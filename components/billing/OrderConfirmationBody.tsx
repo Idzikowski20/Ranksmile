@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import Button from '../koala/primitives/Button';
 import { Textarea } from '../koala/core';
 import { Icon } from '../koala/icons';
+import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
 import type { BillingConfirmation } from '../../lib/billingConfirmation';
 
 const F = 'var(--font-family-primary)';
@@ -125,10 +126,10 @@ export default function OrderConfirmationBody({
           type="button"
           variant="primary"
           size="md"
-          icon={<Icon name="ShoppingCart" size={16} weight="bold" color="#fff" />}
+          icon={<Icon name="ArrowRight" size={16} weight="bold" color="#fff" />}
           onClick={onContinue}
         >
-          Continue shopping
+          Go to dashboard
         </Button>
         {receiptHref ? (
           <a href={receiptHref} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
@@ -245,15 +246,15 @@ export default function OrderConfirmationBody({
                   height: 48,
                   borderRadius: 12,
                   border: `1px solid ${BORDER}`,
-                  background: 'rgba(248, 68, 22, 0.06)',
+                  background: '#fff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  color: BRAND,
+                  overflow: 'hidden',
                 }}
                 >
-                  <Icon name="Package" size={22} weight="bold" color={BRAND} />
+                  <BounceSmileyAnimation compact size={36} entrance={false} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{line.title}</div>

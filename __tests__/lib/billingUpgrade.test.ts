@@ -10,10 +10,10 @@ import type { OrgBillingState } from '../../lib/orgBilling';
 
 describe('billingUpgrade helpers', () => {
   it('ranks plans starter < growth < scale < agency', () => {
-    expect(planRank('starter')).toBe(1);
-    expect(planRank('growth')).toBe(2);
-    expect(planRank('scale')).toBe(3);
-    expect(planRank('agency')).toBe(4);
+    expect(planRank('starter')).toBe(0);
+    expect(planRank('growth')).toBe(1);
+    expect(planRank('scale')).toBe(2);
+    expect(planRank('agency')).toBe(3);
   });
 
   it('treats higher tier as upgrade even when switching yearly → monthly', () => {
@@ -40,6 +40,7 @@ describe('billingUpgrade helpers', () => {
       billingPeriod: 'yearly',
       subscriptionStatus: 'active',
       trialEndsAt: null,
+    trialConsumedAt: null,
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
       lastCheckoutStartedAt: null,

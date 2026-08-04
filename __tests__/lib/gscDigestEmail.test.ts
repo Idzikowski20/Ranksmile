@@ -24,7 +24,10 @@ describe('buildGscDigest', () => {
     expect(html).toContain('-20');
     expect(html).toContain('Deindexed pages');
     expect(html).toContain('Dropped in ranking');
-    expect(html).toContain('cid:ranksmile-logo');
+    expect(html).toContain('https://ranksmile.pl/email/ranksmile-logo.png');
+    expect(html).toContain('https://ranksmile.pl/email/eye.png');
+    expect(html).toContain('https://ranksmile.pl/email/cursor-arrow-rays.png');
+    expect(html).not.toContain('cid:');
     expect(html).not.toContain('Weekly search report');
   });
 });

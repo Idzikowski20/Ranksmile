@@ -1,32 +1,45 @@
 import React, { useMemo } from 'react';
 import { Chart } from '../koala/charts';
 import type { ChartPreparedData } from '../koala/charts';
+import { chartColors } from '../koala/tokens/chart';
 import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
 
 type Bar = { domain: string; overview: { visibilityScore: number }; rank?: number; outsider?: boolean };
 
+/** Grouped bars: orange = You, grey = competitor (Koala Distribution). */
 const CompetitorBarChart = ({
   competitors,
   selected,
   onSelect,
+  ownScore = 0,
 }: {
   competitors: Bar[];
   selected: string | null;
   onSelect: (d: string) => void;
+  /** Own visibility score — orange series on every group. */
+  ownScore?: number;
 }) => {
   const shown = competitors.slice(0, 5);
 
   const chartData: ChartPreparedData = useMemo(
     () => ({
       labels: shown.map((c) => c.domain),
-      points: shown.map((c) => ({
-        label: c.domain,
-        value: c.overview.visibilityScore,
-      })),
+      series: [
+        {
+          label: 'You',
+          kind: 'traffic' as const,
+          values: shown.map(() => ownScore),
+        },
+        {
+          label: 'Competitor',
+          kind: 'comparison' as const,
+          values: shown.map((c) => c.overview.visibilityScore),
+        },
+      ],
     }),
-    [shown],
+    [shown, ownScore],
   );
 
   if (!shown.length) {
@@ -52,8 +65,12 @@ const CompetitorBarChart = ({
         preset="Distribution"
         data={chartData}
         state="ready"
-        overrides={{ height: 220, legend: false }}
+        overrides={{ height: 220, legend: true }}
         aria-label="Competitor visibility scores"
+        legendItems={[
+          { key: 'you', label: 'You', color: chartColors.traffic },
+          { key: 'competitor', label: 'Competitor', color: chartColors.comparison },
+        ]}
       />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {shown.map((c) => {

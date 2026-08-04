@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
-import posthog from 'posthog-js';
 import { signInEmail, signInSocial } from '../../lib/auth/fetchAuth';
 import Button from '../koala/primitives/Button';
 import { IconGoogleColor } from './IconGoogleColor';
@@ -61,7 +60,6 @@ export default function EmailSignInForm() {
       return;
     }
 
-    posthog.capture('user_signed_in', { method: 'email' });
     window.location.href = callbackURL;
   };
 

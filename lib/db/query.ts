@@ -41,7 +41,6 @@ export interface ArticleRow {
   ranking_score: number | null;
   ranking_signals: string | null;
   ranking_sources: string | null;
-  share_token: string | null;
   wizard_state: string | null;
   plagiarism_json: string | null;
   ai_readability_json: string | null;

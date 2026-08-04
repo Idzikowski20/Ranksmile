@@ -105,23 +105,27 @@ const Root = styled.button<{
   };
 });
 
-function Button({
-  busy = false,
-  icon,
-  size = 'md',
-  variant = 'secondary',
-  children,
-  disabled,
-  onMouseEnter,
-  onMouseLeave,
-  type = 'button',
-  'aria-label': ariaLabel,
-  ...rest
-}: ButtonProps) {
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((
+  {
+    busy = false,
+    icon,
+    size = 'md',
+    variant = 'secondary',
+    children,
+    disabled,
+    onMouseEnter,
+    onMouseLeave,
+    type = 'button',
+    'aria-label': ariaLabel,
+    ...rest
+  },
+  ref,
+) => {
   const [hover, setHover] = useState(false);
   const iconOnly = Boolean(icon && !children);
   return (
     <Root
+      ref={ref}
       type={type}
       $size={size}
       $variant={variant}
@@ -144,7 +148,8 @@ function Button({
       {children}
     </Root>
   );
-}
+});
+Button.displayName = 'Button';
 
 export { Button };
 export default Button;

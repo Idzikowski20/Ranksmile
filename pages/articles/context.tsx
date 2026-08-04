@@ -15,7 +15,12 @@ import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 
 interface Voice { id: string; name: string; description: string; isDefault: boolean; }
 
-const label: React.CSSProperties = { fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' };
+const label: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 500,
+  color: 'var(--koala-text-secondary)',
+  fontFamily: 'var(--font-family-primary)',
+};
 
 const ContextPage: NextPage = () => {
   const router = useRouter();
@@ -132,19 +137,15 @@ const ContextPage: NextPage = () => {
   );
 
   const includedCard = (opts: { onClick: () => void; left: React.ReactNode; title: string; desc: string; }) => (
-    <button
-      type="button"
-      onClick={opts.onClick}
-      style={{ background: '#f3f4f0', display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-family-primary)' }}
-    >
+    <button type="button" onClick={opts.onClick} className="koala-wizard-included">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {opts.left}
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>{opts.title}</span>
+          <span className="koala-wizard-included-title">{opts.title}</span>
         </div>
-        <p style={{ margin: 0, fontSize: 13, lineHeight: '16px', color: '#52525C' }}>{opts.desc}</p>
+        <p className="koala-wizard-included-desc">{opts.desc}</p>
       </div>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--koala-text-tertiary)', flexShrink: 0 }} aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
     </button>
   );
 
@@ -156,17 +157,17 @@ const ContextPage: NextPage = () => {
         <WizardNextButton label="Writing mode" onClick={goNext} />
       </>}
     >
-      <h2 style={{ margin: 0, fontSize: 24, lineHeight: '32px', fontWeight: 600, color: '#000', fontFamily: 'var(--font-family-primary)' }}>
+      <h2 className="koala-wizard-title">
         Add context &amp; instructions
       </h2>
 
       {/* Already included */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Already included:</span>
+        <span className="koala-wizard-label" style={{ paddingBottom: 0 }}>Already included:</span>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
           {includedCard({
             onClick: () => setPanel('ranking'),
-            left: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: '#09090B' }}><path fillRule="evenodd" clipRule="evenodd" d="M2.25 12c0-5.39 4.36-9.75 9.75-9.75s9.75 4.36 9.75 9.75-4.36 9.75-9.75 9.75S2.25 17.39 2.25 12Zm13.36-1.81a.75.75 0 1 0-1.22-.87l-3.24 4.53-1.62-1.63a.75.75 0 1 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.09l3.75-5.25Z" fill="currentColor" /></svg>,
+            left: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--koala-text-primary)' }} aria-hidden="true"><path fillRule="evenodd" clipRule="evenodd" d="M2.25 12c0-5.39 4.36-9.75 9.75-9.75s9.75 4.36 9.75 9.75-4.36 9.75-9.75 9.75S2.25 17.39 2.25 12Zm13.36-1.81a.75.75 0 1 0-1.22-.87l-3.24 4.53-1.62-1.63a.75.75 0 1 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.09l3.75-5.25Z" fill="currentColor" /></svg>,
             title: 'Ranking content',
             desc: rankGoogle.length ? `${rankGoogle.length} sources from Google Search results and AI Search` : 'Google Search results and AI Search',
           })}
@@ -211,14 +212,14 @@ const ContextPage: NextPage = () => {
 
       {/* Instructions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <span style={label}>Add context &amp; instructions <span style={{ color: '#9F9FA9', fontWeight: 400 }}>(optional)</span></span>
+        <span style={label}>Add context &amp; instructions <span style={{ color: 'var(--koala-text-tertiary)', fontWeight: 400 }}>(optional)</span></span>
         {showNew && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: '#F4F4F5', border: '1px solid #E4E4E7', borderRadius: 8, padding: '6px 10px' }}>
+          <div className="koala-wizard-chip" style={{ justifyContent: 'space-between', width: '100%', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ background: '#18181B', color: '#fff', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>New</span>
-              <span style={{ fontSize: 13, color: '#18181B' }}>Add up to 5 urls with some context on how to use them</span>
+              <span className="koala-wizard-chip-badge">New</span>
+              <span style={{ fontSize: 13, color: 'var(--koala-text-primary)' }}>Add up to 5 urls with some context on how to use them</span>
             </div>
-            <Button type="button" variant="transparent" size="xs" onClick={() => setShowNew(false)} aria-label="Dismiss" style={{ color: '#52525C', minWidth: 24, padding: 2 }}>
+            <Button type="button" variant="transparent" size="xs" onClick={() => setShowNew(false)} aria-label="Dismiss" style={{ color: 'var(--koala-text-secondary)', minWidth: 24, padding: 2 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </Button>
           </div>

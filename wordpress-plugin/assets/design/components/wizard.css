@@ -1,0 +1,106 @@
+/* Connection wizard — Koala-inspired, RSDS tokens */
+.ranksmile-admin .rs-connect-wizard {
+  display: flex;
+  justify-content: center;
+  padding: var(--rs-space-6) 0 var(--rs-space-8);
+}
+.ranksmile-admin .rs-connect-wizard__card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--rs-bg-primary);
+  border: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  border-radius: var(--rs-radius-card);
+  padding: var(--rs-space-7) var(--rs-space-6);
+  box-shadow: var(--rs-shadow-card);
+  text-align: center;
+}
+.ranksmile-admin .rs-connect-wizard__logo {
+  display: block;
+  margin: 0 auto var(--rs-space-5);
+}
+.ranksmile-admin .rs-connect-wizard__steps {
+  list-style: none;
+  margin: 0 0 var(--rs-space-6);
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--rs-space-2);
+  position: relative;
+}
+.ranksmile-admin .rs-connect-wizard__steps::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 14px;
+  height: 1px;
+  background: var(--rs-border);
+  z-index: 0;
+}
+.ranksmile-admin .rs-connect-wizard__step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+.ranksmile-admin .rs-connect-wizard__step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--rs-bg-secondary);
+  color: var(--rs-text-tertiary);
+  border: 1px solid var(--rs-border);
+}
+.ranksmile-admin .rs-connect-wizard__step.is-active .rs-connect-wizard__step-dot {
+  background: var(--rs-brand);
+  border-color: var(--rs-brand);
+  color: var(--rs-text-on-brand);
+}
+.ranksmile-admin .rs-connect-wizard__step.is-done .rs-connect-wizard__step-dot {
+  background: var(--rs-status-success-bg);
+  border-color: var(--rs-status-success);
+  color: var(--rs-status-success);
+}
+.ranksmile-admin .rs-connect-wizard__step-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--rs-text-tertiary);
+}
+.ranksmile-admin .rs-connect-wizard__step.is-active .rs-connect-wizard__step-label {
+  color: var(--rs-brand);
+}
+.ranksmile-admin .rs-connect-wizard__title {
+  margin: 0 0 var(--rs-space-3);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 28px;
+  color: var(--rs-text-primary);
+}
+.ranksmile-admin .rs-connect-wizard__desc {
+  margin: 0 auto var(--rs-space-6);
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--rs-text-secondary);
+}
+.ranksmile-admin .rs-connect-wizard__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--rs-space-2);
+}
+
+/* Legacy rs-wizard hooks */
+.ranksmile-admin .rs-wizard { display: flex; flex-direction: column; gap: var(--rs-space-4); }

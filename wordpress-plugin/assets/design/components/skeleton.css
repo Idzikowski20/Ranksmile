@@ -1,0 +1,11 @@
+﻿.ranksmile-admin .rs-skeleton {
+  display: block; border-radius: var(--rs-radius-sm); background: linear-gradient(90deg, var(--rs-bg-secondary) 25%, var(--rs-bg-tertiary) 50%, var(--rs-bg-secondary) 75%);
+  background-size: 200% 100%; animation: rs-skel 1.2s ease infinite;
+}
+.ranksmile-admin .rs-skeleton--title { height: 20px; width: 40%; margin-bottom: var(--rs-space-3); }
+.ranksmile-admin .rs-skeleton--line { height: 14px; width: 100%; margin-bottom: var(--rs-space-2); }
+.ranksmile-admin .rs-skeleton--card { height: 120px; width: 100%; }
+@keyframes rs-skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .ranksmile-admin .rs-skeleton { animation: none; }
+}

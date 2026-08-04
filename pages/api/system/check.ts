@@ -79,9 +79,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const resend = Boolean((process.env.RESEND_API_KEY || process.env.RESEND_APIKEY || '').trim());
   checks.push({ id: 'resend', status: resend ? 'ok' : (isProd ? 'fail' : 'skip') });
 
-  const posthog = Boolean((process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN || process.env.POSTHOG_API_KEY || '').trim());
-  checks.push({ id: 'posthog', status: posthog ? 'ok' : 'skip' });
-
   checks.push({ id: 'sentry', status: isSentryEnabled() ? 'ok' : 'skip' });
 
   const storage = Boolean((process.env.AWS_ACCESS_KEY_ID || process.env.S3_BUCKET || '').trim());

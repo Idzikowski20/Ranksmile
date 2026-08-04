@@ -149,7 +149,7 @@ const SiteAuditPage: NextPage = () => {
         domain={domain}
         slug={slug ?? ''}
         section="Site Audit"
-        contentMaxWidth={1280}
+        contentMaxWidth="100%"
         heading={slug ? `Site Audit: ${domain}` : 'Site Audit'}
         subtitle="Analyze your entire website"
         meta={headerMeta}

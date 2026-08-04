@@ -1,0 +1,16 @@
+﻿/* TODO(rsds): remove after settings template fully on RSDS — expiry 2026-12-01 */
+.ranksmile-admin .ranksmile-button--primary,
+.ranksmile-admin .button-ranksmile-primary {
+  background: var(--rs-brand) !important;
+  border-color: var(--rs-brand) !important;
+  color: var(--rs-text-on-brand) !important;
+  border-radius: var(--rs-radius-btn) !important;
+}
+/* TODO(rsds): remove after settings template fully on RSDS — expiry 2026-12-01 */
+.ranksmile-admin .ranksmile-layout,
+.ranksmile-admin .ranksmile-wrapper {
+  font-family: var(--rs-font-body);
+  color: var(--rs-text-primary);
+}
+/* TODO(rsds): neutralize Surfer purple — expiry 2026-12-01 */
+.ranksmile-admin a { color: var(--rs-brand); }

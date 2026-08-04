@@ -1,8 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
+import { hasActiveBillingEntitlement } from '../../../lib/billingEntitlement';
 import { getOrgBillingState } from '../../../lib/orgBilling';
 import {
   buildPlanMetrics,
+  DEFAULT_PLAN_SLUG,
   formatPlanStatus,
   overallUsagePct,
   resolvePlanSlug,
@@ -24,7 +26,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const { orgId } = await ensureUserTenancy(userId);
   const billing = await getOrgBillingState(orgId);
-  const planSlug = resolvePlanSlug(billing?.planSlug);
+  const entitled = hasActiveBillingEntitlement(billing);
+  const planSlug = entitled ? resolvePlanSlug(billing?.planSlug) : DEFAULT_PLAN_SLUG;
   const plan = getCheckoutPlan(planSlug);
   const usage = await getOrgPlanUsage(orgId);
   const metrics = buildPlanMetrics(planSlug, usage);
@@ -32,7 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const summary: PlanSummaryData = {
     planSlug,
     planName: plan?.name ?? 'Growth',
-    billingPeriod: billing?.billingPeriod ?? null,
+    billingPeriod: entitled ? (billing?.billingPeriod ?? null) : null,
     subscriptionStatus: billing?.subscriptionStatus ?? null,
     trialEndsAt: billing?.trialEndsAt ?? null,
     currentPeriodEnd: billing?.currentPeriodEnd ?? null,

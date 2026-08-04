@@ -1,0 +1,6 @@
+﻿.ranksmile-admin .rs-empty {
+  text-align: center; padding: var(--rs-space-8) var(--rs-space-6);
+  border: var(--rs-border-width) dashed var(--rs-border); border-radius: var(--rs-radius-card); background: var(--rs-bg-tertiary);
+}
+.ranksmile-admin .rs-empty__title { margin: 0 0 var(--rs-space-2); font-size: var(--rs-text-lg); font-weight: 700; color: var(--rs-text-primary); }
+.ranksmile-admin .rs-empty__desc { margin: 0 0 var(--rs-space-5); font-size: var(--rs-text-md); color: var(--rs-text-secondary); max-width: 420px; margin-left: auto; margin-right: auto; }

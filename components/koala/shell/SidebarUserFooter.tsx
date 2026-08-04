@@ -76,8 +76,13 @@ export default function SidebarUserFooter({ variant = 'sidebar' }: Props) {
         onClick={() => setOpen((v) => !v)}
       >
         <span className="koala-sidebar-user__avatar-wrap">
-          <Avatar src={userPic || undefined} initials={userInitial} size={isHeader ? 28 : 32} />
-          <span className="koala-sidebar-user__status" aria-hidden="true" />
+          <Avatar
+            src={userPic || undefined}
+            initials={userInitial}
+            size={isHeader ? 28 : 32}
+            badge={isHeader ? 'certificate' : 'flag'}
+            flagCode="US"
+          />
         </span>
         {!isHeader ? (
           <>

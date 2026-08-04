@@ -39,6 +39,20 @@ import {
   type OptimizationStrategy,
 } from './optimizationPolicy';
 import { TARGET_AI, TARGET_SEO } from '../optimizeMode';
+import { evaluateRxQualityGate } from '../wie/rxQualityGate';
+import { parseCompetitorSynthesis, type CompetitorSynthesis } from '../wie/competitorSynthesis';
+import type { ReaderBrief } from '../wie/readerBrief';
+import { buildPolicyContext, resolvePolicyBundle, type PolicyBundle } from '../wie/policyResolver';
+import { recordPatternOutcome } from '../wie/patternStore';
+import { buildNarrativePlan, type NarrativePlan } from '../wie/narrativePlanner';
+import { bundleToExplainability } from '../wie/explainability';
+import { enforceOpeningPolicy } from '../wie/enforceOpeningPolicy';
+import {
+  abVariantBHint,
+  pickAbWinner,
+  scoreAbVariant,
+  shouldAbWriteStep,
+} from '../wie/abWrite';
 
 export type { OptimizationStrategy, OptimizationPolicy };
 export { resolveOptimizationStrategy, resolveOptimizationPolicy };
@@ -96,6 +110,8 @@ export function collectPrecisionCandidates(opts: {
   strategy?: OptimizationStrategy;
   seoStrong?: boolean;
   aiWeak?: boolean;
+  /** Preloaded CCM → EditCandidate (from ActionGraph). */
+  extraCandidates?: readonly EditCandidate[];
 }): EditCandidate[] {
   const plain = opts.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   const liveItems = opts.ctx?.coverage?.items?.length
@@ -103,7 +119,7 @@ export function collectPrecisionCandidates(opts: {
     : [];
   const termGaps = computeTermUsageGaps(opts.ctx?.scoreData ?? undefined, opts.html);
   const sections = splitSections(opts.html);
-  return buildEditCandidates({
+  const base = buildEditCandidates({
     profile: opts.profile,
     termGaps,
     coverageItems: liveItems,
@@ -115,6 +131,15 @@ export function collectPrecisionCandidates(opts: {
     seoStrong: opts.seoStrong,
     aiWeak: opts.aiWeak,
   });
+  if (!opts.extraCandidates?.length) return base;
+  const seen = new Set(base.map((c) => c.gapId));
+  const merged = [...base];
+  for (const c of opts.extraCandidates) {
+    if (seen.has(c.gapId)) continue;
+    seen.add(c.gapId);
+    merged.push(c);
+  }
+  return merged;
 }
 
 /**
@@ -256,6 +281,8 @@ export async function runPrecisionOptimizeV4(opts: {
   keyword: string;
   latestAiFallback?: number;
   visibilityPrompts?: Array<{ id: string; label: string }>;
+  /** CCM ActionGraph → candidates (backend CIA wire). */
+  extraCandidates?: readonly EditCandidate[];
   maxSteps?: number;
   policy?: OptimizationPolicy;
   llmEdit: LlmEditFn;
@@ -282,6 +309,59 @@ export async function runPrecisionOptimizeV4(opts: {
     aiAvailability: 'available',
   });
   const scoreHtml = opts.scoreHtml ?? defaultScore;
+
+  const synthesis: CompetitorSynthesis | null =
+    opts.ctx?.competitorSynthesis
+    ?? parseCompetitorSynthesis(opts.scoreData?.competitor_synthesis ?? null);
+  const readerBrief: ReaderBrief | null = opts.ctx?.readerBrief ?? null;
+
+  let policyBundle: PolicyBundle | null = null;
+  let narrativePlan: NarrativePlan | null = null;
+  try {
+    const pctx = buildPolicyContext({
+      keyword: opts.keyword || opts.ctx?.keyword || '',
+      readerBrief,
+      synthesis,
+    });
+    policyBundle = await resolvePolicyBundle({ ctx: pctx, synthesis });
+    narrativePlan = buildNarrativePlan({ readerBrief, policy: policyBundle, synthesis });
+    const explainability = bundleToExplainability(
+      policyBundle,
+      pctx,
+      policyBundle.dna_ab_variant,
+    );
+    trace.push({
+      step: 'intent_analysis',
+      metadata: {
+        wie_policy: true,
+        dna_version: policyBundle.dna_version,
+        dna_ab_variant: policyBundle.dna_ab_variant,
+        dna_ab_reason: policyBundle.dna_ab_reason,
+        narrative: {
+          openingMove: narrativePlan.openingMove,
+          beats: narrativePlan.beats.map((b) => b.role),
+          ctaPlacement: narrativePlan.ctaPlacement,
+        },
+        explainability,
+        decisions: policyBundle.decisions.map((d) => ({
+          id: d.id,
+          value: d.value,
+          confidence: d.confidence,
+          effectiveness: d.effectiveness,
+          source_layer: d.source_layer,
+          principle_id: d.principle_id,
+          pattern_id: d.pattern_id,
+          reason: d.reason,
+        })),
+        patternIdsUsed: policyBundle.patternIdsUsed,
+      },
+    });
+  } catch {
+    policyBundle = null;
+    narrativePlan = null;
+  }
+
+  const promptOpts = { synthesis, readerBrief, policy: policyBundle, narrative: narrativePlan };
 
   const originalScored = scoreHtml(opts.html);
   const original = makeSnapshot(opts.html, originalScored.scores);
@@ -326,6 +406,7 @@ export async function runPrecisionOptimizeV4(opts: {
     strategy: policy.strategy,
     seoStrong: policy.seoStrong,
     aiWeak: policy.aiWeak,
+    extraCandidates: opts.extraCandidates,
   });
   const planned = planPrecisionStepsV4({
     candidates,
@@ -352,6 +433,7 @@ export async function runPrecisionOptimizeV4(opts: {
   let rejected = 0;
   let accepted = 0;
   let stagnation = 0;
+  let abBudgetLeft = 2;
   const STAGNATION_WINDOW = 3;
   const resolvedGapIds = new Set<string>();
 
@@ -383,15 +465,81 @@ export async function runPrecisionOptimizeV4(opts: {
       continue;
     }
 
-    const prompt = buildPrecisionStepPrompt(step, section.html);
-    let afterSection = section.html;
+    const runAb = shouldAbWriteStep({
+      action: step.action,
+      stepIndex: i,
+      abBudgetLeft,
+    });
+
+    const promptA = buildPrecisionStepPrompt(step, section.html, promptOpts);
+    let afterA = section.html;
     try {
-      const result = await opts.llmEdit(prompt);
+      const result = await opts.llmEdit(promptA);
       tokens += result.tokens;
-      afterSection = result.html || section.html;
+      afterA = result.html || section.html;
     } catch {
       rejected += 1;
       continue;
+    }
+
+    let afterSection = afterA;
+    let abMeta: Record<string, unknown> | undefined;
+
+    if (runAb) {
+      abBudgetLeft -= 1;
+      const opening = policyBundle?.decisions.find((d) => d.id === 'opening')?.value;
+      const promptB = buildPrecisionStepPrompt(step, section.html, {
+        ...promptOpts,
+        variantHint: abVariantBHint(opening),
+      });
+      let afterB = section.html;
+      try {
+        const resultB = await opts.llmEdit(promptB);
+        tokens += resultB.tokens;
+        afterB = resultB.html || section.html;
+      } catch {
+        afterB = afterA;
+      }
+
+      const scoreSection = (sectionHtml: string): AoScores => {
+        const fullHtml = replaceSectionHtml(working.html, section.html, sectionHtml, section.id);
+        return scoreHtml(fullHtml).scores;
+      };
+
+      const scoredA = scoreAbVariant({
+        label: 'A',
+        sectionHtml: afterA,
+        scores: scoreSection(afterA),
+        working: working.scores,
+        action: step.action,
+        synthesis,
+      });
+      const scoredB = scoreAbVariant({
+        label: 'B',
+        sectionHtml: afterB,
+        scores: scoreSection(afterB),
+        working: working.scores,
+        action: step.action,
+        synthesis,
+      });
+      const { winner, loser, margin } = pickAbWinner(scoredA, scoredB);
+      afterSection = winner.html;
+      abMeta = {
+        ab_write: true,
+        winner: winner.label,
+        loser: loser.label,
+        margin,
+        winner_quality: winner.quality,
+        loser_quality: loser.quality,
+        winner_rxOk: winner.rxOk,
+        loser_rxOk: loser.rxOk,
+      };
+      trace.push({
+        step: 'candidate_apply',
+        candidateId: step.candidateId,
+        sectionId: step.sectionId,
+        metadata: abMeta,
+      });
     }
 
     const tempHtml = replaceSectionHtml(working.html, section.html, afterSection, section.id);
@@ -479,6 +627,35 @@ export async function runPrecisionOptimizeV4(opts: {
       continue;
     }
 
+    const rx = evaluateRxQualityGate({
+      afterHtml: afterSection,
+      action: step.action,
+      synthesis,
+    });
+    if (!rx.ok) {
+      rejected += 1;
+      trace.push({
+        step: 'rx_quality_gate',
+        candidateId: step.candidateId,
+        reason: 'RX_QUALITY_VETO',
+        metadata: {
+          decision: 'veto',
+          rxReason: rx.reason,
+          detail: rx.detail,
+          source_layer: 'wie_rx_gate',
+          patternIdsUsed: policyBundle?.patternIdsUsed,
+          ...abMeta,
+        },
+        beforeScores: working.scores,
+        afterScores: tempScores,
+        delta: makeScoreDeltaSet(working.scores, tempScores, aiAvailability),
+      });
+      if (policyBundle?.patternIdsUsed.length) {
+        void recordPatternOutcome({ patternIds: policyBundle.patternIdsUsed, success: false });
+      }
+      continue;
+    }
+
     const next = makeSnapshot(tempHtml, tempScores);
     const flat = isOverallFlat(working.scores, next.scores, OVERALL_FLAT_EPSILON);
     if (flat && !verifiedObjective) {
@@ -498,13 +675,65 @@ export async function runPrecisionOptimizeV4(opts: {
       beforeScores: working.scores,
       afterScores: next.scores,
       delta: makeScoreDeltaSet(working.scores, next.scores, aiAvailability),
+      metadata: {
+        patternIdsUsed: policyBundle?.patternIdsUsed,
+        wie_policy_opening: policyBundle?.decisions.find((d) => d.id === 'opening')?.value,
+        ...abMeta,
+      },
     });
     working = next;
     accepted += 1;
     if (step.gapId) resolvedGapIds.add(step.gapId);
+    if (policyBundle?.patternIdsUsed.length) {
+      void recordPatternOutcome({ patternIds: policyBundle.patternIdsUsed, success: true });
+    }
 
     // Invalidate remaining steps with same gapId
     steps = steps.filter((s, idx) => idx <= i || !s.gapId || s.gapId !== step.gapId);
+  }
+
+  // ── Opening policy enforcement (WIE Expected → Observed) ────────
+  const expectedOpening = policyBundle?.decisions.find((d) => d.id === 'opening')?.value;
+  if (expectedOpening === 'problem_first') {
+    const beforeEnfScores = working.scores;
+    const enf = await enforceOpeningPolicy({
+      html: working.html,
+      expectedOpening,
+      keyword: opts.keyword,
+      llmEdit: async (prompt) => {
+        const r = await opts.llmEdit(prompt);
+        return { html: r.html || '', tokens: r.tokens };
+      },
+    });
+    tokens += enf.tokens;
+    if (enf.attempted) {
+      const enfScored = scoreHtml(enf.html);
+      const enfSnap = makeSnapshot(enf.html, enfScored.scores);
+      const okScores = !hasSeoContentRegression(beforeEnfScores, enfSnap.scores)
+        || enfSnap.scores.seo >= beforeEnfScores.seo - 2;
+      if (okScores) {
+        working = enfSnap;
+        if (enf.method !== 'none') accepted += 1;
+      }
+      trace.push({
+        step: 'opening_policy_enforce',
+        reason: enf.violated ? 'OPENING_POLICY_STILL_VIOLATED' : 'OPENING_POLICY_FIXED',
+        metadata: {
+          before: enf.before,
+          after: enf.after,
+          method: enf.method,
+          violated: enf.violated,
+          expected: expectedOpening,
+          accepted: okScores,
+        },
+        beforeScores: beforeEnfScores,
+        afterScores: enfSnap.scores,
+        delta: makeScoreDeltaSet(beforeEnfScores, enfSnap.scores, enfScored.aiAvailability),
+      });
+      if (enf.violated && policyBundle?.patternIdsUsed.length) {
+        void recordPatternOutcome({ patternIds: policyBundle.patternIdsUsed, success: false });
+      }
+    }
   }
 
   // FINAL: re-score complete working.html vs ORIGINAL baseline

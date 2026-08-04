@@ -1,0 +1,8 @@
+﻿.ranksmile-admin .rs-action-bar {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--rs-space-4);
+  margin-bottom: var(--rs-space-6);
+}
+.ranksmile-admin .rs-action-bar__copy { min-width: 0; flex: 1; }
+.ranksmile-admin .rs-action-bar__title { margin: 0; font-family: var(--rs-font-heading); font-size: var(--rs-text-2xl); font-weight: 700; line-height: var(--rs-leading-2xl); color: var(--rs-text-primary); }
+.ranksmile-admin .rs-action-bar__desc { margin: var(--rs-space-2) 0 0; font-size: var(--rs-text-md); color: var(--rs-text-secondary); max-width: 560px; }
+.ranksmile-admin .rs-action-bar__actions { display: flex; flex-wrap: wrap; gap: var(--rs-space-2); }

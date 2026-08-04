@@ -4,22 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'react-query';
-import { Chart } from '../../../components/koala/charts';
-import type { ChartPreparedData } from '../../../components/koala/charts';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
-import { HoverTooltip, Button, CompactSelect, SegmentedControl, ToolRibbon } from '../../../components/koala/core';
+import { Button, CompactSelect, SegmentedControl, ToolRibbon } from '../../../components/koala/core';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { Card } from '../../../components/koala/product';
+import { Card, ActivityFeed } from '../../../components/koala/product';
+import type { ActivityFeedGroupData } from '../../../components/koala/product';
 import { EmptyState } from '../../../components/koala/feedback';
-import {
-  SentryTable,
-  SentryTableHead,
-  SentryTableBody,
-  SentryTableRow,
-  SentryTableCell,
-  SentryTableHeaderCell,
-} from '../../../components/koala/layout';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { usePeople } from '../../../services/people';
@@ -30,6 +21,10 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEKDAYS_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+/** Contribution dots — idle / active / peak (matches Surfer-style activity grid). */
+const DOT_IDLE = 'var(--koala-border-secondary, #D4D4D8)';
+const DOT_ACTIVE = '#AA93FD';
+const DOT_PEAK = 'var(--koala-text-brand, #F84416)';
 
 type ApiArticle = {
    id: number | string;
@@ -66,11 +61,8 @@ const fmtTime = (d: Date) => {
    const ap = h >= 12 ? 'PM' : 'AM';
    h %= 12;
    if (h === 0) h = 12;
-   return `${h}:${String(m).padStart(2, '0')}${ap}`;
+   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ap}`;
 };
-// Compact table date (no year) with the full date+time surfaced on hover.
-const fmtDateShort = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
-const fmtDateFull = (d: Date) => `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} · ${fmtTime(d)}`;
 const fmtRangeLabel = (from: Date | null, to: Date | null) => {
    if (!from) return 'Custom';
    const f = `${MONTHS[from.getMonth()]} ${from.getDate()}`;
@@ -78,6 +70,23 @@ const fmtRangeLabel = (from: Date | null, to: Date | null) => {
    const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
    const t = sameMonth ? `${to.getDate()}` : `${MONTHS[to.getMonth()]} ${to.getDate()}`;
    return `${f} - ${t}, ${to.getFullYear()}`;
+};
+
+const dateGroupLabel = (d: Date, today: Date) => {
+   const start = startOfDay(d);
+   const diffDays = Math.round((today.getTime() - start.getTime()) / 86_400_000);
+   if (diffDays === 0) return 'Today';
+   if (diffDays === 1) return 'Yesterday';
+   if (diffDays > 1 && diffDays < 7) return `${diffDays} days ago`;
+   const dd = String(d.getDate()).padStart(2, '0');
+   const mm = String(d.getMonth() + 1).padStart(2, '0');
+   return `${dd}/${mm}/${d.getFullYear()}`;
+};
+
+const EVENT_ICON: Record<EventType, string> = {
+   created: 'NotePencil',
+   optimized: 'MagicWand',
+   published: 'PaperPlaneTilt',
 };
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
@@ -244,7 +253,6 @@ const ActivityLogPage: NextPage = () => {
    useEffect(() => { setMounted(true); }, []);
    const session = authClient.useSession?.();
    const person = (mounted && session?.data?.user?.email) ? session.data.user.email : 'You';
-   const personInitial = (person.charAt(0) || '?').toUpperCase();
    const personImage = (mounted && (session?.data?.user as { image?: string } | undefined)?.image) || '';
 
    const { data: peopleData } = usePeople();
@@ -346,7 +354,7 @@ const ActivityLogPage: NextPage = () => {
    }, [allEvents, mode, customRange, peopleSel, actSel, person, sortAsc]);
 
    // Heatmap counts + stats over the filtered set.
-   const { counts, activeDays, peakLabel, peakCount } = useMemo(() => {
+   const { counts, peakKey, activeDays, peakLabel, peakCount } = useMemo(() => {
       const map = new Map<string, number>();
       const repr = new Map<string, Date>();
       events.forEach((e) => {
@@ -358,8 +366,79 @@ const ActivityLogPage: NextPage = () => {
       let pc = 0;
       map.forEach((c, k) => { if (c > pc) { pc = c; pk = k; } });
       const pd = pk ? repr.get(pk) : undefined;
-      return { counts: map, activeDays: map.size, peakLabel: pd ? fmtMostActive(pd) : '—', peakCount: pc };
+      return {
+         counts: map,
+         peakKey: pk,
+         activeDays: map.size,
+         peakLabel: pd ? fmtMostActive(pd) : '—',
+         peakCount: pc,
+      };
    }, [events]);
+
+   const feedGroups: ActivityFeedGroupData[] = useMemo(() => {
+      const map = new Map<string, LogEvent[]>();
+      const order: string[] = [];
+      events.forEach((e) => {
+         const k = dayKey(e.time);
+         if (!map.has(k)) {
+            map.set(k, []);
+            order.push(k);
+         }
+         map.get(k)!.push(e);
+      });
+      return order.map((k) => {
+         const entries = map.get(k)!;
+         return {
+            id: k,
+            dateLabel: dateGroupLabel(entries[0].time, today),
+            entries: entries.map((e) => ({
+               id: e.id,
+               actorName: person,
+               actorImage: personImage || null,
+               timeLabel: fmtTime(e.time),
+               icon: EVENT_ICON[e.type],
+               message: (
+                  <span style={{ display: 'inline' }}>
+                     {e.verb}{' '}
+                     <Link href={`/articles/${e.articleId}`} passHref>
+                        <a
+                           className="activity-log-link"
+                           style={{
+                              fontWeight: 600,
+                              color: 'var(--koala-text-primary)',
+                              textDecoration: 'underline',
+                              textDecorationColor: 'transparent',
+                           }}
+                        >
+                           {e.title}
+                        </a>
+                     </Link>
+                     {e.type === 'optimized' ? (
+                        <>
+                           {' '}from{' '}
+                           <Link href={`/sites/${slug}/content-audit`} passHref>
+                              <a
+                                 className="activity-log-link"
+                                 style={{
+                                    fontWeight: 600,
+                                    color: 'var(--koala-text-primary)',
+                                    textDecoration: 'underline',
+                                    textDecorationColor: 'transparent',
+                                 }}
+                              >
+                                 Content Audit
+                              </a>
+                           </Link>
+                        </>
+                     ) : (
+                        <span style={{ color: 'var(--koala-text-secondary)' }}> in Content Editor</span>
+                     )}
+                  </span>
+               ),
+            })),
+         };
+      });
+   }, [events, person, personImage, slug, today]);
 
    const exportCsv = () => {
       const rows = [['Person', 'Activity', 'Date'], ...events.map((e) => [
@@ -438,140 +517,180 @@ const ActivityLogPage: NextPage = () => {
                         <span>Active days: <strong style={{ color: 'var(--koala-text-primary)', fontWeight: 600 }}>{activeDays}</strong></span>
                         <span>Most active day: <strong style={{ color: 'var(--koala-text-primary)', fontWeight: 600 }}>{peakCount > 0 ? `${peakLabel} with ${peakCount} ${peakCount === 1 ? 'activity' : 'activities'}` : '—'}</strong></span>
                      </div>
-                     <ActivityHeatmap counts={counts} onPickDay={filterToDay} />
+                     <ActivityHeatmap counts={counts} peakKey={peakKey} onPickDay={filterToDay} />
                   </Card>
                </div>
 
-               <Card padded={false}>
-                  <SentryTable>
-                     <SentryTableHead>
-                        <tr>
-                           <SentryTableHeaderCell style={{ width: 96 }}>Person</SentryTableHeaderCell>
-                           <SentryTableHeaderCell>Activity</SentryTableHeaderCell>
-                           <SentryTableHeaderCell style={{ width: 200 }}>
-                              <Button type="button" variant="transparent" size="sm" onClick={() => setSortAsc((s) => !s)} style={{ gap: 6, fontSize: 11, fontWeight: 600, color: 'var(--koala-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                 Date
-                                 <SortArrow asc={sortAsc} />
-                              </Button>
-                           </SentryTableHeaderCell>
-                        </tr>
-                     </SentryTableHead>
-                     <SentryTableBody>
-                        {isLoading ? (
-                           Array.from({ length: 4 }).map((_, i) => (
-                              // eslint-disable-next-line react/no-array-index-key
-                              <SentryTableRow key={i}>
-                                 <SentryTableCell>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                       <span style={{ width: 28, height: 28, borderRadius: 9999, background: 'var(--koala-bg-tertiary)' }} />
-                                       <span style={{ width: 150, height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
-                                    </div>
-                                 </SentryTableCell>
-                                 <SentryTableCell><span style={{ display: 'block', width: '60%', height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} /></SentryTableCell>
-                                 <SentryTableCell><span style={{ display: 'block', width: 120, height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} /></SentryTableCell>
-                              </SentryTableRow>
-                           ))
-                        ) : events.length === 0 ? (
-                           <SentryTableRow>
-                              <SentryTableCell colSpan={3}>
-                                 <EmptyState title="No activities found" description={<EmptyEyes />} />
-                              </SentryTableCell>
-                           </SentryTableRow>
-                        ) : (
-                           events.map((e) => (
-                              <SentryTableRow key={e.id} className="activity-log-row">
-                                 <SentryTableCell>
-                                    <HoverTooltip label={person}>
-                                       {personImage ? (
-                                          // eslint-disable-next-line @next/next/no-img-element
-                                          <img alt={person} src={personImage} width={28} height={28} style={{ width: 28, height: 28, borderRadius: 9999, objectFit: 'cover', flexShrink: 0, cursor: 'default' }} />
-                                       ) : (
-                                          <span style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9999, background: 'var(--koala-border-primary)', color: 'var(--koala-text-primary)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', cursor: 'default' }}>
-                                             {personInitial}
-                                          </span>
-                                       )}
-                                    </HoverTooltip>
-                                 </SentryTableCell>
-                                 <SentryTableCell>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0, fontSize: 14, color: 'var(--koala-text-primary)' }}>
-                                       <span style={{ flexShrink: 0 }}>{e.verb}</span>
-                                       <Link href={`/articles/${e.articleId}`} passHref>
-                                          <a style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--koala-text-primary)', textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'text-decoration-color 150ms ease, color 150ms ease' }} className="activity-log-link">
-                                             {e.title}
-                                          </a>
-                                       </Link>
-                                       {e.type === 'optimized' ? (
-                                          <span style={{ flexShrink: 0, color: 'var(--koala-text-secondary)' }}>
-                                             from{' '}
-                                             <Link href={`/sites/${slug}/content-audit`} passHref>
-                                                <a style={{ fontWeight: 600, color: 'var(--koala-text-primary)', textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'text-decoration-color 150ms ease, color 150ms ease' }} className="activity-log-link">Content Audit</a>
-                                             </Link>
-                                          </span>
-                                       ) : (
-                                          <span style={{ flexShrink: 0, color: 'var(--koala-text-secondary)' }}>in Content Editor</span>
-                                       )}
-                                    </div>
-                                 </SentryTableCell>
-                                 <SentryTableCell>
-                                    <HoverTooltip label={fmtDateFull(e.time)} align="right">
-                                       <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', cursor: 'default' }}>
-                                          {fmtDateShort(e.time)}, <span style={{ color: 'var(--koala-text-secondary)' }}>{fmtTime(e.time)}</span>
-                                       </span>
-                                    </HoverTooltip>
-                                 </SentryTableCell>
-                              </SentryTableRow>
-                           ))
-                        )}
-                     </SentryTableBody>
-                  </SentryTable>
+               <Card>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+                     <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)' }}>Activity</span>
+                     <Button type="button" variant="transparent" size="sm" onClick={() => setSortAsc((s) => !s)} style={{ gap: 6, fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)' }}>
+                        Date
+                        <SortArrow asc={sortAsc} />
+                     </Button>
+                  </div>
+                  {isLoading ? (
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {Array.from({ length: 3 }).map((_, i) => (
+                           // eslint-disable-next-line react/no-array-index-key
+                           <div key={i} style={{ display: 'flex', gap: 12 }}>
+                              <span style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
+                              <span style={{ width: 24, height: 24, borderRadius: 9999, background: 'var(--koala-bg-tertiary)' }} />
+                              <div style={{ flex: 1, maxWidth: 420 }}>
+                                 <span style={{ display: 'block', width: 160, height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)', marginBottom: 10 }} />
+                                 <span style={{ display: 'block', width: '100%', height: 48, borderRadius: 12, background: 'var(--koala-bg-tertiary)' }} />
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  ) : events.length === 0 ? (
+                     <EmptyState title="No activities found" description={<EmptyEyes />} />
+                  ) : (
+                     <ActivityFeed groups={feedGroups} />
+                  )}
                </Card>
          </DomainSubLayout>
       </AppShell>
    );
 };
 
-// ─── Contribution heatmap (Koala ActivityHeatmap) ────────────────────────────
+// ─── Contribution heatmap ────────────────────────────────────────────────────
 
-/** Build 7×N matrix (rows = weekdays Sun–Sat, cols = weeks) for Chart heatmap. */
-function prepareActivityHeatmap(counts: Map<string, number>, year: number): ChartPreparedData {
-   const first = new Date(year, 0, 1);
-   const start = new Date(first);
-   start.setDate(first.getDate() - first.getDay());
-   const last = new Date(year, 11, 31);
-   const weeks: number[][] = [];
-   const cur = new Date(start);
-   let col = 0;
-   while (cur <= last || weeks.length === 0) {
-      const week: number[] = [];
-      for (let row = 0; row < 7; row += 1) {
-         const date = new Date(cur);
-         week.push(date.getFullYear() === year ? (counts.get(dayKey(date)) || 0) : 0);
-         cur.setDate(cur.getDate() + 1);
-      }
-      weeks.push(week);
-      col += 1;
-      if (cur > last) break;
-      if (col > 60) break;
-   }
-   // rows x cols for HeatmapRenderer (transpose week columns)
-   const heatmap = Array.from({ length: 7 }, (_, row) => weeks.map((w) => w[row] ?? 0));
-   return { labels: [], heatmap };
-}
-
-const ActivityHeatmap = ({ counts, onPickDay }: { counts: Map<string, number>; onPickDay: (d: Date) => void }) => {
+const ActivityHeatmap = ({
+   counts,
+   peakKey,
+   onPickDay,
+}: {
+   counts: Map<string, number>;
+   peakKey: string | null;
+   onPickDay: (d: Date) => void;
+}) => {
    const year = new Date().getFullYear();
-   const data = useMemo(() => prepareActivityHeatmap(counts, year), [counts, year]);
-   void onPickDay; // day filter remains on the date picker; heatmap is visual SoT only
+   const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null);
+   const { weeks, monthLabels } = useMemo(() => {
+      const first = new Date(year, 0, 1);
+      const start = new Date(first);
+      start.setDate(first.getDate() - first.getDay());
+      const last = new Date(year, 11, 31);
+      const cols: Date[][] = [];
+      const cur = new Date(start);
+      while (cur <= last) {
+         const week: Date[] = [];
+         for (let i = 0; i < 7; i += 1) {
+            week.push(new Date(cur));
+            cur.setDate(cur.getDate() + 1);
+         }
+         cols.push(week);
+      }
+      let prev = -1;
+      const labels = cols.map((week) => {
+         const rep = week.find((d) => d.getFullYear() === year) || week[0];
+         const mo = rep.getMonth();
+         if (mo !== prev) {
+            prev = mo;
+            return MONTHS[mo];
+         }
+         return '';
+      });
+      return { weeks: cols, monthLabels: labels };
+   }, [year]);
+
+   const CELL = 14;
+   const ROW_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
 
    return (
-      <Chart
-         preset="ActivityHeatmap"
-         data={data}
-         state={(data.heatmap?.length ?? 0) ? 'ready' : 'empty'}
-         overrides={{ height: 140 }}
-         emptyDescription="No activity history"
-         aria-label={`Activity heatmap ${year}`}
-      />
+      <>
+         <div style={{ overflowX: 'auto' }} className="styled-scrollbar">
+            <div style={{ minWidth: 28 + weeks.length * CELL }} role="img" aria-label={`Activity heatmap ${year}`}>
+               <div style={{ display: 'flex', paddingLeft: 28 }}>
+                  {monthLabels.map((label, wi) => (
+                     // eslint-disable-next-line react/no-array-index-key
+                     <div key={wi} style={{ width: CELL, flexShrink: 0, height: 16, fontSize: 10, color: 'var(--koala-text-secondary)', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'visible' }}>{label}</div>
+                  ))}
+               </div>
+               <div style={{ display: 'flex' }}>
+                  <div style={{ width: 28, flexShrink: 0 }}>
+                     {ROW_LABELS.map((d, ri) => (
+                        // eslint-disable-next-line react/no-array-index-key
+                        <div key={ri} style={{ height: CELL, display: 'flex', alignItems: 'center', fontSize: 10, color: 'var(--koala-text-secondary)', fontFamily: FONT }}>{d}</div>
+                     ))}
+                  </div>
+                  <div style={{ display: 'flex' }}>
+                     {weeks.map((week, wi) => (
+                        // eslint-disable-next-line react/no-array-index-key
+                        <div key={wi} style={{ display: 'flex', flexDirection: 'column' }}>
+                           {week.map((day) => {
+                              const inYear = day.getFullYear() === year;
+                              const key = dayKey(day);
+                              const count = counts.get(key) || 0;
+                              let bg = DOT_IDLE;
+                              let opacity = inYear ? 0.3 : 0;
+                              if (count > 0) {
+                                 bg = key === peakKey ? DOT_PEAK : DOT_ACTIVE;
+                                 opacity = 1;
+                              }
+                              const text = `${fmtDate(day)}: ${count} ${count === 1 ? 'activity' : 'activities'}`;
+                              return (
+                                 <button
+                                    key={key}
+                                    type="button"
+                                    disabled={!inYear}
+                                    aria-label={inYear ? text : undefined}
+                                    style={{
+                                       width: CELL,
+                                       height: CELL,
+                                       display: 'grid',
+                                       placeItems: 'center',
+                                       padding: 0,
+                                       border: 'none',
+                                       background: 'transparent',
+                                       cursor: inYear ? 'pointer' : 'default',
+                                    }}
+                                    onMouseEnter={inYear ? (ev) => {
+                                       const r = ev.currentTarget.getBoundingClientRect();
+                                       setTip({ text, x: r.left + r.width / 2, y: r.top });
+                                    } : undefined}
+                                    onMouseLeave={inYear ? () => setTip(null) : undefined}
+                                    onClick={inYear ? () => {
+                                       setTip(null);
+                                       onPickDay(day);
+                                    } : undefined}
+                                 >
+                                    <span style={{ width: 8, height: 8, borderRadius: 9999, background: bg, opacity, transition: 'opacity 300ms', pointerEvents: 'none' }} />
+                                 </button>
+                              );
+                           })}
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            </div>
+         </div>
+         {tip ? (
+            <div
+               role="tooltip"
+               style={{
+                  position: 'fixed',
+                  left: tip.x,
+                  top: tip.y,
+                  transform: 'translate(-50%, calc(-100% - 8px))',
+                  zIndex: 300,
+                  pointerEvents: 'none',
+                  background: 'var(--koala-bg-inverse, #18181B)',
+                  color: 'var(--koala-text-on-brand, #fff)',
+                  fontFamily: FONT,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+               }}
+            >
+               {tip.text}
+            </div>
+         ) : null}
+      </>
    );
 };
 

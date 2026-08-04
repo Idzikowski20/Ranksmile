@@ -1,17 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
+import { cancelDanglingCheckouts } from '../../../lib/billingActivateTrial';
+import { BillingSource, emitBillingEvent } from '../../../lib/billingAudit';
 import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billingPlanLock';
+import { assertTrialAllowed } from '../../../lib/billingTrial';
 import { getOrgBillingState, updateOrgBillingState } from '../../../lib/orgBilling';
 import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
 import { assertStripeModeOrThrow } from '../../../lib/stripeMode';
 import { ensureStripeCustomer } from '../../../lib/stripeCustomer';
+import { clientSecretFromSubscriptionInvoice } from '../../../lib/stripeInvoiceClientSecret';
 import { getStripePriceId, type PlanSlug } from '../../../lib/stripePrices';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
 import { isCheckoutAttemptId } from '../../../lib/checkoutAttemptId';
-import type Stripe from 'stripe';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 const createSubscriptionSchema = z.object({
@@ -20,30 +23,6 @@ const createSubscriptionSchema = z.object({
   mode: z.enum(['trial', 'upfront']),
   checkoutAttemptId: z.string().min(1),
 });
-
-type CheckoutMode = z.infer<typeof createSubscriptionSchema>['mode'];
-
-function clientSecretFromSubscription(
-  subscription: Stripe.Subscription,
-  mode: CheckoutMode,
-): { clientSecret: string; intentType: 'setup' | 'payment' } | null {
-  if (mode === 'trial') {
-    const setup = subscription.pending_setup_intent;
-    if (setup && typeof setup === 'object' && setup.client_secret) {
-      return { clientSecret: setup.client_secret, intentType: 'setup' };
-    }
-    return null;
-  }
-
-  const invoice = subscription.latest_invoice;
-  if (invoice && typeof invoice === 'object') {
-    const paymentIntent = (invoice as { payment_intent?: { client_secret?: string | null } | string | null }).payment_intent;
-    if (paymentIntent && typeof paymentIntent === 'object' && paymentIntent.client_secret) {
-      return { clientSecret: paymentIntent.client_secret, intentType: 'payment' };
-    }
-  }
-  return null;
-}
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -104,13 +83,84 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     billingState?.stripeCustomerId ?? null,
   );
 
+  await cancelDanglingCheckouts(stripe, customerId);
+
+  // Trial: SetupIntent ONLY — subscription is created after confirmSetup (activate-trial).
+  // Creating a Subscription with trial_period_days makes Stripe status=trialing immediately
+  // with no card, which previously granted entitlements via webhooks.
+  if (mode === 'trial') {
+    const trialGate = assertTrialAllowed(plan.slug, billingState);
+    if (!trialGate.ok) {
+      return res.status(trialGate.status).json({ error: trialGate.error });
+    }
+
+    const setupIntent = await stripe.setupIntents.create(
+      {
+        customer: customerId,
+        payment_method_types: ['card'],
+        usage: 'off_session',
+        metadata: {
+          org_id: String(orgId),
+          user_id: user.id,
+          plan_slug: plan.slug,
+          billing_period: billing,
+          checkout_mode: 'trial',
+          checkout_attempt_id: checkoutAttemptId,
+        },
+      },
+      { idempotencyKey: `org-${orgId}-setup-${checkoutAttemptId}` },
+    );
+
+    if (!setupIntent.client_secret) {
+      return res.status(502).json({ error: 'Could not initialize payment' });
+    }
+
+    await emitBillingEvent({
+      kind: 'SETUP_INTENT_CREATED',
+      source: BillingSource.CHECKOUT,
+      reason: 'mode=trial create-subscription',
+      decision: 'ALLOW',
+      correlationId: checkoutAttemptId,
+      orgId,
+      actorUserId: user.id,
+      setupIntentId: setupIntent.id,
+      meta: { planSlug: plan.slug, billing },
+    });
+
+    await updateOrgBillingState(orgId, {
+      stripeCustomerId: customerId,
+      planSlug: null,
+      billingPeriod: null,
+      subscriptionStatus: null,
+      stripeSubscriptionId: null,
+      trialEndsAt: null,
+      cancelAtPeriodEnd: false,
+      lastCheckoutStartedAt: new Date(),
+    }, {
+      source: BillingSource.CHECKOUT,
+      reason: 'mode=trial clear_entitlements_pre_setup',
+      correlationId: checkoutAttemptId,
+      actorUserId: user.id,
+      setupIntentId: setupIntent.id,
+    });
+
+    return res.status(200).json({
+      clientSecret: setupIntent.client_secret,
+      intentType: 'setup' as const,
+      setupIntentId: setupIntent.id,
+      publishableKey,
+      checkoutAttemptId,
+    });
+  }
+
   const subscription = await stripe.subscriptions.create(
     {
       customer: customerId,
       items: [{ price: priceId }],
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['pending_setup_intent', 'latest_invoice.payment_intent'],
+      // Basil+ (stripe-node 22 / API 2025-03-31+): payment_intent removed from Invoice.
+      expand: ['latest_invoice.confirmation_secret'],
       metadata: {
         org_id: String(orgId),
         user_id: user.id,
@@ -119,42 +169,47 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         checkout_mode: mode,
         checkout_attempt_id: checkoutAttemptId,
       },
-      ...(mode === 'trial' ? { trial_period_days: 7 } : {}),
     },
     { idempotencyKey: `org-${orgId}-checkout-${checkoutAttemptId}` },
   );
 
-  // Cancel other incompletes (not this attempt's sub) so Opcja B doesn't leave dangling A.
-  try {
-    const incompletes = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'incomplete',
-      limit: 20,
+  const secret = clientSecretFromSubscriptionInvoice(subscription);
+  if (!secret) {
+    await stripe.subscriptions.cancel(subscription.id).catch((err) => {
+      console.warn('[billing] cancel incomplete without client_secret', subscription.id, err);
     });
-    for (const other of incompletes.data) {
-      if (other.id === subscription.id) continue;
-      await stripe.subscriptions.cancel(other.id).catch((err) => {
-        console.warn('[create-subscription] cancel other incomplete', other.id, err);
-      });
-    }
-  } catch (err) {
-    console.warn('[create-subscription] list incompletes', err);
+    return res.status(502).json({ error: 'Could not initialize payment' });
   }
+
+  await emitBillingEvent({
+    kind: 'BILLING_EVENT',
+    source: BillingSource.CHECKOUT,
+    reason: 'mode=upfront subscription.incomplete_created',
+    decision: 'ALLOW',
+    correlationId: checkoutAttemptId,
+    orgId,
+    actorUserId: user.id,
+    stripeSubscriptionId: subscription.id,
+    newStatus: 'incomplete',
+    meta: { planSlug: plan.slug, billing },
+  });
 
   await updateOrgBillingState(orgId, {
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscription.id,
-    planSlug: plan.slug as PlanSlug,
-    billingPeriod: billing,
+    planSlug: null,
+    billingPeriod: null,
     subscriptionStatus: 'incomplete',
+    trialEndsAt: null,
     cancelAtPeriodEnd: false,
     lastCheckoutStartedAt: new Date(),
+  }, {
+    source: BillingSource.CHECKOUT,
+    reason: 'mode=upfront incomplete',
+    correlationId: checkoutAttemptId,
+    actorUserId: user.id,
+    stripeSubscriptionId: subscription.id,
   });
-
-  const secret = clientSecretFromSubscription(subscription, mode);
-  if (!secret) {
-    return res.status(502).json({ error: 'Could not initialize payment' });
-  }
 
   return res.status(200).json({
     clientSecret: secret.clientSecret,

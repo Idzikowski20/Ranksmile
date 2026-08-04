@@ -1,52 +1,77 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import WpConnectionsTable from '../wordpress/WpConnectionsTable';
-import { KoalaPanel, KoalaPanelBody, KoalaEmptyState } from '../koala/layout';
-
-const DOCS_URL = 'https://ranksmile.pl';
+import { WpConnectWizard } from '../wordpress/WpConnectWizard';
+import { KoalaPanel, KoalaPanelBody } from '../koala/layout';
+import { Icon } from '../koala/icons/Icon';
+import { semantic } from '../koala/tokens/semantic';
 
 const WordPressSettings = () => {
-  const [hover, setHover] = useState(false);
-
-  const emptyState = (
-    <KoalaEmptyState
-      title="No WordPress accounts"
-      description="You haven't connected any accounts yet."
-    />
-  );
+  const [showGuide, setShowGuide] = useState(false);
+  const [hasConnections, setHasConnections] = useState(false);
+  const onHasConnections = useCallback((has: boolean) => {
+    setHasConnections(has);
+    if (!has) setShowGuide(false);
+  }, []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 24, width: '100%' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: 24,
+        width: '100%',
+        fontFamily: 'var(--font-family-primary)',
+      }}
+    >
       <div style={{ width: '100%' }}>
         <KoalaPanel noPadding>
           <KoalaPanelBody>
-            <WpConnectionsTable emptyState={emptyState} />
+            <WpConnectionsTable
+              emptyState={<WpConnectWizard />}
+              onHasConnections={onHasConnections}
+            />
           </KoalaPanelBody>
         </KoalaPanel>
       </div>
 
-      <a
-        href={DOCS_URL}
-        target="_blank"
-        rel="noreferrer noopener"
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 2,
-          fontSize: 14,
-          fontWeight: 500,
-          color: hover ? '#F84416' : '#18181B',
-          textDecoration: 'none',
-          transition: 'color 150ms ease',
-          fontFamily: 'var(--font-family-primary)',
-        }}
-      >
-        How to connect
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
-          <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m8.25 4.5l7.5 7.5l-7.5 7.5" />
-        </svg>
-      </a>
+      {hasConnections && showGuide ? (
+        <div style={{ width: '100%' }}>
+          <KoalaPanel noPadding>
+            <KoalaPanelBody>
+              <WpConnectWizard />
+            </KoalaPanelBody>
+          </KoalaPanel>
+        </div>
+      ) : null}
+
+      {hasConnections ? (
+        <button
+          type="button"
+          onClick={() => setShowGuide((v) => !v)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 2,
+            border: 'none',
+            background: 'transparent',
+            padding: 0,
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 500,
+            color: semantic.text.primary,
+            fontFamily: 'inherit',
+          }}
+        >
+          {showGuide ? 'Hide connect guide' : 'How to connect'}
+          <Icon
+            name={showGuide ? 'CaretUp' : 'CaretRight'}
+            size={16}
+            weight="bold"
+            color="currentColor"
+          />
+        </button>
+      ) : null}
     </div>
   );
 };

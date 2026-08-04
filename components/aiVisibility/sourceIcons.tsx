@@ -1,4 +1,5 @@
 import React from 'react';
+import { Badge } from '../koala/core/badge/badge';
 
 /** Provenance icons for wizard prompts — where Google surfaced each question. */
 
@@ -43,9 +44,23 @@ export const SourceBadge = ({ source }: { source: string }) => {
    const Ico = ICONS[source];
    if (!Ico) return null;
    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 9999, background: '#fff', border: '1px solid #E4E4E7', flexShrink: 0 }}>
-         <Ico size={14} />
-      </span>
+      <Badge
+         appearance="neutral"
+         size="sm"
+         title={source}
+         icon={<Ico size={14} />}
+         style={{
+            width: 24,
+            height: 24,
+            padding: 0,
+            borderRadius: 9999,
+            justifyContent: 'center',
+            border: '1px solid var(--koala-border-primary)',
+            background: 'var(--koala-bg-primary)',
+         }}
+      >
+         <span className="sr-only">{source}</span>
+      </Badge>
    );
 };
 

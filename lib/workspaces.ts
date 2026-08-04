@@ -45,6 +45,11 @@ export async function findSetupWorkspaceId(userId: string): Promise<number | nul
    return existing.length ? Number(existing[0].id) : null;
 }
 
+/** Prefer existing setup workspace before create — avoids duplicates. */
+export async function reuseExistingSetupWorkspace(userId: string): Promise<number | null> {
+   return findSetupWorkspaceId(userId);
+}
+
 /** Returns a workspace (any status) if it belongs to the caller's org, else null. */
 export async function getWorkspace(userId: string, wsId: number): Promise<(Workspace & { status: string }) | null> {
    const { orgId } = await ensureUserTenancy(userId);

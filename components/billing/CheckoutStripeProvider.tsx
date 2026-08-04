@@ -14,11 +14,19 @@ import React from 'react';
 import type { BillingPeriod } from '../../lib/billingPlans';
 import {
   hasFieldErrors,
+  hasRequiredBillingAddressFields,
   validateCompanyFields,
   type CheckoutAddressValue,
   type CheckoutFieldErrors,
 } from '../../lib/checkoutValidation';
-const F = 'var(--font-family-primary)';
+import { Field } from '../koala/forms';
+import { Icon } from '../koala/icons';
+import Input from '../koala/primitives/Input';
+import { typeface } from '../koala/tokens/typography';
+
+const F = typeface.body;
+const DM_SANS_CSS =
+  'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap';
 
 type CheckoutMode = 'trial' | 'upfront';
 
@@ -44,7 +52,7 @@ type StripeCheckoutContextValue = {
   fieldErrors: CheckoutFieldErrors;
   onFieldErrors: (errors: CheckoutFieldErrors) => void;
   onAddressChange: (event: StripeAddressElementChangeEvent) => void;
-  onSuccess: () => void;
+  onSuccess: (confirmationToken?: string | null) => void;
   onError: (message: string) => void;
   onSubmittingChange: (loading: boolean) => void;
 };
@@ -57,31 +65,81 @@ function useStripeCheckout(): StripeCheckoutContextValue {
   return ctx;
 }
 
+/** Match Koala Input md: 40px / 12px radius / #e5e5e5 border. DM Sans must be a
+ *  concrete family name + fonts.cssSrc — Stripe iframes cannot resolve CSS vars. */
 const stripeAppearance: StripeElementsOptions['appearance'] = {
   theme: 'stripe',
   variables: {
     colorPrimary: '#F84416',
     colorBackground: '#ffffff',
     colorText: '#1a1a1a',
+    colorTextSecondary: '#575757',
+    colorTextPlaceholder: '#a3a3a3',
     colorDanger: '#FF6F77',
-    fontFamily: `${F}, system-ui, sans-serif`,
+    fontFamily: typeface.body,
+    fontSizeBase: '14px',
     borderRadius: '12px',
+    spacingUnit: '4px',
+    spacingGridRow: '16px',
+    spacingGridColumn: '16px',
   },
   rules: {
     '.Input': {
       border: '1px solid #e5e5e5',
       boxShadow: 'none',
+      padding: '8px 12px',
+      minHeight: '40px',
+      lineHeight: '20px',
+      fontFamily: typeface.body,
+    },
+    '.Input:hover': {
+      border: '1px solid #d4d4d4',
+      boxShadow: 'none',
     },
     '.Input:focus': {
       border: '1px solid #F84416',
-      boxShadow: '0 0 0 2px rgba(248,68,22,0.1)',
+      boxShadow: '0 0 0 2px #ffffff, 0 0 0 4px rgba(248,68,22,0.2)',
     },
-    '.Label': { fontWeight: '500' },
+    '.Label': {
+      fontWeight: '500',
+      fontSize: '14px',
+      lineHeight: '20px',
+      marginBottom: '6px',
+      color: '#1a1a1a',
+      fontFamily: typeface.body,
+    },
+    '.Error': {
+      fontSize: '13px',
+      marginTop: '6px',
+      fontFamily: typeface.body,
+    },
+    '.Tab': {
+      fontFamily: typeface.body,
+    },
+    '.TabLabel': {
+      fontFamily: typeface.body,
+    },
   },
 };
 
 export type CheckoutStripeHandle = {
   submit: () => Promise<void>;
+};
+
+/** Payment Element options for checkout.
+ *  billingDetails must stay "auto" unless confirmSetup/confirmPayment also
+ *  passes confirmParams.payment_method_data.billing_details (Stripe IntegrationError). */
+export const CHECKOUT_PAYMENT_ELEMENT_OPTIONS = {
+  layout: 'tabs' as const,
+  wallets: { applePay: 'auto' as const, googlePay: 'auto' as const, link: 'never' as const },
+  terms: { card: 'never' as const },
+  fields: {
+    billingDetails: {
+      address: 'auto' as const,
+      email: 'auto' as const,
+      name: 'auto' as const,
+    },
+  },
 };
 
 export function CheckoutStripePayment() {
@@ -100,21 +158,7 @@ export function CheckoutStripePayment() {
       />
     );
   }
-  return (
-    <PaymentElement
-      options={{
-        layout: 'tabs',
-        wallets: { applePay: 'auto', googlePay: 'auto' },
-        fields: {
-          billingDetails: {
-            address: 'auto',
-            email: 'auto',
-            name: 'auto',
-          },
-        },
-      }}
-    />
-  );
+  return <PaymentElement options={CHECKOUT_PAYMENT_ELEMENT_OPTIONS} />;
 }
 
 export function CheckoutStripeAddress() {
@@ -146,29 +190,6 @@ export function CheckoutStripeAddress() {
   );
 }
 
-const inputStyle = (hasError: boolean): React.CSSProperties => ({
-  width: '100%',
-  height: 38,
-  border: `1px solid ${hasError ? '#FF6F77' : '#D4D4D8'}`,
-  borderRadius: 10,
-  padding: '0 10px',
-  fontSize: 14,
-  fontFamily: F,
-  color: '#18181B',
-  background: '#fff',
-  boxShadow: hasError ? '0 0 0 2px rgba(255,111,119,0.12)' : 'none',
-  outline: 'none',
-  boxSizing: 'border-box',
-});
-
-const FieldError = ({ message }: { message?: string }) => (
-  message ? (
-    <span style={{ fontSize: 13, color: '#FF6F77', lineHeight: '18px', fontFamily: F }} role="alert">
-      {message}
-    </span>
-  ) : null
-);
-
 export function CheckoutCompanyFields({
   billingEmail,
   taxId,
@@ -182,49 +203,81 @@ export function CheckoutCompanyFields({
   onBillingEmailChange: (value: string) => void;
   onTaxIdChange: (value: string) => void;
 }) {
+  const hasErrors = Boolean(fieldErrors.billingEmail || fieldErrors.taxId);
+  const [open, setOpen] = React.useState(hasErrors);
+
+  React.useEffect(() => {
+    if (hasErrors) setOpen(true);
+  }, [hasErrors]);
+
   return (
-    <>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>
-        Billing email
-        <input
-          type="email"
-          autoComplete="email"
-          value={billingEmail}
-          onChange={(e) => onBillingEmailChange(e.target.value)}
-          placeholder="invoices@company.com"
-          style={inputStyle(Boolean(fieldErrors.billingEmail))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          width: '100%',
+          padding: '12px 0',
+          border: 'none',
+          borderTop: '1px solid #e5e5e5',
+          background: 'transparent',
+          cursor: 'pointer',
+          fontFamily: F,
+          textAlign: 'left',
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '24px', color: '#1a1a1a' }}>
+            Billing details
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 400, color: '#575757' }}>Optional</span>
+        </span>
+        <Icon
+          name={open ? 'CaretUp' : 'CaretDown'}
+          size={16}
+          color="#575757"
         />
-        <FieldError message={fieldErrors.billingEmail} />
-        <span style={{ fontSize: 13, fontWeight: 400, color: '#3F3F47', lineHeight: '20px' }}>
-          Optional — receive invoices on a different email than your account
-        </span>
-      </label>
+      </button>
 
-      <div>
-        <div style={{ marginBottom: 6, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Billing address</div>
-        <CheckoutStripeAddress />
-        <FieldError message={fieldErrors.address} />
-        <span style={{ display: 'block', marginTop: 6, fontSize: 13, fontWeight: 400, color: '#3F3F47', lineHeight: '20px' }}>
-          Optional — used on invoices; supports autofill via Stripe Link and your browser
-        </span>
-      </div>
+      {open ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 8 }}>
+          <Field
+            label="Billing email"
+            error={fieldErrors.billingEmail}
+            description="Optional — receive invoices on a different email than your account"
+          >
+            <Input
+              type="email"
+              autoComplete="email"
+              value={billingEmail}
+              onChange={(e) => onBillingEmailChange(e.target.value)}
+              placeholder="invoices@company.com"
+              hasError={Boolean(fieldErrors.billingEmail)}
+            />
+          </Field>
 
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>
-        Tax ID
-        <input
-          type="text"
-          autoComplete="off"
-          value={taxId}
-          onChange={(e) => onTaxIdChange(e.target.value)}
-          placeholder="e.g. PL1234567890"
-          style={inputStyle(Boolean(fieldErrors.taxId))}
-        />
-        <FieldError message={fieldErrors.taxId} />
-        <span style={{ fontSize: 13, fontWeight: 400, color: '#3F3F47', lineHeight: '20px' }}>
-          Optional — shown on invoices when a billing address is provided
-        </span>
-      </label>
-    </>
+          <Field
+            label="Tax ID"
+            error={fieldErrors.taxId}
+            description="Optional — shown on invoices"
+          >
+            <Input
+              type="text"
+              autoComplete="off"
+              value={taxId}
+              onChange={(e) => onTaxIdChange(e.target.value)}
+              placeholder="e.g. PL1234567890"
+              hasError={Boolean(fieldErrors.taxId)}
+            />
+          </Field>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -245,11 +298,16 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
         const companyErrors = validateCompanyFields(
           { billingEmail: company.billingEmail, taxId: company.taxId },
           company.addressValue,
-          company.addressComplete,
+          company.addressComplete && hasRequiredBillingAddressFields(company.addressValue),
         );
         onFieldErrors(companyErrors);
         if (hasFieldErrors(companyErrors)) {
-          onError('Please fix the highlighted fields');
+          onError('Enter street address, city, and postal code to continue');
+          return;
+        }
+        if (!hasRequiredBillingAddressFields(company.addressValue)) {
+          onFieldErrors({ address: 'Enter street address, city, and postal code' });
+          onError('Enter street address, city, and postal code to continue');
           return;
         }
 
@@ -262,7 +320,7 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
           }
 
           const confirmParams = {
-            return_url: `${window.location.origin}/billing/confirmation/success?plan=${encodeURIComponent(planSlug)}&billing=${encodeURIComponent(billing)}`,
+            return_url: `${window.location.origin}/dashboard`,
           };
           const result = intentType === 'setup'
             ? await stripe.confirmSetup({ elements, confirmParams, redirect: 'if_required' })
@@ -273,33 +331,66 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
             return;
           }
 
-          if (company.addressValue || company.billingEmail.trim() || company.taxId.trim()) {
-            const addr = company.addressValue?.address;
-            const response = await fetch('/api/billing/update-customer', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                billingEmail: company.billingEmail.trim() || null,
-                taxId: company.taxId.trim() || null,
-                address: addr ? {
-                  name: company.addressValue?.name,
-                  line1: addr.line1,
-                  line2: addr.line2,
-                  city: addr.city,
-                  state: addr.state,
-                  postal_code: addr.postal_code,
-                  country: addr.country,
-                } : null,
-              }),
-            });
-            if (!response.ok) {
-              const data = await response.json() as { error?: string };
-              onError(data.error ?? 'Payment succeeded but invoice details could not be saved');
-              return;
-            }
+          // Address is required for Stripe Tax before trial / payment.
+          const addr = company.addressValue!.address;
+          const response = await fetch('/api/billing/update-customer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              billingEmail: company.billingEmail.trim() || null,
+              taxId: company.taxId.trim() || null,
+              address: {
+                name: company.addressValue?.name,
+                line1: addr.line1,
+                line2: addr.line2,
+                city: addr.city,
+                state: addr.state,
+                postal_code: addr.postal_code,
+                country: addr.country,
+              },
+            }),
+          });
+          if (!response.ok) {
+            const data = await response.json() as { error?: string };
+            onError(data.error ?? 'Could not save billing address for tax');
+            return;
           }
 
-          onSuccess();
+          if (intentType === 'setup') {
+            const setupIntentId = result.setupIntent && typeof result.setupIntent === 'object'
+              ? result.setupIntent.id
+              : null;
+            if (!setupIntentId) {
+              onError('Card saved but trial could not be started');
+              return;
+            }
+            const activate = await fetch('/api/billing/activate-trial', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ setupIntentId }),
+            });
+            if (!activate.ok) {
+              const data = await activate.json() as { error?: string };
+              onError(data.error ?? 'Card saved but trial could not be started');
+              return;
+            }
+            const activated = await activate.json() as { confirmationToken?: string | null };
+            onSuccess(activated.confirmationToken ?? null);
+            return;
+          }
+
+          // Upfront / payment intent path — mint short-lived confirmation token.
+          const issued = await fetch('/api/billing/issue-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planSlug, billing }),
+          });
+          if (issued.ok) {
+            const data = await issued.json() as { confirmationToken?: string };
+            onSuccess(data.confirmationToken ?? null);
+          } else {
+            onSuccess(null);
+          }
         } finally {
           onSubmittingChange(false);
         }
@@ -317,7 +408,7 @@ type ProviderProps = {
   fieldErrors: CheckoutFieldErrors;
   onFieldErrors: (errors: CheckoutFieldErrors) => void;
   onAddressChange: (event: StripeAddressElementChangeEvent) => void;
-  onSuccess: () => void;
+  onSuccess: (confirmationToken?: string | null) => void;
   onError: (message: string) => void;
   onSubmittingChange: (loading: boolean) => void;
   children: React.ReactNode;
@@ -367,7 +458,7 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
     }, [planSlug, billing, mode]);
 
     const stripePromise = React.useMemo(
-      () => (intent ? loadStripe(intent.publishableKey) : null),
+      () => (intent ? loadStripe(intent.publishableKey, { locale: 'en' }) : null),
       [intent],
     );
 
@@ -408,7 +499,12 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
           <Elements
             key={intent.clientSecret}
             stripe={stripePromise}
-            options={{ clientSecret: intent.clientSecret, appearance: stripeAppearance }}
+            options={{
+              clientSecret: intent.clientSecret,
+              appearance: stripeAppearance,
+              locale: 'en',
+              fonts: [{ cssSrc: DM_SANS_CSS }],
+            }}
           >
             <SubmitBridge ref={ref} />
             {body}
@@ -424,22 +520,25 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
 export function addressFromStripeEvent(
   event: StripeAddressElementChangeEvent,
 ): { complete: boolean; value: CheckoutAddressValue | null } {
-  if (!event.complete || !event.value.address) {
+  if (!event.value.address) {
     return { complete: false, value: null };
   }
   const { name, address } = event.value;
-  return {
-    complete: true,
-    value: {
-      name: name ?? '',
-      address: {
-        line1: address.line1 ?? '',
-        line2: address.line2 ?? null,
-        city: address.city ?? '',
-        state: address.state ?? '',
-        postal_code: address.postal_code ?? '',
-        country: address.country ?? '',
-      },
+  const value: CheckoutAddressValue = {
+    name: name ?? '',
+    address: {
+      line1: address.line1 ?? '',
+      line2: address.line2 ?? null,
+      city: address.city ?? '',
+      state: address.state ?? '',
+      postal_code: address.postal_code ?? '',
+      country: address.country ?? '',
     },
   };
+  const fieldsOk = hasRequiredBillingAddressFields(value);
+  // Keep partial value for tax preview while typing; gate submit on `complete`.
+  if (!event.complete || !fieldsOk) {
+    return { complete: false, value };
+  }
+  return { complete: true, value };
 }

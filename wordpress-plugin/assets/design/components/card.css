@@ -1,0 +1,14 @@
+﻿.ranksmile-admin .rs-card {
+  background: var(--rs-bg-primary); border: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  border-radius: var(--rs-radius-card); box-shadow: var(--rs-shadow-card); overflow: hidden;
+}
+.ranksmile-admin .rs-card__header { padding: var(--rs-space-4) var(--rs-space-5); border-bottom: var(--rs-border-width) var(--rs-border-style) var(--rs-border); }
+.ranksmile-admin .rs-card__title { margin: 0; font-family: var(--rs-font-heading); font-size: var(--rs-text-lg); font-weight: 700; color: var(--rs-text-primary); }
+.ranksmile-admin .rs-card__body { padding: var(--rs-space-5); }
+.ranksmile-admin .rs-card__footer { padding: var(--rs-space-4) var(--rs-space-5); border-top: var(--rs-border-width) var(--rs-border-style) var(--rs-border); background: var(--rs-bg-tertiary); }
+.ranksmile-admin .rs-grid { display: grid; gap: var(--rs-space-4); }
+.ranksmile-admin .rs-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ranksmile-admin .rs-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 960px) {
+  .ranksmile-admin .rs-grid--2, .ranksmile-admin .rs-grid--3 { grid-template-columns: 1fr; }
+}

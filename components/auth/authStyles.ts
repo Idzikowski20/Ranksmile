@@ -10,12 +10,13 @@ export const authPageStyle: CSSProperties = {
   flex: 1,
   width: '100%',
   height: '100%',
-  minHeight: '100vh',
+  // Use 100% not 100vh — desktop body has 8px frame padding; 100vh overflows and shows a scrollbar.
+  minHeight: '100%',
   display: 'flex',
   flexDirection: 'column',
   background: AUTH_SHELL_BG,
   fontFamily: AUTH_FONT,
-  overflow: 'auto',
+  overflow: 'hidden',
 };
 
 export const authGradientImageStyle: CSSProperties = {
@@ -40,15 +41,20 @@ export const authMainStyle: CSSProperties = {
   position: 'relative',
   zIndex: 2,
   flex: 1,
+  minHeight: 0,
   display: 'flex',
+  flexDirection: 'column',
   alignItems: 'center',
-  justifyContent: 'center',
-  padding: '48px 16px',
+  padding: '24px 16px',
+  overflowY: 'auto',
 };
 
 export const authCardStyle: CSSProperties = {
   width: '100%',
   maxWidth: 420,
+  // margin auto centers when content fits; when taller than viewport, scroll starts at top
+  marginTop: 'auto',
+  marginBottom: 'auto',
   background: '#FFFFFF',
   border: 'none',
   borderRadius: 16,

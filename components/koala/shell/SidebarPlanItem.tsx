@@ -16,8 +16,8 @@ type PlanSummaryResponse = {
 
 const FALLBACK: PlanSummaryResponse = {
   summary: {
-    planSlug: 'starter',
-    planName: 'Starter',
+    planSlug: 'growth',
+    planName: 'Growth',
     billingPeriod: null,
     subscriptionStatus: null,
     trialEndsAt: null,

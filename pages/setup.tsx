@@ -6,7 +6,7 @@ import { parseWorkspaceId } from '../lib/activeWorkspace';
 import { SETUP_LOCATIONS, type SetupLocation } from '../lib/setupLocations';
 import BlogPathsField from '../components/domains/BlogPathsField';
 import DomainFavicon from '../components/common/DomainFavicon';
-import { Button, Input, Textarea } from '../components/koala/core';
+import { Button, DropdownButton, Input, Textarea } from '../components/koala/core';
 import {
   SetupShell,
   SetupWizardCard,
@@ -368,19 +368,19 @@ const SetupPage: NextPage = () => {
                      {domain ? (
                         <SetupField label="Select Search Console site">
                            <div ref={siteMenuAnchorRef}>
-                              <button
-                                 type="button"
-                                 aria-expanded={comboOpen}
+                              <DropdownButton
+                                 isOpen={comboOpen}
                                  className="koala-setup-trigger"
+                                 showChevron={false}
+                                 prefix={<SiteFavicon domain={domain} />}
                                  onClick={() => {
                                     if (availableGscSites.length > 0) setComboOpen((o) => !o);
                                     else { setDomain(null); setSelectedSite(''); setLocation(null); setStep1Error(''); }
                                  }}
                               >
-                                 <SiteFavicon domain={domain} />
                                  <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</span>
                                  <ChevronDown open={comboOpen} />
-                              </button>
+                              </DropdownButton>
                            </div>
                         </SetupField>
                      ) : !urlMode ? (
@@ -393,21 +393,21 @@ const SetupPage: NextPage = () => {
                         ) : availableGscSites.length > 0 ? (
                            <SetupField label="Select Search Console site">
                               <div ref={siteMenuAnchorRef}>
-                                 <button
-                                    type="button"
+                                 <DropdownButton
                                     role="combobox"
-                                    aria-expanded={comboOpen}
-                                    aria-haspopup="listbox"
+                                    isOpen={comboOpen}
                                     className="koala-setup-trigger"
+                                    showChevron={false}
+                                    prefix={<GoogleIcon />}
                                     onClick={() => setComboOpen((o) => !o)}
                                     disabled={configuring}
+                                    aria-haspopup="listbox"
                                  >
-                                    <GoogleIcon />
                                     <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                        {selectedSite ? normalizeDomain(selectedSite) : <span className="koala-setup-trigger-placeholder">Select site</span>}
                                     </span>
                                     <ChevronDown open={comboOpen} />
-                                 </button>
+                                 </DropdownButton>
                               </div>
                            </SetupField>
                         ) : gscSites.length > 0 ? (
@@ -487,10 +487,10 @@ const SetupPage: NextPage = () => {
                         <div>
                            <SetupField label="Select location and language">
                               <div ref={locMenuAnchorRef}>
-                                 <button
-                                    type="button"
-                                    aria-expanded={locOpen}
+                                 <DropdownButton
+                                    isOpen={locOpen}
                                     className="koala-setup-trigger"
+                                    showChevron={false}
                                     onClick={() => setLocOpen((o) => !o)}
                                  >
                                     <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -504,7 +504,7 @@ const SetupPage: NextPage = () => {
                                        )}
                                     </span>
                                     <ChevronDown open={locOpen} />
-                                 </button>
+                                 </DropdownButton>
                               </div>
                            </SetupField>
                            <SetupSearchableMenu

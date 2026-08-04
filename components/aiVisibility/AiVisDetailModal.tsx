@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from '../koala/core';
+import { Button, CompactSelect } from '../koala/core';
 import TrendLineChart from './TrendLineChart';
 import { SkeletonBox } from './SkeletonBlocks';
 import { AI_VIS_MODEL_LABEL } from '../../lib/aiVisibility';
@@ -31,7 +31,6 @@ const ArrowUp = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="non
 const ArrowDown = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const CloseIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const ChevronDown = () => (<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path fill="currentColor" fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" /></svg>);
-const Check = () => (<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path fill="currentColor" fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" /></svg>);
 
 const cell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
 const engineLabel = (e: string): string => AI_VIS_MODEL_LABEL[e] || e;
@@ -66,32 +65,31 @@ const EmptyState = ({ title, hint }: { title: string; hint: string }) => (
    </div>
 );
 
-/** Engine picker: mirrors the toolbar model dropdown ('' == all engines). Options come from
- *  the active payload's `engines`, each shown with its model glyph + AI_VIS_MODEL_LABEL. */
+/** Engine picker: mirrors the toolbar model dropdown ('' == all engines). */
 const EnginePicker = ({ engines, value, onChange }: { engines: string[]; value: string; onChange: (e: string) => void }) => {
-   const [open, setOpen] = useState(false);
    const label = value ? engineLabel(value) : 'All models';
-   const item = (id: string, name: string, on: boolean, icon: React.ReactNode) => (
-      <button key={id || 'all'} type="button" onClick={() => { onChange(id); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: 'var(--koala-text-primary)', textAlign: 'left', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-         {icon ? <span style={{ display: 'inline-flex', color: 'var(--koala-text-primary)', flexShrink: 0 }}>{icon}</span> : null}
-         <span style={{ flex: 1 }}>{name}</span>
-         {on ? <span style={{ display: 'inline-flex', color: 'var(--koala-text-primary)' }}><Check /></span> : null}
-      </button>
-   );
    return (
-      <div style={{ position: 'relative' }}>
-         <Button type="button" variant="secondary" size="sm" onClick={() => setOpen((o) => !o)} style={{ gap: 6, fontFamily: FONT }}>
-            {value && isKnownModel(label) ? <span style={{ display: 'inline-flex', flexShrink: 0 }}><ModelIcon model={label} size={16} /></span> : null}
-            <span>{label}</span>
-            <ChevronDown />
-         </Button>
-         {open ? (
-            <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, minWidth: 220, background: 'var(--koala-bg-primary)', borderRadius: 12, padding: 8, boxShadow: '0 18px 40px rgba(17,24,39,0.14), 0 8px 18px rgba(17,24,39,0.09)', border: '1px solid var(--koala-border-primary)', zIndex: 320, fontFamily: FONT, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-               {item('', 'All models', value === '', null)}
-               {engines.map((e) => item(e, engineLabel(e), value === e, isKnownModel(engineLabel(e)) ? <ModelIcon model={engineLabel(e)} size={16} /> : null))}
-            </div>
-         ) : null}
-      </div>
+      <CompactSelect
+         value={value}
+         align="right"
+         menuMinWidth={220}
+         options={[
+            { value: '', label: 'All models' },
+            ...engines.map((e) => ({
+               value: e,
+               label: engineLabel(e),
+               leadingItems: isKnownModel(engineLabel(e)) ? <ModelIcon model={engineLabel(e)} size={16} /> : undefined,
+            })),
+         ]}
+         onChange={(opt) => onChange(String(opt.value))}
+         trigger={(props, isOpen) => (
+            <Button {...props} type="button" variant="secondary" size="sm" style={{ gap: 6, fontFamily: FONT }}>
+               {value && isKnownModel(label) ? <span style={{ display: 'inline-flex', flexShrink: 0 }}><ModelIcon model={label} size={16} /></span> : null}
+               <span>{label}</span>
+               <ChevronDown />
+            </Button>
+         )}
+      />
    );
 };
 

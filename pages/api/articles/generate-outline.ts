@@ -17,6 +17,7 @@ import { safeJsonParse } from '../../../lib/safeJson';
 import type { CoverageSnapshot } from '../../../lib/aiCoverage';
 import { resolveContentLocale, languageDisplayName } from '../../../lib/domainLanguage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { chatLlm } from '../../../lib/ai/deepseek';
 
 export const config = { maxDuration: 60 };
 
@@ -63,8 +64,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const locale = await resolveContentLocale({ articleId: articleId ? Number(articleId) : undefined, bodyLanguage: language });
   const lang = languageDisplayName(locale.languageCode);
 
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
+  const llm = chatLlm();
+  if (!llm.apiKey) return res.status(500).json({ error: `${llm.keyEnv} not configured` });
 
   const orgId = await resolveOrgId(req, res);
   const over = await orgBudgetBlocked(orgId);
@@ -127,19 +128,44 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     ? `\nAI SEARCH GAPS (sections or subsections should address these):\n${aiGaps.join('\n')}\n`
     : '';
 
+  let wieBlock = '';
+  try {
+    const { buildWieWriteContext, formatWieWriteBlocks } = await import('../../../lib/wie/writerContext');
+    const scoreData = articleId
+      ? await (async () => {
+          const { queryOne } = await import('../../../lib/db/query');
+          const { getArticleIdSql } = await import('../../../lib/articleSql');
+          const idSql = await getArticleIdSql();
+          const r = await queryOne<{ score_data: string | null }>(
+            `SELECT score_data FROM articles WHERE ${idSql} = ? LIMIT 1`,
+            [articleId],
+          );
+          if (!r?.score_data) return null;
+          try { return JSON.parse(r.score_data) as { competitor_synthesis?: unknown }; } catch { return null; }
+        })()
+      : null;
+    const wie = await buildWieWriteContext({
+      keyword,
+      paa: paaQuestions,
+      scoreData,
+    });
+    wieBlock = formatWieWriteBlocks(wie);
+  } catch { /* optional */ }
+
   const prompt = `You are an expert SEO + AI Search content strategist. Create a READY-TO-USE article brief outline for keyword "${keyword}".
 
-${brandBlock ? `BRAND CONTEXT:\n${brandBlock}\n` : ''}
+${brandBlock ? `BRAND CONTEXT:\n${brandBlock}\n` : ''}${wieBlock ? `\n${wieBlock}\n` : ''}
 COMPETITOR STRUCTURES (what ranks — use as evidence, do NOT copy wording):
 ${competitorSummary || 'No competitor data — use expertise for this keyword.'}
 ${currentHeadingsSummary}${aiBlock}
 TASK:
 1. Synthesise the median winning structure from competitors
 2. Create ORIGINAL H1/H2/H3 headings — unique wording, better flow than competitors
-3. Cover AI Search gaps where relevant (facts users/LLMs expect)
-4. Match brand tone if provided
-5. Target ~${avgHeadings} headings total
-6. Language: ${lang}
+3. Follow NARRATIVE beats / POLICY opening when provided (problem→explain→example→action)
+4. Cover AI Search gaps where relevant (facts users/LLMs expect)
+5. Match brand tone if provided
+6. Target ~${avgHeadings} headings total
+7. Language: ${lang}
 
 OUTPUT FORMAT — one heading per line only:
 H1: [title]
@@ -148,11 +174,11 @@ H3: [subsection]
 ...`;
 
   try {
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetch(llm.url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${llm.apiKey}` },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: llm.model,
         max_tokens: 1200,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -160,7 +186,7 @@ H3: [subsection]
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('[generate-outline] DeepSeek error:', err);
+      console.error('[generate-outline] LLM error:', err);
       return res.status(500).json({ error: 'AI request failed' });
     }
 

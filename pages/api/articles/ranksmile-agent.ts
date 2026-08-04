@@ -5,7 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { streamText, isStepCount } from 'ai';
 import verifyUser from '../../../utils/verifyUser';
-import { deepseek } from '../../../lib/ai/deepseek';
+import { chatLlm, deepseek } from '../../../lib/ai/deepseek';
 import { makeWorkingDoc, stripDataImages, restoreDataImages, stripSids } from '../../../lib/ai/workingDoc';
 import { buildTools } from '../../../lib/ai/tools';
 import { buildSystemPrompt } from '../../../lib/ai/systemPrompt';
@@ -35,7 +35,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     authorName = '',
   } = req.body;
   if (!prompt || !content) return res.status(400).json({ error: 'prompt and content are required' });
-  if (!process.env.DEEPSEEK_API_KEY) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
+  const llm = chatLlm();
+  if (!llm.apiKey) return res.status(500).json({ error: `${llm.keyEnv} not configured` });
 
   const normalizedArticleId = articleId != null ? Number(articleId) : null;
   if (normalizedArticleId != null) {

@@ -1,0 +1,16 @@
+﻿.ranksmile-admin .rs-field { display: flex; flex-direction: column; gap: var(--rs-space-2); margin-bottom: var(--rs-space-4); }
+.ranksmile-admin .rs-label { font-size: var(--rs-text-md); font-weight: 500; color: var(--rs-text-primary); }
+.ranksmile-admin .rs-hint { font-size: var(--rs-text-sm); color: var(--rs-text-secondary); margin: 0; }
+.ranksmile-admin .rs-input, .ranksmile-admin .rs-select, .ranksmile-admin .rs-textarea,
+.ranksmile-admin input[type=text], .ranksmile-admin input[type=password], .ranksmile-admin input[type=email],
+.ranksmile-admin select, .ranksmile-admin textarea {
+  width: 100%; max-width: 480px; box-sizing: border-box;
+  height: 40px; padding: 0 var(--rs-space-3);
+  border: var(--rs-border-width) var(--rs-border-style) var(--rs-border-strong);
+  border-radius: var(--rs-radius-sm); background: var(--rs-bg-primary); color: var(--rs-text-primary);
+  font-family: var(--rs-font-body); font-size: var(--rs-text-md);
+}
+.ranksmile-admin textarea, .ranksmile-admin .rs-textarea { height: auto; min-height: 96px; padding: var(--rs-space-3); }
+.ranksmile-admin .rs-input:focus-visible, .ranksmile-admin input:focus-visible, .ranksmile-admin select:focus-visible, .ranksmile-admin textarea:focus-visible {
+  outline: none; box-shadow: var(--rs-shadow-focus); border-color: var(--rs-brand);
+}

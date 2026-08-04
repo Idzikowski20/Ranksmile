@@ -2,7 +2,6 @@ import type { NextPage } from 'next';
 import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import posthog from 'posthog-js';
 import OnboardingShell from '../components/onboarding/OnboardingShell';
 import OnboardingSurvey from '../components/onboarding/OnboardingSurvey';
 import { useMarkOnboardingComplete } from '../lib/onboardingStatus';
@@ -20,7 +19,6 @@ const OnboardingPage: NextPage = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ answers }),
          });
-         posthog.capture('onboarding_completed');
          markComplete(true);
          router.replace('/plans');
       } catch {

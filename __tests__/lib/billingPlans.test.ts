@@ -6,9 +6,10 @@ import {
 } from '../../lib/billingPlans';
 
 describe('billingPlans', () => {
-  it('builds checkout hrefs with the selected billing period', () => {
-    expect(getPlanCheckoutHref('Growth', 'yearly')).toBe('/billing/checkout/growth?billing=yearly');
-    expect(getPlanCheckoutHref('Scale', 'monthly')).toBe('/billing/checkout/scale?billing=monthly');
+  it('builds checkout hrefs with billing period and checkout mode', () => {
+    expect(getPlanCheckoutHref('Growth', 'yearly')).toBe('/billing/checkout/growth?billing=yearly&mode=trial');
+    expect(getPlanCheckoutHref('Scale', 'monthly')).toBe('/billing/checkout/scale?billing=monthly&mode=upfront');
+    expect(getPlanCheckoutHref('growth', 'yearly', 'upfront')).toBe('/billing/checkout/growth?billing=yearly&mode=upfront');
   });
 
   it('returns yearly totals from the plan yearly monthly price', () => {

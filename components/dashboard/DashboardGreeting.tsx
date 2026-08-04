@@ -2,14 +2,14 @@ import React, {useEffect, useState} from 'react';
 import Link from 'next/link';
 import {Stack} from '../koala/core/layout';
 import {Text, Heading} from '../koala/core/text';
-import {Button} from '../koala/core';
 import Skeleton from './Skeleton';
+import {authClient} from '../../lib/auth/client';
 
 const timeGreeting = (hour: number | null): string => {
-  if (hour === null) return 'Welcome back!';
-  if (hour < 12) return 'Good morning!';
-  if (hour < 18) return 'Good afternoon!';
-  return 'Good evening!';
+  if (hour === null) return 'Welcome back';
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 };
 
 interface Props {
@@ -24,11 +24,16 @@ const DashboardGreeting = ({clicksTotal, deltaPct, hasData, loading, clicksHref}
   const [hour, setHour] = useState<number | null>(null);
   useEffect(() => { setHour(new Date().getHours()); }, []);
 
+  const session = authClient.useSession?.();
+  const email = session?.data?.user?.email?.trim() || '';
   const up = deltaPct >= 0;
+  const greeting = email
+    ? `${timeGreeting(hour)}! ${email} 🖐️`
+    : `${timeGreeting(hour)}!`;
 
   return (
     <Stack gap="2xl">
-      <Heading as="h2" size="2xl">{timeGreeting(hour)}</Heading>
+      <Heading as="h2" size="2xl">{greeting}</Heading>
       {loading ? (
         <Skeleton width="min(420px, 80%)" height={20} radius={6} />
       ) : hasData ? (

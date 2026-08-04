@@ -57,7 +57,7 @@ Also copy existing secrets from Vercel (Neon Auth, Stripe, DeepSeek, DataForSEO,
 | `STRIPE_SECRET_KEY` | Server Stripe API |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Payment Element |
 | `STRIPE_WEBHOOK_SECRET` | `POST /api/webhooks/stripe` signature |
-| `STRIPE_PRICE_*` | Eight price IDs (starter/growth/scale/agency × monthly/yearly) |
+| `STRIPE_PRICE_*` | Six sellable price IDs (growth/scale/agency × monthly/yearly). Keep `STRIPE_PRICE_STARTER_*` only for legacy sub reverse-lookup. |
 
 Webhook events: see [`docs/stripe-event-matrix.md`](./stripe-event-matrix.md). Cron: `GET /api/cron/stripe-billing-reconcile`, `GET /api/cron/starter-nudge` (Bearer `CRON_SECRET`).
 
@@ -73,7 +73,8 @@ Webhook events: see [`docs/stripe-event-matrix.md`](./stripe-event-matrix.md). C
 | Variable | Why |
 |----------|-----|
 | `SERPER_API_KEY` | SERP / PAA / plagiarism / AI visibility evidence. Without it sidecar logs `No SERPER_API_KEY - using keyword seed data`. |
-| `DEEPSEEK_API_KEY` | LLM stages |
+| `OPENROUTER_API_KEY` | Article generation (`openai/gpt-5.6-luna`) |
+| `DEEPSEEK_API_KEY` | Other LLM stages (SERP/terms/scoring) |
 | `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` | Paid SEO metrics (optional fallback) |
 | `INTERNAL_PIPELINE_TOKEN` | Must match app |
 

@@ -10,6 +10,7 @@ import {
   buildRegradedCoverageSnapshot,
   introPlainTextFromHtml,
 } from './buildCoverageSnapshot';
+import { chatLlm } from './ai/deepseek';
 
 export function needsCoverageRegrade(snap: CoverageSnapshot, plainText: string): boolean {
   if (!plainText.trim() || plainText.length < 200) return false;
@@ -34,7 +35,7 @@ export async function regradeCoverageSnapshot(opts: {
   keyword: string;
 }): Promise<CoverageSnapshot | null> {
   if (!needsCoverageRegrade(opts.snapshot, opts.plainText) && opts.snapshot.items.length <= AI_COVERAGE_MAX) return null;
-  if (!process.env.DEEPSEEK_API_KEY) return null;
+  if (!chatLlm().apiKey) return null;
 
   const compacted = compactCoverageSnapshotItems(opts.snapshot.items, opts.keyword)
     .map(remapLegacyCitationItem);

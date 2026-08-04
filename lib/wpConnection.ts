@@ -38,7 +38,7 @@ export async function createConnection(p: { workspaceId: number; userId: string;
    );
 }
 
-/** All connections for a workspace, newest first (for the WordPress Integration page). */
+/** All connections for a workspace, newest first (Settings → WordPress). */
 export async function listConnectionsForWorkspace(workspaceId: number): Promise<WpConnectionRow[]> {
    await ensureWpTables();
    const [rows] = await db.query(

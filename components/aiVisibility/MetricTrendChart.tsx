@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { Chart } from '../koala/charts';
 import type { ChartPreparedData, ChartSeriesKind } from '../koala/charts';
-import { chartColors } from '../koala/tokens/chart';
 
 export type SeriesLine = {
   label: string;
@@ -11,16 +10,16 @@ export type SeriesLine = {
   color?: string;
 };
 
-function resolveKind(line: SeriesLine): ChartSeriesKind {
+function resolveKind(line: SeriesLine, index: number): ChartSeriesKind {
+  if (line.kind === 'neutral') return 'comparison';
   if (line.kind) return line.kind;
-  if (line.color === chartColors.neutral || line.color === '#9F9FA9') return 'comparison';
-  if (line.color === chartColors.ai) return 'ai';
-  if (line.color === chartColors.rank) return 'rank';
-  if (line.color === chartColors.positive) return 'positive';
-  return 'traffic';
+  if (line.color === '#9F9FA9' || line.color === '#71717B' || line.color === '#18181B') {
+    return line.color === '#18181B' ? 'traffic' : 'comparison';
+  }
+  return index === 0 ? 'traffic' : 'comparison';
 }
 
-/** Small per-metric trend chart (Mention rate / Average position / Citations & Pages). */
+/** Small per-metric Koala Comparison (line) chart for AI overview cards. */
 const MetricTrendChart = ({
   labels,
   lines,
@@ -39,9 +38,9 @@ const MetricTrendChart = ({
   const data: ChartPreparedData = useMemo(
     () => ({
       labels,
-      series: lines.map((line) => ({
+      series: lines.map((line, i) => ({
         label: line.label,
-        kind: resolveKind(line),
+        kind: resolveKind(line, i),
         values: line.data,
       })),
     }),
@@ -49,14 +48,21 @@ const MetricTrendChart = ({
   );
 
   return (
-    <div style={{ height }}>
+    <div style={{ height, width: '100%' }}>
       <Chart
-        preset={reverse ? 'RankHistory' : 'Comparison'}
+        preset="Comparison"
         data={data}
         state={labels.length ? 'ready' : 'empty'}
         overrides={{
           height,
-          valueFormatter: percent ? (v) => `${Math.round(v)}%` : (v) => String(v),
+          legend: false,
+          reverseY: reverse,
+          compactLabels: labels.length > 6,
+          valueFormatter: percent
+            ? (v) => `${Math.round(v)}%`
+            : reverse
+              ? (v) => (!Number.isFinite(v) || v <= 0 ? '—' : String(Math.round(v * 10) / 10).replace(/\.0$/, ''))
+              : (v) => String(Math.round(v * 10) / 10).replace(/\.0$/, ''),
         }}
         aria-label="Metric trend"
       />

@@ -181,8 +181,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('[deep-analysis] handler invoked', req.method);
   await db.sync();
   await ensureArticlesTables();
-  const authorized = await verifyUser(req, res);
-  if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+
+  const { assertCronSecret } = await import('../../../lib/cronAuth');
+  const isCron = assertCronSecret(req);
+  if (!isCron) {
+    const authorized = await verifyUser(req, res);
+    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+  }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { url: rawUrl, keywords = [], country: bodyCountry, language: bodyLanguage, articleId: existingArticleId, domainId: reqDomainId } = req.body;
@@ -208,20 +213,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   // an article can only ever land in a domain the caller's workspace can reach.
   let resolvedDomainId: number | undefined;
   if (existingArticleId) {
-    // Re-analyzing an existing article mutates it by raw id — only its owner may.
-    const userId = await getCurrentUserId(req, res);
-    if (!(await assertArticleAccess(userId, Number(existingArticleId)))) {
-      return res.status(403).json({ error: 'Access denied.' });
+    if (!isCron) {
+      const userId = await getCurrentUserId(req, res);
+      if (!(await assertArticleAccess(userId, Number(existingArticleId)))) {
+        return res.status(403).json({ error: 'Access denied.' });
+      }
     }
   } else {
-    const userId = await getCurrentUserId(req, res);
     if (reqDomainId) {
-      // Caller-supplied domain (keyword mode, or URL mode with a domainId) — only a
-      // member of that domain's workspace may create under it.
-      const owned = await verifyDomainOwnershipById(Number(reqDomainId), userId);
-      if (!owned) return res.status(owned === null ? 404 : 403).json({ error: 'Access denied.' });
-      resolvedDomainId = owned.ID;
+      if (isCron) {
+        resolvedDomainId = Number(reqDomainId);
+        if (!Number.isFinite(resolvedDomainId)) {
+          return res.status(400).json({ error: 'domainId required' });
+        }
+      } else {
+        const userId = await getCurrentUserId(req, res);
+        const owned = await verifyDomainOwnershipById(Number(reqDomainId), userId);
+        if (!owned) return res.status(owned === null ? 404 : 403).json({ error: 'Access denied.' });
+        resolvedDomainId = owned.ID;
+      }
     } else {
+      if (isCron) {
+        return res.status(400).json({ error: 'domainId or articleId required for cron' });
+      }
+      const userId = await getCurrentUserId(req, res);
       // URL mode without a domainId — fall back to the caller's own first domain.
       const fallback = await firstAccessibleDomainId(userId);
       if (!fallback) return res.status(403).json({ error: 'No accessible domain to create the article under.' });
@@ -239,9 +254,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const country = locale.countryCode;
 
   // Org-wide AI budget — block before the SSE stream starts (plain JSON 429, not an SSE frame).
-  const orgId = await resolveOrgId(req, res);
-  const over = await orgBudgetBlocked(orgId);
-  if (over) return res.status(429).json(over);
+  // Hoisted: coverage snapshot later records tokens against the same orgId.
+  let orgId: number | null = null;
+  if (!isCron) {
+    orgId = await resolveOrgId(req, res);
+    const over = await orgBudgetBlocked(orgId);
+    if (over) return res.status(429).json(over);
+  }
 
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
@@ -777,6 +796,74 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       };
     }
 
+    // WIE Source A — Competitor Synthesis (bounded JSON from corpus; non-fatal)
+    if (corpusTexts.length && (resolvedKeyword || pipelineKeyword || keyword)) {
+      try {
+        const { buildCompetitorSynthesisFromCorpus } = await import('../../../lib/wie/competitorSynthesis');
+        const synth = await buildCompetitorSynthesisFromCorpus({
+          keyword: resolvedKeyword || pipelineKeyword || keyword || '',
+          corpusTexts,
+        });
+        if (synth) {
+          scoreData.competitor_synthesis = synth;
+          console.log(
+            `[deep-analysis] competitor_synthesis: critical=${synth.critical.length} examples=${synth.examples.length}`,
+          );
+          try {
+            const { discoverFromSynthesis } = await import('../../../lib/wie/patternDiscovery');
+            const { inferIndustry } = await import('../../../lib/wie/policyResolver');
+            const { buildHeuristicReaderBrief } = await import('../../../lib/wie/readerBrief');
+            const kw = resolvedKeyword || pipelineKeyword || keyword || '';
+            const brief = buildHeuristicReaderBrief({ keyword: kw });
+            const n = await discoverFromSynthesis({
+              industry: inferIndustry(kw),
+              emotion: brief.emotion,
+              searchIntent: brief.searchIntent,
+              openingProblemFirst: !!synth.opening_style?.problem_first,
+              expertClaims: synth.expert_claims,
+              examples: synth.examples,
+              source: 'deep_analysis_synthesis',
+            });
+            if (n > 0) console.log(`[deep-analysis] pattern discovery accepted=${n}`);
+            const { evolveFromSynthesis } = await import('../../../lib/wie/evolutionLoop');
+            const evo = await evolveFromSynthesis({
+              synthesis: synth,
+              industry: inferIndustry(kw),
+              emotion: brief.emotion,
+              searchIntent: brief.searchIntent,
+              bumpDna: false,
+            });
+            if (evo.accepted > 0) {
+              console.log(
+                `[deep-analysis] evolution accepted=${evo.accepted} signals=${evo.signals.join(',')}`,
+              );
+            }
+            try {
+              const { buildWieWriteContext } = await import('../../../lib/wie/writerContext');
+              const wie = await buildWieWriteContext({
+                keyword: kw,
+                synthesis: synth,
+                readerBrief: brief,
+              });
+              (scoreData as Record<string, unknown>).wie_policy_hints = {
+                dna_version: wie.policy?.dna_version,
+                dna_ab_variant: wie.policy?.dna_ab_variant,
+                opening: wie.policy?.decisions.find((d) => d.id === 'opening')?.value,
+                narrative_beats: wie.narrative?.beats.map((b) => b.role),
+                explainability: wie.explainability,
+              };
+            } catch (hintErr) {
+              console.warn('[deep-analysis] wie policy hints failed (non-fatal):', getErrorMessage(hintErr));
+            }
+          } catch (discErr) {
+            console.warn('[deep-analysis] pattern discovery failed (non-fatal):', getErrorMessage(discErr));
+          }
+        }
+      } catch (err) {
+        console.warn('[deep-analysis] competitor_synthesis failed (non-fatal):', getErrorMessage(err));
+      }
+    }
+
     const setClauses: string[] = [
       `title = COALESCE(NULLIF(?, ''), title)`,
       `meta_title = COALESCE(NULLIF(?, ''), meta_title)`,
@@ -1016,6 +1103,41 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           console.warn('[coverage] feature store persist failed (non-fatal):', getErrorMessage(err));
         });
 
+        // Persist AI visibility BEFORE CCM enrich (Etap 28 needs citations).
+        if (aiVisibilitySummary?.citations?.length) {
+          await persistAiVisibilityRun(
+            articleId,
+            factKeyword,
+            aiVisibilitySummary,
+            // provisional — recomputed after CCM projection below
+            resolveAiScore({
+              facts: articleFacts,
+              articleText: plainText,
+              summary: aiVisibilitySummary,
+              coverageOverall: coverageSnapshot.overall,
+            }),
+          ).catch((err: unknown) => {
+            console.warn('[ccm] ai visibility persist failed (non-fatal):', getErrorMessage(err));
+          });
+        }
+
+        // CCM compile + DA enrich + SoT projection — await so SSE gets CCM snapshot (Etap 29).
+        try {
+          const ccmMod = await import('../../../lib/intelligence/compileAfterArticleChange');
+          const ccmR = await ccmMod.compileAfterArticleChange({
+            articleId,
+            compiledAt: new Date().toISOString(),
+            contentHtml: pageContent,
+          });
+          if (ccmR.ok && ccmR.coverageSnapshot) {
+            coverageSnapshot = ccmR.coverageSnapshot;
+          } else if (!ccmR.ok) {
+            console.warn('[ccm] compile after deep-analysis skipped:', ccmR.error);
+          }
+        } catch (err: unknown) {
+          console.warn('[ccm] compile after deep-analysis failed (non-fatal):', getErrorMessage(err));
+        }
+
         const intentBucket = coverageSnapshot.buckets.find((b) => b.key === 'intent');
         const aiScore = resolveAiScore({
           facts: articleFacts,
@@ -1037,15 +1159,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           await db.query(
             `UPDATE articles SET score_data = ?, content_score = ? WHERE ${articleIdSql} = ?`,
             { replacements: [JSON.stringify(scoreData), contentScore, articleId] },
-          );
-        }
-
-        if (aiVisibilitySummary?.citations?.length) {
-          await persistAiVisibilityRun(
-            articleId,
-            factKeyword,
-            aiVisibilitySummary,
-            aiScore,
           );
         }
       }

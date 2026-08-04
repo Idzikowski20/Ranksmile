@@ -78,12 +78,42 @@ function CheckIcon() {
 export function BotRow({ bot, status = 'good' }: { bot: AiBot; status?: AiBotStatus }) {
   const good = status === 'good';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, gap: 8 }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        alignItems: 'center',
+        gap: 12,
+        fontSize: 13,
+        minWidth: 0,
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <BotIcon botId={bot.id} />
-        <span style={{ color: '#18181B' }}>{bot.label}</span>
+        <span
+          style={{
+            color: '#18181B',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            minWidth: 0,
+          }}
+          title={bot.label}
+        >
+          {bot.label}
+        </span>
       </div>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: good ? '#1AB25E' : '#FF6F77', fontSize: 12, flexShrink: 0 }}>
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          color: good ? '#1AB25E' : '#FF6F77',
+          fontSize: 12,
+          flexShrink: 0,
+          whiteSpace: 'nowrap',
+        }}
+      >
         {good && <CheckIcon />}
         {good ? 'All good' : 'Blocked'}
       </span>

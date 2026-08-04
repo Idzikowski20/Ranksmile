@@ -12,9 +12,6 @@ interface Props {
   onToggle: () => void;
   onChanged: () => void;
   onClose: () => void;
-  shareUrl?: string;
-  /** Opaque share token for anonymous reviewers; omitted for authenticated owners. */
-  shareToken?: string;
   /** Positioning of the pin container within the comments wrapper. */
   style?: React.CSSProperties;
 }
@@ -33,7 +30,7 @@ const participantsOf = (t: Thread): CommentAuthor[] => {
 
 /** Animated margin pin: stacked participant avatars + thread bubble. Pops in on
  *  create, spins while saving (pending), shows an unread marker, animates out on delete. */
-const CommentPin = ({ thread, author, articleId, open, onToggle, onChanged, onClose, shareUrl, shareToken, style }: Props) => {
+const CommentPin = ({ thread, author, articleId, open, onToggle, onChanged, onClose, style }: Props) => {
   const people = participantsOf(thread);
   const others = people.slice(1, 3); // up to 2 peeking behind the front avatar
   const moreCount = Math.max(0, people.length - 1 - others.length);
@@ -100,7 +97,7 @@ const CommentPin = ({ thread, author, articleId, open, onToggle, onChanged, onCl
 
       <AnimatePresence>
         {open && (
-          <CommentThreadBubble thread={thread} author={author} articleId={articleId} shareUrl={shareUrl} shareToken={shareToken}
+          <CommentThreadBubble thread={thread} author={author} articleId={articleId}
             onChanged={onChanged} onClose={onClose}
             style={{ position: 'absolute', top: 0, right: 42, transformOrigin: 'top right' }} />
         )}

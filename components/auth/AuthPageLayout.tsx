@@ -19,7 +19,7 @@ export default function AuthPageLayout({
   bottomText,
 }: AuthPageLayoutProps) {
   return (
-    <div style={authPageStyle}>
+    <div className="auth-page" style={authPageStyle}>
       {topAction ? (
         <header style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'flex-end', padding: '20px 28px' }}>
           {topAction}

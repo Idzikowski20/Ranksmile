@@ -4,9 +4,6 @@ import CommentComposer, { DraftComment } from './CommentComposer';
 import { Thread, CommentAuthor } from './CommentThreadBubble';
 import CommentPin from './CommentPin';
 import { commentsUrl } from './commentApi';
-import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
-import { ABLY_EVENTS } from '../../../lib/ably/channel';
-import { ablyIgnore } from '../../../lib/ably/safe';
 
 const F = 'var(--font-family-primary)';
 
@@ -19,10 +16,6 @@ interface Props {
   active: boolean;
   /** Bump to refetch threads (SSE-driven live updates). */
   reloadSignal?: number;
-  /** Base share URL for "Copy thread URL". */
-  shareUrl?: string;
-  /** Opaque share token for anonymous reviewers; omitted for authenticated owners. */
-  shareToken?: string;
   /** Bump after each live content push to re-anchor comment highlights. */
   relayoutSignal?: number;
 }
@@ -68,7 +61,7 @@ const anchorQuote = (container: HTMLElement, quote: string, id: string): HTMLEle
 
 const tempId = () => `tmp_${Math.random().toString(36).slice(2, 10)}`;
 
-const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, reloadSignal, shareUrl, shareToken, relayoutSignal }: Props) => {
+const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, reloadSignal, relayoutSignal }: Props) => {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [pill, setPill] = useState<{ top: number; left: number } | null>(null);
   const [composer, setComposer] = useState<{ top: number; quote: string } | null>(null);
@@ -78,25 +71,12 @@ const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, re
   const draftSpanRef = useRef<HTMLElement | null>(null);
 
   const reload = useCallback(() => {
-    fetch(commentsUrl(articleId, shareToken)).then((r) => r.json())
+    fetch(commentsUrl(articleId)).then((r) => r.json())
       .then((d) => setThreads(d.threads || []))
       .catch(() => {})
       .finally(() => { loadedRef.current = true; });
-  }, [articleId, shareToken]);
+  }, [articleId]);
   useEffect(() => { reload(); }, [reload, reloadSignal]);
-
-  // Live comment sync via Ably (replaces the in-process SSE, dead on serverless).
-  const { channel: liveCommentChannel } = useArticleChannel({
-    articleId: articleId ?? null,
-    shareToken: shareToken ?? null,
-    clientId: author?.name || null,
-  });
-  useEffect(() => {
-    if (!liveCommentChannel) return undefined;
-    const onComment = () => reload();
-    ablyIgnore(liveCommentChannel.subscribe(ABLY_EVENTS.comment, onComment));
-    return () => { liveCommentChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
-  }, [liveCommentChannel, reload]);
 
   // (Re)apply highlights, drop orphaned ones, compute pin positions.
   const layout = useCallback(() => {
@@ -203,7 +183,7 @@ const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, re
     setOpenId(tmp);
 
     try {
-      const r = await fetch(commentsUrl(articleId, shareToken), {
+      const r = await fetch(commentsUrl(articleId), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quote, text: draft.text, images: draft.images, author: author.name, color: author.color, avatar: author.avatar || '' }),
       });
@@ -241,7 +221,7 @@ const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, re
           const t = threads.find((x) => x.id === id);
           if (!t) return null;
           return (
-            <CommentPin key={id} thread={t} author={author} articleId={articleId} shareUrl={shareUrl} shareToken={shareToken}
+            <CommentPin key={id} thread={t} author={author} articleId={articleId}
               open={openId === id}
               onToggle={() => setOpenId(openId === id ? null : id)}
               onChanged={reload}
