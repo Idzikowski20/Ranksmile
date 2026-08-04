@@ -67,6 +67,7 @@ export {
 export { buildRewritePlan, runKnowledgeCompletion } from './knowledgeCompletion';
 export { computeKnowledgeCoverage } from './knowledgeCoverage';
 export { buildArticleExecutionPlan, toSidecarExecutionPlan, hashExecutionPlanPayload } from './executionPlan';
+export { toSidecarCompiledPlan } from './knowledgePack/toSidecarCompiledPlan';
 export { generateQuickAnswer } from './quickAnswer';
 export { runContentPlanner, finalizePlannerForWrite } from './runContentPlanner';
 export type { RunContentPlannerInput, RunContentPlannerResult } from './runContentPlanner';
