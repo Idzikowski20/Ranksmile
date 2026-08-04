@@ -79,7 +79,13 @@ const ArticlesPage: NextPage = () => {
 
   const handleDeleteMultiple = async (ids: Array<number | string>) => {
     try {
-      await Promise.all(ids.map((id) => fetch(`/api/articles/${id}`, { method: 'DELETE' })));
+      const results = await Promise.all(
+        ids.map((id) => fetch(`/api/articles/${id}`, { method: 'DELETE' })),
+      );
+      const failed = results.filter((r) => !r.ok);
+      if (failed.length) {
+        throw new Error(`Delete failed for ${failed.length} of ${ids.length} articles`);
+      }
       toast.success(`${ids.length} article${ids.length !== 1 ? 's' : ''} deleted`);
       queryClient.invalidateQueries(['articles']);
     } catch (err) {

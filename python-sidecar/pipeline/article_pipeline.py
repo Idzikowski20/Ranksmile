@@ -1,30 +1,41 @@
 """
 Article Pipeline — wieloetapowe generowanie artykułu SEO.
-Używa DeepSeek API z Anthropic-compatible endpoint:
-  base_url = https://api.deepseek.com/anthropic
-  model    = deepseek-v4-flash
+Używa OpenRouter (OpenAI-compatible chat completions):
+  base_url = https://openrouter.ai/api/v1
+  model    = openai/gpt-5.6-luna
 """
 import json
 import os
 import re
-import anthropic
-import httpx
+from openai import AsyncOpenAI
 
 
-_client: anthropic.AsyncAnthropic | None = None
+_client: AsyncOpenAI | None = None
+
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+MODEL = "openai/gpt-5.6-luna"
 
 
-def get_client() -> anthropic.AsyncAnthropic:
+def get_openrouter_api_key() -> str:
+    return (os.getenv("OPENROUTER_API_KEY") or "").strip()
+
+
+def get_client() -> AsyncOpenAI:
     global _client
+    key = get_openrouter_api_key()
+    if not key:
+        raise RuntimeError("OPENROUTER_API_KEY missing")
     if _client is None:
-        _client = anthropic.AsyncAnthropic(
-            api_key=os.getenv("DEEPSEEK_API_KEY", ""),
-            base_url="https://api.deepseek.com/anthropic",
+        _client = AsyncOpenAI(
+            api_key=key,
+            base_url=OPENROUTER_BASE_URL,
+            default_headers={
+                "HTTP-Referer": (os.getenv("NEXT_PUBLIC_APP_URL") or "https://ranksmile.pl").strip(),
+                "X-Title": "Ranksmile",
+            },
         )
     return _client
 
-
-MODEL = "deepseek-v4-flash"
 
 SYSTEM_PROMPT = """Jesteś ekspertem SEO i copywriterem. Tworzysz artykuły SEO wysokiej jakości,
 które rankują na pierwszej stronie Google. Artykuły muszą być:
@@ -36,19 +47,105 @@ które rankują na pierwszej stronie Google. Artykuły muszą być:
 Zwracaj TYLKO HTML artykułu (bez DOCTYPE, body, head — czysty HTML artykułu)."""
 
 
-async def _chat(prompt: str, max_tokens: int = 4000) -> str:
+async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYSTEM_PROMPT) -> str:
+    if not get_openrouter_api_key():
+        print("[generate] OPENROUTER_API_KEY missing — skipping chat")
+        return ""
     client = get_client()
-    response = await client.messages.create(
-        model=MODEL,
-        max_tokens=max_tokens,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
+    messages: list[dict[str, str]] = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+    try:
+        response = await client.chat.completions.create(
+            model=MODEL,
+            max_tokens=max_tokens,
+            messages=messages,
+            extra_body={"reasoning": {"effort": "medium"}},
+        )
+    except Exception as exc:
+        print(f"[generate] OpenRouter chat failed: {type(exc).__name__}: {exc}")
+        return ""
+
+    choice = response.choices[0] if response.choices else None
+    content = ((choice.message.content if choice and choice.message else None) or "").strip()
+    if not content:
+        print("[generate] _chat returned empty content")
+    return content
+
+
+def _strip_code_fences(html: str) -> str:
+    final_html = (html or "").strip()
+    for prefix in ("```html", "```"):
+        if final_html.startswith(prefix):
+            final_html = final_html[len(prefix):]
+    if final_html.endswith("```"):
+        final_html = final_html[:-3]
+    return final_html.strip()
+
+
+def _is_usable_article(html: str) -> bool:
+    plain = re.sub(r"<[^>]+>", " ", html or "")
+    plain = re.sub(r"\s+", " ", plain).strip()
+    return len(plain) >= 80
+
+
+def _format_execution_plan(plan: dict) -> str:
+    """Serialize Article Execution Plan for the Write Engine prompt (executor only)."""
+    sections = plan.get("sections") or []
+    lines: list[str] = [
+        f"plan_hash: {plan.get('plan_hash', '')}",
+        f"title/H1: {plan.get('title', '')}",
+        f"narrative: {plan.get('narrative', '')}",
+        f"quick_answer (embed as opening, do not rewrite structure): {plan.get('quick_answer', '')}",
+        f"article_budget.words: {(plan.get('article_budget') or {}).get('words', '')}",
+        f"reader: {json.dumps(plan.get('reader') or {}, ensure_ascii=False)}",
+        "",
+        "SECTIONS (execute exactly — do not invent/reorder H2):",
+    ]
+    for i, s in enumerate(sections, 1):
+        claims = s.get("claims") or []
+        claim_txt = "; ".join(
+            (c.get("statement") if isinstance(c, dict) else str(c)) for c in claims[:8]
+        )
+        lines.append(
+            f"{i}. H2: {s.get('heading')}\n"
+            f"   objective: {s.get('objective')}\n"
+            f"   priority: {s.get('priority')} | words≈{s.get('expected_words')}\n"
+            f"   must_answer: {s.get('must_answer') or []}\n"
+            f"   questions: {s.get('questions') or []}\n"
+            f"   claims: {claim_txt}\n"
+            f"   blocks: {s.get('blocks') or []}\n"
+            f"   evidence: {s.get('evidence') or []}"
+        )
+    return "\n".join(lines)
+
+
+def _planned_h2_headings(plan: dict) -> list[str]:
+    return [
+        str(s.get("heading") or "").strip()
+        for s in (plan.get("sections") or [])
+        if str(s.get("heading") or "").strip()
+    ]
+
+
+def _plan_conformity_ok(html: str, plan: dict) -> bool:
+    """Post-write: output H2 set should mostly match Execution Plan (no invented outline)."""
+    planned = [h.lower() for h in _planned_h2_headings(plan)]
+    if not planned:
+        return True
+    h2s = [
+        re.sub(r"<[^>]+>", "", m).strip().lower()
+        for m in re.findall(r"<h2[^>]*>([\s\S]*?)</h2>", html or "", flags=re.I)
+    ]
+    if not h2s:
+        return False
+    covered = sum(
+        1
+        for p in planned
+        if any(h == p or p in h or h in p for h in h2s)
     )
-    # DeepSeek may return ThinkingBlock(s) before the actual TextBlock
-    for block in response.content:
-        if block.type == "text":
-            return block.text
-    return ""
+    return (covered / len(planned)) >= 0.7
 
 
 # Maps the wizard content-type to a structural directive for the prompt.
@@ -76,6 +173,7 @@ async def run_pipeline(
     external_links: bool = True,
     brand_knowledge: str = "",
     voice_tone: str = "",
+    execution_plan: dict | None = None,
 ) -> str:
     top_terms = [t["term"] for t in serp_data.get("terms", [])[:25]]
     terms_str = ", ".join(top_terms) if top_terms else "brak danych NLP"
@@ -105,7 +203,78 @@ async def run_pipeline(
         f"Ton: {site_context.get('tone', tone)}\n"
     )
 
-    # === Faza 1: Outline ===
+    plan = execution_plan if isinstance(execution_plan, dict) and execution_plan.get("sections") else None
+    plan_words = int(
+        ((plan or {}).get("article_budget") or {}).get("words") or target_words or 2200
+    )
+
+    if plan:
+        # === Planner First: skip outline LLM — execute immutable Execution Plan ===
+        plan_block = _format_execution_plan(plan)
+        print(
+            f"[generate] Execution Plan mode plan_hash={plan.get('plan_hash')} "
+            f"sections={len(plan.get('sections') or [])}"
+        )
+        article_html = await _chat(f"""Jesteś Write Engine — EGZEKUTOR Article Execution Plan.
+NIE wymyślaj outline, H2, narracji ani kolejności sekcji. Realizuj plan dokładnie.
+
+Keyword: "{keyword}"
+Język: {language}
+Target słów: ~{plan_words}
+{tone_directive}
+
+ARTICLE EXECUTION PLAN:
+{plan_block}
+
+Kontekst strony (nie zmienia struktury planu):
+{site_info}
+
+NLP Terms (wpleć naturalnie, bez stuffingu): {terms_str}{brand_block}{instr_block}
+
+WYMAGANIA:
+- Zacznij od <h1> = title z planu (lub blisko)
+- Natychmiast po H1 wstaw Quick Answer z planu jako 1–2 <p> (action-first)
+- Dla KAŻDEJ sekcji z planu: dokładnie jedno <h2> z heading z planu, w tej kolejności
+- Pokryj must_answer, claims i blocks z planu; nie dodawaj obcych H2
+- Paragrafy 3-5 zdań; listy gdzie blocks wymagają
+{ext_req}
+- TYLKO HTML (h1,h2,h3,p,ul,ol,strong,em,a,table) — bez <html>,<body>,<head>""", max_tokens=8000)
+
+        article_html = _strip_code_fences(article_html)
+
+        if not _is_usable_article(article_html):
+            print("[generate] Execution Plan write empty — retrying once")
+            article_html = _strip_code_fences(await _chat(
+                f"""Execute this Article Execution Plan as full HTML article.
+Keyword: "{keyword}". Language: {language}. ~{plan_words} words.
+{tone_directive}
+PLAN:
+{plan_block[:6000]}
+Start with <h1>. Use ONLY planned H2 headings in order. Only article HTML.""",
+                max_tokens=8000,
+            ))
+
+        # Intra-section review only — never change H2/outline/narrative.
+        reviewed = _strip_code_fences(await _chat(f"""Zreviewuj STYL wewnątrz sekcji artykułu SEO dla keyword "{keyword}".
+DOZWOLONE: popraw przejścia między akapitami, powtórzenia, keyword stuffing, klarowność zdań.
+ZABRONIONE: zmieniać, dodawać, usuwać lub przestawiać H2; zmieniać narrację/outline; wymyślać nowe sekcje.
+
+Zwróć POPRAWIONY HTML (tylko HTML):
+
+{article_html}""", max_tokens=8000))
+
+        if _is_usable_article(reviewed):
+            if _plan_conformity_ok(reviewed, plan):
+                return reviewed
+            print("[generate] Review broke plan conformity — keeping Phase write")
+        if _is_usable_article(article_html):
+            if not _plan_conformity_ok(article_html, plan):
+                print("[generate] WARNING: output H2 low conformity vs Execution Plan")
+            return article_html
+        print("[generate] Execution Plan pipeline produced no usable HTML")
+        return ""
+
+    # === Legacy fallback (no Execution Plan): Faza 1 Outline ===
     outline = await _chat(f"""Stwórz szczegółowy outline artykułu SEO na keyword: "{keyword}"
 
 Typ treści: {type_guide}
@@ -143,8 +312,21 @@ WYMAGANIA:
 - Zakończ podsumowaniem
 - TYLKO HTML (h1,h2,h3,p,ul,ol,strong,em,a) — bez <html>,<body>,<head>""", max_tokens=8000)
 
-    # === Faza 3: SEO Review ===
-    final_html = await _chat(f"""Zreviewuj i popraw artykuł SEO dla keyword "{keyword}":
+    article_html = _strip_code_fences(article_html)
+
+    # Retry once if the model returned thinking-only / empty HTML.
+    if not _is_usable_article(article_html):
+        print("[generate] Phase 2 empty/unusable — retrying article generation once")
+        article_html = _strip_code_fences(await _chat(f"""Napisz PEŁNY artykuł SEO w HTML na keyword "{keyword}".
+Język: {language}. Target: ~{target_words} słów.
+Typ: {type_guide}
+{tone_directive}
+NLP: {terms_str}{brand_block}{instr_block}
+Outline (jeśli jest): {outline[:3000] if outline else "(brak)"}
+Zacznij od <h1>. Tylko HTML artykułu.""", max_tokens=8000))
+
+    # === Faza 3: SEO Review (never replace a good draft with an empty review) ===
+    reviewed = _strip_code_fences(await _chat(f"""Zreviewuj i popraw artykuł SEO dla keyword "{keyword}":
 - Keyword w H1, pierwszym paragrafie i kilku H2
 - NLP terms naturalnie wplecione: {terms_str[:200]}
 - Min. {target_words} słów
@@ -152,17 +334,16 @@ WYMAGANIA:
 
 Zwróć POPRAWIONY HTML (tylko HTML, bez komentarzy):
 
-{article_html}""", max_tokens=8000)
+{article_html}""", max_tokens=8000))
 
-    # Oczyść z markdown code blocks
-    final_html = final_html.strip()
-    for prefix in ["```html", "```"]:
-        if final_html.startswith(prefix):
-            final_html = final_html[len(prefix):]
-    if final_html.endswith("```"):
-        final_html = final_html[:-3]
+    if _is_usable_article(reviewed):
+        return reviewed
+    if _is_usable_article(article_html):
+        print("[generate] Phase 3 empty — keeping Phase 2 article")
+        return article_html
 
-    return final_html.strip()
+    print("[generate] Pipeline produced no usable HTML")
+    return ""
 
 
 async def generate_brand_knowledge(url: str, title: str, description: str, page_text: str) -> dict:
@@ -257,38 +438,26 @@ OUTPUT FORMAT — JSON array only, no other text:
 If no natural links found, return: []"""
 
     try:
-        api_key = os.getenv("DEEPSEEK_API_KEY", "")
-        if not api_key:
-            print("[internal-links] No DEEPSEEK_API_KEY — skipping")
+        if not get_openrouter_api_key():
+            print("[internal-links] No OPENROUTER_API_KEY — skipping")
             return []
 
-        async with httpx.AsyncClient(timeout=60) as client:
-            r = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key}",
-                },
-                json={
-                    "model": "deepseek-chat",
-                    "max_tokens": 1024,
-                    "temperature": 0.1,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
+        raw = (
+            await _chat(
+                prompt,
+                max_tokens=1024,
+                system="You suggest internal links. Reply with JSON only — no markdown fences.",
             )
-            r.raise_for_status()
-            data = r.json()
-            raw: str = data["choices"][0]["message"]["content"]
+        ).strip()
 
-            # Extract JSON array
-            json_match = re.search(r"\[[\s\S]*\]", raw)
-            if not json_match:
-                print(f"[internal-links] No JSON array in response: {raw[:200]}")
-                return []
+        json_match = re.search(r"\[[\s\S]*\]", raw)
+        if not json_match:
+            print(f"[internal-links] No JSON array in response: {raw[:200]}")
+            return []
 
-            suggestions = json.loads(json_match[0])
-            print(f"[internal-links] Found {len(suggestions)} suggestions")
-            return suggestions
+        suggestions = json.loads(json_match[0])
+        print(f"[internal-links] Found {len(suggestions)} suggestions")
+        return suggestions
 
     except Exception as e:
         print(f"[internal-links] Error: {e}")
