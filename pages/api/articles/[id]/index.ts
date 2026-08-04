@@ -103,12 +103,36 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
 
    // Extract content score from score_data
    let contentScore = 0;
+   let scoreDataObj: Record<string, unknown> | null = null;
    try {
      if (score_data) {
-       const sd = typeof score_data === 'string' ? JSON.parse(score_data) : score_data;
-       contentScore = sd._content_score ?? sd._computed_score ?? 0;
+       scoreDataObj = typeof score_data === 'string'
+         ? JSON.parse(score_data) as Record<string, unknown>
+         : (score_data as Record<string, unknown>);
+       contentScore = Number(scoreDataObj._content_score ?? scoreDataObj._computed_score ?? 0) || 0;
      }
-   } catch { contentScore = 0; }
+   } catch {
+     contentScore = 0;
+     scoreDataObj = null;
+   }
+
+   // CIE: coverage overlay + AO plan patch on HTML save (non-fatal)
+   if (
+     scoreDataObj
+     && typeof content === 'string'
+     && content.trim().length > 80
+     && scoreDataObj.knowledge_graph
+   ) {
+     try {
+       const { applyKnowledgeCoverageOverlay } = await import('../../../../lib/knowledgeEngine');
+       const overlay = await applyKnowledgeCoverageOverlay(scoreDataObj, content);
+       scoreDataObj = overlay.scoreData;
+     } catch (err: unknown) {
+       console.warn('[articles/[id]] CIE coverage overlay failed (non-fatal):', getErrorMessage(err));
+     }
+   }
+
+   const scoreDataJson = scoreDataObj ? JSON.stringify(scoreDataObj) : (score_data ? JSON.stringify(score_data) : null);
 
    try {
       const articleIdSql = await getArticleIdSql();
@@ -131,7 +155,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
                   id,
                   version_type,
                   content ?? '',
-                  score_data ? JSON.stringify(score_data) : null,
+                  scoreDataJson,
                ],
             },
          );
@@ -162,11 +186,11 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
                meta_description ?? null,
                meta_url ?? null,
                word_count ?? null,
-               score_data ? JSON.stringify(score_data) : null,
+               scoreDataJson,
                // Only (re)write content_score when score_data was sent — a partial save (title/status/
                // meta only) must NOT zero the previously-computed score.
-               score_data ? contentScore : null,
-               score_data ? contentScore : null,
+               scoreDataJson ? contentScore : null,
+               scoreDataJson ? contentScore : null,
                featured_image !== undefined ? featured_image : null,
                featured_image !== undefined ? featured_image : null,
                internal_links_cache !== undefined ? JSON.stringify(internal_links_cache) : null,
@@ -177,12 +201,12 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
       );
 
       // v7 live_score queue on content save (fire-and-forget)
-      if (content && score_data) {
+      if (content && scoreDataJson) {
          try {
             const { enqueueLiveScoreOnSave } = await import('../../../../lib/pipeline/enqueueFromDeepAnalysis');
             const { recordScoreFeedback } = await import('../../../../lib/learning/scoreFeedback');
             const userId = await getCurrentUserId(req, res);
-            const sd = typeof score_data === 'string' ? JSON.parse(score_data) : score_data;
+            const sd = scoreDataObj || {};
             const after = Number(
               (sd && typeof sd === 'object' && (sd as { _content_score?: number })._content_score)
               ?? contentScore
@@ -207,6 +231,25 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
          }
       }
 
+      // CIA: refresh CCM if content drifted (07-runtime editor save) — non-fatal, no UI
+      if (typeof content === 'string' && content.trim().length > 80) {
+         void import('../../../../lib/intelligence/compileAfterArticleChange')
+            .then((m) =>
+               m.compileIfStale({
+                  articleId: Number(id),
+                  compiledAt: new Date().toISOString(),
+                  contentHtml: content,
+                  mode: 'full',
+               }),
+            )
+            .then((r) => {
+               if (!r.ok) console.warn('[ccm] compile on article save skipped:', r.error);
+            })
+            .catch((err: unknown) => {
+               console.warn('[ccm] compile on article save failed (non-fatal):', getErrorMessage(err));
+            });
+      }
+
       return res.status(200).json({ updated: true });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
@@ -226,7 +269,7 @@ async function deleteArticle(id: string, res: NextApiResponse, userId: string | 
       await db.transaction(async (tx) => {
          await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id], transaction: tx });
          if (orgId) {
-            await ensureOrgQuotaBalances(orgId);
+            await ensureOrgQuotaBalances(orgId, { transaction: tx });
             await adjustActiveUsage(
                {
                   orgId,

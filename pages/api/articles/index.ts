@@ -3,7 +3,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
-import { getPostHogClient } from '../../../lib/posthog-server';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '../../../lib/tenancy';
@@ -207,17 +206,6 @@ async function createArticle(req: NextApiRequest, res: NextApiResponse, userId: 
             articleId = newArticleId as unknown as number;
          }
       });
-      if (userId) {
-         try {
-            const ph = getPostHogClient();
-            ph.capture({
-               distinctId: userId,
-               event: 'article_created',
-               properties: { domain_id },
-            });
-            await ph.flush();
-         } catch { /* non-critical */ }
-      }
       return res.status(200).json({ articleId, title });
    } catch (error) {
       const { isPlanLimitError, planLimitBody } = await import('../../../lib/quota');
@@ -253,7 +241,7 @@ async function deleteArticle(req: NextApiRequest, res: NextApiResponse, userId: 
       await db.transaction(async (tx) => {
          await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id], transaction: tx });
          if (orgId) {
-            await ensureOrgQuotaBalances(orgId);
+            await ensureOrgQuotaBalances(orgId, { transaction: tx });
             await adjustActiveUsage(
                {
                   orgId,
@@ -267,13 +255,6 @@ async function deleteArticle(req: NextApiRequest, res: NextApiResponse, userId: 
             );
          }
       });
-      if (userId) {
-         try {
-            const ph = getPostHogClient();
-            ph.capture({ distinctId: userId, event: 'article_deleted' });
-            await ph.flush();
-         } catch { /* non-critical */ }
-      }
       return res.status(200).json({ deleted: true });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
