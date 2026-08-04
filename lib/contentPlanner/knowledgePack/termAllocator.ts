@@ -8,11 +8,16 @@ export function allocateTerms(
     return paragraphs;
   }
 
-  return paragraphs.map((paragraph, index) => {
-    const termIndex = index % terms.length;
-    const term = terms[termIndex];
-    if (!term) {
-      return paragraph;
+  const result = paragraphs.map((paragraph) => ({
+    ...paragraph,
+    keywords: [...paragraph.keywords],
+  }));
+
+  for (let i = 0; i < terms.length; i += 1) {
+    const term = terms[i];
+    const targetParagraph = result[i % result.length];
+    if (!term || !targetParagraph) {
+      continue;
     }
 
     const usage: TermUsage = {
@@ -20,14 +25,13 @@ export function allocateTerms(
       importance: 'critical',
       minOccurrences: 1,
       maxOccurrences: 5,
-      preferredParagraphs: [paragraph.id],
+      preferredParagraphs: [targetParagraph.id],
       required: true,
       actualOccurrences: null,
     };
 
-    return {
-      ...paragraph,
-      keywords: [...paragraph.keywords, usage],
-    };
-  });
+    targetParagraph.keywords.push(usage);
+  }
+
+  return result;
 }
