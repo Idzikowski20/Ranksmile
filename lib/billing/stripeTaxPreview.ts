@@ -1,8 +1,8 @@
 import type Stripe from 'stripe';
 import { formatTaxIdForStripe, stripeTaxIdType } from '../checkoutValidation';
 
-/** Default Stripe Tax category: general electronically supplied services. */
-export const DEFAULT_STRIPE_TAX_CODE = 'txcd_10000000';
+/** Ranksmile is a business-use SaaS; override only for a deliberately different product classification. */
+export const DEFAULT_STRIPE_TAX_CODE = 'txcd_10103001';
 
 export type TaxPreviewAddress = {
   line1: string;
@@ -114,9 +114,10 @@ export async function calculateStripeTaxPreview(
   };
 
   const rawTaxId = args.taxId?.trim();
-  if (rawTaxId) {
+  const taxIdType = stripeTaxIdType(country);
+  if (rawTaxId && taxIdType) {
     customerDetails.tax_ids = [{
-      type: stripeTaxIdType(country),
+      type: taxIdType,
       value: formatTaxIdForStripe(country, rawTaxId),
     }];
   }
