@@ -208,7 +208,7 @@ export async function applySubscriptionUpgrade(
   });
 
   const secret = clientSecretFromSubscriptionInvoice(updated);
-  if (secret) {
+  if (secret && updated.pending_update) {
     return {
       subscription: updated,
       result: {

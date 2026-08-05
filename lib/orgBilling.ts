@@ -141,6 +141,21 @@ export async function getOrgIdByStripeCustomerId(customerId: string): Promise<nu
   return row ? Number(row.id) : null;
 }
 
+export async function claimTrialActivation(orgId: number, attemptId: string): Promise<boolean> {
+  await ensureBillingTables();
+  await db.query(
+    `UPDATE organizations SET trial_activation_claim_id = ?
+      WHERE id = ? AND trial_consumed_at IS NULL
+        AND (trial_activation_claim_id IS NULL OR trial_activation_claim_id = ?)`,
+    { replacements: [attemptId, orgId, attemptId] },
+  );
+  const row = await queryOne<{ trial_activation_claim_id: string | null }>(
+    'SELECT trial_activation_claim_id FROM organizations WHERE id = ? LIMIT 1',
+    [orgId],
+  );
+  return row?.trial_activation_claim_id === attemptId;
+}
+
 export interface OrgBillingPatch {
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
