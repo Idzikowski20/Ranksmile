@@ -1,21 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { NextPage } from 'next';
-import Head from 'next/head';
 import { useRouter } from 'next/router';
-import DashboardLayout from '../../components/common/DashboardLayout';
+import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Alert, Button } from '../../components/koala/core';
 import { Icon } from '../../components/koala/icons';
-import {
-  KoalaPage,
-  KoalaPageHeader,
-  KoalaPanel,
-  KoalaPanelBody,
-  KoalaPanelHeader,
-} from '../../components/koala/layout';
-import { Spinner, StatusBadge } from '../../components/koala/primitives';
-import AnalysisCircuitBoard from '../../components/ranksmile/AnalysisCircuitBoard';
-import type { DeepAnalysisUiState, StepVisualStatus } from '../../lib/deepAnalysisProgress';
-import { useFetchDomains } from '../../services/domains';
+import { Spinner } from '../../components/koala/primitives';
 
 // ── Must match the API handler ────────────────────────────────────────
 const STEPS = [
@@ -36,6 +25,17 @@ interface StepState {
   label: string;
   status: StepStatus;
   errorMessage?: string;
+}
+
+interface AnalysisProgressPayload {
+  articleId?: number;
+  jobId?: string;
+  step?: string;
+  currentStage?: string;
+  message?: string;
+  status?: string;
+  progressMessage?: string;
+  error?: string | null;
 }
 
 type StageName = 'fetch_page' | 'scrape_serp' | 'classify_content' | 'extract_terms' | 'score_ranking' | 'ai_search' | 'finalizing' | 'done';
@@ -98,6 +98,28 @@ function applyStageToSteps(stage: string, prev: StepState[]): StepState[] {
   });
 }
 
+function markFailedStep(
+  prev: StepState[],
+  step: string | undefined,
+  currentStage: string | undefined,
+  message: string,
+): StepState[] {
+  const direct = step && prev.find((item) => item.key === step);
+  const mappedKeys = direct
+    ? []
+    : [currentStage, step].flatMap((stage) => (stage ? STAGE_TO_STEPS[stage] || [] : []));
+  const mapped = prev.find((item) => mappedKeys.includes(item.key) && item.status === 'running')
+    || prev.find((item) => mappedKeys.includes(item.key) && item.status !== 'done');
+  const failed = direct
+    || mapped
+    || prev.find((item) => item.status === 'running')
+    || prev.find((item) => item.status === 'pending');
+  if (!failed) return prev;
+  return prev.map((item) => (
+    item.key === failed.key ? { ...item, status: 'error', errorMessage: message } : item
+  ));
+}
+
 const StepIcon = ({ status }: { status: StepStatus }) => {
   if (status === 'done') {
     return (
@@ -105,7 +127,7 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
         name="CheckCircle"
         size={20}
         weight="fill"
-        color="var(--koala-status-success)"
+        color="color-mix(in srgb, var(--koala-status-success) 50%, var(--koala-text-primary))"
         className="deep-analysis-step-icon__done"
       />
     );
@@ -116,7 +138,7 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
         name="XCircle"
         size={20}
         weight="fill"
-        color="var(--koala-status-danger)"
+        color="color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary))"
         className="deep-analysis-step-icon__error"
       />
     );
@@ -129,7 +151,7 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
       name="Circle"
       size={18}
       weight="bold"
-      color="var(--koala-border-strong)"
+      color="var(--koala-text-secondary)"
       className="deep-analysis-step-icon__pending"
     />
   );
@@ -150,20 +172,20 @@ const StepRow = ({ step }: { step: StepState }) => (
 const DeepAnalysisPage: NextPage = () => {
   const router = useRouter();
   const { url, keywords: kwParam, country, domainId: domainIdParam, flow: flowParam, language: languageParam } = router.query;
-  const { data: domainsData } = useFetchDomains(router);
-  const domains: DomainType[] = domainsData?.domains || [];
 
   const [steps, setSteps] = useState<StepState[]>(
     STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })),
   );
   const [articleId, setArticleId] = useState<number | null>(null);
+  const [recoveryArticleId, setRecoveryArticleId] = useState<number | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [overallError, setOverallError] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [apiProgressPct, setApiProgressPct] = useState<number | null>(null);
   const startedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retryArticleIdRef = useRef<number | null>(null);
+  const runGenerationRef = useRef(0);
 
   const urlStr = (url as string || '').trim();
   const kwStr = (kwParam as string || '');
@@ -195,6 +217,8 @@ const DeepAnalysisPage: NextPage = () => {
     }
 
     startedRef.current = true;
+    const runGeneration = runGenerationRef.current;
+    const retryArticleId = retryArticleIdRef.current;
 
     (async () => {
       try {
@@ -203,13 +227,27 @@ const DeepAnalysisPage: NextPage = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
             isKeywordMode
-              ? { keywords, country: country || 'PL', language: languageStr || undefined, domainId: Number(domainIdStr) }
-              : { url: urlStr, keywords, country: country || 'PL', language: languageStr || undefined },
+              ? {
+                keywords,
+                country: country || 'PL',
+                language: languageStr || undefined,
+                domainId: Number(domainIdStr),
+                ...(retryArticleId ? { articleId: retryArticleId } : {}),
+              }
+              : {
+                url: urlStr,
+                keywords,
+                country: country || 'PL',
+                language: languageStr || undefined,
+                ...(retryArticleId ? { articleId: retryArticleId } : {}),
+              },
           ),
         });
+        if (runGeneration !== runGenerationRef.current) return;
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({ error: 'Analysis failed' }));
+          if (runGeneration !== runGenerationRef.current) return;
           setOverallError(data.error || 'Analysis failed');
           startedRef.current = false;
           return;
@@ -227,27 +265,25 @@ const DeepAnalysisPage: NextPage = () => {
         let currentEvent = '';
 
         function processLine(line: string) {
+          if (runGeneration !== runGenerationRef.current) return;
           if (line.startsWith('event: ')) {
             currentEvent = line.slice(7).trim();
           } else if (line.startsWith('data: ')) {
             const jsonStr = line.slice(6);
             try {
-              const data = JSON.parse(jsonStr);
+              const data = JSON.parse(jsonStr) as AnalysisProgressPayload;
               if (currentEvent === 'created') {
                 if (data.articleId) setArticleId(data.articleId);
                 if (data.articleId && data.jobId) {
                   setJobId(data.jobId);
                   writePageRun(runSessionKey, data.articleId, data.jobId);
+                  retryArticleIdRef.current = null;
+                  setRecoveryArticleId(null);
                 }
               } else if (currentEvent === 'error') {
-                setSteps((prev) =>
-                  prev.map((s) =>
-                    s.key === data.step
-                      ? { ...s, status: 'error', errorMessage: data.message }
-                      : s,
-                  ),
-                );
-                setOverallError(data.message || 'Analysis failed');
+                const message = data.message || 'Analysis failed';
+                setSteps((prev) => markFailedStep(prev, data.step, data.currentStage, message));
+                setOverallError(message);
                 clearPageRun(runSessionKey);
               } else if (currentEvent === 'done') {
                 if (data.articleId) setArticleId(data.articleId);
@@ -262,6 +298,7 @@ const DeepAnalysisPage: NextPage = () => {
 
         while (true) {
           const { done, value } = await reader.read();
+          if (runGeneration !== runGenerationRef.current) return;
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
@@ -272,6 +309,7 @@ const DeepAnalysisPage: NextPage = () => {
         }
         if (buffer.trim()) processLine(buffer.trim());
       } catch (err) {
+        if (runGeneration !== runGenerationRef.current) return;
         const e = err as { message?: string };
         setOverallError(e.message || 'Connection lost');
         startedRef.current = false;
@@ -287,19 +325,28 @@ const DeepAnalysisPage: NextPage = () => {
       return undefined;
     }
 
+    const runGeneration = runGenerationRef.current;
     const poll = async () => {
       try {
+        if (runGeneration !== runGenerationRef.current) return;
         const query = jobId
           ? `jobId=${encodeURIComponent(jobId)}`
           : `articleId=${articleId}`;
         const res = await fetch(`/api/articles/job-progress?${query}`);
+        if (runGeneration !== runGenerationRef.current) return;
         if (!res.ok) return;
-        const data = await res.json();
+        const data = await res.json() as AnalysisProgressPayload;
+        if (runGeneration !== runGenerationRef.current) return;
 
-        if (data.jobId && !jobId) setJobId(data.jobId);
+        if (data.jobId && !jobId) {
+          setJobId(data.jobId);
+          if (articleId) writePageRun(runSessionKey, articleId, data.jobId);
+        }
 
         if (data.status === 'failed') {
-          setOverallError(data.progressMessage || 'Analysis failed');
+          const message = data.error || data.progressMessage || data.message || 'Analysis failed';
+          setSteps((prev) => markFailedStep(prev, data.step, data.currentStage, message));
+          setOverallError(message);
           clearPageRun(runSessionKey);
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
           return;
@@ -310,10 +357,6 @@ const DeepAnalysisPage: NextPage = () => {
           clearPageRun(runSessionKey);
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
           return;
-        }
-
-        if (typeof data.totalProgress === 'number') {
-          setApiProgressPct(Math.max(0, Math.min(100, data.totalProgress)));
         }
 
         const stage = data.currentStage as string | undefined;
@@ -338,58 +381,35 @@ const DeepAnalysisPage: NextPage = () => {
     return () => clearTimeout(t);
   }, [allDone, articleId, router]);
 
-  const completedCount = steps.filter((s) => s.status === 'done').length;
-  const progressPct = apiProgressPct ?? Math.round((completedCount / STEPS.length) * 100);
-
-  const circuitState = useMemo((): DeepAnalysisUiState => {
-    const statusOf = (keys: string[]): StepVisualStatus => {
-      const matched = keys
-        .map((k) => steps.find((s) => s.key === k)?.status)
-        .filter((s): s is StepStatus => Boolean(s));
-      if (matched.some((s) => s === 'running' || s === 'error')) return 'running';
-      if (matched.length > 0 && matched.every((s) => s === 'done')) return 'done';
-      if (matched.some((s) => s === 'done')) return 'done';
-      return 'pending';
-    };
-    return {
-      googleSearch: [
-        { key: 'serp_results', label: 'Fetching', status: statusOf(['fetch', 'metadata', 'structure']) },
-        { key: 'serp_crawl', label: 'SERP', status: statusOf(['serp']) },
-        { key: 'serp_scores', label: 'Score', status: statusOf(['score', 'image', 'save']) },
-      ],
-      aiSearch: [
-        { key: 'ai_prompts', label: 'NLP', status: statusOf(['nlp']) },
-        { key: 'ai_scrape', label: 'NLP', status: statusOf(['nlp']) },
-        { key: 'ai_guidelines', label: 'Guidelines', status: statusOf(['score']) },
-      ],
-      error: overallError,
-      isComplete: allDone,
-    };
-  }, [steps, overallError, allDone]);
-
   const subtitle = useMemo(() => {
     if (allDone) return 'Analysis complete — opening your article…';
     if (overallError) return 'Something went wrong while analyzing your content.';
-    return 'Fetching and analyzing content. This may take a moment.';
+    return 'We are analyzing your content. You can continue while it runs in the background.';
   }, [allDone, overallError]);
 
+  const canContinue = articleId !== null && jobId !== null && !overallError;
+  const continueToContentType = () => {
+    if (!articleId) return;
+    router.push(`/articles/content-type?articleId=${articleId}`);
+  };
+
   const handleRetry = () => {
+    runGenerationRef.current += 1;
+    const retryArticleId = articleId ?? retryArticleIdRef.current;
+    retryArticleIdRef.current = retryArticleId;
+    setRecoveryArticleId(retryArticleId);
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     setOverallError(null);
+    setArticleId(null);
     setJobId(null);
-    setApiProgressPct(null);
+    setAllDone(false);
     setSteps(STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })));
     clearPageRun(runSessionKey);
     startedRef.current = false;
     setRetryCount((c) => c + 1);
   };
 
-  const statusBadge = overallError ? (
-    <StatusBadge status="failed" label="Failed" />
-  ) : allDone ? (
-    <StatusBadge status="completed" label="Complete" />
-  ) : (
-    <StatusBadge status="running" label={`${completedCount}/${STEPS.length} steps`} />
-  );
+  const recoveryTargetArticleId = articleId ?? recoveryArticleId;
 
   useEffect(() => {
     if (!router.isReady || flow !== 'import') return undefined;
@@ -398,84 +418,46 @@ const DeepAnalysisPage: NextPage = () => {
   }, [router.isReady, flow, router]);
 
   return (
-    <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-      <Head>
-        <title>Deep Analysis — Ranksmile</title>
-      </Head>
-
-      <KoalaPage maxWidth={560} className="nc-wizard-page">
-        <KoalaPageHeader
-          borderless
-          title="Deep analysis"
-          subtitle={subtitle}
-          meta={statusBadge}
+    <WizardShell
+      title="Deep analysis"
+      footer={(
+        <WizardNextButton
+          label="Content type"
+          disabled={!canContinue}
+          onClick={continueToContentType}
         />
+      )}
+    >
+      <div>
+        <h2 className="koala-wizard-title">Deep analysis</h2>
+        <p className="koala-wizard-subtitle">{subtitle}</p>
+      </div>
 
-        <div className="koala-page-content">
-          <KoalaPanel className="deep-analysis-panel">
-            <KoalaPanelHeader
-              title="Pipeline progress"
-              actions={!overallError ? (
-                <span className="deep-analysis-pct">{allDone ? 100 : progressPct}%</span>
-              ) : undefined}
-            />
-            <KoalaPanelBody>
-              {!overallError && !allDone && (
-                <div className="deep-analysis-pipeline-live">
-                  <AnalysisCircuitBoard
-                    variant="deep-analysis"
-                    state={circuitState}
-                    width={420}
-                    height={200}
-                  />
-                  <p className="deep-analysis-pipeline-status" aria-live="polite">
-                    {steps.find((s) => s.status === 'running')?.label || 'Analyzing content…'}
-                  </p>
-                </div>
-              )}
-              <div className={`deep-analysis-steps${allDone ? ' deep-analysis-steps--complete' : ''}`}>
-                {steps.map((step) => (
-                  <StepRow key={step.key} step={step} />
-                ))}
-              </div>
-              {!overallError && (
-                <div className="deep-analysis-progress" aria-hidden="true">
-                  <div
-                    className="deep-analysis-progress-fill"
-                    style={{ width: `${allDone ? 100 : progressPct}%` }}
-                  />
-                </div>
-              )}
-            </KoalaPanelBody>
-          </KoalaPanel>
+      <div className="deep-analysis-steps" aria-label="Deep analysis progress" aria-live="polite">
+        {steps.map((step) => (
+          <StepRow key={step.key} step={step} />
+        ))}
+      </div>
 
-          {overallError && (
-            <Alert variant="error" title="Analysis failed">
-              {overallError}
-              <div className="deep-analysis-actions">
-                <Button variant="primary" size="sm" onClick={handleRetry}>
-                  Try again
-                </Button>
-                {articleId && (
-                  <Button variant="secondary" size="sm" onClick={() => router.push(`/articles/${articleId}`)}>
-                    Open article
-                  </Button>
-                )}
-                <Button variant="secondary" size="sm" onClick={() => router.push(backHref)}>
-                  {backLabel}
-                </Button>
-              </div>
-            </Alert>
-          )}
-
-          {allDone && (
-            <Alert variant="success" title="All steps completed" className="deep-analysis-complete-alert">
-              Redirecting to content setup…
-            </Alert>
-          )}
-        </div>
-      </KoalaPage>
-    </DashboardLayout>
+      {overallError && (
+        <Alert variant="error" title="Analysis failed">
+          {overallError}
+          <div className="deep-analysis-actions">
+            <Button variant="primary" size="sm" onClick={handleRetry}>
+              Try again
+            </Button>
+            {recoveryTargetArticleId && (
+              <Button variant="secondary" size="sm" onClick={() => router.push(`/articles/${recoveryTargetArticleId}`)}>
+                Open article
+              </Button>
+            )}
+            <Button variant="secondary" size="sm" onClick={() => router.push(backHref)}>
+              {backLabel}
+            </Button>
+          </div>
+        </Alert>
+      )}
+    </WizardShell>
   );
 };
 
