@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pipeline.editorial_judge import ReviewedParagraphResult, review_paragraph
 from pipeline.html_renderer import render_html
 from pipeline.md_ast import parse_markdown
-from pipeline.section_writer import MarkdownGenerator, write_paragraph
+from pipeline.section_writer import write_paragraph
 
 
 @dataclass(frozen=True)
@@ -31,7 +31,7 @@ async def run_compiled_write_plan(
     title = plan.get("title")
     if not isinstance(title, str) or not title.strip():
         raise ValueError("compiled_write_plan.title must be non-empty")
-    _required_list(plan, "knowledge_packs")
+    packs = _required_list(plan, "knowledge_packs")
     paragraphs = _required_list(plan, "paragraph_plans")
     registry = {
         paragraph.get("id"): paragraph
@@ -41,7 +41,7 @@ async def run_compiled_write_plan(
 
     markdown = [f"# {title.strip()}"]
     reviewed: list[ReviewedParagraphResult] = []
-    for pack in _required_list(plan, "knowledge_packs"):
+    for pack in packs:
         if not isinstance(pack, Mapping):
             raise ValueError("compiled_write_plan.knowledge_packs contains invalid pack")
         heading = pack.get("heading")

@@ -30,7 +30,6 @@ import {
   finalizePlannerForWrite,
   runContentPlanner,
   toSidecarCompiledPlan,
-  toSidecarExecutionPlan,
 } from '../../../../lib/contentPlanner';
 import {
   buildStructuralBenchmark,
@@ -272,7 +271,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
-    const executionPlan = toSidecarExecutionPlan(finalized.bundle.executionPlan);
     const compiledWritePlan = toSidecarCompiledPlan(compiledResult.plan);
     await db.query(
       `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
@@ -298,7 +296,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       review_outline: reviewOutline,
       brand_knowledge: allowBrandNiche ? brandKnowledge : '',
       voice_tone: voiceTone,
-      execution_plan: executionPlan,
       compiled_write_plan: compiledWritePlan,
     };
 
