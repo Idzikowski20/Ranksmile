@@ -65,13 +65,13 @@ function stubSection(i: number, template: ExecutionPlanSection | undefined): Exe
 export function applyApprovedOutlineToPlan(
   plan: ArticleExecutionPlan,
   approved: ApprovedOutlineHeading[],
-): ArticleExecutionPlan {
+): ArticleExecutionPlan | null {
   const headings = normalizeHeadings(approved);
   if (!headings.length) return plan;
 
   const body = headings.filter((h) => h.level >= 2);
   const use = body.length > 0 ? body : headings;
-  if (use.length !== plan.sections.length) return plan;
+  if (use.length !== plan.sections.length) return null;
   const template = plan.sections[0];
 
   const sections: ExecutionPlanSection[] = use.map((h, i) => {
