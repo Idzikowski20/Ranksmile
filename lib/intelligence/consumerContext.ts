@@ -101,6 +101,11 @@ export type ContentConsumer<TResult> = {
   ): Promise<ConsumerResult<TResult>> | ConsumerResult<TResult>;
 };
 
+/** Consumer explicitly safe to use in synchronous projections. */
+export type SyncContentConsumer<TResult> = Omit<ContentConsumer<TResult>, 'accept'> & {
+  accept(context: ConsumerContext): ConsumerResult<TResult>;
+};
+
 const defaultRuntime: RuntimeHandle = {
   graphQuery,
 };
