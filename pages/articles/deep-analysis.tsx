@@ -1,21 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { NextPage } from 'next';
-import Head from 'next/head';
 import { useRouter } from 'next/router';
-import DashboardLayout from '../../components/common/DashboardLayout';
+import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Alert, Button } from '../../components/koala/core';
 import { Icon } from '../../components/koala/icons';
-import {
-  KoalaPage,
-  KoalaPageHeader,
-  KoalaPanel,
-  KoalaPanelBody,
-  KoalaPanelHeader,
-} from '../../components/koala/layout';
-import { Spinner, StatusBadge } from '../../components/koala/primitives';
-import AnalysisCircuitBoard from '../../components/ranksmile/AnalysisCircuitBoard';
-import type { DeepAnalysisUiState, StepVisualStatus } from '../../lib/deepAnalysisProgress';
-import { useFetchDomains } from '../../services/domains';
+import { Spinner } from '../../components/koala/primitives';
 
 // ── Must match the API handler ────────────────────────────────────────
 const STEPS = [
@@ -150,8 +139,6 @@ const StepRow = ({ step }: { step: StepState }) => (
 const DeepAnalysisPage: NextPage = () => {
   const router = useRouter();
   const { url, keywords: kwParam, country, domainId: domainIdParam, flow: flowParam, language: languageParam } = router.query;
-  const { data: domainsData } = useFetchDomains(router);
-  const domains: DomainType[] = domainsData?.domains || [];
 
   const [steps, setSteps] = useState<StepState[]>(
     STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })),
@@ -161,7 +148,6 @@ const DeepAnalysisPage: NextPage = () => {
   const [overallError, setOverallError] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [apiProgressPct, setApiProgressPct] = useState<number | null>(null);
   const startedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -312,10 +298,6 @@ const DeepAnalysisPage: NextPage = () => {
           return;
         }
 
-        if (typeof data.totalProgress === 'number') {
-          setApiProgressPct(Math.max(0, Math.min(100, data.totalProgress)));
-        }
-
         const stage = data.currentStage as string | undefined;
         if (stage) {
           setSteps((prev) => applyStageToSteps(stage, prev));
@@ -338,58 +320,26 @@ const DeepAnalysisPage: NextPage = () => {
     return () => clearTimeout(t);
   }, [allDone, articleId, router]);
 
-  const completedCount = steps.filter((s) => s.status === 'done').length;
-  const progressPct = apiProgressPct ?? Math.round((completedCount / STEPS.length) * 100);
-
-  const circuitState = useMemo((): DeepAnalysisUiState => {
-    const statusOf = (keys: string[]): StepVisualStatus => {
-      const matched = keys
-        .map((k) => steps.find((s) => s.key === k)?.status)
-        .filter((s): s is StepStatus => Boolean(s));
-      if (matched.some((s) => s === 'running' || s === 'error')) return 'running';
-      if (matched.length > 0 && matched.every((s) => s === 'done')) return 'done';
-      if (matched.some((s) => s === 'done')) return 'done';
-      return 'pending';
-    };
-    return {
-      googleSearch: [
-        { key: 'serp_results', label: 'Fetching', status: statusOf(['fetch', 'metadata', 'structure']) },
-        { key: 'serp_crawl', label: 'SERP', status: statusOf(['serp']) },
-        { key: 'serp_scores', label: 'Score', status: statusOf(['score', 'image', 'save']) },
-      ],
-      aiSearch: [
-        { key: 'ai_prompts', label: 'NLP', status: statusOf(['nlp']) },
-        { key: 'ai_scrape', label: 'NLP', status: statusOf(['nlp']) },
-        { key: 'ai_guidelines', label: 'Guidelines', status: statusOf(['score']) },
-      ],
-      error: overallError,
-      isComplete: allDone,
-    };
-  }, [steps, overallError, allDone]);
-
   const subtitle = useMemo(() => {
     if (allDone) return 'Analysis complete — opening your article…';
     if (overallError) return 'Something went wrong while analyzing your content.';
-    return 'Fetching and analyzing content. This may take a moment.';
+    return 'We are analyzing your content. You can continue while it runs in the background.';
   }, [allDone, overallError]);
+
+  const canContinue = articleId !== null && jobId !== null;
+  const continueToContentType = () => {
+    if (!articleId) return;
+    void router.push(`/articles/content-type?articleId=${articleId}`);
+  };
 
   const handleRetry = () => {
     setOverallError(null);
     setJobId(null);
-    setApiProgressPct(null);
     setSteps(STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })));
     clearPageRun(runSessionKey);
     startedRef.current = false;
     setRetryCount((c) => c + 1);
   };
-
-  const statusBadge = overallError ? (
-    <StatusBadge status="failed" label="Failed" />
-  ) : allDone ? (
-    <StatusBadge status="completed" label="Complete" />
-  ) : (
-    <StatusBadge status="running" label={`${completedCount}/${STEPS.length} steps`} />
-  );
 
   useEffect(() => {
     if (!router.isReady || flow !== 'import') return undefined;
@@ -398,84 +348,46 @@ const DeepAnalysisPage: NextPage = () => {
   }, [router.isReady, flow, router]);
 
   return (
-    <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-      <Head>
-        <title>Deep Analysis — Ranksmile</title>
-      </Head>
-
-      <KoalaPage maxWidth={560} className="nc-wizard-page">
-        <KoalaPageHeader
-          borderless
-          title="Deep analysis"
-          subtitle={subtitle}
-          meta={statusBadge}
+    <WizardShell
+      title="Deep analysis"
+      footer={(
+        <WizardNextButton
+          label="Content type"
+          disabled={!canContinue}
+          onClick={continueToContentType}
         />
+      )}
+    >
+      <div>
+        <h2 className="koala-wizard-title">Deep analysis</h2>
+        <p className="koala-wizard-subtitle">{subtitle}</p>
+      </div>
 
-        <div className="koala-page-content">
-          <KoalaPanel className="deep-analysis-panel">
-            <KoalaPanelHeader
-              title="Pipeline progress"
-              actions={!overallError ? (
-                <span className="deep-analysis-pct">{allDone ? 100 : progressPct}%</span>
-              ) : undefined}
-            />
-            <KoalaPanelBody>
-              {!overallError && !allDone && (
-                <div className="deep-analysis-pipeline-live">
-                  <AnalysisCircuitBoard
-                    variant="deep-analysis"
-                    state={circuitState}
-                    width={420}
-                    height={200}
-                  />
-                  <p className="deep-analysis-pipeline-status" aria-live="polite">
-                    {steps.find((s) => s.status === 'running')?.label || 'Analyzing content…'}
-                  </p>
-                </div>
-              )}
-              <div className={`deep-analysis-steps${allDone ? ' deep-analysis-steps--complete' : ''}`}>
-                {steps.map((step) => (
-                  <StepRow key={step.key} step={step} />
-                ))}
-              </div>
-              {!overallError && (
-                <div className="deep-analysis-progress" aria-hidden="true">
-                  <div
-                    className="deep-analysis-progress-fill"
-                    style={{ width: `${allDone ? 100 : progressPct}%` }}
-                  />
-                </div>
-              )}
-            </KoalaPanelBody>
-          </KoalaPanel>
+      <div className="deep-analysis-steps" aria-label="Deep analysis progress" aria-live="polite">
+        {steps.map((step) => (
+          <StepRow key={step.key} step={step} />
+        ))}
+      </div>
 
-          {overallError && (
-            <Alert variant="error" title="Analysis failed">
-              {overallError}
-              <div className="deep-analysis-actions">
-                <Button variant="primary" size="sm" onClick={handleRetry}>
-                  Try again
-                </Button>
-                {articleId && (
-                  <Button variant="secondary" size="sm" onClick={() => router.push(`/articles/${articleId}`)}>
-                    Open article
-                  </Button>
-                )}
-                <Button variant="secondary" size="sm" onClick={() => router.push(backHref)}>
-                  {backLabel}
-                </Button>
-              </div>
-            </Alert>
-          )}
-
-          {allDone && (
-            <Alert variant="success" title="All steps completed" className="deep-analysis-complete-alert">
-              Redirecting to content setup…
-            </Alert>
-          )}
-        </div>
-      </KoalaPage>
-    </DashboardLayout>
+      {overallError && (
+        <Alert variant="error" title="Analysis failed">
+          {overallError}
+          <div className="deep-analysis-actions">
+            <Button variant="primary" size="sm" onClick={handleRetry}>
+              Try again
+            </Button>
+            {articleId && (
+              <Button variant="secondary" size="sm" onClick={() => router.push(`/articles/${articleId}`)}>
+                Open article
+              </Button>
+            )}
+            <Button variant="secondary" size="sm" onClick={() => router.push(backHref)}>
+              {backLabel}
+            </Button>
+          </div>
+        </Alert>
+      )}
+    </WizardShell>
   );
 };
 
