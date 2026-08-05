@@ -32,31 +32,37 @@ export type ChatLlmConfig = {
   url: string;
 };
 
-/** Shared config for raw `fetch(.../chat/completions)` call sites. */
-export function chatLlm(): ChatLlmConfig {
-  if (hasOpenRouterKey) {
+export function chatLlmFor(provider: ChatLlmConfig['provider']): ChatLlmConfig {
+  if (provider === 'openrouter') {
     return {
-      provider: 'openrouter',
+      provider,
       apiKey: process.env.OPENROUTER_API_KEY || '',
       keyEnv: 'OPENROUTER_API_KEY',
       model: OPENROUTER_CHAT_MODEL,
       url: `${OPENROUTER_BASE_URL}/chat/completions`,
     };
   }
-  if (USE_GEMINI_FLASH) {
+  if (provider === 'deepseek') {
     return {
-      provider: 'gemini',
-      apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || '',
-      keyEnv: 'GEMINI_API_KEY',
-      model: GEMINI_FLASH_MODEL,
-      url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      provider,
+      apiKey: process.env.DEEPSEEK_API_KEY || '',
+      keyEnv: 'DEEPSEEK_API_KEY',
+      model: 'deepseek-chat',
+      url: 'https://api.deepseek.com/v1/chat/completions',
     };
   }
   return {
-    provider: 'deepseek',
-    apiKey: process.env.DEEPSEEK_API_KEY || '',
-    keyEnv: 'DEEPSEEK_API_KEY',
-    model: 'deepseek-chat',
-    url: 'https://api.deepseek.com/v1/chat/completions',
+    provider,
+    apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || '',
+    keyEnv: 'GEMINI_API_KEY',
+    model: GEMINI_FLASH_MODEL,
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
   };
+}
+
+/** Shared config for raw `fetch(.../chat/completions)` call sites. */
+export function chatLlm(): ChatLlmConfig {
+  if (hasOpenRouterKey) return chatLlmFor('openrouter');
+  if (process.env.DEEPSEEK_API_KEY) return chatLlmFor('deepseek');
+  return chatLlmFor('gemini');
 }
