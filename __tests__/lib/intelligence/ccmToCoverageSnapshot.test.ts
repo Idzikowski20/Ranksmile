@@ -59,4 +59,20 @@ describe('projectCcmToCoverageSnapshot', () => {
     expect(snap.items.some((i) => i.id === 'paa-1')).toBe(true);
     expect(snap.items.some((i) => i.llmSources?.includes('chat_gpt'))).toBe(true);
   });
+
+  it('keeps knowledge items when CCM metadata has no query or title', () => {
+    const { model } = compile({
+      articleId: 'proj-no-query',
+      compiledAt: FIXED_AT,
+      source: { kind: 'plain', text: '# Heading\n\nA fact with enough detail to be indexed.' },
+    });
+    const withoutQuery = {
+      ...model,
+      metadata: { ...model.metadata, primaryQuery: undefined, title: undefined },
+    };
+
+    const snap = projectCcmToCoverageSnapshot(withoutQuery, { createdAt: FIXED_AT });
+
+    expect(snap.items.some((item) => item.category === 'knowledge')).toBe(true);
+  });
 });

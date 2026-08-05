@@ -18,7 +18,7 @@ import {
   type VisibilityProjection,
 } from '../projections/visibilityView';
 import { buildActionGraph } from '../planner/actionGraphBuilder';
-import { createConsumerContext, type ConsumerResult } from './consumerContext';
+import { createConsumerContext } from './consumerContext';
 import { coverageConsumer, visibilityConsumer, actionGraphConsumer } from './consumers';
 import {
   buildWiScorecard,
@@ -83,11 +83,6 @@ function htmlToPlain(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function readSyncConsumer<T>(value: ConsumerResult<T> | Promise<ConsumerResult<T>>): T {
-  if ('then' in value) throw new Error('Synchronous intelligence projection cannot use an async consumer');
-  return value.result;
-}
-
 export function resolveCompileSource(source: ArticleSourceInput): CompileSource {
   if (source.kind === 'html') {
     return { kind: 'plain', text: htmlToPlain(source.html) };
@@ -101,8 +96,8 @@ export function projectArticleIntelligence(
   actionGraph?: ActionGraph,
 ): ArticleIntelligenceView {
   const ctxBase = createConsumerContext({ model, actionGraph });
-  const coverage = readSyncConsumer(coverageConsumer.accept(ctxBase));
-  const visibility = readSyncConsumer(visibilityConsumer.accept(ctxBase));
+  const coverage = coverageConsumer.accept(ctxBase).result;
+  const visibility = visibilityConsumer.accept(ctxBase).result;
   const writing = buildWiScorecard(
     createConsumerContext({
       model,
@@ -164,7 +159,7 @@ export async function compileArticle(
   const agResult = actionGraphConsumer.accept(
     createConsumerContext({ model: compiled.model }),
   );
-  const actionGraph = readSyncConsumer(agResult);
+  const actionGraph = agResult.result;
 
   if (store && opts.persist !== false) {
     await acceptHistoryAsync(store, createConsumerContext({

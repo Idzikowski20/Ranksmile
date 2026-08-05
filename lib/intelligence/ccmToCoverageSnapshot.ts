@@ -121,10 +121,8 @@ export function projectCcmToCoverageSnapshot(
     intents.some((i) => i.primary && isCovered(i.status));
 
   // Cap CCM dump — UI checklist must stay near AI_COVERAGE_MAX (not 100+ facts).
-  const compacted = compactCoverageSnapshotItems(
-    items,
-    model.metadata.primaryQuery ?? model.metadata.title ?? '',
-  );
+  const query = model.metadata.primaryQuery ?? model.metadata.title;
+  const compacted = query ? compactCoverageSnapshotItems(items, query) : items;
   const capped = compacted.length > AI_COVERAGE_MAX
     ? compacted.slice(0, AI_COVERAGE_MAX)
     : compacted;

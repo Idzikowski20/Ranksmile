@@ -1,5 +1,5 @@
 import type { BillingPeriod } from './billingPlans';
-import { getCheckoutPlan, getPlanPeriodPrice } from './billingPlans';
+import { getCheckoutPlan, getLegacyCheckoutPlan, getPlanPeriodPrice } from './billingPlans';
 import { hasActiveBillingEntitlement } from './billingEntitlement';
 import { getLockedCheckoutPlanSlug } from './billingPlanLock';
 import { isTrialEligible } from './billingTrial';
@@ -8,7 +8,7 @@ import { DEFAULT_PLAN_SLUG, resolvePlanSlug } from './planLimits';
 import type { UpcomingPaymentDetails } from './subscriptionFormat';
 import { getStripe, isStripeConfigured } from './stripe';
 import { syncSubscriptionToOrg } from './stripeBillingSync';
-import type { PlanSlug } from './stripePrices';
+import type { LegacyPlanSlug } from './stripePrices';
 import type Stripe from 'stripe';
 
 export type { UpcomingPaymentDetails };
@@ -16,9 +16,9 @@ export type { UpcomingPaymentDetails };
 export interface SubscriptionDetails {
   configured: boolean;
   hasStripeSubscription: boolean;
-  planSlug: PlanSlug | 'starter';
+  planSlug: LegacyPlanSlug;
   /** Set when the org has an active/trialing (etc.) subscription — do not re-checkout this plan. */
-  lockedPlanSlug: PlanSlug | 'starter' | null;
+  lockedPlanSlug: LegacyPlanSlug | null;
   planName: string;
   billingPeriod: BillingPeriod | null;
   subscriptionStatus: SubscriptionStatus | null;
@@ -68,11 +68,11 @@ function formatPeriodLabel(
 
 function estimateUpcoming(
   planName: string,
-  planSlug: PlanSlug | 'starter',
+  planSlug: LegacyPlanSlug,
   billingPeriod: BillingPeriod | null,
   renewalDate: string | null,
 ): UpcomingPaymentDetails | null {
-  const plan = getCheckoutPlan(planSlug);
+  const plan = getCheckoutPlan(planSlug) ?? getLegacyCheckoutPlan(planSlug);
   if (!plan || !billingPeriod) return null;
   const net = getPlanPeriodPrice(plan, billingPeriod);
   const tax = Math.round(net * EU_TAX_RATE * 100) / 100;
@@ -150,7 +150,7 @@ export async function getSubscriptionDetails(orgId: number): Promise<Subscriptio
 
   const entitled = hasActiveBillingEntitlement(billing);
   const planSlug = entitled ? resolvePlanSlug(billing?.planSlug) : DEFAULT_PLAN_SLUG;
-  const plan = getCheckoutPlan(planSlug);
+  const plan = getCheckoutPlan(planSlug) ?? getLegacyCheckoutPlan(planSlug);
   const planName = plan?.name ?? 'Growth';
 
   const paymentFailedLockedAt = billing?.paymentFailedLockedAt ?? null;
