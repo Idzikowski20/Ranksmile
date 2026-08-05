@@ -19,6 +19,10 @@ import {
   parseCompetitorCacheJson,
 } from '../../../../lib/contentPlanner/fromArticleInputs';
 import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlanner';
+import { toPlannerTargets } from '../../../../lib/benchmarkIntelligence';
+import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine/types';
+import type { StructuralBenchmark } from '../../../../lib/benchmarkIntelligence/types';
+import type { PlannerTargets } from '../../../../lib/benchmarkIntelligence/types';
 
 type ArticlePlanRow = {
   id: number;
@@ -76,7 +80,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ? (scoreData!.paa_questions as unknown[]).filter((q): q is string => typeof q === 'string')
       : [];
 
-    const keyword = (row.target_keyword || '').trim() || 'untitled';
+    const keyword = (row.target_keyword || '').trim();
+    if (!keyword) {
+      return res.status(400).json({ error: 'Article has no target keyword' });
+    }
+
+    // Reuse CIE snapshot when present so re-runs do not wipe Execution Plan / AO patching inputs.
+    const storedGraph = scoreData?.knowledge_graph && typeof scoreData.knowledge_graph === 'object'
+      ? (scoreData.knowledge_graph as KnowledgeGraph)
+      : null;
+    const storedBenchmark = scoreData?.structural_benchmark && typeof scoreData.structural_benchmark === 'object'
+      ? (scoreData.structural_benchmark as StructuralBenchmark)
+      : null;
+    const plannerTargets: PlannerTargets | null = storedBenchmark
+      ? toPlannerTargets(storedBenchmark)
+      : null;
+
     const result = runContentPlanner({
       keyword,
       year: new Date().getFullYear(),
@@ -85,13 +104,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ai,
       paaQuestions: paa,
       produceArticle,
+      knowledgeGraph: storedGraph,
+      plannerTargets,
     });
 
     if (persist && scoreData) {
+      const prevPlanner = scoreData.content_planner_v2 && typeof scoreData.content_planner_v2 === 'object'
+        ? (scoreData.content_planner_v2 as Record<string, unknown>)
+        : null;
+      const prevBundle = prevPlanner?.bundle && typeof prevPlanner.bundle === 'object'
+        ? (prevPlanner.bundle as Record<string, unknown>)
+        : null;
       const next = {
         ...scoreData,
         content_planner_v2: {
-          bundle: result.bundle,
+          bundle: {
+            ...result.bundle,
+            // Preserve CIE write artifacts when this endpoint rebuilds without finalize.
+            executionPlan: result.bundle.executionPlan ?? prevBundle?.executionPlan ?? null,
+            quickAnswer: result.bundle.quickAnswer ?? prevBundle?.quickAnswer ?? null,
+            knowledgeCoverage: result.bundle.knowledgeCoverage ?? prevBundle?.knowledgeCoverage ?? null,
+          },
           canWrite: result.canWrite,
           blueprintValidation: result.blueprintValidation,
           outlineValidation: result.outlineValidation,

@@ -19,12 +19,21 @@ function round(n: number): number {
   return Math.round(n);
 }
 
-function frequencyTop(items: string[], minCount: number, limit: number): string[] {
+function frequencyTopPerProfile(
+  profiles: CompetitorProfile[],
+  pick: (p: CompetitorProfile) => string[],
+  minCount: number,
+  limit: number,
+): string[] {
   const map = new Map<string, number>();
-  for (const raw of items) {
-    const k = raw.trim().toLowerCase();
-    if (k.length < 3) continue;
-    map.set(k, (map.get(k) || 0) + 1);
+  for (const p of profiles) {
+    const seen = new Set<string>();
+    for (const raw of pick(p)) {
+      const k = raw.trim().toLowerCase();
+      if (k.length < 3 || seen.has(k)) continue;
+      seen.add(k);
+      map.set(k, (map.get(k) || 0) + 1);
+    }
   }
   return [...map.entries()]
     .filter(([, c]) => c >= minCount)
@@ -40,17 +49,25 @@ export function synthesizeCompetitors(profiles: CompetitorProfile[]): Competitor
   const medWords = median(words);
   const recommendedWords = round(Math.max(avgWords, medWords) * 1.05);
 
-  const allClaims = profiles.flatMap((p) => p.claims);
-  const allQuestions = profiles.flatMap((p) => p.questions);
-  const allEntities = profiles.flatMap((p) => p.entities);
-  const commonClaims = frequencyTop(allClaims, Math.max(2, Math.ceil(n * 0.4)), 40);
-  const commonQuestions = frequencyTop(allQuestions, Math.max(2, Math.ceil(n * 0.3)), 20);
-  const commonEntities = frequencyTop(allEntities, Math.max(2, Math.ceil(n * 0.3)), 30);
+  const commonClaims = frequencyTopPerProfile(
+    profiles, (p) => p.claims, Math.max(2, Math.ceil(n * 0.4)), 40,
+  );
+  const commonQuestions = frequencyTopPerProfile(
+    profiles, (p) => p.questions, Math.max(2, Math.ceil(n * 0.3)), 20,
+  );
+  const commonEntities = frequencyTopPerProfile(
+    profiles, (p) => p.entities, Math.max(2, Math.ceil(n * 0.3)), 30,
+  );
 
   const claimFreq = new Map<string, number>();
-  for (const c of allClaims) {
-    const k = c.trim().toLowerCase();
-    claimFreq.set(k, (claimFreq.get(k) || 0) + 1);
+  for (const p of profiles) {
+    const seen = new Set<string>();
+    for (const c of p.claims) {
+      const k = c.trim().toLowerCase();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      claimFreq.set(k, (claimFreq.get(k) || 0) + 1);
+    }
   }
   const missingTopics = [...claimFreq.entries()]
     .filter(([, c]) => c === 1)
@@ -71,11 +88,8 @@ export function synthesizeCompetitors(profiles: CompetitorProfile[]): Competitor
     averageClaims: round(mean(profiles.map((p) => p.claims.length))),
     averageExamples: round(mean(profiles.map((p) => p.examples))),
     averageQuestions: round(mean(profiles.map((p) => p.questions.length))),
-    commonHeadings: frequencyTop(
-      profiles.flatMap((p) => p.entities.slice(0, 5)),
-      1,
-      12,
-    ),
+    // Profiles store heading counts, not labels — do not substitute entities.
+    commonHeadings: [],
     commonQuestions,
     commonEntities,
     commonClaims,
@@ -109,6 +123,7 @@ export function buildCompetitorBenchmark(
     averageQuestions: Math.max(synth.averageQuestions, 6),
     targetWords,
     targetH2,
+    commonHeadings: synth.commonHeadings?.length ? [...synth.commonHeadings] : [],
   };
 }
 

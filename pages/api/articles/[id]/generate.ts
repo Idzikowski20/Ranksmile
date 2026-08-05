@@ -24,12 +24,16 @@ import {
   competitorsFromScoreData,
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
+  competitorHeadingTitles,
 } from '../../../../lib/contentPlanner/fromArticleInputs';
 import {
   finalizePlannerForWrite,
   runContentPlanner,
   toSidecarExecutionPlan,
+  applyApprovedOutlineToPlan,
+  buildExecutionPlanFromApprovedOutline,
 } from '../../../../lib/contentPlanner';
+import type { ApprovedOutlineHeading } from '../../../../lib/contentPlanner';
 import {
   buildStructuralBenchmark,
   benchmarkDocsFromCompetitors,
@@ -85,6 +89,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     language, tone = 'professional',
     contentType, instructions = '', voiceId = 'serp',
     internalLinks = true, externalLinks = true, reviewOutline = false,
+    approvedOutline = null,
   } = req.body || {};
 
   try {
@@ -200,7 +205,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         cieGate = shouldUseKnowledgePlanner(knowledgeGraph, true);
         if (!cieGate.use) {
           cieWarning = `knowledge_engine_fallback:${cieGate.reason}`;
-          knowledgeGraph = null;
+          // below_floor: keep partial graph when topicBlocks exist (avoid SEO-template outline).
+          if (cieGate.reason === 'below_floor' && knowledgeGraph?.topicBlocks?.length) {
+            cieWarning = `${cieWarning}:partial_topic_blocks`;
+          } else {
+            knowledgeGraph = null;
+          }
         }
       }
     } catch (cieErr) {
@@ -210,6 +220,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       console.warn('[articles/[id]/generate] CIE skipped:', cieWarning);
     }
 
+    const usePartialKg = Boolean(
+      !cieGate.use
+      && cieGate.reason === 'below_floor'
+      && knowledgeGraph?.topicBlocks?.length,
+    );
     const plannerResult = runContentPlanner({
       keyword,
       year: new Date().getFullYear(),
@@ -218,8 +233,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ai,
       paaQuestions: paa,
       produceArticle: false,
-      knowledgeGraph: cieGate.use ? knowledgeGraph : null,
+      knowledgeGraph: cieGate.use || usePartialKg ? knowledgeGraph : null,
       plannerTargets,
+      language: lang,
+      commonHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
     });
     const finalized = await finalizePlannerForWrite(plannerResult);
 
@@ -236,7 +253,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ...scoreData,
       content_planner_v2: plannerPersist,
       ...(structuralBenchmark ? { structural_benchmark: structuralBenchmark } : {}),
-      ...(knowledgeGraph && cieGate.use ? { knowledge_graph: knowledgeGraph } : {}),
+      // Persist graph when full CIE OR partial topic-block fallback.
+      knowledge_graph: (cieGate.use || usePartialKg) && knowledgeGraph ? knowledgeGraph : null,
       ...(cieWarning ? { cie_warning: cieWarning } : {}),
       cie_gate: cieGate,
     };
@@ -245,7 +263,42 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       { replacements: [JSON.stringify(nextScore), articleId] },
     );
 
-    if (!finalized.canWrite || !finalized.bundle.executionPlan) {
+    function parseApprovedOutline(raw: unknown): ApprovedOutlineHeading[] {
+      if (!Array.isArray(raw) || raw.length === 0) return [];
+      return raw
+        .map((item) => {
+          if (!item || typeof item !== 'object') return null;
+          const o = item as Record<string, unknown>;
+          const text = typeof o.text === 'string' ? o.text.trim() : '';
+          const level = typeof o.level === 'number' ? o.level : Number(o.level);
+          if (!text || !Number.isFinite(level)) return null;
+          const heading: ApprovedOutlineHeading = { level, text };
+          return heading;
+        })
+        .filter((h): h is ApprovedOutlineHeading => h !== null);
+    }
+
+    const approvedHeadings = parseApprovedOutline(approvedOutline);
+
+    let writePlan = finalized.bundle.executionPlan;
+    if (writePlan && approvedHeadings.length > 0) {
+      writePlan = applyApprovedOutlineToPlan(writePlan, approvedHeadings);
+    } else if (!writePlan && approvedHeadings.length > 0) {
+      // Outline-review path: user already approved Hn; don't block on CIE/Plan Validator.
+      writePlan = buildExecutionPlanFromApprovedOutline({
+        keyword,
+        headings: approvedHeadings,
+        bundle: {
+          intent: finalized.bundle.intent,
+          reader: finalized.bundle.reader,
+          benchmark: finalized.bundle.benchmark,
+          blueprint: finalized.bundle.blueprint,
+          builtAt: finalized.bundle.builtAt,
+        },
+      });
+    }
+
+    if (!writePlan) {
       return res.status(422).json({
         error: 'plan_validation_failed',
         message: 'Article Execution Plan failed Plan Validator — Write Engine not started',
@@ -258,7 +311,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
-    const executionPlan = toSidecarExecutionPlan(finalized.bundle.executionPlan);
+    const executionPlan = toSidecarExecutionPlan(writePlan);
 
     // 6. Build the sidecar payload (snake_case keys match the sidecar GenerateRequest).
     const sidecarPayload = {
@@ -307,7 +360,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(202).json({
       jobId,
       articleId,
-      planHash: finalized.bundle.executionPlan.planHash,
+      planHash: writePlan.planHash,
     });
   } catch (error) {
     console.error('[articles/[id]/generate] error:', error);

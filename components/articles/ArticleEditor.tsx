@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/router';
 import type { Editor, JSONContent } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { PendingAction } from '../../lib/ai/types';
@@ -44,6 +45,20 @@ import RanksmileChatPanel, { RanksmilePanelApi } from './RanksmileChatPanel';
 import IconSmily from './IconSmily';
 import ProgressiveBlur from '../common/ProgressiveBlur';
 import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
+import OutlineGenerateBar from './OutlineGenerateBar';
+import { revealHtmlInEditor, editorCanCommand } from '../../lib/editor/revealHtmlProgressive';
+import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
+
+function collectOutlineHeadings(ed: Editor): Array<{ level: number; text: string }> {
+  const out: Array<{ level: number; text: string }> = [];
+  ed.state.doc.descendants((node) => {
+    if (node.type.name === 'heading') {
+      const text = node.textContent.trim();
+      if (text) out.push({ level: Number(node.attrs.level) || 2, text });
+    }
+  });
+  return out;
+}
 
 export interface HeadingItem {
   level: number;
@@ -99,6 +114,8 @@ interface Props {
   /** When provided, the Ranksmile chat renders (via portal) into this docked element instead of the
    *  floating modal — the page supplies it in the right column while Ranksmile is open. */
   ranksmileDockEl?: HTMLElement | null;
+  /** Same as OptimizeReviewBar — reserve right score panel so the bar centers in the editor column. */
+  bottomBarRightReserve?: number;
 }
 
 interface MenuBarProps {
@@ -1070,7 +1087,7 @@ const ImportBar = ({ url, onChange, onImport, onClose, busy }: { url: string; on
   </form>
 );
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl, bottomBarRightReserve = 0 }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -1117,6 +1134,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [generateBusy, setGenerateBusy] = useState(false);
     const [generateMsg, setGenerateMsg] = useState('Generating article…');
     const [generatePct, setGeneratePct] = useState<number | null>(null);
+    const router = useRouter();
+    const [outlineReviewMode, setOutlineReviewMode] = useState(false);
+    const outlineAutoStarted = useRef(false);
+    const [outlineHeadingCount, setOutlineHeadingCount] = useState(0);
+    const revealAbortRef = useRef<AbortController | null>(null);
+    const revealPlayingRef = useRef(false);
+    const mountRevealDone = useRef(false);
     const [ranksmileResponse, setRanksmileResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
     const [publishing, setPublishing] = useState(false);
     // Live streaming state for the agent (SSE): per-tool activity, the in-progress text, token usage.
@@ -1570,6 +1594,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     const calcAndEmit = useCallback((ed: Editor) => {
       setDocEmpty(ed.getText().trim().length === 0);
+      setOutlineHeadingCount(collectOutlineHeadings(ed).length);
       let html = ed.getHTML();
       // Strip highlight marks when Ranksmile is open to prevent leaking into saved content
       if (ranksmileOpenRef.current) html = html.replace(/<\/?mark[^>]*>/g, '');
@@ -1656,7 +1681,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         }),
         SlashCommand.configure({ items: (query: string) => filterSlashItems(query, slashAskRanksmileRef) }),
       ],
-      content: content || '<h1></h1><p></p>',
+      content: content ? normalizeListHtml(content) : '<h1></h1><p></p>',
       immediatelyRender: false,
       editable: !readOnly,
       onCreate({ editor: ed }) { calcAndEmit(ed); },
@@ -1751,10 +1776,52 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     }, [editorRef]);
 
     useEffect(() => {
-      if (editor && content && editor.getHTML() !== content) {
-        editor.commands.setContent(content, { emitUpdate: false });
+      if (revealPlayingRef.current) return;
+      if (router.query.reveal === '1') return;
+      if (editorCanCommand(editor) && content) {
+        const cleaned = normalizeListHtml(content);
+        if (editor.getHTML() !== cleaned) {
+          editor.commands.setContent(cleaned, { emitUpdate: false });
+        }
       }
-    }, [content, editor]);
+    }, [content, editor, router.query.reveal]);
+
+    useEffect(() => () => {
+      revealAbortRef.current?.abort();
+    }, []);
+
+    const playReveal = async (html: string, emitUpdate = true) => {
+      if (!editorCanCommand(editor)) return;
+      revealAbortRef.current?.abort();
+      const ac = new AbortController();
+      revealAbortRef.current = ac;
+      revealPlayingRef.current = true;
+      const ed = editor;
+      const cleaned = normalizeListHtml(html);
+      try {
+        await revealHtmlInEditor(ed, cleaned, { signal: ac.signal, emitUpdate });
+      } finally {
+        if (revealAbortRef.current === ac) {
+          revealPlayingRef.current = false;
+        }
+      }
+    };
+
+    // After /articles/generating → open editor with ?reveal=1 and play section-by-section.
+    useEffect(() => {
+      if (!router.isReady || !editor || mountRevealDone.current) return;
+      if (router.query.reveal !== '1') return;
+      const html = (content || '').trim();
+      if (!html || !isUsableArticleHtml(html)) return;
+      mountRevealDone.current = true;
+      void (async () => {
+        await playReveal(html, false);
+        const q = { ...router.query };
+        delete q.reveal;
+        void router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
+      })();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [router.isReady, editor, content, router.query.reveal]);
 
     // ── "Get started" CTA actions (blank-article empty state) ──────────
     const handleImportUrl = async () => {
@@ -1768,7 +1835,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         });
         const data = await res.json();
         if (!res.ok || !data.contentHtml) throw new Error(data.error || 'Import failed');
-        editor.commands.setContent(data.contentHtml, { emitUpdate: true });
+        await playReveal(data.contentHtml, true);
         if (typeof data.featuredImage === 'string' && data.featuredImage) {
           const img = { url: data.featuredImage as string, alt: String(data.title || keyword || articleKeyword || '') };
           setFeaturedImage(img);
@@ -1801,7 +1868,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           const lvl = Math.min(Math.max(h.level, 1), 4);
           return `<h${lvl}>${esc(h.text)}</h${lvl}>`;
         }).join('')}<p></p>`;
-        editor.commands.setContent(html, { emitUpdate: true });
+        await playReveal(html, true);
+        setOutlineHeadingCount(headings.length);
       } catch (e) {
         toast.error(getErrorMessage(e) || 'Could not generate an outline.');
       } finally {
@@ -1809,7 +1877,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     };
 
-    const handleWriteWithAi = async () => {
+    const handleWriteWithAi = async (opts?: {
+      approvedOutline?: Array<{ level: number; text: string }>;
+      internalLinks?: boolean;
+      externalLinks?: boolean;
+      contentType?: string;
+    }) => {
       const articleId = commentArticleId ? Number(commentArticleId) : undefined;
       if (!articleId || !editor) {
         toast.error('Article is not ready yet — try again in a moment.');
@@ -1841,12 +1914,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           const prog = await progRes.json() as { status?: string; jobId?: string };
           if ((prog.status === 'running' || prog.status === 'queued') && prog.jobId) {
             jobId = prog.jobId;
-          } else if (prog.status === 'done') {
+          } else if (prog.status === 'done' && !opts?.approvedOutline?.length) {
             const artRes = await fetch(`/api/articles/${articleId}`);
             const artData = await artRes.json() as { article?: { content?: string | null } };
             const html = artData.article?.content || '';
             if (isUsableArticleHtml(html)) {
-              editor.commands.setContent(html, { emitUpdate: true });
+              await playReveal(html, true);
               toast.success('Article loaded');
               return;
             }
@@ -1858,17 +1931,28 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contentType: 'blog',
+              contentType: opts?.contentType || 'blog',
               instructions,
               voiceId,
-              internalLinks: true,
-              externalLinks: true,
+              internalLinks: opts?.internalLinks ?? true,
+              externalLinks: opts?.externalLinks ?? true,
               reviewOutline: false,
+              ...(opts?.approvedOutline?.length ? { approvedOutline: opts.approvedOutline } : {}),
             }),
           });
-          const genData = await genRes.json().catch(() => ({})) as { jobId?: string; error?: string };
+          const genData = await genRes.json().catch(() => ({})) as {
+            jobId?: string;
+            error?: string;
+            message?: string;
+            blueprintValidation?: { issues?: Array<{ message?: string }> };
+            planValidation?: { issues?: Array<{ message?: string }> };
+          };
           if (!genRes.ok || !genData.jobId) {
-            throw new Error(genData.error || 'Generation failed to start');
+            const detail = [
+              ...(genData.blueprintValidation?.issues || []),
+              ...(genData.planValidation?.issues || []),
+            ].map((i) => i.message).find(Boolean);
+            throw new Error(detail || genData.message || genData.error || 'Generation failed to start');
           }
           jobId = genData.jobId;
           setGenerateMsg('Writing your article…');
@@ -1911,7 +1995,16 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         if (!html.replace(/<[^>]+>/g, ' ').trim()) {
           throw new Error('Generation finished but no content was returned.');
         }
-        editor.commands.setContent(html, { emitUpdate: true });
+        await playReveal(html, true);
+        setOutlineReviewMode(false);
+        if (router.query.reviewOutline) {
+          const q = { ...router.query };
+          delete q.reviewOutline;
+          delete q.internal;
+          delete q.external;
+          delete q.type;
+          void router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
+        }
         toast.success('Article generated');
       } catch (e) {
         toast.error(getErrorMessage(e) || 'Could not generate the article.');
@@ -1919,6 +2012,52 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         setGenerateBusy(false);
         setGeneratePct(null);
       }
+    };
+
+    // ?reviewOutline=1 → review mode; false when param absent (not only Cancel).
+    useEffect(() => {
+      if (!router.isReady) return;
+      setOutlineReviewMode(router.query.reviewOutline === '1');
+    }, [router.isReady, router.query.reviewOutline]);
+
+    useEffect(() => {
+      if (!outlineReviewMode) outlineAutoStarted.current = false;
+    }, [outlineReviewMode]);
+
+    useEffect(() => {
+      if (!outlineReviewMode || !editor || outlineAutoStarted.current || outlineBusy || generateBusy) return undefined;
+      const t = setTimeout(() => {
+        if (outlineAutoStarted.current || !editor) return;
+        const existing = collectOutlineHeadings(editor);
+        outlineAutoStarted.current = true;
+        setOutlineHeadingCount(existing.length);
+        if (existing.length === 0) void handleInsertOutline();
+      }, 450);
+      return () => clearTimeout(t);
+      // ponytail: one-shot when review mode + editor ready (omit handleInsertOutline)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [outlineReviewMode, editor, outlineBusy, generateBusy]);
+
+    const handleOutlineGenerate = () => {
+      if (!editor) return;
+      const approvedOutline = collectOutlineHeadings(editor);
+      if (!approvedOutline.length) {
+        toast.error('Add at least one heading before generating.');
+        return;
+      }
+      void handleWriteWithAi({
+        approvedOutline,
+        internalLinks: router.query.internal !== '0',
+        externalLinks: router.query.external !== '0',
+        contentType: typeof router.query.type === 'string' ? router.query.type : 'blog',
+      });
+    };
+
+    const handleOutlineCancel = () => {
+      setOutlineReviewMode(false);
+      const q = { ...router.query };
+      delete q.reviewOutline;
+      void router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
     };
 
     // Repaint comment decorations when the comment list changes (no-op tx forces
@@ -2005,8 +2144,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror h2 { font-size: 24px; font-weight: 700; color: var(--koala-text-primary); margin: 28px 0 12px; line-height: 1.25; }
           .art-editor-scroll .ProseMirror h3 { font-size: 19px; font-weight: 600; color: var(--koala-text-primary); margin: 22px 0 10px; line-height: 1.35; }
           .art-editor-scroll .ProseMirror p { margin: 10px 0; line-height: 1.75; color: var(--koala-text-secondary); font-size: 14px; }
+          /* TipTap wraps list text in <p>; without this, p+li margins stack into huge gaps. */
+          .art-editor-scroll .ProseMirror li > p { margin: 0; }
           .art-editor-scroll .ProseMirror ul, .art-editor-scroll .ProseMirror ol { padding-left: 24px; margin: 10px 0; color: var(--koala-text-secondary); }
-          .art-editor-scroll .ProseMirror li { margin: 5px 0; line-height: 1.65; color: var(--koala-text-secondary); font-size: 14px; }
+          .art-editor-scroll .ProseMirror li { margin: 2px 0; line-height: 1.65; color: var(--koala-text-secondary); font-size: 14px; }
           .art-editor-scroll .ProseMirror strong { font-weight: 700; color: var(--koala-text-primary); }
           .art-editor-scroll .ProseMirror em { font-style: italic; }
           .art-editor-scroll .ProseMirror blockquote { border-left: 3px solid var(--koala-border-primary); padding: 10px 18px; margin: 16px 0; color: var(--koala-text-tertiary); font-style: italic; background: var(--koala-bg-tertiary); border-radius: 0 6px 6px 0; }
@@ -2106,7 +2247,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               </div>
             ) : null}
             <EditorContent editor={editor} style={{ background: 'var(--koala-bg-primary)' }} />
-            {editor && docEmpty && !readOnly && !generateBusy && (
+            {editor && docEmpty && !readOnly && !generateBusy && !outlineReviewMode && (
               <div style={{ maxWidth: 860, margin: '0 auto', padding: '4px 64px 80px', fontFamily: CTA_FONT }}>
                 {importBusy ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 320 }}>
@@ -2208,8 +2349,19 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           <ProgressiveBlur position="top" backgroundColor="var(--koala-bg-primary)" height={72} blurAmount={4} />
           <ProgressiveBlur position="bottom" backgroundColor="var(--koala-bg-primary)" height={80} blurAmount={4} />
         </div>
-        {generateBusy && (
+        {generateBusy && !outlineReviewMode && (
           <GenerateWritingOverlay message={generateMsg} pct={generatePct} />
+        )}
+        {outlineReviewMode && (outlineHeadingCount > 0 || generateBusy || outlineBusy) && (
+          <OutlineGenerateBar
+            busy={generateBusy || outlineBusy}
+            status={outlineBusy ? 'Building outline…' : generateMsg}
+            progressPct={generatePct}
+            headingCount={outlineHeadingCount}
+            onGenerate={handleOutlineGenerate}
+            onCancel={handleOutlineCancel}
+            rightReserve={bottomBarRightReserve}
+          />
         )}
         </div>
 

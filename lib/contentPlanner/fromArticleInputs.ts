@@ -43,40 +43,42 @@ function asStringList(v: unknown): string[] {
 export function competitorsFromScoreData(scoreData: unknown): CompetitorRawInput[] {
   if (!scoreData || typeof scoreData !== 'object') return [];
   const o = scoreData as Record<string, unknown>;
-  const rawList =
-    (Array.isArray(o.competitors) && o.competitors)
-    || (Array.isArray(o.serp_competitors) && o.serp_competitors)
-    || (Array.isArray(o.ranking_competitors) && o.ranking_competitors)
-    || [];
+  const candidates = [o.competitors, o.serp_competitors, o.ranking_competitors];
+  const rawList = candidates.find((c) => Array.isArray(c) && c.length > 0) || [];
+  const out: CompetitorRawInput[] = [];
 
-  return (rawList as LooseCompetitor[])
-    .map((c, i) => {
-      const values = c.values && typeof c.values === 'object' ? c.values : {};
-      const url = c.url || (c.domain ? `https://${c.domain}` : '');
-      if (!url) return null;
-      const headingsArr = Array.isArray(c.headings) ? c.headings : [];
-      const entities = asStringList(c.entities).length
-        ? asStringList(c.entities)
-        : asStringList(c.terms);
-      return {
-        url,
-        position: c.position ?? i + 1,
-        wordCount: c.wordCount ?? c.word_count ?? values.word_count_body ?? 0,
-        paragraphs: c.paragraphs ?? c.p_count ?? values.p_count ?? 0,
-        headings: typeof c.headings === 'number'
-          ? c.headings
-          : (c.h2_count ?? values.h2_h6_count ?? headingsArr.length),
-        lists: c.lists ?? values.ul_ol_count ?? 0,
-        tables: c.tables ?? values.table_count ?? 0,
-        images: c.images ?? values.img_count ?? 0,
-        faq: c.faq ?? 0,
-        claims: asStringList(c.claims),
-        questions: asStringList(c.questions),
-        entities,
-        openingPattern: 'unknown' as const,
-      };
-    })
-    .filter((x): x is CompetitorRawInput => !!x);
+  (rawList as unknown[]).forEach((row, i) => {
+    if (!row || typeof row !== 'object') return;
+    const c = row as LooseCompetitor;
+    const values = c.values && typeof c.values === 'object' ? c.values : {};
+    const url = typeof c.url === 'string' && c.url
+      ? c.url
+      : (typeof c.domain === 'string' && c.domain ? `https://${c.domain}` : '');
+    if (!url) return;
+    const headingsArr = Array.isArray(c.headings) ? c.headings.filter((h): h is string => typeof h === 'string') : [];
+    const entities = asStringList(c.entities).length
+      ? asStringList(c.entities)
+      : asStringList(c.terms);
+    out.push({
+      url,
+      position: typeof c.position === 'number' ? c.position : i + 1,
+      wordCount: c.wordCount ?? c.word_count ?? values.word_count_body ?? 0,
+      paragraphs: c.paragraphs ?? c.p_count ?? values.p_count ?? 0,
+      headings: typeof c.headings === 'number'
+        ? c.headings
+        : (c.h2_count ?? values.h2_h6_count ?? headingsArr.length),
+      lists: c.lists ?? values.ul_ol_count ?? 0,
+      tables: c.tables ?? values.table_count ?? 0,
+      images: c.images ?? values.img_count ?? 0,
+      faq: c.faq ?? 0,
+      claims: asStringList(c.claims),
+      questions: asStringList(c.questions),
+      entities,
+      openingPattern: 'unknown',
+    });
+  });
+
+  return out;
 }
 
 /** Enrich raw competitors with WIE expert_claims / faq / examples when structural claims empty. */
@@ -88,7 +90,7 @@ export function enrichWithWieSynthesis(
     ? (wieSynthesis as Record<string, unknown>)
     : null;
   if (!parsed) return competitors;
-  const claims = asStringList(parsed.expert_claims).concat(asStringList(parsed.critical));
+  const wieClaims = asStringList(parsed.expert_claims).concat(asStringList(parsed.critical));
   const examples = asStringList(parsed.examples);
   const faqKeys = parsed.faq && typeof parsed.faq === 'object'
     ? Object.keys(parsed.faq as Record<string, unknown>)
@@ -103,19 +105,23 @@ export function enrichWithWieSynthesis(
       headings: 12,
       paragraphs: 60,
       lists: 10,
-      claims: [...claims, ...infoGain],
+      claims: [...wieClaims, ...infoGain],
       questions: faqKeys,
       examples: examples.length,
       entities: asStringList(parsed.important).slice(0, 20),
     }];
   }
 
-  return competitors.map((c, i) => ({
-    ...c,
-    claims: c.claims.length ? c.claims : (i === 0 ? [...claims, ...infoGain] : c.claims),
-    questions: c.questions.length ? c.questions : (i === 0 ? faqKeys : c.questions),
-    examples: c.examples || (i === 0 ? examples.length : 0),
-  }));
+  return competitors.map((c, i) => {
+    const claims = c.claims || [];
+    const questions = c.questions || [];
+    return {
+      ...c,
+      claims: claims.length ? claims : (i === 0 ? [...wieClaims, ...infoGain] : claims),
+      questions: questions.length ? questions : (i === 0 ? faqKeys : questions),
+      examples: c.examples || (i === 0 ? examples.length : 0),
+    };
+  });
 }
 
 export function aiIntelFromScoreData(scoreData: unknown): AiSearchIntelInput {
@@ -156,3 +162,36 @@ export function parseCompetitorCacheJson(raw: string | null | undefined): Compet
       : []);
   return competitorsFromScoreData({ competitors: list });
 }
+
+/** H2/H3 titles from competitor outlines cache — outline fillers + AI coverage seeds. */
+export function competitorHeadingTitles(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  const parsed = safeJsonParse<unknown>(raw, null);
+  const list = Array.isArray(parsed)
+    ? parsed
+    : (parsed && typeof parsed === 'object' && Array.isArray((parsed as { competitors?: unknown }).competitors)
+      ? (parsed as { competitors: unknown[] }).competitors
+      : []);
+  const topics: string[] = [];
+  const seen = new Set<string>();
+  for (const c of list) {
+    if (!c || typeof c !== 'object') continue;
+    const headings = (c as { headings?: unknown }).headings;
+    if (!Array.isArray(headings)) continue;
+    for (const h of headings) {
+      if (!h || typeof h !== 'object') continue;
+      const level = (h as { level?: unknown }).level;
+      const text = (h as { text?: unknown }).text;
+      if ((level === 2 || level === 3) && typeof text === 'string') {
+        const t = text.trim();
+        if (t.length < 8 || t.length > 100) continue;
+        const key = t.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        topics.push(t);
+      }
+    }
+  }
+  return topics.slice(0, 40);
+}
+

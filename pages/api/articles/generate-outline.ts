@@ -110,9 +110,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const competitorSummary = formatCompetitorStructures(compList);
-  const avgHeadings = compList.length > 0
-    ? Math.round(compList.reduce((s, c) => s + (c.heading_count || c.headings.length), 0) / compList.length)
-    : 12;
+  const competitorHeadingCounts = compList
+    .map((c) => c.heading_count || (c.headings || []).length || 0)
+    .filter((n) => n > 0);
+  const competitorAvg = competitorHeadingCounts.length > 0
+    ? Math.round(competitorHeadingCounts.reduce((s, n) => s + n, 0) / competitorHeadingCounts.length)
+    : 18;
+  // Floor 16 / ceiling 20 — thin outlines lose to SERP pages with 20–27 headings.
+  const targetHeadings = Math.min(20, Math.max(16, competitorAvg));
 
   const currentHeadingsSummary = currentHeadings.length > 0
     ? `\nCURRENT ARTICLE HEADINGS (already written — do NOT repeat these):\n${currentHeadings.map((h) => `H${h.level}: ${h.text}`).join('\n')}\n\nFOCUS: Emphasise MISSING topics not yet covered.\n`
@@ -159,18 +164,20 @@ COMPETITOR STRUCTURES (what ranks — use as evidence, do NOT copy wording):
 ${competitorSummary || 'No competitor data — use expertise for this keyword.'}
 ${currentHeadingsSummary}${aiBlock}
 TASK:
-1. Synthesise the median winning structure from competitors
+1. Synthesise the median winning structure from competitors (they often have 15–27 headings)
 2. Create ORIGINAL H1/H2/H3 headings — unique wording, better flow than competitors
 3. Follow NARRATIVE beats / POLICY opening when provided (problem→explain→example→action)
 4. Cover AI Search gaps where relevant (facts users/LLMs expect)
 5. Match brand tone if provided
-6. Target ~${avgHeadings} headings total
-7. Language: ${lang}
+6. HARD REQUIREMENT: output EXACTLY ${targetHeadings} headings total (one H1, rest H2/H3). Never fewer than 16. Do not stop early.
+7. Prefer depth: most H2s should have 1–3 H3 children where useful
+8. Language: ${lang}
 
-OUTPUT FORMAT — one heading per line only:
+OUTPUT FORMAT — one heading per line only, no numbering, no bullets, no blank commentary:
 H1: [title]
 H2: [section]
 H3: [subsection]
+H2: [section]
 ...`;
 
   try {
@@ -179,7 +186,7 @@ H3: [subsection]
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${llm.apiKey}` },
       body: JSON.stringify({
         model: llm.model,
-        max_tokens: 1200,
+        max_tokens: 2800,
         messages: [{ role: 'user', content: prompt }],
       }),
     });

@@ -34,7 +34,8 @@ export async function generateQuickAnswer(opts: {
   const { html } = await wieLlmComplete({
     userPrompt: user,
     systemPrompt: system,
-    maxTokens: 280,
+    // Gemini thinking shares this budget — keep headroom for visible text.
+    maxTokens: 1024,
     temperature: 0.35,
     signal: opts.signal,
     llmEdit: opts.llmEdit,

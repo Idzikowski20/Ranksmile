@@ -541,6 +541,16 @@ const WriteOptimizePanel = ({
     copy(sel.map((t) => t.term).join('\n'));
   };
   const copyFacts = (which: 'all' | 'missing' | 'covered') => {
+    if (hasCie && cieClaims?.length) {
+      const sel = cieClaims.filter((c) => {
+        if (which === 'all') return true;
+        const cov = coverageById.get(c.id) || 'missing';
+        if (which === 'missing') return cov === 'missing' || cov === 'partial';
+        return cov === 'covered';
+      });
+      copy(sel.map((c) => c.statement).join('\n'));
+      return;
+    }
     const sel = allInfoFacts.filter((i) => which === 'all' || (which === 'missing' && !i.covered) || (which === 'covered' && i.covered));
     copy(sel.map((i) => i.text).join('\n'));
   };

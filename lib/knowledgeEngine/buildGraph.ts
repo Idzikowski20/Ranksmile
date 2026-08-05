@@ -53,7 +53,11 @@ export function buildKnowledgeGraph(opts: {
 function freezeClaim(c: CanonicalClaim): CanonicalClaim {
   return Object.freeze({
     ...c,
-    evidence: Object.freeze([...c.evidence.map((e) => Object.freeze({ ...e }))]),
+    evidence: Object.freeze([...c.evidence.map((e) => Object.freeze({
+      ...e,
+      roles: Object.freeze([...e.roles]),
+      serpPositions: e.serpPositions ? Object.freeze([...e.serpPositions]) : undefined,
+    }))]),
     usedInSections: Object.freeze([...c.usedInSections]),
     generatedFrom: Object.freeze([...c.generatedFrom]),
     sourceDiversity: Object.freeze({ ...c.sourceDiversity }),
@@ -64,27 +68,29 @@ function freezeClaim(c: CanonicalClaim): CanonicalClaim {
   }) as CanonicalClaim;
 }
 
+function docsHitForTerm(term: string, docs: CompetitorDocument[]): number {
+  const k = term.toLowerCase();
+  let hit = 0;
+  for (const d of docs) {
+    const inHeadings = d.headings.some((h) => {
+      const ht = h.toLowerCase();
+      return ht === k || ht.includes(k) || k.includes(ht);
+    });
+    const inEntities = d.entities.some((e) => e.toLowerCase() === k);
+    if (inHeadings || inEntities) hit += 1;
+  }
+  return hit;
+}
 
 export function voteEntities(
   terms: string[],
   docs: CompetitorDocument[],
 ): KnowledgeEntityVote[] {
   const total = Math.max(1, docs.length);
-  const counts = new Map<string, number>();
-  for (const t of terms) {
-    const k = t.toLowerCase();
-    counts.set(k, (counts.get(k) || 0) + 1);
-  }
-  // heading presence across docs
-  for (const d of docs) {
-    for (const h of d.headings) {
-      const k = h.toLowerCase();
-      if (counts.has(k)) continue;
-      // soft: count unique heading as 1 doc hit when matching entity term substring
-    }
-  }
+  const unique = [...new Set(terms.map((t) => t.toLowerCase().trim()).filter(Boolean))];
 
-  return [...counts.entries()].map(([term, hit]) => {
+  return unique.map((term) => {
+    const hit = docsHitForTerm(term, docs);
     const consensus = Math.min(1, hit / total);
     const importanceScore = Math.round(consensus * 100);
     const importance: PriorityClass =

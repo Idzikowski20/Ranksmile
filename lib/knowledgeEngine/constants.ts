@@ -2,7 +2,7 @@ import type { SourceKind } from './types';
 
 export const KNOWLEDGE_SCHEMA_VERSION = 1;
 export const KNOWLEDGE_CONSENSUS_MIN = 0.75;
-export const PLANNER_CLAIMS_FLOOR = 30;
+export const PLANNER_CLAIMS_FLOOR = 12;
 export const CANONICALIZE_SIM_MIN = 0.82;
 
 export const SOURCE_TIER_WEIGHTS: Record<SourceKind, number> = {

@@ -8,6 +8,30 @@ _TITLE_RE = re.compile(
     r"\b([A-ZÁĄĆĘŁŃÓŚŹŻ][\wÁáĄąĆćĘęŁłŃńÓóŚśŹźŻż]+(?:\s+[A-ZÁĄĆĘŁŃÓŚŹŻ][\wÁáĄąĆćĘęŁłŃńÓóŚśŹźŻż]+){0,3})\b"
 )
 
+# One load per language — spacy.load each call spikes RSS hard on Railway.
+_nlp_cache: dict[str, Any] = {}
+
+
+def _model_name(language: str) -> str:
+    return "pl_core_news_sm" if (language or "pl").startswith("pl") else "en_core_web_sm"
+
+
+def _get_nlp(language: str) -> Any | None:
+    model = _model_name(language)
+    cached = _nlp_cache.get(model)
+    if cached is not None:
+        return cached
+    try:
+        import spacy  # type: ignore
+    except Exception:
+        return None
+    try:
+        nlp = spacy.load(model)
+    except Exception:
+        return None
+    _nlp_cache[model] = nlp
+    return nlp
+
 
 def _regex_spans(text: str, max_spans: int) -> list[dict[str, Any]]:
     seen: set[str] = set()
@@ -35,14 +59,8 @@ def _regex_spans(text: str, max_spans: int) -> list[dict[str, Any]]:
 
 
 def _spacy_spans(text: str, language: str, max_spans: int) -> list[dict[str, Any]] | None:
-    try:
-        import spacy  # type: ignore
-    except Exception:
-        return None
-    model = "pl_core_news_sm" if language.startswith("pl") else "en_core_web_sm"
-    try:
-        nlp = spacy.load(model)
-    except Exception:
+    nlp = _get_nlp(language)
+    if nlp is None:
         return None
     doc = nlp(text[:50_000])
     out: list[dict[str, Any]] = []

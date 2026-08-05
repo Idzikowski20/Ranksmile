@@ -50,11 +50,19 @@ function isActiveStatus(status: string): boolean {
   return status === 'queued' || status === 'running';
 }
 
+/** Queues that should not surface the sidebar status strip (silent background work). */
+const HIDDEN_STRIP_QUEUES = new Set(['live_score']);
+
+export function isStripVisibleQueue(queue: string): boolean {
+  return !HIDDEN_STRIP_QUEUES.has(queue);
+}
+
 /** One chip per queue — prefer running over queued, then newest id. */
 export function dedupeActiveJobs(jobs: PipelineJob[]): PipelineJob[] {
   const byQueue = new Map<string, PipelineJob>();
   for (const j of jobs) {
     if (!isActiveStatus(j.status)) continue;
+    if (!isStripVisibleQueue(j.queue)) continue;
     const prev = byQueue.get(j.queue);
     if (!prev) {
       byQueue.set(j.queue, j);
@@ -130,20 +138,23 @@ export default function PipelineStatusStrip(props: { articleId: number | string 
   if (!data?.latest && !waitingForResume) return null;
 
   const latest = data?.latest;
-  const active = (data?.activeCount ?? 0) > 0 || (latest != null && isActiveStatus(latest.status));
+  const visibleJobs = dedupeActiveJobs(data?.jobs ?? []);
+  const latestVisible = latest && isStripVisibleQueue(latest.queue) ? latest : visibleJobs[0] ?? null;
+  const active = visibleJobs.length > 0
+    || (latestVisible != null && isActiveStatus(latestVisible.status));
 
-  // Hide idle / failed strip — only show while something is actually running.
+  // Hide idle / failed / live_score-only strip — only show while visible queues run.
   if (!active && !waitingForResume) return null;
 
-  const status = latest?.status ?? 'queued';
-  const queue = latest?.queue ?? 'pipeline';
+  const status = latestVisible?.status ?? 'queued';
+  const queue = latestVisible?.queue ?? 'pipeline';
   const label = waitingForResume
     ? 'Wznawiam pipeline…'
     : status === 'queued'
       ? `W kolejce · ${queueLabel(queue)}`
       : `W tle · ${queueLabel(queue)}`;
 
-  const activeJobs = dedupeActiveJobs(data?.jobs ?? []);
+  const activeJobs = visibleJobs;
 
   return (
     <div

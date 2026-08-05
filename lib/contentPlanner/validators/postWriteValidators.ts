@@ -174,7 +174,7 @@ export function validatePlanConformity(
     return { ok: false, issues: [{ code: 'no_plan_headings', message: 'No planned H2 for conformity' }] };
   }
   for (const h of h2s) {
-    const hit = planned.some((p) => h === p || h.includes(p) || p.includes(h));
+    const hit = planned.some((p) => h === p);
     if (!hit) {
       issues.push({
         code: 'h2_not_in_plan',
@@ -182,9 +182,7 @@ export function validatePlanConformity(
       });
     }
   }
-  const coveredPlan = planned.filter((p) =>
-    h2s.some((h) => h === p || h.includes(p) || p.includes(h)),
-  ).length;
+  const coveredPlan = planned.filter((p) => h2s.some((h) => h === p)).length;
   const coverage = planned.length ? coveredPlan / planned.length : 0;
   if (coverage < 0.7) {
     issues.push({

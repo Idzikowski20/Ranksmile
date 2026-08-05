@@ -4,9 +4,9 @@
  */
 import { ensurePipelineJobsTables } from './ensurePipelineJobsTables';
 import db from '../database/database';
-import { USE_GEMINI_FLASH, chatLlm } from './ai/deepseek';
+import { chatLlm } from './ai/deepseek';
 
-export type LlmProvider = 'deepseek' | 'openai' | 'anthropic' | 'ollama' | 'gemini';
+export type LlmProvider = 'deepseek' | 'openai' | 'anthropic' | 'ollama' | 'gemini' | 'openrouter';
 
 export type LlmGatewayRequest = {
   provider?: LlmProvider;
@@ -40,6 +40,7 @@ const MODEL_DEFAULTS: Record<LlmProvider, string> = {
   openai: 'gpt-4o-mini',
   anthropic: 'claude-3-5-haiku-latest',
   ollama: 'llama3.2',
+  openrouter: 'openai/gpt-5.6-luna',
 };
 
 /** Rough USD estimate — telemetry only, not billing. */
@@ -51,6 +52,7 @@ export function estimateLlmCost(provider: LlmProvider, promptChars: number, comp
     openai: 0.0000005,
     anthropic: 0.000001,
     ollama: 0,
+    openrouter: 0.0000005,
   };
   return Math.round(tokens * (rates[provider] ?? 0.0000005) * 1e6) / 1e6;
 }
@@ -99,16 +101,11 @@ async function callProvider(
   maxTokens: number,
   opts?: { seed?: number; responseFormat?: 'json_object' | 'text' },
 ): Promise<string> {
-  if (provider === 'deepseek' || provider === 'openai' || provider === 'gemini') {
-    // TEMP: route "deepseek" requests through Gemini OpenAI-compat while the switch is on.
-    const resolved =
-      provider === 'gemini' || (provider === 'deepseek' && USE_GEMINI_FLASH)
-        ? chatLlm()
-        : provider === 'deepseek'
-          ? { apiKey: process.env.DEEPSEEK_API_KEY || '', url: 'https://api.deepseek.com/v1/chat/completions', model, provider: 'deepseek' as const }
-          : { apiKey: process.env.OPENAI_API_KEY || '', url: 'https://api.openai.com/v1/chat/completions', model, provider: 'openai' as const };
+  if (provider === 'deepseek' || provider === 'openai' || provider === 'gemini' || provider === 'openrouter') {
+    // Node chat path: always OpenRouter GPT (chatLlm). Provider arg kept for telemetry labels.
+    const resolved = chatLlm();
     const key = resolved.apiKey;
-    if (!key) throw new Error(`${resolved.provider} API key not configured`);
+    if (!key) throw new Error(`${resolved.keyEnv} not configured`);
     const body: Record<string, unknown> = {
       model: resolved.model || model,
       messages,
@@ -124,6 +121,8 @@ async function callProvider(
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${key}`,
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://ranksmile.pl',
+        'X-Title': 'Ranksmile',
       },
       body: JSON.stringify(body),
     });
@@ -160,8 +159,8 @@ async function callProvider(
 
 export async function llmGateway(req: LlmGatewayRequest): Promise<LlmGatewayResponse> {
   const chain: LlmProvider[] = [
-    req.provider || (USE_GEMINI_FLASH ? 'gemini' : 'deepseek'),
-    ...(req.fallbackProviders || ['openai']),
+    req.provider || 'openrouter',
+    ...(req.fallbackProviders || []),
   ].filter((p, i, a) => a.indexOf(p) === i);
 
   const maxAttempts = Math.max(1, req.maxAttempts ?? 2);

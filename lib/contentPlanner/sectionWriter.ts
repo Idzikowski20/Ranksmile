@@ -97,18 +97,18 @@ export function stubWriteSection(opts: {
 }): string {
   const claims = opts.kg.claims.filter((c) => opts.brief.claimIds.includes(c.id));
   const questions = opts.kg.questions.filter((q) => opts.brief.questionIds.includes(q.id));
-  const parts: string[] = [`<h2>${opts.brief.heading}</h2>`];
+  const parts: string[] = [`<h2>${escapeHtml(opts.brief.heading)}</h2>`];
   for (const block of opts.brief.blocks) {
     if (block === 'checklist' || block === 'steps') {
       parts.push('<ul>');
       for (const c of claims.slice(0, Math.max(2, opts.brief.budget.claims))) {
-        parts.push(`<li>${c.statement}</li>`);
+        parts.push(`<li>${escapeHtml(c.statement)}</li>`);
       }
       if (claims.length === 0) parts.push('<li>Wykonaj pierwszy krok z planu.</li>');
       parts.push('</ul>');
     } else if (block === 'faq') {
       for (const q of questions.slice(0, Math.max(2, opts.brief.budget.faq || 3))) {
-        parts.push(`<p><strong>${q.question}</strong> ${q.requiredAnswerBrief}</p>`);
+        parts.push(`<p><strong>${escapeHtml(q.question)}</strong> ${escapeHtml(q.requiredAnswerBrief)}</p>`);
       }
     } else if (block === 'warning') {
       parts.push('<p><strong>Uwaga:</strong> Unikaj masowych pakietów linków i gwarancji TOP1.</p>');
@@ -116,14 +116,14 @@ export function stubWriteSection(opts: {
       parts.push('<p>Porównanie opcji: samodzielnie vs agencja vs konsultacje — wybierz wg budżetu czasu.</p>');
     } else if (block === 'example') {
       const ex = claims[0]?.statement || opts.brief.evidence.find((e) => e.kind === 'example')?.hint || 'Przykład wdrożenia';
-      parts.push(`<p>Przykład: ${ex}</p>`);
+      parts.push(`<p>Przykład: ${escapeHtml(ex)}</p>`);
     } else if (block === 'summary') {
       parts.push('<p>Podsumowanie: wdrażaj, mierz w Search Console, iteruj co 2–4 tygodnie.</p>');
     } else {
       for (const c of claims.slice(0, 2)) {
-        parts.push(`<p>${c.statement}</p>`);
+        parts.push(`<p>${escapeHtml(c.statement)}</p>`);
       }
-      if (!claims.length) parts.push(`<p>${opts.brief.objective}</p>`);
+      if (!claims.length) parts.push(`<p>${escapeHtml(opts.brief.objective)}</p>`);
     }
   }
   return parts.join('\n');

@@ -297,17 +297,6 @@ export async function runEditorialJudge(opts: {
 
       let llm = chatLlm();
       let res = await tryOnce(llm);
-      // Gemini OpenAI-compat may 404 (retired model) / 429 — Judge falls back to DeepSeek.
-      if (!res.ok && llm.provider === 'gemini' && process.env.DEEPSEEK_API_KEY) {
-        llm = {
-          provider: 'deepseek',
-          apiKey: process.env.DEEPSEEK_API_KEY,
-          keyEnv: 'DEEPSEEK_API_KEY',
-          model: 'deepseek-chat',
-          url: 'https://api.deepseek.com/v1/chat/completions',
-        };
-        res = await tryOnce(llm);
-      }
       if (!res.ok) return { status: 'skipped_error', reason: res.reason };
       text = res.text;
       tokens = res.tokens;

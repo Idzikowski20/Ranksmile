@@ -48,7 +48,7 @@ export function validatePlannerPlan(input: PlannerValidateInput): PlannerValidat
   }
 
   if (input.targets && outline) {
-    if (outline.sections.length < Math.min(5, input.targets.h2)) {
+    if (outline.sections.length < input.targets.h2) {
       issues.push({
         code: 'h2_below_benchmark',
         message: `H2 ${outline.sections.length} < target ${input.targets.h2}`,

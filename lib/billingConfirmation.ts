@@ -160,7 +160,7 @@ function fromInvoice(
       ? 'Your Ranksmile trial is active — no charge today.'
       : "We've received your payment and activated your plan",
     planName: opts.planName || lines[0]?.title || 'Subscription',
-    billingPeriodLabel: opts.periodLabel,
+    billingPeriodLabel: opts.periodLabel ?? null,
     isTrialing: opts.isTrialing,
     billingName: name,
     addressLines,
