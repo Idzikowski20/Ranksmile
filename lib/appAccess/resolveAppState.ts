@@ -4,6 +4,8 @@ import type {
   ResolvedAppState,
   WorkspaceState,
 } from './types';
+import { hasActiveBillingEntitlement } from '../billingEntitlement';
+import type { SubscriptionStatus } from '../orgBilling';
 
 /**
  * Priority: LOCKED → EMAIL → ONBOARDING → PAYMENT_FAILED → BILLING → WORKSPACE → READY
@@ -38,10 +40,17 @@ export function projectBillingState(args: {
   subscriptionStatus: string | null | undefined;
   paymentFailedLocked: boolean;
   hardLocked?: boolean;
+  currentPeriodEnd?: string | null;
+  cancelAtPeriodEnd?: boolean;
 }): BillingState {
   if (args.hardLocked) return 'LOCKED';
   if (args.paymentFailedLocked) return 'FAILED';
   const status = args.subscriptionStatus ?? null;
+  if (!hasActiveBillingEntitlement({
+    subscriptionStatus: status as SubscriptionStatus | null,
+    currentPeriodEnd: args.currentPeriodEnd ?? null,
+    cancelAtPeriodEnd: args.cancelAtPeriodEnd ?? false,
+  })) return 'NONE';
   if (status === 'trialing') return 'TRIAL';
   if (status === 'active' || status === 'past_due' || status === 'unpaid') return 'ACTIVE';
   return 'NONE';

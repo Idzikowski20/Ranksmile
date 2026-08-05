@@ -10,7 +10,7 @@ export type EvidenceBuildResult = {
 };
 
 const YEAR_RE = /\b((?:19|20)\d{2})\b/g;
-const NUMBER_RE = /\b(\d+(?:[.,]\d+)?%?)\b/g;
+const NUMBER_RE = /\b(\d+(?:[.,]\d+)?%?)(?![\p{L}\p{N}_])/gu;
 
 function blockText(ast: LexicalAst, blockId: string | undefined): string {
   if (!blockId) return '';
@@ -55,7 +55,8 @@ export function buildEvidenceForFacts(
 
   for (const fact of facts) {
     const blockId = fact.sectionId;
-    const text = blockText(ast, blockId);
+    const block = blockText(ast, blockId);
+    const text = fact.statement && block.includes(fact.statement) ? fact.statement : block;
     if (!blockId || !text.trim()) {
       weakFactIds.push(fact.id);
       continue;

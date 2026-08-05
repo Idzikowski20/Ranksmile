@@ -11,7 +11,7 @@ function isDefaultTarget(ctx: BillingContext): boolean {
 }
 
 function hasReplacement(ctx: BillingContext): boolean {
-  return ctx.paymentMethods.some((pm) => pm.id !== ctx.targetPaymentMethodId);
+  return ctx.paymentMethods.some((pm) => pm.id !== ctx.targetPaymentMethodId && !pm.roles.includes('expired'));
 }
 
 /** Domain rules for payment-method mutations. */
@@ -35,7 +35,7 @@ export const BillingPolicy = {
 
   canSetDefault(ctx: BillingContext): boolean {
     const target = ctx.paymentMethods.find((pm) => pm.id === ctx.targetPaymentMethodId);
-    if (!target) return false;
+    if (!target || target.roles.includes('expired')) return false;
     if (ctx.targetPaymentMethodId === ctx.customerDefaultId) return false;
     return true;
   },

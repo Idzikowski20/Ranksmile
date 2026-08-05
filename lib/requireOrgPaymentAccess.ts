@@ -65,6 +65,8 @@ async function loadAccessSnapshot(orgId: number, userId: string | null): Promise
   const billingState = projectBillingState({
     subscriptionStatus: billing?.subscriptionStatus ?? null,
     paymentFailedLocked: isPaymentFailedLocked(billing),
+    currentPeriodEnd: billing?.currentPeriodEnd ?? null,
+    cancelAtPeriodEnd: billing?.cancelAtPeriodEnd ?? false,
   });
 
   const db = (await import('../database/database')).default;

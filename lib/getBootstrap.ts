@@ -86,6 +86,8 @@ export async function getBootstrap(
   const billingState = projectBillingState({
     subscriptionStatus: billing?.subscriptionStatus ?? null,
     paymentFailedLocked: isPaymentFailedLocked(billing),
+    currentPeriodEnd: billing?.currentPeriodEnd ?? null,
+    cancelAtPeriodEnd: billing?.cancelAtPeriodEnd ?? false,
   });
   let workspaceState = projectWorkspaceState({
     readyCount: workspaces.length,

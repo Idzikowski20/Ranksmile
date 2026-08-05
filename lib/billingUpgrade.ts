@@ -1,13 +1,14 @@
 import type Stripe from 'stripe';
 import {
   getCheckoutPlan,
+  getLegacyCheckoutPlan,
   getPlanPeriodPrice,
   type BillingPeriod,
   type CheckoutPlan,
 } from './billingPlans';
 import { blocksNewPaidCheckout } from './billingPlanLock';
 import type { OrgBillingState } from './orgBilling';
-import type { PlanSlug } from './stripePrices';
+import type { LegacyPlanSlug, PlanSlug } from './stripePrices';
 import { getStripePriceId } from './stripePrices';
 import { clientSecretFromSubscriptionInvoice } from './stripeInvoiceClientSecret';
 
@@ -17,6 +18,10 @@ const PLAN_RANK: Record<string, number> = {
   scale: 2,
   agency: 3,
 };
+
+function getBillingPlan(slug: string): CheckoutPlan | undefined {
+  return getCheckoutPlan(slug) ?? getLegacyCheckoutPlan(slug);
+}
 
 export function planRank(slug: string): number | null {
   if (slug === 'starter' || slug === 'growth' || slug === 'scale' || slug === 'agency') {
@@ -32,7 +37,7 @@ export function isPaidPlanUpgrade(
   toSlug: string,
   toBilling: BillingPeriod,
 ): boolean {
-  const from = getCheckoutPlan(fromSlug);
+  const from = getBillingPlan(fromSlug);
   const to = getCheckoutPlan(toSlug);
   if (!from || !to) return false;
   const fromR = planRank(from.slug);
@@ -58,7 +63,7 @@ export function isAllowedSubscriptionChange(
   toBilling: BillingPeriod,
 ): boolean {
   if (fromSlug === toSlug && fromBilling === toBilling) return false;
-  const from = getCheckoutPlan(fromSlug);
+  const from = getBillingPlan(fromSlug);
   const to = getCheckoutPlan(toSlug);
   if (!from || !to) return false;
   const fromR = planRank(from.slug);
@@ -72,7 +77,7 @@ export function assertCanUpgradeSubscription(
   billing: OrgBillingState | null,
   targetSlug: string,
   targetBilling: BillingPeriod,
-): { ok: true; currentSlug: PlanSlug; currentBilling: BillingPeriod } | { ok: false; status: number; error: string } {
+): { ok: true; currentSlug: LegacyPlanSlug; currentBilling: BillingPeriod } | { ok: false; status: number; error: string } {
   if (!billing?.stripeSubscriptionId) {
     return { ok: false, status: 400, error: 'No active Stripe subscription to upgrade' };
   }

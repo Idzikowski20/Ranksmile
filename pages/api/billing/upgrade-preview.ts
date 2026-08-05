@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { getCheckoutPlan } from '../../../lib/billingPlans';
+import { getCheckoutPlan, getLegacyCheckoutPlan } from '../../../lib/billingPlans';
 import {
   assertCanUpgradeSubscription,
   previewSubscriptionUpgrade,
@@ -54,7 +54,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const gate = assertCanUpgradeSubscription(billingState, targetPlan.slug, billing);
   if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
 
-  const currentPlan = getCheckoutPlan(gate.currentSlug);
+  const currentPlan = getCheckoutPlan(gate.currentSlug) ?? getLegacyCheckoutPlan(gate.currentSlug);
   if (!currentPlan) return res.status(409).json({ error: 'Current plan is unknown; cannot upgrade' });
   if (!billingState?.stripeCustomerId || !billingState.stripeSubscriptionId) {
     return res.status(400).json({ error: 'No active Stripe subscription to upgrade' });

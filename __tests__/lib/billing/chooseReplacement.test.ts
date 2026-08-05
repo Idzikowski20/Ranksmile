@@ -63,4 +63,13 @@ describe('chooseReplacement', () => {
   it('returns null when no candidates', () => {
     expect(chooseReplacement([pm({ id: 'only' })], 'only', 'only')).toBeNull();
   });
+
+  it('never promotes an expired card and retains another default', () => {
+    const list = [
+      pm({ id: 'expired', roles: ['expired'], created: 999 }),
+      pm({ id: 'default', roles: ['default'], created: 1 }),
+      pm({ id: 'remove', created: 2 }),
+    ];
+    expect(chooseReplacement(list, 'remove', null)?.id).toBe('default');
+  });
 });
