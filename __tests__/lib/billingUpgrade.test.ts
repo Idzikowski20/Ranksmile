@@ -24,6 +24,7 @@ describe('billingUpgrade helpers', () => {
   });
 
   it('allows same-tier billing period switches but not tier downgrades', () => {
+    expect(isAllowedSubscriptionChange('starter', 'monthly', 'growth', 'monthly')).toBe(true);
     expect(isAllowedSubscriptionChange('scale', 'yearly', 'scale', 'monthly')).toBe(true);
     expect(isAllowedSubscriptionChange('scale', 'monthly', 'scale', 'yearly')).toBe(true);
     expect(isAllowedSubscriptionChange('growth', 'yearly', 'scale', 'monthly')).toBe(true);

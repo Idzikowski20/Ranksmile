@@ -1,5 +1,6 @@
 import {
   getCheckoutPlan,
+  getLegacyCheckoutPlan,
   getPlanCheckoutHref,
   getPlanPeriodPrice,
   getTrialEndDateLabel,
@@ -18,6 +19,11 @@ describe('billingPlans', () => {
     expect(growth?.name).toBe('Growth');
     expect(getPlanPeriodPrice(growth!, 'yearly')).toBe(588);
     expect(getPlanPeriodPrice(growth!, 'monthly')).toBe(59);
+  });
+
+  it('keeps Starter available only for legacy billing records', () => {
+    expect(getCheckoutPlan('starter')).toBeUndefined();
+    expect(getLegacyCheckoutPlan('starter')?.priceMonthly).toBe(29);
   });
 
   it('formats the 7-day trial end label from a stable clock', () => {

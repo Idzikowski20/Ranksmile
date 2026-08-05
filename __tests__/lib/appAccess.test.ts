@@ -118,6 +118,12 @@ describe('projectors', () => {
       subscriptionStatus: 'active',
       paymentFailedLocked: true,
     })).toBe('FAILED');
+    expect(projectBillingState({
+      subscriptionStatus: 'active',
+      paymentFailedLocked: false,
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: '2020-01-01T00:00:00.000Z',
+    })).toBe('NONE');
     expect(projectWorkspaceState({ readyCount: 0, setupId: 18 })).toBe('SETUP');
     expect(projectWorkspaceState({ readyCount: 1, setupId: 18 })).toBe('READY');
   });

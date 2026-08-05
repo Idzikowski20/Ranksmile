@@ -149,6 +149,7 @@ export function Select({
     <Wrapper ref={wrapRef} style={{ width }}>
       <div style={{ position: 'relative' }}>
         <Trigger
+          type="button"
           $sz={size}
           $open={open}
           $disabled={disabled}

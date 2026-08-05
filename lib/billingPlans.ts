@@ -50,11 +50,24 @@ export const CHECKOUT_PLANS: CheckoutPlan[] = [
   },
 ];
 
+const LEGACY_PLANS: readonly CheckoutPlan[] = [{
+  slug: 'starter',
+  name: 'Starter',
+  priceMonthly: 29,
+  priceYearly: 24,
+  features: [],
+}];
+
 const normalizePlan = (value: string): string => value.trim().toLowerCase().replace(/\s+/g, '-');
 
 export const getCheckoutPlan = (slugOrName: string): CheckoutPlan | undefined => {
   const normalized = normalizePlan(slugOrName);
   return CHECKOUT_PLANS.find((plan) => plan.slug === normalized || normalizePlan(plan.name) === normalized);
+};
+
+export const getLegacyCheckoutPlan = (slugOrName: string): CheckoutPlan | undefined => {
+  const normalized = normalizePlan(slugOrName);
+  return LEGACY_PLANS.find((plan) => plan.slug === normalized || normalizePlan(plan.name) === normalized);
 };
 
 export type CheckoutMode = 'trial' | 'upfront';
