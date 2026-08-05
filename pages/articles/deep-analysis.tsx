@@ -329,7 +329,7 @@ const DeepAnalysisPage: NextPage = () => {
   const canContinue = articleId !== null && jobId !== null;
   const continueToContentType = () => {
     if (!articleId) return;
-    void router.push(`/articles/content-type?articleId=${articleId}`);
+    router.push(`/articles/content-type?articleId=${articleId}`);
   };
 
   const handleRetry = () => {
