@@ -64,6 +64,12 @@ function lexPlain(text: string): readonly LexToken[] {
   const ctr = { i: 0 };
   const chunks = text.replace(/\r\n/g, '\n').split(/\n{2,}/);
   const out: LexToken[] = [];
+  const emitList = (lines: readonly string[]): boolean => {
+    const items = lines.map((line) => /^\s*(?:[-*+]\s+|\d+[.)]\s+)(.+)$/.exec(line)?.[1]?.trim() ?? '');
+    if (items.length === 0 || items.some((item) => !item)) return false;
+    for (const item of items) out.push({ kind: 'list_item', text: item, blockId: nextId(ctr) });
+    return true;
+  };
   for (const chunk of chunks) {
     const trimmed = chunk.trim();
     if (!trimmed) continue;
@@ -78,6 +84,8 @@ function lexPlain(text: string): readonly LexToken[] {
       });
       continue;
     }
+    if (emitList(trimmed.split('\n'))) continue;
+
     // multi-line chunk: first line heading, rest paragraph
     const lines = trimmed.split('\n');
     const first = lines[0] ?? '';
@@ -90,8 +98,9 @@ function lexPlain(text: string): readonly LexToken[] {
         headingLevel: level,
         blockId: nextId(ctr),
       });
-      const rest = lines.slice(1).join('\n').trim();
-      if (rest) {
+      const restLines = lines.slice(1);
+      const rest = restLines.join('\n').trim();
+      if (rest && !emitList(restLines)) {
         out.push({ kind: 'paragraph', text: rest, blockId: nextId(ctr) });
       }
       continue;

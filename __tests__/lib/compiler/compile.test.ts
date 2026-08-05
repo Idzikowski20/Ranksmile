@@ -92,6 +92,15 @@ describe('compiler skeleton + builders (Etap 8)', () => {
     expect(t1.map((t) => t.blockId)).toEqual(['b1', 'b2']);
   });
 
+  it('lexes Markdown list markers as separate list items', () => {
+    const tokens = lex({ kind: 'plain', text: '- First item\n- Second item\n\n1. Third item' });
+    expect(tokens.map((token) => [token.kind, token.text])).toEqual([
+      ['list_item', 'First item'],
+      ['list_item', 'Second item'],
+      ['list_item', 'Third item'],
+    ]);
+  });
+
   it('empty source → empty KG', () => {
     const { model } = compile({
       articleId: 'empty',
