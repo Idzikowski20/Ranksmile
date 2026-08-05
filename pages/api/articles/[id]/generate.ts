@@ -274,6 +274,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const executionPlan = toSidecarExecutionPlan(finalized.bundle.executionPlan);
     const compiledWritePlan = toSidecarCompiledPlan(compiledResult.plan);
+    await db.query(
+      `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+      {
+        replacements: [
+          JSON.stringify({ ...nextScore, compiled_write_plan: compiledResult.plan }),
+          articleId,
+        ],
+      },
+    );
 
     // 6. Build the sidecar payload (snake_case keys match the sidecar GenerateRequest).
     const sidecarPayload = {
