@@ -4622,32 +4622,15 @@ html.editor-route .app-content {
   border-color: var(--koala-status-danger);
 }
 .deep-analysis-step--error .deep-analysis-step-label {
-  color: var(--koala-status-danger);
+  color: color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary));
 }
 .deep-analysis-step-error {
   min-width: 0;
   font-size: 12px;
-  color: var(--koala-status-danger);
+  line-height: 16px;
+  color: color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary));
   font-family: var(--font-family-primary);
-}
-.deep-analysis-source {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: var(--koala-bg-secondary);
-  border-radius: 8px;
-  border: 1px solid var(--koala-border-primary);
-  overflow: hidden;
-  min-width: 0;
-}
-.deep-analysis-source-text {
-  font-size: 13px;
-  color: var(--koala-text-secondary);
-  font-family: var(--font-family-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .deep-analysis-actions {
   display: flex;
@@ -4657,9 +4640,9 @@ html.editor-route .app-content {
 }
 
 /* Step status icons use Phosphor + CSS vars */
-.deep-analysis-step-icon__done { color: var(--koala-status-success); }
-.deep-analysis-step-icon__error { color: var(--koala-status-danger); }
-.deep-analysis-step-icon__pending { color: var(--koala-border-strong); }
+.deep-analysis-step-icon__done { color: color-mix(in srgb, var(--koala-status-success) 50%, var(--koala-text-primary)); }
+.deep-analysis-step-icon__error { color: color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary)); }
+.deep-analysis-step-icon__pending { color: var(--koala-text-secondary); }
 
 /* ??? New Content ? generating (article preview stage) ????????????????????? */
 .nc-gen {
