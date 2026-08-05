@@ -9,11 +9,14 @@ export function chooseReplacement(
   removedId: string,
   previousDefaultId: string | null,
 ): PaymentMethodViewModel | null {
-  const candidates = paymentMethods.filter((pm) => pm.id !== removedId);
+  const candidates = paymentMethods.filter((pm) => pm.id !== removedId && !pm.roles.includes('expired'));
   if (candidates.length === 0) return null;
 
   const preferred = candidates.find((pm) => pm.rankingHint === 'preferred');
   if (preferred) return preferred;
+
+  const defaultCandidate = candidates.find((pm) => pm.roles.includes('default'));
+  if (defaultCandidate) return defaultCandidate;
 
   if (previousDefaultId && previousDefaultId !== removedId) {
     const prev = candidates.find((pm) => pm.id === previousDefaultId);
