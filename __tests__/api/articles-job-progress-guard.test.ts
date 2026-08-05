@@ -132,6 +132,40 @@ it('returns the stored job error instead of stale progress for failed jobs', asy
   }));
 });
 
+it('does not expose stored errors for failed non-deep jobs', async () => {
+  mockDbQuery.mockResolvedValueOnce(dbResult([{
+    id: 'domain_123',
+    job_type: 'domain_setup',
+    domain_id: 12,
+    article_id: null,
+    status: 'failed',
+    current_stage: 'crawl',
+    stage_progress: null,
+    total_progress: null,
+    progress_message: 'Reviewing indexed pages',
+    error: 'database connection failed at private-host',
+    updated_at: new Date(),
+  }]));
+  mockVerifyDomainOwnership.mockResolvedValueOnce(true);
+  const res = makeRes();
+
+  await handler({
+    method: 'GET',
+    headers: {},
+    body: {},
+    query: { jobId: 'domain_123' },
+    cookies: {},
+  } as NextApiRequest, res);
+
+  expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+    error: null,
+    progressMessage: 'Reviewing indexed pages',
+  }));
+  expect(res.json).not.toHaveBeenCalledWith(expect.objectContaining({
+    error: 'database connection failed at private-host',
+  }));
+});
+
 it('does not let the article cancellation endpoint cancel a domain setup job', async () => {
   mockDbQuery.mockResolvedValueOnce(dbResult([{
     id: 'domain_123', status: 'running', job_type: 'domain_setup', domain_id: 12, article_id: null,
@@ -192,6 +226,6 @@ it('recovers a stale finalizing job so polling can stop waiting forever', async 
   } as NextApiRequest, res);
 
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-    status: 'failed', error: 'finalizing timed out', progressMessage: 'finalizing timed out',
+    status: 'failed', error: null, progressMessage: 'Saving article',
   }));
 });

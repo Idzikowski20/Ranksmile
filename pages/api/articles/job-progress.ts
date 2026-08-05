@@ -134,6 +134,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         j.status = 'failed';
         j.error = 'finalizing timed out';
       }
+      const publicJobError = j.status === 'failed' && j.job_type === 'deep_analysis' ? j.error : null;
 
       return res.status(200).json({
         jobId: j.id,
@@ -142,8 +143,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         currentStage: j.current_stage,
         stageProgress: j.stage_progress,
         totalProgress: j.total_progress,
-        progressMessage: j.status === 'failed' ? j.error || j.progress_message : j.progress_message,
-        error: j.error,
+        progressMessage: publicJobError || j.progress_message,
+        error: publicJobError,
         updatedAt: j.updated_at ? new Date(j.updated_at).toISOString() : null,
       });
     } catch (err) {
