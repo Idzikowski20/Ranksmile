@@ -15,9 +15,6 @@ const mockRouter = {
 };
 
 jest.mock('next/router', () => ({ useRouter: () => mockRouter }));
-jest.mock('../../services/domains', () => ({
-  useFetchDomains: () => ({ data: { domains: [] } }),
-}));
 jest.mock('../../components/articles/WizardShell', () => ({
   __esModule: true,
   default: ({ children, footer }: { children: ReactNode; footer?: ReactNode }) => (
@@ -28,14 +25,6 @@ jest.mock('../../components/articles/WizardShell', () => ({
     onClick: () => void;
     disabled?: boolean;
   }) => <button type="button" onClick={onClick} disabled={disabled}>{label}</button>,
-}));
-jest.mock('../../components/common/DashboardLayout', () => ({
-  __esModule: true,
-  default: ({ children }: { children: ReactNode }) => <>{children}</>,
-}));
-jest.mock('../../components/ranksmile/AnalysisCircuitBoard', () => ({
-  __esModule: true,
-  default: () => <div data-testid="analysis-circuit" />,
 }));
 
 function response(body: Record<string, unknown>): Response {
@@ -59,17 +48,13 @@ function streamResponse(payload: string): Response {
   } as unknown as Response;
 }
 
-function deferredStreamResponse(payload: string): { response: Response; release: () => void } {
+function deferredStreamResponse(): { response: Response; release: (payload: string) => void } {
   type StreamReadResult =
     | { done: false; value: Uint8Array }
     | { done: true; value: undefined };
 
-  const bytes = Buffer.from(payload, 'utf8');
   let resolveRead: ((result: StreamReadResult) => void) | null = null;
-  const firstRead = new Promise<StreamReadResult>((resolve) => {
-    resolveRead = resolve;
-  });
-  let sent = false;
+  const pending: Uint8Array[] = [];
 
   return {
     response: {
@@ -77,16 +62,23 @@ function deferredStreamResponse(payload: string): { response: Response; release:
       body: {
         getReader: () => ({
           read: () => {
-            if (sent) return Promise.resolve({ done: true, value: undefined } as const);
-            sent = true;
-            return firstRead;
+            if (pending.length > 0) {
+              return Promise.resolve({ done: false, value: pending.shift() as Uint8Array } as const);
+            }
+            return new Promise<StreamReadResult>((resolve) => { resolveRead = resolve; });
           },
         }),
       },
     } as unknown as Response,
-    release: () => {
-      if (!resolveRead) throw new Error('Deferred stream is not ready');
-      resolveRead({ done: false, value: bytes });
+    release: (payload: string) => {
+      const bytes = Buffer.from(payload, 'utf8');
+      if (!resolveRead) {
+        pending.push(bytes);
+        return;
+      }
+      const resolve = resolveRead;
+      resolveRead = null;
+      resolve({ done: false, value: bytes });
     },
   };
 }
@@ -100,13 +92,14 @@ describe('DeepAnalysisPage', () => {
   });
 
   it('enables Content type after the job is created and keeps analysis running', async () => {
-    const stream = deferredStreamResponse(
-      'event: created\ndata: {"articleId":177,"jobId":"job_177_1"}\n\n',
-    );
+    const stream = deferredStreamResponse();
     fetchMock.mockImplementation((input) => {
       const url = String(input);
       if (url === '/api/articles/deep-analysis') {
         return Promise.resolve(stream.response);
+      }
+      if (url === '/api/articles/job-progress?articleId=177') {
+        return Promise.resolve(response({ status: 'running', currentStage: 'fetch_page' }));
       }
       if (url === '/api/articles/job-progress?jobId=job_177_1') {
         return Promise.resolve(response({ status: 'running', currentStage: 'fetch_page' }));
@@ -115,28 +108,24 @@ describe('DeepAnalysisPage', () => {
     });
 
     const { container, unmount } = render(<DeepAnalysisPage />);
-    let initialCtaError: unknown;
-    try {
-      expect(screen.getByRole('button', { name: 'Content type' })).toBeDisabled();
-    } catch (error: unknown) {
-      initialCtaError = error;
-    }
+    const next = screen.getByRole('button', { name: 'Content type' });
+    expect(next).toBeDisabled();
 
     expect(container.querySelectorAll('.deep-analysis-step--pending')).toHaveLength(8);
     expect(container.querySelectorAll('.deep-analysis-step-icon__pending')).toHaveLength(8);
     await act(async () => {
-      stream.release();
+      stream.release('event: created\ndata: {"articleId":177}\n\n');
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/articles/job-progress?articleId=177'));
+    expect(next).toBeDisabled();
+
+    await act(async () => {
+      stream.release('event: created\ndata: {"articleId":177,"jobId":"job_177_1"}\n\n');
     });
     await waitFor(() => expect(container.querySelectorAll('.deep-analysis-step')).toHaveLength(8));
     await waitFor(() => expect(container.querySelector('.deep-analysis-step--running [role="status"]')).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith('/api/articles/job-progress?jobId=job_177_1');
 
-    if (initialCtaError) {
-      unmount();
-      throw initialCtaError;
-    }
-
-    const next = screen.getByRole('button', { name: 'Content type' });
     await waitFor(() => expect(next).toBeEnabled());
     expect(container.querySelector('.deep-analysis-pipeline-live')).not.toBeInTheDocument();
     expect(container.querySelector('.deep-analysis-progress')).not.toBeInTheDocument();
