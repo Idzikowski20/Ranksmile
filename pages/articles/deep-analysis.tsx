@@ -27,6 +27,16 @@ interface StepState {
   errorMessage?: string;
 }
 
+interface AnalysisProgressPayload {
+  articleId?: number;
+  jobId?: string;
+  step?: string;
+  currentStage?: string;
+  message?: string;
+  status?: string;
+  progressMessage?: string;
+}
+
 type StageName = 'fetch_page' | 'scrape_serp' | 'classify_content' | 'extract_terms' | 'score_ranking' | 'ai_search' | 'finalizing' | 'done';
 
 const STAGE_ORDER: StageName[] = [
@@ -85,6 +95,28 @@ function applyStageToSteps(stage: string, prev: StepState[]): StepState[] {
     if (currentStepKeys.includes(s.key) && s.status !== 'done') return { ...s, status: 'running' as StepStatus };
     return s;
   });
+}
+
+function markFailedStep(
+  prev: StepState[],
+  step: string | undefined,
+  currentStage: string | undefined,
+  message: string,
+): StepState[] {
+  const direct = step && prev.find((item) => item.key === step);
+  const mappedKeys = direct
+    ? []
+    : [currentStage, step].flatMap((stage) => (stage ? STAGE_TO_STEPS[stage] || [] : []));
+  const mapped = prev.find((item) => mappedKeys.includes(item.key) && item.status === 'running')
+    || prev.find((item) => mappedKeys.includes(item.key) && item.status !== 'done');
+  const failed = direct
+    || mapped
+    || prev.find((item) => item.status === 'running')
+    || prev.find((item) => item.status === 'pending');
+  if (!failed) return prev;
+  return prev.map((item) => (
+    item.key === failed.key ? { ...item, status: 'error', errorMessage: message } : item
+  ));
 }
 
 const StepIcon = ({ status }: { status: StepStatus }) => {
@@ -150,6 +182,8 @@ const DeepAnalysisPage: NextPage = () => {
   const [retryCount, setRetryCount] = useState(0);
   const startedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retryArticleIdRef = useRef<number | null>(null);
+  const runGenerationRef = useRef(0);
 
   const urlStr = (url as string || '').trim();
   const kwStr = (kwParam as string || '');
@@ -181,6 +215,8 @@ const DeepAnalysisPage: NextPage = () => {
     }
 
     startedRef.current = true;
+    const runGeneration = runGenerationRef.current;
+    const retryArticleId = retryArticleIdRef.current;
 
     (async () => {
       try {
@@ -189,13 +225,27 @@ const DeepAnalysisPage: NextPage = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
             isKeywordMode
-              ? { keywords, country: country || 'PL', language: languageStr || undefined, domainId: Number(domainIdStr) }
-              : { url: urlStr, keywords, country: country || 'PL', language: languageStr || undefined },
+              ? {
+                keywords,
+                country: country || 'PL',
+                language: languageStr || undefined,
+                domainId: Number(domainIdStr),
+                ...(retryArticleId ? { articleId: retryArticleId } : {}),
+              }
+              : {
+                url: urlStr,
+                keywords,
+                country: country || 'PL',
+                language: languageStr || undefined,
+                ...(retryArticleId ? { articleId: retryArticleId } : {}),
+              },
           ),
         });
+        if (runGeneration !== runGenerationRef.current) return;
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({ error: 'Analysis failed' }));
+          if (runGeneration !== runGenerationRef.current) return;
           setOverallError(data.error || 'Analysis failed');
           startedRef.current = false;
           return;
@@ -213,27 +263,24 @@ const DeepAnalysisPage: NextPage = () => {
         let currentEvent = '';
 
         function processLine(line: string) {
+          if (runGeneration !== runGenerationRef.current) return;
           if (line.startsWith('event: ')) {
             currentEvent = line.slice(7).trim();
           } else if (line.startsWith('data: ')) {
             const jsonStr = line.slice(6);
             try {
-              const data = JSON.parse(jsonStr);
+              const data = JSON.parse(jsonStr) as AnalysisProgressPayload;
               if (currentEvent === 'created') {
                 if (data.articleId) setArticleId(data.articleId);
                 if (data.articleId && data.jobId) {
                   setJobId(data.jobId);
                   writePageRun(runSessionKey, data.articleId, data.jobId);
+                  retryArticleIdRef.current = null;
                 }
               } else if (currentEvent === 'error') {
-                setSteps((prev) =>
-                  prev.map((s) =>
-                    s.key === data.step
-                      ? { ...s, status: 'error', errorMessage: data.message }
-                      : s,
-                  ),
-                );
-                setOverallError(data.message || 'Analysis failed');
+                const message = data.message || 'Analysis failed';
+                setSteps((prev) => markFailedStep(prev, data.step, data.currentStage, message));
+                setOverallError(message);
                 clearPageRun(runSessionKey);
               } else if (currentEvent === 'done') {
                 if (data.articleId) setArticleId(data.articleId);
@@ -248,6 +295,7 @@ const DeepAnalysisPage: NextPage = () => {
 
         while (true) {
           const { done, value } = await reader.read();
+          if (runGeneration !== runGenerationRef.current) return;
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
@@ -258,6 +306,7 @@ const DeepAnalysisPage: NextPage = () => {
         }
         if (buffer.trim()) processLine(buffer.trim());
       } catch (err) {
+        if (runGeneration !== runGenerationRef.current) return;
         const e = err as { message?: string };
         setOverallError(e.message || 'Connection lost');
         startedRef.current = false;
@@ -273,19 +322,28 @@ const DeepAnalysisPage: NextPage = () => {
       return undefined;
     }
 
+    const runGeneration = runGenerationRef.current;
     const poll = async () => {
       try {
+        if (runGeneration !== runGenerationRef.current) return;
         const query = jobId
           ? `jobId=${encodeURIComponent(jobId)}`
           : `articleId=${articleId}`;
         const res = await fetch(`/api/articles/job-progress?${query}`);
+        if (runGeneration !== runGenerationRef.current) return;
         if (!res.ok) return;
-        const data = await res.json();
+        const data = await res.json() as AnalysisProgressPayload;
+        if (runGeneration !== runGenerationRef.current) return;
 
-        if (data.jobId && !jobId) setJobId(data.jobId);
+        if (data.jobId && !jobId) {
+          setJobId(data.jobId);
+          if (articleId) writePageRun(runSessionKey, articleId, data.jobId);
+        }
 
         if (data.status === 'failed') {
-          setOverallError(data.progressMessage || 'Analysis failed');
+          const message = data.progressMessage || data.message || 'Analysis failed';
+          setSteps((prev) => markFailedStep(prev, data.step, data.currentStage, message));
+          setOverallError(message);
           clearPageRun(runSessionKey);
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
           return;
@@ -326,15 +384,20 @@ const DeepAnalysisPage: NextPage = () => {
     return 'We are analyzing your content. You can continue while it runs in the background.';
   }, [allDone, overallError]);
 
-  const canContinue = articleId !== null && jobId !== null;
+  const canContinue = articleId !== null && jobId !== null && !overallError;
   const continueToContentType = () => {
     if (!articleId) return;
     router.push(`/articles/content-type?articleId=${articleId}`);
   };
 
   const handleRetry = () => {
+    runGenerationRef.current += 1;
+    retryArticleIdRef.current = articleId ?? retryArticleIdRef.current;
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     setOverallError(null);
+    setArticleId(null);
     setJobId(null);
+    setAllDone(false);
     setSteps(STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })));
     clearPageRun(runSessionKey);
     startedRef.current = false;
