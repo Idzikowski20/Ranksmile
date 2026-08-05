@@ -3,6 +3,7 @@ export * from './knowledgePack/types';
 export { buildCompileDiagnostics } from './knowledgePack/compileDiagnostics';
 export { validateStructural } from './knowledgePack/validateStructural';
 export { validateSemantic } from './knowledgePack/validateSemantic';
+export { validateRuntime } from './knowledgePack/validateRuntime';
 export { compileWritePlan, compileAndValidateWritePlan } from './knowledgePack/compileWritePlan';
 export { buildIntentBlueprint } from './intentBlueprint';
 export { buildReaderModel } from './readerModel';
