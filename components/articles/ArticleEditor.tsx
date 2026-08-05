@@ -1134,8 +1134,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [generateBusy, setGenerateBusy] = useState(false);
     const [generateMsg, setGenerateMsg] = useState('Generating article…');
     const [generatePct, setGeneratePct] = useState<number | null>(null);
-    const generationCanceledRef = useRef(false);
-    const generationJobIdRef = useRef<string | null>(null);
+    const generationRunRef = useRef(0);
+    const generationJobIdRef = useRef<{ runId: number; jobId: string } | null>(null);
     const router = useRouter();
     const [outlineReviewMode, setOutlineReviewMode] = useState(false);
     const outlineAutoStarted = useRef(false);
@@ -1879,6 +1879,15 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     };
 
+    const cancelGenerationJob = async (jobId: string) => {
+      try {
+        const response = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Cancellation was not confirmed');
+      } catch {
+        toast.error('Could not confirm cancellation. The generation may still finish.');
+      }
+    };
+
     const handleWriteWithAi = async (opts?: {
       approvedOutline?: Array<{ level: number; text: string }>;
       internalLinks?: boolean;
@@ -1890,7 +1899,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         toast.error('Article is not ready yet — try again in a moment.');
         return;
       }
-      generationCanceledRef.current = false;
+      generationRunRef.current += 1;
+      const runId = generationRunRef.current;
+      const isCurrentRun = () => generationRunRef.current === runId;
       generationJobIdRef.current = null;
       setGenerateBusy(true);
       setGenerateMsg('Starting generation…');
@@ -1903,6 +1914,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           const artData = await artRes.json() as {
             article?: { wizard_state?: string | null; content?: string | null };
           };
+          if (!isCurrentRun()) return;
           if (artData.article?.wizard_state) {
             const ws = JSON.parse(artData.article.wizard_state) as { instructions?: string; voiceId?: string };
             instructions = ws.instructions || '';
@@ -1921,14 +1933,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           } else if (prog.status === 'done' && !opts?.approvedOutline?.length) {
             const artRes = await fetch(`/api/articles/${articleId}`);
             const artData = await artRes.json() as { article?: { content?: string | null } };
+            if (!isCurrentRun()) return;
             const html = artData.article?.content || '';
             if (isUsableArticleHtml(html)) {
               await playReveal(html, true);
+              if (!isCurrentRun()) return;
               toast.success('Article loaded');
               return;
             }
           }
         }
+
+        if (!isCurrentRun()) return;
 
         if (!jobId) {
           const genRes = await fetch(`/api/articles/${articleId}/generate`, {
@@ -1959,18 +1975,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             throw new Error(detail || genData.message || genData.error || 'Generation failed to start');
           }
           jobId = genData.jobId;
-          setGenerateMsg('Writing your article…');
+          if (isCurrentRun()) setGenerateMsg('Writing your article…');
         }
-        generationJobIdRef.current = jobId;
-        if (generationCanceledRef.current) {
-          void fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`, { method: 'DELETE' });
+        if (!isCurrentRun()) {
+          void cancelGenerationJob(jobId);
           return;
         }
+        generationJobIdRef.current = { runId, jobId };
 
         const started = Date.now();
         await new Promise<void>((resolve, reject) => {
           const tick = async () => {
-            if (generationCanceledRef.current) { resolve(); return; }
+            if (!isCurrentRun()) { resolve(); return; }
             try {
               const r = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId!)}`);
               const d = await r.json().catch(() => ({})) as {
@@ -1978,6 +1994,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 progressMessage?: string;
                 totalProgress?: number;
               };
+              if (!isCurrentRun()) { resolve(); return; }
               if (typeof d.progressMessage === 'string' && d.progressMessage.trim()) {
                 setGenerateMsg(d.progressMessage.trim());
               }
@@ -1999,15 +2016,17 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setTimeout(tick, 1200);
         });
 
-        if (generationCanceledRef.current) return;
+        if (!isCurrentRun()) return;
 
         const artRes = await fetch(`/api/articles/${articleId}`);
         const artData = await artRes.json() as { article?: { content?: string | null } };
+        if (!isCurrentRun()) return;
         const html = artData.article?.content || '';
         if (!html.replace(/<[^>]+>/g, ' ').trim()) {
           throw new Error('Generation finished but no content was returned.');
         }
         await playReveal(html, true);
+        if (!isCurrentRun()) return;
         setOutlineReviewMode(false);
         if (router.query.reviewOutline) {
           const q = { ...router.query };
@@ -2019,11 +2038,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         }
         toast.success('Article generated');
       } catch (e) {
-        if (!generationCanceledRef.current) toast.error(getErrorMessage(e) || 'Could not generate the article.');
+        if (isCurrentRun()) toast.error(getErrorMessage(e) || 'Could not generate the article.');
       } finally {
-        generationJobIdRef.current = null;
-        setGenerateBusy(false);
-        setGeneratePct(null);
+        if (isCurrentRun()) {
+          generationJobIdRef.current = null;
+          setGenerateBusy(false);
+          setGeneratePct(null);
+        }
       }
     };
 
@@ -2067,13 +2088,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     };
 
     const handleOutlineCancel = () => {
-      const jobId = generationJobIdRef.current;
-      generationCanceledRef.current = true;
+      const activeJob = generationJobIdRef.current;
+      generationRunRef.current += 1;
       generationJobIdRef.current = null;
+      revealAbortRef.current?.abort();
       setGenerateBusy(false);
       setGeneratePct(null);
-      if (jobId) {
-        void fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`, { method: 'DELETE' });
+      if (activeJob) {
+        void cancelGenerationJob(activeJob.jobId);
       }
       setOutlineReviewMode(false);
       const q = { ...router.query };

@@ -9,6 +9,7 @@ import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { affectedRows } from '../../../lib/queueRunner';
 
 type JobAccessRow = {
   id: string;
@@ -125,20 +126,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const job = rows[0];
     if (!job) return res.status(404).json({ error: 'job not found' });
     if (!(await canReadJob(userId, job))) return res.status(403).json({ error: 'Access denied.' });
-    if (job.status === 'done' || job.status === 'failed') return res.status(409).json({ error: 'job already finished' });
+    // This endpoint is used only by ArticleEditor. Domain setup owns a separate quota
+    // reservation lifecycle and must not be canceled here.
+    if (job.job_type !== 'article_generate' || !job.article_id) {
+      return res.status(409).json({ error: 'job cannot be canceled here' });
+    }
 
-    await db.query(
-      `UPDATE analysis_jobs SET status = 'canceled', error = 'canceled_by_user', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      { replacements: [jobId] },
-    );
-    if (job.article_id) {
+    const canceled = await db.transaction(async (transaction) => {
+      const claim = await db.query(
+        `UPDATE analysis_jobs
+         SET status = 'canceled', error = 'canceled_by_user', updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND status IN ('queued', 'running')`,
+        { replacements: [jobId], transaction },
+      );
+      if (affectedRows(claim) === 0) return false;
       const { getArticleIdSql } = await import('../../../lib/articleSql');
       const articleIdSql = await getArticleIdSql();
       await db.query(
         `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-        { replacements: [job.article_id] },
+        { replacements: [job.article_id], transaction },
       );
-    }
+      return true;
+    });
+    if (!canceled) return res.status(409).json({ error: 'job already finishing or finished' });
     return res.status(200).json({ ok: true });
   }
 
@@ -149,23 +159,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!jobId) return res.status(400).json({ error: 'jobId is required' });
 
   try {
-    const jobRows = await db.query<{ id: string; status: string }>(
-      `SELECT id, status FROM analysis_jobs WHERE id = ?`,
-      { replacements: [jobId], type: QueryTypes.SELECT },
-    );
-    if (!jobRows.length) {
-      return res.status(404).json({ error: 'job not found' });
-    }
-    if (jobRows[0]?.status === 'canceled') {
-      return res.status(409).json({ error: 'job canceled' });
-    }
-
     if (status === 'done' || status === 'failed') {
-      // terminal callback
       const jrows = await db.query<{ job_type: string; domain_id: number | null; article_id: number | null }>(
         `SELECT job_type, domain_id, article_id FROM analysis_jobs WHERE id = ?`,
         { replacements: [jobId], type: QueryTypes.SELECT },
       );
+      if (!jrows.length) return res.status(404).json({ error: 'job not found' });
+      // Claim terminal handling before materializing any result. DELETE competes on the
+      // same queued/running states, so exactly one of cancellation or materialization wins.
+      const claim = await db.query(
+        `UPDATE analysis_jobs SET status = 'finalizing', updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND status IN ('queued', 'running')`,
+        { replacements: [jobId] },
+      );
+      if (affectedRows(claim) === 0) return res.status(409).json({ error: 'job canceled or already finalized' });
+
+      // terminal callback
       const jt = jrows[0]?.job_type;
       const domainId = jrows[0]?.domain_id;
       const genArticleId = jrows[0]?.article_id;
@@ -190,7 +199,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           // would be dead for the 10-min staleness window). Mark it failed so Retry works now.
           const msg = e instanceof Error ? e.message : String(e);
           await db.query(
-            `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND status = 'finalizing'`,
             { replacements: [`materialize failed: ${msg}`, jobId] },
           );
           const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
@@ -210,7 +220,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           // Never wipe a draft with an empty LLM response — fail the job so the UI can retry.
           if (!isUsableArticleHtml(html)) {
             await db.query(
-              `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+              `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ? AND status = 'finalizing'`,
               { replacements: ['empty_article_html', jobId] },
             );
             await db.query(
@@ -267,8 +278,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
       }
       await db.query(
-        `UPDATE analysis_jobs SET status = ?, result = COALESCE(?, result), error = ?, total_progress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        { replacements: [status, result ? JSON.stringify(result) : null, status === 'failed' ? (message || 'failed') : null, status === 'done' ? 100 : null, jobId] },
+        `UPDATE analysis_jobs SET status = ?, result = COALESCE(?, result), error = ?, total_progress = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND status = 'finalizing'`,
+        { replacements: [
+          status,
+          result ? JSON.stringify(result) : null,
+          status === 'failed' ? (message || 'failed') : null,
+          status === 'done' ? 100 : null,
+          jobId,
+        ] },
       );
       return res.status(200).json({ ok: true });
     }
@@ -281,7 +299,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
            total_progress = COALESCE(?, total_progress),
            progress_message = COALESCE(?, progress_message),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
+       WHERE id = ? AND status IN ('queued', 'running')`,
       { replacements: [currentStage || null, stageProgress ?? null, totalProgress ?? null, message || null, jobId] },
     );
     res.status(200).json({ ok: true });
