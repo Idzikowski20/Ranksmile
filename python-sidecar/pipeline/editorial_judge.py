@@ -7,9 +7,6 @@ from dataclasses import dataclass
 from pipeline.section_writer import ParagraphResult
 
 
-MarkdownRewriter = Callable[[str], Awaitable[str]]
-
-
 @dataclass(frozen=True)
 class ReviewedParagraphResult:
     base: ParagraphResult
@@ -22,7 +19,7 @@ class ReviewedParagraphResult:
 
 async def review_paragraph(
     result: ParagraphResult,
-    rewrite_markdown: MarkdownRewriter,
+    rewrite_markdown: Callable[[str], Awaitable[str]],
     *,
     critical_gaps: Sequence[str] = (),
     confidence_threshold: float = 0.6,
