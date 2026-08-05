@@ -1136,6 +1136,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [generatePct, setGeneratePct] = useState<number | null>(null);
     const generationRunRef = useRef(0);
     const generationJobIdRef = useRef<{ runId: number; jobId: string } | null>(null);
+    const generationRevealHtmlRef = useRef<{ runId: number; html: string } | null>(null);
     const router = useRouter();
     const [outlineReviewMode, setOutlineReviewMode] = useState(false);
     const outlineAutoStarted = useRef(false);
@@ -1792,7 +1793,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       revealAbortRef.current?.abort();
     }, []);
 
-    const playReveal = async (html: string, emitUpdate = true) => {
+    const playReveal = async (html: string, emitUpdate = true, abortBehavior: 'complete' | 'preserve' = 'complete') => {
       if (!editorCanCommand(editor)) return;
       revealAbortRef.current?.abort();
       const ac = new AbortController();
@@ -1801,7 +1802,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const ed = editor;
       const cleaned = normalizeListHtml(html);
       try {
-        await revealHtmlInEditor(ed, cleaned, { signal: ac.signal, emitUpdate });
+        await revealHtmlInEditor(ed, cleaned, { signal: ac.signal, emitUpdate, abortBehavior });
       } finally {
         if (revealAbortRef.current === ac) {
           revealPlayingRef.current = false;
@@ -1944,7 +1945,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           }
         }
 
-        if (!isCurrentRun()) return;
+        if (!isCurrentRun()) {
+          if (jobId) void cancelGenerationJob(jobId);
+          return;
+        }
 
         if (!jobId) {
           const genRes = await fetch(`/api/articles/${articleId}/generate`, {
@@ -2025,8 +2029,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         if (!html.replace(/<[^>]+>/g, ' ').trim()) {
           throw new Error('Generation finished but no content was returned.');
         }
-        await playReveal(html, true);
+        generationRevealHtmlRef.current = { runId, html: editor.getHTML() };
+        await playReveal(html, true, 'preserve');
         if (!isCurrentRun()) return;
+        generationRevealHtmlRef.current = null;
         setOutlineReviewMode(false);
         if (router.query.reviewOutline) {
           const q = { ...router.query };
@@ -2042,6 +2048,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       } finally {
         if (isCurrentRun()) {
           generationJobIdRef.current = null;
+          if (generationRevealHtmlRef.current?.runId === runId) generationRevealHtmlRef.current = null;
           setGenerateBusy(false);
           setGeneratePct(null);
         }
@@ -2089,9 +2096,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     const handleOutlineCancel = () => {
       const activeJob = generationJobIdRef.current;
+      const activeReveal = generationRevealHtmlRef.current;
       generationRunRef.current += 1;
       generationJobIdRef.current = null;
       revealAbortRef.current?.abort();
+      if (activeReveal && editorCanCommand(editor)) {
+        editor.commands.setContent(activeReveal.html, { emitUpdate: true });
+      }
+      generationRevealHtmlRef.current = null;
       setGenerateBusy(false);
       setGeneratePct(null);
       if (activeJob) {

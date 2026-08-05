@@ -134,3 +134,32 @@ it('atomically cancels an article job only while it is still running', async () 
   expect(mockDbQuery.mock.calls[2]?.[1]).toMatchObject({ transaction: expect.anything() });
   expect(res.status).toHaveBeenCalledWith(200);
 });
+
+it('recovers a stale finalizing job so polling can stop waiting forever', async () => {
+  mockDbQuery
+    .mockResolvedValueOnce(dbResult([{
+      id: 'gen_finalizing',
+      job_type: 'article_generate',
+      domain_id: null,
+      article_id: 55,
+      status: 'finalizing',
+      current_stage: null,
+      stage_progress: null,
+      total_progress: null,
+      progress_message: 'Saving article',
+      updated_at: new Date(Date.now() - 6 * 60 * 1000),
+    }]))
+    .mockResolvedValueOnce(dbResult([[], { changes: 1 }]))
+    .mockResolvedValueOnce(dbResult([[], { changes: 1 }]));
+  mockAssertArticleAccess.mockResolvedValueOnce(true);
+  mockDbTransaction.mockImplementation(async (callback) => callback({} as never));
+  const res = makeRes();
+
+  await handler({
+    method: 'GET', headers: {}, body: {}, query: { jobId: 'gen_finalizing' }, cookies: {},
+  } as NextApiRequest, res);
+
+  expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+    status: 'failed', progressMessage: 'Finalization timed out',
+  }));
+});
