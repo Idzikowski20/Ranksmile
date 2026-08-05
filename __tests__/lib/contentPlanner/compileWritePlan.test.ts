@@ -1,4 +1,8 @@
-import { compileWritePlan, compileAndValidateWritePlan } from '../../../lib/contentPlanner';
+import {
+  compileWritePlan,
+  compileAndValidateWritePlan,
+  validateCompiledWritePlan,
+} from '../../../lib/contentPlanner';
 import type {
   ArticleExecutionPlan,
   ExecutionPlanSection,
@@ -334,5 +338,18 @@ describe('compileAndValidateWritePlan', () => {
       expect(a.plan.planHash).toBe(b.plan.planHash);
       expect(a.plan.planHash).toHaveLength(32);
     }
+  });
+
+  it('aggregates semantic and runtime failures before allowing Writer kickoff', () => {
+    const compiled = compileWritePlan(sampleExecutionPlan({ sections: [sampleSection()] }));
+    const result = validateCompiledWritePlan({
+      ...compiled,
+      title: '',
+      knowledgePacks: [{ ...compiled.knowledgePacks[0], expectedWords: 0 }],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((issue) => issue.stage === 'semantic')).toBe(true);
+    expect(result.issues.some((issue) => issue.stage === 'runtime')).toBe(true);
   });
 });

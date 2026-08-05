@@ -19,7 +19,7 @@ import {
   type PipelineManifest,
 } from './types';
 import { buildCompileDiagnostics } from './compileDiagnostics';
-import { validateStructural } from './validateStructural';
+import { validateCompiledWritePlan } from './validateCompiledWritePlan';
 import { buildKnowledgePack } from './sectionPlanner';
 import { planParagraphs } from './paragraphPlanner';
 import { allocateTerms } from './termAllocator';
@@ -201,7 +201,7 @@ export function compileAndValidateWritePlan(
   opts?: { importantTerms?: string[]; allowBrandNiche?: boolean; researchVersion?: string },
 ): CompileResult {
   const compiled = compileWritePlan(plan, opts);
-  const validation = validateStructural(compiled);
+  const validation = validateCompiledWritePlan(compiled);
   if (!validation.ok) {
     return { ok: false, issues: validation.issues, diagnostics: compiled.diagnostics };
   }
