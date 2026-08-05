@@ -1,9 +1,12 @@
 import type { BillingPeriod } from './billingPlans';
-import { CHECKOUT_PLANS } from './billingPlans';
 
-export type PlanSlug = (typeof CHECKOUT_PLANS)[number]['slug'];
+/** Sellable plan slugs (Starter removed). */
+export type PlanSlug = 'growth' | 'scale' | 'agency';
 
-const PRICE_ENV_KEYS: Record<PlanSlug, Record<BillingPeriod, string>> = {
+/** Includes legacy Starter for DB / Stripe price reverse-lookup. */
+export type LegacyPlanSlug = PlanSlug | 'starter';
+
+const PRICE_ENV_KEYS: Record<LegacyPlanSlug, Record<BillingPeriod, string>> = {
   starter: {
     monthly: 'STRIPE_PRICE_STARTER_MONTHLY',
     yearly: 'STRIPE_PRICE_STARTER_YEARLY',
@@ -22,18 +25,18 @@ const PRICE_ENV_KEYS: Record<PlanSlug, Record<BillingPeriod, string>> = {
   },
 };
 
-export function getStripePriceId(slug: PlanSlug, billing: BillingPeriod): string | null {
+export function getStripePriceId(slug: LegacyPlanSlug, billing: BillingPeriod): string | null {
   const envKey = PRICE_ENV_KEYS[slug]?.[billing];
   if (!envKey) return null;
   const value = process.env[envKey]?.trim();
   return value || null;
 }
 
-export function getPlanFromPriceId(priceId: string): { slug: PlanSlug; billing: BillingPeriod } | null {
-  for (const plan of CHECKOUT_PLANS) {
+export function getPlanFromPriceId(priceId: string): { slug: LegacyPlanSlug; billing: BillingPeriod } | null {
+  for (const slug of Object.keys(PRICE_ENV_KEYS) as LegacyPlanSlug[]) {
     for (const billing of ['monthly', 'yearly'] as const) {
-      if (getStripePriceId(plan.slug as PlanSlug, billing) === priceId) {
-        return { slug: plan.slug as PlanSlug, billing };
+      if (getStripePriceId(slug, billing) === priceId) {
+        return { slug, billing };
       }
     }
   }
@@ -42,4 +45,8 @@ export function getPlanFromPriceId(priceId: string): { slug: PlanSlug; billing: 
 
 export function isStripeCheckoutConfigured(slug: PlanSlug, billing: BillingPeriod): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim() && getStripePriceId(slug, billing));
+}
+
+export function isSellablePlanSlug(value: string | null | undefined): value is PlanSlug {
+  return value === 'growth' || value === 'scale' || value === 'agency';
 }

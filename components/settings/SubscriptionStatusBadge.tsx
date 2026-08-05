@@ -1,4 +1,5 @@
 import React from 'react';
+import { Badge, type BadgeAppearance } from '../koala/core/badge/badge';
 import { Icon } from '../koala/icons/Icon';
 import type { SubscriptionDetails } from '../../lib/subscriptionDetails';
 
@@ -10,10 +11,10 @@ export type SubscriptionBadgeInfo = {
   icon: 'CheckCircle' | 'XCircle' | 'Warning';
 };
 
-const TONE_COLOR: Record<SubscriptionBadgeTone, string> = {
-  success: 'var(--koala-status-success)',
-  neutral: 'var(--koala-text-secondary)',
-  warning: 'var(--koala-status-warning)',
+const TONE_APPEARANCE: Record<SubscriptionBadgeTone, BadgeAppearance> = {
+  success: 'success',
+  neutral: 'muted',
+  warning: 'warning',
 };
 
 /** Map org subscription state → Figma WidgetLicense-style status (Acquired / Not acquired / Out of date). */
@@ -51,28 +52,22 @@ export function SubscriptionStatusBadge({
 }: {
   info: SubscriptionBadgeInfo;
 }) {
-  const color = TONE_COLOR[info.tone];
+  const appearance = TONE_APPEARANCE[info.tone];
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        fontSize: 14,
-        fontWeight: 500,
-        color,
-        fontFamily: 'var(--font-family-primary)',
-        whiteSpace: 'nowrap',
-      }}
+    <Badge
+      appearance={appearance}
+      size="md"
+      icon={(
+        <Icon
+          name={info.icon}
+          size={14}
+          weight={info.icon === 'CheckCircle' ? 'fill' : 'bold'}
+        />
+      )}
+      style={{ fontSize: 14, fontWeight: 500, height: 'auto', padding: '2px 6px' }}
     >
-      <Icon
-        name={info.icon}
-        size={16}
-        weight={info.icon === 'CheckCircle' ? 'fill' : 'bold'}
-        color={color}
-      />
       {info.label}
-    </span>
+    </Badge>
   );
 }
 

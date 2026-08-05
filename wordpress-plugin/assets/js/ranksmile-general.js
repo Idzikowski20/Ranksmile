@@ -79537,7 +79537,7 @@ var Svg = function Svg(_ref) {
   return (0,_emotion_react__WEBPACK_IMPORTED_MODULE_10__.jsx)("svg", (0,_babel_runtime_helpers_esm_extends__WEBPACK_IMPORTED_MODULE_1__["default"])({
     height: size,
     width: size,
-    viewBox: "0 0 20 20",
+    viewBox: "0 0 226 226",
     "aria-hidden": "true",
     focusable: "false",
     css: _ref2
@@ -85241,7 +85241,7 @@ var ContentSync = function ContentSync(props) {
       variant: "primary",
       target: "_blank",
       size: buttonSize !== null && buttonSize !== void 0 ? buttonSize : 'base',
-      href: "".concat(wpsurfer.ranksmileurl, "/drafts/").concat(ranksmileDraft.draftId),
+      href: "".concat(ranksmile.ranksmileurl, "/drafts/").concat(ranksmileDraft.draftId),
       fullWidth: true,
       style: {
         maxWidth: '100%',
@@ -85282,7 +85282,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ranksmileseo/ui */ "./node_modules/@ranksmileseo/ui/index.ts");
 /* harmony import */ var _icons_heroicons_sparkles_jsx__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ~icons/heroicons/sparkles.jsx */ "./_virtual_~icons%2Fheroicons%2Fsparkles.jsx");
-/* harmony import */ var _icons_ranksmile_wordpress_jsx__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ~icons/ranksmile/wordpress.jsx */ "./_virtual_~icons%2Fsurfer%2Fwordpress.jsx");
+/* harmony import */ var _icons_ranksmile_wordpress_jsx__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ~icons/ranksmile/wordpress.jsx */ "./_virtual_~icons%2Franksmile%2Fwordpress.jsx");
 
 
 
@@ -85398,7 +85398,7 @@ var OrganizationBox = function OrganizationBox(props) {
         size: "md",
         color: "gray-140",
         weight: "medium",
-        children: organizationName ? organizationName : wpsurfer.organization_name
+        children: organizationName ? organizationName : ranksmile.organization_name
       })]
     }), contentEditorCreditsFailed && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.Note.Root, {
       color: "warning",
@@ -85672,13 +85672,13 @@ var WorkspaceSelectField = function WorkspaceSelectField(_ref) {
             case 0:
               _context.p = 0;
               _context.n = 1;
-              return fetch(wpsurfer.ajaxurl + '?action=ranksmile_get_user_workspaces', {
+              return fetch(ranksmile.ajaxurl + '?action=ranksmile_get_user_workspaces', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                  _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce
+                  _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce
                 })
               });
             case 1:
@@ -85783,7 +85783,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _useRanksmileDraftSyncContext__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../useRanksmileDraftSyncContext */ "./src/js/components/ContentSync/useRanksmileDraftSyncContext.tsx");
 /* harmony import */ var _icons_heroicons_arrow_small_left_jsx__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ~icons/heroicons/arrow-small-left.jsx */ "./_virtual_~icons%2Fheroicons%2Farrow-small-left.jsx");
 /* harmony import */ var _icons_heroicons_exclamation_triangle20_solid_jsx__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ~icons/heroicons/exclamation-triangle20-solid.jsx */ "./_virtual_~icons%2Fheroicons%2Fexclamation-triangle20-solid.jsx");
-/* harmony import */ var _icons_ranksmile_write_article_jsx__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ~icons/ranksmile/write-article.jsx */ "./_virtual_~icons%2Fsurfer%2Fwrite-article.jsx");
+/* harmony import */ var _icons_ranksmile_write_article_jsx__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ~icons/ranksmile/write-article.jsx */ "./_virtual_~icons%2Franksmile%2Fwrite-article.jsx");
 function _regenerator() {
   /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */var e,
     t,
@@ -86052,13 +86052,13 @@ var ContentSyncCreateNew = function ContentSyncCreateNew() {
         case 1:
           setIsLoading(true);
           _context.n = 2;
-          return fetch(wpsurfer.ajaxurl + '?action=ranksmile_create_content_editor', {
+          return fetch(ranksmile.ajaxurl + '?action=ranksmile_create_content_editor', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce,
+              _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce,
               keywords: keyword,
               location: location,
               workspace_id: workspace || '',
@@ -86089,8 +86089,8 @@ var ContentSyncCreateNew = function ContentSyncCreateNew() {
               is_ai_generated: false,
               is_wp_connected: []
             });
-            wpsurfer.default_permalink_hash = data.permalink_hash;
-            wpsurfer.default_draft_id = data.id;
+            ranksmile.default_permalink_hash = data.permalink_hash;
+            ranksmile.default_draft_id = data.id;
             setIsLoading(false);
             setCurrentStep('done');
           } else {
@@ -86121,13 +86121,13 @@ var ContentSyncCreateNew = function ContentSyncCreateNew() {
       while (1) switch (_context2.n) {
         case 0:
           _context2.n = 1;
-          return fetch(wpsurfer.ajaxurl + '?action=ranksmile_get_user_credits', {
+          return fetch(ranksmile.ajaxurl + '?action=ranksmile_get_user_credits', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce
+              _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce
             })
           });
         case 1:
@@ -86322,7 +86322,7 @@ var ContentSyncDone = function ContentSyncDone() {
       children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.Modal.FooterRightSlot, {
         hideClose: true,
         children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.ButtonLink, {
-          href: "".concat(wpsurfer.ranksmileurl, "/drafts/").concat(ranksmileDraft.draftId),
+          href: "".concat(ranksmile.ranksmileurl, "/drafts/").concat(ranksmileDraft.draftId),
           target: "_blank",
           variant: "primary",
           icon: _icons_heroicons_arrow_up_right_jsx__WEBPACK_IMPORTED_MODULE_4__["default"],
@@ -86747,14 +86747,14 @@ var ContentSyncUpdateConfirm = function ContentSyncUpdateConfirm(props) {
             setIsLoading(true);
             setErrorMessage('');
             _context.n = 1;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_update_content_editor', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_update_content_editor', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'api-key': wpsurfer.api_key
+                'api-key': ranksmile.api_key
               },
               body: JSON.stringify({
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce,
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce,
                 draft_id: ranksmileTempDraft.draftId,
                 content: content,
                 post_id: wpPostId,
@@ -86771,9 +86771,9 @@ var ContentSyncUpdateConfirm = function ContentSyncUpdateConfirm(props) {
             data = _context.v;
             setIsLoading(false);
             if (data && data.message == 'Draft updated') {
-              wpsurfer.default_permalink_hash = ranksmileTempDraft.permalinkHash;
-              wpsurfer.default_draft_id = ranksmileTempDraft.draftId;
-              wpsurfer.post_is_scraped = true;
+              ranksmile.default_permalink_hash = ranksmileTempDraft.permalinkHash;
+              ranksmile.default_draft_id = ranksmileTempDraft.draftId;
+              ranksmile.post_is_scraped = true;
               setRanksmileDraft(ranksmileTempDraft);
               setCurrentStep('done');
             } else {
@@ -86833,7 +86833,7 @@ var ContentSyncUpdateConfirm = function ContentSyncUpdateConfirm(props) {
               children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.ContentScore.Indicator, {})
             })
           }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.Link, {
-            href: "".concat(wpsurfer.ranksmileurl, "/drafts/").concat(ranksmileTempDraft.draftId),
+            href: "".concat(ranksmile.ranksmileurl, "/drafts/").concat(ranksmileTempDraft.draftId),
             target: "_blank",
             variant: "standalone",
             icon: _icons_heroicons_arrow_up_right_jsx__WEBPACK_IMPORTED_MODULE_7__["default"],
@@ -87262,14 +87262,14 @@ var ContentSyncUpdateExisting = function ContentSyncUpdateExisting() {
             keywordToSearch = searchQuery || '';
             setIsLoading(true);
             _context.n = 2;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_get_user_drafts', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_get_user_drafts', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'api-key': wpsurfer.api_key
+                'api-key': ranksmile.api_key
               },
               body: JSON.stringify({
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce,
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce,
                 query: keywordToSearch,
                 workspace_id: workspace || ''
               }),
@@ -87621,9 +87621,9 @@ var RanksmileDraftSync = function RanksmileDraftSync(props) {
   var children = props.children;
   var content = props.content || (0,_utils_postsFunctions__WEBPACK_IMPORTED_MODULE_2__.getPostContent)();
   var wpPostId = props.wpPostId || (0,_utils_postsFunctions__WEBPACK_IMPORTED_MODULE_2__.getCurrentPostId)();
-  var permalinkHash = (_props$permalinkHash = props.permalinkHash) !== null && _props$permalinkHash !== void 0 ? _props$permalinkHash : wpsurfer.default_permalink_hash || '';
-  var draftId = (_props$draftId = props.draftId) !== null && _props$draftId !== void 0 ? _props$draftId : wpsurfer.default_draft_id || 0;
-  var scrapeStatus = (_props$scrapeStatus = props.scrapeStatus) !== null && _props$scrapeStatus !== void 0 ? _props$scrapeStatus : wpsurfer.post_is_scraped || false;
+  var permalinkHash = (_props$permalinkHash = props.permalinkHash) !== null && _props$permalinkHash !== void 0 ? _props$permalinkHash : ranksmile.default_permalink_hash || '';
+  var draftId = (_props$draftId = props.draftId) !== null && _props$draftId !== void 0 ? _props$draftId : ranksmile.default_draft_id || 0;
+  var scrapeStatus = (_props$scrapeStatus = props.scrapeStatus) !== null && _props$scrapeStatus !== void 0 ? _props$scrapeStatus : ranksmile.post_is_scraped || false;
   var _useState = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('start'),
     _useState2 = _slicedToArray(_useState, 2),
     currentStep = _useState2[0],
@@ -87637,8 +87637,8 @@ var RanksmileDraftSync = function RanksmileDraftSync(props) {
       permalinkHash: permalinkHash,
       folderName: '',
       keyword: '',
-      keywords: wpsurfer.default_post_keywords || [],
-      location: wpsurfer.default_post_location || '',
+      keywords: ranksmile.default_post_keywords || [],
+      location: ranksmile.default_post_location || '',
       title: '',
       tags: [],
       editedInRanksmileDate: '',
@@ -87677,9 +87677,9 @@ var RanksmileDraftSync = function RanksmileDraftSync(props) {
       is_wp_connected: []
     });
     setRanksmileTempDraft(ranksmileDraft);
-    wpsurfer.default_permalink_hash = '';
-    wpsurfer.default_draft_id = 0;
-    wpsurfer.post_is_scraped = false;
+    ranksmile.default_permalink_hash = '';
+    ranksmile.default_draft_id = 0;
+    ranksmile.post_is_scraped = false;
   };
   var handleDisconnect = /*#__PURE__*/function () {
     var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
@@ -87689,7 +87689,7 @@ var RanksmileDraftSync = function RanksmileDraftSync(props) {
           case 0:
             setDisconnectionLoading(true);
             _context.n = 1;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_remove_post_draft_connection', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_remove_post_draft_connection', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -87697,7 +87697,7 @@ var RanksmileDraftSync = function RanksmileDraftSync(props) {
               body: JSON.stringify({
                 post_id: (0,_utils_postsFunctions__WEBPACK_IMPORTED_MODULE_2__.getCurrentPostId)(),
                 draft_id: draftId,
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce
               })
             });
           case 1:
@@ -87732,16 +87732,16 @@ var RanksmileDraftSync = function RanksmileDraftSync(props) {
             return _context2.a(2);
           case 1:
             _context2.n = 2;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_check_draft_status', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_check_draft_status', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'api-key': wpsurfer.api_key
+                'api-key': ranksmile.api_key
               },
               body: JSON.stringify({
                 draft_id: ranksmileDraft.draftId,
                 post_id: (0,_utils_postsFunctions__WEBPACK_IMPORTED_MODULE_2__.getCurrentPostId)(),
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce
               })
             });
           case 2:
@@ -87752,7 +87752,7 @@ var RanksmileDraftSync = function RanksmileDraftSync(props) {
             data = _context2.v;
             if (data && data.draft_ready) {
               setScrapeIsReady(true);
-              wpsurfer.post_is_scraped = true;
+              ranksmile.post_is_scraped = true;
             } else {
               setTimeout(_handleScrapeStatusCheck, 5000);
             }
@@ -88090,7 +88090,7 @@ var DisconnectModal = function DisconnectModal(props) {
                   children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.ContentScore.Indicator, {})
                 })
               }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.Link, {
-                href: "".concat(wpsurfer.ranksmileurl, "/drafts/").concat(ranksmileDraft.draftId),
+                href: "".concat(ranksmile.ranksmileurl, "/drafts/").concat(ranksmileDraft.draftId),
                 target: "_blank",
                 variant: "standalone",
                 icon: _icons_heroicons_arrow_up_right_jsx__WEBPACK_IMPORTED_MODULE_5__["default"],
@@ -89492,13 +89492,13 @@ var JsonSchema = function JsonSchema() {
               break;
             }
             _context.n = 1;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_get_post_json_schema', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_get_post_json_schema', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce,
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce,
                 post_id: wpPostId
               })
             });
@@ -89531,13 +89531,13 @@ var JsonSchema = function JsonSchema() {
               break;
             }
             _context2.n = 1;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_save_post_json_schema', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_save_post_json_schema', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce,
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce,
                 post_id: wpPostId,
                 json_schema: jsonSchema
               })
@@ -89646,7 +89646,7 @@ var KeywordSuggestionsList = function KeywordSuggestionsList(params) {
     }), resultsFound < 1 && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", {
       className: "keyword-ranksmile-grid__no-results",
       children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("img", {
-        src: wpsurfer.baseurl + 'assets/images/sad_ranksmile.svg',
+        src: ranksmile.baseurl + 'assets/images/sad_ranksmile.svg',
         alt: "Sad Ranksmile",
         style: {
           marginBottom: '2rem'
@@ -89993,7 +89993,7 @@ var KeywordRanksmile = function KeywordRanksmile() {
     data: null,
     keyword: ''
   };
-  var defaultLanguage = getDefaultLanguage(wpsurfer.wp_language);
+  var defaultLanguage = getDefaultLanguage(ranksmile.wp_language);
   var _useState = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)(''),
     _useState2 = _slicedToArray(_useState, 2),
     mainKeyword = _useState2[0],
@@ -90051,7 +90051,7 @@ var KeywordRanksmile = function KeywordRanksmile() {
         children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("p", {
           className: "keyword-ranksmile__tool-instruction",
           children: [(0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_2__.__)('Generate keyword ideas and get data on monthly traffic and cost per click. ', 'ranksmileseo'), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("a", {
-            href: wpsurfer.learnmore_url,
+            href: ranksmile.learnmore_url,
             className: "no-underline",
             target: "_blank",
             children: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_2__.__)('Learn more', 'ranksmileseo')
@@ -90271,7 +90271,7 @@ var gatherSimilarKeywords = /*#__PURE__*/function () {
           return delay(2000);
         case 1:
           _context.n = 2;
-          return fetch(wpsurfer.ajaxurl + '?action=ranksmile_track_keyword_research_usage', {
+          return fetch(ranksmile.ajaxurl + '?action=ranksmile_track_keyword_research_usage', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -90279,7 +90279,7 @@ var gatherSimilarKeywords = /*#__PURE__*/function () {
             body: JSON.stringify({
               keyword: mainKeyword,
               location: location,
-              _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce
+              _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce
             })
           });
         case 2:
@@ -90625,13 +90625,13 @@ var DomainReport = function DomainReport() {
           case 0:
             setIsLoading(true);
             _context.n = 1;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_get_domain_performance_report', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_get_domain_performance_report', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce
               })
             });
           case 1:
@@ -91134,13 +91134,13 @@ var PerformanceReport = function PerformanceReport() {
             filter = _args.length > 5 && _args[5] !== undefined ? _args[5] : 'all';
             setIsLoading(true);
             _context.n = 1;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_get_posts_for_performance_report', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_get_posts_for_performance_report', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce,
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce,
                 query: query,
                 page: page,
                 perPage: perPage,
@@ -91239,8 +91239,8 @@ var PerformanceReport = function PerformanceReport() {
       children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("p", {
         className: "performance-report__date",
         children: [(0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_4__.__)('Date:', 'ranksmileseo'), " ", currentPeriod]
-      }), !wpsurfer.emails_enabled && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("a", {
-        href: wpsurfer.wp_admin_url + '?page=ranksmile&ranksmile_enable_email_notification=1',
+      }), !ranksmile.emails_enabled && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("a", {
+        href: ranksmile.wp_admin_url + '?page=ranksmile&ranksmile_enable_email_notification=1',
         className: "ranksmile-button ranksmile-button--primary",
         children: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_4__.__)('Turn on a weekly report', 'ranksmileseo')
       })]
@@ -92365,7 +92365,7 @@ var WritingGuidelines = function WritingGuidelines(props) {
             variant: "primary",
             size: "xsmall",
             fullWidth: true,
-            href: wpsurfer.ranksmileurl + '/settings/subscription',
+            href: ranksmile.ranksmileurl + '/settings/subscription',
             children: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_2__.__)('Upgrade plan', 'ranksmileseo')
           })
         })
@@ -92428,7 +92428,7 @@ var WritingGuidelines = function WritingGuidelines(props) {
                 children: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_2__.__)('Disconnect', 'ranksmileseo')
               }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.Dropdown.Item, {
                 onClick: function onClick() {
-                  window.open(wpsurfer.ranksmileurl + '/drafts/' + draftId, '_blank', 'noreferrer');
+                  window.open(ranksmile.ranksmileurl + '/drafts/' + draftId, '_blank', 'noreferrer');
                 },
                 children: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_2__.__)('Open in Ranksmile', 'ranksmileseo')
               })]
@@ -93285,7 +93285,7 @@ var UpdateCompleted = function UpdateCompleted(props) {
       children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.Modal.FooterRightSlot, {
         hideClose: true,
         children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_ranksmileseo_ui__WEBPACK_IMPORTED_MODULE_1__.ButtonLink, {
-          href: "".concat(wpsurfer.ranksmileurl, "/drafts/").concat(draftId),
+          href: "".concat(ranksmile.ranksmileurl, "/drafts/").concat(draftId),
           target: "_blank",
           color: "primary",
           icon: _icons_heroicons_arrow_up_right_jsx__WEBPACK_IMPORTED_MODULE_4__["default"],
@@ -93566,14 +93566,14 @@ var UpdateDetails = function UpdateDetails(props) {
             setErrorMessage('');
             setSyncDataIsLoading(true);
             _context.n = 1;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_get_post_sync_status', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_get_post_sync_status', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'api-key': wpsurfer.api_key
+                'api-key': ranksmile.api_key
               },
               body: JSON.stringify({
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce,
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce,
                 draft_id: draftId,
                 post_id: (0,_utils_postsFunctions__WEBPACK_IMPORTED_MODULE_5__.getCurrentPostId)()
               })
@@ -93615,14 +93615,14 @@ var UpdateDetails = function UpdateDetails(props) {
             setErrorMessage('');
             content = (0,_utils_postsFunctions__WEBPACK_IMPORTED_MODULE_5__.getPostContent)();
             _context2.n = 1;
-            return fetch(wpsurfer.ajaxurl + '?action=ranksmile_update_content_editor', {
+            return fetch(ranksmile.ajaxurl + '?action=ranksmile_update_content_editor', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'api-key': wpsurfer.api_key
+                'api-key': ranksmile.api_key
               },
               body: JSON.stringify({
-                _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce,
+                _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce,
                 draft_id: draftId,
                 content: content,
                 post_id: (0,_utils_postsFunctions__WEBPACK_IMPORTED_MODULE_5__.getCurrentPostId)(),
@@ -94164,7 +94164,7 @@ var trackEvent = /*#__PURE__*/function () {
       while (1) switch (_context.n) {
         case 0:
           _context.n = 1;
-          return fetch(wpsurfer.ajaxurl + '?action=ranksmile_track_event', {
+          return fetch(ranksmile.ajaxurl + '?action=ranksmile_track_event', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -94172,7 +94172,7 @@ var trackEvent = /*#__PURE__*/function () {
             body: JSON.stringify({
               event_name: eventName,
               event_data: eventData,
-              _ranksmile_nonce: wpsurfer.ranksmile_ajax_nonce
+              _ranksmile_nonce: ranksmile.ranksmile_ajax_nonce
             })
           });
         case 1:
@@ -97249,7 +97249,7 @@ ensureReactDebugCurrentFrame();
     }));
   }
   var ranksmileElementorModal = document.getElementById('elementor-editor-wrapper');
-  if (ranksmileElementorModal !== null && wpsurfer.disable_elementor != 1) {
+  if (ranksmileElementorModal !== null && ranksmile.disable_elementor != 1) {
     var modalHolder = document.createElement('aside');
     modalHolder.id = 'ranksmile-elementor-modal-holder';
     ranksmileElementorModal.appendChild(modalHolder);
@@ -100387,9 +100387,9 @@ var phBooks = function phBooks(props) {
 
 /***/ }),
 
-/***/ "./_virtual_~icons%2Fsurfer%2Fwordpress.jsx":
+/***/ "./_virtual_~icons%2Franksmile%2Fwordpress.jsx":
 /*!**************************************************!*\
-  !*** ./_virtual_~icons%2Fsurfer%2Fwordpress.jsx ***!
+  !*** ./_virtual_~icons%2Franksmile%2Fwordpress.jsx ***!
   \**************************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
@@ -100429,9 +100429,9 @@ var ranksmileWordpress = function ranksmileWordpress(props) {
 
 /***/ }),
 
-/***/ "./_virtual_~icons%2Fsurfer%2Fwrite-article.jsx":
+/***/ "./_virtual_~icons%2Franksmile%2Fwrite-article.jsx":
 /*!******************************************************!*\
-  !*** ./_virtual_~icons%2Fsurfer%2Fwrite-article.jsx ***!
+  !*** ./_virtual_~icons%2Franksmile%2Fwrite-article.jsx ***!
   \******************************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
@@ -100602,13 +100602,13 @@ var RanksmileLogo = function RanksmileLogo(_ref4) {
   return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("svg", {
     width: size,
     height: size,
-    viewBox: "0 0 36 36",
+    viewBox: "0 0 226 226",
     fill: "none",
     xmlns: "http://www.w3.org/2000/svg",
     children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("path", {
       fillRule: "evenodd",
       clipRule: "evenodd",
-      d: "M10.4702 4.44598C6.58699 4.44598 3.439 7.59398 3.439 11.4772V20.0048H1.95282L4.83744 24.1875L7.72205 20.0048H6.2515V11.4772C6.2515 9.14728 8.14029 7.25848 10.4702 7.25848H25.0434C27.1488 7.25848 28.8555 8.96521 28.8555 11.0706H31.668C31.668 7.41191 28.7021 4.44598 25.0434 4.44598H10.4702ZM19.9817 25.0529H22.5057C22.8663 25.0529 23.0826 24.7644 23.0826 24.4759V12.7211C23.0826 12.3606 22.7942 12.1442 22.5057 12.1442H19.9817C19.6211 12.1442 19.4047 12.4327 19.4047 12.7211V24.4759C19.4047 24.7644 19.6932 25.0529 19.9817 25.0529ZM12.4817 25.0529H15.0057C15.3663 25.0529 15.5827 24.7644 15.5827 24.4759V16.9759C15.5827 16.6154 15.2942 16.399 15.0057 16.399H12.4817C12.1211 16.399 11.9048 16.6875 11.9048 16.9759V24.4038C11.9048 24.7644 12.1932 25.0529 12.4817 25.0529ZM27.3849 17.1112H28.8555V25.6388C28.8555 27.9687 26.9667 29.8575 24.6367 29.8575H10.0636C7.95822 29.8575 6.2515 28.1508 6.2515 26.0454H3.439C3.439 29.7041 6.40492 32.67 10.0636 32.67H24.6367C28.52 32.67 31.668 29.522 31.668 25.6388V17.1112H33.1542L30.2696 12.9285L27.3849 17.1112Z"
+      d: "M91.4595 26.5015C102.568 12.8345 123.432 12.8345 134.54 26.5015C140.447 33.7678 149.618 37.5668 158.932 36.6049C176.451 34.7958 191.204 49.5488 189.395 67.0678C188.433 76.382 192.232 85.5535 199.498 91.4595C213.165 102.568 213.165 123.432 199.498 134.54C192.232 140.447 188.433 149.618 189.395 158.932C191.204 176.451 176.451 191.204 158.932 189.395C149.618 188.433 140.447 192.232 134.54 199.498C123.432 213.165 102.568 213.165 91.4595 199.498C85.5535 192.232 76.382 188.433 67.0678 189.395C49.5488 191.204 34.7958 176.451 36.6049 158.932C37.5668 149.618 33.7678 140.447 26.5015 134.54C12.8345 123.432 12.8345 102.568 26.5015 91.4595C33.7678 85.5535 37.5668 76.382 36.6049 67.0678C34.7958 49.5488 49.5488 34.7958 67.0678 36.6049C76.382 37.5668 85.5535 33.7678 91.4595 26.5015ZM73 112.5a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0 -15 0M123 112.5a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0 -15 0M88 125.5C97 141 113 141 122 125.5C119.5 129 98.5 129 88 125.5Z"
     })
   });
 };
@@ -100616,13 +100616,13 @@ var RanksmileLogoGray = function RanksmileLogoGray() {
   return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("svg", {
     width: "36",
     height: "36",
-    viewBox: "0 0 36 36",
+    viewBox: "0 0 226 226",
     fill: "none",
     xmlns: "http://www.w3.org/2000/svg",
     children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("path", {
       fillRule: "evenodd",
       clipRule: "evenodd",
-      d: "M10.4702 4.44598C6.58699 4.44598 3.439 7.59398 3.439 11.4772V20.0048H1.95282L4.83744 24.1875L7.72205 20.0048H6.2515V11.4772C6.2515 9.14728 8.14029 7.25848 10.4702 7.25848H25.0434C27.1488 7.25848 28.8555 8.96521 28.8555 11.0706H31.668C31.668 7.41191 28.7021 4.44598 25.0434 4.44598H10.4702ZM19.9817 25.0529H22.5057C22.8663 25.0529 23.0826 24.7644 23.0826 24.4759V12.7211C23.0826 12.3606 22.7942 12.1442 22.5057 12.1442H19.9817C19.6211 12.1442 19.4047 12.4327 19.4047 12.7211V24.4759C19.4047 24.7644 19.6932 25.0529 19.9817 25.0529ZM12.4817 25.0529H15.0057C15.3663 25.0529 15.5827 24.7644 15.5827 24.4759V16.9759C15.5827 16.6154 15.2942 16.399 15.0057 16.399H12.4817C12.1211 16.399 11.9048 16.6875 11.9048 16.9759V24.4038C11.9048 24.7644 12.1932 25.0529 12.4817 25.0529ZM27.3849 17.1112H28.8555V25.6388C28.8555 27.9687 26.9667 29.8575 24.6367 29.8575H10.0636C7.95822 29.8575 6.2515 28.1508 6.2515 26.0454H3.439C3.439 29.7041 6.40492 32.67 10.0636 32.67H24.6367C28.52 32.67 31.668 29.522 31.668 25.6388V17.1112H33.1542L30.2696 12.9285L27.3849 17.1112Z",
+      d: "M91.4595 26.5015C102.568 12.8345 123.432 12.8345 134.54 26.5015C140.447 33.7678 149.618 37.5668 158.932 36.6049C176.451 34.7958 191.204 49.5488 189.395 67.0678C188.433 76.382 192.232 85.5535 199.498 91.4595C213.165 102.568 213.165 123.432 199.498 134.54C192.232 140.447 188.433 149.618 189.395 158.932C191.204 176.451 176.451 191.204 158.932 189.395C149.618 188.433 140.447 192.232 134.54 199.498C123.432 213.165 102.568 213.165 91.4595 199.498C85.5535 192.232 76.382 188.433 67.0678 189.395C49.5488 191.204 34.7958 176.451 36.6049 158.932C37.5668 149.618 33.7678 140.447 26.5015 134.54C12.8345 123.432 12.8345 102.568 26.5015 91.4595C33.7678 85.5535 37.5668 76.382 36.6049 67.0678C34.7958 49.5488 49.5488 34.7958 67.0678 36.6049C76.382 37.5668 85.5535 33.7678 91.4595 26.5015ZM73 112.5a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0 -15 0M123 112.5a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0 -15 0M88 125.5C97 141 113 141 122 125.5C119.5 129 98.5 129 88 125.5Z",
       fill: "#9DA1A7"
     })
   });
@@ -100631,13 +100631,13 @@ var RanksmileLogoWhite = function RanksmileLogoWhite() {
   return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("svg", {
     width: "20",
     height: "20",
-    viewBox: "0 0 20 20",
+    viewBox: "0 0 226 226",
     fill: "none",
     xmlns: "http://www.w3.org/2000/svg",
     children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("path", {
       fillRule: "evenodd",
       clipRule: "evenodd",
-      d: "M5.81787 2.47021C3.6605 2.47021 1.91161 4.2191 1.91161 6.37647V11.114H1.08594L2.6885 13.4377L4.29107 11.114H3.47411V6.37647C3.47411 5.08205 4.52345 4.03271 5.81787 4.03271H13.9141C15.0837 4.03271 16.0319 4.98089 16.0319 6.15053H17.5944C17.5944 4.11795 15.9467 2.47021 13.9141 2.47021H5.81787ZM11.102 13.9185H12.5042C12.7045 13.9185 12.8247 13.7582 12.8247 13.598V7.06752C12.8247 6.8672 12.6645 6.74701 12.5042 6.74701H11.102C10.9016 6.74701 10.7815 6.90727 10.7815 7.06752V13.598C10.7815 13.7582 10.9417 13.9185 11.102 13.9185ZM6.93533 13.9185H8.33757C8.5379 13.9185 8.65809 13.7582 8.65809 13.598V9.4313C8.65809 9.23098 8.49783 9.11079 8.33757 9.11079H6.93533C6.73501 9.11079 6.61482 9.27104 6.61482 9.4313V13.5579C6.61482 13.7582 6.77507 13.9185 6.93533 13.9185ZM15.2149 9.50644H16.0319V14.244C16.0319 15.5384 14.9826 16.5877 13.6881 16.5877H5.59192C4.42228 16.5877 3.4741 15.6395 3.4741 14.4699H1.9116C1.9116 16.5025 3.55934 18.1502 5.59192 18.1502H13.6881C15.8455 18.1502 17.5944 16.4013 17.5944 14.244V9.50644H18.42L16.8175 7.18272L15.2149 9.50644Z",
+      d: "M91.4595 26.5015C102.568 12.8345 123.432 12.8345 134.54 26.5015C140.447 33.7678 149.618 37.5668 158.932 36.6049C176.451 34.7958 191.204 49.5488 189.395 67.0678C188.433 76.382 192.232 85.5535 199.498 91.4595C213.165 102.568 213.165 123.432 199.498 134.54C192.232 140.447 188.433 149.618 189.395 158.932C191.204 176.451 176.451 191.204 158.932 189.395C149.618 188.433 140.447 192.232 134.54 199.498C123.432 213.165 102.568 213.165 91.4595 199.498C85.5535 192.232 76.382 188.433 67.0678 189.395C49.5488 191.204 34.7958 176.451 36.6049 158.932C37.5668 149.618 33.7678 140.447 26.5015 134.54C12.8345 123.432 12.8345 102.568 26.5015 91.4595C33.7678 85.5535 37.5668 76.382 36.6049 67.0678C34.7958 49.5488 49.5488 34.7958 67.0678 36.6049C76.382 37.5668 85.5535 33.7678 91.4595 26.5015ZM73 112.5a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0 -15 0M123 112.5a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0 -15 0M88 125.5C97 141 113 141 122 125.5C119.5 129 98.5 129 88 125.5Z",
       fill: "white"
     })
   });

@@ -79,15 +79,13 @@ textarea:not(:disabled),
   cursor: var(--koala-cursor-not-allowed) !important;
 }
 
-/* Busy / wait */
-[aria-busy="true"],
+/* Busy / wait — system cursors only (no beachball / busy color-wheel) */
 .koala-cursor-wait {
-  cursor: var(--koala-cursor-beachball);
+  cursor: wait;
 }
 
-.koala-cursor-progress,
-[data-busy="true"] {
-  cursor: var(--koala-cursor-busy);
+.koala-cursor-progress {
+  cursor: progress;
 }
 
 /* Drag / pan */

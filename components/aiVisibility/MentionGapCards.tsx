@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Button } from '../koala/core';
+import { Button, Input, MenuList, MenuListItem } from '../koala/core';
 import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
@@ -49,29 +49,30 @@ const Picker = ({ rect, candidates, exclude, onPick, onClose }: { rect: DOMRect 
    const top = rect.bottom + 6;
    return createPortal(
       <>
-         { /* click-away backdrop so typing in the search never dismisses the picker */ }
          <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 400 }} role="presentation" />
-         <div style={{ position: 'fixed', top, left, width: PICKER_W, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', zIndex: 401, fontFamily: FONT, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-            <style>{'.aiv-gap-scroll{scrollbar-width:thin;scrollbar-color:#D4D4D8 transparent}.aiv-gap-scroll::-webkit-scrollbar{width:8px;background:transparent}.aiv-gap-scroll::-webkit-scrollbar-track{background:transparent}.aiv-gap-scroll::-webkit-scrollbar-thumb{background:#D4D4D8;border-radius:9999px}'}</style>
-            <input
-               autoFocus
-               value={q}
-               onChange={(e) => setQ(e.target.value)}
-               onClick={(e) => e.stopPropagation()}
-               placeholder="Search"
-               style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #D4D4D8', borderRadius: 8, padding: '8px 10px', fontSize: 14, fontFamily: FONT, color: '#18181B', marginBottom: 8, outline: 'none', transition: 'border-color 150ms ease, box-shadow 150ms ease' }}
-               onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(242,153,100,0.1)'; }}
-               onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = 'none'; }}
-            />
-            <div className="aiv-gap-scroll" style={{ maxHeight: 260, overflow: 'auto', background: 'transparent' }}>
+         <div style={{ position: 'fixed', top, left, width: PICKER_W, zIndex: 401, fontFamily: FONT }}>
+            <MenuList
+               search={(
+                  <Input
+                     autoFocus
+                     value={q}
+                     onChange={(e) => setQ(e.target.value)}
+                     onClick={(e) => e.stopPropagation()}
+                     placeholder="Search"
+                     size="sm"
+                  />
+               )}
+            >
                {list.map((c) => (
-                  <Button key={c} type="button" variant="transparent" size="sm" onClick={(e) => { e.stopPropagation(); onPick(c); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'flex-start', textAlign: 'left', fontFamily: FONT, borderRadius: 8, padding: '8px 10px' }}>
-                     <DomainFavicon domain={c} size={16} />
-                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c}</span>
-                  </Button>
+                  <MenuListItem
+                     key={c}
+                     label={c}
+                     leadingItems={<DomainFavicon domain={c} size={16} />}
+                     onClick={(e) => { e.stopPropagation(); onPick(c); }}
+                  />
                ))}
                {list.length === 0 ? <div style={{ padding: '10px 10px', fontSize: 13, color: '#9F9FA9' }}>No matches.</div> : null}
-            </div>
+            </MenuList>
          </div>
       </>,
       document.body,

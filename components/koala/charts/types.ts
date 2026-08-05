@@ -42,6 +42,13 @@ export type ChartOverrides = {
   showGrid?: boolean;
   compactLabels?: boolean;
   valueFormatter?: ChartValueFormatter;
+  /** Invert Y (e.g. SERP / AI citation rank — lower is better). */
+  reverseY?: boolean;
+  /**
+   * Multi-series: each line uses its own Y domain (GSC-style).
+   * Avoids low-magnitude metrics (clicks/CTR) flattening under impressions.
+   */
+  independentY?: boolean;
 };
 
 /** Resolved config from preset SoT — consumed only by Chart → renderers. */
@@ -58,6 +65,8 @@ export type RendererConfig = {
   compactLabels: boolean;
   barHighlightLast?: boolean;
   areaGradient?: boolean;
+  /** Per-series Y scale when multiple lines — see ChartOverrides.independentY. */
+  independentY?: boolean;
 };
 
 export type ChartPreparedData = {

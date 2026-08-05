@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from '../koala/core';
+import { Button, Badge } from '../koala/core';
 import { KoalaSettingsSection, KoalaSettingsRow, KoalaPanel, KoalaPanelBody } from '../koala/layout';
 
 type SearchConsoleSettingsProps = {
@@ -133,9 +133,9 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
                               {account.email || account.googleSub || 'Google Account'}
                             </span>
                             {account.status === 'expired' && (
-                              <span style={{ flexShrink: 0, borderRadius: 9999, background: 'var(--koala-status-danger-bg)', padding: '2px 8px', fontSize: 11, fontWeight: 600, color: 'var(--koala-status-danger)' }}>
+                              <Badge appearance="danger" size="sm">
                                 Reconnect needed
-                              </span>
+                              </Badge>
                             )}
                           </div>
                           <span style={{ fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: 'var(--font-family-primary)' }} suppressHydrationWarning>

@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { LinkSuggestion } from '../../pages/api/articles/suggest-internal-links';
 import { getErrorMessage } from '../../lib/errors';
 import DomainFavicon from '../common/DomainFavicon';
+import { CompactSelect, DropdownButton } from '../koala/core';
 
 export interface InsertResult {
   url: string;
@@ -43,8 +44,8 @@ const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 
       padding: '9px 16px', transition: 'opacity 0.15s, background 0.15s',
       opacity: rest.disabled ? 0.45 : 1,
       ...(variant === 'dark'
-        ? { background: '#18181b', color: '#fff' }
-        : { background: 'transparent', color: '#52525c', boxShadow: 'inset 0 0 0 1px #e4e4e7' }),
+        ? { background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)' }
+        : { background: 'transparent', color: 'var(--koala-text-secondary)', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)' }),
       ...style,
     }}
     {...rest}
@@ -54,7 +55,7 @@ const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 
 );
 
 const Spinner = () => (
-  <div style={{ width: 20, height: 20, border: '2.5px solid #e4e4e7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.65s linear infinite' }} />
+  <div style={{ width: 20, height: 20, border: '2.5px solid var(--koala-border-primary)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.65s linear infinite' }} />
 );
 
 const InternalLinksPanel: React.FC<Props> = ({
@@ -84,11 +85,6 @@ const InternalLinksPanel: React.FC<Props> = ({
   const [cachedSuggestions, setCachedSuggestions] = useState<LinkSuggestion[] | null>(null);
   const [sharedKeywordCounts, setSharedKeywordCounts] = useState<Record<string, number>>({});
 
-  // ── GSC-domain dropdown (pick the link source instead of typing a URL) ──
-  const [siteDropdownOpen, setSiteDropdownOpen] = useState(false);
-  const [siteSearch, setSiteSearch] = useState('');
-  const siteDropdownRef = useRef<HTMLDivElement | null>(null);
-
   const hostOf = (u: string) => {
     if (!u) return '';
     try { return new URL(u).hostname.replace(/^www\./, ''); }
@@ -98,16 +94,7 @@ const InternalLinksPanel: React.FC<Props> = ({
   const articleHost = hostOf(domainBaseUrl);
 
   const siteOptions = (domains || []).map((d) => d.domain).filter(Boolean);
-  const filteredSites = siteOptions.filter((d) => d.toLowerCase().includes(siteSearch.trim().toLowerCase()));
-
-  useEffect(() => {
-    if (!siteDropdownOpen) return undefined;
-    const onDown = (e: MouseEvent) => {
-      if (siteDropdownRef.current && !siteDropdownRef.current.contains(e.target as Node)) setSiteDropdownOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [siteDropdownOpen]);
+  const currentDomain = siteOptions.find((d) => d.replace(/^www\./, '') === selectedHost) ?? '';
 
   // Compute shared keyword counts when insertion is done
   useEffect(() => {
@@ -268,10 +255,10 @@ const InternalLinksPanel: React.FC<Props> = ({
   const insertedCount = results.filter((r) => r.success).length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#fff', fontFamily: 'var(--font-family-primary)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--koala-bg-primary)', fontFamily: 'var(--font-family-primary)', overflow: 'hidden' }}>
 
       {/* ── Header ──────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: '1px solid #f4f4f5', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: '1px solid var(--koala-bg-secondary)', flexShrink: 0 }}>
         <button
           type="button"
           onClick={() => {
@@ -289,19 +276,19 @@ const InternalLinksPanel: React.FC<Props> = ({
               onClose();
             }
           }}
-          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: '#f4f4f5', color: '#52525c', cursor: 'pointer', padding: 0, flexShrink: 0 }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: 'var(--koala-bg-secondary)', color: 'var(--koala-text-secondary)', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-border-primary)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
         >
           <svg viewBox="0 0 20 20" width={16} height={16} fill="currentColor">
             <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0" clipRule="evenodd" />
           </svg>
         </button>
-        <span style={{ fontSize: 15, fontWeight: 600, color: '#09090b', flex: 1 }}>Internal Links</span>
+        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)', flex: 1 }}>Internal Links</span>
 
         {/* Score circle */}
         {phase === 'done' && (
-          <div style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid ${insertedCount > 0 ? '#22c55e' : '#e4e4e7'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: insertedCount > 0 ? '#16a34a' : '#9f9fa9' }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid ${insertedCount > 0 ? 'var(--koala-status-success)' : 'var(--koala-border-primary)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: insertedCount > 0 ? 'var(--koala-status-success)' : 'var(--koala-text-disabled)' }}>
             {insertedCount}
           </div>
         )}
@@ -313,96 +300,59 @@ const InternalLinksPanel: React.FC<Props> = ({
         {/* ── IDLE ── */}
         {(phase === 'idle') && (
           <div style={{ padding: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: '#52525c', marginBottom: 8 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', marginBottom: 8 }}>
               Site to add links from
             </div>
 
             {/* Site dropdown — pick a GSC-connected domain as the link source */}
-            <div ref={siteDropdownRef} style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => setSiteDropdownOpen((v) => !v)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: '1px solid #e4e4e7', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
-              >
-                {selectedHost && (
-                  <DomainFavicon domain={selectedHost} size={18} />
-                )}
-                <span style={{ flex: 1, textAlign: 'left', fontSize: 13, color: selectedHost ? '#09090b' : '#9f9fa9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {selectedHost || 'Select a site'}
-                </span>
-                <svg viewBox="0 0 24 24" width={16} height={16} style={{ flexShrink: 0, color: '#71717b', transition: 'transform 150ms ease', transform: siteDropdownOpen ? 'rotate(180deg)' : 'none' }}>
-                  <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m6 9 6 6 6-6" />
-                </svg>
-              </button>
-
-              {siteDropdownOpen && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 50, background: '#fff', borderRadius: 8, boxShadow: '0px 8px 24px rgba(24,26,34,0.12), 0px 1px 2px rgba(24,26,34,0.06)', border: '1px solid #f4f4f5', overflow: 'hidden', animation: 'growOut 0.15s ease' }}>
-                  <div style={{ padding: '8px 8px 6px' }}>
-                    <input
-                      autoFocus
-                      value={siteSearch}
-                      onChange={(e) => setSiteSearch(e.target.value)}
-                      placeholder="Search sites"
-                      style={{ width: '100%', boxSizing: 'border-box', height: 34, padding: '0 10px', border: '1px solid #e4e4e7', borderRadius: 8, fontSize: 13, color: '#09090b', outline: 'none', fontFamily: 'var(--font-family-primary)' }}
-                    />
-                  </div>
-                  <div style={{ maxHeight: 240, overflowY: 'auto', padding: '0 4px 4px' }} className="styled-scrollbar">
-                    {filteredSites.length === 0 ? (
-                      <div style={{ padding: 12, fontSize: 13, color: '#9f9fa9', textAlign: 'center', fontFamily: 'var(--font-family-primary)' }}>
-                        {siteOptions.length === 0 ? 'No GSC domains connected.' : 'No sites found.'}
-                      </div>
-                    ) : filteredSites.map((d) => {
-                      const isSel = selectedHost === d.replace(/^www\./, '');
-                      return (
-                        <button
-                          key={d}
-                          type="button"
-                          onClick={() => { setSiteUrl(`https://${d}/`); setSiteDropdownOpen(false); setSiteSearch(''); }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: isSel ? '#f4f4f5' : 'transparent', borderRadius: 6, cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-family-primary)' }}
-                          onMouseEnter={(e) => { if (!isSel) e.currentTarget.style.background = '#f3f4f0'; }}
-                          onMouseLeave={(e) => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <DomainFavicon domain={d} size={20} />
-                          <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: 13, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d}</span>
-                            <span style={{ fontSize: 10, color: '#71717b', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 1 }}>Domain property</span>
-                            {d.replace(/^www\./, '') === articleHost && (
-                              <span style={{ fontSize: 11, color: '#71717b', marginTop: 1 }}>Semantic links available</span>
-                            )}
-                          </span>
-                          {isSel && (
-                            <svg viewBox="0 0 20 20" width={16} height={16} fill="currentColor" style={{ flexShrink: 0, color: '#18181b' }}>
-                              <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div style={{ height: 1, background: '#e4e4e7', margin: '4px 0' }} />
-                  <div style={{ padding: 4 }}>
-                    <button
-                      type="button"
-                      onClick={() => { window.location.href = '/api/gsc/connect'; }}
-                      style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', fontSize: 13, fontWeight: 600, color: '#52525c', textAlign: 'left' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      Add another Search Console account
-                    </button>
-                  </div>
+            <CompactSelect
+              search
+              value={currentDomain}
+              menuMinWidth="100%"
+              emptyMessage={siteOptions.length === 0 ? 'No GSC domains connected.' : 'No sites found.'}
+              options={siteOptions.map((d) => ({
+                value: d,
+                label: d,
+                textValue: d,
+                leadingItems: <DomainFavicon domain={d} size={20} />,
+                details: d.replace(/^www\./, '') === articleHost ? 'Semantic links available' : 'Domain property',
+              }))}
+              onChange={(opt) => setSiteUrl(`https://${opt.value}/`)}
+              trigger={(props, isOpen) => (
+                <DropdownButton
+                  {...props}
+                  isOpen={isOpen}
+                  size="sm"
+                  prefix={selectedHost ? <DomainFavicon domain={selectedHost} size={18} /> : undefined}
+                  style={{ width: '100%', fontFamily: 'var(--font-family-primary)' }}
+                >
+                  <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedHost ? 'var(--koala-text-primary)' : 'var(--koala-text-disabled)' }}>
+                    {selectedHost || 'Select a site'}
+                  </span>
+                </DropdownButton>
+              )}
+              menuBody={() => (
+                <div style={{ padding: 4, borderTop: '1px solid var(--koala-border-primary)' }}>
+                  <button
+                    type="button"
+                    onClick={() => { window.location.href = '/api/gsc/connect'; }}
+                    style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', fontSize: 13, fontWeight: 600, color: 'var(--koala-text-secondary)', textAlign: 'left' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    Add another Search Console account
+                  </button>
                 </div>
               )}
-            </div>
+            />
 
             {error && (
-              <div style={{ marginTop: 12, padding: '10px 12px', background: '#fff1f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 13, color: '#dc2626' }}>
+              <div style={{ marginTop: 12, padding: '10px 12px', background: '#fff1f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 13, color: 'var(--koala-status-danger)' }}>
                 {error}
               </div>
             )}
 
-            <p style={{ fontSize: 12, color: '#9f9fa9', marginTop: 12, lineHeight: '18px' }}>
+            <p style={{ fontSize: 12, color: 'var(--koala-text-disabled)', marginTop: 12, lineHeight: '18px' }}>
               Pick a site — we&apos;ll scan its pages and suggest where to add internal links in your article.
             </p>
           </div>
@@ -412,7 +362,7 @@ const InternalLinksPanel: React.FC<Props> = ({
         {phase === 'fetching' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '60px 0' }}>
             <Spinner />
-            <span style={{ fontSize: 13, color: '#9f9fa9' }}>Fetching pages…</span>
+            <span style={{ fontSize: 13, color: 'var(--koala-text-disabled)' }}>Fetching pages…</span>
           </div>
         )}
 
@@ -420,10 +370,10 @@ const InternalLinksPanel: React.FC<Props> = ({
         {phase === 'selecting' && (
           <div style={{ padding: '8px 0' }}>
             {fetchedLinks.length === 0 ? (
-              <div style={{ padding: '40px 16px', textAlign: 'center', fontSize: 13, color: '#9f9fa9' }}>
+              <div style={{ padding: '40px 16px', textAlign: 'center', fontSize: 13, color: 'var(--koala-text-disabled)' }}>
                 No internal links found on that page.
                 {hint && (
-                  <div style={{ marginTop: 12, padding: '10px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, fontSize: 12, color: '#92400e', lineHeight: '18px' }}>
+                  <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--koala-status-warning-bg)', border: '1px solid var(--koala-status-warning-bg)', borderRadius: 6, fontSize: 12, color: '#92400e', lineHeight: '18px' }}>
                     {hint}
                   </div>
                 )}
@@ -432,19 +382,19 @@ const InternalLinksPanel: React.FC<Props> = ({
               <>
                 {/* "Link" section header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px 4px' }}>
-                  <div style={{ width: 14, height: 14, borderRadius: 3, background: '#18181b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 14, height: 14, borderRadius: 3, background: 'var(--koala-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <svg viewBox="0 0 10 10" width={8} height={8} fill="none">
-                      <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="var(--koala-bg-primary)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#52525c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Link</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--koala-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Link</span>
                 </div>
 
                 {fetchedLinks.map((link, i) => (
                   <label
                     key={i}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 16px', cursor: 'pointer' }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#f9fafb'; }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--koala-bg-tertiary)'; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                   >
                     {/* Custom checkbox */}
@@ -452,21 +402,21 @@ const InternalLinksPanel: React.FC<Props> = ({
                       onClick={() => toggleCheck(i)}
                       style={{
                         width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-                        background: checked.has(i) ? '#F84416' : '#fff',
-                        border: `1.5px solid ${checked.has(i) ? '#F84416' : '#d4d4d8'}`,
+                        background: checked.has(i) ? 'var(--koala-text-brand)' : 'var(--koala-bg-primary)',
+                        border: `1.5px solid ${checked.has(i) ? 'var(--koala-text-brand)' : 'var(--koala-border-secondary)'}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'all 0.12s',
                       }}
                     >
                       {checked.has(i) && (
                         <svg viewBox="0 0 10 10" width={8} height={8} fill="none">
-                          <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="var(--koala-bg-primary)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </div>
 
                     {/* URL path */}
-                    <span style={{ fontSize: 13, color: '#3f3f47', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {(() => {
                         try { return new URL(link.url).pathname; } catch { return link.url; }
                       })()}
@@ -475,7 +425,7 @@ const InternalLinksPanel: React.FC<Props> = ({
                 ))}
 
                 {error && (
-                  <div style={{ margin: '8px 16px', padding: '10px 12px', background: '#fff1f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 13, color: '#dc2626' }}>
+                  <div style={{ margin: '8px 16px', padding: '10px 12px', background: '#fff1f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 13, color: 'var(--koala-status-danger)' }}>
                     {error}
                   </div>
                 )}
@@ -488,7 +438,7 @@ const InternalLinksPanel: React.FC<Props> = ({
         {phase === 'inserting' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '60px 0' }}>
             <Spinner />
-            <span style={{ fontSize: 13, color: '#9f9fa9' }}>Finding anchor texts…</span>
+            <span style={{ fontSize: 13, color: 'var(--koala-text-disabled)' }}>Finding anchor texts…</span>
           </div>
         )}
 
@@ -498,11 +448,11 @@ const InternalLinksPanel: React.FC<Props> = ({
             {/* Summary row */}
             <div style={{ padding: '8px 16px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
               {insertedCount > 0 ? (
-                <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>
+                <span style={{ fontSize: 13, color: 'var(--koala-status-success)', fontWeight: 600 }}>
                   ✓ {insertedCount} link{insertedCount !== 1 ? 's' : ''} added to article
                 </span>
               ) : (
-                <span style={{ fontSize: 13, color: '#9f9fa9' }}>
+                <span style={{ fontSize: 13, color: 'var(--koala-text-disabled)' }}>
                   No matching phrases found in article text.
                 </span>
               )}
@@ -515,36 +465,36 @@ const InternalLinksPanel: React.FC<Props> = ({
               >
                 {r.success ? (
                   <svg viewBox="0 0 16 16" width={16} height={16} fill="none" style={{ flexShrink: 0 }}>
-                    <circle cx="8" cy="8" r="8" fill="#22c55e" />
-                    <path d="M4.5 8l2.5 2.5 4.5-4.5" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="8" cy="8" r="8" fill="var(--koala-status-success)" />
+                    <path d="M4.5 8l2.5 2.5 4.5-4.5" stroke="var(--koala-bg-primary)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 ) : (
                   <svg viewBox="0 0 16 16" width={16} height={16} fill="none" style={{ flexShrink: 0 }}>
-                    <circle cx="8" cy="8" r="7.5" stroke="#e4e4e7" />
-                    <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#9f9fa9" strokeWidth={1.5} strokeLinecap="round" />
+                    <circle cx="8" cy="8" r="7.5" stroke="var(--koala-border-primary)" />
+                    <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="var(--koala-text-disabled)" strokeWidth={1.5} strokeLinecap="round" />
                   </svg>
                 )}
-                <span style={{ fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: r.success ? '#3f3f47' : '#9f9fa9', textDecoration: r.success ? 'none' : 'line-through' }}>
+                <span style={{ fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: r.success ? 'var(--koala-text-secondary)' : 'var(--koala-text-disabled)', textDecoration: r.success ? 'none' : 'line-through' }}>
                   {(() => { try { return new URL(r.url).pathname; } catch { return r.url; } })()}
                 </span>
                 {r.success && r.anchorText && (
-                  <span style={{ fontSize: 11, color: '#F84416', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.anchorText}>
+                  <span style={{ fontSize: 11, color: 'var(--koala-text-brand)', background: 'color-mix(in srgb, var(--koala-text-brand) 12%, transparent)', borderRadius: 4, padding: '1px 6px', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.anchorText}>
                     &ldquo;{r.anchorText}&rdquo;
                   </span>
                 )}
                 {r.success && sharedKeywordCounts[r.url] > 0 && (
-                  <span style={{ fontSize: 11, color: '#F84416', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--koala-text-brand)', background: 'color-mix(in srgb, var(--koala-text-brand) 12%, transparent)', borderRadius: 4, padding: '1px 6px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>
                     {sharedKeywordCounts[r.url]} shared KW
                   </span>
                 )}
               </div>
             ))}
 
-            <div style={{ padding: '12px 16px 0', borderTop: '1px solid #f4f4f5', marginTop: 8 }}>
+            <div style={{ padding: '12px 16px 0', borderTop: '1px solid var(--koala-bg-secondary)', marginTop: 8 }}>
               <button
                 type="button"
                 onClick={() => { setPhase('selecting'); setResults([]); setError(null); }}
-                style={{ fontSize: 12, color: '#F84416', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-family-primary)' }}
+                style={{ fontSize: 12, color: 'var(--koala-text-brand)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-family-primary)' }}
               >
                 ← Back to selection
               </button>
@@ -555,7 +505,7 @@ const InternalLinksPanel: React.FC<Props> = ({
 
       {/* ── Footer ──────────────────────────────────────────────── */}
       {phase === 'idle' && (
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #f4f4f5', flexShrink: 0, display: 'flex', gap: 8 }}>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--koala-bg-secondary)', flexShrink: 0, display: 'flex', gap: 8 }}>
           <Btn
             onClick={handleRequestLinks}
             disabled={!siteUrl.trim()}
@@ -565,7 +515,7 @@ const InternalLinksPanel: React.FC<Props> = ({
           </Btn>
           {/* "..." menu placeholder */}
           <Btn variant="ghost" style={{ width: 38, padding: 0, flexShrink: 0 }}>
-            <svg viewBox="0 0 20 20" width={16} height={16} fill="#52525c">
+            <svg viewBox="0 0 20 20" width={16} height={16} fill="var(--koala-text-secondary)">
               <circle cx="4" cy="10" r="1.5" />
               <circle cx="10" cy="10" r="1.5" />
               <circle cx="16" cy="10" r="1.5" />
@@ -575,7 +525,7 @@ const InternalLinksPanel: React.FC<Props> = ({
       )}
 
       {phase === 'selecting' && fetchedLinks.length > 0 && (
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #f4f4f5', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--koala-bg-secondary)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {/* Recommend button */}
           <button
             type="button"
@@ -583,8 +533,8 @@ const InternalLinksPanel: React.FC<Props> = ({
             disabled={isRecommending}
             style={{
               width: '100%', padding: '9px 16px', borderRadius: 8, border: 'none',
-              background: 'linear-gradient(135deg, #f3eeff 0%, #ede9fe 100%)',
-              color: '#6d28d9', fontSize: 13, fontWeight: 600,
+              background: 'linear-gradient(135deg, color-mix(in srgb, var(--koala-text-brand) 12%, transparent) 0%, #ede9fe 100%)',
+              color: 'var(--koala-text-brand)', fontSize: 13, fontWeight: 600,
               cursor: isRecommending ? 'not-allowed' : 'pointer',
               fontFamily: 'var(--font-family-primary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,

@@ -41,7 +41,6 @@ const SearchIcon = () => (<svg viewBox="0 0 24 24" width={16} height={16} style=
 const PencilIcon = () => (<svg viewBox="0 0 24 24" width={22} height={22}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>);
 const KebabIcon = () => (<svg viewBox="0 0 24 24" width={20} height={20}><path fill="currentColor" d="M12 8a2 2 0 1 0 0-4a2 2 0 0 0 0 4m0 6a2 2 0 1 0 0-4a2 2 0 0 0 0 4m0 6a2 2 0 1 0 0-4a2 2 0 0 0 0 4" /></svg>);
 const EditorIcon = () => (<svg viewBox="0 0 24 24" width={16} height={16}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>);
-const LinkIcon = () => (<svg viewBox="0 0 24 24" width={16} height={16}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>);
 const ExportIcon = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>);
 const GoogleIcon = () => (
    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M15.68 8.18c0-.54-.04-1.08-.14-1.62H8v3.08h4.32a3.7 3.7 0 0 1-1.6 2.43v2h2.58a7.8 7.8 0 0 0 2.38-5.89" fill="#4285F4" /><path d="M8 16a7.6 7.6 0 0 0 5.3-1.93l-2.58-2a4.8 4.8 0 0 1-2.72.77 4.77 4.77 0 0 1-4.49-3.3H.85v2.06A8 8 0 0 0 8 16" fill="#34A853" /><path d="M3.51 9.53a4.8 4.8 0 0 1 0-3.06V4.41H.85a8 8 0 0 0 0 7.18z" fill="#FBBC04" /><path d="M8 3.17a4.35 4.35 0 0 1 3.07 1.2l2.28-2.29A7.7 7.7 0 0 0 8 0a8 8 0 0 0-7.15 4.41L3.5 6.47A4.77 4.77 0 0 1 8 3.17" fill="#EA4335" /></svg>
@@ -170,12 +169,11 @@ const TabItem = ({ label, count, active, disabled, onClick }: { label: string; c
 
 /* ─── Cluster card ────────────────────────────────────────────────────────── */
 type CardState = 'idle' | 'creating' | 'preparing' | 'done' | 'editing';
-const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor, onCopyLink }: {
+const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor }: {
    cluster: KwCluster;
    state: CardState;
    onOpenDetails: () => void;
    onOpenEditor: () => void;
-   onCopyLink: () => void;
 }) => {
    const [hover, setHover] = useState(false);
    const [menuOpen, setMenuOpen] = useState(false);
@@ -242,9 +240,6 @@ const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor, onCopyLink }
                      <div style={{ position: 'absolute', right: 0, bottom: 'calc(100% + 8px)', minWidth: 210, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 12, boxShadow: '0px 12px 32px rgba(9,9,11,0.18)', padding: 6, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}>
                         <button type="button" style={menuItem} onClick={() => { setMenuOpen(false); onOpenEditor(); }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                            <span style={{ color: MUTED, display: 'inline-flex' }}><EditorIcon /></span>Open Content Editor
-                        </button>
-                        <button type="button" style={menuItem} onClick={() => { setMenuOpen(false); onCopyLink(); }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-                           <span style={{ color: MUTED, display: 'inline-flex' }}><LinkIcon /></span>Copy Public Link
                         </button>
                      </div>
                   )}
@@ -433,20 +428,6 @@ const KeywordResearchDetailPage: NextPage = () => {
       router.push(`/articles/${aid}`);
    };
 
-   const copyPublicLink = async (idx: number) => {
-      const aid = articleIdFor(idx);
-      if (aid == null) return;
-      try {
-         const r = await fetch(`/api/articles/${aid}/share-link`);
-         const d: { token?: string; error?: string } = await r.json();
-         if (!r.ok || !d.token) throw new Error(d.error || 'No public link available');
-         await navigator.clipboard.writeText(`${window.location.origin}/drafts/s/${d.token}`);
-         toast.success('Public link copied to clipboard.');
-      } catch (e) {
-         toast.error(e instanceof Error ? e.message : 'Could not copy the public link.');
-      }
-   };
-
    const modalCluster = modalIdx != null ? visibleClusters[modalIdx] : null;
 
    return (
@@ -513,7 +494,6 @@ const KeywordResearchDetailPage: NextPage = () => {
                               state={stateOf(c.index)}
                               onOpenDetails={() => setModalIdx(i)}
                               onOpenEditor={() => openEditor(c.index)}
-                              onCopyLink={() => copyPublicLink(c.index)}
                            />
                         ))}
                         {!busy && visibleClusters.length === 0 && (

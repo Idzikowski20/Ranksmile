@@ -154,6 +154,7 @@ const runAppCronJobs = () => {
    scheduleHttpJob('*/5 * * * *', 'plan-reservations', '/api/cron/plan-reservations');
    scheduleHttpJob('0 0 * * * *', 'stripe-billing-reconcile', '/api/cron/stripe-billing-reconcile');
    scheduleHttpJob('0 0 3 * * *', 'starter-nudge', '/api/cron/starter-nudge');
+   scheduleHttpJob('0 30 */6 * * *', 'ccm-compile', '/api/cron/ccm-compile');
 
    // ── Legacy scrape / notify / failed_queue / GSC (now CRON_SECRET) ──────
    getAppSettings().then((settings) => {

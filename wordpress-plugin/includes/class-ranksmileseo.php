@@ -311,6 +311,14 @@ class Ranksmileseo {
 			return;
 		}
 
+		
+		// RSDS design layer (tokens → theme → components → legacy).
+		$rsds = $this->baseurl . 'assets/design/';
+		wp_enqueue_style( 'ranksmile-rsds-tokens', $rsds . 'tokens/design-tokens.css', array(), RANKSMILE_VERSION );
+		wp_enqueue_style( 'ranksmile-rsds-theme', $rsds . 'themes/theme.css', array( 'ranksmile-rsds-tokens' ), RANKSMILE_VERSION );
+		wp_enqueue_style( 'ranksmile-rsds-components', $rsds . 'components/components.bundle.css', array( 'ranksmile-rsds-theme' ), RANKSMILE_VERSION );
+		wp_enqueue_style( 'ranksmile-rsds-legacy', $rsds . 'overrides/legacy.css', array( 'ranksmile-rsds-components' ), RANKSMILE_VERSION );
+
 		wp_enqueue_style( 'ranksmile-components', $this->baseurl . 'assets/css/components.css', array(), RANKSMILE_VERSION );
 
 		// Only load Ranksmile styles on Ranksmile admin pages or post editor screens where Ranksmile UI is used.

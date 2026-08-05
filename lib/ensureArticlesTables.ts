@@ -224,9 +224,6 @@ export async function ensureArticlesTables() {
    // Wizard language (used by generation to write in the analysed language)
    try { await db.query(`ALTER TABLE articles ADD COLUMN language TEXT DEFAULT 'pl'`); } catch {}
 
-   // Opaque share token for the public read-only /drafts/s/<token> preview.
-   try { await db.query(`ALTER TABLE articles ADD COLUMN share_token TEXT`); } catch {}
-
    // Ranking content gathered at the deep-analysis step (Google Search + AI-cited
    // sources) — shown in the New-Content wizard "Ranking content" panel.
    try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_sources TEXT`); } catch {}

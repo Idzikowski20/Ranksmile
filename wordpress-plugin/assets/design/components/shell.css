@@ -1,0 +1,186 @@
+﻿/**
+ * RSDS shell — Ranksmile app Settings layout (sidebar + main).
+ */
+.ranksmile-admin {
+  font-family: var(--rs-font-body);
+  color: var(--rs-text-primary);
+  background: transparent;
+  margin: 0 16px 16px 0;
+  border: none;
+  border-radius: 0;
+  min-height: calc(100vh - 64px);
+  overflow: hidden;
+}
+.ranksmile-admin *,
+.ranksmile-admin *::before,
+.ranksmile-admin *::after { box-sizing: border-box; }
+
+.ranksmile-admin .rs-settings-shell {
+  display: flex;
+  min-height: calc(100vh - 64px);
+  width: 100%;
+  background: var(--rs-bg-primary);
+  border: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  border-radius: var(--rs-radius-card);
+  overflow: hidden;
+}
+
+.ranksmile-admin .rs-settings-nav {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  background: var(--rs-bg-primary);
+}
+
+.ranksmile-admin .rs-settings-nav__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 8px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ranksmile-admin .rs-settings-nav__title {
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.06px;
+  color: var(--rs-text-secondary);
+}
+
+.ranksmile-admin .rs-settings-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--rs-bg-primary);
+}
+
+.ranksmile-admin .rs-settings-header {
+  padding: 28px 32px 20px;
+  border-bottom: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  background: var(--rs-bg-primary);
+}
+
+.ranksmile-admin .rs-settings-header__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--rs-space-4);
+}
+
+.ranksmile-admin .rs-settings-header__copy { min-width: 0; flex: 1; }
+
+.ranksmile-admin .rs-settings-header__title {
+  margin: 0;
+  font-family: var(--rs-font-heading);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 30px;
+  color: var(--rs-text-primary);
+}
+
+.ranksmile-admin .rs-settings-header__subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--rs-text-secondary);
+  letter-spacing: -0.25px;
+  max-width: 560px;
+}
+
+.ranksmile-admin .rs-settings-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-2);
+  flex-shrink: 0;
+}
+
+.ranksmile-admin .rs-settings-body {
+  padding: 8px 32px 48px;
+  max-width: 920px;
+  margin: 0;
+  background: transparent;
+}
+
+/* Settings sections — dividers only (app General style) */
+.ranksmile-admin .rs-settings-section {
+  border: none;
+  border-bottom: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  padding: 28px 0;
+  margin: 0;
+  background: transparent;
+}
+.ranksmile-admin .rs-settings-section:last-child { border-bottom: none; }
+.ranksmile-admin .rs-settings-section__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rs-text-primary);
+}
+.ranksmile-admin .rs-settings-section__body {
+  padding: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ranksmile-admin .rs-settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ranksmile-admin .rs-settings-row__label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rs-text-primary);
+}
+.ranksmile-admin .rs-settings-row__desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--rs-text-secondary);
+}
+
+@media (max-width: 1023px) {
+  .ranksmile-admin .rs-settings-shell { flex-direction: column; overflow: auto; }
+  .ranksmile-admin .rs-settings-nav {
+    width: 100%;
+    border-right: none;
+    border-bottom: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+    max-height: 220px;
+  }
+  .ranksmile-admin .rs-settings-header { padding: 20px 16px 16px; }
+  .ranksmile-admin .rs-settings-body { padding: 8px 16px 40px; }
+}
+
+/* Hide default WP page title chrome when our shell owns the page */
+.ranksmile-admin ~ #wpfooter { margin-left: 0; }
+
+.ranksmile-admin .notice,
+.ranksmile-admin .e-notice,
+.ranksmile-admin .updated,
+.ranksmile-admin .error,
+.ranksmile-admin .update-nag {
+  display: none !important;
+}
+.ranksmile-admin-notices-host {
+  margin: 0 16px 12px 0;
+}
+.ranksmile-admin-notices-host .notice,
+.ranksmile-admin-notices-host .e-notice {
+  display: block !important;
+  margin: 0 0 8px;
+}
+
+/* Legacy shell hooks kept for wizard / older templates */
+.ranksmile-admin .rs-shell { display: flex; flex-direction: column; min-height: 70vh; }
+.ranksmile-admin .rs-shell__main { display: flex; flex: 1; min-height: 0; }
+.ranksmile-admin .rs-shell__content { flex: 1; padding: var(--rs-space-6); background: var(--rs-bg-primary); min-width: 0; }

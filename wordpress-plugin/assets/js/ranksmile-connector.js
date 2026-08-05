@@ -43,7 +43,7 @@ jQuery(function ($) {
 
   function make_disconnection() {
     var data = {
-      action: 'disconnect_surfer',
+      action: 'disconnect_ranksmile',
       _ranksmile_nonce: ranksmile_connection_lang._ranksmile_nonce,
     }
 

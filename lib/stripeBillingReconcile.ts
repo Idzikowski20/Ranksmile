@@ -1,5 +1,6 @@
 import type Stripe from 'stripe';
 import db from '../database/database';
+import { BillingSource, newBillingCorrelationId } from './billingAudit';
 import { ensureBillingTables } from './ensureBillingTables';
 import { getStripe, isStripeConfigured } from './stripe';
 import { orgIdFromMetadata, syncSubscriptionToOrg } from './stripeBillingSync';
@@ -45,8 +46,13 @@ export async function reconcileStripeBilling(opts?: {
 
   for (const org of orgs) {
     try {
+      const corr = newBillingCorrelationId();
       const sub = await stripe.subscriptions.retrieve(org.stripe_subscription_id);
-      await syncSubscriptionToOrg(org.id, sub);
+      await syncSubscriptionToOrg(org.id, sub, undefined, {
+        source: BillingSource.RECONCILE,
+        reason: 'reconcile.tracked_subscription',
+        correlationId: corr,
+      });
       result.synced += 1;
       if (sub.status === 'canceled' || sub.status === 'incomplete_expired') {
         // Keep projection; entitlement helper handles access. Optionally clear current id when deleted-like
@@ -55,6 +61,11 @@ export async function reconcileStripeBilling(opts?: {
             subscriptionStatus: 'canceled',
             stripeSubscriptionId: null,
             cancelAtPeriodEnd: false,
+          }, {
+            source: BillingSource.RECONCILE,
+            reason: 'reconcile.clear_canceled',
+            correlationId: corr,
+            stripeSubscriptionId: sub.id,
           });
           result.staleCleared += 1;
         }
@@ -66,6 +77,10 @@ export async function reconcileStripeBilling(opts?: {
           subscriptionStatus: 'canceled',
           stripeSubscriptionId: null,
           cancelAtPeriodEnd: false,
+        }, {
+          source: BillingSource.RECONCILE,
+          reason: 'reconcile.missing_subscription',
+          correlationId: newBillingCorrelationId(),
         });
         result.staleCleared += 1;
       } else {
@@ -107,7 +122,11 @@ export async function reconcileStripeBilling(opts?: {
       if (current === sub.id) continue;
       // Recover if DB has no sub, or different incomplete
       if (!current || current !== sub.id) {
-        await syncSubscriptionToOrg(orgId, sub as Stripe.Subscription);
+        await syncSubscriptionToOrg(orgId, sub as Stripe.Subscription, undefined, {
+          source: BillingSource.RECONCILE,
+          reason: 'reconcile.orphan_recover',
+          correlationId: newBillingCorrelationId(),
+        });
         result.orphansRecovered += 1;
       }
     }

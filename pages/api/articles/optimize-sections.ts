@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { chatLlm } from '../../../lib/ai/deepseek';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
@@ -251,9 +252,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    flushHeaders(res);
    res.write(':ok\n\n');
 
-   const apiKey = process.env.DEEPSEEK_API_KEY;
+   const llm = chatLlm();
+   const apiKey = llm.apiKey;
    if (!apiKey) {
-      sse(res, 'error', { message: 'DEEPSEEK_API_KEY not configured' });
+      sse(res, 'error', { message: `${llm.keyEnv} not configured` });
       return res.end();
    }
 
@@ -441,6 +443,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                ? await readWeakVisibilityPrompts(Number(articleId))
                : [];
 
+            const ccmExtra =
+               articleId != null
+                  ? await import('../../../lib/intelligence/loadCcmEditCandidates')
+                      .then((m) =>
+                         m.loadCcmEditCandidatesForArticle({
+                            articleId: Number(articleId),
+                            html: workingHtml,
+                         }),
+                      )
+                      .catch(() => [] as const)
+                  : [];
+
             const v4 = await runPrecisionOptimizeV4({
                runId: `ao-${articleId ?? 'anon'}-${Date.now()}`,
                html: workingHtml,
@@ -449,30 +463,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                keyword: ctx?.keyword || '',
                latestAiFallback: latestAi,
                visibilityPrompts,
+               extraCandidates: ccmExtra,
                policy: aoPolicy,
                maxSteps: aoPolicy.maxSteps,
                signal: controller.signal,
                llmEdit: async (prompt) => {
-                  const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                     body: JSON.stringify({
-                        model: 'deepseek-chat',
-                        max_tokens: 4000,
-                        temperature: 0.2,
-                        messages: [
-                           {
-                              role: 'system',
-                              content: 'You are a precision editor. Execute only the requested bounded operation. Return HTML only.',
-                           },
-                           { role: 'user', content: prompt },
-                        ],
-                     }),
+                  const { wieLlmComplete, wieWriterSystemPrompt } = await import('../../../lib/wie/writer');
+                  return wieLlmComplete({
+                     userPrompt: prompt,
+                     systemPrompt: wieWriterSystemPrompt(),
                      signal: controller.signal,
+                     maxTokens: 4000,
+                     temperature: 0.2,
                   });
-                  if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
-                  const data = parseChatCompletion(await aiRes.json());
-                  return { html: stripFences(data.content), tokens: data.totalTokens };
                },
             });
 
@@ -500,6 +503,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             aoDeltasPayload = v4.deltas as unknown as Record<string, unknown>;
             aoTraceSummary = v4.trace.summary();
 
+            // WIE Performance Loop: remember pattern ids used in this AO run
+            if (articleId != null && !v4.rolledBack) {
+               try {
+                  const { extractPatternIdsFromTraceEvents, saveWieLastRun } = await import('../../../lib/wie/outcomeLearning');
+                  const patternIds = extractPatternIdsFromTraceEvents(v4.trace.events);
+                  if (patternIds.length) {
+                     const dnaEv = v4.trace.events.find((e) => typeof e.metadata?.dna_version === 'number');
+                     await saveWieLastRun(Number(articleId), {
+                        at: new Date().toISOString(),
+                        runId: v4.baseline.runId,
+                        patternIds,
+                        dna_version: typeof dnaEv?.metadata?.dna_version === 'number'
+                           ? dnaEv.metadata.dna_version
+                           : undefined,
+                     });
+                  }
+               } catch {
+                  /* non-fatal */
+               }
+            }
             sse(res, 'progress', {
                round: 1,
                processed: 1,
@@ -545,25 +568,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                         ? '\n\nIMPORTANT: Previous reply was truncated or incomplete. Make SMALLER surgical edits only '
                           + '(a few paragraphs or one section). Return the COMPLETE article HTML — do not omit later sections.'
                         : '';
-                     const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                        body: JSON.stringify({
-                           model: 'deepseek-chat',
-                           max_tokens: 8000,
-                           temperature: 0.3,
-                           messages: [
-                              { role: 'system', content: promptPack.systemPrompt },
-                              { role: 'user', content: `${promptPack.userInstruction}${surgicalHint}\n\n${workingHtml}` },
-                           ],
-                        }),
+                     const { wieLlmComplete } = await import('../../../lib/wie/writer');
+                     const completed = await wieLlmComplete({
+                        userPrompt: `${promptPack.userInstruction}${surgicalHint}\n\n${workingHtml}`,
+                        systemPrompt: promptPack.systemPrompt,
+                        maxTokens: 8000,
+                        temperature: 0.3,
                         signal: controller.signal,
                      });
-                     if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
-                     const data = parseChatCompletion(await aiRes.json());
-                     aiTokens += data.totalTokens;
-                     const cleaned = stripFences(data.content);
-                     if (!isUsableWholeArticleEdit(cleaned, workingHtml, data.finishReason)) {
+                     aiTokens += completed.tokens;
+                     const cleaned = completed.html;
+                     if (!isUsableWholeArticleEdit(cleaned, workingHtml, undefined)) {
                         rejectedUnusable += 1;
                         if (attempt < MAX_ATTEMPTS) continue;
                         break;
@@ -583,29 +598,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                         });
                         const structurePrompt = `${retryPack.systemPrompt}\n\nSTRUCTURE FIX REQUIRED:\n${issues.join('\n')}`;
                         try {
-                           const retryRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                              body: JSON.stringify({
-                                 model: 'deepseek-chat',
-                                 max_tokens: 8000,
-                                 temperature: 0.3,
-                                 messages: [
-                                    { role: 'system', content: structurePrompt },
-                                    { role: 'user', content: `Fix structure issues and return complete HTML.\n\n${newHtml}` },
-                                 ],
-                              }),
+                           const retryCompleted = await wieLlmComplete({
+                              userPrompt: `Fix structure issues and return complete HTML.\n\n${newHtml}`,
+                              systemPrompt: structurePrompt,
+                              maxTokens: 8000,
+                              temperature: 0.3,
                               signal: controller.signal,
                            });
-                           if (retryRes.ok) {
-                              const retryData = parseChatCompletion(await retryRes.json());
-                              aiTokens += retryData.totalTokens;
-                              const retryCleaned = stripFences(retryData.content);
-                              if (isUsableWholeArticleEdit(retryCleaned, workingHtml, retryData.finishReason)) {
-                                 newHtml = retryCleaned;
-                              } else {
-                                 rejectedUnusable += 1;
-                              }
+                           aiTokens += retryCompleted.tokens;
+                           const retryCleaned = retryCompleted.html;
+                           if (isUsableWholeArticleEdit(retryCleaned, workingHtml, undefined)) {
+                              newHtml = retryCleaned;
+                           } else {
+                              rejectedUnusable += 1;
                            }
                         } catch { /* non-fatal */ }
                      }
@@ -703,11 +708,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                   language: ctx.language || 'pl',
                });
                try {
-                  const faqRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                  const faqRes = await fetch(llm.url, {
                      method: 'POST',
                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
                      body: JSON.stringify({
-                        model: 'deepseek-chat',
+                        model: llm.model,
                         max_tokens: 4000,
                         temperature: 0.3,
                         messages: [
@@ -853,6 +858,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const outcome = (workOutcome === 'faq_only' || workOutcome === 'partial_body' || workOutcome === 'incomplete_no_body')
          ? workOutcome
          : legacyOutcome;
+
+      // CCM after AO (07-runtime) — non-fatal; use final HTML even if client hasn't saved yet
+      if (articleId != null && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)) {
+         void import('../../../lib/intelligence/compileAfterArticleChange')
+            .then((m) =>
+               m.compileAfterArticleChange({
+                  articleId: Number(articleId),
+                  compiledAt: new Date().toISOString(),
+                  contentHtml: workingHtml,
+                  mode: 'full',
+               }),
+            )
+            .then((r) => {
+               if (!r.ok) console.warn('[ccm] compile after AO skipped:', r.error);
+            })
+            .catch((err: unknown) => {
+               console.warn('[ccm] compile after AO failed (non-fatal):', getErrorMessage(err));
+            });
+      }
 
       sse(res, 'done', {
          changedCount, total: MAX_ROUNDS, promptVersion: PROMPT_VERSION,

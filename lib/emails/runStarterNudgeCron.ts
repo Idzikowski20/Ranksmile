@@ -1,4 +1,5 @@
 import db from '../../database/database';
+import { BillingSource } from '../billingAudit';
 import { ensureBillingTables } from '../ensureBillingTables';
 import {
   getOrgBillingState,
@@ -64,7 +65,10 @@ export async function runStarterNudgeCron(now = new Date()): Promise<StarterNudg
         result.skipped += 1;
         continue;
       }
-      await updateOrgBillingState(orgId, { starterNudgeSentAt: now });
+      await updateOrgBillingState(orgId, { starterNudgeSentAt: now }, {
+        source: BillingSource.STARTER_NUDGE,
+        reason: 'starter_nudge_sent',
+      });
       result.sent += 1;
     } catch (err) {
       result.skipped += 1;

@@ -1,5 +1,4 @@
-// Comments for an article — shared between the editor and the public preview,
-// so a reviewer's note shows up for the owner too. Threaded: a root comment is
+// Comments for an article (owner session). Threaded: a root comment is
 // anchored to a quote and can hold replies (parent_id). Resolve marks a thread done.
 //   GET    /api/articles/[id]/comments              — list (roots + threads)
 //   POST   /api/articles/[id]/comments              — create root, or reply (parentId)
@@ -10,8 +9,6 @@ import { randomBytes } from 'crypto';
 import db from '../../../../database/database';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { emitCommentChange } from '../../../../lib/commentBus';
-import { publishToArticle } from '../../../../lib/ably/server';
-import { ABLY_EVENTS } from '../../../../lib/ably/channel';
 import { getCommentAccessKind } from '../../../../lib/commentAccess';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne } from '../../../../lib/db/query';
@@ -67,18 +64,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    const { id } = req.query;
    if (!id) return res.status(400).json({ error: 'id is required' });
 
-   // Reachable by raw article_id, so a valid share token (anonymous reviewer) or owner
-   // access is required — otherwise any guessed id would expose another tenant's comments.
+   // Owner session required — raw article id alone must not expose another tenant's comments.
    const articleId = parseInt(String(id), 10);
    const access = await getCommentAccessKind(req, res, articleId);
    if (!access) {
       return res.status(403).json({ error: 'Access denied.' });
    }
-   // An anonymous (share-token) reviewer may not edit/delete a comment authored by the owner.
-   const isOwnerComment = async (cid: string): Promise<boolean> => {
-      const r = await queryOne<{ is_owner: number | null }>('SELECT is_owner FROM article_comments WHERE id = ? AND article_id = ?', [cid, id]);
-      return Number(r?.is_owner) === 1;
-   };
 
    try {
       if (req.method === 'GET') {
@@ -105,10 +96,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          await db.query(
             `INSERT INTO article_comments (id, article_id, quote, body, images_json, author, color, avatar_url, parent_id, is_owner, resolved, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
-            { replacements: [commentId, id, q, text, JSON.stringify(images), author, color, avatar, parentId, access === 'owner' ? 1 : 0] },
+            { replacements: [commentId, id, q, text, JSON.stringify(images), author, color, avatar, parentId, 1] },
          );
          emitCommentChange(String(id), { type: 'create', commentId, parentId });
-         void publishToArticle(String(id), ABLY_EVENTS.comment, { type: 'create', commentId, parentId });
          return res.status(200).json({
             comment: { id: commentId, parentId: parentId || null, quote: q, text, images, author, color, avatar, resolved: false, reactions: {}, createdAt: Date.now(), updatedAt: null },
          });
@@ -122,7 +112,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                { replacements: [resolved ? 1 : 0, commentId, id] });
          }
          if (typeof text === 'string') {
-            if (access === 'token' && await isOwnerComment(commentId)) return res.status(403).json({ error: "You can't edit the owner's comment." });
             await db.query(`UPDATE article_comments SET body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND article_id = ?`,
                { replacements: [text, commentId, id] });
          }
@@ -137,19 +126,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                { replacements: [JSON.stringify(current), commentId, id] });
          }
          emitCommentChange(String(id), { type: 'update', commentId });
-         void publishToArticle(String(id), ABLY_EVENTS.comment, { type: 'update', commentId });
          return res.status(200).json({ ok: true });
       }
 
       if (req.method === 'DELETE') {
          const { commentId } = req.query;
          if (!commentId) return res.status(400).json({ error: 'commentId is required' });
-         if (access === 'token' && await isOwnerComment(String(commentId))) return res.status(403).json({ error: "You can't delete the owner's comment." });
          // Deleting a root removes its whole thread (replies anchored to it).
          await db.query(`DELETE FROM article_comments WHERE article_id = ? AND (id = ? OR parent_id = ?)`,
             { replacements: [id, commentId, commentId] });
          emitCommentChange(String(id), { type: 'delete', commentId });
-         void publishToArticle(String(id), ABLY_EVENTS.comment, { type: 'delete', commentId: String(commentId) });
          return res.status(200).json({ ok: true });
       }
 

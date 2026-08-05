@@ -6,7 +6,12 @@ jest.mock('../../lib/ensurePlanQuotaTables', () => ({
 }));
 
 jest.mock('../../lib/orgBilling', () => ({
-  getOrgBillingState: jest.fn().mockResolvedValue({ planSlug: 'starter' }),
+  getOrgBillingState: jest.fn().mockResolvedValue({
+    planSlug: 'starter',
+    subscriptionStatus: 'active',
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+  }),
 }));
 
 type BalRow = { used: number; reserved: number };

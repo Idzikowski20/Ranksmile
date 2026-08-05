@@ -8,6 +8,11 @@ import { readArticleTerms, type ArticleTermRow } from './articleTerms';
 import { readContentSettings } from './contentSettings';
 import { getDomainLocale } from './domainLanguage';
 import { getDomainVoices } from './domainVoices';
+import {
+  parseCompetitorSynthesis,
+  type CompetitorSynthesis,
+} from './wie/competitorSynthesis';
+import { buildHeuristicReaderBrief, type ReaderBrief } from './wie/readerBrief';
 
 export interface CompetitorContext {
   domain: string;
@@ -31,6 +36,12 @@ export interface ArticleContext {
   voiceTone?: string;
   customRules?: string;
   contentType?: string;
+  /** WIE Source A brief from score_data.competitor_synthesis */
+  competitorSynthesis?: CompetitorSynthesis | null;
+  /** Thin reader model for AO prompts */
+  readerBrief?: ReaderBrief | null;
+  /** Preformatted WIE Think→Write prompt blocks (Policy / Narrative / Synthesis) */
+  wiePromptBlock?: string;
 }
 
 /** Read-only aggregator: assembles one ArticleContext from all its DB sources. Never writes. Sparse on missing data.
@@ -85,9 +96,32 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
     ? row.language
     : domainLocale?.languageCode;
 
+  const keyword = typeof row?.target_keyword === 'string' ? row.target_keyword : '';
+  const competitorSynthesis = parseCompetitorSynthesis(scoreData?.competitor_synthesis ?? null);
+  const h1Title = ''; // title comes from content elsewhere; keyword+PAA enough for brief
+  const readerBrief = keyword
+    ? buildHeuristicReaderBrief({ keyword, title: h1Title, paa })
+    : null;
+
+  let wiePromptBlock: string | undefined;
+  try {
+    const { buildWieWriteContext, formatWieWriteBlocks } = await import('./wie/writerContext');
+    const wie = await buildWieWriteContext({
+      keyword,
+      paa,
+      synthesis: competitorSynthesis,
+      readerBrief,
+      scoreData,
+    });
+    const block = formatWieWriteBlocks(wie);
+    if (block) wiePromptBlock = block;
+  } catch {
+    wiePromptBlock = undefined;
+  }
+
   return {
     articleId,
-    keyword: typeof row?.target_keyword === 'string' ? row.target_keyword : '',
+    keyword,
     language: resolvedLanguage,
     scoreData,
     breakdown: null,
@@ -103,5 +137,8 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
     // `articles` has no content_type column yet — selecting it would throw ("column does not exist").
     // Field kept optional (always undefined) until a migration adds the column.
     contentType: undefined,
+    competitorSynthesis,
+    readerBrief,
+    wiePromptBlock,
   };
 }

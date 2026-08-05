@@ -8,6 +8,7 @@ import { Field } from '../koala/forms';
 import { Icon } from '../koala/icons';
 import {
   CheckoutCompanyFields,
+  CheckoutStripeAddress,
   CheckoutStripePayment,
   type CompanyState,
 } from './CheckoutStripeProvider';
@@ -20,6 +21,7 @@ import {
   getPlanMonthlyPrice,
   getPlanPeriodPrice,
 } from '../../lib/billingPlans';
+import { typeface } from '../koala/tokens/typography';
 
 function formatPriceDelta(delta: number): string | null {
   if (delta === 0) return null;
@@ -27,17 +29,23 @@ function formatPriceDelta(delta: number): string | null {
   return delta > 0 ? `+${amount}` : `−${amount}`;
 }
 
-const F = 'var(--font-family-primary)';
+const F = typeface.body;
 const BRAND = '#F84416';
 const BORDER = '#e5e5e5';
 const TEXT = '#1a1a1a';
 const MUTED = '#575757';
-const TAX_RATE = 0.23;
 
 const formatEuro2 = (amount: number): string =>
   `€${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const formatEuroCents = (cents: number): string => formatEuro2(cents / 100);
+
+export type CheckoutTaxPreview = {
+  taxAmountCents: number;
+  amountTotalCents: number;
+  taxPercent: number | null;
+  taxLabel: string;
+};
 
 function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
@@ -171,6 +179,10 @@ export type CheckoutKoalaBodyProps = {
   onAddressLine: (v: string) => void;
   onCity: (v: string) => void;
   onZip: (v: string) => void;
+  taxPreview?: CheckoutTaxPreview | null;
+  taxLoading?: boolean;
+  /** Address incomplete or VAT still loading — blocks trial/purchase CTAs. */
+  ctaBlocked?: boolean;
 };
 
 export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
@@ -184,16 +196,20 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
     addressLine, city, zip,
     onCardNumber, onCardExpiry, onCardCvc, onCountry, onCountryOpen,
     onAddressLine, onCity, onZip,
+    taxPreview = null,
+    taxLoading = false,
+    ctaBlocked = false,
   } = props;
 
   const [discount, setDiscount] = React.useState('');
-  const [paymentMethod, setPaymentMethod] = React.useState<'paypal' | 'card' | 'bank'>('card');
 
   const isYearly = billing === 'yearly';
   const periodPrice = getPlanPeriodPrice(plan, billing);
   const monthlyPrice = getPlanMonthlyPrice(plan, billing);
-  const taxAmount = periodPrice * TAX_RATE;
-  const totalToday = periodPrice + taxAmount;
+  const taxAmountCents = taxPreview?.taxAmountCents ?? null;
+  const taxLabel = taxPreview?.taxLabel ?? 'VAT';
+  const totalWithTaxCents = taxPreview?.amountTotalCents
+    ?? Math.round(periodPrice * 100) + (taxAmountCents ?? 0);
   const originalYearPrice = plan.priceMonthly * 12;
   const currentMonthly = monthlyPrice;
   const planOptions = CHECKOUT_PLANS.map((p) => ({
@@ -238,7 +254,6 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
         .cko-figma-rail { width: 1px; background: ${BORDER}; align-self: stretch; min-height: 100%; }
         .cko-figma-left { display: flex; flex-direction: column; gap: 24px; min-width: 0; padding-bottom: 32px; }
         .cko-figma-right { display: flex; flex-direction: column; gap: 24px; min-width: 0; position: sticky; top: 24px; }
-        .cko-methods { display: flex; gap: 16px; }
         .cko-billing { display: flex; gap: 16px; }
         .cko-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .cko-row-city { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
@@ -248,7 +263,6 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
           .cko-figma-grid { grid-template-columns: 1fr; gap: 32px; }
           .cko-figma-rail { display: none; }
           .cko-figma-right { position: static; }
-          .cko-methods { flex-direction: column; }
         }
         @media (max-width: 640px) {
           .cko-row2, .cko-row-city, .cko-billing { grid-template-columns: 1fr; display: grid; }
@@ -306,32 +320,6 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
             <span style={{ fontSize: 14, fontWeight: 500, color: MUTED, whiteSpace: 'nowrap' }}>Payment Information</span>
           </div>
 
-          {!isUpgrade && (
-            <div>
-              <FieldLabel required>Payment method</FieldLabel>
-              <div className="cko-methods">
-                <SelectCard selected={paymentMethod === 'paypal'} disabled onClick={() => undefined}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <VisaMark />
-                    <span style={{ fontSize: 16, fontWeight: 600 }}>Paypal</span>
-                  </div>
-                </SelectCard>
-                <SelectCard selected={paymentMethod === 'card'} onClick={() => setPaymentMethod('card')}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <Icon name="CreditCard" size={24} color={TEXT} />
-                    <span style={{ fontSize: 16, fontWeight: 600 }}>Card</span>
-                  </div>
-                </SelectCard>
-                <SelectCard selected={paymentMethod === 'bank'} disabled onClick={() => undefined}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <Icon name="Bank" size={24} color={TEXT} />
-                    <span style={{ fontSize: 16, fontWeight: 600 }}>Bank</span>
-                  </div>
-                </SelectCard>
-              </div>
-            </div>
-          )}
-
           <div>
             <FieldLabel required>Billing</FieldLabel>
             <div className="cko-billing" role="radiogroup" aria-label="Billing period">
@@ -363,23 +351,27 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
               We&apos;ll charge the prorated difference to your card on file. Unused time on your current plan is credited automatically.
             </p>
           ) : stripeCheckoutEnabled ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <FieldLabel required>Card details</FieldLabel>
                 <CheckoutStripePayment />
               </div>
-              <div>
-                <FieldLabel>Billing details</FieldLabel>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <CheckoutCompanyFields
-                    billingEmail={company.billingEmail}
-                    taxId={company.taxId}
-                    fieldErrors={fieldErrors}
-                    onBillingEmailChange={onCompanyEmail}
-                    onTaxIdChange={onCompanyTaxId}
-                  />
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <FieldLabel required>Billing address</FieldLabel>
+                <CheckoutStripeAddress />
+                {fieldErrors.address ? (
+                  <span style={{ fontSize: 13, color: '#FF6F77', lineHeight: '18px' }} role="alert">
+                    {fieldErrors.address}
+                  </span>
+                ) : null}
               </div>
+              <CheckoutCompanyFields
+                billingEmail={company.billingEmail}
+                taxId={company.taxId}
+                fieldErrors={fieldErrors}
+                onBillingEmailChange={onCompanyEmail}
+                onTaxIdChange={onCompanyTaxId}
+              />
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -471,34 +463,6 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              onClick={onCta}
-              disabled={checkoutLoading || (isUpgrade && (previewLoading || Boolean(previewError)))}
-              style={{ width: '100%' }}
-            >
-              {ctaLabel}
-            </Button>
-            {!isUpfront && !isUpgrade && onSkipTrial && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={onSkipTrial}
-                disabled={checkoutLoading}
-                style={{ width: '100%' }}
-              >
-                Skip trial and buy {plan.name} now
-              </Button>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, color: MUTED }}>
-              <Icon name="LockSimple" size={16} color={MUTED} />
-              <span>Checkout secured by Stripe</span>
-            </div>
-          </div>
         </div>
 
         <div className="cko-figma-rail" aria-hidden />
@@ -631,40 +595,100 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                 <span style={{ color: MUTED }}>Subtotal</span>
                 <span>{formatEuro2(periodPrice)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                <span style={{ color: MUTED }}>{isUpfront ? 'TAX (23%)' : 'Due today'}</span>
-                <span>{isUpfront ? formatEuro2(taxAmount) : formatEuro2(0)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
+                <span style={{ color: MUTED }}>{taxLabel}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 20 }}>
+                  {taxLoading ? (
+                    <>
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: '50%',
+                          border: '2px solid #e5e5e5',
+                          borderTopColor: '#F84416',
+                          animation: 'rs-tax-spin 0.7s linear infinite',
+                          display: 'inline-block',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ color: MUTED, fontSize: 13 }}>Calculating…</span>
+                      <style>{`@keyframes rs-tax-spin{to{transform:rotate(360deg)}}`}</style>
+                    </>
+                  ) : taxAmountCents != null
+                    ? formatEuroCents(taxAmountCents)
+                    : '—'}
+                </span>
               </div>
+              {!isUpfront && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                  <span style={{ color: MUTED }}>Due today</span>
+                  <span>{formatEuro2(0)}</span>
+                </div>
+              )}
               <div style={{ height: 1, background: BORDER }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: 16, fontWeight: 700 }}>Total</span>
+                <span style={{ fontSize: 16, fontWeight: 700 }}>
+                  {isUpfront ? 'Total' : 'Total today'}
+                </span>
                 <span style={{ fontSize: 18, fontWeight: 700 }}>
-                  {isUpfront ? formatEuro2(totalToday) : formatEuro2(0)}
+                  {isUpfront
+                    ? (taxAmountCents != null ? formatEuroCents(totalWithTaxCents) : formatEuro2(periodPrice))
+                    : formatEuro2(0)}
                 </span>
               </div>
               {!isUpfront && (
                 <p style={{ margin: 0, fontSize: 13, lineHeight: '18px', color: MUTED }}>
-                  On {trialEndLabel}, you will be charged {formatEuro(periodPrice)}. Trial starts {trialStartLabel}.
+                  On {trialEndLabel}, you will be charged{' '}
+                  {taxAmountCents != null
+                    ? formatEuroCents(totalWithTaxCents)
+                    : formatEuro(periodPrice)}
+                  {taxAmountCents != null ? ` (incl. ${taxLabel})` : ''}. Trial starts {trialStartLabel}.
                 </p>
               )}
               {isUpfront && (
                 <p style={{ margin: 0, fontSize: 13, lineHeight: '18px', color: MUTED }}>
                   Charged every {isYearly ? 'year' : 'month'} until canceled. Next charge {nextChargeLabel}.
                   {' '}
-                  ({formatEuro(monthlyPrice)}/mo effective)
+                  ({formatEuro(monthlyPrice)}/mo effective
+                  {taxAmountCents != null ? ` + ${taxLabel}` : ''})
                 </p>
               )}
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 600, lineHeight: '24px' }}>Team Ranksmile</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              onClick={onCta}
+              disabled={
+                checkoutLoading
+                || ctaBlocked
+                || (isUpgrade && (previewLoading || Boolean(previewError)))
+              }
+              style={{ width: '100%' }}
+            >
+              {ctaLabel}
+            </Button>
+            {!isUpfront && !isUpgrade && onSkipTrial && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={onSkipTrial}
+                disabled={checkoutLoading || ctaBlocked}
+                style={{ width: '100%' }}
+              >
+                Skip trial and buy {plan.name} now
+              </Button>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, color: MUTED }}>
+              <Icon name="LockSimple" size={16} color={MUTED} />
+              <span>Checkout secured by Stripe</span>
             </div>
-            <p style={{ margin: 0, fontSize: 16, lineHeight: '24px', color: MUTED }}>
-              Ranksmile turned our SEO workflow into something the whole team can ship every week — scoring, AI edits, and visibility in one place.
-            </p>
-            <span style={{ fontSize: 16, fontWeight: 600 }}>Ranksmile</span>
           </div>
         </aside>
       </div>

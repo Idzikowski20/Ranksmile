@@ -1,4 +1,4 @@
-import type { PlanSlug } from './stripePrices';
+import type { LegacyPlanSlug } from './stripePrices';
 
 const LOCKED_CHECKOUT_STATUSES = new Set([
   'active',
@@ -20,8 +20,8 @@ export function blocksNewPaidCheckout(status: string | null | undefined): boolea
  * Uses DB plan_slug only (never the quota default) so free/default orgs stay unlocked.
  */
 export function getLockedCheckoutPlanSlug(
-  billing: { planSlug?: PlanSlug | null; subscriptionStatus?: string | null } | null | undefined,
-): PlanSlug | null {
+  billing: { planSlug?: LegacyPlanSlug | null; subscriptionStatus?: string | null } | null | undefined,
+): LegacyPlanSlug | null {
   if (!billing?.planSlug) return null;
   if (!billing.subscriptionStatus || !LOCKED_CHECKOUT_STATUSES.has(billing.subscriptionStatus)) {
     return null;

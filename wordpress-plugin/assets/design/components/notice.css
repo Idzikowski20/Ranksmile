@@ -1,0 +1,10 @@
+﻿.ranksmile-admin .rs-notice {
+  display: flex; gap: var(--rs-space-3); align-items: flex-start;
+  padding: var(--rs-space-3) var(--rs-space-4); border-radius: var(--rs-radius-sm);
+  border: var(--rs-border-width) var(--rs-border-style) var(--rs-border); font-size: var(--rs-text-md);
+}
+.ranksmile-admin .rs-notice--success { background: var(--rs-status-success-bg); border-color: var(--rs-status-success); color: var(--rs-text-primary); }
+.ranksmile-admin .rs-notice--warning { background: var(--rs-status-warning-bg); border-color: var(--rs-status-warning); }
+.ranksmile-admin .rs-notice--error { background: var(--rs-status-danger-bg); border-color: var(--rs-status-danger); }
+.ranksmile-admin .rs-notice--info { background: var(--rs-status-info-bg); border-color: var(--rs-status-info); }
+.ranksmile-admin .rs-notice-stack { display: flex; flex-direction: column; gap: var(--rs-space-2); margin-bottom: var(--rs-space-4); }

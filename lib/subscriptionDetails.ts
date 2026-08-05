@@ -1,8 +1,10 @@
 import type { BillingPeriod } from './billingPlans';
 import { getCheckoutPlan, getPlanPeriodPrice } from './billingPlans';
+import { hasActiveBillingEntitlement } from './billingEntitlement';
 import { getLockedCheckoutPlanSlug } from './billingPlanLock';
+import { isTrialEligible } from './billingTrial';
 import { getOrgBillingState, type OrgBillingState, type SubscriptionStatus } from './orgBilling';
-import { resolvePlanSlug } from './planLimits';
+import { DEFAULT_PLAN_SLUG, resolvePlanSlug } from './planLimits';
 import type { UpcomingPaymentDetails } from './subscriptionFormat';
 import { getStripe, isStripeConfigured } from './stripe';
 import { syncSubscriptionToOrg } from './stripeBillingSync';
@@ -24,6 +26,8 @@ export interface SubscriptionDetails {
   paymentFailedLockedAt: string | null;
   trialEndsAt: string | null;
   trialEndsAtLabel: string | null;
+  /** Growth free trial still available (once per org). */
+  trialEligible: boolean;
   currentPeriodEnd: string | null;
   currentPeriodEndLabel: string | null;
   cancelAtPeriodEnd: boolean;
@@ -131,9 +135,6 @@ async function fetchStripeUpcoming(
 
 export async function getSubscriptionDetails(orgId: number): Promise<SubscriptionDetails> {
   let billing = await getOrgBillingState(orgId);
-  const planSlug = resolvePlanSlug(billing?.planSlug);
-  const plan = getCheckoutPlan(planSlug);
-  const planName = plan?.name ?? 'Growth';
 
   let cancelAtPeriodEnd = false;
   let subscriptionStatus = billing?.subscriptionStatus ?? null;
@@ -147,25 +148,31 @@ export async function getSubscriptionDetails(orgId: number): Promise<Subscriptio
     subscriptionStatus = billing?.subscriptionStatus ?? subscriptionStatus;
   }
 
+  const entitled = hasActiveBillingEntitlement(billing);
+  const planSlug = entitled ? resolvePlanSlug(billing?.planSlug) : DEFAULT_PLAN_SLUG;
+  const plan = getCheckoutPlan(planSlug);
+  const planName = plan?.name ?? 'Growth';
+
   const paymentFailedLockedAt = billing?.paymentFailedLockedAt ?? null;
 
   const isTrialing = subscriptionStatus === 'trialing';
   const trialEndsAt = billing?.trialEndsAt ?? null;
   const currentPeriodEnd = billing?.currentPeriodEnd ?? trialEndsAt;
-  const endLabel = formatDateLabel(isTrialing ? trialEndsAt : currentPeriodEnd);
   const periodLabel = formatPeriodLabel(cancelAtPeriodEnd, isTrialing, isTrialing ? trialEndsAt : currentPeriodEnd);
 
   const upcoming = cancelAtPeriodEnd
     ? null
-    : (billing
+    : (billing && entitled
       ? await fetchStripeUpcoming(billing, planName, isTrialing ? trialEndsAt : currentPeriodEnd)
       : null)
-      ?? estimateUpcoming(
-        planName,
-        planSlug,
-        billing?.billingPeriod ?? 'monthly',
-        isTrialing ? trialEndsAt : currentPeriodEnd,
-      );
+      ?? (entitled
+        ? estimateUpcoming(
+          planName,
+          planSlug,
+          billing?.billingPeriod ?? 'monthly',
+          isTrialing ? trialEndsAt : currentPeriodEnd,
+        )
+        : null);
 
   return {
     configured: isStripeConfigured(),
@@ -173,12 +180,13 @@ export async function getSubscriptionDetails(orgId: number): Promise<Subscriptio
     planSlug,
     lockedPlanSlug: getLockedCheckoutPlanSlug(billing),
     planName,
-    billingPeriod: billing?.billingPeriod ?? null,
+    billingPeriod: entitled ? (billing?.billingPeriod ?? null) : null,
     subscriptionStatus,
     paymentFailedLocked: paymentFailedLockedAt != null,
     paymentFailedLockedAt,
     trialEndsAt,
     trialEndsAtLabel: formatDateLabel(trialEndsAt),
+    trialEligible: isTrialEligible(billing),
     currentPeriodEnd,
     currentPeriodEndLabel: formatDateLabel(currentPeriodEnd),
     cancelAtPeriodEnd,

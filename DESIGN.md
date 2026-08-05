@@ -116,4 +116,8 @@ Nie używaj `style={{}}` dla: `color`, `background`, `backgroundColor`, `border`
 
 Canonical: `components/koala/core` `Badge` — contract: `appearance`/`variant`, `size` (`sm`|`md`|`lg`), optional `icon`. Domenowe chipy → `components/koala/product/helpers/`.
 
+### Chip
+
+Canonical: `components/koala/core` `Chip` — interactive / selected / dismissable filter tag (Figma `11196:273025`). **Nie mylić z Badge** (status label, nieklikalny).
+
 Debt: `npm run token:debt` · budget: `npm run check:koala-tokens`.

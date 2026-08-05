@@ -29,6 +29,8 @@ export type PricingCardProps = {
   frequency?: string;
   billing: BillingPeriod;
   ctaState: CtaState;
+  /** Growth trial still available — drives CTA copy. Default true. */
+  trialEligible?: boolean;
   benefits: Array<{ label: string; state: BenefitState; value?: string }>;
   recommended?: boolean;
   showMostPopularBadge?: boolean;
@@ -44,20 +46,28 @@ const Shell = styled.div<{ $recommended: boolean; $current: boolean }>`
   flex-direction: column;
   isolation: isolate;
   width: 100%;
+  height: 100%;
   border-radius: ${radius['2xl']};
   overflow: hidden;
   font-family: ${typeface.body};
   opacity: ${(p) => (p.$current ? 0.78 : 1)};
   filter: ${(p) => (p.$current ? 'grayscale(0.2)' : 'none')};
-  background: ${(p) => (p.$recommended ? 'var(--koala-bg-brand, #F84416)' : 'transparent')};
-  padding: ${(p) => (p.$recommended || p.$current ? '2px' : '0')};
+  background: ${(p) => (p.$recommended ? 'var(--koala-bg-brand, #F84416)' : p.$current ? semantic.text.tertiary : 'transparent')};
+  /* Same 2px rim on every card so white bodies share one top edge */
+  padding: 2px;
   box-sizing: border-box;
 `;
 
-const Ribbon = styled.div<{ $tone: 'brand' | 'muted' }>`
+/** Same footprint as Ribbon so card bodies align across the pricing grid. */
+const RibbonSlot = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 36px;
+  flex-shrink: 0;
+`;
+
+const Ribbon = styled(RibbonSlot)<{ $tone: 'brand' | 'muted' }>`
   padding: 8px 12px 6px;
   background: ${(p) => (p.$tone === 'brand' ? 'var(--koala-bg-brand, #F84416)' : semantic.text.tertiary)};
   color: #fff;
@@ -65,6 +75,12 @@ const Ribbon = styled.div<{ $tone: 'brand' | 'muted' }>`
   font-weight: ${fontWeight.medium};
   line-height: ${textScale.base.lineHeight};
   letter-spacing: ${textScale.base.letterSpacing};
+`;
+
+const RibbonSpacer = styled(RibbonSlot)`
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
 `;
 
 const Body = styled.div<{ $recommended: boolean }>`
@@ -107,11 +123,27 @@ const Badge = styled.span`
   line-height: ${textScale.sm.lineHeight};
 `;
 
+const Intro = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
 const Desc = styled.p`
   margin: 0;
   font-size: ${textScale.base.fontSize};
   line-height: ${textScale.base.lineHeight};
   color: ${semantic.text.secondary};
+  /* Longest plan blurbs are ~3 lines — equal block so price + CTA align across the grid */
+  min-height: calc(3 * ${textScale.base.lineHeight});
+`;
+
+const PriceCta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${spacing.xl};
+  flex-shrink: 0;
 `;
 
 const Hint = styled.p`
@@ -175,6 +207,7 @@ export function PricingCard({
   frequency = '/month',
   billing,
   ctaState,
+  trialEligible = true,
   benefits,
   recommended = false,
   showMostPopularBadge = false,
@@ -197,9 +230,13 @@ export function PricingCard({
       data-plan={slug}
       data-cta={ctaState}
     >
-      {showRibbon ? <Ribbon $tone={ribbonTone}>{ribbonText}</Ribbon> : null}
+      {showRibbon ? (
+        <Ribbon $tone={ribbonTone}>{ribbonText}</Ribbon>
+      ) : (
+        <RibbonSpacer aria-hidden>Recommended</RibbonSpacer>
+      )}
       <Body $recommended={Boolean(recommended) && !isCurrent}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Intro>
           <TitleRow>
             <Title>{name}</Title>
             {showMostPopularBadge && recommended && !isCurrent ? (
@@ -208,24 +245,26 @@ export function PricingCard({
           </TitleRow>
           <Desc>{description}</Desc>
           {hierarchyHint ? <Hint>{hierarchyHint}</Hint> : null}
-        </div>
+        </Intro>
 
-        <PriceRow>
-          <Currency>{currency}</Currency>
-          <Amount>{price}</Amount>
-          <Freq>{frequency}</Freq>
-        </PriceRow>
+        <PriceCta>
+          <PriceRow>
+            <Currency>{currency}</Currency>
+            <Amount>{price}</Amount>
+            <Freq>{frequency}</Freq>
+          </PriceRow>
 
-        <Button
-          type="button"
-          variant={primaryCta ? 'primary' : 'secondary'}
-          size="md"
-          disabled={isCurrent}
-          style={{ width: '100%' }}
-          onClick={() => onAction({ slug, billing, ctaState })}
-        >
-          {ctaLabel(ctaState, name)}
-        </Button>
+          <Button
+            type="button"
+            variant={primaryCta ? 'primary' : 'secondary'}
+            size="md"
+            disabled={isCurrent}
+            style={{ width: '100%' }}
+            onClick={() => onAction({ slug, billing, ctaState })}
+          >
+            {ctaLabel(ctaState, name, { planSlug: slug, trialEligible })}
+          </Button>
+        </PriceCta>
 
         <Benefits>
           {benefits.map((b) => (

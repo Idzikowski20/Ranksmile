@@ -1,18 +1,17 @@
+/**
+ * Payment-failed helpers — Access Snapshot projects FAILED → PAYMENT_FAILED.
+ * Frontend allowlist delegates to AccessPolicy for PAYMENT_FAILED.
+ * API allowlist kept for transitional callers; prefer allowsApi(appState, route).
+ */
 import type { OrgBillingState } from './orgBilling';
+import { allowsFrontend } from './appAccess';
 
 export function isPaymentFailedLocked(billing: OrgBillingState | null | undefined): boolean {
   return billing?.paymentFailedLockedAt != null;
 }
 
 export function isFrontendRouteAllowedDuringPaymentLock(url: string): boolean {
-  const pathname = url.split('?')[0]?.split('#')[0] ?? '';
-  if (pathname === '/plans') return true;
-  if (pathname.startsWith('/billing/checkout/')) return true;
-  if (pathname === '/billing/confirmation/failed') return true;
-  if (pathname === '/billing/confirmation/success') return true;
-  if (pathname === '/settings/billing_subscription') return true;
-  if (pathname === '/settings/billing_invoices' || pathname === '/settings/billing_history') return true;
-  return false;
+  return allowsFrontend('PAYMENT_FAILED', url);
 }
 
 const ALLOWED_API = new Set([
@@ -24,6 +23,7 @@ const ALLOWED_API = new Set([
   'GET:/api/billing/plan-summary',
   'GET:/api/billing/invoices',
   'GET:/api/billing/confirmation',
+  'GET:/api/billing/snapshot',
   'POST:/api/billing/upgrade-preview',
   'POST:/api/billing/create-subscription',
   'POST:/api/billing/checkout-session',
@@ -31,6 +31,10 @@ const ALLOWED_API = new Set([
   'POST:/api/billing/portal',
   'POST:/api/billing/cancel',
   'POST:/api/billing/update-customer',
+  'POST:/api/billing/audit-beacon',
+  'POST:/api/billing/tax-preview',
+  'POST:/api/billing/issue-confirmation',
+  'POST:/api/billing/activate-trial',
 ]);
 
 /** Expects `METHOD:/path` (optional query stripped). Default deny. */
@@ -38,5 +42,10 @@ export function isApiRouteAllowedDuringPaymentLock(url: string): boolean {
   const trimmed = url.trim().split('?')[0] ?? '';
   const m = trimmed.match(/^(GET|POST|PUT|DELETE|PATCH)\s*[: ]\s*(\/.*)$/i);
   if (!m) return false;
-  return ALLOWED_API.has(`${m[1].toUpperCase()}:${m[2]}`);
+  const method = m[1].toUpperCase();
+  const path = m[2];
+  if (ALLOWED_API.has(`${method}:${path}`)) return true;
+  if (method === 'DELETE' && /^\/api\/billing\/payment-methods\/[^/]+$/.test(path)) return true;
+  if (method === 'POST' && /^\/api\/billing\/payment-methods\/[^/]+\/default$/.test(path)) return true;
+  return false;
 }

@@ -15,7 +15,9 @@ import Highlight from '@tiptap/extension-highlight';
 import Placeholder from '@tiptap/extension-placeholder';
 import type { ScoreData, NlpTerm } from '../../lib/contentScore';
 import { getErrorMessage } from '../../lib/errors';
+import { isUsableArticleHtml } from '../../lib/articleHtmlUsable';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
+import { EC } from './editorChrome';
 import RanksmileImageNode from './RanksmileImageNode';
 import ContentOptimizer from './contentOptimizerNode';
 import RanksmileBubbleMenu, { RanksmileLinkModal } from './RanksmileBubbleMenu';
@@ -106,10 +108,30 @@ interface MenuBarProps {
   formattingSuspended?: boolean;
 }
 
+/* Content-editor toolbar chrome → Koala tokens (KEEP TipTap structure). */
+const CE_TB = {
+  text: EC.text,
+  muted: EC.textSecondary,
+  brand: EC.brand,
+  surface: EC.surface,
+  hover: EC.surfaceMuted,
+  activeBg: EC.activeBg,
+  border: EC.border,
+  danger: EC.danger,
+  dangerBg: EC.dangerBg,
+} as const;
+
+const ceBtn = (active: boolean): React.CSSProperties => ({
+  color: active ? CE_TB.brand : CE_TB.text,
+  background: active ? CE_TB.activeBg : 'transparent',
+});
+const ceHoverBg = (active: boolean, open = false) => (open || !active ? CE_TB.hover : CE_TB.activeBg);
+const ceLeaveBg = (active: boolean, open = false) => (open ? CE_TB.hover : active ? CE_TB.activeBg : 'transparent');
+
 /* ── Vertical separator ─────────────────────────────────────────────── */
 const Sep = () => (
   <div style={{ padding: '0 0.25rem', display: 'flex', flexShrink: 0 }}>
-    <div style={{ width: 1, height: 20, background: '#E4E4E7' }} />
+    <div style={{ width: 1, height: 20, background: CE_TB.border }} />
   </div>
 );
 
@@ -127,7 +149,7 @@ const TOOLBAR_TRIGGER: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
   height: 28, minWidth: 28, padding: '0 4px', borderRadius: 4,
   border: 'none', cursor: 'pointer', flexShrink: 0,
-  background: 'transparent', color: '#18181B',
+  background: 'transparent', color: CE_TB.text,
   transition: 'background-color 150ms', fontFamily: 'var(--font-family-primary)',
 };
 
@@ -174,9 +196,9 @@ const ToolbarMenu = ({
         type="button"
         title={title}
         onClick={toggle}
-        style={{ ...TOOLBAR_TRIGGER, color: active ? '#630DE3' : '#18181B', background: open ? '#F4F4F5' : active ? '#F3EEFF' : 'transparent' }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = open ? '#F4F4F5' : active ? '#F3EEFF' : '#F4F4F5'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = open ? '#F4F4F5' : active ? '#F3EEFF' : 'transparent'; }}
+        style={{ ...TOOLBAR_TRIGGER, ...ceBtn(active), background: open ? CE_TB.hover : ceBtn(active).background }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = ceHoverBg(active, open); }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = ceLeaveBg(active, open); }}
       >
         {trigger}
         {!hideChevron && (
@@ -197,9 +219,9 @@ const ToolbarMenu = ({
               <div style={{ position: 'fixed', top: anchor.top, left, transform: wide ? 'none' : 'translateX(-50%)', zIndex: 1000 }}>
                 <div
                   style={{
-                    background: '#fff', borderRadius: 8, padding: wide ? 6 : 4,
+                    background: CE_TB.surface, borderRadius: 8, padding: wide ? 6 : 4,
                     boxShadow: '0px 4px 16px 0px rgba(24,26,34,0.12), 0px 1px 4px 0px rgba(24,26,34,0.08)',
-                    border: '1px solid #F4F4F5',
+                    border: `1px solid ${CE_TB.border}`,
                     display: 'flex', flexDirection: wide ? 'column' : 'row',
                     alignItems: wide ? 'stretch' : 'center', gap: wide ? 2 : 4,
                     minWidth: wide ? MENU_W : undefined,
@@ -252,7 +274,7 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     width: 28, height: 28, padding: 0, borderRadius: 4,
     border: 'none', cursor: 'pointer', flexShrink: 0,
-    background: 'transparent', color: '#18181B',
+    background: 'transparent', color: CE_TB.text,
     transition: 'background-color 150ms',
   };
 
@@ -272,7 +294,7 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
           justifyContent: 'safe center',
           padding: '0 12px',
           height: 44,
-          background: '#fff',
+          background: CE_TB.surface,
           flexShrink: 0,
           borderBottom: 'none',
           gap: 8,
@@ -303,9 +325,9 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
                         type="button"
                         onClick={() => { editor.chain().focus().setParagraph().run(); close(); }}
                         title="Paragraph"
-                        style={{ ...btnStyle, fontWeight: 500, fontSize: 13, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}
+                        style={{ ...btnStyle, fontWeight: 500, fontSize: 13, color: active ? CE_TB.brand : CE_TB.text, background: active ? CE_TB.activeBg : 'transparent' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = active ? CE_TB.activeBg : CE_TB.hover; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = active ? CE_TB.activeBg : 'transparent'; }}
                       >
                         P
                       </button>
@@ -319,9 +341,9 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
                         type="button"
                         onClick={() => { editor.chain().focus().toggleHeading({ level: lvl }).run(); close(); }}
                         title={`Heading ${lvl}`}
-                        style={{ ...btnStyle, fontWeight: 600, fontSize: lvl <= 2 ? 15 - lvl : 13, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}
+                        style={{ ...btnStyle, fontWeight: 600, fontSize: lvl <= 2 ? 15 - lvl : 13, color: active ? CE_TB.brand : CE_TB.text, background: active ? CE_TB.activeBg : 'transparent' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = active ? CE_TB.activeBg : CE_TB.hover; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = active ? CE_TB.activeBg : 'transparent'; }}
                       >
                         H{lvl}
                       </button>
@@ -336,15 +358,15 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
         <Sep />
 
         {/* Bold */}
-        <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} title="Bold" style={{ ...btnStyle, fontWeight: 700, color: editor.isActive('bold') ? '#630DE3' : '#18181B', background: editor.isActive('bold') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('bold') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('bold') ? '#F3EEFF' : 'transparent'; }}>
+        <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} title="Bold" style={{ ...btnStyle, fontWeight: 700, color: editor.isActive('bold') ? CE_TB.brand : CE_TB.text, background: editor.isActive('bold') ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('bold') ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('bold') ? CE_TB.activeBg : 'transparent'; }}>
           <span style={{ fontSize: 14 }}>B</span>
         </button>
         {/* Italic */}
-        <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic" style={{ ...btnStyle, fontStyle: 'italic', fontFamily: 'Georgia, serif', fontSize: 14, color: editor.isActive('italic') ? '#630DE3' : '#18181B', background: editor.isActive('italic') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('italic') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('italic') ? '#F3EEFF' : 'transparent'; }}>
+        <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic" style={{ ...btnStyle, fontStyle: 'italic', fontFamily: 'Georgia, serif', fontSize: 14, color: editor.isActive('italic') ? CE_TB.brand : CE_TB.text, background: editor.isActive('italic') ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('italic') ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('italic') ? CE_TB.activeBg : 'transparent'; }}>
           <span>I</span>
         </button>
         {/* Underline */}
-        <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" style={{ ...btnStyle, textDecoration: 'underline', fontSize: 14, color: editor.isActive('underline') ? '#630DE3' : '#18181B', background: editor.isActive('underline') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('underline') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('underline') ? '#F3EEFF' : 'transparent'; }}>
+        <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" style={{ ...btnStyle, textDecoration: 'underline', fontSize: 14, color: editor.isActive('underline') ? CE_TB.brand : CE_TB.text, background: editor.isActive('underline') ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('underline') ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('underline') ? CE_TB.activeBg : 'transparent'; }}>
           <span>U</span>
         </button>
         {/* Sub / superscript dropdown */}
@@ -355,10 +377,10 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
         >
           {(close) => (
             <>
-              <button type="button" onClick={() => { editor.chain().focus().toggleSuperscript().run(); close(); }} title="Superscript" style={{ ...btnStyle, color: editor.isActive('superscript') ? '#630DE3' : '#18181B', background: editor.isActive('superscript') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('superscript') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('superscript') ? '#F3EEFF' : 'transparent'; }}>
+              <button type="button" onClick={() => { editor.chain().focus().toggleSuperscript().run(); close(); }} title="Superscript" style={{ ...btnStyle, color: editor.isActive('superscript') ? CE_TB.brand : CE_TB.text, background: editor.isActive('superscript') ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('superscript') ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('superscript') ? CE_TB.activeBg : 'transparent'; }}>
                 <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>x<sup style={{ fontSize: 9 }}>2</sup></span>
               </button>
-              <button type="button" onClick={() => { editor.chain().focus().toggleSubscript().run(); close(); }} title="Subscript" style={{ ...btnStyle, color: editor.isActive('subscript') ? '#630DE3' : '#18181B', background: editor.isActive('subscript') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('subscript') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('subscript') ? '#F3EEFF' : 'transparent'; }}>
+              <button type="button" onClick={() => { editor.chain().focus().toggleSubscript().run(); close(); }} title="Subscript" style={{ ...btnStyle, color: editor.isActive('subscript') ? CE_TB.brand : CE_TB.text, background: editor.isActive('subscript') ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('subscript') ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('subscript') ? CE_TB.activeBg : 'transparent'; }}>
                 <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>x<sub style={{ fontSize: 9 }}>2</sub></span>
               </button>
             </>
@@ -379,13 +401,13 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
         >
           {(close) => (
             <>
-              <button type="button" onClick={() => { editor.chain().focus().toggleBulletList().run(); close(); }} title="Bullet list" style={{ ...btnStyle, color: editor.isActive('bulletList') ? '#630DE3' : '#18181B', background: editor.isActive('bulletList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : 'transparent'; }}>
+              <button type="button" onClick={() => { editor.chain().focus().toggleBulletList().run(); close(); }} title="Bullet list" style={{ ...btnStyle, color: editor.isActive('bulletList') ? CE_TB.brand : CE_TB.text, background: editor.isActive('bulletList') ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? CE_TB.activeBg : 'transparent'; }}>
                 <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M80 64a8 8 0 0 1 8-8h128a8 8 0 0 1 0 16H88a8 8 0 0 1-8-8m136 56H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16m0 64H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16M44 116a12 12 0 1 0 0-24a12 12 0 0 0 0 24m0 64a12 12 0 1 0 0-24a12 12 0 0 0 0 24" /></svg>
               </button>
-              <button type="button" onClick={() => { editor.chain().focus().toggleOrderedList().run(); close(); }} title="Ordered list" style={{ ...btnStyle, color: editor.isActive('orderedList') ? '#630DE3' : '#18181B', background: editor.isActive('orderedList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : 'transparent'; }}>
+              <button type="button" onClick={() => { editor.chain().focus().toggleOrderedList().run(); close(); }} title="Ordered list" style={{ ...btnStyle, color: editor.isActive('orderedList') ? CE_TB.brand : CE_TB.text, background: editor.isActive('orderedList') ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? CE_TB.activeBg : 'transparent'; }}>
                 <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M224 128a8 8 0 0 1-8 8H104a8 8 0 0 1 0-16h112a8 8 0 0 1 8 8M104 72h112a8 8 0 0 0 0-16H104a8 8 0 0 0 0 16m112 112H104a8 8 0 0 0 0 16h112a8 8 0 0 0 0-16M43.58 55.16L48 52.94V104a8 8 0 0 0 16 0V40a8 8 0 0 0-11.58-7.16l-16 8a8 8 0 0 0 7.16 14.32m36.19 101.56a23.73 23.73 0 0 0-9.6-15.95a24.86 24.86 0 0 0-34.11 4.7a23.6 23.6 0 0 0-3.57 6.46a8 8 0 1 0 15 5.47a7.8 7.8 0 0 1 1.18-2.13a8.76 8.76 0 0 1 12-1.59a7.9 7.9 0 0 1 3.26 5.32a7.64 7.64 0 0 1-1.57 5.78a1 1 0 0 0-.08.11l-28.69 38.32A8 8 0 0 0 40 216h32a8 8 0 0 0 0-16H56l19.08-25.53a23.47 23.47 0 0 0 4.69-17.75" /></svg>
               </button>
-              <button type="button" onClick={() => { editor.chain().focus().toggleTaskList().run(); close(); }} title="Checklist" style={{ ...btnStyle, color: editor.isActive('taskList') ? '#630DE3' : '#18181B', background: editor.isActive('taskList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('taskList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('taskList') ? '#F3EEFF' : 'transparent'; }}>
+              <button type="button" onClick={() => { editor.chain().focus().toggleTaskList().run(); close(); }} title="Checklist" style={{ ...btnStyle, color: editor.isActive('taskList') ? CE_TB.brand : CE_TB.text, background: editor.isActive('taskList') ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('taskList') ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('taskList') ? CE_TB.activeBg : 'transparent'; }}>
                 <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 6h10M11 12h10M11 18h10M3 6l1.5 1.5L7 5M3 13l1.5 1.5L7 12" /></svg>
               </button>
             </>
@@ -409,7 +431,7 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
               {(close) => aligns.map((a) => {
                 const active = editor.isActive({ textAlign: a.key }) || (a.key === 'left' && !editor.isActive({ textAlign: 'center' }) && !editor.isActive({ textAlign: 'right' }));
                 return (
-                  <button key={a.key} type="button" onClick={() => { editor.chain().focus().setTextAlign(a.key).run(); close(); }} title={a.title} style={{ ...btnStyle, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}>
+                  <button key={a.key} type="button" onClick={() => { editor.chain().focus().setTextAlign(a.key).run(); close(); }} title={a.title} style={{ ...btnStyle, color: active ? CE_TB.brand : CE_TB.text, background: active ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = active ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = active ? CE_TB.activeBg : 'transparent'; }}>
                     <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d={a.d} /></svg>
                   </button>
                 );
@@ -421,7 +443,7 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
         <Sep />
 
         {/* Link */}
-        <button type="button" onClick={openLinkModal} title="Insert link" style={{ ...btnStyle, color: editor.isActive('link') ? '#630DE3' : '#18181B', background: editor.isActive('link') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('link') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('link') ? '#F3EEFF' : 'transparent'; }}>
+        <button type="button" onClick={openLinkModal} title="Insert link" style={{ ...btnStyle, color: editor.isActive('link') ? CE_TB.brand : CE_TB.text, background: editor.isActive('link') ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('link') ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('link') ? CE_TB.activeBg : 'transparent'; }}>
           <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M165.66 90.34a8 8 0 0 1 0 11.32l-64 64a8 8 0 0 1-11.32-11.32l64-64a8 8 0 0 1 11.32 0M215.6 40.4a56 56 0 0 0-79.2 0l-30.06 30.05a8 8 0 0 0 11.32 11.32l30.06-30a40 40 0 0 1 56.57 56.56l-30.07 30.06a8 8 0 0 0 11.31 11.32l30.07-30.11a56 56 0 0 0 0-79.2m-77.26 133.82l-30.06 30.06a40 40 0 1 1-56.56-56.57l30.05-30.05a8 8 0 0 0-11.32-11.32L40.4 136.4a56 56 0 0 0 79.2 79.2l30.06-30.07a8 8 0 0 0-11.32-11.31" /></svg>
         </button>
         {/* Image — file upload as block */}
@@ -441,12 +463,12 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
             e.target.value = '';
           }}
         />
-        <button type="button" data-tour="media" onClick={() => fileInputRef.current?.click()} title="Insert image" style={btnStyle} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <button type="button" data-tour="media" onClick={() => fileInputRef.current?.click()} title="Insert image" style={btnStyle} onMouseEnter={(e) => { e.currentTarget.style.background = CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m2.25 15.75l5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5m10.5-11.25h.008v.008h-.008zm.375 0a.375.375 0 1 1-.75 0a.375.375 0 0 1 .75 0" /></svg>
         </button>
 
         {/* Insert table (3×3 with a header row) */}
-        <button type="button" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert table" style={btnStyle} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <button type="button" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert table" style={btnStyle} onMouseEnter={(e) => { e.currentTarget.style.background = CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><rect x={3} y={4} width={18} height={16} rx={1.5} /><path d="M3 9.5h18M3 15h18M9 4.5v15M15 4.5v15" /></svg>
         </button>
 
@@ -458,11 +480,11 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
         >
           {(close) => (
             <>
-              <button type="button" title="Embed YouTube video" onClick={() => { const url = window.prompt('YouTube video URL'); if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run(); close(); }} style={{ ...btnStyle, width: 'auto', padding: '0 10px', gap: 8, fontSize: 13, fontFamily: 'var(--font-family-primary)' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+              <button type="button" title="Embed YouTube video" onClick={() => { const url = window.prompt('YouTube video URL'); if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run(); close(); }} style={{ ...btnStyle, width: 'auto', padding: '0 10px', gap: 8, fontSize: 13, fontFamily: 'var(--font-family-primary)' }} onMouseEnter={(e) => { e.currentTarget.style.background = CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                 <svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor"><path d="M21.58 7.19c-.23-.86-.91-1.54-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42c-.86.23-1.54.91-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81c.23.86.91 1.54 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42c.86-.23 1.54-.91 1.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81M10 15V9l5 3z" /></svg>
                 <span>YouTube</span>
               </button>
-              <button type="button" title="Collapsible details / FAQ" onClick={() => { editor.chain().focus().setDetails().run(); close(); }} style={{ ...btnStyle, width: 'auto', padding: '0 10px', gap: 8, fontSize: 13, fontFamily: 'var(--font-family-primary)' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+              <button type="button" title="Collapsible details / FAQ" onClick={() => { editor.chain().focus().setDetails().run(); close(); }} style={{ ...btnStyle, width: 'auto', padding: '0 10px', gap: 8, fontSize: 13, fontFamily: 'var(--font-family-primary)' }} onMouseEnter={(e) => { e.currentTarget.style.background = CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                 <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
                 <span>Details / FAQ</span>
               </button>
@@ -489,8 +511,8 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
               {(close) => TEXT_COLORS.map((c) => {
                 const active = c.value ? editor.isActive('textStyle', { color: c.value }) : !editor.getAttributes('textStyle').color;
                 return (
-                  <button key={c.label} type="button" title={c.label} onClick={() => { if (c.value) editor.chain().focus().setColor(c.value).run(); else editor.chain().focus().unsetColor().run(); close(); }} style={{ ...btnStyle, background: active ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}>
-                    <span style={{ width: 16, height: 16, borderRadius: '50%', background: c.swatch, border: c.value ? 'none' : '1.5px solid #D4D4D8', display: 'inline-block' }} />
+                  <button key={c.label} type="button" title={c.label} onClick={() => { if (c.value) editor.chain().focus().setColor(c.value).run(); else editor.chain().focus().unsetColor().run(); close(); }} style={{ ...btnStyle, background: active ? CE_TB.activeBg : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = active ? CE_TB.activeBg : CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = active ? CE_TB.activeBg : 'transparent'; }}>
+                    <span style={{ width: 16, height: 16, borderRadius: '50%', background: c.swatch, border: c.value ? 'none' : '1.5px solid var(--koala-border-secondary)', display: 'inline-block' }} />
                   </button>
                 );
               })}
@@ -529,13 +551,13 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       width: '100%', padding: '4px 8px', borderRadius: 6,
-                      background: active ? '#F3EEFF' : 'transparent',
+                      background: active ? CE_TB.activeBg : 'transparent',
                       border: 'none', cursor: 'pointer',
-                      color: '#18181B', fontSize: 13,
+                      color: CE_TB.text, fontSize: 13,
                       fontFamily: 'var(--font-family-primary)',
                       transition: 'background-color 120ms ease',
                     }}
-                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#F4F4F5'; }}
+                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = CE_TB.hover; }}
                     onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                   >
                     <HighlightSwatchIcon color={item.swatch} />
@@ -543,7 +565,7 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
                   </button>
                 );
               })}
-              <div style={{ height: 1, background: '#F4F4F5', margin: '2px 0' }} />
+              <div style={{ height: 1, background: CE_TB.hover, margin: '2px 0' }} />
               <button
                 type="button"
                 onMouseDown={(e) => {
@@ -555,11 +577,11 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
                   display: 'flex', alignItems: 'center', gap: 8,
                   width: '100%', padding: '4px 8px', borderRadius: 6,
                   background: 'transparent', border: 'none', cursor: 'pointer',
-                  color: '#FF6F77', fontSize: 13,
+                  color: CE_TB.danger, fontSize: 13,
                   fontFamily: 'var(--font-family-primary)',
                   transition: 'background-color 120ms ease',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#FEF2F2'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = CE_TB.dangerBg; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <svg viewBox="0 0 256 256" width={16} height={16} style={{ display: 'inline-block', flexShrink: 0 }}>
@@ -574,11 +596,11 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
         <Sep />
 
         {/* Undo */}
-        <button type="button" onClick={() => editor.chain().focus().undo().run()} title="Undo" disabled={!canUndo} style={{ ...btnStyle, opacity: canUndo ? 1 : 0.4, cursor: canUndo ? 'pointer' : 'not-allowed' }} onMouseEnter={(e) => { if (canUndo) e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <button type="button" onClick={() => editor.chain().focus().undo().run()} title="Undo" disabled={!canUndo} style={{ ...btnStyle, opacity: canUndo ? 1 : 0.4, cursor: canUndo ? 'pointer' : 'not-allowed' }} onMouseEnter={(e) => { if (canUndo) e.currentTarget.style.background = CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
         </button>
         {/* Redo */}
-        <button type="button" onClick={() => editor.chain().focus().redo().run()} title="Redo" disabled={!canRedo} style={{ ...btnStyle, opacity: canRedo ? 1 : 0.4, cursor: canRedo ? 'pointer' : 'not-allowed' }} onMouseEnter={(e) => { if (canRedo) e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <button type="button" onClick={() => editor.chain().focus().redo().run()} title="Redo" disabled={!canRedo} style={{ ...btnStyle, opacity: canRedo ? 1 : 0.4, cursor: canRedo ? 'pointer' : 'not-allowed' }} onMouseEnter={(e) => { if (canRedo) e.currentTarget.style.background = CE_TB.hover; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m15 15l6-6m0 0l-6-6m6 6H9a6 6 0 0 0 0 12h3" /></svg>
         </button>
 
@@ -598,16 +620,16 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
                 key={key}
                 type="button"
                 onClick={() => { run(); close(); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '7px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: on ? '#F3EEFF' : 'transparent', color: on ? '#630DE3' : '#18181B', fontSize: 13, fontFamily: 'var(--font-family-primary)', textAlign: 'left', transition: 'background-color 120ms ease' }}
-                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = '#F4F4F5'; }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '7px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: on ? CE_TB.activeBg : 'transparent', color: on ? CE_TB.brand : CE_TB.text, fontSize: 13, fontFamily: 'var(--font-family-primary)', textAlign: 'left', transition: 'background-color 120ms ease' }}
+                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = CE_TB.hover; }}
                 onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
               >
-                <span style={{ flexShrink: 0, color: on ? '#630DE3' : '#52525C', display: 'inline-flex' }}>{icon}</span>
+                <span style={{ flexShrink: 0, color: on ? CE_TB.brand : CE_TB.muted, display: 'inline-flex' }}>{icon}</span>
                 <span style={{ flex: 1 }}>{label}</span>
-                {shortcut && <span style={{ color: '#9f9fa9', fontSize: 12, flexShrink: 0 }}>{shortcut}</span>}
+                {shortcut && <span style={{ color: CE_TB.muted, fontSize: 12, flexShrink: 0 }}>{shortcut}</span>}
               </button>
             );
-            const divider = <div style={{ height: 1, background: '#F4F4F5', margin: '4px 6px' }} />;
+            const divider = <div style={{ height: 1, background: CE_TB.hover, margin: '4px 6px' }} />;
             return (
               <>
                 {row('code', <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="m8 9l-3 3l3 3m8-6l3 3l-3 3" /></svg>, 'Toggle code block', () => editor.chain().focus().toggleCodeBlock().run(), 'Ctrl+Alt+C', editor.isActive('codeBlock'))}
@@ -633,15 +655,15 @@ const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuB
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           gap: 6, height: 28, padding: '0 6px 0 2px', borderRadius: 4,
-          background: '#fff', color: '#18181B',
+          background: CE_TB.surface, color: CE_TB.text,
           border: 'none', cursor: 'pointer',
           fontSize: 13, fontWeight: 500,
           fontFamily: 'var(--font-family-primary)',
           transition: 'background-color 200ms ease-in-out',
           flexShrink: 0,
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = CE_TB.hover; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = CE_TB.surface; }}
       >
         <IconRanksmile size={20} />
         Ask Smily
@@ -686,7 +708,7 @@ const FeaturedImageBlock = ({
     <div style={{ marginBottom: 24 }}>
       {!collapsed && (
         <div
-          style={{ background: '#fff', borderBottom: '1px solid #e4e4e7', padding: '16px 16px 12px', marginBottom: 8 }}
+          style={{ background: 'var(--koala-bg-primary)', borderBottom: '1px solid var(--koala-border-primary)', padding: '16px 16px 12px', marginBottom: 8 }}
         >
           {/* Image container with hover overlay */}
           <div
@@ -697,7 +719,7 @@ const FeaturedImageBlock = ({
             <img
               src={imageUrl}
               alt={altText || 'Featured image'}
-              style={{ width: '100%', height: 'auto', maxHeight: 420, objectFit: 'contain', objectPosition: 'center', display: 'block', background: '#f3f4f0' }}
+              style={{ width: '100%', height: 'auto', maxHeight: 420, objectFit: 'contain', objectPosition: 'center', display: 'block', background: 'var(--koala-bg-secondary)' }}
             />
 
             {/* Dark overlay */}
@@ -780,7 +802,7 @@ const FeaturedImageBlock = ({
 
           {/* Alt text row */}
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 500, color: '#9f9fa9', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>Alt</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--koala-text-disabled)', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>Alt</span>
             <input
               type="text"
               value={altText}
@@ -788,7 +810,7 @@ const FeaturedImageBlock = ({
               placeholder="Alt text…"
               style={{
                 flex: 1, border: 'none', outline: 'none', fontSize: 12,
-                color: '#374151', fontFamily: 'var(--font-family-primary)',
+                color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)',
                 background: 'transparent',
               }}
             />
@@ -801,7 +823,7 @@ const FeaturedImageBlock = ({
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#6b7280', background: '#fff', border: '1px solid #e4e4e7', borderRadius: 20, padding: '3px 12px', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--koala-text-tertiary)', background: 'var(--koala-bg-primary)', border: '1px solid var(--koala-border-primary)', borderRadius: 20, padding: '3px 12px', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}
         >
           Featured Image {collapsed ? <ArrowDown01Icon size={12} /> : <ArrowUp01Icon size={12} />}
         </button>
@@ -826,35 +848,35 @@ const TitleDescriptionBlock = ({
   const descLen = metaDescription?.length || 0;
 
   return (
-    <div style={{ marginBottom: 32, background: '#fff' }}>
+    <div style={{ marginBottom: 32, background: 'var(--koala-bg-primary)' }}>
       {expanded && (
         <>
           {/* Title row */}
-          <div style={{ paddingBottom: 12, borderBottom: '1px solid #e4e4e7' }}>
+          <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--koala-border-primary)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', fontFamily: 'var(--font-family-primary)' }}>Title</span>
-              <span style={{ fontSize: 12, color: titleLen > titleMax ? '#ef4444' : '#9ca3af', fontFamily: 'var(--font-family-primary)' }}>{titleLen}/{titleMax}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)' }}>Title</span>
+              <span style={{ fontSize: 12, color: titleLen > titleMax ? 'var(--koala-status-danger)' : 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)' }}>{titleLen}/{titleMax}</span>
             </div>
             <textarea
               value={metaTitle || ''}
               onChange={(e) => onMetaTitleChange?.(e.target.value)}
               rows={2}
               placeholder="Enter meta title..."
-              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', fontSize: 15, color: '#111827', lineHeight: 1.5, fontFamily: 'var(--font-family-primary)', background: 'transparent' }}
+              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', fontSize: 15, color: 'var(--koala-text-primary)', lineHeight: 1.5, fontFamily: 'var(--font-family-primary)', background: 'transparent' }}
             />
           </div>
           {/* Description row */}
-          <div style={{ paddingTop: 12, paddingBottom: 12, borderBottom: '1px solid #e4e4e7' }}>
+          <div style={{ paddingTop: 12, paddingBottom: 12, borderBottom: '1px solid var(--koala-border-primary)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af', fontFamily: 'var(--font-family-primary)' }}>Description</span>
-              <span style={{ fontSize: 12, color: descLen > descMax ? '#ef4444' : '#9ca3af', fontFamily: 'var(--font-family-primary)' }}>{descLen}/{descMax}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)' }}>Description</span>
+              <span style={{ fontSize: 12, color: descLen > descMax ? 'var(--koala-status-danger)' : 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)' }}>{descLen}/{descMax}</span>
             </div>
             <textarea
               value={metaDescription || ''}
               onChange={(e) => onMetaDescriptionChange?.(e.target.value)}
               rows={3}
               placeholder="Enter meta description..."
-              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', fontSize: 14, color: '#374151', lineHeight: 1.6, fontFamily: 'var(--font-family-primary)', background: 'transparent' }}
+              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', fontSize: 14, color: 'var(--koala-text-secondary)', lineHeight: 1.6, fontFamily: 'var(--font-family-primary)', background: 'transparent' }}
             />
           </div>
         </>
@@ -864,7 +886,7 @@ const TitleDescriptionBlock = ({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#6b7280', background: '#fff', border: '1px solid #e4e4e7', borderRadius: 20, padding: '3px 12px', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--koala-text-tertiary)', background: 'var(--koala-bg-primary)', border: '1px solid var(--koala-border-primary)', borderRadius: 20, padding: '3px 12px', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}
         >
           Title and Description {expanded ? <ArrowUp01Icon size={12} /> : <ArrowDown01Icon size={12} />}
         </button>
@@ -1031,20 +1053,20 @@ const GenerateWritingOverlay = ({ message, pct }: { message: string; pct: number
 );
 
 const CtaButton = ({ icon, children, onClick, busy }: { icon: React.ReactNode; children: React.ReactNode; onClick: () => void; busy?: boolean }) => (
-  <button type="button" onClick={onClick} disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 16px', borderRadius: 8, border: '1px solid #E4E4E7', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 500, fontFamily: CTA_FONT, cursor: busy ? 'default' : 'pointer', boxShadow: '0px 1px 2px rgba(24,26,34,0.06)', opacity: busy ? 0.7 : 1, transition: 'background 150ms ease, border-color 150ms ease' }} onMouseEnter={(e) => { if (!busy) { e.currentTarget.style.background = '#F4F4F5'; e.currentTarget.style.borderColor = '#D4D4D8'; } }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E4E4E7'; }}>
-    {busy ? <span style={{ width: 16, height: 16, border: '2px solid #D4D4D8', borderTopColor: '#52525C', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> : <span style={{ display: 'inline-flex', color: '#52525C' }}>{icon}</span>}
+  <button type="button" onClick={onClick} disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 16px', borderRadius: 8, border: '1px solid var(--koala-border-primary)', background: 'var(--koala-bg-primary)', color: 'var(--koala-text-primary)', fontSize: 14, fontWeight: 500, fontFamily: CTA_FONT, cursor: busy ? 'default' : 'pointer', boxShadow: '0px 1px 2px rgba(24,26,34,0.06)', opacity: busy ? 0.7 : 1, transition: 'background 150ms ease, border-color 150ms ease' }} onMouseEnter={(e) => { if (!busy) { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; e.currentTarget.style.borderColor = 'var(--koala-border-secondary)'; } }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-primary)'; e.currentTarget.style.borderColor = 'var(--koala-border-primary)'; }}>
+    {busy ? <span style={{ width: 16, height: 16, border: '2px solid var(--koala-border-secondary)', borderTopColor: 'var(--koala-text-secondary)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> : <span style={{ display: 'inline-flex', color: 'var(--koala-text-secondary)' }}>{icon}</span>}
     {children}
   </button>
 );
 
 const ImportBar = ({ url, onChange, onImport, onClose, busy }: { url: string; onChange: (v: string) => void; onImport: () => void; onClose: () => void; busy?: boolean }) => (
-  <form onSubmit={(e) => { e.preventDefault(); onImport(); }} style={{ display: 'flex', width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, background: '#F4F4F5', borderRadius: 8, padding: '6px 8px' }}>
-    <span style={{ display: 'inline-flex', alignSelf: 'center', color: '#52525C', marginLeft: 6 }}><IconGlobe /></span>
-    <input value={url} onChange={(e) => onChange(e.target.value)} placeholder="https://example.com/article.html" aria-label="URL" autoFocus style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, color: '#18181B', fontFamily: CTA_FONT }} />
-    <button type="submit" disabled={busy || !url.trim()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 6, background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: CTA_FONT, padding: '6px 12px', cursor: busy || !url.trim() ? 'default' : 'pointer', opacity: busy || !url.trim() ? 0.6 : 1 }}>
+  <form onSubmit={(e) => { e.preventDefault(); onImport(); }} style={{ display: 'flex', width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, background: 'var(--koala-bg-secondary)', borderRadius: 8, padding: '6px 8px' }}>
+    <span style={{ display: 'inline-flex', alignSelf: 'center', color: 'var(--koala-text-secondary)', marginLeft: 6 }}><IconGlobe /></span>
+    <input value={url} onChange={(e) => onChange(e.target.value)} placeholder="https://example.com/article.html" aria-label="URL" autoFocus style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: CTA_FONT }} />
+    <button type="submit" disabled={busy || !url.trim()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 6, background: 'var(--koala-bg-inverse)', color: 'var(--koala-bg-primary)', fontSize: 13, fontWeight: 600, fontFamily: CTA_FONT, padding: '6px 12px', cursor: busy || !url.trim() ? 'default' : 'pointer', opacity: busy || !url.trim() ? 0.6 : 1 }}>
       <span>Import</span>
     </button>
-    <button type="button" onClick={onClose} aria-label="Clear value" style={{ display: 'inline-flex', alignItems: 'center', border: 'none', background: 'transparent', color: '#52525C', cursor: 'pointer', padding: 4, marginRight: 4 }}><IconClose /></button>
+    <button type="button" onClick={onClose} aria-label="Clear value" style={{ display: 'inline-flex', alignItems: 'center', border: 'none', background: 'transparent', color: 'var(--koala-text-secondary)', cursor: 'pointer', padding: 4, marginRight: 4 }}><IconClose /></button>
   </form>
 );
 
@@ -1823,7 +1845,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             const artRes = await fetch(`/api/articles/${articleId}`);
             const artData = await artRes.json() as { article?: { content?: string | null } };
             const html = artData.article?.content || '';
-            if (html.replace(/<[^>]+>/g, ' ').trim()) {
+            if (isUsableArticleHtml(html)) {
               editor.commands.setContent(html, { emitUpdate: true });
               toast.success('Article loaded');
               return;
@@ -1932,7 +1954,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     }, [scoreData?.terms, highlightTerms, editor]);
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', background: '#fff', position: 'relative' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', background: 'var(--koala-bg-primary)', position: 'relative' }}>
         <style>{`
           .art-editor-scroll {
             flex: 1;
@@ -1943,7 +1965,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                a chunky gutter at the bottom. Article text wraps and images are
                capped at 100%, so nothing legitimate needs horizontal scroll. */
             overflow-x: hidden;
-            background: #fff;
+            background: var(--koala-bg-primary);
           }
           .art-editor-scroll .ProseMirror {
             outline: none;
@@ -1974,45 +1996,45 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror > ul::after,
           .art-editor-scroll .ProseMirror > ol::after {
             position: absolute; left: -36px; top: 5px;
-            font-size: 11px; font-weight: 400; color: #d1d5db;
+            font-size: 11px; font-weight: 400; color: var(--koala-text-disabled);
             font-family: var(--font-family-primary); line-height: 1;
             pointer-events: none; user-select: none;
           }
           /* Typography */
-          .art-editor-scroll .ProseMirror h1 { font-size: 35px; font-weight: 800; color: #09090b; margin: 36px 0 16px; line-height: 1.15; letter-spacing: -0.02em; }
-          .art-editor-scroll .ProseMirror h2 { font-size: 24px; font-weight: 700; color: #111827; margin: 28px 0 12px; line-height: 1.25; }
-          .art-editor-scroll .ProseMirror h3 { font-size: 19px; font-weight: 600; color: #1f2937; margin: 22px 0 10px; line-height: 1.35; }
-          .art-editor-scroll .ProseMirror p { margin: 10px 0; line-height: 1.75; color: #374151; font-size: 14px; }
-          .art-editor-scroll .ProseMirror ul, .art-editor-scroll .ProseMirror ol { padding-left: 24px; margin: 10px 0; color: #374151; }
-          .art-editor-scroll .ProseMirror li { margin: 5px 0; line-height: 1.65; color: #374151; font-size: 14px; }
-          .art-editor-scroll .ProseMirror strong { font-weight: 700; color: #111827; }
+          .art-editor-scroll .ProseMirror h1 { font-size: 35px; font-weight: 800; color: var(--koala-text-primary); margin: 36px 0 16px; line-height: 1.15; letter-spacing: -0.02em; }
+          .art-editor-scroll .ProseMirror h2 { font-size: 24px; font-weight: 700; color: var(--koala-text-primary); margin: 28px 0 12px; line-height: 1.25; }
+          .art-editor-scroll .ProseMirror h3 { font-size: 19px; font-weight: 600; color: var(--koala-text-primary); margin: 22px 0 10px; line-height: 1.35; }
+          .art-editor-scroll .ProseMirror p { margin: 10px 0; line-height: 1.75; color: var(--koala-text-secondary); font-size: 14px; }
+          .art-editor-scroll .ProseMirror ul, .art-editor-scroll .ProseMirror ol { padding-left: 24px; margin: 10px 0; color: var(--koala-text-secondary); }
+          .art-editor-scroll .ProseMirror li { margin: 5px 0; line-height: 1.65; color: var(--koala-text-secondary); font-size: 14px; }
+          .art-editor-scroll .ProseMirror strong { font-weight: 700; color: var(--koala-text-primary); }
           .art-editor-scroll .ProseMirror em { font-style: italic; }
-          .art-editor-scroll .ProseMirror blockquote { border-left: 3px solid #e5e7eb; padding: 10px 18px; margin: 16px 0; color: #6b7280; font-style: italic; background: #f9fafb; border-radius: 0 6px 6px 0; }
+          .art-editor-scroll .ProseMirror blockquote { border-left: 3px solid var(--koala-border-primary); padding: 10px 18px; margin: 16px 0; color: var(--koala-text-tertiary); font-style: italic; background: var(--koala-bg-tertiary); border-radius: 0 6px 6px 0; }
           .art-editor-scroll .ProseMirror img { max-width: 100%; height: auto; }
           .art-editor-scroll .ProseMirror img.article-image.ProseMirror-selectednode { outline: 3px solid var(--color-surface-raised); }
           /* New-line placeholder — Ranksmile-style: inherits the paragraph's size/line-height/spacing
              (so a fresh line sits as a normal paragraph and nothing shifts when you start typing),
              soft gray, NOT italic. */
-          .art-editor-scroll .ProseMirror p.is-empty::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+          .art-editor-scroll .ProseMirror p.is-empty::before { color: var(--koala-text-disabled); content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
           /* Empty-title placeholder ("Untitled") — inherits the h1 size/weight, soft gray, not italic. */
-          .art-editor-scroll .ProseMirror h1.is-empty::before { color: #a1a1aa; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+          .art-editor-scroll .ProseMirror h1.is-empty::before { color: var(--koala-text-disabled); content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
           /* On a blank article the ProseMirror min-height / bottom padding collapse so the "get started" CTA sits right under the first line. */
           .art-editor-scroll[data-empty="true"] .ProseMirror { min-height: 0; padding-bottom: 8px; }
           /* Hide the paragraph placeholder while importing so only "Importing your content…" shows. */
           .art-editor-scroll[data-importing="true"] .ProseMirror p.is-empty::before { content: none; }
-          .art-editor-scroll .ProseMirror a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
-          .art-editor-scroll .ProseMirror a:hover { color: #1d4ed8; }
-          .art-editor-scroll[data-review="true"] .ProseMirror a { background: #f29964; color: #fff !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
-          .art-editor-scroll[data-review="true"] .ProseMirror a:hover { background: #6d28d9; color: #fff !important; }
-          .art-editor-scroll .ProseMirror hr { border: none; border-top: 1px solid #e4e4e7; margin: 22px 0; }
-          .art-editor-scroll .ProseMirror .comment-mark { text-decoration: underline; text-decoration-color: #F29964; text-decoration-thickness: 2px; text-underline-offset: 2px; background: rgba(242,153,100,0.08); cursor: pointer; }
+          .art-editor-scroll .ProseMirror a { color: var(--koala-text-link); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+          .art-editor-scroll .ProseMirror a:hover { color: var(--koala-text-link); }
+          .art-editor-scroll[data-review="true"] .ProseMirror a { background: var(--koala-text-brand); color: var(--koala-text-on-brand) !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
+          .art-editor-scroll[data-review="true"] .ProseMirror a:hover { background: var(--koala-text-brand); color: var(--koala-text-on-brand) !important; }
+          .art-editor-scroll .ProseMirror hr { border: none; border-top: 1px solid var(--koala-border-primary); margin: 22px 0; }
+          .art-editor-scroll .ProseMirror .comment-mark { text-decoration: underline; text-decoration-color: var(--koala-text-brand); text-decoration-thickness: 2px; text-underline-offset: 2px; background: rgba(242,153,100,0.08); cursor: pointer; }
           .art-editor-scroll .ProseMirror .comment-mark-draft { background: rgba(242,153,100,0.22); }
           .art-editor-scroll .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 18px 0; overflow: hidden; font-size: 14px; }
-          .art-editor-scroll .ProseMirror table td, .art-editor-scroll .ProseMirror table th { border: 1px solid #e4e4e7; padding: 8px 12px; vertical-align: top; box-sizing: border-box; position: relative; min-width: 1em; color: #374151; line-height: 1.6; }
-          .art-editor-scroll .ProseMirror table th { background: #f4f4f5; font-weight: 600; color: #18181b; text-align: left; }
+          .art-editor-scroll .ProseMirror table td, .art-editor-scroll .ProseMirror table th { border: 1px solid var(--koala-border-primary); padding: 8px 12px; vertical-align: top; box-sizing: border-box; position: relative; min-width: 1em; color: var(--koala-text-secondary); line-height: 1.6; }
+          .art-editor-scroll .ProseMirror table th { background: var(--koala-bg-secondary); font-weight: 600; color: var(--koala-text-primary); text-align: left; }
           .art-editor-scroll .ProseMirror table p { margin: 0; }
           .art-editor-scroll .ProseMirror table .selectedCell:after { content: ''; position: absolute; inset: 0; background: rgba(242,153,100,0.08); pointer-events: none; z-index: 2; }
-          .art-editor-scroll .ProseMirror table .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: #f29964; pointer-events: none; }
+          .art-editor-scroll .ProseMirror table .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: var(--koala-text-brand); pointer-events: none; }
           .art-editor-scroll .ProseMirror.resize-cursor { cursor: col-resize; }
           /* Task list (checklist) */
           .art-editor-scroll .ProseMirror ul[data-type="taskList"] { list-style: none; padding: 0; margin: 10px 0; }
@@ -2020,16 +2042,16 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 3px; user-select: none; }
           .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > div { flex: 1 1 auto; min-width: 0; }
           .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > div > p { margin: 0; }
-          .art-editor-scroll .ProseMirror ul[data-type="taskList"] input[type="checkbox"] { width: 15px; height: 15px; accent-color: #f29964; cursor: pointer; }
-          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { color: #9f9fa9; text-decoration: line-through; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--koala-text-brand); cursor: pointer; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { color: var(--koala-text-disabled); text-decoration: line-through; }
           /* Details / FAQ (collapsible) */
-          .art-editor-scroll .ProseMirror [data-type="details"] { display: flex; gap: 8px; border: 1px solid #e4e4e7; border-radius: 8px; padding: 10px 12px; margin: 14px 0; background: #fafafa; }
+          .art-editor-scroll .ProseMirror [data-type="details"] { display: flex; gap: 8px; border: 1px solid var(--koala-border-primary); border-radius: 8px; padding: 10px 12px; margin: 14px 0; background: var(--koala-bg-tertiary); }
           .art-editor-scroll .ProseMirror [data-type="details"] > button { flex: 0 0 auto; width: 16px; height: 22px; background: transparent; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
-          .art-editor-scroll .ProseMirror [data-type="details"] > button::before { content: '▶'; color: #f29964; font-size: 10px; transition: transform 0.15s ease; }
+          .art-editor-scroll .ProseMirror [data-type="details"] > button::before { content: '▶'; color: var(--koala-text-brand); font-size: 10px; transition: transform 0.15s ease; }
           .art-editor-scroll .ProseMirror [data-type="details"].is-open > button::before { transform: rotate(90deg); }
           .art-editor-scroll .ProseMirror [data-type="details"] > div { flex: 1 1 auto; min-width: 0; }
-          .art-editor-scroll .ProseMirror [data-type="detailsSummary"] { font-weight: 600; color: #18181b; }
-          .art-editor-scroll .ProseMirror [data-type="detailsContent"] > p { margin: 6px 0 0; color: #374151; }
+          .art-editor-scroll .ProseMirror [data-type="detailsSummary"] { font-weight: 600; color: var(--koala-text-primary); }
+          .art-editor-scroll .ProseMirror [data-type="detailsContent"] > p { margin: 6px 0 0; color: var(--koala-text-secondary); }
           /* YouTube embed */
           .art-editor-scroll .ProseMirror div[data-youtube-video] { margin: 16px 0; }
           .art-editor-scroll .ProseMirror div[data-youtube-video] iframe { max-width: 100%; width: 100%; aspect-ratio: 16 / 9; height: auto; border: none; border-radius: 8px; }
@@ -2083,13 +2105,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 />
               </div>
             ) : null}
-            <EditorContent editor={editor} style={{ background: '#fff' }} />
+            <EditorContent editor={editor} style={{ background: 'var(--koala-bg-primary)' }} />
             {editor && docEmpty && !readOnly && !generateBusy && (
               <div style={{ maxWidth: 860, margin: '0 auto', padding: '4px 64px 80px', fontFamily: CTA_FONT }}>
                 {importBusy ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 320 }}>
                     <AnalysisCircuitBoard variant="import" importing width={280} height={168} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#52525C', fontSize: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--koala-text-secondary)', fontSize: 14 }}>
                       Importing your content…
                     </div>
                   </div>
@@ -2097,7 +2119,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                   <ImportBar url={importUrl} onChange={setImportUrl} onImport={handleImportUrl} onClose={() => { setCtaMode('menu'); setImportUrl(''); }} busy={importBusy} />
                 ) : (
                   <>
-                    <div style={{ fontSize: 14, color: '#9ca3af', margin: '0 0 12px' }}>or get started with</div>
+                    <div style={{ fontSize: 14, color: 'var(--koala-text-disabled)', margin: '0 0 12px' }}>or get started with</div>
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <CtaButton icon={<IconGlobe />} onClick={() => setCtaMode('import')}>Import content from URL</CtaButton>
                       <CtaButton icon={<IconOutline />} onClick={handleInsertOutline} busy={outlineBusy}>Insert Outline</CtaButton>
@@ -2167,7 +2189,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               <div style={{ position: 'absolute', top: commentDraft.top, left: commentDraft.left, transform: 'translateX(-50%)', zIndex: 250, width: 320, maxWidth: 'min(74vw, 360px)' }}>
                 <CommentComposer
                   authorName={commentAuthor?.name || 'You'}
-                  authorColor={commentAuthor?.color || '#F29964'}
+                  authorColor={commentAuthor?.color || 'var(--koala-text-brand)'}
                   authorAvatar={commentAuthor?.avatar}
                   autoFocus
                   onSubmit={async (draft: DraftComment) => {
@@ -2183,8 +2205,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             )}
           </div>
           {/* Progressive-blur fades at the top & bottom scroll edges (à la Skiper41). */}
-          <ProgressiveBlur position="top" backgroundColor="#fff" height={72} blurAmount={4} />
-          <ProgressiveBlur position="bottom" backgroundColor="#fff" height={80} blurAmount={4} />
+          <ProgressiveBlur position="top" backgroundColor="var(--koala-bg-primary)" height={72} blurAmount={4} />
+          <ProgressiveBlur position="bottom" backgroundColor="var(--koala-bg-primary)" height={80} blurAmount={4} />
         </div>
         {generateBusy && (
           <GenerateWritingOverlay message={generateMsg} pct={generatePct} />

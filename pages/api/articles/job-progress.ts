@@ -30,15 +30,17 @@ async function canReadJob(userId: string | null, job: JobAccessRow): Promise<boo
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await ensureArticlesTables();
 
-  // Auth: internal token (Python sidecar) or session cookie (browser polling).
+  // Auth: internal token (Python sidecar), cron secret (eval suite), or session cookie.
   const internalToken = req.headers['x-internal-token'];
   const isInternal = Boolean(
     process.env.INTERNAL_PIPELINE_TOKEN
       && typeof internalToken === 'string'
       && internalToken === process.env.INTERNAL_PIPELINE_TOKEN,
   );
+  const { assertCronSecret } = await import('../../../lib/cronAuth');
+  const isCron = assertCronSecret(req);
 
-  if (!isInternal) {
+  if (!isInternal && !isCron) {
     const authorized = await verifyUser(req, res);
     if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   }
@@ -57,7 +59,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     try {
-      if (!isInternal && articleId) {
+      if (!isInternal && !isCron && articleId) {
         const userId = await getCurrentUserId(req, res);
         if (!(await assertArticleAccess(userId, Number(articleId)))) {
           return res.status(403).json({ error: 'Access denied.' });
@@ -86,7 +88,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!rows.length) return res.status(404).json({ error: 'job not found' });
 
       const j = rows[0];
-      if (!isInternal) {
+      if (!isInternal && !isCron) {
         const userId = await getCurrentUserId(req, res);
         if (!(await canReadJob(userId, j))) {
           return res.status(403).json({ error: 'Access denied.' });
@@ -172,7 +174,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const articleIdSql = await getArticleIdSql();
         if (status === 'done') {
           const html = (result?.article_html as string) || '';
-          const wordCount = html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+          const { isUsableArticleHtml, stripHtmlToPlain } = await import('../../../lib/articleHtmlUsable');
+          // Never wipe a draft with an empty LLM response — fail the job so the UI can retry.
+          if (!isUsableArticleHtml(html)) {
+            await db.query(
+              `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+              { replacements: ['empty_article_html', jobId] },
+            );
+            await db.query(
+              `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+              { replacements: [genArticleId] },
+            );
+            return res.status(422).json({ error: 'empty_article_html' });
+          }
+          const plain = stripHtmlToPlain(html);
+          const wordCount = plain.split(/\s+/).filter(Boolean).length;
           const { reconcilePostGenerateArticle } = await import('../../../lib/reconcilePostGenerateArticle');
           const sidecarScore = (result?.score_data && typeof result.score_data === 'object')
             ? result.score_data as import('../../../lib/contentScore').ScoreData

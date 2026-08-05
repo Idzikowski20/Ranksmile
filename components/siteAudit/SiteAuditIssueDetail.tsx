@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  CompactSelect,
   Pagination,
   SearchBar,
   SegmentedControl,
@@ -485,15 +486,12 @@ export default function SiteAuditIssueDetail({ data, onBack }: Props) {
         />
         <label className="koala-issue-page-size">
           Rows
-          <select
+          <CompactSelect
+            size="sm"
             value={pageSize}
-            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-            className="koala-issue-page-size-select"
-          >
-            {[10, 25, 50, 100].map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
+            options={[10, 25, 50, 100].map((n) => ({ value: n, label: String(n) }))}
+            onChange={(opt) => { setPageSize(Number(opt.value)); setPage(1); }}
+          />
         </label>
       </div>
     </>

@@ -19,6 +19,7 @@ function makeBillingState(overrides: Partial<OrgBillingState> = {}): OrgBillingS
     billingPeriod,
     subscriptionStatus: 'active',
     trialEndsAt: null,
+    trialConsumedAt: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
     lastCheckoutStartedAt: null,
@@ -61,6 +62,7 @@ describe('frontend route allowlist', () => {
 
   it('allows billing subscription settings', () => {
     expect(isFrontendRouteAllowedDuringPaymentLock('/settings/billing_subscription')).toBe(true);
+    expect(isFrontendRouteAllowedDuringPaymentLock('/settings/billing_details')).toBe(true);
   });
 
   it('allows billing confirmation routes', () => {
@@ -82,12 +84,16 @@ describe('API route allowlist', () => {
     expect(isApiRouteAllowedDuringPaymentLock('GET:/api/billing/plan-summary')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('GET:/api/billing/invoices')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('GET:/api/billing/confirmation')).toBe(true);
+    expect(isApiRouteAllowedDuringPaymentLock('GET:/api/billing/snapshot')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/checkout-session')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/upgrade-subscription')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/portal')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/upgrade-preview')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/cancel')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/update-customer')).toBe(true);
+    expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/audit-beacon')).toBe(true);
+    expect(isApiRouteAllowedDuringPaymentLock('DELETE:/api/billing/payment-methods/pm_123')).toBe(true);
+    expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/payment-methods/pm_123/default')).toBe(true);
   });
 
   it('allows essential session endpoints used by guards', () => {

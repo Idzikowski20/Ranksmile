@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import useOnKey from '../../hooks/useOnKey';
+import { Checkbox } from '../koala/core';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import { useWorkspaceMembers, useSetWorkspaceMembers, WorkspaceMemberRow } from '../../services/workspaceMembers';
 
@@ -14,23 +15,6 @@ const Avatar = ({ initial }: { initial: string }) => (
    <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(248,68,22,0.12)', color: 'var(--koala-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
       {initial}
    </div>
-);
-
-const Checkbox = ({ checked, disabled, onChange }: { checked: boolean; disabled?: boolean; onChange?: () => void }) => (
-   <button
-      type="button"
-      role="checkbox"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={disabled ? undefined : onChange}
-      style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: checked ? '1px solid var(--koala-brand)' : '1px solid var(--koala-border-primary)', background: checked ? 'var(--koala-brand)' : 'var(--koala-bg-primary)', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'background 120ms ease, border-color 120ms ease' }}
-   >
-      {checked && (
-         <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M5 10.5l3 3 7-7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-         </svg>
-      )}
-   </button>
 );
 
 const ManageMembersModal = ({ wsId, open, onClose }: { wsId: number; open: boolean; onClose: () => void }) => {
@@ -120,7 +104,7 @@ const ManageMembersModal = ({ wsId, open, onClose }: { wsId: number; open: boole
                      <thead>
                         <tr style={{ borderBottom: '1px solid var(--koala-border-primary)' }}>
                            <th style={{ ...thStyle, textAlign: 'center' }}>
-                              <Checkbox checked={allToggleableChecked} disabled={toggleableRows.length === 0} onChange={toggleAll} />
+                              <Checkbox checked={allToggleableChecked} disabled={toggleableRows.length === 0} onChange={() => toggleAll()} size="sm" />
                            </th>
                            <th style={thStyle}>Member</th>
                            <th style={thStyle}>Role</th>
@@ -136,7 +120,7 @@ const ManageMembersModal = ({ wsId, open, onClose }: { wsId: number; open: boole
                            return (
                               <tr key={m.id} style={{ borderTop: '1px solid var(--koala-border-primary)' }}>
                                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                    <Checkbox checked={isChecked(m)} disabled={manager} onChange={() => toggleRow(m.id)} />
+                                    <Checkbox checked={isChecked(m)} disabled={manager} onChange={() => toggleRow(m.id)} size="sm" />
                                  </td>
                                  <td style={{ padding: '12px 16px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { Badge, Gauge } from '../koala/core';
+import { Badge, Checkbox, Gauge, HoverTooltip } from '../koala/core';
+import { Icon } from '../koala/icons/Icon';
 import GeneratingStage from './GeneratingStage';
 
 interface Article {
@@ -76,6 +76,64 @@ const articleStatusBadge = (status: string) => {
   }
   return null;
 };
+
+/** Figma Button Group on card hover (nodes 11679:484899 / 11679:484919). */
+function ArticleCardHoverActions({
+  articleId,
+  onDelete,
+  onSelect,
+}: {
+  articleId: number | string;
+  onDelete: (id: number | string) => void | Promise<void>;
+  onSelect: (id: number | string) => void;
+}) {
+  return (
+    <div
+      className="article-card-hover-actions"
+      role="toolbar"
+      aria-label="Article actions"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <Link href={`/articles/${articleId}`}>
+        <a
+          className="article-card-hover-btn"
+          aria-label="Edit"
+          title="Edit"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Icon name="PencilSimple" size={20} />
+        </a>
+      </Link>
+      <HoverTooltip label="Delete">
+        <button
+          type="button"
+          className="article-card-hover-btn"
+          aria-label="Delete"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onDelete(articleId);
+          }}
+        >
+          <Icon name="Trash" size={20} />
+        </button>
+      </HoverTooltip>
+      <button
+        type="button"
+        className="article-card-hover-btn"
+        aria-label="Select"
+        title="Select"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onSelect(articleId);
+        }}
+      >
+        <Icon name="CheckCircle" size={20} />
+      </button>
+    </div>
+  );
+}
 
 const EmptyCardArrow = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -153,34 +211,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
   }, [hasMore, onLoadMore, isLoadingMore]);
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<number | string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [mounted, setMounted] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const menuBtnRef = useRef<HTMLButtonElement>(null);
-
-  // Close menu on outside click / scroll / resize (fixed portal follows neither)
-  useEffect(() => {
-    if (openMenuId === null) return;
-    const onPointer = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (menuRef.current?.contains(t) || menuBtnRef.current?.contains(t)) return;
-      setOpenMenuId(null);
-      setMenuPos(null);
-    };
-    const close = () => {
-      setOpenMenuId(null);
-      setMenuPos(null);
-    };
-    document.addEventListener('mousedown', onPointer);
-    window.addEventListener('scroll', close, true);
-    window.addEventListener('resize', close);
-    return () => {
-      document.removeEventListener('mousedown', onPointer);
-      window.removeEventListener('scroll', close, true);
-      window.removeEventListener('resize', close);
-    };
-  }, [openMenuId]);
 
   useEffect(() => {
     setMounted(true);
@@ -323,7 +354,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
   }
 
   return (
-    <div className="article-list" style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', minWidth: 0, maxWidth: '100%' }}>
+    <div className="article-list" style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', minWidth: 0, maxWidth: '100%', paddingTop: 20 }}>
       {articles.map((article) => {
         const time = mounted ? timeAgo(article.updated_at || article.created_at) : null;
         // Content score from dedicated column (synced with editor via PUT /api/articles/[id])
@@ -436,314 +467,71 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
           );
         }
 
+        const statusBadge = articleStatusBadge(article.status);
+        const wordsLabel = article.word_count != null ? `${article.word_count.toLocaleString()} words` : '—';
+
         return (
           <div
             key={article.id}
-            className={`article-list-card article-list-item group/selectable-item select-none gap-md relative flex h-[133px] w-full items-center justify-between border border-solid hover:shadow-sm cursor-pointer pr-lg border-gray-20 rounded-xl${selectedIds.has(article.id) ? ' is-selected' : ''}`}
-            style={{
-              height: 133,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              border: '1px solid var(--koala-border-primary)',
-              borderRadius: 12,
-              paddingRight: 24,
-              gap: 12,
-              userSelect: 'none',
-              cursor: 'pointer',
-              minWidth: 0,
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-              boxShadow: 'none',
-              transition: 'border-color 0.2s, box-shadow 0.12s ease',
-            }}
-            onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = '0px 6px 10px 0px rgba(24,26,34,0.06)'; el.style.borderColor = 'var(--koala-border-secondary)'; }}
-            onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.borderColor = 'var(--koala-border-primary)'; }}
+            className={`article-list-card article-list-item group/selectable-item select-none relative flex w-full cursor-pointer${selectedIds.has(article.id) ? ' is-selected' : ''}`}
           >
+            <ArticleCardHoverActions
+              articleId={article.id}
+              onDelete={onDelete}
+              onSelect={toggleSelect}
+            />
+
             {/* Left: Score gauge / Checkbox */}
-            <div
-              className="article-list-card-gauge group flex h-full items-center justify-between border-r hover:border-gray-10 border-transparent pl-lg pr-md"
-              style={{
-                display: 'flex',
-                height: '100%',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderRight: '1px solid transparent',
-                paddingLeft: 24,
-                paddingRight: 12,
-                flexShrink: 0,
-                transition: 'border-color 0.15s',
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderRightColor = 'var(--koala-bg-secondary)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderRightColor = 'transparent'; }}
-            >
+            <div className="article-list-card-gauge">
               <div style={{ width: 48 }}>
-                {/* Score gauge — visible by default, hidden on group hover */}
                 <div className="article-gauge-default">
                   <Gauge score={score ?? 0} size="sm" />
                 </div>
-                {/* Checkbox — hidden by default, shown on group hover */}
                 <div className="article-gauge-checkbox hidden">
-                  <label
-                    style={{
-                      fontSize: 16,
-                      lineHeight: '24px',
-                      color: 'var(--koala-text-primary)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      position: 'relative',
-                    }}
-                  >
-                    <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(article.id)}
-                        onChange={() => toggleSelect(article.id)}
-                        style={{
-                          margin: 0,
-                          width: 20,
-                          height: 20,
-                          borderRadius: 4,
-                          border: '1px solid var(--koala-border-secondary)',
-                          background: selectedIds.has(article.id) ? 'var(--koala-text-brand)' : 'var(--koala-bg-primary)',
-                          boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                          cursor: 'pointer',
-                          appearance: 'none',
-                          WebkitAppearance: 'none',
-                          flexShrink: 0,
-                          display: 'grid',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'background 0.25s, border-color 0.25s',
-                        }}
-                      />
-                      {selectedIds.has(article.id) && (
-                        <svg
-                          viewBox="0 0 20 20"
-                          width="16"
-                          height="16"
-                          style={{
-                            position: 'absolute',
-                            left: '50%',
-                            top: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            color: 'var(--koala-text-on-brand)',
-                            pointerEvents: 'none',
-                          }}
-                        >
-                          <path fill="currentColor" fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </span>
-                  </label>
+                  <Checkbox
+                    checked={selectedIds.has(article.id)}
+                    onChange={() => toggleSelect(article.id)}
+                    size="md"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Main content */}
-            <div className="article-list-card-main" style={{ position: 'relative', display: 'flex', height: '100%', flex: 1, alignItems: 'center', justifyContent: 'space-between', minWidth: 0, overflow: 'hidden' }}>
+            {/* Main content — Figma article card (10218:665879) */}
+            <div className="article-list-card-main">
               <Link href={`/articles/${article.id}`}>
                 <a style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
               </Link>
 
-              <div className="article-list-card-cols" style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minWidth: 0, paddingRight: 4 }}>
-                {/* Top row: title + meta */}
-                <div className="article-list-card-top" style={{ display: 'flex', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
-                      <span
-                        className="article-list-card-title"
-                        style={{
-                          fontSize: 14,
-                          lineHeight: '20px',
-                          fontWeight: 600,
-                          maxWidth: '100%',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          color: 'var(--koala-text-primary)',
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                      >
-                        {article.title || '(untitled)'}
-                      </span>
-                    </div>
-                    {article.target_keyword && (
-                      <span
-                        className="article-list-card-keyword"
-                        style={{
-                          fontSize: 14,
-                          lineHeight: '20px',
-                          maxWidth: '100%',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          color: 'var(--koala-text-primary)',
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                      >
-                        {article.target_keyword}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Right meta: status check, avatar, menu */}
-                  <div className="article-list-card-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, zIndex: 1, flexShrink: 0 }}>
-                    {articleStatusBadge(article.status)}
-
-                    {/* Avatar */}
-                    <div
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: '50%',
-                        background: 'var(--koala-bg-secondary)',
-                        color: 'var(--koala-text-primary)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 11,
-                        fontWeight: 500,
-                        textTransform: 'uppercase',
-                        fontFamily: 'var(--font-family-primary)',
-                        flexShrink: 0,
-                        position: 'relative',
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                        b
-                      </span>
-                    </div>
-
-                    {/* Triple-dot menu — dropdown portaled to body (cards/panels clip overflow) */}
-                    <div style={{ position: 'relative' }}>
-                      <button
-                        type="button"
-                        ref={openMenuId === article.id ? menuBtnRef : undefined}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (openMenuId === article.id) {
-                            setOpenMenuId(null);
-                            setMenuPos(null);
-                            return;
-                          }
-                          const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                          const menuW = 220;
-                          setMenuPos({
-                            top: r.bottom + 4,
-                            left: Math.max(8, Math.min(r.right - menuW, window.innerWidth - menuW - 8)),
-                          });
-                          setOpenMenuId(article.id);
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: 'var(--koala-text-primary)',
-                          padding: 0,
-                          transition: 'opacity 0.15s',
-                        }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.7'; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-                      >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                          <path d="M12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M19 13C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11C18.4477 11 18 11.4477 18 12C18 12.5523 18.4477 13 19 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M5 13C5.55228 13 6 12.5523 6 12C6 11.4477 5.55228 11 5 11C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
-
-                      {openMenuId === article.id && menuPos && mounted && createPortal(
-                        <div
-                          ref={menuRef}
-                          style={{
-                            position: 'fixed',
-                            top: menuPos.top,
-                            left: menuPos.left,
-                            zIndex: 10000,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            padding: 6,
-                            borderRadius: 8,
-                            background: 'var(--koala-bg-primary)',
-                            boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.06), 0px 2px 8px 0px rgba(24,26,34,0.03), 0px 1px 2px 0px rgba(24,26,34,0.06)',
-                            border: '1px solid var(--koala-bg-secondary)',
-                            minWidth: 220,
-                            animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)',
-                            transformOrigin: '100% 0',
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div
-                            role="button"
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 8,
-                              padding: '8px 12px', borderRadius: 6,
-                              fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)',
-                              cursor: 'pointer', transition: 'background 0.12s',
-                              fontFamily: 'var(--font-family-primary)',
-                            }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--koala-bg-secondary)'; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
-                            onClick={() => { setOpenMenuId(null); setMenuPos(null); }}
-                          >
-                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}>
-                              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186m0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185" />
-                            </svg>
-                            Get shareable link
-                          </div>
-
-                          <div style={{ height: 1, background: 'var(--koala-bg-secondary)', margin: '4px -6px' }} />
-
-                          <div
-                            role="button"
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 8,
-                              padding: '8px 12px', borderRadius: 6,
-                              fontSize: 14, fontWeight: 500, color: 'var(--koala-status-danger)',
-                              cursor: 'pointer', transition: 'background 0.12s',
-                              fontFamily: 'var(--font-family-primary)',
-                            }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--koala-status-danger-bg)'; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
-                            onClick={() => { setOpenMenuId(null); setMenuPos(null); onDelete(article.id); }}
-                          >
-                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}>
-                              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0" />
-                            </svg>
-                            Delete
-                          </div>
-                        </div>,
-                        document.body,
-                      )}
-                    </div>
-                  </div>
+              <div className="article-list-card-cols">
+                <div className="article-list-card-copy">
+                  <span className="article-list-card-title">
+                    {article.title || '(untitled)'}
+                  </span>
+                  {article.target_keyword ? (
+                    <span className="article-list-card-keyword">
+                      {article.target_keyword}
+                    </span>
+                  ) : null}
                 </div>
 
-                {/* Bottom row: country + timestamp */}
-                <div className="article-list-card-bottom" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, minWidth: 0 }}>
-                  {/* Left tags */}
-                  {/* Right: country + timestamp */}
-                  <div className="article-list-card-loc" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, minWidth: 0 }}>
-                    {/* Country */}
-                    <div className="article-list-card-country" style={{ display: 'flex', alignItems: 'center', fontSize: 13, lineHeight: '16px', color: 'var(--koala-text-primary)', gap: 2, fontFamily: 'var(--font-family-primary)' }}>
-                      <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0 }}>
-                        <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
-                      </svg>
-                      <span>Poland</span>
-                    </div>
-
-                    {/* Timestamp */}
-                    <div style={{ fontSize: 13, lineHeight: '16px', color: 'var(--koala-text-primary)', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }} suppressHydrationWarning>
+                <div className="article-list-card-meta">
+                  <div className="article-list-card-meta-item">
+                    <span className="article-list-card-meta-label">Words:</span>
+                    <span className="article-list-card-meta-value">{wordsLabel}</span>
+                  </div>
+                  <div className="article-list-card-meta-item" suppressHydrationWarning>
+                    <span className="article-list-card-meta-label">Updated:</span>
+                    <span className="article-list-card-meta-value">
                       <span className="article-time-relative">{time?.relative || ''}</span>
                       <span className="article-time-full hidden">{time?.full || ''}</span>
-                    </div>
+                    </span>
                   </div>
+                  {statusBadge ? (
+                    <div className="article-list-card-meta-badge" style={{ position: 'relative', zIndex: 1 }}>
+                      {statusBadge}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

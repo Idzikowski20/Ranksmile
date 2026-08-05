@@ -77,12 +77,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       prorationDate: parsed.data.prorationDate,
     });
 
-    await syncSubscriptionToOrg(orgId, subscription, {
-      slug: targetPlan.slug as PlanSlug,
-      billing,
-    });
-
     if (result.status === 'requires_payment') {
+      // Keep current plan until invoice payment succeeds (webhook syncs target).
+      await syncSubscriptionToOrg(orgId, subscription);
       return res.status(200).json({
         status: 'requires_payment',
         clientSecret: result.clientSecret,
@@ -91,6 +88,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         publishableKey,
       });
     }
+
+    await syncSubscriptionToOrg(orgId, subscription, {
+      slug: targetPlan.slug as PlanSlug,
+      billing,
+    });
 
     return res.status(200).json({
       status: 'upgraded',

@@ -5,10 +5,11 @@ import type { OptimizeAdjustment } from '../../lib/optimizeStats';
 import type { StepFocus, EditMode } from '../../lib/optimizationPlanner';
 import { sectionResultLabel } from '../../lib/optimizeMessaging';
 import { useEntrance } from '../../lib/motion/useEntrance';
+import { TrendDeltaBadge } from '../koala/product/helpers/TrendDeltaBadge';
 
 const F = 'var(--font-family-primary)';
-const SUCCESS = '#1AB25E';
-const ERROR = '#FF6F77';
+const SUCCESS = 'var(--koala-status-success)';
+const ERROR = 'var(--koala-status-danger)';
 const TEXT = '#18181B';
 const MUTED = '#52525C';
 
@@ -53,23 +54,11 @@ const StatCard = ({ label, value, color }: { label: string; value: string; color
 /* ── +N / −N words chip ───────────────────────────────────────────────── */
 const WordChip = ({ delta }: { delta: number }) => {
   if (delta === 0) {
-    return <span style={{ fontSize: 12, fontWeight: 600, color: MUTED, fontFamily: F, fontVariantNumeric: 'tabular-nums' }}>—</span>;
+    return <TrendDeltaBadge delta="=" flatLabel="—" positive={null} size="sm" variant="outline" />;
   }
   const up = delta > 0;
-  return (
-    <span
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0,
-        fontSize: 12, fontWeight: 600, lineHeight: '16px', fontFamily: F,
-        fontVariantNumeric: 'tabular-nums', color: up ? SUCCESS : ERROR,
-      }}
-    >
-      <svg viewBox="0 0 8 6" width={8} height={6} aria-hidden="true" style={{ transform: up ? 'none' : 'rotate(180deg)' }}>
-        <path d="M4 0L8 6H0Z" fill="currentColor" />
-      </svg>
-      {up ? '+' : '−'}{Math.abs(delta)} words
-    </span>
-  );
+  const text = `${up ? '+' : '−'}${Math.abs(delta)} words`;
+  return <TrendDeltaBadge delta={text} positive={up} size="sm" variant="outline" />;
 };
 
 /** Color a signed delta: success when positive, error when negative, muted at zero. */

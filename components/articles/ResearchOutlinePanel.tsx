@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { computeSerpInsights, classifyHeadingStatus, isPaaCovered } from '../../lib/researchUtils';
 import { getErrorMessage } from '../../lib/errors';
-import { Gauge } from '../koala/core';
+import { Gauge, Badge } from '../koala/core';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 export interface CompetitorOutline {
@@ -133,8 +133,8 @@ const ResearchOutlinePanel: React.FC<Props> = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: '#fff',
-        color: '#09090b',
+        background: 'var(--koala-bg-primary)',
+        color: 'var(--koala-text-primary)',
         fontFamily: 'var(--font-family-primary)',
         overflow: 'hidden',
       }}
@@ -147,7 +147,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
           justifyContent: 'space-between',
           padding: '16px',
           flexShrink: 0,
-          borderBottom: '1px solid #f4f4f5',
+          borderBottom: '1px solid var(--koala-bg-secondary)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -157,29 +157,29 @@ const ResearchOutlinePanel: React.FC<Props> = ({
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 28, height: 28, borderRadius: 6, border: 'none',
-              background: '#f4f4f5', color: '#52525c', cursor: 'pointer', padding: 0, flexShrink: 0,
+              background: 'var(--koala-bg-secondary)', color: 'var(--koala-text-secondary)', cursor: 'pointer', padding: 0, flexShrink: 0,
               transition: 'background 0.15s, color 0.15s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; e.currentTarget.style.color = '#09090b'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; e.currentTarget.style.color = '#52525c'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-border-primary)'; e.currentTarget.style.color = 'var(--koala-text-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}
           >
             <svg viewBox="0 0 20 20" width={20} height={20} fill="currentColor">
               <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0" clipRule="evenodd" />
             </svg>
           </button>
-          <span style={{ fontSize: 15, fontWeight: 600, color: '#09090b' }}>SERP Research</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>SERP Research</span>
         </div>
         <div style={{ width: 32, height: 32, flexShrink: 0 }} />
       </div>
 
       {/* ── Tab switcher ──────────────────────────────────────────── */}
-      <div style={{ padding: '12px 16px 0', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10, background: '#fff' }}>
-        <div role="group" style={{ display: 'flex', background: '#f4f4f5', borderRadius: 10, padding: 3, position: 'relative' }}>
+      <div style={{ padding: '12px 16px 0', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10, background: 'var(--koala-bg-primary)' }}>
+        <div role="group" style={{ display: 'flex', background: 'var(--koala-bg-secondary)', borderRadius: 10, padding: 3, position: 'relative' }}>
           <div
             style={{
               position: 'absolute', top: 3, left: tab === 'competitors' ? 3 : 'calc(50% + 3px)',
               width: 'calc(50% - 6px)', height: 28,
-              background: '#fff', borderRadius: 8,
+              background: 'var(--koala-bg-primary)', borderRadius: 8,
               transition: 'left 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
               boxShadow: '0px 4px 4px 0px rgba(24,26,34,0.02), 0px 1px 2px 0px rgba(24,26,34,0.08)',
             }}
@@ -195,7 +195,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                 border: 'none', background: 'transparent', borderRadius: 8,
                 cursor: 'pointer', fontSize: 13, fontWeight: 500,
                 fontFamily: 'var(--font-family-primary)',
-                color: tab === t ? '#09090b' : '#52525c',
+                color: tab === t ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)',
                 position: 'relative', zIndex: 1, transition: 'color 0.25s',
               }}
             >
@@ -219,8 +219,8 @@ const ResearchOutlinePanel: React.FC<Props> = ({
           <>
             {/* ── AI-Generated Outline section ──────────────────── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b' }}>Generated Outline</span>
-              <span style={{ fontSize: 14, color: '#52525c' }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Generated Outline</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>
                 Based on median structure from <strong>{competitors.length}</strong> competitor{competitors.length !== 1 ? 's' : ''}
               </span>
 
@@ -231,18 +231,18 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                 style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   padding: '6px 14px', borderRadius: 6, border: 'none',
-                  background: 'transparent', color: '#52525c', fontSize: 14, fontWeight: 600,
+                  background: 'transparent', color: 'var(--koala-text-secondary)', fontSize: 14, fontWeight: 600,
                   cursor: isGenerating || loading || competitors.length === 0 ? 'not-allowed' : 'pointer',
                   fontFamily: 'var(--font-family-primary)',
-                  boxShadow: 'inset 0 0 0 1px #e4e4e7',
+                  boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)',
                   opacity: isGenerating || loading || competitors.length === 0 ? 0.5 : 1,
                   transition: 'background 0.15s, color 0.15s',
                 }}
-                onMouseEnter={(e) => { if (!isGenerating) { e.currentTarget.style.background = '#f4f4f5'; e.currentTarget.style.color = '#09090b'; } }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#52525c'; }}
+                onMouseEnter={(e) => { if (!isGenerating) { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; e.currentTarget.style.color = 'var(--koala-text-primary)'; } }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}
               >
                 {isGenerating ? (
-                  <div style={{ width: 14, height: 14, border: '2px solid #e4e4e7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                  <div style={{ width: 14, height: 14, border: '2px solid var(--koala-border-primary)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
                 ) : (
                   <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor">
                     <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5" clipRule="evenodd" />
@@ -253,14 +253,14 @@ const ResearchOutlinePanel: React.FC<Props> = ({
 
               {/* Generate error */}
               {generateError && (
-                <span style={{ fontSize: 12, color: '#ef4444' }}>{generateError}</span>
+                <span style={{ fontSize: 12, color: 'var(--koala-status-danger)' }}>{generateError}</span>
               )}
 
               {/* Generated outline preview */}
               {generatedHeadings && generatedHeadings.length > 0 && (
                 <div
                   style={{
-                    border: '1px solid #e4e4e7',
+                    border: '1px solid var(--koala-border-primary)',
                     borderRadius: 8,
                     overflow: 'hidden',
                     marginTop: 4,
@@ -270,25 +270,25 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                   <div
                     style={{
                       padding: '10px 12px 8px',
-                      background: '#f3f4f0',
-                      borderBottom: '1px solid #f4f4f5',
+                      background: 'var(--koala-bg-secondary)',
+                      borderBottom: '1px solid var(--koala-bg-secondary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                     }}
                   >
-                    <span style={{ fontSize: 12, fontWeight: 600, color: '#52525c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--koala-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       Generated outline · {generatedHeadings.length} headings
                       {usedBrand && (
-                        <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, color: '#F84416', textTransform: 'none', letterSpacing: 0 }}>
+                        <Badge appearance="brand" size="sm" style={{ marginLeft: 8, textTransform: 'none', letterSpacing: 0 }}>
                           Brand voice
-                        </span>
+                        </Badge>
                       )}
                     </span>
                     <button
                       type="button"
                       onClick={() => setGeneratedHeadings(null)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9f9fa9', padding: 2, lineHeight: 1 }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--koala-text-disabled)', padding: 2, lineHeight: 1 }}
                     >
                       <svg viewBox="0 0 20 20" width={14} height={14} fill="currentColor">
                         <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -297,13 +297,13 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                     {currentHeadings.length > 0 && (
                       <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
                         {[
-                          { color: '#1ab25e', label: 'Covered' },
+                          { color: 'var(--koala-status-success)', label: 'Covered' },
                           { color: '#efa00d', label: 'Expand' },
-                          { color: '#ef4444', label: 'Missing' },
+                          { color: 'var(--koala-status-danger)', label: 'Missing' },
                         ].map(({ color, label }) => (
                           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 11, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
+                            <span style={{ fontSize: 11, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
                           </div>
                         ))}
                       </div>
@@ -314,8 +314,8 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                   <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 220, overflowY: 'auto' }} className="styled-scrollbar">
                     {generatedHeadings.map((h, i) => {
                       const status = classifyHeadingStatus(h, currentHeadings);
-                      const dotColor = status === 'covered' ? '#1ab25e' : status === 'expand' ? '#efa00d' : '#ef4444';
-                      const textColor = status === 'covered' ? '#9f9fa9' : status === 'expand' ? '#3f3f47' : '#09090b';
+                      const dotColor = status === 'covered' ? 'var(--koala-status-success)' : status === 'expand' ? '#efa00d' : 'var(--koala-status-danger)';
+                      const textColor = status === 'covered' ? 'var(--koala-text-disabled)' : status === 'expand' ? 'var(--koala-text-secondary)' : 'var(--koala-text-primary)';
                       const fontWeight = status === 'missing' && h.level <= 2 ? 700 : h.level <= 2 ? 500 : 400;
                       return (
                         <div
@@ -326,7 +326,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                             fontSize: 13, lineHeight: '18px',
                           }}
                         >
-                          <span style={{ color: '#9f9fa9', fontSize: 11, minWidth: 16, paddingTop: 3, flexShrink: 0 }}>
+                          <span style={{ color: 'var(--koala-text-disabled)', fontSize: 11, minWidth: 16, paddingTop: 3, flexShrink: 0 }}>
                             {headingTag(h.level)}
                           </span>
                           <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0, marginTop: 6 }} />
@@ -337,7 +337,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                   </div>
 
                   {/* Insert button */}
-                  <div style={{ padding: '8px 12px', borderTop: '1px solid #f4f4f5', display: 'flex', gap: 6 }}>
+                  <div style={{ padding: '8px 12px', borderTop: '1px solid var(--koala-bg-secondary)', display: 'flex', gap: 6 }}>
                     <button
                       type="button"
                       onClick={() => {
@@ -346,13 +346,13 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                       }}
                       style={{
                         flex: 1, padding: '6px 12px', borderRadius: 6, border: 'none',
-                        background: '#18181b', color: '#fff',
+                        background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)',
                         fontSize: 13, fontWeight: 600, cursor: 'pointer',
                         fontFamily: 'var(--font-family-primary)',
                         transition: 'background 0.15s',
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = '#27272a'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-text-primary)'; }}
                     >
                       Insert into article
                     </button>
@@ -361,12 +361,12 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                       onClick={handleGenerateOutline}
                       style={{
                         padding: '6px 10px', borderRadius: 6, border: 'none',
-                        background: 'transparent', color: '#52525c', fontSize: 13, fontWeight: 500,
+                        background: 'transparent', color: 'var(--koala-text-secondary)', fontSize: 13, fontWeight: 500,
                         cursor: 'pointer', fontFamily: 'var(--font-family-primary)',
-                        boxShadow: 'inset 0 0 0 1px #e4e4e7', transition: 'background 0.15s',
+                        boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', transition: 'background 0.15s',
                       }}
                       title="Regenerate"
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
                       <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -386,22 +386,22 @@ const ResearchOutlinePanel: React.FC<Props> = ({
               const hiddenCount = Math.max(0, commonTopics.length - 6);
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b' }}>SERP Insights</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>SERP Insights</span>
 
                   {/* Word count comparison */}
                   <div
                     style={{
                       display: 'flex', alignItems: 'center', gap: 0,
-                      border: '1px solid #f4f4f5', borderRadius: 8, overflow: 'hidden',
+                      border: '1px solid var(--koala-bg-secondary)', borderRadius: 8, overflow: 'hidden',
                     }}
                   >
-                    <div style={{ flex: 1, padding: '10px 14px', borderRight: '1px solid #f4f4f5' }}>
-                      <div style={{ fontSize: 11, fontWeight: 500, color: '#9f9fa9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Avg. competitor</div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: '#09090b' }}>{avgWordCount.toLocaleString()} words</div>
+                    <div style={{ flex: 1, padding: '10px 14px', borderRight: '1px solid var(--koala-bg-secondary)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--koala-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Avg. competitor</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>{avgWordCount.toLocaleString()} words</div>
                     </div>
                     <div style={{ flex: 1, padding: '10px 14px' }}>
-                      <div style={{ fontSize: 11, fontWeight: 500, color: '#9f9fa9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Your article</div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: currentWordCount !== undefined && currentWordCount < avgWordCount * 0.7 ? '#ef4444' : '#09090b' }}>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--koala-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Your article</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: currentWordCount !== undefined && currentWordCount < avgWordCount * 0.7 ? 'var(--koala-status-danger)' : 'var(--koala-text-primary)' }}>
                         {currentWordCount !== undefined ? currentWordCount.toLocaleString() : '—'} words
                       </div>
                     </div>
@@ -410,27 +410,19 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                   {/* Common topics */}
                   {visibleTopics.length > 0 && (
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: '#9f9fa9', marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--koala-text-disabled)', marginBottom: 6 }}>
                         Common topics (≥3/{competitors.length} competitors)
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {visibleTopics.map((topic) => (
-                          <span
-                            key={topic}
-                            style={{
-                              display: 'inline-block', padding: '3px 9px',
-                              borderRadius: 9999, fontSize: 12, fontWeight: 500,
-                              background: '#f4f4f5', color: '#3f3f47',
-                              fontFamily: 'var(--font-family-primary)',
-                            }}
-                          >
+                          <Badge key={topic} appearance="muted" size="md" style={{ borderRadius: 9999, height: 'auto', padding: '3px 9px', fontSize: 12 }}>
                             {topic}
-                          </span>
+                          </Badge>
                         ))}
                         {hiddenCount > 0 && (
-                          <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 9999, fontSize: 12, fontWeight: 500, background: '#f4f4f5', color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>
+                          <Badge appearance="muted" size="md" style={{ borderRadius: 9999, height: 'auto', padding: '3px 9px', fontSize: 12, color: 'var(--koala-text-disabled)' }}>
                             +{hiddenCount} more
-                          </span>
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -439,34 +431,34 @@ const ResearchOutlinePanel: React.FC<Props> = ({
               );
             })()}
 
-            <div style={{ height: 1, background: '#f4f4f5', flexShrink: 0 }} />
+            <div style={{ height: 1, background: 'var(--koala-bg-secondary)', flexShrink: 0 }} />
 
             {/* ── Competitors' Outlines ──────────────────────────── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b' }}>Competitors&rsquo; Outlines</span>
-              <span style={{ fontSize: 14, color: '#52525c', paddingBottom: 4 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Competitors&rsquo; Outlines</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', paddingBottom: 4 }}>
                 Outline examples sourced from your competitors
               </span>
 
               {/* Loading */}
               {loading && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '24px 0', alignItems: 'center' }}>
-                  <div style={{ width: 20, height: 20, border: '2px solid #e4e4e7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                  <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>Analyzing SERP…</span>
+                  <div style={{ width: 20, height: 20, border: '2px solid var(--koala-border-primary)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                  <span style={{ fontSize: 12, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)' }}>Analyzing SERP…</span>
                 </div>
               )}
 
               {/* Error */}
               {error && !loading && (
                 <div style={{ padding: '16px 0', textAlign: 'center' }}>
-                  <span style={{ fontSize: 13, color: '#ef4444', fontFamily: 'var(--font-family-primary)' }}>{error}</span>
+                  <span style={{ fontSize: 13, color: 'var(--koala-status-danger)', fontFamily: 'var(--font-family-primary)' }}>{error}</span>
                 </div>
               )}
 
               {/* Empty */}
               {!loading && !error && competitors.length === 0 && (
                 <div style={{ padding: '16px 0', textAlign: 'center' }}>
-                  <span style={{ fontSize: 13, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>No competitors found. Try a different keyword.</span>
+                  <span style={{ fontSize: 13, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)' }}>No competitors found. Try a different keyword.</span>
                 </div>
               )}
 
@@ -476,20 +468,20 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                 return (
                   <div
                     key={comp.url}
-                    style={{ border: '1px solid #f4f4f5', borderRadius: 8, overflow: 'hidden', transition: 'border-color 0.15s' }}
-                    onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.borderColor = '#d4d4d8'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#f4f4f5'; }}
+                    style={{ border: '1px solid var(--koala-bg-secondary)', borderRadius: 8, overflow: 'hidden', transition: 'border-color 0.15s' }}
+                    onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.borderColor = 'var(--koala-border-secondary)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--koala-bg-secondary)'; }}
                   >
                     <button
                       type="button"
                       onClick={() => setExpandedIdx(isExpanded ? null : idx)}
                       style={{
                         width: '100%', padding: '12px', border: 'none', background: 'transparent',
-                        cursor: 'pointer', color: '#52525c', textAlign: 'left',
+                        cursor: 'pointer', color: 'var(--koala-text-secondary)', textAlign: 'left',
                         fontFamily: 'var(--font-family-primary)', transition: 'color 0.15s',
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = '#09090b'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#52525c'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-primary)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, overflow: 'hidden', flex: 1, minWidth: 0 }}>
@@ -501,7 +493,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                           />
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, textAlign: 'left', overflow: 'hidden', flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
                                 {comp.title}
                               </span>
                               {competitors.length > 0 && (
@@ -513,13 +505,13 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              style={{ fontSize: 13, color: '#F84416', textDecoration: 'underline', textUnderlineOffset: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              style={{ fontSize: 13, color: 'var(--koala-text-brand)', textDecoration: 'underline', textUnderlineOffset: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                             >
                               {comp.url.length > 50 ? comp.url.slice(0, 50) + '…' : comp.url}
                             </a>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, background: '#f3f4f0', flexShrink: 0, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, background: 'var(--koala-bg-secondary)', flexShrink: 0, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                           <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
                             <path d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                           </svg>
@@ -529,13 +521,13 @@ const ResearchOutlinePanel: React.FC<Props> = ({
 
                     {isExpanded && (
                       <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <div style={{ height: 1, background: '#f4f4f5', marginBottom: 4 }} />
+                        <div style={{ height: 1, background: 'var(--koala-bg-secondary)', marginBottom: 4 }} />
                         {comp.headings.slice(0, 40).map((h, hi) => (
                           <div
                             key={hi}
-                            style={{ display: 'flex', alignItems: 'flex-start', gap: 8, paddingLeft: headingIndent(h.level), fontSize: 14, lineHeight: '20px', color: h.level === 1 ? '#09090b' : '#52525c', fontWeight: h.level === 1 ? 500 : 400 }}
+                            style={{ display: 'flex', alignItems: 'flex-start', gap: 8, paddingLeft: headingIndent(h.level), fontSize: 14, lineHeight: '20px', color: h.level === 1 ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)', fontWeight: h.level === 1 ? 500 : 400 }}
                           >
-                            <span style={{ color: '#9f9fa9', fontSize: 13, minWidth: 14, textAlign: 'right', paddingTop: 2, flexShrink: 0 }}>
+                            <span style={{ color: 'var(--koala-text-disabled)', fontSize: 13, minWidth: 14, textAlign: 'right', paddingTop: 2, flexShrink: 0 }}>
                               {headingTag(h.level)}
                             </span>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
@@ -552,14 +544,14 @@ const ResearchOutlinePanel: React.FC<Props> = ({
 
         {tab === 'questions' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b' }}>People Also Ask</span>
-            <span style={{ fontSize: 13, color: '#52525c' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>People Also Ask</span>
+            <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>
               Coverage based on your current headings
             </span>
 
             {paaQuestions.length === 0 ? (
               <div style={{ padding: '24px 0', textAlign: 'center' }}>
-                <span style={{ fontSize: 13, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>
+                <span style={{ fontSize: 13, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)' }}>
                   No PAA questions found — run deep analysis to fetch them.
                 </span>
               </div>
@@ -571,7 +563,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                     <div
                       key={i}
                       style={{
-                        border: '1px solid #f4f4f5',
+                        border: '1px solid var(--koala-bg-secondary)',
                         borderRadius: 8,
                         padding: '10px 12px',
                         display: 'flex',
@@ -581,16 +573,16 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                         <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>❓</span>
-                        <span style={{ fontSize: 13, color: '#3f3f47', lineHeight: '18px', fontWeight: 500 }}>{q}</span>
+                        <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', lineHeight: '18px', fontWeight: 500 }}>{q}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 22 }}>
                         <div
                           style={{
                             width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-                            background: covered ? '#1ab25e' : '#ef4444',
+                            background: covered ? 'var(--koala-status-success)' : 'var(--koala-status-danger)',
                           }}
                         />
-                        <span style={{ fontSize: 12, color: covered ? '#1ab25e' : '#ef4444', fontWeight: 500 }}>
+                        <span style={{ fontSize: 12, color: covered ? 'var(--koala-status-success)' : 'var(--koala-status-danger)', fontWeight: 500 }}>
                           {covered ? 'Covered' : 'Not covered'}
                         </span>
                       </div>

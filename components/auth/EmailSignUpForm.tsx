@@ -1,6 +1,5 @@
 ﻿import Link from 'next/link';
 import React, { useState } from 'react';
-import posthog from 'posthog-js';
 import { signInSocial, signUpEmail } from '../../lib/auth/fetchAuth';
 import Button from '../koala/primitives/Button';
 import { IconGoogleColor } from './IconGoogleColor';
@@ -51,7 +50,6 @@ export default function EmailSignUpForm() {
       return;
     }
 
-    posthog.capture('user_signed_up', { method: 'email' });
     window.location.href = '/';
   };
 
@@ -107,7 +105,7 @@ export default function EmailSignUpForm() {
           icon={<IconGoogleColor size={20} />}
           style={{ width: '100%', borderRadius: 14, boxShadow: '0px 1px 1px rgba(0,0,0,0.04)' }}
         >
-          {googleLoading ? 'Redirecting…' : 'Sign in with Google'}
+          {googleLoading ? 'Redirecting…' : 'Sign up with Google'}
         </Button>
 
         <div style={authDividerWrapStyle} aria-hidden="true">

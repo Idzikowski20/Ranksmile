@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Select } from '../koala/core';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import KeywordSuggestInput from './KeywordSuggestInput';
 
@@ -54,9 +55,6 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
   const [language, setLanguage] = useState('pl');
   const [trackedKeywords, setTrackedKeywords] = useState<TrackedKeyword[]>([]);
   const [isLoadingTracked, setIsLoadingTracked] = useState(false);
-  const [domainDropdownOpen, setDomainDropdownOpen] = useState(false);
-  const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
-
   const selectedDomain = domains.find((d) => d.ID === domainId);
   const selectedDomainStr = selectedDomain?.domain || '';
 
@@ -74,19 +72,6 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
       .catch(() => setTrackedKeywords([]))
       .finally(() => setIsLoadingTracked(false));
   }, [selectedDomainStr]);
-
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.generate-modal-dropdown')) {
-        setDomainDropdownOpen(false);
-        setLanguageDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,108 +195,17 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
           {/* Domain selector */}
           <div style={fieldGroup}>
             <label style={labelStyle}>Domain</label>
-            <div className="generate-modal-dropdown" style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setDomainDropdownOpen(!domainDropdownOpen);
-                  setLanguageDropdownOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  height: 40,
-                  padding: '0 12px',
-                  border: '1px solid #D4D4D8',
-                  borderRadius: 8,
-                  background: 'var(--koala-bg-primary)',
-                  fontSize: 14,
-                  lineHeight: '20px',
-                  color: '#2F2F34',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-family-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                  transition: 'border-color 0.2s',
-                  textAlign: 'left',
-                }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; }}
-              >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                  {selectedDomainStr || 'Select domain...'}
-                </span>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  style={{
-                    flexShrink: 0,
-                    color: '#9F9FA9',
-                    transform: domainDropdownOpen ? 'rotate(180deg)' : 'rotate(0)',
-                    transition: 'transform 0.15s',
-                  }}
-                >
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              {domainDropdownOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    marginTop: 4,
-                    background: 'var(--koala-bg-primary)',
-                    border: '1px solid var(--koala-border-primary)',
-                    borderRadius: 8,
-                    boxShadow: '0px 4px 16px rgba(0,0,0,0.08)',
-                    zIndex: 60,
-                    maxHeight: 200,
-                    overflowY: 'auto',
-                  }}
-                >
-                  {domains.map((d) => (
-                    <div
-                      key={d.ID}
-                      onClick={() => {
-                        setDomainId(d.ID);
-                        setKeywords([]);
-                        setDomainDropdownOpen(false);
-                      }}
-                      style={{
-                        height: 36,
-                        padding: '0 12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: 14,
-                        color: d.ID === domainId ? '#F84416' : '#2F2F34',
-                        fontWeight: d.ID === domainId ? 600 : 400,
-                        fontFamily: 'var(--font-family-primary)',
-                        cursor: 'pointer',
-                        background: d.ID === domainId ? '#FFF5EE' : 'transparent',
-                        transition: 'background 0.1s',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (d.ID !== domainId) {
-                          (e.currentTarget as HTMLDivElement).style.background = '#F4F4F5';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (d.ID !== domainId) {
-                          (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-                        }
-                      }}
-                    >
-                      {d.domain}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <Select
+              size="md"
+              width="100%"
+              placeholder="Select domain..."
+              value={domainId ? String(domainId) : ''}
+              options={domains.map((d) => ({ value: String(d.ID), label: d.domain }))}
+              onChange={(v) => {
+                setDomainId(Number(v));
+                setKeywords([]);
+              }}
+            />
           </div>
 
           {/* Target keywords */}
@@ -514,105 +408,13 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
           {/* Language selector */}
           <div style={fieldGroup}>
             <label style={labelStyle}>Language</label>
-            <div className="generate-modal-dropdown" style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setLanguageDropdownOpen(!languageDropdownOpen);
-                  setDomainDropdownOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  height: 40,
-                  padding: '0 12px',
-                  border: '1px solid #D4D4D8',
-                  borderRadius: 8,
-                  background: 'var(--koala-bg-primary)',
-                  fontSize: 14,
-                  lineHeight: '20px',
-                  color: '#2F2F34',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-family-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                  transition: 'border-color 0.2s',
-                  textAlign: 'left',
-                }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; }}
-              >
-                <span>{LANGUAGES.find((l) => l.value === language)?.label || 'Polski'}</span>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  style={{
-                    flexShrink: 0,
-                    color: '#9F9FA9',
-                    transform: languageDropdownOpen ? 'rotate(180deg)' : 'rotate(0)',
-                    transition: 'transform 0.15s',
-                  }}
-                >
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              {languageDropdownOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    marginTop: 4,
-                    background: 'var(--koala-bg-primary)',
-                    border: '1px solid var(--koala-border-primary)',
-                    borderRadius: 8,
-                    boxShadow: '0px 4px 16px rgba(0,0,0,0.08)',
-                    zIndex: 60,
-                    maxHeight: 200,
-                    overflowY: 'auto',
-                  }}
-                >
-                  {LANGUAGES.map((l) => (
-                    <div
-                      key={l.value}
-                      onClick={() => {
-                        setLanguage(l.value);
-                        setLanguageDropdownOpen(false);
-                      }}
-                      style={{
-                        height: 36,
-                        padding: '0 12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: 14,
-                        color: l.value === language ? '#F84416' : '#2F2F34',
-                        fontWeight: l.value === language ? 600 : 400,
-                        fontFamily: 'var(--font-family-primary)',
-                        cursor: 'pointer',
-                        background: l.value === language ? '#FFF5EE' : 'transparent',
-                        transition: 'background 0.1s',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (l.value !== language) {
-                          (e.currentTarget as HTMLDivElement).style.background = '#F4F4F5';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (l.value !== language) {
-                          (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-                        }
-                      }}
-                    >
-                      {l.label}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <Select
+              size="md"
+              width="100%"
+              value={language}
+              options={LANGUAGES}
+              onChange={setLanguage}
+            />
           </div>
 
           {/* Footer */}

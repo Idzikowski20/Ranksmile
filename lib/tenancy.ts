@@ -142,16 +142,6 @@ export async function getScopedWorkspaceIds(req: NextApiRequest, userId: string)
    return id > 0 ? [id] : [];
 }
 
-/**
- * The article id an opaque share token unlocks, or null if the token matches nothing.
- */
-export async function articleIdForShareToken(token: string | null | undefined): Promise<number | null> {
-   if (!token || typeof token !== 'string') return null;
-   const idCol = await getArticleIdSql();
-   const rows = await select(`SELECT ${idCol} AS id FROM articles WHERE share_token = ? LIMIT 1`, [token]);
-   return rows.length ? Number(rows[0].id) : null;
-}
-
 /** True if the article's domain belongs to a workspace the caller can access. */
 export async function assertArticleAccess(userId: string | null | undefined, articleId: number): Promise<boolean> {
    if (!userId || !Number.isInteger(articleId)) return false;

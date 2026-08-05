@@ -5,6 +5,7 @@ import { auth } from '@googleapis/searchconsole';
 import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
 import { GOOGLE_OAUTH_SCOPES, upsertAccountForUser } from '../../../lib/gscAccounts';
+import { resolveGscPostOAuthRedirect } from '../../../lib/gscOAuthRedirect';
 
 function parseState(state: string): { domain?: string; redirect: string | null; userId?: string | null; nonce?: string } {
   try {
@@ -16,7 +17,7 @@ function parseState(state: string): { domain?: string; redirect: string | null; 
 
 /** Only same-origin relative redirect targets (the state value is already validated on connect, but
  *  re-check here so a tampered/legacy state can't open-redirect). */
-const safeRelative = (r: string | null): string => (r && r.startsWith('/') && !r.startsWith('//') ? r : '/settings/google_search_console');
+const safeRelative = (r: string | null): string => resolveGscPostOAuthRedirect(r);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { code, state, error: oauthError } = req.query;

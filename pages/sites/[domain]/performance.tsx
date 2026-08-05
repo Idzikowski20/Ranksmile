@@ -7,9 +7,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { KoalaPanelHeader, PageHeader } from '../../../components/koala/layout';
-import { Button, CompactSelect, PageFilterBar, Modal, ModalFooter } from '../../../components/koala/core';
-import { Card, MetricWidget, ChartWidget, FeedbackPopover } from '../../../components/koala/product';
+import { PageHeader } from '../../../components/koala/layout';
+import { Button, CompactSelect, PageFilterBar, Modal, ModalFooter, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, Tabs, ToolRibbon, Pagination, getPaginationCaption } from '../../../components/koala/core';
+import { Card, FeedbackPopover } from '../../../components/koala/product';
+import { TrendDeltaBadge } from '../../../components/koala/product/helpers/TrendDeltaBadge';
+import { Icon } from '../../../components/koala/icons/Icon';
 import PerformanceLineChart from '../../../components/performance/PerformanceLineChart';
 import { useFetchDomains } from '../../../services/domains';
 import countries from '../../../utils/countries';
@@ -78,14 +80,6 @@ function TableSkeleton({ headerLabelWidth }: { headerLabelWidth: number }) {
   );
 }
 
-function ChevronDown({ size = 18 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 20 20" width={size} height={size} fill="currentColor" aria-hidden="true">
-      <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
-    </svg>
-  );
-}
-
 function ChevronLeft() {
   return (
     <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true">
@@ -102,14 +96,6 @@ function ChevronRight() {
   );
 }
 
-
-function FeedbackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-      <path fillRule="evenodd" d="M5.337 21.718a7 7 0 0 1-.533-.074a.75.75 0 0 1-.44-1.223a3.73 3.73 0 0 0 .814-1.686c.023-.115-.022-.317-.254-.543C3.274 16.587 2.25 14.41 2.25 12c0-5.03 4.428-9 9.75-9s9.75 3.97 9.75 9s-4.428 9-9.75 9c-.833 0-1.643-.097-2.417-.279a6.72 6.72 0 0 1-4.246.997" clipRule="evenodd" />
-    </svg>
-  );
-}
 
 function CalendarIcon() {
   return (
@@ -179,24 +165,6 @@ function KeywordIcon() {
   );
 }
 
-function EyeIcon({ muted = false }: { muted?: boolean }) {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
-      {muted ? (
-        <>
-          <path fillRule="evenodd" d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.03 10.03 0 0 0 3.3-4.38a1.65 1.65 0 0 0 0-1.185A10 10 0 0 0 9.999 3a9.96 9.96 0 0 0-4.744 1.194zm4.472 4.47l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092A4 4 0 0 0 7.752 6.69" clipRule="evenodd" />
-          <path d="m10.748 13.93l2.523 2.523a10 10 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.65 1.65 0 0 1 0-1.186A10 10 0 0 1 2.839 6.02L6.07 9.252Q6 9.616 6 10a4 4 0 0 0 4.748 3.93" />
-        </>
-      ) : (
-        <>
-          <path d="M10 12.5a2.5 2.5 0 1 0 0-5a2.5 2.5 0 0 0 0 5" />
-          <path fillRule="evenodd" d="M.664 10.59a1.65 1.65 0 0 1 0-1.186A10 10 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41c.147.381.146.804 0 1.186A10 10 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41M14 10a4 4 0 1 1-8 0a4 4 0 0 1 8 0" clipRule="evenodd" />
-        </>
-      )}
-    </svg>
-  );
-}
-
 function DeltaIcon({ direction }: { direction: Delta }) {
   if (direction === 'neutral') {
     return <div style={{ width: 6, height: 6, borderRadius: 9999, background: 'var(--koala-border-primary)', flexShrink: 0 }} />;
@@ -232,85 +200,221 @@ function XIcon() {
   );
 }
 
-function TableSortButton({
+const SORT_ORDER_OPTIONS = [
+  { value: 'highest', label: 'highest' },
+  { value: 'lowest', label: 'lowest' },
+] as const;
+
+const SORT_METRIC_OPTIONS = [
+  { value: 'clicks', label: 'clicks' },
+  { value: 'impressions', label: 'impressions' },
+  { value: 'ctr', label: 'ctr' },
+  { value: 'position', label: 'position' },
+] as const;
+
+const METRIC_ICONS: Record<MetricKey, string> = {
+  clicks: 'CursorClick',
+  impressions: 'Eye',
+  ctr: 'ChartLineUp',
+  position: 'Ranking',
+};
+
+/** Koala Analytics Item (Figma 9834:294099) — flat KPI cell with outline delta badge. */
+function AnalyticsItem({
+  icon,
+  label,
   value,
-  onClick,
+  change,
+  period,
+  muted = false,
+  onToggle,
+  last = false,
+  direction,
 }: {
+  icon: string;
+  label: string;
   value: string;
-  onClick: () => void;
+  change?: number | null;
+  period?: string;
+  muted?: boolean;
+  onToggle?: () => void;
+  last?: boolean;
+  /** Compact triangle when no % change (summary strip). */
+  direction?: Delta;
 }) {
+  const hasChange = change !== undefined;
+  const positive = change == null ? null : change >= 0;
+  const deltaText = change == null
+    ? null
+    : `${change >= 0 ? '+' : ''}${Math.round(change)}%`;
+
+  const body = (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, width: '100%' }}>
+        <Icon name={icon} size={20} weight="bold" color="var(--koala-text-primary)" />
+        <span
+          style={{
+            flex: '1 1 0',
+            minWidth: 0,
+            fontSize: 14,
+            fontWeight: 500,
+            lineHeight: '20px',
+            letterSpacing: '-0.4px',
+            color: 'var(--koala-text-primary)',
+            fontFamily: 'var(--font-family-primary)',
+          }}
+        >
+          {label}
+        </span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+          <span
+            style={{
+              fontSize: 30,
+              fontWeight: 700,
+              lineHeight: '36px',
+              letterSpacing: '-0.07px',
+              color: 'var(--koala-text-primary)',
+              fontFamily: 'var(--font-family-primary)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {value}
+          </span>
+          {hasChange ? (
+            <div style={{ paddingBottom: 6 }}>
+              <TrendDeltaBadge
+                delta={deltaText ?? '='}
+                positive={positive}
+                variant="outline"
+                size="sm"
+              />
+            </div>
+          ) : direction ? (
+            <div style={{ paddingBottom: 10 }}>
+              <DeltaIcon direction={direction} />
+            </div>
+          ) : null}
+        </div>
+        {period ? (
+          <p
+            style={{
+              margin: 0,
+              fontSize: 14,
+              fontWeight: 400,
+              lineHeight: '20px',
+              letterSpacing: '-0.4px',
+              color: 'var(--koala-text-tertiary)',
+              fontFamily: 'var(--font-family-primary)',
+            }}
+          >
+            {period}
+          </p>
+        ) : null}
+      </div>
+    </>
+  );
+
+  const shellStyle: React.CSSProperties = {
+    flex: '1 0 0',
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    alignItems: 'flex-start',
+    justifyContent: 'flex-end',
+    paddingRight: last ? 0 : 24,
+    borderRight: last ? 'none' : '1px solid var(--koala-border-primary)',
+    opacity: muted ? 0.45 : 1,
+    transition: 'opacity 150ms ease',
+    fontFamily: 'var(--font-family-primary)',
+    textAlign: 'left',
+    boxSizing: 'border-box',
+  };
+
+  if (onToggle) {
+    return (
+      <button
+        type="button"
+        className="performance-analytics-item"
+        onClick={onToggle}
+        aria-pressed={!muted}
+        title={muted ? `Show ${label} on chart` : `Hide ${label} on chart`}
+        style={{
+          ...shellStyle,
+          margin: 0,
+          background: 'transparent',
+          border: 'none',
+          borderRight: last ? 'none' : '1px solid var(--koala-border-primary)',
+          cursor: 'pointer',
+        }}
+      >
+        {body}
+      </button>
+    );
+  }
+
   return (
-    <Button
-      variant="secondary"
-      size="sm"
-      onClick={onClick}
-      style={{ borderRadius: 8, border: '1px solid var(--koala-border-primary)', background: 'transparent', color: 'var(--koala-text-primary)' }}
-    >
-      <span style={{ textTransform: 'lowercase' }}>{value}</span>
-      <ChevronDown size={18} />
-    </Button>
+    <div className="performance-analytics-item" style={shellStyle}>
+      {body}
+    </div>
   );
 }
 
 function MetricCard({
+  metricKey,
   label,
   value,
   change,
-  accentBg,
-  accentColor,
+  period,
   muted = false,
   onToggle,
+  last = false,
 }: {
+  metricKey: MetricKey;
   label: string;
   value: string;
   change: number | null;
-  accentBg: string;
-  accentColor: string;
-  gradientColor?: string;
+  period: string;
   muted?: boolean;
   onToggle?: () => void;
+  last?: boolean;
 }) {
-  const deltaText = change === null
-    ? '- vs previous period'
-    : `${change >= 0 ? '+' : ''}${Math.round(change)}% vs previous period`;
-
   return (
-    <MetricWidget
-      title={label}
+    <AnalyticsItem
+      icon={METRIC_ICONS[metricKey]}
+      label={label}
       value={value}
-      delta={deltaText}
-      deltaPositive={change === null ? undefined : change >= 0}
-      action={(
-        <Button
-          variant="secondary"
-          size="zero"
-          onClick={onToggle}
-          style={{ padding: 8, borderRadius: 8, background: accentBg, color: accentColor, border: 'none', flexShrink: 0, opacity: muted ? 0.5 : 1, transition: 'opacity 150ms ease' }}
-          icon={<EyeIcon muted={muted} />}
-        />
-      )}
+      change={change}
+      period={period}
+      muted={muted}
+      onToggle={onToggle}
+      last={last}
     />
   );
 }
 
 function SummaryCard({
+  icon,
   label,
   value,
   direction,
+  last = false,
 }: {
+  icon: string;
   label: string;
   value: string;
   direction?: Delta;
+  last?: boolean;
 }) {
   return (
-    <MetricWidget
-      title={label}
-      value={(
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {value}
-          {direction ? <DeltaIcon direction={direction} /> : null}
-        </span>
-      )}
+    <AnalyticsItem
+      icon={icon}
+      label={label}
+      value={value}
+      direction={direction}
+      last={last}
     />
   );
 }
@@ -321,6 +425,151 @@ function DeltaValue({ value, direction }: { value: string; direction: Delta }) {
       <DeltaIcon direction={direction} />
       <span>{value}</span>
     </div>
+  );
+}
+
+const METRIC_COL: React.CSSProperties = {
+  padding: '10px 16px',
+  width: 108,
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  fontSize: 13,
+  color: 'var(--koala-text-primary)',
+  fontFamily: 'var(--font-family-primary)',
+};
+
+const HEADER_METRIC: React.CSSProperties = {
+  padding: '8px 16px',
+  width: 108,
+  flexShrink: 0,
+  textAlign: 'right',
+  fontSize: 14,
+  fontWeight: 500,
+  letterSpacing: '-0.4px',
+  color: 'var(--koala-text-secondary)',
+  fontFamily: 'var(--font-family-primary)',
+};
+
+/** Pages / Keywords rows — same DataTable shell as Recommendations. */
+const PERF_TABLE_PAGE_SIZE = 10;
+
+function PerformanceMetricTable({
+  label,
+  rows,
+  emptyLabel,
+  page,
+  pageSize,
+  total,
+  onPageChange,
+}: {
+  label: string;
+  rows: TableRow[];
+  emptyLabel: string;
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+}) {
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  return (
+    <>
+      <DataTable>
+        <DataTableScroll>
+          <DataTableContent minWidth={720} aria-label={label}>
+            <DataTableHeader>
+              <div
+                style={{
+                  padding: '8px 16px',
+                  flex: '1 1 0',
+                  minWidth: 200,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  letterSpacing: '-0.4px',
+                  color: 'var(--koala-text-secondary)',
+                  fontFamily: 'var(--font-family-primary)',
+                }}
+              >
+                {label}
+              </div>
+              <div style={HEADER_METRIC}>Clicks</div>
+              <div style={HEADER_METRIC}>Impr.</div>
+              <div className="performance-col-secondary" style={HEADER_METRIC}>CTR</div>
+              <div className="performance-col-secondary" style={HEADER_METRIC}>Position</div>
+            </DataTableHeader>
+
+            {rows.length === 0 ? (
+              <DataTableEmpty>{emptyLabel}</DataTableEmpty>
+            ) : (
+              <DataTableBody>
+                {rows.map((row) => (
+                  <DataTableRow
+                    key={row.key}
+                    className="perf-row"
+                    style={{ minHeight: 56, alignItems: 'center' }}
+                  >
+                    <div style={{ padding: '10px 16px', flex: '1 1 0', minWidth: 200, overflow: 'hidden' }}>
+                      <span
+                        title={row.label}
+                        style={{
+                          display: 'block',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: 'var(--koala-text-primary)',
+                          fontFamily: 'var(--font-family-primary)',
+                        }}
+                      >
+                        {row.href ? (
+                          <a
+                            href={row.href}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: 'inherit', textDecoration: 'none' }}
+                          >
+                            {row.label}
+                          </a>
+                        ) : (
+                          row.label
+                        )}
+                      </span>
+                    </div>
+                    <div style={METRIC_COL}>
+                      <DeltaValue value={compactNumber(row.clicks)} direction={row.clickDir} />
+                    </div>
+                    <div style={METRIC_COL}>
+                      <DeltaValue value={compactNumber(row.impressions)} direction={row.impressionDir} />
+                    </div>
+                    <div className="performance-col-secondary" style={METRIC_COL}>
+                      <DeltaValue value={formatPercent(row.ctr)} direction={row.ctrDir} />
+                    </div>
+                    <div className="performance-col-secondary" style={METRIC_COL}>
+                      <DeltaValue
+                        value={row.position.toFixed(1).replace('.0', '')}
+                        direction={row.positionDir}
+                      />
+                    </div>
+                  </DataTableRow>
+                ))}
+              </DataTableBody>
+            )}
+          </DataTableContent>
+        </DataTableScroll>
+      </DataTable>
+      {total > pageSize ? (
+        <div style={{ padding: '0 16px 16px' }}>
+          <Pagination
+            page={page}
+            pageCount={pageCount}
+            onPageChange={onPageChange}
+            caption={getPaginationCaption({ page, pageSize, total })}
+          />
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -345,6 +594,8 @@ const PerformancePage: NextPage = () => {
   const [pageSortOrder, setPageSortOrder] = useState<SortOrder>('highest');
   const [keywordSortMetric, setKeywordSortMetric] = useState<SortMetric>('clicks');
   const [keywordSortOrder, setKeywordSortOrder] = useState<SortOrder>('highest');
+  const [tableTab, setTableTab] = useState<'pages' | 'keywords'>('pages');
+  const [tablePage, setTablePage] = useState(1);
 
   const [filtersModalOpen, setFiltersModalOpen] = useState(false);
   const [visibleMetrics, setVisibleMetrics] = useState({ clicks: true, impressions: true, ctr: false, position: false });
@@ -516,40 +767,24 @@ const PerformancePage: NextPage = () => {
         label: 'Clicks',
         value: compactNumber(statsTotals.clicks),
         change: getChangePercent(statsTotals.clicks, previousTotals.clicks),
-        accentBg: 'var(--koala-bg-secondary)',
-        accentColor: 'var(--koala-text-primary)',
-        gradientColor: '#74A9FF',
-        muted: false,
       },
       {
         key: 'impressions' as MetricKey,
         label: 'Impressions',
         value: compactNumber(statsTotals.impressions),
         change: getChangePercent(statsTotals.impressions, previousTotals.impressions),
-        accentBg: 'var(--koala-bg-secondary)',
-        accentColor: 'var(--koala-text-primary)',
-        gradientColor: 'var(--koala-text-brand)',
-        muted: false,
       },
       {
         key: 'ctr' as MetricKey,
         label: 'Avg. CTR',
         value: formatPercent(avgCtr),
         change: getChangePercent(avgCtr, previousAvgCtr),
-        accentBg: 'var(--koala-bg-secondary)',
-        accentColor: 'var(--koala-text-primary)',
-        gradientColor: '#22C55E',
-        muted: true,
       },
       {
         key: 'position' as MetricKey,
         label: 'Avg. position',
         value: avgPosition > 0 ? avgPosition.toFixed(1) : '0.0',
         change: getChangePercent(previousAvgPosition, avgPosition),
-        accentBg: 'var(--koala-bg-secondary)',
-        accentColor: 'var(--koala-text-primary)',
-        gradientColor: '#F97316',
-        muted: true,
       },
     ];
 
@@ -735,7 +970,7 @@ const PerformancePage: NextPage = () => {
       const valueB = b[pageSortMetric];
       return valueA > valueB ? direction : valueA < valueB ? -direction : 0;
     });
-    return rows.slice(0, 5);
+    return rows;
   }, [filteredPageRows, pageSortMetric, pageSortOrder]);
 
   const sortedKeywordRows = useMemo(() => {
@@ -746,8 +981,25 @@ const PerformancePage: NextPage = () => {
       const valueB = b[keywordSortMetric];
       return valueA > valueB ? direction : valueA < valueB ? -direction : 0;
     });
-    return rows.slice(0, 5);
+    return rows;
   }, [computed.keywordRows, keywordSortMetric, keywordSortOrder]);
+
+  const activeTableRows = tableTab === 'pages' ? sortedPageRows : sortedKeywordRows;
+  const activeSortMetric = tableTab === 'pages' ? pageSortMetric : keywordSortMetric;
+  const activeSortOrder = tableTab === 'pages' ? pageSortOrder : keywordSortOrder;
+  const setActiveSortMetric = tableTab === 'pages' ? setPageSortMetric : setKeywordSortMetric;
+  const setActiveSortOrder = tableTab === 'pages' ? setPageSortOrder : setKeywordSortOrder;
+
+  const tablePageCount = Math.max(1, Math.ceil(activeTableRows.length / PERF_TABLE_PAGE_SIZE));
+  const safeTablePage = Math.min(tablePage, tablePageCount);
+  const pagedTableRows = useMemo(() => {
+    const start = (safeTablePage - 1) * PERF_TABLE_PAGE_SIZE;
+    return activeTableRows.slice(start, start + PERF_TABLE_PAGE_SIZE);
+  }, [activeTableRows, safeTablePage]);
+
+  useEffect(() => {
+    setTablePage(1);
+  }, [tableTab, pageSortMetric, pageSortOrder, keywordSortMetric, keywordSortOrder, pageFilter, performanceQuery]);
 
   const handleTodayClick = () => {
     const today = getToday();
@@ -921,14 +1173,8 @@ const PerformancePage: NextPage = () => {
   const feedbackAction = (
     <FeedbackPopover context="performance">
       {({ open, anchorRef }) => (
-        <span ref={anchorRef as React.RefObject<HTMLSpanElement>} style={{ display: 'inline-flex' }}>
-          <Button
-            variant="link"
-            size="sm"
-            icon={<FeedbackIcon />}
-            style={{ padding: 0, color: 'var(--koala-text-secondary)' }}
-            onClick={open}
-          >
+        <span ref={anchorRef as React.RefObject<HTMLSpanElement>}>
+          <Button type="button" variant="secondary" size="sm" onClick={open}>
             Leave feedback
           </Button>
         </span>
@@ -1001,151 +1247,99 @@ const PerformancePage: NextPage = () => {
                   </Button>
                 </div>
 
-                  <div className="performance-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
-                    {computed.statsCards.map((card) => (
+                  <div className="performance-metrics-grid">
+                    {computed.statsCards.map((card, index) => (
                       <MetricCard
                         key={card.key}
+                        metricKey={card.key}
                         label={card.label}
                         value={card.value}
                         change={card.change}
-                        accentBg={card.accentBg}
-                        accentColor={card.accentColor}
-                        gradientColor={card.gradientColor}
+                        period={getRangeLabel(datePreset, selectedDateRange)}
                         muted={!visibleMetrics[card.key as MetricKey]}
+                        last={index === computed.statsCards.length - 1}
                         onToggle={() => setVisibleMetrics((prev) => ({ ...prev, [card.key]: !prev[card.key as MetricKey] }))}
                       />
                     ))}
                   </div>
 
-                  <ChartWidget title="Traffic trend">
-                    <PerformanceLineChart data={computed.chart} visibleMetrics={visibleMetrics} />
-                  </ChartWidget>
+                  <PerformanceLineChart
+                    data={computed.chart}
+                    visibleMetrics={visibleMetrics}
+                    primaryValue={
+                      (visibleMetrics.clicks
+                        ? computed.statsCards.find((c) => c.key === 'clicks')
+                        : computed.statsCards.find((c) => visibleMetrics[c.key as keyof typeof visibleMetrics]))
+                        ?.value ?? '0'
+                    }
+                    primaryLabel={
+                      visibleMetrics.clicks
+                        ? 'Clicks'
+                        : (computed.statsCards.find((c) => visibleMetrics[c.key as keyof typeof visibleMetrics])?.label ?? 'Clicks')
+                    }
+                  />
                 </div>
               </Card>
 
-              <section className="performance-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
-                <SummaryCard label="All Keywords" value={String(computed.keywordSummary.allKeywords)} />
-                <SummaryCard label="Top 3" value={String(computed.keywordSummary.top3)} direction={computed.keywordSummary.top3Direction} />
-                <SummaryCard label="Position 4-10" value={String(computed.keywordSummary.pos4to10)} direction={computed.keywordSummary.pos4to10Direction} />
-                <SummaryCard label="Position 11-20" value={String(computed.keywordSummary.pos11to20)} direction={computed.keywordSummary.pos11to20Direction} />
-              </section>
-
-              <Card padded={false} elevated>
-                <KoalaPanelHeader
-                  title={(
-                    <div className="performance-table-header-title">
-                      <span>Pages</span>
-                      <span className="performance-table-header-sorts">
-                        <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--koala-text-secondary)' }}>with</span>
-                        <TableSortButton value={pageSortOrder} onClick={() => setPageSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
-                        <TableSortButton
-                          value={pageSortMetric === 'impressions' ? 'impr.' : pageSortMetric}
-                          onClick={() => {
-                            const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
-                            const currentIndex = order.indexOf(pageSortMetric);
-                            setPageSortMetric(order[(currentIndex + 1) % order.length]);
-                          }}
-                        />
-                      </span>
-                    </div>
-                  )}
-                />
-
-                <div className="performance-data-table-wrap">
-                  <table className="performance-data-table">
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--koala-bg-secondary)' }}>
-                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Page</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
-                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
-                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Position</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedPageRows.map((row, index) => (
-                        <tr key={row.key} style={{ borderBottom: index < sortedPageRows.length - 1 ? '1px solid var(--koala-bg-secondary)' : 'none' }}>
-                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 24px', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
-                            <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.label}>
-                              <a href={row.href} target="_blank" rel="noreferrer" style={{ color: 'var(--koala-text-primary)', textDecoration: 'none' }}>{row.label}</a>
-                            </span>
-                          </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
-                            <DeltaValue value={compactNumber(row.clicks)} direction={row.clickDir} />
-                          </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
-                            <DeltaValue value={compactNumber(row.impressions)} direction={row.impressionDir} />
-                          </td>
-                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
-                            <DeltaValue value={formatPercent(row.ctr)} direction={row.ctrDir} />
-                          </td>
-                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
-                            <DeltaValue value={row.position.toFixed(1).replace('.0', '')} direction={row.positionDir} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <Card elevated className="performance-summary-card">
+                <div className="performance-summary-grid">
+                  <SummaryCard icon="MagnifyingGlass" label="All Keywords" value={String(computed.keywordSummary.allKeywords)} />
+                  <SummaryCard icon="Trophy" label="Top 3" value={String(computed.keywordSummary.top3)} direction={computed.keywordSummary.top3Direction} />
+                  <SummaryCard icon="ListNumbers" label="Position 4-10" value={String(computed.keywordSummary.pos4to10)} direction={computed.keywordSummary.pos4to10Direction} />
+                  <SummaryCard icon="Rows" label="Position 11-20" value={String(computed.keywordSummary.pos11to20)} direction={computed.keywordSummary.pos11to20Direction} last />
                 </div>
               </Card>
 
               <Card padded={false} elevated>
-                <KoalaPanelHeader
-                  title={(
-                    <div className="performance-table-header-title">
-                      <span>Keywords</span>
-                      <span className="performance-table-header-sorts">
-                        <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--koala-text-secondary)' }}>with</span>
-                        <TableSortButton value={keywordSortOrder} onClick={() => setKeywordSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
-                        <TableSortButton
-                          value={keywordSortMetric === 'impressions' ? 'impr.' : keywordSortMetric}
-                          onClick={() => {
-                            const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
-                            const currentIndex = order.indexOf(keywordSortMetric);
-                            setKeywordSortMetric(order[(currentIndex + 1) % order.length]);
-                          }}
-                        />
+                <div style={{ padding: '12px 16px 0' }}>
+                  <ToolRibbon className="performance-table-ribbon">
+                    <Tabs
+                      items={[
+                        { value: 'pages', label: 'Pages', count: sortedPageRows.length },
+                        { value: 'keywords', label: 'Keywords', count: sortedKeywordRows.length },
+                      ]}
+                      value={tableTab}
+                      onChange={(v) => setTableTab(v as 'pages' | 'keywords')}
+                    />
+                    <div
+                      className="performance-table-header-sorts"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', flexWrap: 'wrap' }}
+                    >
+                      <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
+                        {tableTab === 'pages' ? 'Pages' : 'Keywords'} with
                       </span>
+                      <CompactSelect
+                        size="sm"
+                        options={[...SORT_ORDER_OPTIONS]}
+                        value={activeSortOrder}
+                        onChange={(opt) => {
+                          const v = String(opt.value);
+                          if (v === 'highest' || v === 'lowest') setActiveSortOrder(v);
+                        }}
+                      />
+                      <CompactSelect
+                        size="sm"
+                        options={[...SORT_METRIC_OPTIONS]}
+                        value={activeSortMetric}
+                        onChange={(opt) => {
+                          const v = String(opt.value);
+                          if (v === 'clicks' || v === 'impressions' || v === 'ctr' || v === 'position') {
+                            setActiveSortMetric(v);
+                          }
+                        }}
+                      />
                     </div>
-                  )}
-                />
-
-                <div className="performance-data-table-wrap">
-                  <table className="performance-data-table">
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--koala-bg-secondary)' }}>
-                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Keyword</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
-                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
-                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Position</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedKeywordRows.map((row, index) => (
-                        <tr key={row.key} style={{ borderBottom: index < sortedKeywordRows.length - 1 ? '1px solid var(--koala-bg-secondary)' : 'none' }}>
-                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 24px', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
-                            <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.label}>
-                              {row.label}
-                            </span>
-                          </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
-                            <DeltaValue value={compactNumber(row.clicks)} direction={row.clickDir} />
-                          </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
-                            <DeltaValue value={compactNumber(row.impressions)} direction={row.impressionDir} />
-                          </td>
-                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
-                            <DeltaValue value={formatPercent(row.ctr)} direction={row.ctrDir} />
-                          </td>
-                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
-                            <DeltaValue value={row.position.toFixed(1).replace('.0', '')} direction={row.positionDir} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  </ToolRibbon>
                 </div>
+                <PerformanceMetricTable
+                  label={tableTab === 'pages' ? 'Page' : 'Keyword'}
+                  rows={pagedTableRows}
+                  emptyLabel={tableTab === 'pages' ? 'No pages in this range.' : 'No keywords in this range.'}
+                  page={safeTablePage}
+                  pageSize={PERF_TABLE_PAGE_SIZE}
+                  total={activeTableRows.length}
+                  onPageChange={setTablePage}
+                />
               </Card>
           </>
         )}
@@ -1196,9 +1390,9 @@ const PerformancePage: NextPage = () => {
           }
 
           @media (max-width: 1100px) and (min-width: 768px) {
-            .performance-metrics-grid,
-            .performance-summary-grid {
-              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            .performance-analytics-item {
+              flex: 1 1 calc(50% - 12px) !important;
+              min-width: calc(50% - 12px) !important;
             }
           }
 

@@ -7,7 +7,7 @@ import { getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../.
 import { ensureGscSnapshotTables } from '../../../lib/ensureGscSnapshotTables';
 import { captureWeeklySnapshot, getSnapshot, weekStartFor, shiftWeek } from '../../../lib/gscSnapshots';
 import { computeDrops } from '../../../lib/gscDrops';
-import { buildGscDigest, loadDigestInlineAttachments, type DomainDigest } from '../../../lib/gscDigestEmail';
+import { buildGscDigest, type DomainDigest } from '../../../lib/gscDigestEmail';
 import { sendMail } from '../../../lib/sendMail';
 import { queryRows, type ArticleRow } from '../../../lib/db/query';
 import { getErrorMessage } from '../../../lib/errors';
@@ -33,6 +33,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
    } catch (e) {
       console.error('[cron] GSC refresh sweep failed', e);
+   }
+
+   // WIE Performance Loop: GSC 30d page metrics → pattern effectiveness
+   try {
+      const { syncDueWieOutcomesFromGsc } = await import('../../../lib/wie/gscOutcomeSync');
+      const wieSync = await syncDueWieOutcomesFromGsc({ limit: 25 });
+      if (wieSync.synced > 0) {
+         console.log('[cron] WIE GSC outcome synced', wieSync.synced, '/', wieSync.scanned);
+      }
+   } catch (e) {
+      console.error('[cron] WIE GSC outcome sync failed', e);
+   }
+
+   // WIE Learning hygiene: persist confidence decay
+   try {
+      const { persistConfidenceDecay } = await import('../../../lib/wie/patternStore');
+      const decay = await persistConfidenceDecay();
+      if (decay.updated > 0) console.log('[cron] WIE confidence decay updated', decay.updated);
+   } catch (e) {
+      console.error('[cron] WIE confidence decay failed', e);
    }
 
    // ── Weekly GSC drop digest (Mondays only) ──────────────────────────────
@@ -77,10 +97,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                if (emails.length === 0) continue;
 
                const html = buildGscDigest({ orgName: org.name, domains: digests });
-               const attachments = loadDigestInlineAttachments();
                let anySent = false;
                for (const to of emails) {
-                  try { const { sent } = await sendMail({ to, subject: `Weekly Ranksmile Performance - ${org.name}`, html, attachments }); anySent = anySent || sent; }
+                  try { const { sent } = await sendMail({ to, subject: `Weekly Ranksmile Performance - ${org.name}`, html }); anySent = anySent || sent; }
                   catch (e) { console.error('[cron] digest email failed for', to, e); }
                }
                if (anySent) {

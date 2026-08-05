@@ -222,6 +222,21 @@ export async function reconcilePostGenerateArticle(opts: {
     });
   }
 
+  void import('./intelligence/compileAfterArticleChange')
+    .then((m) =>
+      m.compileAfterArticleChange({
+        articleId: opts.articleId,
+        compiledAt: new Date().toISOString(),
+        contentHtml: opts.html,
+      }),
+    )
+    .then((r) => {
+      if (!r.ok) console.warn('[ccm] compile after generate skipped:', r.error);
+    })
+    .catch((err: unknown) => {
+      console.warn('[ccm] compile after generate failed (non-fatal):', getErrorMessage(err));
+    });
+
   return {
     scoreData,
     aiInfoToCover,

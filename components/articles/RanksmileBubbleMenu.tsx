@@ -65,7 +65,7 @@ const IconClearFormatting = () => (
 );
 
 const Separator = () => (
-  <div style={{ width: 1, height: 20, background: '#dbded4', margin: '0 4px', flexShrink: 0 }} />
+  <div style={{ width: 1, height: 20, background: 'var(--koala-border-primary)', margin: '0 4px', flexShrink: 0 }} />
 );
 
 const ChevronDown = ({ open }: { open: boolean }) => (
@@ -144,13 +144,13 @@ function ToolButton({ editor, command, isActive, onClick, children }: {
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         borderRadius: 4, minWidth: 28, width: 'max-content', height: 28,
-        background: isActive ? '#F4F4F5' : 'transparent',
+        background: isActive ? 'var(--koala-bg-secondary)' : 'transparent',
         border: 'none', cursor: 'pointer',
-        color: isActive ? '#F84416' : '#302E36',
+        color: isActive ? 'var(--koala-text-brand)' : 'var(--koala-text-primary)',
         padding: 0,
         transition: 'background-color 200ms ease-in-out',
       }}
-      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = '#F4F4F5'; }}
+      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
       onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
     >
       {children}
@@ -229,7 +229,7 @@ export function RanksmileLinkModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(9,9,11,0.62)',
+        background: 'color-mix(in srgb, var(--koala-bg-inverse) 62%, transparent)',
       }}
       onMouseDown={(e) => e.stopPropagation()}
     >
@@ -237,15 +237,15 @@ export function RanksmileLinkModal({
         onSubmit={saveLink}
         style={{
           width: 'min(740px, calc(100vw - 48px))',
-          background: '#FFFFFF',
+          background: 'var(--koala-bg-primary)',
           borderRadius: 8,
-          boxShadow: '0 24px 64px rgba(24,26,34,0.34), 0 4px 12px rgba(24,26,34,0.14)',
+          boxShadow: '0 24px 64px color-mix(in srgb, var(--koala-bg-inverse) 34%, transparent), 0 4px 12px color-mix(in srgb, var(--koala-bg-inverse) 14%, transparent)',
           overflow: 'hidden',
           fontFamily: 'var(--font-family-primary)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '28px 24px 22px' }}>
-          <h2 style={{ margin: 0, color: '#18181B', fontSize: 24, lineHeight: '32px', fontWeight: 700 }}>
+          <h2 style={{ margin: 0, color: 'var(--koala-text-primary)', fontSize: 24, lineHeight: '32px', fontWeight: 700 }}>
             Create link
           </h2>
           <button
@@ -260,7 +260,7 @@ export function RanksmileLinkModal({
               height: 32,
               border: 'none',
               background: 'transparent',
-              color: '#18181B',
+              color: 'var(--koala-text-primary)',
               cursor: 'pointer',
               padding: 0,
             }}
@@ -273,7 +273,7 @@ export function RanksmileLinkModal({
           <div style={{ display: 'flex', width: '100%', flexDirection: 'column' }}>
             <label
               htmlFor="ranksmile-link-anchor"
-              style={{ color: '#3F3F47', paddingBottom: '0.375rem', fontSize: 14, lineHeight: '20px', fontWeight: 500 }}
+              style={{ color: 'var(--koala-text-secondary)', paddingBottom: '0.375rem', fontSize: 14, lineHeight: '20px', fontWeight: 500 }}
             >
               Text
             </label>
@@ -304,9 +304,9 @@ export function RanksmileLinkModal({
                   textOverflow: 'ellipsis',
                   minHeight: '2.5rem',
                   outlineOffset: 2,
-                  boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                  color: '#18181B',
-                  border: '1px solid #D4D4D8',
+                  boxShadow: '0px 1px 2px 0px color-mix(in srgb, var(--koala-bg-inverse) 6%, transparent)',
+                  color: 'var(--koala-text-primary)',
+                  border: '1px solid var(--koala-border-secondary)',
                   borderRadius: 8,
                 }}
               />
@@ -316,7 +316,7 @@ export function RanksmileLinkModal({
           <div style={{ display: 'flex', width: '100%', flexDirection: 'column' }}>
             <label
               htmlFor="ranksmile-link-href"
-              style={{ color: '#3F3F47', paddingBottom: '0.375rem', fontSize: 14, lineHeight: '20px', fontWeight: 500 }}
+              style={{ color: 'var(--koala-text-secondary)', paddingBottom: '0.375rem', fontSize: 14, lineHeight: '20px', fontWeight: 500 }}
             >
               URL
             </label>
@@ -328,7 +328,7 @@ export function RanksmileLinkModal({
                   alignItems: 'center',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  color: '#18181B',
+                  color: 'var(--koala-text-primary)',
                   left: '0.75rem',
                   pointerEvents: 'none',
                 }}
@@ -360,9 +360,9 @@ export function RanksmileLinkModal({
                   textOverflow: 'ellipsis',
                   minHeight: '2.5rem',
                   outlineOffset: 2,
-                  boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                  color: '#18181B',
-                  border: '1px solid #F5C4A0',
+                  boxShadow: '0px 1px 2px 0px color-mix(in srgb, var(--koala-bg-inverse) 6%, transparent)',
+                  color: 'var(--koala-text-primary)',
+                  border: '1px solid var(--koala-border-brand)',
                   borderRadius: 8,
                 }}
               />
@@ -382,7 +382,7 @@ export function RanksmileLinkModal({
               gap: '0.5rem',
               border: 'none',
               background: 'transparent',
-              color: '#3F3F47',
+              color: 'var(--koala-text-secondary)',
               cursor: 'pointer',
               padding: 0,
               fontFamily: 'var(--font-family-primary)',
@@ -404,8 +404,8 @@ export function RanksmileLinkModal({
               gap: '0.5rem',
               border: 'none',
               borderRadius: 8,
-              background: '#18181B',
-              color: '#FFFFFF',
+              background: 'var(--koala-text-primary)',
+              color: 'var(--koala-bg-primary)',
               cursor: canSave ? 'pointer' : 'not-allowed',
               opacity: canSave ? 1 : 0.55,
               padding: '0.5rem 1.5rem',
@@ -589,8 +589,8 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
     border: 'none',
     cursor: 'pointer',
     padding: '0 6px',
-    background: active ? '#F4F4F5' : 'transparent',
-    color: active ? '#F84416' : '#302E36',
+    background: active ? 'var(--koala-bg-secondary)' : 'transparent',
+    color: active ? 'var(--koala-text-brand)' : 'var(--koala-text-primary)',
     fontFamily: 'var(--font-family-primary)',
     fontSize: 14,
     fontWeight: 500,
@@ -611,14 +611,14 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
         border: 'none',
         borderRadius: 6,
         background: 'transparent',
-        color: '#181225',
+        color: 'var(--koala-text-primary)',
         cursor: 'pointer',
         fontFamily: 'var(--font-family-primary)',
         fontSize: 14,
         fontWeight: 500,
         textAlign: 'left',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
     >
       <span>{label}</span>
@@ -639,10 +639,10 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
         zIndex: 1000,
         minWidth: 260,
         maxWidth: 'min(320px, calc(100vw - 16px))',
-        background: '#FFFFFF',
-        border: '1px solid #dbded4',
+        background: 'var(--koala-bg-primary)',
+        border: '1px solid var(--koala-border-primary)',
         borderRadius: 8,
-        boxShadow: '0 16px 32px rgba(24,26,34,0.16), 0 2px 8px rgba(24,26,34,0.08)',
+        boxShadow: '0 16px 32px color-mix(in srgb, var(--koala-bg-inverse) 16%, transparent), 0 2px 8px color-mix(in srgb, var(--koala-bg-inverse) 8%, transparent)',
         fontFamily: 'var(--font-family-primary)',
         overflow: 'visible',
       }}
@@ -654,7 +654,7 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
           alignItems: 'center',
           gap: 2,
           padding: '8px 10px',
-          borderBottom: '1px solid #dbded4',
+          borderBottom: '1px solid var(--koala-border-primary)',
           flexWrap: 'wrap',
         }}
       >
@@ -676,10 +676,10 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                 left: 0,
                 minWidth: 200,
                 padding: 6,
-                background: '#FFFFFF',
-                border: '1px solid #dbded4',
+                background: 'var(--koala-bg-primary)',
+                border: '1px solid var(--koala-border-primary)',
                 borderRadius: 8,
-                boxShadow: '0 8px 16px rgba(24,26,34,0.12)',
+                boxShadow: '0 8px 16px color-mix(in srgb, var(--koala-bg-inverse) 12%, transparent)',
                 zIndex: 2,
               }}
             >
@@ -701,8 +701,8 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                       padding: '8px 10px',
                       border: 'none',
                       borderRadius: 6,
-                      background: active ? '#F4F4F5' : 'transparent',
-                      color: active ? '#F84416' : '#302E36',
+                      background: active ? 'var(--koala-bg-secondary)' : 'transparent',
+                      color: active ? 'var(--koala-text-brand)' : 'var(--koala-text-primary)',
                       cursor: 'pointer',
                       fontFamily: 'var(--font-family-primary)',
                       fontSize: 14,
@@ -748,10 +748,10 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                 right: 0,
                 minWidth: 200,
                 padding: 6,
-                background: '#FFFFFF',
-                border: '1px solid #dbded4',
+                background: 'var(--koala-bg-primary)',
+                border: '1px solid var(--koala-border-primary)',
                 borderRadius: 8,
-                boxShadow: '0 8px 16px rgba(24,26,34,0.12)',
+                boxShadow: '0 8px 16px color-mix(in srgb, var(--koala-bg-inverse) 12%, transparent)',
                 zIndex: 2,
               }}
             >
@@ -776,8 +776,8 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                       padding: '8px 10px',
                       border: 'none',
                       borderRadius: 6,
-                      background: active ? '#F4F4F5' : 'transparent',
-                      color: '#302E36',
+                      background: active ? 'var(--koala-bg-secondary)' : 'transparent',
+                      color: 'var(--koala-text-primary)',
                       cursor: 'pointer',
                       fontFamily: 'var(--font-family-primary)',
                       fontSize: 14,
@@ -813,19 +813,19 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
               padding: '10px 12px',
               border: 'none',
               borderRadius: 6,
-              background: voiceMenuOpen ? '#f3f4f0' : 'transparent',
-              color: '#181225',
+              background: voiceMenuOpen ? 'var(--koala-bg-secondary)' : 'transparent',
+              color: 'var(--koala-text-primary)',
               cursor: 'pointer',
               fontFamily: 'var(--font-family-primary)',
               fontSize: 14,
               fontWeight: 500,
               textAlign: 'left',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = voiceMenuOpen ? '#f3f4f0' : 'transparent'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = voiceMenuOpen ? 'var(--koala-bg-secondary)' : 'transparent'; }}
           >
             <span>Change voice</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#6A6772', fontWeight: 400 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--koala-text-secondary)', fontWeight: 400 }}>
               {voiceLabel}
               <ChevronDown open={voiceMenuOpen} />
             </span>
@@ -838,9 +838,9 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                 marginLeft: 8,
                 marginRight: 8,
                 padding: 4,
-                border: '1px solid #dbded4',
+                border: '1px solid var(--koala-border-primary)',
                 borderRadius: 6,
-                background: '#f3f4f0',
+                background: 'var(--koala-bg-secondary)',
               }}
             >
               {RANKSMILE_VOICE_OPTIONS.map((v) => (
@@ -858,8 +858,8 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                     padding: '8px 10px',
                     border: 'none',
                     borderRadius: 4,
-                    background: v === voiceLabel ? '#FFFFFF' : 'transparent',
-                    color: '#302E36',
+                    background: v === voiceLabel ? 'var(--koala-bg-primary)' : 'transparent',
+                    color: 'var(--koala-text-primary)',
                     cursor: 'pointer',
                     fontFamily: 'var(--font-family-primary)',
                     fontSize: 13,

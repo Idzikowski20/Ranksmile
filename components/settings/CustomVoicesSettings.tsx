@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
-import { Button, Input, Textarea, Checkbox } from '../koala/core';
+import { Button, Input, Textarea, Checkbox, Badge } from '../koala/core';
 import Modal, { ModalBody, ModalFooter } from '../koala/core/modal/modal';
 import {
   KoalaPanel,
@@ -127,9 +127,7 @@ const CustomVoicesSettings = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>{v.name}</span>
                     {v.isDefault && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--koala-text-brand)', background: 'color-mix(in srgb, var(--koala-brand) 10%, transparent)', padding: '2px 8px', borderRadius: 9999 }}>
-                        Default
-                      </span>
+                      <Badge appearance="brand" size="sm">Default</Badge>
                     )}
                   </div>
                   <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--koala-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 520, fontFamily: 'var(--font-family-primary)' }}>

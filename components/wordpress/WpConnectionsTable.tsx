@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from 'react-query';
+import { MenuList, MenuListItem } from '../koala/core';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId } from '../../lib/activeWorkspace';
 
@@ -43,11 +44,13 @@ const PlugIcon = () => (
 type Props = {
    /** Rendered when the workspace has no WordPress connections. */
    emptyState?: React.ReactNode;
+   /** Fires when connection list presence is known / changes. */
+   onHasConnections?: (has: boolean) => void;
 };
 
-/** The "Accounts connected" table (domain / integrated / integrated-by + disconnect),
- *  shared by the WordPress Integration page and the WordPress settings panel. */
-const WpConnectionsTable = ({ emptyState }: Props) => {
+/** The "Accounts connected" table (domain / integrated / integrated-by + disconnect)
+ *  used by Settings → WordPress. */
+const WpConnectionsTable = ({ emptyState, onHasConnections }: Props) => {
    const router = useRouter();
    const queryClient = useQueryClient();
    const [mounted, setMounted] = useState(false);
@@ -68,6 +71,11 @@ const WpConnectionsTable = ({ emptyState }: Props) => {
       { enabled: !!activeWsId },
    );
    const connections = data?.connections || [];
+
+   useEffect(() => {
+      if (isLoading || !activeWsId) return;
+      onHasConnections?.(connections.length > 0);
+   }, [isLoading, activeWsId, connections.length, onHasConnections]);
 
    const disconnect = async (id: number) => {
       setMenuFor(null);
@@ -150,25 +158,15 @@ const WpConnectionsTable = ({ emptyState }: Props) => {
                            {menuFor === c.id && (
                               <>
                                  <div onClick={() => setMenuFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 149 }} />
-                                 <div
-                                    role="menu"
-                                    style={{
-                                       position: 'absolute', top: 'calc(100% + 4px)', right: 16, zIndex: 150, minWidth: 200,
-                                       background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 12, padding: 6,
-                                       boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09), 0px 2px 6px 0px rgba(17,24,39,0.06)',
-                                       animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)', transformOrigin: 'top right' }}
-                                 >
-                                    <button
-                                       type="button"
-                                       role="menuitem"
-                                       onClick={() => disconnect(c.id)}
-                                       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 12px', fontFamily: font, fontSize: 14, fontWeight: 500, color: '#18181B', cursor: 'pointer', textAlign: 'left', transition: 'background 150ms ease' }}
-                                       onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }}
-                                       onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-                                    >
-                                       <PlugIcon />
-                                       Disconnect account
-                                    </button>
+                                 <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 16, zIndex: 150, minWidth: 200 }}>
+                                    <MenuList role="menu">
+                                       <MenuListItem
+                                          label="Disconnect account"
+                                          leadingItems={<PlugIcon />}
+                                          onClick={() => disconnect(c.id)}
+                                          style={{ fontFamily: font, fontSize: 14, fontWeight: 500 }}
+                                       />
+                                    </MenuList>
                                  </div>
                               </>
                            )}

@@ -211,6 +211,11 @@ function brandBlock(ctx: ArticleContext | null): string {
   return parts.length ? `\n\n${parts.join('\n')}` : '';
 }
 
+function wiePromptFromCtx(ctx: ArticleContext | null): string {
+  const block = ctx?.wiePromptBlock?.trim();
+  return block ? `\n\n${block}` : '';
+}
+
 export function buildWholeArticlePrompt(opts: {
   ctx: ArticleContext | null;
   html: string;
@@ -231,6 +236,7 @@ export function buildWholeArticlePrompt(opts: {
   const gaps = opts.focusInstruction ? '' : gapsBlock(opts.ctx, opts.html);
   const effort = opts.focusInstruction ? '' : effortBlock(opts.ctx, opts.html);
   const brand = brandBlock(opts.ctx);
+  const wie = wiePromptFromCtx(opts.ctx);
 
   // When minimal mode still has term debt, allow normal (not patch-only) edits so
   // the model can redistribute phrases — "less" was too timid for 20+ missing terms.
@@ -248,7 +254,7 @@ export function buildWholeArticlePrompt(opts: {
 
   const gapsSection = gaps ? `\n\n${gaps}` : '';
   const effortSection = effort ? `\n\n${effort}` : '';
-  const systemPrompt = `${SHARED_RULES}${lessRules}\n\n${block}${gapsSection}${effortSection}${brand}\n\n${OUTPUT_RULE}`;
+  const systemPrompt = `${SHARED_RULES}${lessRules}\n\n${block}${gapsSection}${effortSection}${brand}${wie}\n\n${OUTPUT_RULE}`;
   const userInstruction = opts.focusInstruction
     ? 'Apply ONLY the Priority Action above with minimal, targeted edits. Return the complete HTML article.'
     : effectiveEditMode === 'less'

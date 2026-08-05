@@ -34,8 +34,12 @@ class Ranksmile_Admin {
 		add_action( 'admin_init', array( $this, 'handle_admin_actions' ) );
 		add_action( 'admin_init', array( $this, 'do_admin_redirects' ) );
 
+		// Ranksmile product alerts (rendered via RSDS Notices on Ranksmile screens).
 		add_action( 'admin_notices', array( $this, 'check_wordfence_application_password_protection' ) );
 		add_action( 'admin_notices', array( $this, 'check_elementor_grid_settings' ) );
+
+		// WP common.js moves .notice after h1 inside .wrap â€” keep foreign banners out of rs-shell.
+		add_action( 'admin_head', array( $this, 'suppress_foreign_admin_notices' ), 1 );
 	}
 
 	/**
@@ -48,27 +52,140 @@ class Ranksmile_Admin {
 	}
 
 	/**
-	 * Register admin menu.
+	 * Register admin menu (Dashboard-first IA).
 	 */
 	public function register_settings_page() {
+		$icon = 'data:image/svg+xml;base64,' . base64_encode( file_get_contents( Ranksmileseo::get_instance()->get_basedir() . '/assets/images/admin_menu_logo.svg' ) ); // @codingStandardsIgnoreLine
+
 		add_menu_page(
 			'Ranksmile',
 			'Ranksmile',
 			'manage_options',
 			'ranksmile',
-			array( $this, 'settings_page' ),
-			'data:image/svg+xml;base64,' . base64_encode( file_get_contents( Ranksmileseo::get_instance()->get_basedir() . '/assets/images/admin_menu_logo.svg' ) ) // @codingStandardsIgnoreLine
+			array( $this, 'dashboard_page' ),
+			$icon
 		);
 
-		$gsc_is_connected = Ranksmile()->get_plugin()->get_gsc()->check_if_gsc_connected();
+		add_submenu_page( 'ranksmile', __( 'Dashboard', 'ranksmileseo' ), __( 'Dashboard', 'ranksmileseo' ), 'manage_options', 'ranksmile', array( $this, 'dashboard_page' ) );
+		add_submenu_page( 'ranksmile', __( 'Articles', 'ranksmileseo' ), __( 'Articles', 'ranksmileseo' ), 'manage_options', 'ranksmile-articles', array( $this, 'articles_page' ) );
+		add_submenu_page( 'ranksmile', __( 'Content Audit', 'ranksmileseo' ), __( 'Content Audit', 'ranksmileseo' ), 'manage_options', 'ranksmile-content-audit', array( $this, 'content_audit_page' ) );
+		add_submenu_page( 'ranksmile', __( 'Google Search Console', 'ranksmileseo' ), __( 'Search Console', 'ranksmileseo' ), 'manage_options', 'ranksmile-gsc', array( $this, 'gsc_page' ) );
+		add_submenu_page( 'ranksmile', __( 'Integrations', 'ranksmileseo' ), __( 'Integrations', 'ranksmileseo' ), 'manage_options', 'ranksmile-integrations', array( $this, 'integrations_page' ) );
+		add_submenu_page( 'ranksmile', __( 'Settings', 'ranksmileseo' ), __( 'Settings', 'ranksmileseo' ), 'manage_options', 'ranksmile-settings', array( $this, 'settings_page' ) );
+		add_submenu_page( 'ranksmile', __( 'Help', 'ranksmileseo' ), __( 'Help', 'ranksmileseo' ), 'manage_options', 'ranksmile-help', array( $this, 'help_page' ) );
 
+		$gsc_is_connected = Ranksmile()->get_plugin()->get_gsc()->check_if_gsc_connected();
 		if ( $gsc_is_connected ) {
 			add_submenu_page( 'ranksmile', __( 'Performance Report', 'ranksmileseo' ), __( 'Performance Report', 'ranksmileseo' ), 'manage_options', 'ranksmile-performance-report', array( $this, 'performance_report_page' ) );
 		}
 	}
 
 	/**
-	 * Ranksmile wp-admin general settings page.
+	 * Render an app inside the RSDS Admin Shell.
+	 *
+	 * @param string               $slug        Page slug.
+	 * @param string               $title       Title.
+	 * @param string               $description Description.
+	 * @param string               $template    Relative template under templates/admin/pages/.
+	 * @param array<string,string> $primary     Primary action.
+	 * @param array<string,string> $secondary   Secondary action.
+	 */
+	private function render_shell_app( $slug, $title, $description, $template, $primary = null, $secondary = null ) {
+		$rs_page_slug        = $slug;
+		$rs_page_title       = $title;
+		$rs_page_description = $description;
+		$rs_primary_action   = $primary;
+		$rs_secondary_action = $secondary;
+		$rs_content_template = Ranksmileseo::get_instance()->get_basedir() . '/templates/admin/pages/' . $template;
+		require Ranksmileseo::get_instance()->get_basedir() . '/templates/admin/shell.php';
+	}
+
+	/**
+	 * Dashboard Control Center.
+	 */
+	public function dashboard_page() {
+		$this->render_shell_app(
+			'ranksmile',
+			__( 'Dashboard', 'ranksmileseo' ),
+			__( 'Connect Ranksmile and Search Console - that\'s all this plugin needs.', 'ranksmileseo' ),
+			'dashboard.php',
+			null,
+			null
+		);
+	}
+
+	/** Articles app. */
+	public function articles_page() {
+		$this->render_shell_app(
+			'ranksmile-articles',
+			__( 'Articles', 'ranksmileseo' ),
+			__( 'Manage synchronized content.', 'ranksmileseo' ),
+			'articles.php',
+			array(
+				'label' => __( 'Sync articles', 'ranksmileseo' ),
+				'url'   => admin_url( 'edit.php' ),
+			),
+			array(
+				'label' => __( 'Open app', 'ranksmileseo' ),
+				'url'   => 'https://app.ranksmile.pl',
+			)
+		);
+	}
+
+	/** Content Audit app. */
+	public function content_audit_page() {
+		$this->render_shell_app(
+			'ranksmile-content-audit',
+			__( 'Content Audit', 'ranksmileseo' ),
+			__( 'Review content quality signals from Ranksmile.', 'ranksmileseo' ),
+			'content-audit.php',
+			array(
+				'label' => __( 'Open app', 'ranksmileseo' ),
+				'url'   => 'https://app.ranksmile.pl',
+			)
+		);
+	}
+
+	/** GSC app. */
+	public function gsc_page() {
+		$this->render_shell_app(
+			'ranksmile-gsc',
+			__( 'Google Search Console', 'ranksmileseo' ),
+			__( 'Connection status, sync, and performance entry points.', 'ranksmileseo' ),
+			'gsc.php',
+			array(
+				'label' => __( 'Connect account', 'ranksmileseo' ),
+				'url'   => admin_url( 'admin.php?page=ranksmile-settings' ),
+			)
+		);
+	}
+
+	/** Integrations app. */
+	public function integrations_page() {
+		$this->render_shell_app(
+			'ranksmile-integrations',
+			__( 'Integrations', 'ranksmileseo' ),
+			__( 'Connect Ranksmile with the tools you already use.', 'ranksmileseo' ),
+			'integrations.php',
+			array(
+				'label' => __( 'Configure', 'ranksmileseo' ),
+				'url'   => admin_url( 'admin.php?page=ranksmile-settings' ),
+			)
+		);
+	}
+
+	/** Help app. */
+	public function help_page() {
+		$this->render_shell_app(
+			'ranksmile-help',
+			__( 'Help & Documentation', 'ranksmileseo' ),
+			__( 'Docs, support, and debug tools.', 'ranksmileseo' ),
+			'help.php'
+		);
+	}
+
+	/**
+	 * Settings app (form + progressive disclosure via section query).
 	 */
 	public function settings_page() {
 		$success = false;
@@ -84,14 +201,52 @@ class Ranksmile_Admin {
 			if ( $form_is_valid ) {
 				$form->bind( $_POST );
 				$form->save( $tab );
-
 				$success = true;
+				\Ranksmile\Admin\RSDS\Notices::push( 'success', __( 'Settings saved.', 'ranksmileseo' ) );
 			} else {
 				$error = true;
+				\Ranksmile\Admin\RSDS\Notices::push( 'error', __( 'There is an error in your form.', 'ranksmileseo' ) );
 			}
 		}
 
-		require_once Ranksmileseo::get_instance()->get_basedir() . '/templates/admin/settings.php';
+		$section = isset( $_GET['section'] ) ? sanitize_key( wp_unslash( $_GET['section'] ) ) : 'connection'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$section_meta = array(
+			'connection'    => array(
+				'title' => __( 'Connection', 'ranksmileseo' ),
+				'desc'  => __( 'Connect this WordPress site to Ranksmile.', 'ranksmileseo' ),
+			),
+			'editor'        => array(
+				'title' => __( 'Editor', 'ranksmileseo' ),
+				'desc'  => __( 'Writing guidelines and editor integrations.', 'ranksmileseo' ),
+			),
+			'tracking'      => array(
+				'title' => __( 'Tracking', 'ranksmileseo' ),
+				'desc'  => __( 'Optional product analytics for the plugin.', 'ranksmileseo' ),
+			),
+			'notifications' => array(
+				'title' => __( 'Notifications', 'ranksmileseo' ),
+				'desc'  => __( 'Email and in-WordPress alerts from Ranksmile.', 'ranksmileseo' ),
+			),
+			'advanced'      => array(
+				'title' => __( 'Advanced', 'ranksmileseo' ),
+				'desc'  => __( 'Debug tools and low-level options.', 'ranksmileseo' ),
+			),
+		);
+		if ( ! isset( $section_meta[ $section ] ) ) {
+			$section = 'connection';
+		}
+		$rs_page_slug        = 'ranksmile-settings';
+		$section = 'advanced';
+		$rs_page_title       = __( 'Advanced', 'ranksmileseo' );
+		$rs_page_description = __( 'Rare options for parsers, tracking, and debug. Most users never need these.', 'ranksmileseo' );
+		$rs_primary_action   = null;
+		$rs_secondary_action = null;
+		$rs_content_template = Ranksmileseo::get_instance()->get_basedir() . '/templates/admin/pages/settings-body.php';
+		// Expose form flags to settings-body.
+		$rs_settings_form    = $form;
+		$rs_settings_success = $success;
+		$rs_settings_error   = $error;
+		require Ranksmileseo::get_instance()->get_basedir() . '/templates/admin/shell.php';
 	}
 
 	/**
@@ -123,6 +278,47 @@ class Ranksmile_Admin {
 	 *
 	 * @param string $hook_suffix Admin page hook suffix.
 	 */
+
+	/**
+	 * Whether the current admin screen is a Ranksmile top-level/submenu page.
+	 *
+	 * @return bool
+	 */
+	private function is_ranksmile_admin_screen() {
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			return false;
+		}
+		$screen = get_current_screen();
+		if ( empty( $screen ) || empty( $screen->id ) ) {
+			return false;
+		}
+		$id = (string) $screen->id;
+		return ( false !== strpos( $id, 'toplevel_page_ranksmile' ) )
+			|| ( 0 === strpos( $id, 'ranksmile_page_' ) );
+	}
+
+	/**
+	 * Strip third-party admin_notices on Ranksmile screens.
+	 *
+	 * Root cause: WordPress admin common.js relocates .notice nodes after the first
+	 * h1/h2 inside .wrap, so Elementor/Vamtam/WordFence banners land inside rs-shell.
+	 * Ranksmile product alerts are re-queued into RSDS Notices (see check_* methods).
+	 *
+	 * @return void
+	 */
+	public function suppress_foreign_admin_notices() {
+		if ( ! $this->is_ranksmile_admin_screen() ) {
+			return;
+		}
+
+		remove_all_actions( 'admin_notices' );
+		remove_all_actions( 'all_admin_notices' );
+
+		// Re-attach Ranksmile-owned checks (they push to RSDS Notices on these screens).
+		add_action( 'admin_notices', array( $this, 'check_wordfence_application_password_protection' ) );
+		add_action( 'admin_notices', array( $this, 'check_elementor_grid_settings' ) );
+	}
+
 	public function admin_enqueue_scripts( $hook_suffix = '' ) {
 		unset( $hook_suffix );
 
@@ -145,6 +341,14 @@ class Ranksmile_Admin {
 
 		$connected        = Ranksmile()->get_plugin()->is_ranksmile_connected();
 		$tracking_enabled = Ranksmile()->get_ranksmile_tracking()->is_tracking_allowed();
+
+		wp_enqueue_script(
+			'ranksmile-admin-notices',
+			Ranksmileseo::get_instance()->get_baseurl() . 'assets/js/ranksmile-admin-notices.js',
+			array(),
+			RANKSMILE_VERSION,
+			true
+		);
 
 		wp_enqueue_script( 'ranksmile_connection', Ranksmileseo::get_instance()->get_baseurl() . 'assets/js/ranksmile-connector.js', array( 'jquery' ), RANKSMILE_VERSION, true );
 		wp_localize_script(
@@ -258,19 +462,25 @@ class Ranksmile_Admin {
 
 		$loginsec_disabled_app_passwords = call_user_func( array( '\wfConfig', 'get' ), 'loginSec_disableApplicationPasswords' );
 		if ( 1 === intval( $loginsec_disabled_app_passwords ) ) {
-			$class       = 'notice notice-error';
 			$disable_url = admin_url( 'admin.php?page=WordfenceWAF&subpage=waf_options#wf-option-loginSec-disableApplicationPasswords-label' );
 
 			/* translators: %s - URL to the option that should be disabled */
-			$message = sprintf( __( '<b>WordFence is blocking Ranksmile!</b> <br/>WordFence option "Disable WordPress application passwords" is enabled. This option blocks Ranksmile API and you will be not able to use it. <a href="%s">Please disable this option</a>.', 'ranksmileseo' ), $disable_url );
+			$message = sprintf( __( 'WordFence is blocking Ranksmile! WordFence option "Disable WordPress application passwords" is enabled. This option blocks Ranksmile API â€” please disable it: %s', 'ranksmileseo' ), $disable_url );
 
+			if ( $this->is_ranksmile_admin_screen() ) {
+				\Ranksmile\Admin\RSDS\Notices::push( 'error', $message );
+				return;
+			}
+
+			$class        = 'notice notice-error';
+			$html_message = sprintf( __( '<b>WordFence is blocking Ranksmile!</b> <br/>WordFence option "Disable WordPress application passwords" is enabled. This option blocks Ranksmile API and you will be not able to use it. <a href="%s">Please disable this option</a>.', 'ranksmileseo' ), $disable_url );
 			$allowed_html = array(
 				'b'  => array(),
 				'br' => array(),
 				'a'  => array( 'href' => array() ),
 			);
 
-			printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses( $message, $allowed_html ) );
+			printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses( $html_message, $allowed_html ) );
 		}
 	}
 
@@ -312,19 +522,25 @@ class Ranksmile_Admin {
 			return;
 		}
 
-		$class       = 'notice notice-error';
 		$disable_url = admin_url( 'admin.php?page=elementor-settings#e-experiment-container_grid' );
 
 		/* translators: %s - URL to the option that should be disabled */
-		$message = sprintf( __( '<b>It appears there may be an issue with Elementor</b> <br/>We have noticed that you are attempting to use the Elementor parser with the Ranksmile plugin while the Grid Container option is disabled. Please be aware that this configuration may lead to errors during the export process from Ranksmile. <a href="%s">Please enable this option</a>.', 'ranksmileseo' ), $disable_url );
+		$message = sprintf( __( 'Elementor Grid Container is disabled. Ranksmile Elementor export may fail â€” please enable it: %s', 'ranksmileseo' ), $disable_url );
 
+		if ( $this->is_ranksmile_admin_screen() ) {
+			\Ranksmile\Admin\RSDS\Notices::push( 'error', $message );
+			return;
+		}
+
+		$class        = 'notice notice-error';
+		$html_message = sprintf( __( '<b>It appears there may be an issue with Elementor</b> <br/>We have noticed that you are attempting to use the Elementor parser with the Ranksmile plugin while the Grid Container option is disabled. Please be aware that this configuration may lead to errors during the export process from Ranksmile. <a href="%s">Please enable this option</a>.', 'ranksmileseo' ), $disable_url );
 		$allowed_html = array(
 			'b'  => array(),
 			'br' => array(),
 			'a'  => array( 'href' => array() ),
 		);
 
-		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses( $message, $allowed_html ) );
+		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses( $html_message, $allowed_html ) );
 	}
 
 	/**
@@ -347,7 +563,7 @@ class Ranksmile_Admin {
 			return;
 		}
 
-		// Already on the Ranksmile page – clear the flag and stop (avoids a redirect loop).
+		// Already on the Ranksmile page â€“ clear the flag and stop (avoids a redirect loop).
 		$current_page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : false; // phpcs:ignore WordPress.Security.NonceVerification
 		if ( 'ranksmile' === $current_page ) {
 			delete_transient( '_ranksmile_activation_redirect' );
@@ -417,7 +633,7 @@ class Ranksmile_Admin {
 		$content .= 'HOME URL: ' . home_url() . PHP_EOL . PHP_EOL;
 		$content .= 'SITE URL: ' . get_site_url() . PHP_EOL . PHP_EOL;
 		$content .= 'AFTER FILTER SITE URL: ' . apply_filters( 'ranksmile_api_base_url', get_site_url() ) . PHP_EOL . PHP_EOL;
-		$content .= 'RANKSMILE API KEY: ' . get_option( 'wpranksmile_api_access_key', false ) . PHP_EOL . PHP_EOL;
+		$content .= 'RANKSMILE API KEY: ' . get_option( 'ranksmile_api_access_key', false ) . PHP_EOL . PHP_EOL;
 		$content .= 'RANKSMILE ORGANIZATION: ' . join( PHP_EOL, get_option( 'ranksmile_connection_details', null ) ) . PHP_EOL . PHP_EOL;
 		$content .= 'PERMALINK STRUCTURE: ' . get_option( 'permalink_structure', false ) . PHP_EOL . PHP_EOL;
 		$content .= 'GSC DATA INTERVAL: ' . $interval . PHP_EOL . PHP_EOL;
@@ -443,7 +659,8 @@ class Ranksmile_Admin {
 			return;
 		}
 
-		if ( ! isset( $_GET['page'] ) || 'ranksmile' !== $_GET['page'] ) {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		if ( ! in_array( $page, array( 'ranksmile', 'ranksmile-settings' ), true ) ) {
 			return;
 		}
 

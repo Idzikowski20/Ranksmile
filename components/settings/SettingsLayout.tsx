@@ -61,7 +61,7 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
 
 const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
   notifications: 'Manage notifications from Ranksmile or other organization members.',
-  brand_knowledge: 'Manage what we know about your brand.',
+  brand_knowledge: 'Brand profile plus writing examples that train Brand DNA.',
   custom_voices: 'Manage Custom Voices for Content Editor, Humanizer, and Ranksmile AI.',
   billing_details: 'Manage your billing information and payment methods.',
   billing_subscription: 'View and change your Ranksmile plan.',

@@ -10,10 +10,10 @@ import type { OrgBillingState } from '../../lib/orgBilling';
 
 describe('billingUpgrade helpers', () => {
   it('ranks plans starter < growth < scale < agency', () => {
-    expect(planRank('starter')).toBe(1);
-    expect(planRank('growth')).toBe(2);
-    expect(planRank('scale')).toBe(3);
-    expect(planRank('agency')).toBe(4);
+    expect(planRank('starter')).toBe(0);
+    expect(planRank('growth')).toBe(1);
+    expect(planRank('scale')).toBe(2);
+    expect(planRank('agency')).toBe(3);
   });
 
   it('treats higher tier as upgrade even when switching yearly → monthly', () => {
@@ -24,6 +24,7 @@ describe('billingUpgrade helpers', () => {
   });
 
   it('allows same-tier billing period switches but not tier downgrades', () => {
+    expect(isAllowedSubscriptionChange('starter', 'monthly', 'growth', 'monthly')).toBe(true);
     expect(isAllowedSubscriptionChange('scale', 'yearly', 'scale', 'monthly')).toBe(true);
     expect(isAllowedSubscriptionChange('scale', 'monthly', 'scale', 'yearly')).toBe(true);
     expect(isAllowedSubscriptionChange('growth', 'yearly', 'scale', 'monthly')).toBe(true);
@@ -40,6 +41,7 @@ describe('billingUpgrade helpers', () => {
       billingPeriod: 'yearly',
       subscriptionStatus: 'active',
       trialEndsAt: null,
+    trialConsumedAt: null,
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
       lastCheckoutStartedAt: null,
@@ -111,5 +113,16 @@ describe('applySubscriptionUpgrade pending updates', () => {
     expect(calls[0][1]).toEqual({ cancel_at_period_end: false });
     expect(calls[1][1].payment_behavior).toBe('pending_if_incomplete');
     expect(calls[1][1]).not.toHaveProperty('cancel_at_period_end');
+  });
+
+  it('does not request payment after an immediately paid upgrade', async () => {
+    const stripe = mockStripe({
+      ...baseSub,
+      latest_invoice: { confirmation_secret: { client_secret: 'pi_paid_secret' } },
+    });
+
+    const { result } = await applySubscriptionUpgrade(stripe, args);
+
+    expect(result).toEqual({ status: 'upgraded', subscriptionId: 'sub_x' });
   });
 });

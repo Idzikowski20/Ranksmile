@@ -122,6 +122,47 @@
         ]
       }]
     }
+   },
+   {
+     "files": [
+       "lib/projections/**/*.{ts,tsx}",
+       "lib/planner/**/*.{ts,tsx}",
+       "lib/intelligence/**/*.{ts,tsx}"
+     ],
+     "rules": {
+       "no-restricted-imports": ["error", {
+         "patterns": [
+           {
+             "group": ["cheerio", "cheerio/*", "jsdom", "jsdom/*"],
+             "message": "CIA ADR-001: projections/planner/intelligence must not parse HTML — use CCM + GraphQuery."
+           },
+           {
+             "group": [
+               "**/engines/coverageEngine",
+               "**/engines/coverageEngine.*",
+               "**/coverageSnapshotToKg*",
+               "**/coverageSnapshotToCcm*",
+               "**/aiCoverageJudge*",
+               "**/buildCoverageSnapshot*"
+             ],
+             "message": "CIA ADR-025/035: no coverage engine/adapter/judge SoT imports in consumer zones."
+           }
+         ]
+       }]
+     }
+   },
+   {
+     "files": ["lib/compiler/**/*.{ts,tsx}"],
+     "rules": {
+       "no-restricted-imports": ["error", {
+         "patterns": [
+           {
+             "group": ["**/lib/ao/**", "**/ao/**", "**/lib/wie/**", "**/wie/**"],
+             "message": "CIA: compiler must not depend on AO/WIE consumers."
+           }
+         ]
+       }]
+     }
    }
  ]
 }

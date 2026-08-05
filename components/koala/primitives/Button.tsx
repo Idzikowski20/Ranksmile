@@ -63,7 +63,7 @@ const Root = styled.button<{
     whiteSpace: 'nowrap',
     fontWeight: 500,
     fontFamily: typeface.body,
-    cursor: $busy ? 'var(--koala-cursor-beachball)' : 'var(--koala-cursor-pointing)',
+    cursor: $busy ? 'var(--koala-cursor-not-allowed)' : 'var(--koala-cursor-pointing)',
     height: sz.height,
     minHeight: sz.height,
     padding: sz.padding,

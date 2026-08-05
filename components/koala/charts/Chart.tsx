@@ -66,6 +66,8 @@ function mergeConfig(preset: ChartPresetName, overrides?: ChartOverrides, height
     height: heightProp ?? overrides?.height ?? base.height,
     compactLabels: overrides?.compactLabels ?? base.compactLabels,
     valueFormatter: overrides?.valueFormatter ?? base.valueFormatter,
+    reverseY: overrides?.reverseY ?? base.reverseY,
+    independentY: overrides?.independentY ?? base.independentY,
   };
 }
 

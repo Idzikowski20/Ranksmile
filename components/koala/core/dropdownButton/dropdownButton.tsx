@@ -20,7 +20,7 @@ const Chevron = ({ up, size }: { up: boolean; size: ButtonProps['size'] }) => (
       flexShrink: 0,
       transform: up ? 'rotate(180deg)' : 'none',
       transition: 'transform 150ms ease',
-      color: '#6A6772',
+      color: 'var(--koala-text-secondary)',
     }}
   >
     <path
@@ -31,47 +31,54 @@ const Chevron = ({ up, size }: { up: boolean; size: ButtonProps['size'] }) => (
   </svg>
 );
 
-export function DropdownButton({
-  children,
-  prefix,
-  size = 'sm',
-  isOpen = false,
-  showChevron = true,
-  disabled = false,
-  variant = 'secondary',
-  style,
-  ...props
-}: DropdownButtonProps) {
-  return (
-    <Button
-      {...props}
-      type="button"
-      variant={variant}
-      size={size}
-      disabled={disabled}
-      aria-haspopup="true"
-      aria-expanded={isOpen}
-      style={{
-        position: 'relative',
-        maxWidth: '100%',
-        width: '100%',
-        justifyContent: 'flex-start',
-        fontWeight: prefix ? 400 : undefined,
-        boxShadow: isOpen || disabled ? 'none' : undefined,
-        ...style,
-      }}
-    >
-      {prefix && (
-        <span className="koala-dropdown-button-prefix">{prefix}</span>
-      )}
-      <span className="koala-dropdown-button-label">{children}</span>
-      {showChevron && (
-        <span className="koala-dropdown-button-chevron">
-          <Chevron up={isOpen} size={size} />
-        </span>
-      )}
-    </Button>
-  );
-}
+export const DropdownButton = React.forwardRef<HTMLButtonElement, DropdownButtonProps>(
+  (
+    {
+      children,
+      prefix,
+      size = 'sm',
+      isOpen = false,
+      showChevron = true,
+      disabled = false,
+      variant = 'secondary',
+      style,
+      ...props
+    },
+    ref,
+  ) => {
+    return (
+      <Button
+        {...props}
+        ref={ref}
+        type="button"
+        variant={variant}
+        size={size}
+        disabled={disabled}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        style={{
+          position: 'relative',
+          maxWidth: '100%',
+          width: '100%',
+          justifyContent: 'flex-start',
+          fontWeight: prefix ? 400 : undefined,
+          boxShadow: isOpen || disabled ? 'none' : undefined,
+          ...style,
+        }}
+      >
+        {prefix && (
+          <span className="koala-dropdown-button-prefix">{prefix}</span>
+        )}
+        <span className="koala-dropdown-button-label">{children}</span>
+        {showChevron && (
+          <span className="koala-dropdown-button-chevron">
+            <Chevron up={isOpen} size={size} />
+          </span>
+        )}
+      </Button>
+    );
+  },
+);
+DropdownButton.displayName = 'DropdownButton';
 
 export default DropdownButton;

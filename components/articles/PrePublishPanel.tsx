@@ -64,17 +64,17 @@ const ordinal = (n: number): string => {
 };
 
 const InfoIcon = () => (
-  <svg viewBox="0 0 24 24" width={16} height={16} style={{ color: '#52525c', flexShrink: 0 }}>
+  <svg viewBox="0 0 24 24" width={16} height={16} style={{ color: 'var(--koala-text-secondary)', flexShrink: 0 }}>
     <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0m-9-3.75h.008v.008H12z" />
   </svg>
 );
 
-const Divider = () => <div style={{ minHeight: 1, height: 1, flexShrink: 0, background: '#f4f4f5', alignSelf: 'stretch' }} />;
+const Divider = () => <div style={{ minHeight: 1, height: 1, flexShrink: 0, background: 'var(--koala-bg-secondary)', alignSelf: 'stretch' }} />;
 
 const OutlineButton = ({ label, disabled, onClick }: { label: React.ReactNode; disabled?: boolean; onClick?: () => void }) => (
   <button type="button" disabled={disabled} onClick={onClick}
-    style={{ width: '100%', padding: '9px 16px', borderRadius: 6, border: 'none', boxShadow: 'inset 0 0 0 1px #e4e4e7', background: 'transparent', color: '#3f3f47', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'background 0.15s' }}
-    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#f4f4f5'; }}
+    style={{ width: '100%', padding: '9px 16px', borderRadius: 6, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: 'var(--koala-text-secondary)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'background 0.15s' }}
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
     {label}
   </button>
@@ -82,7 +82,7 @@ const OutlineButton = ({ label, disabled, onClick }: { label: React.ReactNode; d
 
 
 const Spinner = () => (
-  <span style={{ display: 'inline-block', width: 13, height: 13, border: '2px solid rgba(63,63,71,0.25)', borderTopColor: '#3f3f47', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+  <span style={{ display: 'inline-block', width: 13, height: 13, border: '2px solid rgba(63,63,71,0.25)', borderTopColor: 'var(--koala-text-secondary)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
 );
 
 const Busy = ({ label }: { label: string }) => (
@@ -108,10 +108,10 @@ const AI_READABILITY_CRITERIA: Array<{ key: string; title: string; desc: string 
 
 const AiReadabilityInfoModal = ({ onClose, result }: { onClose: () => void; result?: AiReadabilityResult | null }) => createPortal(
   <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: overlayZ.modal, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: F }}>
-    <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 600, maxHeight: '85vh', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+    <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 600, maxHeight: '85vh', background: 'var(--koala-bg-primary)', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '24px 24px 16px' }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#18181b' }}>How do we assess AI Readability?</h2>
-        <button type="button" onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525c', display: 'inline-flex', padding: 0, marginLeft: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--koala-text-primary)' }}>How do we assess AI Readability?</h2>
+        <button type="button" onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--koala-text-secondary)', display: 'inline-flex', padding: 0, marginLeft: 12 }}>
           <svg viewBox="0 0 24 24" width={22} height={22}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
@@ -121,24 +121,24 @@ const AiReadabilityInfoModal = ({ onClose, result }: { onClose: () => void; resu
           const analyzed = !!result;
           const met = !!r?.met;
           return (
-            <div key={c.key} style={{ display: 'flex', gap: 12, background: '#f3f4f0', borderRadius: 12, padding: 16 }}>
-              <span style={{ flexShrink: 0, marginTop: 2, width: 16, height: 16, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: !analyzed ? '#d4d4d8' : met ? '#1AB25E' : '#fff', border: analyzed && !met ? '2px solid #e4e4e7' : 'none' }}>
+            <div key={c.key} style={{ display: 'flex', gap: 12, background: 'var(--koala-bg-secondary)', borderRadius: 12, padding: 16 }}>
+              <span style={{ flexShrink: 0, marginTop: 2, width: 16, height: 16, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: !analyzed ? 'var(--koala-border-secondary)' : met ? 'var(--koala-status-success)' : 'var(--koala-bg-primary)', border: analyzed && !met ? '2px solid var(--koala-border-primary)' : 'none' }}>
                 {analyzed && met && (
-                  <svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="var(--koala-bg-primary)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 )}
               </span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>{c.title}</span>
-                <span style={{ fontSize: 14, lineHeight: '20px', color: '#52525c' }}>{c.desc}</span>
-                {r?.note && <span style={{ fontSize: 12, color: met ? '#1AB25E' : '#9f9fa9', fontStyle: 'italic' }}>{r.note}</span>}
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>{c.title}</span>
+                <span style={{ fontSize: 14, lineHeight: '20px', color: 'var(--koala-text-secondary)' }}>{c.desc}</span>
+                {r?.note && <span style={{ fontSize: 12, color: met ? 'var(--koala-status-success)' : 'var(--koala-text-disabled)', fontStyle: 'italic' }}>{r.note}</span>}
               </div>
             </div>
           );
         })}
       </div>
-      <div style={{ borderTop: '1px solid #f4f4f5', padding: 20, display: 'flex', justifyContent: 'flex-end' }}>
-        <button type="button" onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'background 0.15s' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+      <div style={{ borderTop: '1px solid var(--koala-bg-secondary)', padding: 20, display: 'flex', justifyContent: 'flex-end' }}>
+        <button type="button" onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'background 0.15s' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-text-brand)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-text-primary)'; }}>
           Close
         </button>
       </div>
@@ -238,11 +238,11 @@ const PrePublishPanel = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button type="button" onClick={onBack} title="Back"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, border: 'none', background: '#f4f4f5', cursor: 'pointer', color: '#18181b' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}>
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, border: 'none', background: 'var(--koala-bg-secondary)', cursor: 'pointer', color: 'var(--koala-text-primary)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-border-primary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}>
             <svg viewBox="0 0 20 20" width={20} height={20}><path fill="currentColor" fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0" clipRule="evenodd" /></svg>
           </button>
-          <span style={{ fontSize: 16, fontWeight: 600, color: '#18181b' }}>Pre-Publish Review</span>
+          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Pre-Publish Review</span>
         </div>
         <div
           style={{ position: 'relative', display: 'inline-flex' }}
@@ -251,14 +251,14 @@ const PrePublishPanel = ({
         >
           <MiniGauge score={mainScore} />
           {scoreTip && (
-            <div style={{ position: 'absolute', top: '50%', right: 'calc(100% + 10px)', transform: 'translateY(-50%)', background: '#18181b', color: '#fff', borderRadius: 8, padding: '8px 12px', whiteSpace: 'nowrap', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', fontFamily: F }}>
+            <div style={{ position: 'absolute', top: '50%', right: 'calc(100% + 10px)', transform: 'translateY(-50%)', background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)', borderRadius: 8, padding: '8px 12px', whiteSpace: 'nowrap', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', fontFamily: F }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: '#a1a1aa' }}>SEO</span>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: 'var(--koala-text-disabled)' }}>SEO</span>
                 <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{Math.round(score)}</span>
               </div>
               {hasAi && typeof aiScore === 'number' && (
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginTop: 6, paddingTop: 6, borderTop: '1px solid #3f3f47' }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: '#a1a1aa' }}>AI SEARCH</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--koala-text-secondary)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: 'var(--koala-text-disabled)' }}>AI SEARCH</span>
                   <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{aiScore}</span>
                 </div>
               )}
@@ -271,11 +271,11 @@ const PrePublishPanel = ({
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }} className="styled-scrollbar">
         {/* Readability Score */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '0 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, color: '#18181b' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Readability Score <InfoIcon /></span>
             <span>{r.score || '—'}</span>
           </div>
-          <span style={{ fontSize: 13, color: '#52525c' }}>
+          <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>
             {r.grade
               ? <>Your text can be read by people with at least grade {ordinal(r.grade)} education</>
               : 'Add content to compute readability'}
@@ -286,7 +286,7 @@ const PrePublishPanel = ({
 
         {/* Plagiarism Check */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 16px' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>Plagiarism Check</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Plagiarism Check</span>
           <OutlineButton
             disabled={scanning || !articleId || readOnly}
             onClick={runPlagiarism}
@@ -295,7 +295,7 @@ const PrePublishPanel = ({
               : plag ? 'Re-run Plagiarism Checker' : 'Run Plagiarism Checker'}
           />
           {!plag && !scanning && (
-            <span style={{ fontSize: 13, color: '#52525c' }}>Checks representative passages against the web for verbatim matches.</span>
+            <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>Checks representative passages against the web for verbatim matches.</span>
           )}
         </div>
 
@@ -304,16 +304,16 @@ const PrePublishPanel = ({
         {/* AI Readability */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: '#18181b' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>
               AI Readability
-              <button type="button" onClick={() => setShowAiInfo(true)} aria-label="How do we assess AI Readability?" title="How do we assess AI Readability?" style={{ display: 'inline-flex', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#52525c' }}>
+              <button type="button" onClick={() => setShowAiInfo(true)} aria-label="How do we assess AI Readability?" title="How do we assess AI Readability?" style={{ display: 'inline-flex', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: 'var(--koala-text-secondary)' }}>
                 <InfoIcon />
               </button>
             </span>
             {aiRead && !analyzingRead && (
               <button type="button" onClick={analyze} disabled={readOnly} aria-label="Re-run analysis" title="Re-run analysis"
-                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: readOnly ? 'not-allowed' : 'pointer', color: '#52525c' }}
-                onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#f4f4f5'; }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: readOnly ? 'not-allowed' : 'pointer', color: 'var(--koala-text-secondary)' }}
+                onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                 <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" /></svg>
               </button>
@@ -321,31 +321,31 @@ const PrePublishPanel = ({
           </div>
 
           {analyzingRead ? (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '2px 0', fontSize: 13, lineHeight: '20px', color: '#52525c' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '2px 0', fontSize: 13, lineHeight: '20px', color: 'var(--koala-text-secondary)' }}>
               <span style={{ marginTop: 2, flexShrink: 0 }}><Spinner /></span>
               <span>Assessing how clearly your content is structured for AI models. This may take a minute or two.</span>
             </div>
           ) : !aiRead ? (
             <>
               <OutlineButton disabled={readOnly} onClick={analyze} label="Analyze Content" />
-              <span style={{ fontSize: 13, color: '#52525c' }}>Checks how clearly your content is structured for AI models against 10 criteria.</span>
+              <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>Checks how clearly your content is structured for AI models against 10 criteria.</span>
             </>
           ) : (() => {
             const cards = aiRead.criteria.filter((c) => (c.suggestions?.length ?? 0) > 0);
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#9f9fa9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--koala-text-disabled)' }}>
                   {cards.length === 0 ? (
                     <>
                       <svg viewBox="0 0 20 20" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6}><circle cx={10} cy={10} r={7} /></svg>
-                      <span style={{ color: '#1AB25E', fontWeight: 500 }}>All criteria met — nothing to improve.</span>
+                      <span style={{ color: 'var(--koala-status-success)', fontWeight: 500 }}>All criteria met — nothing to improve.</span>
                     </>
                   ) : applied ? (
                     <>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: '#1AB25E', color: '#fff', flexShrink: 0 }}>
-                        <svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: 'var(--koala-status-success)', color: 'var(--koala-bg-primary)', flexShrink: 0 }}>
+                        <svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="var(--koala-bg-primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       </span>
-                      <span style={{ color: '#1AB25E', fontWeight: 500 }}>{cards.length}/{cards.length} suggestions applied</span>
+                      <span style={{ color: 'var(--koala-status-success)', fontWeight: 500 }}>{cards.length}/{cards.length} suggestions applied</span>
                     </>
                   ) : (
                     <>
@@ -356,27 +356,27 @@ const PrePublishPanel = ({
                 </div>
                 {onApplyReadability && cards.length > 0 && !applied && (
                   <button type="button" disabled={readOnly} onClick={() => onApplyReadability(aiRead)}
-                    style={{ width: '100%', padding: '9px 16px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: readOnly ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}
-                    onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#F84416'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+                    style={{ width: '100%', padding: '9px 16px', borderRadius: 8, border: 'none', background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: readOnly ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}
+                    onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = 'var(--koala-text-brand)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-text-primary)'; }}>
                     Apply All
                   </button>
                 )}
                 {cards.map((c) => {
                   const title = AI_READABILITY_CRITERIA.find((x) => x.key === c.key)?.title || c.key;
                   return (
-                    <div key={c.key} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, border: '1px solid #f4f4f5', borderRadius: 12, opacity: applied ? 0.6 : 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#9f9fa9' }}>
+                    <div key={c.key} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, border: '1px solid var(--koala-bg-secondary)', borderRadius: 12, opacity: applied ? 0.6 : 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--koala-text-disabled)' }}>
                         <span>{title}</span>
                         {applied && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: '#1AB25E', color: '#fff', flexShrink: 0 }}>
-                            <svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: 'var(--koala-status-success)', color: 'var(--koala-bg-primary)', flexShrink: 0 }}>
+                            <svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="var(--koala-bg-primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
                           </span>
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {(c.suggestions ?? []).map((s, i) => (
-                          <span key={i} style={{ fontSize: 14, lineHeight: '20px', color: '#3f3f47', whiteSpace: 'pre-wrap', paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12, borderTop: i === 0 ? 'none' : '1px solid #f4f4f5' }}>{s}</span>
+                          <span key={i} style={{ fontSize: 14, lineHeight: '20px', color: 'var(--koala-text-secondary)', whiteSpace: 'pre-wrap', paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12, borderTop: i === 0 ? 'none' : '1px solid var(--koala-bg-secondary)' }}>{s}</span>
                         ))}
                       </div>
                     </div>

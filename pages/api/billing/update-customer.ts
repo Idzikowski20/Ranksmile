@@ -21,7 +21,7 @@ const addressSchema = z.object({
 const bodySchema = z.object({
   billingEmail: z.string().email().max(254).optional().nullable(),
   taxId: z.string().max(32).optional().nullable(),
-  address: addressSchema.optional().nullable(),
+  address: addressSchema,
 });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -35,12 +35,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const parsed = bodySchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' });
+    return res.status(400).json({
+      error: parsed.error.issues[0]?.message ?? 'Enter street address, city, and postal code',
+    });
   }
 
   const { billingEmail, taxId, address } = parsed.data;
-  if (!address && !billingEmail && !taxId) {
-    return res.status(400).json({ error: 'Nothing to update' });
+  if (!address.line1.trim() || !address.city.trim() || !address.postal_code.trim()) {
+    return res.status(400).json({ error: 'Enter street address, city, and postal code' });
   }
 
   const { orgId } = await ensureUserTenancy(userId);
@@ -53,30 +55,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const stripe = getStripe();
   const customerId = billing.stripeCustomerId;
 
-  if (address) {
-    await stripe.customers.update(customerId, {
-      name: address.name?.trim() || undefined,
-      email: billingEmail ?? undefined,
-      address: {
-        line1: address.line1,
-        line2: address.line2 ?? undefined,
-        city: address.city,
-        state: address.state ?? undefined,
-        postal_code: address.postal_code,
-        country: address.country,
-      },
-    });
-  } else if (billingEmail) {
-    await stripe.customers.update(customerId, { email: billingEmail });
-  }
+  await stripe.customers.update(customerId, {
+    name: address.name?.trim() || undefined,
+    email: billingEmail ?? undefined,
+    address: {
+      line1: address.line1,
+      line2: address.line2 ?? undefined,
+      city: address.city,
+      state: address.state ?? undefined,
+      postal_code: address.postal_code,
+      country: address.country,
+    },
+    tax: { validate_location: 'immediately' },
+  });
 
-  if (taxId && address?.country) {
+  const taxIdType = stripeTaxIdType(address.country);
+  if (taxId && taxIdType) {
     const formatted = formatTaxIdForStripe(address.country, taxId);
-    const type = stripeTaxIdType(address.country);
     const existing = await stripe.customers.listTaxIds(customerId, { limit: 20 });
     const duplicate = existing.data.some((row) => row.value === formatted);
     if (!duplicate) {
-      await stripe.customers.createTaxId(customerId, { type, value: formatted });
+      await stripe.customers.createTaxId(customerId, { type: taxIdType, value: formatted });
     }
   }
 

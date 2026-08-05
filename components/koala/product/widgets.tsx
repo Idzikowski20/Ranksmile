@@ -9,6 +9,7 @@ import { Chart } from '../charts/Chart';
 import { Sparkline } from '../charts/Sparkline';
 import type { ChartProps } from '../charts/Chart';
 import type { SparklineAppearance } from '../charts/Sparkline';
+import { TrendDeltaBadge } from './helpers/TrendDeltaBadge';
 
 const WidgetRoot = styled(Card)`
   display: flex;
@@ -43,11 +44,10 @@ const MetricValue = styled.div`
   letter-spacing: ${textScale['3xl'].letterSpacing};
 `;
 
-const MetricDelta = styled.div<{ $positive?: boolean }>`
+const MetricDeltaSlot = styled.div`
   margin-top: ${spacing.xs};
-  font-size: ${textScale.sm.fontSize};
-  line-height: ${textScale.sm.lineHeight};
-  color: ${(p) => (p.$positive === undefined ? semantic.text.secondary : p.$positive ? semantic.status.success : semantic.status.danger)};
+  display: inline-flex;
+  align-items: center;
 `;
 
 const ChartArea = styled.div`
@@ -167,12 +167,18 @@ export type MetricWidgetProps = {
 export function MetricWidget({
   title, value, delta, deltaPositive, action, actions, footer, state, className, sparkline,
 }: MetricWidgetProps) {
+  const deltaNode = delta == null
+    ? null
+    : (typeof delta === 'string' || typeof delta === 'number')
+      ? <TrendDeltaBadge delta={delta} positive={deltaPositive ?? null} size="sm" variant="outline" />
+      : delta;
+
   return (
     <WidgetShell title={title} action={action} actions={actions} footer={footer} state={state} className={className}>
       <MetricRow>
         <div>
           <MetricValue>{value}</MetricValue>
-          {delta ? <MetricDelta $positive={deltaPositive}>{delta}</MetricDelta> : null}
+          {deltaNode ? <MetricDeltaSlot>{deltaNode}</MetricDeltaSlot> : null}
         </div>
         {sparkline && sparkline.values.length > 0 ? (
           <SparkSlot>

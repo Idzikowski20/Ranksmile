@@ -2,17 +2,9 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '../koala/core';
 import { KoalaPanel, KoalaPanelHeader, KoalaPanelBody } from '../koala/layout';
+import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
 
 const font = 'var(--font-family-primary)';
-
-const RanksmileMark = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M18.3955 0C21.4658 0 23.9548 2.48899 23.9548 5.55933V7.02488L21.4689 7.78901V5.55016C21.464 3.85696 20.0899 2.48587 18.3955 2.48587H5.55933C3.86192 2.48587 2.48589 3.86189 2.48589 5.55933V11.4871C2.48589 12.517 2.48589 13.0319 2.20286 13.415C1.91983 13.7981 1.42762 13.9494 0.443206 14.252L0 14.3882L9.42195e-06 5.55933C9.42195e-06 2.48899 2.489 0 5.55933 0H18.3955Z" fill="#FF5B49" />
-    <path d="M23.5116 9.75731L23.9548 9.62109V18.4408C23.9548 21.5111 21.4658 24.0001 18.3955 24.0001H5.55933C2.48899 24.0001 0 21.5111 0 18.4408L1.55422e-06 16.9844L2.48589 16.2203V18.4499C2.49077 20.1431 3.86493 21.5143 5.55933 21.5143H18.3955C20.0929 21.5143 21.4689 20.1382 21.4689 18.4408V12.5222C21.4689 11.4923 21.4689 10.9774 21.752 10.5943C22.035 10.2112 22.5272 10.0599 23.5116 9.75731Z" fill="#FF5B49" />
-    <path d="M6.69922 15.7673V11.1256C6.69922 9.90231 6.95458 9.64697 8.17783 9.64697H8.6353C9.85868 9.64697 10.1139 9.90225 10.1139 11.1256V15.7673C10.1139 16.9907 9.85868 17.2459 8.6353 17.2459H8.17783C6.95458 17.2459 6.69922 16.9906 6.69922 15.7673Z" fill="#FF5B49" />
-    <path d="M15.3204 6.75684C14.0972 6.75684 13.8418 7.0122 13.8418 8.23548V15.7674C13.8418 16.9907 14.0972 17.246 15.3204 17.246H15.7779C17.0013 17.246 17.2565 16.9907 17.2565 15.7674V8.23548C17.2565 7.01212 17.0013 6.75684 15.7779 6.75684H15.3204Z" fill="#FF5B49" />
-  </svg>
-);
 
 const LookerMark = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -56,7 +48,9 @@ const ApiSettings = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 24, fontFamily: font, width: '100%' }}>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <LogoCircle><RanksmileMark /></LogoCircle>
+        <LogoCircle>
+          <BounceSmileyAnimation compact size={20} entrance={false} animateRotate={false} />
+        </LogoCircle>
         <div style={{ display: 'flex', alignItems: 'center', margin: '0 -6px', zIndex: 10 }}>
           <div style={{ width: 10, height: 10, borderRadius: 9999, background: 'var(--koala-border-primary)' }} />
           <div style={{ width: 12, height: 2, background: 'var(--koala-border-primary)' }} />
