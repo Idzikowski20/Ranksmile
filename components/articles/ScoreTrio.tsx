@@ -16,7 +16,7 @@ const SideGauge = ({ score, label, align, pending, onClick, onHover, delta, delt
 }) => {
   const content = (
     <span style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'end' ? 'flex-end' : 'flex-start', gap: 6 }}>
-      <span style={{ fontSize: 13, color: '#52525c', fontFamily: F }}>{label}</span>
+      <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: F }}>{label}</span>
       <ScoreGauge score={score} size={38} pending={pending} delta={delta} deltaPlacement={deltaPlacement} />
     </span>
   );
@@ -52,7 +52,7 @@ const ScoreTrio = ({ seo, ai, hasAi, content, onSeoClick, onAiClick, deltas }: {
   const [hovered, setHovered] = useState<'seo' | 'ai' | null>(null);
   const overlayBase: React.CSSProperties = {
     position: 'absolute', top: 0, bottom: 0, width: 'calc(50% + 50px)',
-    border: '1px solid #e4e4e7', background: '#f3f4f0', pointerEvents: 'none',
+    border: '1px solid var(--koala-border-primary)', background: 'var(--koala-bg-secondary)', pointerEvents: 'none',
     transition: 'opacity 0.15s ease-out, background-color 0.15s ease-out',
   };
   return (

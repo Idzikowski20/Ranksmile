@@ -39,8 +39,9 @@ const Home: NextPage<HomeProps> = () => {
           return;
         }
         const bootstrap = await res.json() as BootstrapData;
-        if (bootstrap.redirectTo) {
-          router.replace(bootstrap.redirectTo);
+        const to = bootstrap.redirectTo ?? bootstrap.access?.redirect?.redirect;
+        if (to) {
+          router.replace(to);
         }
       } catch {
         router.replace('/onboarding');
@@ -83,9 +84,12 @@ export const getServerSideProps: GetServerSideProps<HomeProps> = async (ctx) => 
     createSetupIfNeeded: true,
   });
 
-  if (bootstrap.redirectTo) {
+  if (bootstrap.redirectTo ?? bootstrap.access?.redirect?.redirect) {
     return {
-      redirect: { destination: bootstrap.redirectTo, permanent: false },
+      redirect: {
+        destination: bootstrap.redirectTo ?? bootstrap.access.redirect.redirect,
+        permanent: false,
+      },
     };
   }
 

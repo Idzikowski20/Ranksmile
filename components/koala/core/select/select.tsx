@@ -14,6 +14,7 @@ interface SelectProps {
   size?: 'sm' | 'md';
   width?: number | string;
   emptyMessage?: string;
+  disabled?: boolean;
   renderOption?: (option: SelectOption, selected: boolean) => React.ReactNode;
 }
 
@@ -27,7 +28,7 @@ const Wrapper = styled.div`
   display: inline-block;
 `;
 
-const Trigger = styled.button<{ $sz: 'sm' | 'md'; $open: boolean }>(({ $sz, $open }) => {
+const Trigger = styled.button<{ $sz: 'sm' | 'md'; $open: boolean; $disabled?: boolean }>(({ $sz, $open, $disabled }) => {
   const cfg = FORM[$sz];
   return {
     display: 'flex',
@@ -41,14 +42,19 @@ const Trigger = styled.button<{ $sz: 'sm' | 'md'; $open: boolean }>(({ $sz, $ope
     lineHeight: '1rem',
     borderRadius: cfg.r,
     border: $open ? `1px solid ${semantic.input.borderFocus}` : `1px solid ${semantic.input.border}`,
-    backgroundColor: semantic.input.bg,
+    backgroundColor: $disabled ? semantic.background.secondary : semantic.input.bg,
     color: semantic.text.primary,
     boxShadow: $open ? 'var(--shadow-focus)' : 'none',
-    cursor: 'var(--koala-cursor-pointing)',
+    cursor: $disabled ? 'not-allowed' : 'var(--koala-cursor-pointing)',
+    opacity: $disabled ? 0.5 : 1,
     outline: 'none',
     textAlign: 'left' as const,
     transition: 'border 0.12s ease, box-shadow 0.12s ease',
-    '&:hover': { borderColor: $open ? semantic.input.borderFocus : semantic.input.borderHover },
+    '&:hover': $disabled ? undefined : { borderColor: $open ? semantic.input.borderFocus : semantic.input.borderHover },
+    '&:focus-visible': {
+      borderColor: semantic.input.borderFocus,
+      boxShadow: 'var(--shadow-focus)',
+    },
   };
 });
 
@@ -116,7 +122,7 @@ const CK = () => (
 
 export function Select({
   options, value, onChange, placeholder = 'Select...',
-  searchable = false, size = 'sm', width, emptyMessage = 'No results', renderOption,
+  searchable = false, size = 'sm', width, emptyMessage = 'No results', disabled = false, renderOption,
 }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -142,8 +148,19 @@ export function Select({
   return (
     <Wrapper ref={wrapRef} style={{ width }}>
       <div style={{ position: 'relative' }}>
-        <Trigger $sz={size} $open={open} ref={triggerRef}
-          onClick={() => { setOpen(!open); if (open) setSearch(''); }}>
+        <Trigger
+          type="button"
+          $sz={size}
+          $open={open}
+          $disabled={disabled}
+          ref={triggerRef}
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) return;
+            setOpen(!open);
+            if (open) setSearch('');
+          }}
+        >
           <Label>{selected ? selected.label : <span style={{ color: 'var(--koala-text-tertiary)' }}>{placeholder}</span>}</Label>
         </Trigger>
         <ChevronWrap $open={open}>
@@ -152,7 +169,7 @@ export function Select({
           </svg>
         </ChevronWrap>
       </div>
-      {open && (
+      {open && !disabled && (
         <Menu>
           {searchable && (
             <SearchWrap>

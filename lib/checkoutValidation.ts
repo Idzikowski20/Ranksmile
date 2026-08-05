@@ -57,6 +57,19 @@ export function validateTaxId(country: string, raw: string): string | null {
   return 'Enter a valid tax ID for the selected country';
 }
 
+export function hasRequiredBillingAddressFields(
+  address: CheckoutAddressValue | null | undefined,
+): boolean {
+  if (!address?.address) return false;
+  const a = address.address;
+  return Boolean(
+    a.line1?.trim()
+    && a.city?.trim()
+    && a.postal_code?.trim()
+    && a.country?.trim().length === 2,
+  );
+}
+
 export function validateCompanyFields(
   input: CheckoutCompanyInput,
   address: CheckoutAddressValue | null,
@@ -71,28 +84,18 @@ export function validateCompanyFields(
     if (!parsed.success) errors.billingEmail = parsed.error.issues[0]?.message ?? 'Invalid email';
   }
 
-  const wantsInvoiceDetails = Boolean(billingEmail || taxId);
-  const hasAddressData = Boolean(
-    address?.address.line1?.trim()
-    || address?.address.city?.trim()
-    || address?.address.postal_code?.trim(),
-  );
+  if (!addressComplete || !hasRequiredBillingAddressFields(address)) {
+    errors.address = 'Enter street address, city, and postal code';
+  }
 
   if (taxId) {
     const country = address?.address.country ?? '';
-    if (!country) {
-      errors.address = 'Select a complete billing address before adding a tax ID';
-    } else {
+    if (country) {
       const taxError = validateTaxId(country, taxId);
       if (taxError) errors.taxId = taxError;
+    } else if (!isValidEuVat(normalizeTaxId(taxId)) && !/^[A-Z0-9-]{5,20}$/i.test(taxId)) {
+      errors.taxId = 'Enter a valid tax ID (e.g. PL1234567890)';
     }
-    if (!addressComplete) {
-      errors.address = errors.address ?? 'Complete the billing address to add a tax ID';
-    }
-  }
-
-  if (wantsInvoiceDetails && (hasAddressData || taxId) && !addressComplete) {
-    errors.address = errors.address ?? 'Complete all required address fields';
   }
 
   return errors;
@@ -102,10 +105,12 @@ export function hasFieldErrors(errors: CheckoutFieldErrors): boolean {
   return Object.keys(errors).length > 0;
 }
 
-export function stripeTaxIdType(country: string): 'eu_vat' | 'gb_vat' | 'us_ein' {
-  if (country === 'GB') return 'gb_vat';
-  if (country === 'US') return 'us_ein';
-  return 'eu_vat';
+export function stripeTaxIdType(country: string): 'eu_vat' | 'gb_vat' | 'us_ein' | null {
+  const normalized = country.toUpperCase();
+  if (normalized === 'GB') return 'gb_vat';
+  if (normalized === 'US') return 'us_ein';
+  if (new Set(['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE']).has(normalized)) return 'eu_vat';
+  return null;
 }
 
 export function formatTaxIdForStripe(country: string, raw: string): string {

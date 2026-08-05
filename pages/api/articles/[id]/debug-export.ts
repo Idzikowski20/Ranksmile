@@ -17,6 +17,7 @@ import type { ArticleRow } from '../../../../lib/db/query';
 
 import { parseJsonish } from '../../../../lib/types/json';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { compileArticle } from '../../../../lib/intelligence/runtimeApi';
 
 const parse = (v: unknown): unknown => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
 
@@ -87,6 +88,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          deep_analysis_job: job ? { status: job.status, payload: parse(job.payload), result: parse(job.result) } : null,
          ai_visibility: aiv ? { score: aiv.score, summary: parse(aiv.summary_json) } : null,
          content_html: content,
+         ccm: await (async () => {
+            try {
+               const result = await compileArticle({
+                  articleId: String(id),
+                  compiledAt: new Date().toISOString(),
+                  source: { kind: 'html', html: content },
+                  persist: false,
+               });
+               return {
+                  ccmId: result.model.ccmId,
+                  version: result.model.version,
+                  contentHash: result.model.contentHash,
+                  deterministicHash: result.model.compiler.deterministicHash,
+                  view: result.view,
+                  actionCount: result.actionGraph.actions.length,
+               };
+            } catch (e) {
+               return { error: getErrorMessage(e) || 'ccm_compile_failed' };
+            }
+         })(),
       };
 
       res.setHeader('Content-Type', 'application/json; charset=utf-8');

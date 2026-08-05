@@ -5,6 +5,7 @@
  */
 import Stripe from 'stripe';
 import { CHECKOUT_PLANS } from '../lib/billingPlans';
+import { DEFAULT_STRIPE_TAX_CODE } from '../lib/billing/stripeTaxPreview';
 
 const PLANS = CHECKOUT_PLANS.map((plan) => ({
   slug: plan.slug,
@@ -27,6 +28,7 @@ async function main(): Promise<void> {
     const product = await stripe.products.create({
       name: `Ranksmile ${plan.name}`,
       description: `${plan.name} subscription plan`,
+      tax_code: process.env.STRIPE_TAX_CODE?.trim() || DEFAULT_STRIPE_TAX_CODE,
       metadata: { plan_slug: plan.slug, app: 'ranksmile' },
     });
 

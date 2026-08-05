@@ -1,9 +1,11 @@
 {
     "name":  "Ranksmile – WordPress Plugin",
-    "version":  "1.7.0.640",
+    "version":  "1.8.0.0",
     "requires":  "6.0",
     "tested":  "6.9",
     "download":  "/downloads/ranksmile-plugin.zip",
     "homepage":  "https://ranksmile.pl",
-    "changelog":  "\u003ch4\u003e1.7.0.640\u003c/h4\u003e\u003cul\u003e\u003cli\u003eDefault app URL now points to the production deployment.\u003c/li\u003e\u003c/ul\u003e"
+    "designSystem":  "rsds-v1",
+    "theme":  "light",
+    "changelog":  "\u003ch4\u003e1.8.0.0\u003c/h4\u003e\u003cul\u003e\u003cli\u003eRSDS design system + Admin Shell IA (Dashboard-first).\u003c/li\u003e\u003c/ul\u003e"
 }

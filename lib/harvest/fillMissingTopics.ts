@@ -1,6 +1,7 @@
 import { languageInstructionForLlm } from '../domainLanguagePrompts';
 import { normalizeTerm } from '../termUtils';
 import { safeJsonParse } from '../safeJson';
+import { chatLlm } from '../ai/deepseek';
 import type { TopicBucket } from './clusterQuestions';
 import { PLACEHOLDER_TOPIC_ID, PLACEHOLDER_TOPIC_TITLE, tokenizeForHarvest } from './clusterQuestions';
 import { MIN_TOPICS, medianQuestionCount } from './enforceBudget';
@@ -86,7 +87,7 @@ export async function fillMissingTopics(opts: {
   if (!needsFill(topics) || uniqueQuestions < 9) {
     return { topics, llmAddedTopics: 0 };
   }
-  if (!process.env.DEEPSEEK_API_KEY) {
+  if (!chatLlm().apiKey) {
     return { topics, llmAddedTopics: 0 };
   }
 
@@ -107,9 +108,24 @@ ${existingTitles.map((t) => `- ${t}`).join('\n') || '(none)'}
 Sample questions:
 ${sampleQs.map((q) => `- ${q}`).join('\n')}
 
+Prefer topics that deepen CRITICAL reader problems and concrete examples over encyclopedic type-lists. Do not invent fake credentials topics.
+
 Return ONLY a JSON array of strings (topic titles). No markdown.`;
 
   try {
+    let wieHint = '';
+    try {
+      const { buildWieWriteContext, formatBoundedCoverageForPrompt } = await import('../wie/writerContext');
+      const { formatPolicyBundleForPrompt } = await import('../wie/policyResolver');
+      const { formatNarrativePlanForPrompt } = await import('../wie/narrativePlanner');
+      const wie = await buildWieWriteContext({ keyword });
+      wieHint = [
+        formatPolicyBundleForPrompt(wie.policy),
+        formatNarrativePlanForPrompt(wie.narrative),
+        formatBoundedCoverageForPrompt(wie.synthesis),
+      ].filter(Boolean).join('\n');
+    } catch { /* optional */ }
+
     // Dynamic import — keeps ESM @ai-sdk/deepseek out of Jest's static graph.
     const [{ generateText }, { deepseek }] = await Promise.all([
       import('ai'),
@@ -117,7 +133,7 @@ Return ONLY a JSON array of strings (topic titles). No markdown.`;
     ]);
     const { text } = await generateText({
       model: deepseek('deepseek-chat'),
-      prompt,
+      prompt: wieHint ? `${wieHint}\n\n${prompt}` : prompt,
       maxOutputTokens: 800,
     });
     const generated = parseTitles(text);

@@ -1,7 +1,7 @@
 export { Card, CardHeader } from './Card';
 export type { CardProps } from './Card';
 export { ActivityFeed } from './ActivityFeed';
-export type { ActivityItem } from './ActivityFeed';
+export type { ActivityItem, ActivityFeedEntry, ActivityFeedGroupData } from './ActivityFeed';
 export { DataToolbar } from './DataToolbar';
 export type { DataToolbarProps } from './DataToolbar';
 export { TablePattern } from './TablePattern';
@@ -24,12 +24,12 @@ export type {
   ListWidgetProps,
   ActionWidgetProps,
 } from './widgets';
+export { AnalyticsMetricItem } from './AnalyticsMetricItem';
+export type { AnalyticsMetricItemProps } from './AnalyticsMetricItem';
 export { GuidedTour } from './GuidedTour';
 export type { GuidedTourProps, GuidedTourStep } from './GuidedTour';
 export { FeedbackPopover } from './FeedbackPopover';
 export type { FeedbackPopoverProps } from './FeedbackPopover';
-export { SharePopoverContent } from './SharePopoverContent';
-export type { SharePopoverContentProps } from './SharePopoverContent';
 export { Enable2FADialog } from './Enable2FADialog';
 export type { Enable2FADialogProps } from './Enable2FADialog';
 export { CreateTeamDialog } from './CreateTeamDialog';
@@ -40,3 +40,7 @@ export { PricingCard } from './PricingCard';
 export type { PricingCardProps, PricingCardAction } from './PricingCard';
 export { ComparePricingTable } from './ComparePricingTable';
 export type { ComparePricingTableProps } from './ComparePricingTable';
+export { RadialComparisonWidget, RADIAL_SEGMENT_COLORS } from './RadialComparisonWidget';
+export type { RadialComparisonWidgetProps, RadialSegment } from './RadialComparisonWidget';
+export { PricingFaqSection } from './PricingFaqSection';
+export type { FaqItem, FaqCategory } from './PricingFaqSection';

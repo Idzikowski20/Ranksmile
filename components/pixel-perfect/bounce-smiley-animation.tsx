@@ -45,10 +45,10 @@ function SmileyFace({
             : { transformBox: "view-box", transformOrigin: "113px 113px" }
         }
       >
-        <path d={SMILEY_PATH} fill="#FA6B3D" />
+        <path d={SMILEY_PATH} fill="#50B9FF" />
         <path d={SMILEY_PATH} fill={`url(#${paintId})`} />
       </g>
-      <circle cx="80.5" cy="112.5" r="7.5" fill="#C11C0D" />
+      <circle cx="80.5" cy="112.5" r="7.5" fill="#00558E" />
       <g
         className={animateRotate ? "smily-eye-blink" : undefined}
         style={
@@ -59,12 +59,12 @@ function SmileyFace({
       >
         <path
           d="M 123 112.5 C 123 116.642 126.358 120 130.5 120 C 134.642 120 138 116.642 138 112.5 C 138 108.358 134.589 104.915 130.447 104.915 C 126.305 104.915 123 108.358 123 112.5 Z"
-          fill="#C11C0D"
+          fill="#00558E"
         />
       </g>
       <path
         d="M90 127C97.2727 139 112.727 139 120 127"
-        stroke="#E92B0D"
+        stroke="#057BC9"
         strokeWidth="8"
         strokeLinecap="round"
       />
@@ -100,7 +100,7 @@ function SmileyFace({
           gradientUnits="userSpaceOnUse"
           gradientTransform="translate(113 113) rotate(90) scale(227)"
         >
-          <stop stopColor="#FFB08A" />
+          <stop stopColor="#28A9FF" />
           <stop offset="1" stopColor="white" stopOpacity="0" />
         </radialGradient>
       </defs>

@@ -1,14 +1,16 @@
 import {
   getCheckoutPlan,
+  getLegacyCheckoutPlan,
   getPlanCheckoutHref,
   getPlanPeriodPrice,
   getTrialEndDateLabel,
 } from '../../lib/billingPlans';
 
 describe('billingPlans', () => {
-  it('builds checkout hrefs with the selected billing period', () => {
-    expect(getPlanCheckoutHref('Growth', 'yearly')).toBe('/billing/checkout/growth?billing=yearly');
-    expect(getPlanCheckoutHref('Scale', 'monthly')).toBe('/billing/checkout/scale?billing=monthly');
+  it('builds checkout hrefs with billing period and checkout mode', () => {
+    expect(getPlanCheckoutHref('Growth', 'yearly')).toBe('/billing/checkout/growth?billing=yearly&mode=trial');
+    expect(getPlanCheckoutHref('Scale', 'monthly')).toBe('/billing/checkout/scale?billing=monthly&mode=upfront');
+    expect(getPlanCheckoutHref('growth', 'yearly', 'upfront')).toBe('/billing/checkout/growth?billing=yearly&mode=upfront');
   });
 
   it('returns yearly totals from the plan yearly monthly price', () => {
@@ -17,6 +19,11 @@ describe('billingPlans', () => {
     expect(growth?.name).toBe('Growth');
     expect(getPlanPeriodPrice(growth!, 'yearly')).toBe(588);
     expect(getPlanPeriodPrice(growth!, 'monthly')).toBe(59);
+  });
+
+  it('keeps Starter available only for legacy billing records', () => {
+    expect(getCheckoutPlan('starter')).toBeUndefined();
+    expect(getLegacyCheckoutPlan('starter')?.priceMonthly).toBe(29);
   });
 
   it('formats the 7-day trial end label from a stable clock', () => {

@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Icon } from '../icons/Icon';
 import TopbarSearch from '../../common/TopbarSearch';
 import TopbarInbox from '../../common/TopbarInbox';
+import TopbarServiceStatus from '../../common/TopbarServiceStatus';
+import TopbarWhatsNew from '../../common/TopbarWhatsNew';
 import { ThemeCycleButton } from '../theme/ThemeSwitcher';
 import SidebarUserFooter from './SidebarUserFooter';
 
@@ -13,7 +15,7 @@ type Props = {
 
 /**
  * Product Header — Figma `6959:74257`
- * Search left + help / inbox / settings / avatar right.
+ * Search left + help / status / changelog / inbox / settings / avatar right.
  */
 export default function KoalaHeader({ breadcrumb, onMobileMenuClick }: Props) {
   return (
@@ -49,6 +51,8 @@ export default function KoalaHeader({ breadcrumb, onMobileMenuClick }: Props) {
         >
           <Icon name="Question" size={20} weight="bold" />
         </a>
+        <TopbarServiceStatus />
+        <TopbarWhatsNew />
         <TopbarInbox />
         <ThemeCycleButton className="koala-header__icon-btn" />
         <Link href="/settings/general" passHref>

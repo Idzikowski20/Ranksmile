@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import type { BillingPeriod } from '../../../lib/billingPlans';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
 import { getLockedCheckoutPlanSlug } from '../../../lib/billingPlanLock';
+import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from '../../../lib/billingTrial';
 import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
 import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
@@ -59,6 +60,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (hasNonTerminalStripeSubscription(billingState)) {
     return res.status(409).json({ error: 'An active Stripe subscription already exists for this organization' });
   }
+  if (mode === 'trial') {
+    const trialGate = assertTrialAllowed(plan.slug, billingState);
+    if (!trialGate.ok) {
+      return res.status(trialGate.status).json({ error: trialGate.error });
+    }
+  }
   const origin = getAppOrigin(req);
 
   const stripe = getStripe();
@@ -85,7 +92,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           plan_slug: plan.slug,
           billing_period: billing,
         },
-        ...(mode === 'trial' ? { trial_period_days: 7 } : {}),
+        ...(mode === 'trial' ? { trial_period_days: TRIAL_PERIOD_DAYS } : {}),
       },
       allow_promotion_codes: true,
       billing_address_collection: 'auto',

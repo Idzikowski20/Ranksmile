@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { Icon } from '../icons/Icon';
 import MenuListItem from '../core/menuListItem';
 import { MenuList } from '../core/menuList';
-import SearchBar from '../core/searchBar';
+import { ShellPortal } from '../overlay/ShellPortal';
+import { zIndex } from '../tokens/zIndex';
 import { deriveActiveId, resolveActiveDomain } from '../../../lib/activeWorkspace';
 import { useOrganization } from '../../../services/organization';
 import { useFetchDomains } from '../../../services/domains';
@@ -13,19 +14,21 @@ import {
   useSetActiveWorkspace,
   useCreateSetupWorkspace,
 } from '../../../services/workspaces';
-import { CreateTeamDialog } from '../product/CreateTeamDialog';
 import DomainFaviconAvatar from '../../common/DomainFaviconAvatar';
+import { Flag } from '../icons/Flag';
 
 /**
  * Koala workspace / org select — Figma Product Sidebar header (`4903:6905`).
+ * Menu portals to body as a single MenuList surface (no nested Popover panel —
+ * that caused gray square corners behind the rounded card).
  */
 export default function WorkspaceSelect({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [teamOpen, setTeamOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   const { data: org } = useOrganization();
   const { data: domainsData } = useFetchDomains(router, false);
@@ -46,28 +49,62 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
 
   const avatarDomain = activeDomain?.domain ?? activeWorkspace?.domain ?? null;
   const label = activeWorkspace?.name || org?.name?.trim() || 'Workspace';
-  const meta = `${workspaces.length} ${workspaces.length === 1 ? 'project' : 'projects'}`;
+  const meta = `${workspaces.length} ${workspaces.length === 1 ? 'workspace' : 'workspaces'}`;
 
-  const filteredWorkspaces = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return workspaces;
-    return workspaces.filter((w) => w.name.toLowerCase().includes(q) || (w.domain ?? '').toLowerCase().includes(q));
-  }, [workspaces, search]);
+  const close = useCallback(() => setOpen(false), []);
+
+  const syncPos = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos({
+      top: Math.min(r.bottom + 4, window.innerHeight - 16),
+      left: Math.min(Math.max(8, r.left), window.innerWidth - 288),
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) return undefined;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    syncPos();
+    const onScrollOrResize = () => syncPos();
+    window.addEventListener('resize', onScrollOrResize);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    return () => {
+      window.removeEventListener('resize', onScrollOrResize);
+      window.removeEventListener('scroll', onScrollOrResize, true);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  }, [open, syncPos]);
 
   useEffect(() => {
-    if (!open) setSearch('');
-  }, [open]);
+    if (!open) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (menuRef.current?.contains(t) || triggerRef.current?.contains(t)) return;
+      close();
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onDown);
+    };
+  }, [open, close]);
 
-  const close = () => setOpen(false);
+  useLayoutEffect(() => {
+    if (!open || !menuRef.current) return;
+    const rect = menuRef.current.getBoundingClientRect();
+    let { top, left } = pos ?? { top: 8, left: 8 };
+    if (rect.bottom > window.innerHeight - 8) {
+      top = Math.max(8, window.innerHeight - 8 - rect.height);
+    }
+    if (rect.right > window.innerWidth - 8) {
+      left = Math.max(8, window.innerWidth - 8 - rect.width);
+    }
+    menuRef.current.style.top = `${Math.round(top)}px`;
+    menuRef.current.style.left = `${Math.round(left)}px`;
+  }, [open, pos, workspaces.length]);
+
   const nav = (href: string) => { close(); void router.push(href); };
 
   const addWorkspace = () => {
@@ -85,28 +122,48 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
   };
 
   return (
-    <>
-      <div ref={ref} className={`koala-ws-select${compact ? ' koala-ws-select--compact' : ''}`}>
-        <button
-          type="button"
-          className={`koala-ws-select__trigger${open ? ' koala-ws-select__trigger--open' : ''}`}
-          aria-label="Switch workspace"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          <span className="koala-ws-select__avatar-wrap">
-            <DomainFaviconAvatar domain={avatarDomain} size={compact ? 24 : 28} className="koala-ws-select__avatar" />
-            <span className="koala-ws-select__status" aria-hidden="true" />
+    <div className={`koala-ws-select${compact ? ' koala-ws-select--compact' : ''}`}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`koala-ws-select__trigger${open ? ' koala-ws-select__trigger--open' : ''}`}
+        aria-label="Switch workspace"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => {
+          if (open) {
+            close();
+            return;
+          }
+          syncPos();
+          setOpen(true);
+        }}
+      >
+        <span className="koala-ws-select__avatar-wrap">
+          <DomainFaviconAvatar domain={avatarDomain} size={compact ? 24 : 28} className="koala-ws-select__avatar" />
+          <span className="koala-ws-select__badge koala-ws-select__badge--flag" aria-hidden="true">
+            <Flag code="US" size={compact ? 10 : 12} />
           </span>
-          <span className="koala-ws-select__text">
-            <span className="koala-ws-select__name">{label}</span>
-          </span>
-          <Icon name="CaretDown" size={16} weight="bold" className="koala-ws-select__caret" />
-        </button>
+        </span>
+        <span className="koala-ws-select__text">
+          <span className="koala-ws-select__name">{label}</span>
+        </span>
+        <Icon name="CaretDown" size={16} weight="bold" className="koala-ws-select__caret" />
+      </button>
 
-        {open ? (
-          <div className="koala-ws-select__menu">
+      {open && pos ? (
+        <ShellPortal>
+          <div
+            ref={menuRef}
+            className="koala-ws-select__menu"
+            role="dialog"
+            style={{
+              position: 'fixed',
+              top: pos.top,
+              left: pos.left,
+              zIndex: zIndex.popover,
+            }}
+          >
             <MenuList
               header={(
                 <div className="koala-ws-select__menu-head" style={{ border: 'none', padding: 0 }}>
@@ -117,28 +174,21 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
                   </div>
                 </div>
               )}
-              search={<SearchBar value={search} onChange={setSearch} placeholder="Search workspaces" width="100%" />}
               footer={(
-                <>
-                  <MenuListItem
-                    label="Add Workspace"
-                    priority="primary"
-                    disabled={createSetup.isLoading}
-                    onClick={addWorkspace}
-                  />
-                  <MenuListItem
-                    label="Create team"
-                    onClick={() => { close(); setTeamOpen(true); }}
-                  />
-                </>
+                <MenuListItem
+                  label="Add Workspace"
+                  priority="primary"
+                  leadingItems={<Icon name="Plus" size={16} weight="bold" />}
+                  disabled={createSetup.isLoading}
+                  onClick={addWorkspace}
+                />
               )}
             >
               <MenuListItem as="a" href="/settings/general" label="Organization Settings" onClick={(e) => { e.preventDefault(); nav('/settings/general'); }} />
-              <MenuListItem label="Projects" onClick={() => nav('/')} />
               <MenuListItem as="a" href="/settings/people" label="Members" onClick={(e) => { e.preventDefault(); nav('/settings/people'); }} />
               <MenuListItem as="a" href="/settings/billing_subscription" label="Usage & Billing" onClick={(e) => { e.preventDefault(); nav('/settings/billing_subscription'); }} />
               <div className="koala-ws-select__divider" role="separator" />
-              {filteredWorkspaces.map((w) => {
+              {workspaces.map((w) => {
                 const isActive = w.id === activeId;
                 return (
                   <MenuListItem
@@ -153,17 +203,15 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
                   />
                 );
               })}
-              {filteredWorkspaces.length === 0 ? (
+              {workspaces.length === 0 ? (
                 <p style={{ margin: 0, padding: '8px 10px', fontSize: 13, color: 'var(--koala-text-secondary)' }}>
-                  No workspaces match your search.
+                  No workspaces yet.
                 </p>
               ) : null}
             </MenuList>
           </div>
-        ) : null}
-      </div>
-
-      <CreateTeamDialog open={teamOpen} onClose={() => setTeamOpen(false)} />
-    </>
+        </ShellPortal>
+      ) : null}
+    </div>
   );
 }

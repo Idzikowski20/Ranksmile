@@ -58,10 +58,6 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      // PostHog reverse proxy (avoids ad-blocker interference)
-      { source: '/ingest/static/:path*', destination: 'https://eu-assets.i.posthog.com/static/:path*' },
-      { source: '/ingest/array/:path*', destination: 'https://eu-assets.i.posthog.com/array/:path*' },
-      { source: '/ingest/:path*', destination: 'https://eu.i.posthog.com/:path*' },
       { source: '/content-editor', destination: '/articles' },
       { source: '/content-editor/:path*', destination: '/articles/:path*' },
       { source: '/workspace/:wsId/sites/articles/new', destination: '/articles/new' },

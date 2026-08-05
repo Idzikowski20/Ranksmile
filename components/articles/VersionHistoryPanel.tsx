@@ -83,7 +83,7 @@ const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Pr
       {/* ── Top section ─────────────────────────────────── */}
       <div
         style={{
-          background: '#fff',
+          background: 'var(--koala-bg-primary)',
           padding: 16,
           display: 'flex',
           flexDirection: 'column',
@@ -94,7 +94,7 @@ const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Pr
       >
         {/* Header row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 14, lineHeight: '1.25rem', fontWeight: 600, fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>
+          <span style={{ fontSize: 14, lineHeight: '1.25rem', fontWeight: 600, fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-primary)' }}>
             Version History
           </span>
           <button
@@ -129,25 +129,25 @@ const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Pr
         {/* Current version card */}
         <div
           style={{
-            background: '#fff',
+            background: 'var(--koala-bg-primary)',
             padding: 12,
             marginBottom: 12,
             cursor: 'pointer',
             borderRadius: 8,
-            border: '1px solid #18181B',
+            border: '1px solid var(--koala-text-primary)',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', borderBottom: '1px solid #E4E4E7', paddingBottom: 12 }}>
+            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', borderBottom: '1px solid var(--koala-border-primary)', paddingBottom: 12 }}>
               <div style={{ display: 'flex', gap: 8, height: 28, alignItems: 'center' }}>
                 <svg viewBox="0 0 20 20" width={16} height={16} style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub', color: '#360483' }}>
                   <path fill="currentColor" d="M11.983 1.907a.75.75 0 0 0-1.292-.657l-8.5 9.5A.75.75 0 0 0 2.75 12h6.572l-1.305 6.093a.75.75 0 0 0 1.292.657l8.5-9.5A.75.75 0 0 0 17.25 8h-6.572z" />
                 </svg>
-                <span style={{ fontSize: 14, fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>Current Version</span>
+                <span style={{ fontSize: 14, fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-primary)' }}>Current Version</span>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 14, lineHeight: '1.25rem', fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>You</div>
+              <div style={{ fontSize: 14, lineHeight: '1.25rem', fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-primary)' }}>You</div>
               <div className="vh-ring" style={{ flexShrink: 0, display: 'flex' }}><ScoreGauge score={currentScore} size={52} /></div>
             </div>
           </div>
@@ -156,14 +156,14 @@ const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Pr
         {/* Past versions */}
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
-            <div style={{ width: 20, height: 20, border: '2px solid #E4E4E7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+            <div style={{ width: 20, height: 20, border: '2px solid var(--koala-border-primary)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
           </div>
         ) : versions.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '48px 0' }}>
-            <span style={{ fontSize: 14, fontFamily: 'var(--font-family-primary)', color: '#52525C', textAlign: 'center', fontWeight: 600 }}>
+            <span style={{ fontSize: 14, fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-secondary)', textAlign: 'center', fontWeight: 600 }}>
               No version history yet
             </span>
-            <span style={{ fontSize: 14, fontFamily: 'var(--font-family-primary)', color: '#52525C', textAlign: 'center' }}>
+            <span style={{ fontSize: 14, fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-secondary)', textAlign: 'center' }}>
               Saved versions will appear here.
             </span>
           </div>
@@ -176,20 +176,20 @@ const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Pr
                   key={v.id}
                   className="version-row"
                   style={{
-                    background: '#fff',
+                    background: 'var(--koala-bg-primary)',
                     padding: 12,
                     marginBottom: 12,
-                    border: '1px solid #E4E4E7',
+                    border: '1px solid var(--koala-border-primary)',
                     borderRadius: 8,
                     cursor: 'pointer',
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', borderBottom: '1px solid #E4E4E7', paddingBottom: 12 }}>
+                    <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', borderBottom: '1px solid var(--koala-border-primary)', paddingBottom: 12 }}>
                       <div style={{ display: 'flex', height: 28, width: '100%', alignItems: 'center' }}>
-                        <span style={{ textAlign: 'left', fontSize: 14, lineHeight: '1.25rem', fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>
+                        <span style={{ textAlign: 'left', fontSize: 14, lineHeight: '1.25rem', fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-primary)' }}>
                           <span>{date}</span>
-                          <span style={{ fontWeight: 400, color: '#52525C' }}> ({relative})</span>
+                          <span style={{ fontWeight: 400, color: 'var(--koala-text-secondary)' }}> ({relative})</span>
                         </span>
                       </div>
                       <div className="version-restore-btn" style={{ opacity: 0, transition: 'opacity 0.15s' }}>
@@ -209,21 +209,21 @@ const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Pr
                             borderRadius: 6,
                             fontSize: 13,
                             lineHeight: '1rem',
-                            background: '#F4F4F5',
-                            color: '#18181B',
+                            background: 'var(--koala-bg-secondary)',
+                            color: 'var(--koala-text-primary)',
                             cursor: restoringId === v.id ? 'not-allowed' : 'pointer',
                             whiteSpace: 'nowrap',
                           }}
-                          onMouseEnter={(e) => { if (restoringId !== v.id) { e.currentTarget.style.background = '#E4E4E7'; } }}
-                          onMouseLeave={(e) => { if (restoringId !== v.id) { e.currentTarget.style.background = '#F4F4F5'; } }}
-                          onMouseDown={(e) => { if (restoringId !== v.id) { e.currentTarget.style.background = '#D4D4D8'; } }}
+                          onMouseEnter={(e) => { if (restoringId !== v.id) { e.currentTarget.style.background = 'var(--koala-border-primary)'; } }}
+                          onMouseLeave={(e) => { if (restoringId !== v.id) { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; } }}
+                          onMouseDown={(e) => { if (restoringId !== v.id) { e.currentTarget.style.background = 'var(--koala-border-secondary)'; } }}
                         >
                           {restoringId === v.id ? 'Restoring…' : 'Restore'}
                         </button>
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 6, paddingBottom: 6 }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13, lineHeight: '1rem', fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13, lineHeight: '1rem', fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-primary)' }}>
                         {versionTypeLabel(v.version_type)}
                       </span>
                       {v.score != null && (

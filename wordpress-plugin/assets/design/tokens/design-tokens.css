@@ -1,0 +1,85 @@
+﻿/**
+ * RSDS design tokens (rsds-v1)
+ */
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/dm-sans/dm-sans-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/dm-sans/dm-sans-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/dm-sans/dm-sans-700.woff2") format("woff2");
+}
+:root {
+  --rs-brand: #f84416;
+  --rs-brand-hover: #d93610;
+  --rs-bg-primary: #ffffff;
+  --rs-bg-secondary: #f5f5f5;
+  --rs-bg-tertiary: #fafafa;
+  --rs-text-primary: #1a1a1a;
+  --rs-text-secondary: #575757;
+  --rs-text-tertiary: #767676;
+  --rs-text-on-brand: #ffffff;
+  --rs-border: #e5e5e5;
+  --rs-border-strong: #d4d4d8;
+  --rs-status-success: #1ab25e;
+  --rs-status-success-bg: #e8f8ef;
+  --rs-status-warning: #e5a000;
+  --rs-status-warning-bg: #fff6e0;
+  --rs-status-danger: #e5484d;
+  --rs-status-danger-bg: #fdecec;
+  --rs-status-info: #3b82f6;
+  --rs-status-info-bg: #eff6ff;
+  --rs-font-body: "DM Sans", system-ui, -apple-system, sans-serif;
+  --rs-font-heading: "DM Sans", system-ui, -apple-system, sans-serif;
+  --rs-text-xs: 12px;
+  --rs-text-sm: 13px;
+  --rs-text-md: 14px;
+  --rs-text-lg: 16px;
+  --rs-text-xl: 20px;
+  --rs-text-2xl: 24px;
+  --rs-leading-xs: 16px;
+  --rs-leading-sm: 18px;
+  --rs-leading-md: 22px;
+  --rs-leading-lg: 24px;
+  --rs-leading-xl: 28px;
+  --rs-leading-2xl: 32px;
+  --rs-space-1: 4px;
+  --rs-space-2: 8px;
+  --rs-space-3: 12px;
+  --rs-space-4: 16px;
+  --rs-space-5: 20px;
+  --rs-space-6: 24px;
+  --rs-space-7: 32px;
+  --rs-space-8: 40px;
+  --rs-radius-sm: 8px;
+  --rs-radius-btn: 12px;
+  --rs-radius-card: 16px;
+  --rs-border-width: 1px;
+  --rs-border-style: solid;
+  --rs-transition-fast: 150ms ease;
+  --rs-transition-normal: 250ms ease;
+  --rs-shadow-card: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04);
+  --rs-shadow-focus: 0 0 0 3px rgba(248,68,22,.25);
+  --rs-z-dropdown: 100;
+  --rs-z-modal: 200;
+  --rs-z-tooltip: 300;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --rs-transition-fast: 0ms;
+    --rs-transition-normal: 0ms;
+  }
+}

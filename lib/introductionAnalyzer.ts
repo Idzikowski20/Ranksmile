@@ -1,5 +1,6 @@
 import { CoverageItem, intentItems } from './aiCoverage';
 import { safeJsonParse } from './safeJson';
+import { chatLlm } from './ai/deepseek';
 
 export interface IntroVerdict {
   intentConfirmed: boolean;
@@ -68,21 +69,22 @@ export const deepseekIntroJudge: IntroductionJudge = {
       '- goalMentioned: the intro explains why this matters / what the reader gains\n' +
       '- expectationsSet: the intro previews the article structure or scope\n\n' +
       '=== INTRO ===\n' + introText + '\n=== END ===';
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const llm = chatLlm();
+    const res = await fetch(llm.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        Authorization: `Bearer ${llm.apiKey}`,
       },
       body: JSON.stringify({
-        model: INTRO_MODEL, temperature: INTRO_TEMPERATURE, seed: 7,
+        model: llm.model, temperature: INTRO_TEMPERATURE, seed: 7,
         response_format: { type: 'json_object' },
         messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
       }),
       signal: AbortSignal.timeout(20_000),
     });
-    if (!res.ok) throw new Error(`deepseek intro judge failed: ${res.status}`);
-    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`${llm.provider} intro judge failed: ${res.status}`);
+    const data = await res.json().catch(() => ({} as { choices?: Array<{ message?: { content?: string } }> }));
     const parsed = safeJsonParse<Partial<IntroVerdict>>(data?.choices?.[0]?.message?.content ?? '', {});
     return {
       intentConfirmed: !!parsed.intentConfirmed,

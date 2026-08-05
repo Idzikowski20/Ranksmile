@@ -42,6 +42,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
+      // Publish gate: refresh CCM if content drifted (07-runtime) — non-blocking on failure
+      const ccmGate = await import('../../../lib/intelligence/compileAfterArticleChange')
+         .then((m) =>
+            m.compileIfStale({
+               articleId: Number(articleId),
+               compiledAt: new Date().toISOString(),
+               contentHtml: article.content || '',
+               mode: 'full',
+            }),
+         )
+         .catch((err: unknown) => {
+            console.warn('[ccm] publish gate compile failed (non-fatal):', getErrorMessage(err));
+            return { ok: false as const, error: getErrorMessage(err) || 'compile_failed' };
+         });
+      if (!ccmGate.ok) {
+         console.warn('[ccm] publish gate:', ccmGate.error);
+      }
+
       // Pobierz publish target konfigurację
       const publishTarget = await queryOne<{ url: string; api_key: string }>(
          `SELECT * FROM publish_targets WHERE domain_id = ? AND type = ? LIMIT 1`,
@@ -108,7 +126,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          }
       }
 
-      return res.status(200).json({ url: publishedUrl, published: true });
+      return res.status(200).json({
+         url: publishedUrl,
+         published: true,
+         ccm: ccmGate.ok
+            ? { refreshed: !ccmGate.skipped, version: ccmGate.version, skipped: !!ccmGate.skipped }
+            : { refreshed: false, error: ccmGate.error },
+      });
    } catch (error) {
       console.error('publish error:', error);
       return res.status(500).json({ error: getErrorMessage(error) || 'Publish failed' });

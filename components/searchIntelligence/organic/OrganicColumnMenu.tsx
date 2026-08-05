@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Checkbox } from '../../koala/core';
+import { Button, Checkbox, MenuList } from '../../koala/core';
 
 const FONT = 'var(--font-family-primary)';
 const LINK_COLOR = 'rgb(35, 95, 226)';
@@ -25,17 +25,6 @@ export type ColumnId = (typeof ALL_COLUMNS)[number]['id'];
 export const DEFAULT_VISIBLE: ColumnId[] = [
   'keyword', 'intent', 'position', 'sf', 'traffic', 'trafficShare', 'volume', 'difficulty', 'url', 'updatedAt',
 ];
-
-const dropdownPanel: React.CSSProperties = {
-  position: 'absolute',
-  right: 0,
-  background: '#fff',
-  border: '1px solid #dbded4',
-  borderRadius: 8,
-  boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
-  zIndex: 30,
-  fontFamily: FONT,
-};
 
 function IconSettings() {
   return (
@@ -95,45 +84,37 @@ export function OrganicColumnMenu({
       </Button>
       {open && (
         <div
-          role="menu"
-          aria-label="Show table columns"
           style={{
-            ...dropdownPanel,
+            position: 'absolute',
             top: 'calc(100% + 6px)',
+            right: 0,
+            zIndex: 30,
             width: 240,
-            maxHeight: 'min(420px, 70vh)',
-            overflowY: 'auto',
-            padding: '12px 0 8px',
           }}
         >
-          <div style={{
-            padding: '0 14px 6px',
-            fontSize: 14,
-            fontWeight: 700,
-            color: '#181225',
-          }}
+          <MenuList
+            role="menu"
+            header="Show table columns"
+            footer={(
+              <button
+                type="button"
+                onClick={() => onChange([...DEFAULT_VISIBLE])}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  padding: 0,
+                  margin: 0,
+                  fontSize: 13,
+                  color: LINK_COLOR,
+                  cursor: 'pointer',
+                  fontFamily: FONT,
+                  textAlign: 'left',
+                }}
+              >
+                Reset to default
+              </button>
+            )}
           >
-            Show table columns
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange([...DEFAULT_VISIBLE])}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              padding: '0 14px 10px',
-              margin: 0,
-              fontSize: 13,
-              color: LINK_COLOR,
-              cursor: 'pointer',
-              fontFamily: FONT,
-              textAlign: 'left',
-              width: '100%',
-            }}
-          >
-            Reset to default
-          </button>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {ALL_COLUMNS.map((col) => {
               const on = visibleCols.includes(col.id);
               const locked = 'locked' in col && col.locked === true;
@@ -144,7 +125,7 @@ export function OrganicColumnMenu({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
-                    padding: '7px 14px',
+                    padding: '7px 8px',
                     fontSize: 13,
                     color: locked ? '#878490' : '#302E36',
                     cursor: locked ? 'default' : 'pointer',
@@ -172,7 +153,7 @@ export function OrganicColumnMenu({
                 </label>
               );
             })}
-          </div>
+          </MenuList>
         </div>
       )}
     </div>

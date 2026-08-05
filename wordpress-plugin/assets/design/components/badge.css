@@ -1,0 +1,9 @@
+﻿.ranksmile-admin .rs-badge {
+  display: inline-flex; align-items: center; gap: var(--rs-space-1);
+  padding: 2px var(--rs-space-2); border-radius: 999px;
+  font-size: var(--rs-text-xs); font-weight: 500; line-height: var(--rs-leading-xs);
+  background: var(--rs-bg-secondary); color: var(--rs-text-secondary);
+}
+.ranksmile-admin .rs-badge--success { background: var(--rs-status-success-bg); color: var(--rs-status-success); }
+.ranksmile-admin .rs-badge--warning { background: var(--rs-status-warning-bg); color: #9a6b00; }
+.ranksmile-admin .rs-badge--danger { background: var(--rs-status-danger-bg); color: var(--rs-status-danger); }

@@ -106,13 +106,16 @@ export function useOnboardingChecklist(): {
          { key: 'content', label: 'Create content that ranks in AI Search and SEO', done: hasArticle, time: '10m', href: ws('/articles'), cta: 'Open Content Editor' },
       ];
       const beyondSteps: OnboardingStep[] = [
-         { key: 'wordpress', label: 'Connect WordPress for publishing', done: false, href: '/settings/wordpress' },
-         { key: 'api', label: 'Explore the API for custom workflows', done: false, href: '/settings/api' },
+         { key: 'wordpress', label: 'Connect WordPress for publishing', done: false, href: '/settings/wordpress', cta: 'Connect WordPress' },
+         { key: 'api', label: 'Explore the API for custom workflows', done: false, href: '/settings/api', cta: 'Open API settings' },
       ];
+      // done/pct stay on the core 5 steps so the sidebar launchpad can hide at 100%.
+      // nextStep falls through to beyondSteps so the dashboard Get Started card keeps
+      // nudging (WP / API) after the core checklist is complete — otherwise it vanishes.
       const done = steps.filter((s) => s.done).length;
       const total = steps.length;
       const pct = Math.round((done / total) * 100);
-      const nextStep = steps.find((s) => !s.done) ?? null;
+      const nextStep = steps.find((s) => !s.done) ?? beyondSteps.find((s) => !s.done) ?? null;
       return { steps, beyondSteps, done, total, pct, nextStep, loading };
    }, [wsId, slug, wsData, sitesData, recsData, articlesData, aiStatus, loading]);
 }

@@ -1,0 +1,77 @@
+﻿.ranksmile-admin .rs-settings-nav__group { margin-top: 8px; }
+.ranksmile-admin .rs-settings-nav__group-title {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rs-text-tertiary);
+}
+.ranksmile-admin .rs-settings-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ranksmile-admin .rs-settings-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--rs-text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background-color var(--rs-transition-fast), color var(--rs-transition-fast);
+}
+.ranksmile-admin .rs-settings-nav__item-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.ranksmile-admin .rs-settings-nav__item:hover {
+  background: var(--rs-bg-secondary);
+  color: var(--rs-text-primary);
+}
+.ranksmile-admin .rs-settings-nav__item--active {
+  background: color-mix(in srgb, var(--rs-brand) 10%, var(--rs-bg-primary));
+  color: var(--rs-brand);
+}
+.ranksmile-admin .rs-settings-nav__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ranksmile-admin .rs-settings-nav__item.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.ranksmile-admin .rs-settings-nav__item:focus-visible {
+  outline: none;
+  box-shadow: var(--rs-shadow-focus);
+}
+
+/* Legacy rs-nav (wizard / emails) */
+.ranksmile-admin .rs-nav { display: flex; flex-direction: column; gap: var(--rs-space-4); padding: 0 var(--rs-space-3); }
+.ranksmile-admin .rs-nav__group-label {
+  margin: 0 0 var(--rs-space-2); padding: 0 var(--rs-space-2);
+  font-size: var(--rs-text-xs); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--rs-text-tertiary);
+}
+.ranksmile-admin .rs-nav__link {
+  display: block; padding: var(--rs-space-2) var(--rs-space-3); border-radius: var(--rs-radius-sm);
+  color: var(--rs-text-secondary); text-decoration: none; font-size: var(--rs-text-md); font-weight: 500;
+  transition: background var(--rs-transition-fast), color var(--rs-transition-fast);
+}
+.ranksmile-admin .rs-nav__link:hover { background: var(--rs-bg-secondary); color: var(--rs-text-primary); }
+.ranksmile-admin .rs-nav__link.is-active { background: color-mix(in srgb, var(--rs-brand) 12%, transparent); color: var(--rs-brand); }
+.ranksmile-admin .rs-nav__link.is-disabled { opacity: .45; pointer-events: none; }
+.ranksmile-admin .rs-nav__link:focus-visible { outline: none; box-shadow: var(--rs-shadow-focus); }

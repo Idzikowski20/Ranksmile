@@ -8,6 +8,8 @@ type PaginationProps = {
   className?: string;
   caption?: React.ReactNode;
   disabled?: boolean;
+  /** Numbered page buttons (Figma 3950:178062). Default true. */
+  showPageNumbers?: boolean;
 };
 
 const ChevronLeft = () => (
@@ -22,6 +24,35 @@ const ChevronRight = () => (
   </svg>
 );
 
+/** Visible page list with ellipses — Koala Pagination (Figma 3950:178062). */
+export function getVisiblePages(page: number, pageCount: number): Array<number | 'ellipsis'> {
+  if (pageCount <= 1) return pageCount === 1 ? [1] : [];
+  if (pageCount <= 7) {
+    return Array.from({ length: pageCount }, (_, i) => i + 1);
+  }
+  const set = new Set<number>([1, pageCount]);
+  for (let i = page - 1; i <= page + 1; i += 1) {
+    if (i >= 1 && i <= pageCount) set.add(i);
+  }
+  if (page <= 3) {
+    set.add(2);
+    set.add(3);
+    set.add(4);
+  }
+  if (page >= pageCount - 2) {
+    set.add(pageCount - 1);
+    set.add(pageCount - 2);
+    set.add(pageCount - 3);
+  }
+  const sorted = Array.from(set).sort((a, b) => a - b);
+  const out: Array<number | 'ellipsis'> = [];
+  for (let i = 0; i < sorted.length; i += 1) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push('ellipsis');
+    out.push(sorted[i]);
+  }
+  return out;
+}
+
 export function Pagination({
   page,
   pageCount,
@@ -29,10 +60,12 @@ export function Pagination({
   className = '',
   caption,
   disabled = false,
+  showPageNumbers = true,
 }: PaginationProps) {
   if (pageCount <= 1) return null;
   const prevDisabled = disabled || page <= 1;
   const nextDisabled = disabled || page >= pageCount;
+  const pages = showPageNumbers ? getVisiblePages(page, pageCount) : [];
 
   return (
     <div className={`koala-pagination ${className}`} data-test-id="pagination">
@@ -47,6 +80,30 @@ export function Pagination({
         >
           <ChevronLeft />
         </Button>
+        {pages.map((item, idx) => {
+          if (item === 'ellipsis') {
+            return (
+              <span key={`e-${idx}`} className="koala-pagination-ellipsis" aria-hidden>
+                …
+              </span>
+            );
+          }
+          const active = item === page;
+          return (
+            <Button
+              key={item}
+              size="sm"
+              variant={active ? 'primary' : 'secondary'}
+              aria-label={`Page ${item}`}
+              aria-current={active ? 'page' : undefined}
+              disabled={disabled}
+              className={active ? 'koala-pagination-page is-active' : 'koala-pagination-page'}
+              onClick={() => onPageChange(item)}
+            >
+              {item}
+            </Button>
+          );
+        })}
         <Button
           size="sm"
           variant="secondary"

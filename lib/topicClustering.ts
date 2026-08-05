@@ -3,7 +3,7 @@
  * Uses DeepSeek for cluster naming; deterministic logic for idea grouping and stats.
  */
 import { generateText } from 'ai';
-import { deepseek } from './ai/deepseek';
+import { chatLlm, deepseek } from './ai/deepseek';
 import { languageInstructionForLlm } from './domainLanguagePrompts';
 import { computeTopicalCohesion } from './contentEffort';
 import type {
@@ -132,8 +132,9 @@ export async function clusterKeywords(
   keywords: EnrichedKeyword[],
   languageCode = 'en',
 ): Promise<RawCluster[]> {
-   if (!process.env.DEEPSEEK_API_KEY) {
-      throw new Error('DEEPSEEK_API_KEY is not configured');
+   const llm = chatLlm();
+   if (!llm.apiKey) {
+      throw new Error(`${llm.keyEnv} is not configured`);
    }
    const top = keywords.slice(0, 150);
    const lines = top.map((k, i) => `${i}. ${k.keyword} (vol: ${k.volume ?? 0}, kd: ${k.kd ?? 0})`).join('\n');

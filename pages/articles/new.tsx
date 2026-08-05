@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
-import posthog from 'posthog-js';
 import { useFetchDomains } from '../../services/domains';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
@@ -68,10 +67,6 @@ const NewContentPage: NextPage = () => {
 
   const goNext = () => {
     if (!canNext) return;
-    posthog.capture('article_research_started', {
-      keyword_count: keywords.length,
-      language,
-    });
     const q = new URLSearchParams();
     q.set('domainId', String(domainId));
     q.set('keywords', keywords.join(','));

@@ -3,7 +3,7 @@
  * Plugin Name: Ranksmile – WordPress Plugin
  * Plugin URI: https://wordpress.org/plugins/ranksmileseo/
  * Description: Create content that ranks with Ranksmile in WordPress
- * Version: 1.7.0.640
+ * Version: 1.8.0.0
  * Author: Ranksmile
  * Author URI: https://ranksmile.pl
  * License: GPLv2 or later
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'RANKSMILE_VERSION' ) ) {
-	define( 'RANKSMILE_VERSION', '1.7.0.640' );
+	define( 'RANKSMILE_VERSION', '1.8.0.0' );
 }
 
 if ( ! defined( 'RANKSMILE_PLUGIN_FILE' ) ) {

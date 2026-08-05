@@ -8,10 +8,6 @@ import { countOccurrences, type ScoreData } from '../../lib/contentScore';
 import { scoreArticleHtml } from '../../lib/scoreArticleHtml';
 import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 import type { CoverageItem } from '../../lib/aiCoverage';
-import { throttle } from '../../lib/throttle';
-import { useArticleChannel } from '../../lib/ably/useArticleChannel';
-import { ABLY_EVENTS } from '../../lib/ably/channel';
-import { ablyIgnore } from '../../lib/ably/safe';
 import type { ArticleEditorHandle } from '../../lib/types/editor';
 import type { Editor } from '@tiptap/core';
 import { Thread, type CommentAuthor } from '../../components/articles/comments/CommentThreadBubble';
@@ -109,7 +105,6 @@ export function useArticleEditorState({
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
   const [commentThreads, setCommentThreads] = useState<Thread[]>([]);
   const [commentsVersion, setCommentsVersion] = useState(0);
 
@@ -130,8 +125,6 @@ export function useArticleEditorState({
 
   const actionsRef = useRef<HTMLDivElement>(null);
   const voiceRef = useRef<HTMLDivElement>(null);
-  const shareRef = useRef<HTMLDivElement>(null);
-  const sharePopoverRef = useRef<HTMLDivElement>(null);
   const [domainBaseUrl, setDomainBaseUrl] = useState('');
   const [ranksmileAiActive, setRanksmileAiActive] = useState(false);
   const [linksAiActive, setLinksAiActive] = useState(false);
@@ -170,56 +163,6 @@ export function useArticleEditorState({
       .then((d) => setCommentThreads(d.threads || []))
       .catch(() => {});
   }, [id, commentsVersion]);
-
-  const { channel: ownerChannel } = useArticleChannel({ articleId: article?.id ?? null });
-  useEffect(() => {
-    if (!ownerChannel) return undefined;
-    const onComment = () => setCommentsVersion((v) => v + 1);
-    ablyIgnore(ownerChannel.subscribe(ABLY_EVENTS.comment, onComment));
-    ablyIgnore(ownerChannel.presence.enter({ role: 'owner' }));
-    return () => {
-      ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment);
-      ablyIgnore(ownerChannel.presence.leave());
-    };
-  }, [ownerChannel]);
-
-  const [reviewers, setReviewers] = useState<string[]>([]);
-  useEffect(() => {
-    if (!ownerChannel) return undefined;
-    const refresh = () => ablyIgnore(
-      ownerChannel.presence.get()
-        .then((members) => setReviewers(members
-          .filter((m) => (m.data as { role?: string } | undefined)?.role === 'viewer')
-          .map((m) => ((m.data as { name?: string } | undefined)?.name) || 'Guest'))),
-    );
-    ablyIgnore(ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh));
-    refresh();
-    return () => {
-      ownerChannel.presence.unsubscribe();
-      ablyIgnore(ownerChannel.presence.leave());
-    };
-  }, [ownerChannel]);
-
-  const MAX_LIVE_HTML = 56 * 1024;
-  const ownerChannelRef = useRef<typeof ownerChannel>(null);
-  useEffect(() => { ownerChannelRef.current = ownerChannel; }, [ownerChannel]);
-  const contentRevRef = useRef(0);
-
-  const publishContentRef = useRef(
-    throttle((html: string, rev: number) => {
-      const ch = ownerChannelRef.current;
-      if (!ch) return;
-      if (html.length > MAX_LIVE_HTML) void ch.publish(ABLY_EVENTS.content, { tooLarge: true, rev });
-      else void ch.publish(ABLY_EVENTS.content, { html, rev });
-    }, 500),
-  );
-
-  const publishCaretRef = useRef(
-    throttle((from: number, to: number, rev: number) => {
-      const ch = ownerChannelRef.current;
-      if (ch) void ch.publish(ABLY_EVENTS.caret, { from, to, rev });
-    }, 75),
-  );
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -293,7 +236,7 @@ export function useArticleEditorState({
               fetch(`/api/articles?domainId=${art.domain_id}`).then((r) => r.json()),
             ])
               .then(([dd, d]) => {
-                const dom = (dd.domains || []).find((domItem: DomainType) => domItem.ID === art.domain_id);
+                const dom = (dd.domains || []).find((domItem: { ID: number; domain?: string }) => domItem.ID === art.domain_id);
                 if (dom?.domain) setDomainBaseUrl(`https://${dom.domain}`);
                 const others = (d.articles || [])
                   .filter((a: { id: number; status?: string }) => a.id !== art.id && a.status === 'published')
@@ -311,16 +254,15 @@ export function useArticleEditorState({
   }, [id, analysisReloadKey, router]);
 
   useEffect(() => {
-    if (!actionsMenu && !voiceOpen && !shareOpen) return undefined;
+    if (!actionsMenu && !voiceOpen) return undefined;
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
       if (voiceOpen && voiceRef.current && !voiceRef.current.contains(t)) setVoiceOpen(false);
-      if (shareOpen && !shareRef.current?.contains(t) && !sharePopoverRef.current?.contains(t)) setShareOpen(false);
       if (actionsMenu && actionsRef.current && !actionsRef.current.contains(t)) { setActionsMenu(false); setVoiceOpen(false); }
     };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
-  }, [actionsMenu, voiceOpen, shareOpen]);
+  }, [actionsMenu, voiceOpen]);
 
   const handleEditorChange = useCallback(
     (html: string, text: string, words: number, headings: number, paragraphs: number) => {
@@ -329,30 +271,9 @@ export function useArticleEditorState({
       setWordCount(words);
       setHeadingCount(headings);
       setParagraphCount(paragraphs);
-      contentRevRef.current += 1;
-      publishContentRef.current(html, contentRevRef.current);
     },
     [],
   );
-
-  useEffect(() => {
-    let ed: ReturnType<NonNullable<typeof editorRef.current>['getEditor']> | null = null;
-    const onSel = () => {
-      if (!ed) return;
-      const { from, to } = ed.state.selection;
-      publishCaretRef.current(from, to, contentRevRef.current);
-    };
-    const tryBind = () => {
-      const e = editorRef.current?.getEditor?.();
-      if (e && !ed) { ed = e; e.on('selectionUpdate', onSel); return true; }
-      return false;
-    };
-    if (!tryBind()) {
-      const iv = setInterval(() => { if (tryBind()) clearInterval(iv); }, 200);
-      return () => { clearInterval(iv); if (ed) ed.off('selectionUpdate', onSel); };
-    }
-    return () => { if (ed) ed.off('selectionUpdate', onSel); };
-  }, [article?.id]);
 
   const handleMetaTitleChange = useCallback((v: string) => {
     setArticle((prev) => prev ? { ...prev, meta_title: v } : prev);
@@ -587,8 +508,6 @@ export function useArticleEditorState({
     setActionsMenu,
     voiceOpen,
     setVoiceOpen,
-    shareOpen,
-    setShareOpen,
     commentThreads,
     setCommentThreads,
     commentsVersion,
@@ -596,8 +515,6 @@ export function useArticleEditorState({
     commentAuthor,
     actionsRef,
     voiceRef,
-    shareRef,
-    sharePopoverRef,
     domainBaseUrl,
     ranksmileAiActive,
     setRanksmileAiActive,
@@ -618,7 +535,6 @@ export function useArticleEditorState({
     internalArticles,
     scoreData,
     setScoreData,
-    reviewers,
     handleEditorChange,
     handleMetaTitleChange,
     handleMetaDescriptionChange,

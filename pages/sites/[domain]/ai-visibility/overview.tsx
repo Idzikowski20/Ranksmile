@@ -159,8 +159,15 @@ const AiVisibilityOverview: NextPage = () => {
             const sourceCount = ov?.snapshot?.sources.length || 0;
 
             // Per-metric trend series (You + optional competitor) from /history.
-            const histScans = histData?.scans || [];
-            const histLabels = histScans.map((s) => (s.finishedAt ? new Date(s.finishedAt).toLocaleDateString() : ''));
+            // API is newest-first; charts need chronological (oldest → newest).
+            const histScans = [...(histData?.scans || [])].reverse();
+            const histLabels = histScans.map((s, i) => {
+               if (!s.finishedAt) return `#${i + 1}`;
+               const d = new Date(s.finishedAt);
+               return Number.isNaN(d.getTime())
+                  ? `#${i + 1}`
+                  : d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            });
             const youVals = (pick: (o: DomainOverview) => number | null): Array<number | null> => histScans.map((s) => (s.series.you ? pick(s.series.you) : null));
             const compVals = (pick: (o: DomainOverview) => number | null): Array<number | null> => histScans.map((s) => (s.series.competitor ? pick(s.series.competitor) : null));
 
@@ -182,7 +189,14 @@ const AiVisibilityOverview: NextPage = () => {
             if (pending) {
                chartBody = <SkeletonBars />;
             } else if (chartMode === 'bar') {
-               chartBody = <CompetitorBarChart competitors={barItems} selected={compareDomain} onSelect={setCompareDomain} />;
+               chartBody = (
+                  <CompetitorBarChart
+                     competitors={barItems}
+                     selected={compareDomain}
+                     onSelect={setCompareDomain}
+                     ownScore={own?.visibilityScore ?? 0}
+                  />
+               );
             } else {
                // Line mode mirrors Ranksmile: trend on the left, a "Top Competitors"
                // picker on the right (the line only plots You + the chosen competitor).
@@ -394,11 +408,9 @@ const AiVisibilityOverview: NextPage = () => {
                               <MetricTrendChart
                                  labels={histLabels}
                                  lines={[
-                                    { label: 'You', data: youVals((o) => o.mentionRate), color: '#F84416' },
-                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.mentionRate), kind: 'neutral' as const }] : []),
+                                    { label: 'You', data: youVals((o) => o.mentionRate), kind: 'traffic' },
+                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.mentionRate), kind: 'comparison' as const }] : []),
                                  ]}
-                                 yMin={0}
-                                 yMax={100}
                                  percent
                               />
                            )}
@@ -418,11 +430,9 @@ const AiVisibilityOverview: NextPage = () => {
                               <MetricTrendChart
                                  labels={histLabels}
                                  lines={[
-                                    { label: 'You', data: youVals((o) => o.avgPosition), color: '#F84416' },
-                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.avgPosition), kind: 'neutral' as const }] : []),
+                                    { label: 'You', data: youVals((o) => o.avgPosition), kind: 'traffic' },
+                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.avgPosition), kind: 'comparison' as const }] : []),
                                  ]}
-                                 yMin={1}
-                                 yMax={10}
                                  reverse
                               />
                            )}
@@ -432,12 +442,12 @@ const AiVisibilityOverview: NextPage = () => {
                      <section style={card}>
                         <div style={{ ...cardHeader, gap: 16, flexWrap: 'wrap' }}>
                            <span style={{ ...cardTitle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#18181B', flexShrink: 0 }} />
-                              Direct citations: <span style={{ color: '#18181B', fontWeight: 700 }}>{own ? own.directCitations : '—'}</span>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--koala-text-brand, #F84416)', flexShrink: 0 }} />
+                              Direct citations: <span style={{ color: 'var(--koala-text-primary)', fontWeight: 700 }}>{own ? own.directCitations : '—'}</span>
                            </span>
                            <span style={{ ...cardTitle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#9F9FA9', flexShrink: 0 }} />
-                              Pages: <span style={{ color: '#18181B', fontWeight: 700 }}>{own ? own.pages : '—'}</span>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--koala-text-secondary)', flexShrink: 0 }} />
+                              Pages: <span style={{ color: 'var(--koala-text-primary)', fontWeight: 700 }}>{own ? own.pages : '—'}</span>
                            </span>
                         </div>
                         <div style={{ padding: 24 }}>
@@ -445,10 +455,9 @@ const AiVisibilityOverview: NextPage = () => {
                               <MetricTrendChart
                                  labels={histLabels}
                                  lines={[
-                                    { label: 'Direct citations', data: youVals((o) => o.directCitations), color: '#18181B' },
-                                    { label: 'Pages', data: youVals((o) => o.pages), kind: 'neutral' as const },
+                                    { label: 'Direct citations', data: youVals((o) => o.directCitations), kind: 'traffic' },
+                                    { label: 'Pages', data: youVals((o) => o.pages), kind: 'comparison' },
                                  ]}
-                                 yMin={0}
                               />
                            )}
                         </div>

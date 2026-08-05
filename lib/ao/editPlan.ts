@@ -5,6 +5,15 @@ import {
   budgetForAction,
   type EditBudget,
 } from './editBudget';
+import type { CompetitorSynthesis } from '../wie/competitorSynthesis';
+import { formatCompetitorSynthesisForPrompt } from '../wie/competitorSynthesis';
+import type { ReaderBrief } from '../wie/readerBrief';
+import { formatReaderBriefForPrompt } from '../wie/readerBrief';
+import type { PolicyBundle } from '../wie/policyResolver';
+import { formatPolicyBundleForPrompt } from '../wie/policyResolver';
+import type { NarrativePlan } from '../wie/narrativePlanner';
+import { formatNarrativePlanForPrompt } from '../wie/narrativePlanner';
+import { formatBoundedCoverageForPrompt } from '../wie/writerContext';
 
 export type PrecisionAction =
   | 'expand_existing_paragraph'
@@ -125,7 +134,18 @@ export function buildPrecisionEditPlan(input: BuildEditPlanInput): PrecisionEdit
 }
 
 /** WHAT / WHY / WHERE / HOW — never "improve this section". */
-export function buildPrecisionStepPrompt(step: PrecisionPlanStep, sectionHtml: string): string {
+export function buildPrecisionStepPrompt(
+  step: PrecisionPlanStep,
+  sectionHtml: string,
+  opts?: {
+    synthesis?: CompetitorSynthesis | null;
+    readerBrief?: ReaderBrief | null;
+    policy?: PolicyBundle | null;
+    narrative?: NarrativePlan | null;
+    /** Extra hint for A/B variant B */
+    variantHint?: string;
+  },
+): string {
   const how =
     step.action === 'add_faq'
       ? 'Add concise FAQ Q&A only for unanswered questions.'
@@ -143,6 +163,31 @@ export function buildPrecisionStepPrompt(step: PrecisionPlanStep, sectionHtml: s
                   ? 'Insert one natural sentence into an existing paragraph.'
                   : 'Apply a targeted edit for the gap only.';
 
+  const synthBlock = formatCompetitorSynthesisForPrompt(opts?.synthesis);
+  const readerBlock = formatReaderBriefForPrompt(opts?.readerBrief);
+  const policyBlock = formatPolicyBundleForPrompt(opts?.policy);
+  const narrativeBlock = formatNarrativePlanForPrompt(opts?.narrative);
+  const coverageBlock = formatBoundedCoverageForPrompt(opts?.synthesis);
+  const voiceLines = policyBlock
+    ? ''
+    : [
+      'VOICE:',
+      '- Prefer problem-first / reader-addressed openings when synthesis says so; avoid dictionary-lead.',
+      '- Include at least one concrete example when expanding a practical section.',
+      '- Use expert cues where natural (e.g. "w praktyce", "najczęściej") — no fake credentials.',
+      '- Prefer depth on critical synthesis items; do not pad FAQ or type-lists only for score.',
+    ].join('\n');
+
+  const openingValue = opts?.policy?.decisions.find((d) => d.id === 'opening')?.value;
+  const hardOpening = openingValue === 'problem_first'
+    ? [
+      'HARD OPENING POLICY (must obey):',
+      '- opening:problem_first — first paragraph MUST start with reader problem/stakes/emotion.',
+      '- FORBIDDEN first sentence patterns: “X to…”, “X jest…”, “Definicja…”, dictionary leads.',
+      '- If you explain what X is, do it AFTER the problem hook — never as the lead.',
+    ].join('\n')
+    : '';
+
   return [
     'You are a precision content editor. Execute ONLY the assigned objective.',
     `WHAT: ${step.targetGap.claimOrQuestion}`,
@@ -152,10 +197,18 @@ export function buildPrecisionStepPrompt(step: PrecisionPlanStep, sectionHtml: s
     `ACTION: ${step.action}`,
     `MAX NEW WORDS (ceiling, not target): ${step.maxNewWords}`,
     `FORBIDDEN: ${step.forbiddenChanges.join(', ')}`,
+    readerBlock,
+    policyBlock,
+    hardOpening,
+    narrativeBlock,
+    synthBlock,
+    coverageBlock,
+    voiceLines,
+    opts?.variantHint || '',
     'Improve the assigned objective without removing or weakening already-correct high-value content unless replacement is required for correctness.',
     'Return the FULL updated section HTML only.',
     '',
     'SECTION HTML:',
     sectionHtml,
-  ].join('\n');
+  ].filter((line) => line !== '').join('\n');
 }

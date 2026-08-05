@@ -15,6 +15,7 @@ import { queryOne } from '../../../lib/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { chatLlm } from '../../../lib/ai/deepseek';
 
 export interface LinkSuggestion {
   anchorText: string;
@@ -66,8 +67,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
   }
 
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
+  const llm = chatLlm();
+  if (!llm.apiKey) return res.status(500).json({ error: `${llm.keyEnv} not configured` });
 
   // Org-wide AI budget (gate after the free cache return above).
   const orgId = await resolveOrgId(req, res);
@@ -114,11 +115,11 @@ OUTPUT FORMAT — JSON array only, no other text:
 If no natural links found, return: []`;
 
   try {
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetch(llm.url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${llm.apiKey}` },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: llm.model,
         max_tokens: 2048,
         messages: [{ role: 'user', content: prompt }],
       }),

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Modal, { ModalBody } from '../core/modal/modal';
 import Button from '../core/button/button';
+import { Chip, Select } from '../core';
 import Input from '../core/input/input';
 import { Form, FormField, FormSection, FormActions, FieldHint } from '../forms';
 import { useCreateTeam } from '../../../services/team';
@@ -93,21 +94,13 @@ export function CreateTeamDialog({ open, onClose }: CreateTeamDialogProps) {
             {chips.length > 0 ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {chips.map((e) => (
-                  <button
+                  <Chip
                     key={e}
-                    type="button"
-                    onClick={() => setEmails((prev) => prev.filter((x) => x !== e))}
-                    style={{
-                      border: '1px solid var(--koala-border-primary)',
-                      borderRadius: 999,
-                      padding: '4px 10px',
-                      background: 'var(--koala-bg-secondary)',
-                      fontSize: 12,
-                      cursor: 'var(--koala-cursor-pointing)',
-                    }}
+                    size="sm"
+                    onDismiss={() => setEmails((prev) => prev.filter((x) => x !== e))}
                   >
-                    {e} ×
-                  </button>
+                    {e}
+                  </Chip>
                 ))}
               </div>
             ) : null}
@@ -116,22 +109,16 @@ export function CreateTeamDialog({ open, onClose }: CreateTeamDialogProps) {
           <FormSection title="Permissions">
             <FieldHint>Default invite role. Advanced roles may require a plan upgrade.</FieldHint>
             <FormField label="Role">
-              <select
+              <Select
+                size="md"
+                width="100%"
                 value={role}
-                onChange={(e) => setRole(e.target.value as 'member' | 'manager')}
-                style={{
-                  height: 40,
-                  borderRadius: 12,
-                  border: '1px solid var(--koala-input-border)',
-                  padding: '0 12px',
-                  fontFamily: 'var(--font-family-primary)',
-                  background: 'var(--koala-input-bg)',
-                  color: 'var(--koala-text-primary)',
-                }}
-              >
-                <option value="member">Member</option>
-                <option value="manager">Manager</option>
-              </select>
+                options={[
+                  { value: 'member', label: 'Member' },
+                  { value: 'manager', label: 'Manager' },
+                ]}
+                onChange={(v) => setRole(v as 'member' | 'manager')}
+              />
             </FormField>
           </FormSection>
 

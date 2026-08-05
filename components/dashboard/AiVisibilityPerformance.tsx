@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { ChartWidget } from '../koala/product';
+import { TrendDeltaBadge } from '../koala/product/helpers/TrendDeltaBadge';
 import type { ChartPreparedData } from '../koala/charts';
 
 const font = 'var(--font-family-primary)';
@@ -42,11 +43,14 @@ const AiVisibilityPerformance = ({
         </Link>
       )}
       footer={!loading && points.length ? (
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontFamily: font, fontSize: 12, color: 'var(--koala-text-secondary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%', fontFamily: font, fontSize: 12, color: 'var(--koala-text-secondary)' }}>
           <span style={{ fontWeight: 700, fontSize: 20, color: 'var(--koala-text-primary)' }}>{score}</span>
-          <span style={{ color: up ? 'var(--koala-status-success)' : 'var(--koala-status-danger)', fontWeight: 600 }}>
-            {up ? '+' : ''}{deltaPct}%
-          </span>
+          <TrendDeltaBadge
+            delta={`${up ? '+' : ''}${deltaPct}%`}
+            positive={up}
+            size="sm"
+            variant="outline"
+          />
           <span>{startLabel}</span>
           <span>{endLabel}</span>
         </div>

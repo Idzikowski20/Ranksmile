@@ -18,7 +18,7 @@ interface Props {
   command: (item: SlashItem) => void;
 }
 
-/** The "/" command popup (Notion-style). Light card per design.md; keyboard-navigable. */
+/** The "/" command popup (Notion-style). Theme-aware via Koala tokens; keyboard-navigable. */
 const SlashCommandMenu = forwardRef<SlashMenuRef, Props>(({ items, command }, ref) => {
   const [selected, setSelected] = useState(0);
   useEffect(() => { setSelected(0); }, [items]);
@@ -40,8 +40,11 @@ const SlashCommandMenu = forwardRef<SlashMenuRef, Props>(({ items, command }, re
       role="listbox"
       style={{
         width: 256, maxHeight: 360, overflowY: 'auto',
-        background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 12, padding: 6,
-        boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09), 0px 2px 6px 0px rgba(17,24,39,0.06)',
+        background: 'var(--koala-bg-primary)',
+        border: '1px solid var(--koala-border-primary)',
+        borderRadius: 12,
+        padding: 6,
+        boxShadow: '0 16px 32px color-mix(in srgb, var(--koala-bg-inverse) 16%, transparent), 0 2px 8px color-mix(in srgb, var(--koala-bg-inverse) 8%, transparent)',
         fontFamily: 'var(--font-family-primary)',
         animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)', transformOrigin: 'top left',
       }}
@@ -53,7 +56,7 @@ const SlashCommandMenu = forwardRef<SlashMenuRef, Props>(({ items, command }, re
         return (
           <React.Fragment key={`${item.title}-${i}`}>
             {showHeader && (
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: '#9F9FA9', padding: '8px 8px 4px' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: 'var(--koala-text-tertiary)', padding: '8px 8px 4px' }}>
                 {item.section}
               </div>
             )}
@@ -66,15 +69,15 @@ const SlashCommandMenu = forwardRef<SlashMenuRef, Props>(({ items, command }, re
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, width: '100%',
                 padding: '7px 8px', borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'left',
-                background: i === selected ? '#F4F4F5' : 'transparent',
-                color: '#18181B', fontFamily: 'var(--font-family-primary)',
+                background: i === selected ? 'var(--koala-bg-secondary)' : 'transparent',
+                color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)',
               }}
             >
-              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, flexShrink: 0, color: '#3F3F47' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, flexShrink: 0, color: 'var(--koala-text-secondary)' }}>
                 {item.icon}
               </span>
               <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{item.title}</span>
-              <span style={{ fontSize: 12, color: '#9F9FA9' }}>{item.hint}</span>
+              <span style={{ fontSize: 12, color: 'var(--koala-text-tertiary)' }}>{item.hint}</span>
             </button>
           </React.Fragment>
         );

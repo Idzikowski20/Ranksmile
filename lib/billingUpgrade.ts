@@ -1,21 +1,27 @@
 import type Stripe from 'stripe';
 import {
   getCheckoutPlan,
+  getLegacyCheckoutPlan,
   getPlanPeriodPrice,
   type BillingPeriod,
   type CheckoutPlan,
 } from './billingPlans';
 import { blocksNewPaidCheckout } from './billingPlanLock';
 import type { OrgBillingState } from './orgBilling';
-import type { PlanSlug } from './stripePrices';
+import type { LegacyPlanSlug, PlanSlug } from './stripePrices';
 import { getStripePriceId } from './stripePrices';
+import { clientSecretFromSubscriptionInvoice } from './stripeInvoiceClientSecret';
 
-const PLAN_RANK: Record<PlanSlug, number> = {
-  starter: 1,
-  growth: 2,
-  scale: 3,
-  agency: 4,
+const PLAN_RANK: Record<string, number> = {
+  starter: 0, // legacy — still below Growth for upgrade checks
+  growth: 1,
+  scale: 2,
+  agency: 3,
 };
+
+function getBillingPlan(slug: string): CheckoutPlan | undefined {
+  return getCheckoutPlan(slug) ?? getLegacyCheckoutPlan(slug);
+}
 
 export function planRank(slug: string): number | null {
   if (slug === 'starter' || slug === 'growth' || slug === 'scale' || slug === 'agency') {
@@ -31,7 +37,7 @@ export function isPaidPlanUpgrade(
   toSlug: string,
   toBilling: BillingPeriod,
 ): boolean {
-  const from = getCheckoutPlan(fromSlug);
+  const from = getBillingPlan(fromSlug);
   const to = getCheckoutPlan(toSlug);
   if (!from || !to) return false;
   const fromR = planRank(from.slug);
@@ -57,7 +63,7 @@ export function isAllowedSubscriptionChange(
   toBilling: BillingPeriod,
 ): boolean {
   if (fromSlug === toSlug && fromBilling === toBilling) return false;
-  const from = getCheckoutPlan(fromSlug);
+  const from = getBillingPlan(fromSlug);
   const to = getCheckoutPlan(toSlug);
   if (!from || !to) return false;
   const fromR = planRank(from.slug);
@@ -71,7 +77,7 @@ export function assertCanUpgradeSubscription(
   billing: OrgBillingState | null,
   targetSlug: string,
   targetBilling: BillingPeriod,
-): { ok: true; currentSlug: PlanSlug; currentBilling: BillingPeriod } | { ok: false; status: number; error: string } {
+): { ok: true; currentSlug: LegacyPlanSlug; currentBilling: BillingPeriod } | { ok: false; status: number; error: string } {
   if (!billing?.stripeSubscriptionId) {
     return { ok: false, status: 400, error: 'No active Stripe subscription to upgrade' };
   }
@@ -190,7 +196,7 @@ export async function applySubscriptionUpgrade(
     proration_behavior: 'always_invoice',
     ...(args.prorationDate ? { proration_date: args.prorationDate } : {}),
     payment_behavior: 'pending_if_incomplete',
-    expand: ['latest_invoice.payment_intent'],
+    expand: ['latest_invoice.confirmation_secret'],
     metadata: {
       ...subscription.metadata,
       org_id: String(args.orgId),
@@ -201,22 +207,17 @@ export async function applySubscriptionUpgrade(
     },
   });
 
-  const invoice = updated.latest_invoice;
-  if (invoice && typeof invoice === 'object') {
-    const pi = (invoice as Stripe.Invoice & {
-      payment_intent?: Stripe.PaymentIntent | string | null;
-    }).payment_intent;
-    if (pi && typeof pi === 'object' && pi.status !== 'succeeded' && pi.client_secret) {
-      return {
-        subscription: updated,
-        result: {
-          status: 'requires_payment',
-          subscriptionId: updated.id,
-          clientSecret: pi.client_secret,
-          intentType: 'payment',
-        },
-      };
-    }
+  const secret = clientSecretFromSubscriptionInvoice(updated);
+  if (secret && updated.pending_update) {
+    return {
+      subscription: updated,
+      result: {
+        status: 'requires_payment',
+        subscriptionId: updated.id,
+        clientSecret: secret.clientSecret,
+        intentType: 'payment',
+      },
+    };
   }
 
   return {

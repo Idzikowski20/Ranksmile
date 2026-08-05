@@ -15,7 +15,6 @@ function isSkipped(posixRel: string): boolean {
     'pages/api/ready.ts',
     'pages/api/login.ts',
     'pages/api/logout.ts',
-    'pages/api/share/[token].ts',
     'pages/api/koala-example-api.ts',
     'pages/api/favicon.ts',
     'pages/api/confirm-account.ts',

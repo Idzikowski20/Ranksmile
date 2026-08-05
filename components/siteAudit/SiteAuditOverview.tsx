@@ -1,8 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Button } from '../koala/core';
+import { RadialComparisonWidget, RADIAL_SEGMENT_COLORS } from '../koala/product';
+import type { RadialSegment } from '../koala/product';
+import { brandMain, green } from '../koala/tokens/colors';
 import { dashedLinkStyle } from './InfoPopper';
 import SiteAuditScoreGauge from './SiteAuditScoreGauge';
-import SiteHealthIssueBar, { type HealthIssueSegment } from './SiteHealthIssueBar';
 import IssueTrendArea from './IssueTrendArea';
 import OverviewInfoPopper, { type OverviewPopperKind } from './overviewPoppers';
 import { BotRow, PRIMARY_BOTS } from './aiSearchBots';
@@ -26,14 +28,6 @@ const LINK_BLUE = '#2563EB';
 const MUTED = '#52525C';
 const TEXT = '#18181B';
 const BORDER = '#e5e5e5';
-
-const BUCKET_COLORS: Record<PageBucket, string> = {
-  healthy: 'rgb(129, 224, 34)',
-  broken: 'rgb(252, 219, 3)',
-  haveIssues: 'rgb(186, 232, 76)',
-  redirects: 'rgb(107, 92, 231)',
-  blocked: 'rgb(212, 212, 216)',
-};
 
 const BUCKET_LABELS: Record<PageBucket, string> = {
   healthy: 'Healthy',
@@ -60,35 +54,44 @@ function InfoIcon() {
   );
 }
 
-function OverviewScoreGauge({
-  score,
-  deltaLabel = 'no changes',
-  size = 140,
-  variant = 'watchtower',
-}: {
-  score: number;
-  deltaLabel?: string | null;
-  size?: number;
-  variant?: 'watchtower' | 'compact';
-}) {
-  return (
-    <div className="koala-site-audit-score-gauge">
-      <SiteAuditScoreGauge score={score} size={size} variant={variant} showLabel={variant === 'watchtower'} />
-      {deltaLabel ? (
-        <span className="koala-site-audit-score-gauge-delta">{deltaLabel}</span>
-      ) : null}
-    </div>
-  );
+function siteHealthRadialSegments(distribution: Record<PageBucket, number>): RadialSegment[] {
+  const order: PageBucket[] = ['healthy', 'haveIssues', 'redirects', 'broken', 'blocked'];
+  return order.map((key, i) => ({
+    id: key,
+    label: BUCKET_LABELS[key],
+    value: distribution[key],
+    color: RADIAL_SEGMENT_COLORS[i % RADIAL_SEGMENT_COLORS.length],
+  }));
 }
 
-function crawledPagesBarSegments(distribution: Record<PageBucket, number>): HealthIssueSegment[] {
+function aiSearchRadialSegments(score: number): RadialSegment[] {
+  const optimized = Math.max(0, Math.min(100, Math.round(score)));
+  const gap = Math.max(0, 100 - optimized);
   return [
-    { id: 'healthy', label: BUCKET_LABELS.healthy, count: distribution.healthy, color: 'rgb(129, 224, 34)' },
-    { id: 'haveIssues', label: BUCKET_LABELS.haveIssues, count: distribution.haveIssues, color: 'rgb(186, 232, 76)' },
-    { id: 'redirects', label: BUCKET_LABELS.redirects, count: distribution.redirects, color: 'rgb(107, 92, 231)' },
-    { id: 'broken', label: BUCKET_LABELS.broken, count: distribution.broken, color: 'rgb(252, 219, 3)' },
-    { id: 'blocked', label: BUCKET_LABELS.blocked, count: distribution.blocked, color: 'rgb(212, 212, 216)' },
+    {
+      id: 'optimized',
+      label: 'Optimized',
+      value: Math.max(optimized, 0.01),
+      color: green[500],
+      displayValue: `${optimized}%`,
+    },
+    {
+      id: 'gap',
+      label: 'Needs work',
+      value: Math.max(gap, 0.01),
+      color: brandMain,
+      displayValue: `${gap}%`,
+    },
   ];
+}
+
+function formatHealthDelta(delta: number | null): { label: string | null; positive: boolean | null } {
+  if (delta === null) return { label: null, positive: null };
+  if (delta === 0) return { label: 'No change vs last crawl', positive: null };
+  return {
+    label: `${delta > 0 ? '+' : ''}${delta}% vs last crawl`,
+    positive: delta > 0,
+  };
 }
 
 function WidgetTitle({
@@ -192,7 +195,12 @@ type Props = {
 export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
   const dist = data.crawledPages.distribution;
   const [popper, setPopper] = useState<{ kind: OverviewPopperKind; rect: DOMRect } | null>(null);
-  const crawledBarSegments = useMemo(() => crawledPagesBarSegments(dist), [dist]);
+  const siteRadialSegments = useMemo(() => siteHealthRadialSegments(dist), [dist]);
+  const aiRadialSegments = useMemo(
+    () => aiSearchRadialSegments(data.aiSearchHealth),
+    [data.aiSearchHealth],
+  );
+  const siteDelta = formatHealthDelta(data.siteHealthDelta);
 
   const openPopper = useCallback((kind: OverviewPopperKind) => (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -206,143 +214,64 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT }}>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <section style={{ ...CARD, flex: '1 1 320px', minWidth: 0 }}>
-          <div className="koala-audit-overview-split">
-            <div style={{ flex: 1, padding: '12px 20px', borderRight: `1px solid ${BORDER}` }}>
-              <WidgetTitle
-                onInfoClick={openPopper('info-site-health')}
-                infoOpen={isInfoOpen('info-site-health')}
-              >
-                Site Health
-              </WidgetTitle>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
-                <OverviewScoreGauge
-                  score={data.siteHealth}
-                  deltaLabel={data.siteHealthDelta === null ? 'no changes' : `${data.siteHealthDelta > 0 ? '+' : ''}${data.siteHealthDelta}%`}
-                  size={148}
-                  variant="watchtower"
-                />
-                <div style={{ width: '100%', marginTop: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, color: '#D1002F' }}>▼</span>
-                    <span style={{ fontSize: 13, color: TEXT, flex: 1, marginLeft: 4 }}>Top-10% websites</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{data.benchmarkHealth}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div style={{ flex: 1, padding: '12px 20px' }}>
-              <WidgetTitle
-                onInfoClick={openPopper('info-crawled-pages')}
-                infoOpen={isInfoOpen('info-crawled-pages')}
-              >
-                Crawled Pages
-              </WidgetTitle>
-              <div className="koala-cp-overview-row">
-                <a
-                  href={`/sites/${data.slug}/site-audit`}
-                  className="koala-cp-overview-total"
-                  data-test-id="crawled-pages-total"
-                  aria-label={`Open all ${data.crawledPages.total} crawled pages`}
-                >
-                  {data.crawledPages.total}
-                </a>
-                <span className="koala-cp-overview-delta" data-test-id="crawled-pages-delta">
-                  {data.crawledPages.delta === null ? 'no changes' : `${data.crawledPages.delta > 0 ? '+' : ''}${data.crawledPages.delta}`}
-                </span>
-                <div className="koala-cp-overview-issue-bar" data-test-id="crawled-pages-chart">
-                  <SiteHealthIssueBar segments={crawledBarSegments} />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '6px 12px', fontSize: 13, marginBottom: 4 }}>
-                {(['healthy', 'broken', 'haveIssues', 'redirects', 'blocked'] as PageBucket[]).map((key) => (
-                  <React.Fragment key={key}>
-                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: BUCKET_COLORS[key], alignSelf: 'center' }} />
-                    <span style={{ color: TEXT }}>{BUCKET_LABELS[key]}</span>
-                    <span style={{ textAlign: 'right', color: dist[key] ? TEXT : MUTED, fontWeight: dist[key] ? 500 : 400 }}>
-                      {dist[key]}
-                    </span>
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
-          </div>
+        <section style={{ ...CARD, flex: '1 1 420px', minWidth: 0, overflow: 'hidden' }}>
+          <RadialComparisonWidget
+            title="Site Health"
+            value={String(Math.round(data.siteHealth))}
+            deltaLabel={siteDelta.label}
+            deltaPositive={siteDelta.positive}
+            segments={siteRadialSegments}
+            emptyLabel="No crawled pages yet."
+            framed={false}
+          />
         </section>
 
-        <section style={{ ...CARD, flex: '1 1 320px', minWidth: 0 }}>
+        <section style={{ ...CARD, flex: '1 1 520px', minWidth: 0, overflow: 'hidden' }}>
           <div className="koala-audit-overview-split">
-            <div style={{ flex: 1, padding: '12px 20px 20px', borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 12 }}>
-                <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: FONT }}>AI Search Health</h2>
+            <div style={{ flex: '1.1 1 260px', minWidth: 0, borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column' }}>
+              <RadialComparisonWidget
+                title="AI Search Health"
+                value={String(Math.round(data.aiSearchHealth))}
+                deltaLabel={data.aiSearchIssues > 0 ? `${data.aiSearchIssues} ${data.aiSearchIssues === 1 ? 'issue' : 'issues'}` : 'No AI issues'}
+                deltaPositive={data.aiSearchIssues === 0}
+                segments={aiRadialSegments}
+                framed={false}
+                badge={(
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#fff', background: '#EFA00D', borderRadius: 4, padding: '2px 6px' }}>beta</span>
+                )}
+              />
+              <div style={{ padding: '0 16px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, fontSize: 13 }}>
                 <button
                   type="button"
-                  aria-label="More info"
+                  aria-expanded={popper?.kind === 'how-it-works'}
+                  onClick={openPopper('how-it-works')}
+                  style={dashedLinkStyle}
+                >
+                  How it works
+                </button>
+                <button
+                  type="button"
                   aria-expanded={isInfoOpen('info-ai-search-health')}
                   onClick={openPopper('info-ai-search-health')}
-                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex' }}
+                  style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--koala-text-brand)', cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 500 }}
                 >
-                  <InfoIcon />
+                  More info
                 </button>
-                <span style={{ fontSize: 10, fontWeight: 600, color: '#fff', background: '#EFA00D', borderRadius: 4, padding: '2px 6px' }}>beta</span>
-              </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
-                <OverviewScoreGauge score={data.aiSearchHealth} size={148} variant="watchtower" />
-                <div
-                  style={{
-                    width: '100%',
-                    minHeight: 48,
-                    marginTop: 16,
-                    marginBottom: 12,
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    background: '#F0F0F2',
-                    fontSize: 12,
-                    color: TEXT,
-                    lineHeight: 1.45,
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                >
-                  {data.aiSearchNotice}
-                </div>
-                <div style={{ width: '100%', marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, fontSize: 13 }}>
-                  <button
-                    type="button"
-                    aria-expanded={popper?.kind === 'how-it-works'}
-                    onClick={openPopper('how-it-works')}
-                    style={dashedLinkStyle}
-                  >
-                    How it works
-                  </button>
-                  <button
-                    type="button"
-                    style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--koala-text-brand)', cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 500 }}
-                  >
-                    {data.aiSearchIssues} {data.aiSearchIssues === 1 ? 'issue' : 'issues'}
-                  </button>
-                </div>
               </div>
             </div>
-            <div style={{ flex: 1, padding: '12px 20px 20px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: '1 1 220px', padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', minWidth: 200 }}>
               <WidgetTitle
                 onInfoClick={openPopper('info-blocked-ai-search')}
                 infoOpen={isInfoOpen('info-blocked-ai-search')}
               >
                 Blocked from AI Search
               </WidgetTitle>
-              <p style={{ margin: '0 0 16px', fontSize: 12, color: MUTED }}>
-                Pages crawled:
-                {' '}
-                {data.pagesCrawled}
-                /
-                {data.pagesLimit}
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
                 {PRIMARY_BOTS.map((bot) => (
                   <BotRow key={bot.id} bot={bot} />
                 ))}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginTop: 16, fontSize: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginTop: 16, fontSize: 13, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   aria-expanded={popper?.kind === 'show-more'}

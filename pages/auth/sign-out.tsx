@@ -1,7 +1,6 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import React, { useEffect } from 'react';
-import posthog from 'posthog-js';
 import { signOut } from '../../lib/auth/fetchAuth';
 import { authSubtitleStyle, authTitleStyle } from '../../components/auth/authStyles';
 import AuthPageLayout from '../../components/auth/AuthPageLayout';
@@ -13,7 +12,6 @@ const SignOut: NextPage = () => {
 
     const run = async () => {
       await signOut();
-      posthog.reset();
       if (!cancelled) {
         window.location.href = '/auth/sign-in';
       }

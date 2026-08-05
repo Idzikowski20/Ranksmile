@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   usePeople, useInviteMember, useChangeRole, useRemoveMember, useRevokeInvitation,
   useSetMemberWorkspaces, describeWorkspaceAccess, PeopleMember,
 } from '../../services/people';
 import { useWorkspaces, Workspace } from '../../services/workspaces';
-import { Button, Input, MenuListItem } from '../koala/core';
+import { Button, CompactSelect, Input, MenuList, MenuListItem, Select } from '../koala/core';
+import { Icon } from '../koala/icons';
 import {
   KoalaSettingsSection,
   KoalaSettingsRow,
@@ -54,196 +55,39 @@ const Avatar = ({ initial }: { initial: string }) => (
   </div>
 );
 
-const CheckMark = () => (
-  <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0, color: 'var(--koala-text-primary)' }}>
-    <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
-  </svg>
-);
+const roleOptions = (options: readonly string[]) => options.map((o) => ({ value: o, label: cap(o) }));
 
-const fieldBtnStyle = (compact?: boolean): React.CSSProperties => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 8,
-  width: compact ? 'auto' : '100%',
-  minWidth: compact ? 108 : undefined,
-  maxWidth: '100%',
-  height: compact ? 32 : 40,
-  border: '1px solid var(--koala-border-primary)',
-  borderRadius: 8,
-  padding: compact ? '0 8px 0 12px' : '0 10px 0 12px',
-  fontSize: compact ? 13 : 14,
-  color: 'var(--koala-text-primary)',
-  background: 'var(--koala-bg-primary)',
-  fontFamily: font,
-  cursor: 'pointer',
-  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-  outline: 'none',
-});
-
-const menuPanelStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '110%',
-  left: 0,
-  background: 'var(--koala-bg-primary)',
-  border: '1px solid var(--koala-border-primary)',
-  borderRadius: 8,
-  boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-  zIndex: 150,
-  padding: 4,
-  animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)',
-};
-
-/** Role dropdown — `compact` = inline pill for table rows. */
 const RoleSelect = ({ value, options, onChange, compact }: {
   value: string; options: readonly string[]; onChange: (v: string) => void; compact?: boolean;
-}) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open]);
-  return (
-    <div ref={ref} style={{ position: 'relative', width: compact ? 'auto' : '100%', maxWidth: compact ? undefined : 360, display: compact ? 'inline-block' : 'block' }}>
-      <button type="button" onClick={() => setOpen((v) => !v)} style={fieldBtnStyle(compact)}>
-        <span>{cap(value)}</span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--koala-text-secondary)', flexShrink: 0, transition: 'transform 150ms ease', transform: open ? 'rotate(180deg)' : 'none' }}>
-          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      {open && (
-        <div style={{ ...menuPanelStyle, minWidth: compact ? 140 : '100%' }}>
-          {options.map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => { onChange(o); setOpen(false); }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-                width: '100%',
-                textAlign: 'left',
-                padding: '8px 10px',
-                borderRadius: 6,
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                fontSize: compact ? 13 : 14,
-                fontWeight: o === value ? 600 : 500,
-                color: 'var(--koala-text-primary)',
-                fontFamily: font,
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              <span>{cap(o)}</span>
-              {o === value && <CheckMark />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+}) => (
+  <div style={{ width: compact ? 'auto' : '100%', maxWidth: compact ? undefined : 360, display: compact ? 'inline-block' : 'block' }}>
+    <Select
+      size={compact ? 'sm' : 'md'}
+      width={compact ? undefined : '100%'}
+      value={value}
+      options={roleOptions(options)}
+      onChange={onChange}
+    />
+  </div>
+);
 
 const WorkspacePicker = ({ workspaces, selected, onChange, disabled }: {
   workspaces: Workspace[]; selected: number[]; onChange: (ids: number[]) => void; disabled?: boolean;
-}) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open]);
-  const label = disabled ? 'All workspaces' : selected.length ? `${selected.length} workspace${selected.length > 1 ? 's' : ''}` : 'Select workspaces';
-  const toggle = (id: number) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
-  return (
-    <div ref={ref} style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          ...fieldBtnStyle(false),
-          color: disabled ? 'var(--koala-text-secondary)' : 'var(--koala-text-primary)',
-          cursor: disabled ? 'default' : 'pointer',
-        }}
-      >
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--koala-text-secondary)', flexShrink: 0 }}>
-            <path d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          {label}
-        </span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--koala-text-secondary)', flexShrink: 0, transition: 'transform 150ms ease', transform: open && !disabled ? 'rotate(180deg)' : 'none' }}>
-          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      {open && !disabled && (
-        <div style={{ ...menuPanelStyle, right: 0, maxHeight: 220, overflowY: 'auto' }}>
-          {workspaces.length === 0 && (
-            <div style={{ padding: '10px 12px', fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: font }}>No workspaces</div>
-          )}
-          {workspaces.map((w) => {
-            const checked = selected.includes(w.id);
-            return (
-              <button
-                key={w.id}
-                type="button"
-                onClick={() => toggle(w.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '8px 12px',
-                  borderRadius: 6,
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  color: 'var(--koala-text-primary)',
-                  fontFamily: font,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <span
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 4,
-                    flexShrink: 0,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: checked ? '1px solid #F84416' : '1px solid var(--koala-border-primary)',
-                    background: checked ? '#F84416' : 'var(--koala-bg-primary)',
-                  }}
-                >
-                  {checked && (
-                    <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                      <path d="M5 10.5l3 3 7-7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </span>
-                {w.name}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
+}) => (
+  <div style={{ width: '100%', maxWidth: 360 }}>
+    <CompactSelect
+      multiple
+      disabled={disabled}
+      size="sm"
+      value={selected}
+      prefix={<Icon name="Folder" size={16} color="var(--koala-text-secondary)" />}
+      triggerLabel={disabled ? 'All workspaces' : selected.length === 0 ? 'Select workspaces' : undefined}
+      emptyMessage="No workspaces"
+      options={workspaces.map((w) => ({ value: w.id, label: w.name }))}
+      onChange={(opts) => onChange(opts.map((o) => o.value))}
+    />
+  </div>
+);
 
 const PeopleSettings = () => {
   const { data, isLoading } = usePeople();
@@ -452,27 +296,15 @@ const PeopleSettings = () => {
                                 ···
                               </Button>
                               {menuFor === inv.id && (
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    right: 0,
-                                    top: '110%',
-                                    background: 'var(--koala-bg-primary)',
-                                    border: '1px solid var(--koala-border-primary)',
-                                    borderRadius: 8,
-                                    boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-                                    zIndex: 150,
-                                    minWidth: 140,
-                                    overflow: 'hidden',
-                                    animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)',
-                                  }}
-                                >
-                                  <MenuListItem
-                                    label="Revoke"
-                                    priority="danger"
-                                    onClick={() => { setMenuFor(null); revoke.mutate(inv.id, { onSuccess: onOk('Invitation revoked'), onError }); }}
-                                    style={{ width: '100%', fontFamily: font, fontSize: 13 }}
-                                  />
+                                <div style={{ position: 'absolute', right: 0, top: '110%', zIndex: 150 }}>
+                                  <MenuList>
+                                    <MenuListItem
+                                      label="Revoke"
+                                      priority="danger"
+                                      onClick={() => { setMenuFor(null); revoke.mutate(inv.id, { onSuccess: onOk('Invitation revoked'), onError }); }}
+                                      style={{ width: '100%', fontFamily: font, fontSize: 13 }}
+                                    />
+                                  </MenuList>
                                 </div>
                               )}
                             </div>

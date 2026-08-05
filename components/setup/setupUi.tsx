@@ -4,6 +4,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode,
 import KoalaHeader from '../koala/shell/Header';
 import { KoalaPage, KoalaPanel, KoalaPanelBody } from '../koala/layout';
 import Input from '../koala/primitives/Input';
+import { MenuList } from '../koala/core';
 
 const SETUP_WIZARD_WIDTH_NARROW = 480;
 const SETUP_WIZARD_WIDTH_WIDE = 880;
@@ -156,21 +157,23 @@ export function SetupSearchableMenu<T>({
 
   return (
     <SetupDropdownMenu open={open} anchorRef={anchorRef} onClose={onClose}>
-      <div className="koala-setup-menu-search">
-        <Input
-          autoFocus
-          value={filter}
-          onChange={(e) => onFilterChange(e.target.value)}
-          placeholder={placeholder}
-          size="sm"
-        />
-      </div>
-      <div className="koala-setup-menu-list" style={listMaxHeight ? { maxHeight: listMaxHeight } : undefined}>
+      <MenuList
+        search={(
+          <Input
+            autoFocus
+            value={filter}
+            onChange={(e) => onFilterChange(e.target.value)}
+            placeholder={placeholder}
+            size="sm"
+          />
+        )}
+        footer={footer}
+        role="listbox"
+      >
         {visible.map((item) => (
           <Fragment key={getKey(item)}>{renderItem(item)}</Fragment>
         ))}
-      </div>
-      {footer}
+      </MenuList>
     </SetupDropdownMenu>
   );
 }

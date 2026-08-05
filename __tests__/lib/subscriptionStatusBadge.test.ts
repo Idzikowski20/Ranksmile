@@ -13,6 +13,7 @@ function sub(partial: Partial<SubscriptionDetails>): SubscriptionDetails {
     paymentFailedLocked: false,
     paymentFailedLockedAt: null,
     trialEndsAt: null,
+    trialConsumedAt: null,
     trialEndsAtLabel: null,
     currentPeriodEnd: null,
     currentPeriodEndLabel: null,
