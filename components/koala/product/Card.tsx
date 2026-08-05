@@ -31,13 +31,14 @@ const Sub = styled.p`
 export interface CardProps {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
   padded?: boolean;
   elevated?: boolean;
 }
 
-export function Card({ children, className, padded = true, elevated = false }: CardProps) {
+export function Card({ children, className, style, padded = true, elevated = false }: CardProps) {
   return (
-    <Root className={className} $padded={padded} $shadow={elevated}>
+    <Root className={className} style={style} $padded={padded} $shadow={elevated}>
       {children}
     </Root>
   );

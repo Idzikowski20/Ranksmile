@@ -105,13 +105,13 @@ export function getMeterKind(meter: QuotaMeter): MeterKind {
 }
 
 /** Limit for a meter from current plan — source of truth (never read from balances). */
-export function getPlanMeterLimit(planSlug: PlanSlug, meter: QuotaMeter): number | null {
+export function getPlanMeterLimit(planSlug: PlanSlug | 'starter', meter: QuotaMeter): number | null {
   const def = PLAN_LIMITS[planSlug].find((d) => d.key === meter);
   return def?.limit ?? null;
 }
 
 export function buildPlanMetrics(
-  planSlug: PlanSlug,
+  planSlug: PlanSlug | 'starter',
   usage: OrgPlanUsage,
 ): PlanLimitMetric[] {
   const defs = PLAN_LIMITS[planSlug];

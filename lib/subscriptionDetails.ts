@@ -16,9 +16,9 @@ export type { UpcomingPaymentDetails };
 export interface SubscriptionDetails {
   configured: boolean;
   hasStripeSubscription: boolean;
-  planSlug: PlanSlug;
+  planSlug: PlanSlug | 'starter';
   /** Set when the org has an active/trialing (etc.) subscription — do not re-checkout this plan. */
-  lockedPlanSlug: PlanSlug | null;
+  lockedPlanSlug: PlanSlug | 'starter' | null;
   planName: string;
   billingPeriod: BillingPeriod | null;
   subscriptionStatus: SubscriptionStatus | null;
@@ -68,7 +68,7 @@ function formatPeriodLabel(
 
 function estimateUpcoming(
   planName: string,
-  planSlug: PlanSlug,
+  planSlug: PlanSlug | 'starter',
   billingPeriod: BillingPeriod | null,
   renewalDate: string | null,
 ): UpcomingPaymentDetails | null {
