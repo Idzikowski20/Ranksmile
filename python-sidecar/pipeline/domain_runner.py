@@ -82,6 +82,20 @@ async def post_terminal(
         print(f"[domain_runner] terminal callback failed: {type(exc).__name__}: {exc}")
 
 
+async def post_progress(nextjs_url: str, job_id: str, total_progress: int, message: str) -> None:
+    if not nextjs_url:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            await client.post(
+                f"{nextjs_url.rstrip('/')}/api/articles/job-progress",
+                headers={"Content-Type": "application/json", "x-internal-token": os.environ.get("INTERNAL_PIPELINE_TOKEN", "")},
+                json={"jobId": job_id, "currentStage": "compiled_write_plan", "stageProgress": total_progress, "totalProgress": total_progress, "message": message},
+            )
+    except Exception as exc:
+        print(f"[domain_runner] progress callback failed: {type(exc).__name__}: {exc}")
+
+
 async def run_domain_setup(job_id: str, payload: dict, nextjs_url: str) -> None:
     """Execute the 4-stage domain pipeline with per-stage timeouts.
 
