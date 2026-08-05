@@ -226,6 +226,6 @@ it('recovers a stale finalizing job so polling can stop waiting forever', async 
   } as NextApiRequest, res);
 
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-    status: 'failed', error: null, progressMessage: 'Saving article',
+    status: 'failed', error: null, progressMessage: 'Finalization timed out',
   }));
 });
