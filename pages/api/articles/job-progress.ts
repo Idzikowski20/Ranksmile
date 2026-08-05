@@ -10,6 +10,7 @@ import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership'
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
+import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
 
 const FINALIZING_STALE_SECS = 5 * 60;
 const isPg = Boolean(process.env.DATABASE_URL);
@@ -106,12 +107,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         stage_progress: number | null;
         total_progress: number | null;
         progress_message: string | null;
+        error: string | null;
         updated_at: string | Date | null;
       }>(
         jobId
-          ? `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+          ? `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, error, updated_at
              FROM analysis_jobs WHERE id = ?`
-          : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+          : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, error, updated_at
              FROM analysis_jobs
              WHERE article_id = ? AND job_type = ?
              ORDER BY created_at DESC, id DESC
@@ -131,8 +133,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       if (j.status === 'finalizing' && await failStaleFinalization(j)) {
         j.status = 'failed';
+        j.error = 'finalizing timed out';
         j.progress_message = 'Finalization timed out';
       }
+      const publicJobError = j.status === 'failed' && j.job_type === 'deep_analysis'
+        ? publicDeepAnalysisError(j.error, j.current_stage)
+        : null;
 
       return res.status(200).json({
         jobId: j.id,
@@ -141,13 +147,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         currentStage: j.current_stage,
         stageProgress: j.stage_progress,
         totalProgress: j.total_progress,
-        progressMessage: j.progress_message,
+        progressMessage: publicJobError || j.progress_message,
+        error: publicJobError,
         updatedAt: j.updated_at ? new Date(j.updated_at).toISOString() : null,
       });
     } catch (err) {
       const msg = (err instanceof Error ? err.message : String(err));
       console.error('[job-progress] GET failed:', msg);
-      return res.status(500).json({ error: msg });
+      return res.status(500).json({ error: 'Failed to load job progress' });
     }
   }
 
