@@ -12,6 +12,7 @@ import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type JobAccessRow = {
   id: string;
+  status?: string;
   job_type: string | null;
   domain_id: number | null;
   article_id: number | null;
@@ -113,6 +114,34 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   // ── POST: update progress (Python sidecar) ──────────────────────
+  if (req.method === 'DELETE') {
+    const jobId = typeof req.query.jobId === 'string' ? req.query.jobId : '';
+    if (!jobId) return res.status(400).json({ error: 'jobId query param is required' });
+    const userId = await getCurrentUserId(req, res);
+    const rows = await db.query<JobAccessRow>(
+      'SELECT id, status, job_type, domain_id, article_id FROM analysis_jobs WHERE id = ?',
+      { replacements: [jobId], type: QueryTypes.SELECT },
+    );
+    const job = rows[0];
+    if (!job) return res.status(404).json({ error: 'job not found' });
+    if (!(await canReadJob(userId, job))) return res.status(403).json({ error: 'Access denied.' });
+    if (job.status === 'done' || job.status === 'failed') return res.status(409).json({ error: 'job already finished' });
+
+    await db.query(
+      `UPDATE analysis_jobs SET status = 'canceled', error = 'canceled_by_user', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      { replacements: [jobId] },
+    );
+    if (job.article_id) {
+      const { getArticleIdSql } = await import('../../../lib/articleSql');
+      const articleIdSql = await getArticleIdSql();
+      await db.query(
+        `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+        { replacements: [job.article_id] },
+      );
+    }
+    return res.status(200).json({ ok: true });
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!isInternal) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -120,12 +149,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!jobId) return res.status(400).json({ error: 'jobId is required' });
 
   try {
-    const jobRows = await db.query<{ id: string }>(
-      `SELECT id FROM analysis_jobs WHERE id = ?`,
+    const jobRows = await db.query<{ id: string; status: string }>(
+      `SELECT id, status FROM analysis_jobs WHERE id = ?`,
       { replacements: [jobId], type: QueryTypes.SELECT },
     );
     if (!jobRows.length) {
       return res.status(404).json({ error: 'job not found' });
+    }
+    if (jobRows[0]?.status === 'canceled') {
+      return res.status(409).json({ error: 'job canceled' });
     }
 
     if (status === 'done' || status === 'failed') {
