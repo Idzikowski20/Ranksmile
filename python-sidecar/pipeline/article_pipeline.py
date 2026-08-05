@@ -8,6 +8,7 @@ import json
 import os
 import re
 from openai import AsyncOpenAI
+from pipeline.compiled_runtime import run_compiled_write_plan
 
 
 _client: AsyncOpenAI | None = None
@@ -174,6 +175,7 @@ async def run_pipeline(
     brand_knowledge: str = "",
     voice_tone: str = "",
     execution_plan: dict | None = None,
+    compiled_write_plan: dict | None = None,
 ) -> str:
     top_terms = [t["term"] for t in serp_data.get("terms", [])[:25]]
     terms_str = ", ".join(top_terms) if top_terms else "brak danych NLP"
@@ -207,6 +209,29 @@ async def run_pipeline(
     plan_words = int(
         ((plan or {}).get("article_budget") or {}).get("words") or target_words or 2200
     )
+
+    if compiled_write_plan is not None:
+        if not isinstance(compiled_write_plan, dict):
+            raise ValueError("compiled_write_plan must be an object")
+
+        async def write_markdown(prompt: str) -> str:
+            return await _chat(
+                f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}\n\n{prompt}",
+                max_tokens=1200,
+                system="Write SEO content as Markdown only. Never emit HTML.",
+            )
+
+        async def rewrite_markdown(markdown: str) -> str:
+            return await _chat(
+                f"Rewrite this Markdown paragraph for clarity and factual precision. Markdown only.\n\n{markdown}",
+                max_tokens=1200,
+                system="You are an editorial judge. Return only rewritten Markdown.",
+            )
+
+        compiled = await run_compiled_write_plan(compiled_write_plan, write_markdown, rewrite_markdown)
+        if not compiled.html:
+            raise RuntimeError("compiled_write_plan produced empty HTML")
+        return compiled.html
 
     if plan:
         # === Planner First: skip outline LLM — execute immutable Execution Plan ===
