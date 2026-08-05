@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { TextDecoder as NodeTextDecoder } from 'util';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import DeepAnalysisPage from '../../pages/articles/deep-analysis';
 
 global.TextDecoder = NodeTextDecoder as unknown as typeof global.TextDecoder;
@@ -59,6 +59,38 @@ function streamResponse(payload: string): Response {
   } as unknown as Response;
 }
 
+function deferredStreamResponse(payload: string): { response: Response; release: () => void } {
+  type StreamReadResult =
+    | { done: false; value: Uint8Array }
+    | { done: true; value: undefined };
+
+  const bytes = Buffer.from(payload, 'utf8');
+  let resolveRead: ((result: StreamReadResult) => void) | null = null;
+  const firstRead = new Promise<StreamReadResult>((resolve) => {
+    resolveRead = resolve;
+  });
+  let sent = false;
+
+  return {
+    response: {
+      ok: true,
+      body: {
+        getReader: () => ({
+          read: () => {
+            if (sent) return Promise.resolve({ done: true, value: undefined } as const);
+            sent = true;
+            return firstRead;
+          },
+        }),
+      },
+    } as unknown as Response,
+    release: () => {
+      if (!resolveRead) throw new Error('Deferred stream is not ready');
+      resolveRead({ done: false, value: bytes });
+    },
+  };
+}
+
 describe('DeepAnalysisPage', () => {
   beforeEach(() => {
     routerPush.mockReset();
@@ -68,25 +100,44 @@ describe('DeepAnalysisPage', () => {
   });
 
   it('enables Content type after the job is created and keeps analysis running', async () => {
+    const stream = deferredStreamResponse(
+      'event: created\ndata: {"articleId":177,"jobId":"job_177_1"}\n\n',
+    );
     fetchMock.mockImplementation((input) => {
       const url = String(input);
-      if (url.includes('/api/articles/deep-analysis')) {
-        return Promise.resolve(streamResponse(
-          'event: created\ndata: {"articleId":177,"jobId":"job_177_1"}\n\n',
-        ));
+      if (url === '/api/articles/deep-analysis') {
+        return Promise.resolve(stream.response);
       }
-      return Promise.resolve(response({ status: 'running', currentStage: 'fetch_page' }));
+      if (url === '/api/articles/job-progress?jobId=job_177_1') {
+        return Promise.resolve(response({ status: 'running', currentStage: 'fetch_page' }));
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
     });
 
     const { container, unmount } = render(<DeepAnalysisPage />);
-    const next = screen.getByRole('button', { name: 'Content type' });
+    let initialCtaError: unknown;
+    try {
+      expect(screen.getByRole('button', { name: 'Content type' })).toBeDisabled();
+    } catch (error: unknown) {
+      initialCtaError = error;
+    }
 
-    expect(next).toBeDisabled();
     expect(container.querySelectorAll('.deep-analysis-step--pending')).toHaveLength(8);
     expect(container.querySelectorAll('.deep-analysis-step-icon__pending')).toHaveLength(8);
-    await waitFor(() => expect(next).toBeEnabled());
+    await act(async () => {
+      stream.release();
+    });
     await waitFor(() => expect(container.querySelectorAll('.deep-analysis-step')).toHaveLength(8));
     await waitFor(() => expect(container.querySelector('.deep-analysis-step--running [role="status"]')).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledWith('/api/articles/job-progress?jobId=job_177_1');
+
+    if (initialCtaError) {
+      unmount();
+      throw initialCtaError;
+    }
+
+    const next = screen.getByRole('button', { name: 'Content type' });
+    await waitFor(() => expect(next).toBeEnabled());
     expect(container.querySelector('.deep-analysis-pipeline-live')).not.toBeInTheDocument();
     expect(container.querySelector('.deep-analysis-progress')).not.toBeInTheDocument();
 
@@ -103,21 +154,28 @@ describe('DeepAnalysisPage', () => {
 
     const { container } = render(<DeepAnalysisPage />);
 
-    expect(await screen.findAllByText('Fetch failed')).not.toHaveLength(0);
-    expect(container.querySelector('.deep-analysis-step--error')).toBeInTheDocument();
-    expect(container.querySelector('.deep-analysis-step-icon__error')).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('.deep-analysis-step--error')).toBeInTheDocument());
+    const errorRow = container.querySelector<HTMLElement>('.deep-analysis-step--error');
+    if (!errorRow) throw new Error('Expected fetch step to be in the error state');
+    expect(within(errorRow).getByText('Fetching page content')).toBeInTheDocument();
+    expect(errorRow).toHaveTextContent('Fetch failed');
+    expect(errorRow.querySelector('.deep-analysis-step-icon__error')).toBeInTheDocument();
+    expect(container.querySelectorAll('.deep-analysis-step--pending')).toHaveLength(7);
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
   });
 
   it('marks every row complete when the background job finishes', async () => {
     fetchMock.mockImplementation((input) => {
       const url = String(input);
-      if (url.includes('/api/articles/deep-analysis')) {
+      if (url === '/api/articles/deep-analysis') {
         return Promise.resolve(streamResponse(
           'event: created\ndata: {"articleId":177,"jobId":"job_177_1"}\n\n',
         ));
       }
-      return Promise.resolve(response({ status: 'done', currentStage: 'done' }));
+      if (url === '/api/articles/job-progress?jobId=job_177_1') {
+        return Promise.resolve(response({ status: 'done', currentStage: 'done' }));
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
     });
 
     const { container } = render(<DeepAnalysisPage />);
@@ -126,5 +184,6 @@ describe('DeepAnalysisPage', () => {
       expect(container.querySelectorAll('.deep-analysis-step--done')).toHaveLength(8);
       expect(container.querySelectorAll('.deep-analysis-step-icon__done')).toHaveLength(8);
     });
+    expect(fetchMock).toHaveBeenCalledWith('/api/articles/job-progress?jobId=job_177_1');
   });
 });
