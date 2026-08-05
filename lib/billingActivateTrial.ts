@@ -11,7 +11,7 @@ import {
   type BillingDomainEventSource,
 } from './billing/domainEvents';
 import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from './billingTrial';
-import { getOrgBillingState, updateOrgBillingState } from './orgBilling';
+import { claimTrialActivation, getOrgBillingState, updateOrgBillingState } from './orgBilling';
 import { getStripePriceId, type PlanSlug } from './stripePrices';
 import { syncSubscriptionToOrg } from './stripeBillingSync';
 
@@ -93,6 +93,8 @@ export async function activateTrialFromSetupIntent(
   const plan = getCheckoutPlan(planSlug);
   if (!plan) return { ok: false, status: 400, error: 'Unknown plan' };
 
+  const attemptId = meta.checkout_attempt_id?.trim() || setupIntent.id;
+
   const billingState = await getOrgBillingState(orgId);
   const trialGate = assertTrialAllowed(plan.slug, billingState);
   if (!trialGate.ok) {
@@ -137,7 +139,9 @@ export async function activateTrialFromSetupIntent(
     return { ok: false, status: 409, error: 'SetupIntent has no customer' };
   }
 
-  const attemptId = meta.checkout_attempt_id?.trim() || setupIntent.id;
+  if (!await claimTrialActivation(orgId, attemptId)) {
+    return { ok: false, status: 409, error: 'This organization has already started a trial activation' };
+  }
 
   // Dual default: customer invoice_settings + subscription.default_payment_method (no PI €0).
   await stripe.customers.update(

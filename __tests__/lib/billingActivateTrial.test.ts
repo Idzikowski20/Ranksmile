@@ -1,11 +1,12 @@
 import type Stripe from 'stripe';
 import { activateTrialFromSetupIntent } from '../../lib/billingActivateTrial';
 import { syncSubscriptionToOrg } from '../../lib/stripeBillingSync';
-import { updateOrgBillingState } from '../../lib/orgBilling';
+import { claimTrialActivation, updateOrgBillingState } from '../../lib/orgBilling';
 import { appendBillingDomainEvent } from '../../lib/billing/domainEvents';
 
 jest.mock('../../lib/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => ({ trialConsumedAt: null })),
+  claimTrialActivation: jest.fn(async () => true),
   updateOrgBillingState: jest.fn(async () => undefined),
 }));
 
@@ -40,12 +41,15 @@ jest.mock('../../lib/stripePrices', () => ({
 }));
 
 const mockUpdate = updateOrgBillingState as jest.MockedFunction<typeof updateOrgBillingState>;
+const mockClaim = claimTrialActivation as jest.MockedFunction<typeof claimTrialActivation>;
 const mockSync = syncSubscriptionToOrg as jest.MockedFunction<typeof syncSubscriptionToOrg>;
 const mockAppend = appendBillingDomainEvent as jest.MockedFunction<typeof appendBillingDomainEvent>;
 
 describe('activateTrialFromSetupIntent', () => {
   beforeEach(() => {
     mockUpdate.mockClear();
+    mockClaim.mockReset();
+    mockClaim.mockResolvedValue(true);
     mockSync.mockClear();
     mockAppend.mockClear();
   });
@@ -133,5 +137,30 @@ describe('activateTrialFromSetupIntent', () => {
     expect(mockAppend).toHaveBeenCalledWith(expect.objectContaining({ type: 'CARD_ADDED', source: 'checkout' }));
     expect(mockAppend).toHaveBeenCalledWith(expect.objectContaining({ type: 'TRIAL_STARTED', source: 'checkout' }));
     expect(mockAppend).toHaveBeenCalledWith(expect.objectContaining({ type: 'SUBSCRIPTION_CREATED', source: 'checkout' }));
+  });
+
+  it('does not create a second trial when another attempt owns the claim', async () => {
+    mockClaim.mockResolvedValue(false);
+    const stripe = {
+      customers: { update: jest.fn() },
+      subscriptions: { create: jest.fn() },
+      paymentIntents: { create: jest.fn() },
+    } as unknown as Stripe;
+
+    const result = await activateTrialFromSetupIntent(stripe, {
+      orgId: 6,
+      userId: 'u1',
+      setupIntent: {
+        id: 'seti_loser',
+        status: 'succeeded',
+        metadata: { org_id: '6', plan_slug: 'growth', billing_period: 'yearly', checkout_mode: 'trial' },
+        payment_method: 'pm_1',
+        customer: 'cus_1',
+      } as unknown as Stripe.SetupIntent,
+    });
+
+    expect(result).toEqual({ ok: false, status: 409, error: 'This organization has already started a trial activation' });
+    expect(stripe.customers.update).not.toHaveBeenCalled();
+    expect(stripe.subscriptions.create).not.toHaveBeenCalled();
   });
 });
