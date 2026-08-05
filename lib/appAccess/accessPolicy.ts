@@ -93,6 +93,7 @@ export function frontendPathCapability(pathname: string): RouteCapability {
     return 'BillingManage';
   }
   if (path === '/workspace/new') return 'WorkspaceSetup';
+  if (path === '/setup') return 'WorkspaceSetup';
   if (/^\/workspace\/\d+\/setup$/.test(path)) return 'WorkspaceSetup';
   if (path === '/no-access' || path === '/404') return 'Public';
   if (

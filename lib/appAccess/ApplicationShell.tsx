@@ -25,8 +25,8 @@ type Props = { children: React.ReactNode };
 
 export function ApplicationShell({ children }: Props) {
   const router = useRouter();
-  const path = router.pathname;
   const asPath = router.asPath;
+  const path = asPath.split('?')[0] ?? router.pathname;
   const isPublic = isPublicPath(path);
 
   const [completedOverride, setCompleted] = React.useState<boolean | null>(null);
