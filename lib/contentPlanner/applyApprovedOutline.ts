@@ -10,6 +10,8 @@ import { hashExecutionPlanPayload } from './executionPlan';
 export type ApprovedOutlineHeading = {
   level: number;
   text: string;
+  instructions?: string[];
+  targetWords?: number;
 };
 
 const DEFAULT_BUDGET = {
@@ -30,6 +32,12 @@ function normalizeHeadings(approved: ApprovedOutlineHeading[]): ApprovedOutlineH
     .map((h) => ({
       level: Math.min(Math.max(Number(h.level) || 2, 1), 4),
       text: String(h.text || '').trim(),
+      instructions: Array.isArray(h.instructions)
+        ? h.instructions.map((item) => String(item).trim()).filter(Boolean)
+        : undefined,
+      targetWords: Number.isFinite(Number(h.targetWords))
+        ? Math.min(2000, Math.max(80, Math.round(Number(h.targetWords))))
+        : undefined,
     }))
     .filter((h) => h.text.length > 0);
 }
@@ -80,7 +88,11 @@ export function applyApprovedOutlineToPlan(
       ...base,
       id: base.id || `approved-${i}`,
       heading: h.text,
-      objective: base.objective || `Write section: ${h.text}`,
+      objective: h.instructions?.length
+        ? h.instructions.join('\n')
+        : (base.objective || `Write section: ${h.text}`),
+      expectedWords: h.targetWords ?? base.expectedWords,
+      budget: h.targetWords ? { ...base.budget, words: h.targetWords } : base.budget,
       reason: {
         summary: `User-approved outline: ${h.text}`,
         signals: base.reason?.signals ?? [],
@@ -93,6 +105,10 @@ export function applyApprovedOutlineToPlan(
   const payload: Omit<ArticleExecutionPlan, 'planHash'> = {
     ...rest,
     title: h1?.text || plan.title,
+    articleBudget: {
+      ...plan.articleBudget,
+      words: sections.reduce((total, section) => total + section.expectedWords, 0),
+    },
     sections,
   };
   return { ...payload, planHash: hashExecutionPlanPayload(payload) };

@@ -35,7 +35,7 @@ import { validatePlanForWrite } from './validators/planValidators';
 import { titleizeH1 } from './sectionLabels';
 import type { CompetitorBenchmark, ContentPlannerBundle, ValidationResult } from './types';
 import { KNOWLEDGE_COVERAGE_MIN_PCT } from './types';
-import type { KnowledgeGraph } from '../knowledgeEngine/types';
+import type { KnowledgeGraph, TopicBlock } from '../knowledgeEngine/types';
 import { knowledgeGraphToTargetKg } from '../knowledgeEngine/toTargetKg';
 import type { PlannerTargets } from '../benchmarkIntelligence/types';
 
@@ -52,6 +52,8 @@ export type RunContentPlannerInput = {
   builtAt?: string;
   /** CIE: immutable Knowledge Graph — replaces legacy Target KG when set. */
   knowledgeGraph?: KnowledgeGraph | null;
+  /** Narrative-only seeds from a below-floor Knowledge Graph; legacy KG still supplies facts. */
+  topicBlocks?: readonly TopicBlock[] | null;
   /** CIE: median-first structural targets overlay on CompetitorBenchmark. */
   plannerTargets?: PlannerTargets | null;
   /** Article/domain language (pl|en) for outline labels + H1. */
@@ -175,8 +177,8 @@ export function runContentPlanner(input: RunContentPlannerInput): RunContentPlan
     intent,
     benchmark,
     synthesis: competitorSynthesis,
-    topicBlocks: input.knowledgeGraph?.topicBlocks
-      ? [...input.knowledgeGraph.topicBlocks]
+    topicBlocks: input.topicBlocks || input.knowledgeGraph?.topicBlocks
+      ? [...(input.topicBlocks || input.knowledgeGraph?.topicBlocks || [])]
       : null,
     plannerTargets: input.plannerTargets,
     knowledgeGraph: input.knowledgeGraph,

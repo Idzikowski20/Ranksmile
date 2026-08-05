@@ -233,7 +233,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ai,
       paaQuestions: paa,
       produceArticle: false,
-      knowledgeGraph: cieGate.use || usePartialKg ? knowledgeGraph : null,
+      knowledgeGraph: cieGate.use ? knowledgeGraph : null,
+      topicBlocks: usePartialKg ? knowledgeGraph?.topicBlocks : null,
       plannerTargets,
       language: lang,
       commonHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
@@ -272,7 +273,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           const text = typeof o.text === 'string' ? o.text.trim() : '';
           const level = typeof o.level === 'number' ? o.level : Number(o.level);
           if (!text || !Number.isFinite(level)) return null;
-          const heading: ApprovedOutlineHeading = { level, text };
+          const outlineInstructions = Array.isArray(o.instructions)
+            ? o.instructions.filter((instruction): instruction is string => (
+              typeof instruction === 'string' && instruction.trim().length > 0
+            ))
+            : undefined;
+          const rawTargetWords = typeof o.targetWords === 'number' ? o.targetWords : Number(o.targetWords);
+          const heading: ApprovedOutlineHeading = {
+            level,
+            text,
+            ...(outlineInstructions?.length ? { instructions: outlineInstructions } : {}),
+            ...(Number.isFinite(rawTargetWords) ? { targetWords: rawTargetWords } : {}),
+          };
           return heading;
         })
         .filter((h): h is ApprovedOutlineHeading => h !== null);
