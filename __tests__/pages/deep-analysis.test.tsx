@@ -287,8 +287,8 @@ describe('DeepAnalysisPage', () => {
         return Promise.resolve(response({
           status: 'failed',
           currentStage: 'scrape_serp',
-          error: 'SERP collection failed',
-          progressMessage: 'Scraping competitor 7/10',
+          error: "Couldn't analyze search results. Please try again.",
+          progressMessage: "Couldn't analyze search results. Please try again.",
         }));
       }
       throw new Error(`Unexpected fetch: ${requestUrl}`);
@@ -296,12 +296,13 @@ describe('DeepAnalysisPage', () => {
 
     const { container } = render(<DeepAnalysisPage />);
 
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('SERP collection failed'));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent("Couldn't analyze search results. Please try again."));
     const errorRows = container.querySelectorAll<HTMLElement>('.deep-analysis-step--error');
     expect(errorRows).toHaveLength(1);
     expect(errorRows[0]).toHaveTextContent('Analyzing SERP competitors');
-    expect(errorRows[0]).toHaveTextContent('SERP collection failed');
-    expect(screen.getByRole('alert')).toHaveTextContent('SERP collection failed');
+    expect(errorRows[0]).toHaveTextContent("Couldn't analyze search results. Please try again.");
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't analyze search results. Please try again.");
+    expect(screen.queryByText('SERP collection failed')).not.toBeInTheDocument();
     expect(screen.queryByText('Scraping competitor 7/10')).not.toBeInTheDocument();
   });
 
