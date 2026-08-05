@@ -151,7 +151,7 @@ export async function resolvePolicyBundle(opts: {
   let openingPatternId: string | undefined;
 
   if (opening) {
-    openingValue = /definition first/i.test(opening.pattern) ? 'definition_first' : 'problem_first';
+    openingValue = /definition first/i.test(opening.pattern.pattern) ? 'definition_first' : 'problem_first';
     openingSrc = opening.pattern.layer;
     openingReason = dnaAbReason || opening.pattern.reason;
     openingConf = applyConfidenceDecay(opening.pattern);
