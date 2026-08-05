@@ -52,6 +52,8 @@ export type ReaderModel = {
   articleType: ArticleType;
   fears: string[];
   expectedCta: string;
+  /** Content language for localized outline labels (pl|en). */
+  language?: 'pl' | 'en';
 };
 
 export type CompetitorProfile = {
@@ -112,6 +114,8 @@ export type CompetitorBenchmark = {
   averageQuestions: number;
   targetWords: number;
   targetH2: number;
+  /** Shared competitor H2 labels (when available from outlines). */
+  commonHeadings?: string[];
 };
 
 export type ClaimSource = {

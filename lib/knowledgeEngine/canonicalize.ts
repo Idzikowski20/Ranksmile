@@ -37,9 +37,13 @@ function claimId(statement: string): string {
   return `CLAIM_${createHash('sha1').update(statement.toLowerCase()).digest('hex').slice(0, 8)}`;
 }
 
+function isOfficialHost(hostname: string, official: string): boolean {
+  return hostname === official || hostname.endsWith(`.${official}`);
+}
+
 function inferKind(url: string, kind: SourceKind): SourceKind {
   const d = domainOf(url);
-  if (OFFICIAL_DOMAINS.some((o) => d.endsWith(o))) return 'official';
+  if (OFFICIAL_DOMAINS.some((o) => isOfficialHost(d, o))) return 'official';
   return kind;
 }
 
@@ -149,7 +153,7 @@ export function sentencesToCanonicalizeInputs(sentences: RawSentence[]): Canonic
   return sentences.map((s) => ({
     text: s.text,
     url: s.url,
-    kind: 'competitor' as const,
-    serpPosition: s.serpPosition,
+    kind: s.kind || 'competitor',
+    serpPosition: s.serpPosition || undefined,
   }));
 }

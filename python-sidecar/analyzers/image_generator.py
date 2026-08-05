@@ -142,6 +142,77 @@ async def generate_article_image(keyword: str, article_title: str, style: str = 
     return await _pollinations_fetch(prompt, alt_text)
 
 
+def _pollinations_url(prompt: str) -> str:
+    """Public Pollinations URL (browser/CDN fetch) — preferred for article HTML (no multi-MB data URI)."""
+    seed = int(hashlib.md5(prompt.encode()).hexdigest()[:8], 16) % 1000000
+    encoded = quote(prompt, safe="")
+    api_key = os.getenv("POLLINATIONS_API_KEY", "")
+    token_param = f"&token={api_key}" if api_key else ""
+    return (
+        f"https://image.pollinations.ai/prompt/{encoded}"
+        f"?width=1920&height=1080&nologo=true&private=true&seed={seed}&enhance=true&model=flux-schnell{token_param}"
+    )
+
+
+def _surfer_style_alt(heading: str, keyword: str, language: str = "pl") -> str:
+    if (language or "pl").lower().startswith("pl"):
+        return (
+            f"Na zdjęciu widać scenę związaną z tematem „{heading}” w kontekście {keyword}. "
+            f"Ilustracja podkreśla praktyczne aspekty omawiane w tej części artykułu."
+        )[:400]
+    return (
+        f"Illustration related to “{heading}” in the context of {keyword}, "
+        f"highlighting practical aspects covered in this section."
+    )[:400]
+
+
+async def generate_article_image_for_embed(
+    keyword: str,
+    article_title: str,
+    style: str = "professional",
+    language: str = "pl",
+) -> dict:
+    """
+    For mid-article <img src>: return Pollinations CDN URL (not base64).
+    Warm the cache with one server GET (fail-soft — URL still returned).
+    """
+    enriched = await _enrich_prompt_with_ai(keyword, article_title)
+    if enriched:
+        prompt = (
+            f"{enriched}, cinematic 16:9 widescreen composition, 4K, ultra high resolution, "
+            f"professional editorial photography, no text, no watermarks"
+        )
+    else:
+        prompt = _build_prompt(keyword, article_title, style)
+
+    alt_text = _surfer_style_alt(article_title, keyword, language)
+    url = _pollinations_url(prompt)
+
+    # Warm generation so first editor load isn't a cold Pollinations miss.
+    try:
+        async with _pollinations_sem:
+            headers = {}
+            api_key = os.getenv("POLLINATIONS_API_KEY", "")
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
+                resp = await client.get(url, headers=headers)
+            if resp.status_code != 200:
+                print(f"[image] Warm-fetch HTTP {resp.status_code} — still embedding URL")
+            else:
+                print(f"[image] Warm-fetch OK ({len(resp.content)//1024} KB) for embed")
+    except Exception as e:
+        print(f"[image] Warm-fetch skipped: {e}")
+
+    return {
+        "url": url,
+        "alt": alt_text,
+        "width": 1920,
+        "height": 1080,
+        "source": "pollinations",
+    }
+
+
 async def _pollinations_fetch(prompt: str, alt_text: str = "") -> dict:
     """
     Pobiera obraz z Pollinations.ai po stronie serwera i zwraca jako data URI (base64).

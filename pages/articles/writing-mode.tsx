@@ -52,10 +52,22 @@ const WritingModePage: NextPage = () => {
       router.push('/articles');
       return;
     }
+    // Review outline: skip generating page — outline lands in the editor first.
+    if (reviewOutline) {
+      if (!articleId) { router.push('/articles'); return; }
+      clearWizardState(articleId);
+      const q = new URLSearchParams();
+      q.set('reviewOutline', '1');
+      q.set('type', type);
+      q.set('internal', internalLinks ? '1' : '0');
+      q.set('external', externalLinks ? '1' : '0');
+      router.push(`/articles/${articleId}?${q.toString()}`);
+      return;
+    }
     const q = new URLSearchParams();
     if (articleId) q.set('articleId', articleId);
     q.set('type', type);
-    q.set('outline', reviewOutline ? '1' : '0');
+    q.set('outline', '0');
     q.set('internal', internalLinks ? '1' : '0');
     q.set('external', externalLinks ? '1' : '0');
     router.push(`/articles/generating?${q.toString()}`);

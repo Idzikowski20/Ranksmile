@@ -120,6 +120,7 @@ export function toSidecarExecutionPlan(plan: ArticleExecutionPlan): Record<strin
       questions: plan.articleBudget.questions,
       examples: plan.articleBudget.examples,
       faq: plan.articleBudget.faq,
+      images: plan.articleBudget.images,
     },
     benchmark: {
       target_words: plan.benchmark.targetWords,

@@ -1,28 +1,30 @@
 import { createDeepSeek } from '@ai-sdk/deepseek';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
-/**
- * TEMP switch: Gemini 3.6 Flash instead of DeepSeek for Ranksmile chat / agent / OpenAI-compat fetches.
- * Set to `false` to restore DeepSeek. Needs GEMINI_API_KEY (or GOOGLE_GENERATIVE_AI_API_KEY).
- * Model: gemini-2.5-flash is blocked for new AI Studio keys → use gemini-3.6-flash.
- */
+export const OPENROUTER_CHAT_MODEL = 'openai/gpt-5.6-luna';
+export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 export const USE_GEMINI_FLASH = process.env.USE_GEMINI_FLASH === 'true';
 
 const GEMINI_FLASH_MODEL = 'gemini-3.6-flash';
-
+const hasOpenRouterKey = Boolean(process.env.OPENROUTER_API_KEY);
 const deepseekProvider = createDeepSeek({ apiKey: process.env.DEEPSEEK_API_KEY });
+const openrouterProvider = createDeepSeek({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: OPENROUTER_BASE_URL,
+});
 const googleProvider = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
 });
 
-/** Drop-in for `deepseek('deepseek-chat')` — model id ignored while Gemini is on. */
+/** OpenRouter is preferred when configured; legacy DeepSeek remains a safe default. */
 export function deepseek(modelId: string = 'deepseek-chat') {
+  if (hasOpenRouterKey) return openrouterProvider(OPENROUTER_CHAT_MODEL);
   if (USE_GEMINI_FLASH) return googleProvider(GEMINI_FLASH_MODEL);
   return deepseekProvider(modelId);
 }
 
 export type ChatLlmConfig = {
-  provider: 'gemini' | 'deepseek';
+  provider: 'openrouter' | 'gemini' | 'deepseek';
   apiKey: string;
   keyEnv: string;
   model: string;
@@ -32,6 +34,15 @@ export type ChatLlmConfig = {
 
 /** Shared config for raw `fetch(.../chat/completions)` call sites. */
 export function chatLlm(): ChatLlmConfig {
+  if (hasOpenRouterKey) {
+    return {
+      provider: 'openrouter',
+      apiKey: process.env.OPENROUTER_API_KEY || '',
+      keyEnv: 'OPENROUTER_API_KEY',
+      model: OPENROUTER_CHAT_MODEL,
+      url: `${OPENROUTER_BASE_URL}/chat/completions`,
+    };
+  }
   if (USE_GEMINI_FLASH) {
     return {
       provider: 'gemini',

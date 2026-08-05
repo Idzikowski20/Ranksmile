@@ -3,6 +3,7 @@ import type { CanonicalClaim } from '../../../lib/knowledgeEngine';
 import {
   KNOWLEDGE_SCHEMA_VERSION,
   PLANNER_CLAIMS_FLOOR,
+  buildKnowledgeGraph,
 } from '../../../lib/knowledgeEngine';
 
 describe('CIE types smoke', () => {
@@ -42,8 +43,54 @@ describe('CIE types smoke', () => {
       consensusExplanation: { percent: 94, because: ['TOP1', 'TOP2', 'Official'] },
     };
     expect(c.importanceScore).toBe(92);
-    expect(PLANNER_CLAIMS_FLOOR).toBe(30);
+    expect(PLANNER_CLAIMS_FLOOR).toBe(12);
     expect(KNOWLEDGE_SCHEMA_VERSION).toBe(1);
     expect('dependsOn' in c).toBe(false);
+  });
+
+  it('buildKnowledgeGraph deeply freezes nested evidence roles', () => {
+    const graph = buildKnowledgeGraph({
+      claims: [{
+        id: 'CLAIM_1',
+        statement: 'SSL is required.',
+        cluster: 'Tech',
+        importance: 'high',
+        importanceScore: 70,
+        consensus: 0.5,
+        evidence: [{
+          kind: 'competitor',
+          url: 'https://example.com',
+          domain: 'example.com',
+          favicon: '',
+          title: 'Ex',
+          weight: 1,
+          roles: ['serp'],
+          serpPositions: [1],
+        }],
+        usedByCompetitors: 1,
+        competitorsTotal: 2,
+        usedInSections: [],
+        generatedFrom: ['serp'],
+        sourceDiversity: {
+          official: false, competitors: true, aiOverview: false, paa: false, score: 0.25,
+        },
+        consensusExplanation: { percent: 50, because: [] },
+      }],
+      entities: [],
+      topicBlocks: [],
+      gaps: [],
+      competitors: [],
+      stageTimingsMs: {
+        extract: 0, normalize: 0, canonicalize: 0, vote: 0, cluster: 0, build: 0, verify: 0,
+      },
+      verifier: { ok: true, issues: [] },
+    });
+    expect(Object.isFrozen(graph)).toBe(true);
+    expect(Object.isFrozen(graph.claims[0])).toBe(true);
+    expect(Object.isFrozen(graph.claims[0].evidence[0])).toBe(true);
+    expect(Object.isFrozen(graph.claims[0].evidence[0].roles)).toBe(true);
+    expect(() => {
+      (graph.claims[0].evidence[0].roles as string[]).push('official');
+    }).toThrow();
   });
 });

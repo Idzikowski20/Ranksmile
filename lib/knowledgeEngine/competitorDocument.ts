@@ -41,21 +41,27 @@ export function buildCompetitorDocuments(opts: {
 
   return list
     .map((row, i) => {
-      const url = row.url || '';
+      if (!row || typeof row !== 'object') return null;
+      const url = typeof row.url === 'string' ? row.url : '';
       if (!url) return null;
-      const scoreHit = scoreComps.find((c) => c.url === url) || scoreComps[i];
+      const scoreHit = scoreComps.find((c) => c && c.url === url) || scoreComps[i];
       const authorityRaw = row.authority ?? (typeof scoreHit?.authority === 'number' ? scoreHit.authority : null);
       const scoreRaw = row.score ?? (typeof scoreHit?.score === 'number' ? scoreHit.score : null);
+      const headingsRaw = Array.isArray(row.headings)
+        ? row.headings.filter((h): h is OutlineHeading => !!h && typeof h === 'object')
+        : undefined;
       const doc: CompetitorDocument = {
         url,
-        title: row.title || row.serp_title || url,
+        title: (typeof row.title === 'string' && row.title)
+          || (typeof row.serp_title === 'string' && row.serp_title)
+          || url,
         score: typeof scoreRaw === 'number' ? scoreRaw : Math.max(0, 100 - i * 8),
         authority: typeof authorityRaw === 'number' ? authorityRaw : Math.max(0.2, 1 - i * 0.08),
-        headings: headingTextsFromOutline(row.headings),
+        headings: headingTextsFromOutline(headingsRaw),
         entities: [],
         claimIds: [],
         topicBlockIds: [],
-        serpPosition: row.serp_position ?? i + 1,
+        serpPosition: typeof row.serp_position === 'number' ? row.serp_position : i + 1,
       };
       return doc;
     })

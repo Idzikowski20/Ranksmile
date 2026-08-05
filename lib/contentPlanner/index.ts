@@ -58,6 +58,12 @@ export {
 } from './planningLoop';
 export { optimizeNarrative } from './narrativeOptimizer';
 export type { NarrativeSeed } from './narrativeOptimizer';
+export {
+  titleizeH1,
+  localizedRequiredSections,
+  orderSectionsFaqLast,
+  isSeoMetaHeading,
+} from './sectionLabels';
 export { validatePlannerPlan } from './plannerValidator';
 export type { PlannerValidateInput, PlannerValidateResult } from './plannerValidator';
 export {
@@ -70,6 +76,8 @@ export {
 export { buildRewritePlan, runKnowledgeCompletion } from './knowledgeCompletion';
 export { computeKnowledgeCoverage } from './knowledgeCoverage';
 export { buildArticleExecutionPlan, toSidecarExecutionPlan, hashExecutionPlanPayload } from './executionPlan';
+export { applyApprovedOutlineToPlan } from './applyApprovedOutline';
+export type { ApprovedOutlineHeading } from './applyApprovedOutline';
 export { toSidecarCompiledPlan } from './knowledgePack/toSidecarCompiledPlan';
 export { generateQuickAnswer } from './quickAnswer';
 export { runContentPlanner, finalizePlannerForWrite } from './runContentPlanner';

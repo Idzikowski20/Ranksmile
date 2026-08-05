@@ -1,9 +1,10 @@
 /**
  * Narrative Optimizer — Topic Blocks + intent → ordered outline seeds.
- * Prefer action-first for step-by-step; avoid English course templates when blocks ≥ 5.
+ * Prefer action-first for step-by-step; never inject product-SEO meta H2s.
  */
 import type { TopicBlock } from '../knowledgeEngine/types';
 import type { IntentBlueprint } from './types';
+import { headingFillersFromCompetitors, isSeoMetaHeading } from './sectionLabels';
 
 export type NarrativeSeed = {
   role: string;
@@ -19,14 +20,6 @@ const ROLE_RANK: Record<string, number> = {
   MONITORING: 3,
   ADVANCED: 4,
 };
-
-const TEMPLATE_FILLERS_PL: NarrativeSeed[] = [
-  { role: 'keywords', heading: 'Analiza słów kluczowych i intencji', importance: 7 },
-  { role: 'technical', heading: 'Techniczne SEO i indeksowanie', importance: 7 },
-  { role: 'content', heading: 'Tworzenie treści, które rankują', importance: 6 },
-  { role: 'links_internal', heading: 'Linkowanie wewnętrzne', importance: 5 },
-  { role: 'monitor', heading: 'Monitorowanie wyników', importance: 6 },
-];
 
 function blockToSeed(b: TopicBlock): NarrativeSeed {
   const importance =
@@ -44,25 +37,29 @@ function blockToSeed(b: TopicBlock): NarrativeSeed {
 }
 
 /**
- * Order: Quick Answer → action path → foundation → monitoring → advanced → FAQ/Summary.
- * When blocks ≥ 5, do not inject primary EN course template labels.
+ * Order: required action path → topic blocks → competitor heading fillers.
+ * FAQ/Summary stay in required list; outlineBuilder reorders them to the end.
  */
 export function optimizeNarrative(opts: {
   topicBlocks: TopicBlock[];
   intent: IntentBlueprint;
   targetH2: number;
   requiredSections?: string[];
+  commonHeadings?: string[];
+  lang?: 'pl' | 'en';
 }): NarrativeSeed[] {
-  const need = Math.max(5, opts.targetH2);
   const required = opts.requiredSections || [];
+  const need = Math.max(5, opts.targetH2, required.length);
   const seeds: NarrativeSeed[] = [];
+  const lang = opts.lang || 'pl';
 
   for (const name of required) {
+    if (isSeoMetaHeading(name)) continue;
     seeds.push({
       role: name.toLowerCase().replace(/\s+/g, '_'),
       heading: name,
       importance:
-        /quick/i.test(name) ? 10
+        /quick|szybka|szybki|pierwsze/i.test(name) ? 10
           : /faq/i.test(name) ? 4
             : /summary|podsum/i.test(name) ? 2
               : 6,
@@ -85,28 +82,21 @@ export function optimizeNarrative(opts: {
 
   for (const b of sorted) {
     if (seeds.length >= need) break;
+    if (isSeoMetaHeading(b.title)) continue;
     if (seeds.some((s) => s.heading.toLowerCase() === b.title.toLowerCase())) continue;
     seeds.push(blockToSeed(b));
   }
 
-  const allowFillers = opts.topicBlocks.length < 5;
-  if (allowFillers) {
-    for (const f of TEMPLATE_FILLERS_PL) {
-      if (seeds.length >= need) break;
-      if (seeds.some((s) => s.role === f.role)) continue;
-      // Guard: never inject English course labels as primary seeds
-      if (/keywords and intent|technical seo foundations/i.test(f.heading)) continue;
-      seeds.push({ ...f, reasonSummary: 'Template filler (few topic blocks)' });
-    }
-  }
-
-  while (seeds.length < need) {
-    seeds.push({
-      role: `topic_${seeds.length}`,
-      heading: `Praktyczne rozszerzenie (${seeds.length + 1})`,
-      importance: 3,
-      reasonSummary: 'Padding to meet H2 target',
-    });
+  const fillers = headingFillersFromCompetitors(
+    opts.commonHeadings || [],
+    opts.intent.keyword,
+    lang,
+    Math.max(0, need - seeds.length),
+  );
+  for (const f of fillers) {
+    if (seeds.length >= need) break;
+    if (seeds.some((s) => s.heading.toLowerCase() === f.heading.toLowerCase())) continue;
+    seeds.push({ ...f, reasonSummary: 'Competitor / practical filler' });
   }
 
   return seeds.slice(0, need);

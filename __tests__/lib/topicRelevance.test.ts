@@ -82,9 +82,26 @@ describe('filterNlpTermsForAnalysis', () => {
     expect(labels).toContain('wojny hybrydowej');
     expect(labels).toContain('dzialania hybrydowe');
     expect(labels).toContain('dezinformacja');
-    expect(labels).toContain('bezpieczenstwo panstwa');
     expect(labels).not.toContain('test z lektury pan tadeusz');
-    expect(out.length).toBeGreaterThanOrEqual(6);
+    // Off-seed multi-word without stem overlap is no longer free-passed
+    expect(labels).not.toContain('bezpieczenstwo panstwa');
+    expect(out.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('rejects gaming/book related-search pollution even when seed token matches', () => {
+    const seed = 'szantaz';
+    const terms = [
+      { term: 'szantaz' },
+      { term: 'szantaz metin2' },
+      { term: 'szantaz emocjonalny ksiazka' },
+      { term: 'szantaz policja' },
+      { term: 'grozba bezprawna' },
+    ];
+    const out = filterNlpTermsForAnalysis(terms, seed);
+    const labels = out.map((t) => t.term);
+    expect(labels).not.toContain('szantaz metin2');
+    expect(labels).not.toContain('szantaz emocjonalny ksiazka');
+    expect(labels).toContain('szantaz');
   });
 });
 

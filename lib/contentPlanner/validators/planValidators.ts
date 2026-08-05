@@ -306,8 +306,7 @@ export function validateRequiredAssignments(opts: {
     }
   }
   for (const s of opts.outline.sections) {
-    if (s.evidenceNeeds.length === 0) continue;
-    // Evidence needs are satisfied at brief stage; flag empty needs on critical sections.
+    // Critical sections must declare evidence needs (empty needs previously bypassed this).
     if (s.importance >= 8 && s.evidenceNeeds.length === 0) {
       issues.push({
         code: 'evidence_need_missing',

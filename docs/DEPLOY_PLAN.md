@@ -77,7 +77,7 @@ Railway healthchecks: prefer ready endpoints once shipped.
 
 - Image: `Dockerfile.workers` (Node + `tsx`, not Next standalone)
 - Start only after `waitForRedis()`
-- Concurrency: **2** (current)
+- Concurrency: **`PIPELINE_WORKER_CONCURRENCY`** (default **1**; was hard-coded 2)
 - Env: `REDIS_URL`, `DATABASE_URL`, `PIPELINE_STAGE=5`, `PIPELINE_INLINE_WORKERS=0`, `PYTHON_SIDECAR_URL`, `INTERNAL_PIPELINE_TOKEN`
 
 ## Env (reference)

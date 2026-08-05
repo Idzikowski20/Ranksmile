@@ -1,5 +1,5 @@
 import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
-import type { CompetitorDocument } from './types';
+import type { CompetitorDocument, SourceKind } from './types';
 
 export type RawSentence = {
   text: string;
@@ -7,7 +7,16 @@ export type RawSentence = {
   serpPosition: number;
   score: number;
   authority: number;
+  kind?: SourceKind;
 };
+
+function kindFromExtra(kind?: string): SourceKind {
+  if (kind === 'official' || kind === 'industry' || kind === 'competitor'
+    || kind === 'ai_overview' || kind === 'paa') {
+    return kind;
+  }
+  return 'competitor';
+}
 
 export type RawExtract = {
   sentences: RawSentence[];
@@ -38,15 +47,18 @@ export function extractRawKnowledge(opts: {
   }
 
   for (const extra of opts.extraTexts || []) {
+    const kind = kindFromExtra(extra.kind);
     for (const part of extra.text.split(SENTENCE_SPLIT)) {
       const t = part.trim();
       if (t.length >= 20) {
         sentences.push({
           text: t,
           url: extra.url || 'synthetic://extra',
-          serpPosition: 99,
+          // Non-SERP extras are not ranked results — leave unset (0).
+          serpPosition: 0,
           score: 50,
           authority: 0.5,
+          kind,
         });
       }
     }
