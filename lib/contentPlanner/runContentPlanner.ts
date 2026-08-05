@@ -170,6 +170,7 @@ export function runContentPlanner(input: RunContentPlannerInput): RunContentPlan
     };
   }
 
+  const topicBlocks = input.topicBlocks ?? input.knowledgeGraph?.topicBlocks;
   const outlineLoop = runOutlinePlanningLoop({
     blueprint,
     kg: targetKg,
@@ -177,9 +178,7 @@ export function runContentPlanner(input: RunContentPlannerInput): RunContentPlan
     intent,
     benchmark,
     synthesis: competitorSynthesis,
-    topicBlocks: input.topicBlocks || input.knowledgeGraph?.topicBlocks
-      ? [...(input.topicBlocks || input.knowledgeGraph?.topicBlocks || [])]
-      : null,
+    topicBlocks: topicBlocks ? [...topicBlocks] : null,
     plannerTargets: input.plannerTargets,
     knowledgeGraph: input.knowledgeGraph,
   });

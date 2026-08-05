@@ -69,4 +69,16 @@ describe('review outline', () => {
       { level: 2, text: 'Edited section', instructions: ['Edited instruction.', 'Keep this separate.'], targetWords: 240 },
     ]);
   });
+
+  it('does not expose a partial outline when planner briefs are missing or mismatched', () => {
+    const bundle = {
+      outline: { h1: 'Article title', sections: [{ id: 'one', heading: 'First section' }] },
+      briefs: [],
+      targetKg: { claims: [] },
+    } as unknown as ContentPlannerBundle;
+    expect(reviewOutlineFromBundle(bundle)).toEqual([]);
+
+    bundle.briefs = [{ sectionId: 'one' }, { sectionId: 'extra' }] as ContentPlannerBundle['briefs'];
+    expect(reviewOutlineFromBundle(bundle)).toEqual([]);
+  });
 });

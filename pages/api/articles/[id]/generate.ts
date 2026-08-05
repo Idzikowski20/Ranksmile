@@ -31,9 +31,9 @@ import {
   finalizePlannerForWrite,
   runContentPlanner,
   applyApprovedOutlineToPlan,
+  parseApprovedOutline,
   toSidecarCompiledPlan,
 } from '../../../../lib/contentPlanner';
-import type { ApprovedOutlineHeading } from '../../../../lib/contentPlanner';
 import {
   buildStructuralBenchmark,
   benchmarkDocsFromCompetitors,
@@ -263,32 +263,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
       { replacements: [JSON.stringify(nextScore), articleId] },
     );
-
-    function parseApprovedOutline(raw: unknown): ApprovedOutlineHeading[] {
-      if (!Array.isArray(raw) || raw.length === 0) return [];
-      return raw
-        .map((item) => {
-          if (!item || typeof item !== 'object') return null;
-          const o = item as Record<string, unknown>;
-          const text = typeof o.text === 'string' ? o.text.trim() : '';
-          const level = typeof o.level === 'number' ? o.level : Number(o.level);
-          if (!text || !Number.isFinite(level)) return null;
-          const outlineInstructions = Array.isArray(o.instructions)
-            ? o.instructions.filter((instruction): instruction is string => (
-              typeof instruction === 'string' && instruction.trim().length > 0
-            ))
-            : undefined;
-          const rawTargetWords = typeof o.targetWords === 'number' ? o.targetWords : Number(o.targetWords);
-          const heading: ApprovedOutlineHeading = {
-            level,
-            text,
-            ...(outlineInstructions?.length ? { instructions: outlineInstructions } : {}),
-            ...(Number.isFinite(rawTargetWords) ? { targetWords: rawTargetWords } : {}),
-          };
-          return heading;
-        })
-        .filter((h): h is ApprovedOutlineHeading => h !== null);
-    }
 
     const approvedHeadings = parseApprovedOutline(approvedOutline);
 

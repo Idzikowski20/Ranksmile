@@ -13,13 +13,14 @@ export async function saveWizardState(articleId: string, patch: Record<string, u
    } catch { /* best-effort */ }
 }
 
-export async function clearWizardState(articleId: string): Promise<void> {
-   if (!articleId) return;
+export async function clearWizardState(articleId: string): Promise<boolean> {
+   if (!articleId) return true;
    try {
-      await fetch(`/api/articles/${articleId}/wizard-state`, {
+      const response = await fetch(`/api/articles/${articleId}/wizard-state`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({ clear: true }),
       });
-   } catch { /* best-effort */ }
+      return response.ok;
+   } catch { return false; }
 }
