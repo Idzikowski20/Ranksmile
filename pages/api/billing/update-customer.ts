@@ -66,15 +66,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       postal_code: address.postal_code,
       country: address.country,
     },
+    tax: { validate_location: 'immediately' },
   });
 
-  if (taxId && address.country) {
+  const taxIdType = stripeTaxIdType(address.country);
+  if (taxId && taxIdType) {
     const formatted = formatTaxIdForStripe(address.country, taxId);
-    const type = stripeTaxIdType(address.country);
     const existing = await stripe.customers.listTaxIds(customerId, { limit: 20 });
     const duplicate = existing.data.some((row) => row.value === formatted);
     if (!duplicate) {
-      await stripe.customers.createTaxId(customerId, { type, value: formatted });
+      await stripe.customers.createTaxId(customerId, { type: taxIdType, value: formatted });
     }
   }
 

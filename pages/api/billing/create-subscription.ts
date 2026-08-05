@@ -158,6 +158,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       customer: customerId,
       items: [{ price: priceId }],
       payment_behavior: 'default_incomplete',
+      automatic_tax: { enabled: true },
       payment_settings: { save_default_payment_method: 'on_subscription' },
       // Basil+ (stripe-node 22 / API 2025-03-31+): payment_intent removed from Invoice.
       expand: ['latest_invoice.confirmation_secret'],

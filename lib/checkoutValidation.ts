@@ -105,10 +105,12 @@ export function hasFieldErrors(errors: CheckoutFieldErrors): boolean {
   return Object.keys(errors).length > 0;
 }
 
-export function stripeTaxIdType(country: string): 'eu_vat' | 'gb_vat' | 'us_ein' {
-  if (country === 'GB') return 'gb_vat';
-  if (country === 'US') return 'us_ein';
-  return 'eu_vat';
+export function stripeTaxIdType(country: string): 'eu_vat' | 'gb_vat' | 'us_ein' | null {
+  const normalized = country.toUpperCase();
+  if (normalized === 'GB') return 'gb_vat';
+  if (normalized === 'US') return 'us_ein';
+  if (new Set(['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE']).has(normalized)) return 'eu_vat';
+  return null;
 }
 
 export function formatTaxIdForStripe(country: string, raw: string): string {

@@ -4,6 +4,7 @@ import {
   isValidPolishNip,
   hasFieldErrors,
   hasRequiredBillingAddressFields,
+  stripeTaxIdType,
 } from '../../lib/checkoutValidation';
 
 describe('checkoutValidation', () => {
@@ -67,6 +68,13 @@ describe('checkoutValidation', () => {
   it('validates Polish NIP checksum', () => {
     expect(isValidPolishNip('5270103391')).toBe(true);
     expect(isValidPolishNip('1234567890')).toBe(false);
+  });
+
+  it('only sends tax IDs using a Stripe type valid for the country', () => {
+    expect(stripeTaxIdType('PL')).toBe('eu_vat');
+    expect(stripeTaxIdType('GB')).toBe('gb_vat');
+    expect(stripeTaxIdType('US')).toBe('us_ein');
+    expect(stripeTaxIdType('BR')).toBeNull();
   });
 
   it('rejects address marked complete when street/city/postal are missing', () => {
