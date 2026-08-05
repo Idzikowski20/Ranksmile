@@ -6,9 +6,6 @@ from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 
 
-MarkdownGenerator = Callable[[str], Awaitable[str]]
-
-
 @dataclass(frozen=True)
 class Coverage:
     questions_answered: tuple[str, ...]
@@ -78,7 +75,7 @@ def _prompt(paragraph_plan: Mapping[str, object]) -> str:
 
 async def write_paragraph(
     paragraph_plan: Mapping[str, object],
-    generate_markdown: MarkdownGenerator,
+    generate_markdown: Callable[[str], Awaitable[str]],
 ) -> ParagraphResult:
     markdown = (await generate_markdown(_prompt(paragraph_plan))).strip()
     used_terms = _terms(paragraph_plan, markdown)
