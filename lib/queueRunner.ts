@@ -2,6 +2,7 @@ import db from '../database/database';
 import { queryOne } from './db/query';
 import { getErrorMessage } from './errors';
 import { isQueueRunnerEnabled } from './featureFlags';
+import { queryAffected } from './types/db';
 
 const isPg = !!process.env.DATABASE_URL;
 const DEFAULT_STALE_SECS = 5 * 60;
@@ -9,10 +10,7 @@ const DEFAULT_STALE_SECS = 5 * 60;
 export const affectedRows = (out: unknown): number => {
   const meta = Array.isArray(out) ? (out as unknown[])[1] : undefined;
   if (typeof meta === 'number') return meta;
-  if (meta && typeof meta === 'object' && 'rowCount' in meta) {
-    return Number((meta as { rowCount?: unknown }).rowCount) || 0;
-  }
-  return 0;
+  return queryAffected(meta);
 };
 
 export type QueueRunRow = { id: number; seed: string; country: string };

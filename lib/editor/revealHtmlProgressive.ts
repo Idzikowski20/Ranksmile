@@ -60,6 +60,8 @@ function animateLastBlock(editor: Editor): void {
 
 export type RevealHtmlOptions = {
   signal?: AbortSignal;
+  /** `preserve` keeps partial content for an explicit user cancellation. */
+  abortBehavior?: 'complete' | 'preserve';
   /** Final emitUpdate (default true). Intermediate inserts use emitUpdate false when possible. */
   emitUpdate?: boolean;
 };
@@ -103,7 +105,7 @@ export async function revealHtmlInEditor(
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
       // Unmount / supersede: never touch destroyed editor (root cause of null.commands).
-      if (editorCanCommand(editor)) {
+      if (opts?.abortBehavior !== 'preserve' && editorCanCommand(editor)) {
         editor.commands.setContent(html, { emitUpdate: emit });
       }
       return;

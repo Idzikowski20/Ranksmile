@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 import {
+  revealHtmlInEditor,
   splitHtmlTopLevelBlocks,
   editorCanCommand,
 } from '../../../lib/editor/revealHtmlProgressive';
@@ -31,4 +32,21 @@ describe('editorCanCommand', () => {
     expect(editorCanCommand({ isDestroyed: true } as never)).toBe(false);
     expect(editorCanCommand({ isDestroyed: false } as never)).toBe(true);
   });
+});
+
+it('does not flush the complete article when an explicit cancellation aborts reveal', async () => {
+  const setContent = jest.fn();
+  const controller = new AbortController();
+  controller.abort();
+
+  await revealHtmlInEditor({
+    isDestroyed: false,
+    commands: { setContent, insertContent: jest.fn() },
+  } as never, '<h2>One</h2><p>Two</p>', {
+    signal: controller.signal,
+    abortBehavior: 'preserve',
+  });
+
+  expect(setContent).toHaveBeenCalledWith('', { emitUpdate: false });
+  expect(setContent).not.toHaveBeenCalledWith('<h2>One</h2><p>Two</p>', expect.anything());
 });

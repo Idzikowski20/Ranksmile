@@ -1134,6 +1134,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [generateBusy, setGenerateBusy] = useState(false);
     const [generateMsg, setGenerateMsg] = useState('Generating article…');
     const [generatePct, setGeneratePct] = useState<number | null>(null);
+    const generationRunRef = useRef(0);
+    const generationJobIdRef = useRef<{ runId: number; jobId: string } | null>(null);
+    const generationRevealHtmlRef = useRef<{ runId: number; html: string } | null>(null);
     const router = useRouter();
     const [outlineReviewMode, setOutlineReviewMode] = useState(false);
     const outlineAutoStarted = useRef(false);
@@ -1790,7 +1793,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       revealAbortRef.current?.abort();
     }, []);
 
-    const playReveal = async (html: string, emitUpdate = true) => {
+    const playReveal = async (html: string, emitUpdate = true, abortBehavior: 'complete' | 'preserve' = 'complete') => {
       if (!editorCanCommand(editor)) return;
       revealAbortRef.current?.abort();
       const ac = new AbortController();
@@ -1799,7 +1802,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const ed = editor;
       const cleaned = normalizeListHtml(html);
       try {
-        await revealHtmlInEditor(ed, cleaned, { signal: ac.signal, emitUpdate });
+        await revealHtmlInEditor(ed, cleaned, { signal: ac.signal, emitUpdate, abortBehavior });
       } finally {
         if (revealAbortRef.current === ac) {
           revealPlayingRef.current = false;
@@ -1877,6 +1880,15 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     };
 
+    const cancelGenerationJob = async (jobId: string) => {
+      try {
+        const response = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Cancellation was not confirmed');
+      } catch {
+        toast.error('Could not confirm cancellation. The generation may still finish.');
+      }
+    };
+
     const handleWriteWithAi = async (opts?: {
       approvedOutline?: Array<{ level: number; text: string }>;
       internalLinks?: boolean;
@@ -1888,6 +1900,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         toast.error('Article is not ready yet — try again in a moment.');
         return;
       }
+      generationRunRef.current += 1;
+      const runId = generationRunRef.current;
+      const isCurrentRun = () => generationRunRef.current === runId;
+      generationJobIdRef.current = null;
       setGenerateBusy(true);
       setGenerateMsg('Starting generation…');
       setGeneratePct(null);
@@ -1899,6 +1915,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           const artData = await artRes.json() as {
             article?: { wizard_state?: string | null; content?: string | null };
           };
+          if (!isCurrentRun()) return;
           if (artData.article?.wizard_state) {
             const ws = JSON.parse(artData.article.wizard_state) as { instructions?: string; voiceId?: string };
             instructions = ws.instructions || '';
@@ -1917,13 +1934,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           } else if (prog.status === 'done' && !opts?.approvedOutline?.length) {
             const artRes = await fetch(`/api/articles/${articleId}`);
             const artData = await artRes.json() as { article?: { content?: string | null } };
+            if (!isCurrentRun()) return;
             const html = artData.article?.content || '';
             if (isUsableArticleHtml(html)) {
               await playReveal(html, true);
+              if (!isCurrentRun()) return;
               toast.success('Article loaded');
               return;
             }
           }
+        }
+
+        if (!isCurrentRun()) {
+          if (jobId) void cancelGenerationJob(jobId);
+          return;
         }
 
         if (!jobId) {
@@ -1955,12 +1979,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             throw new Error(detail || genData.message || genData.error || 'Generation failed to start');
           }
           jobId = genData.jobId;
-          setGenerateMsg('Writing your article…');
+          if (isCurrentRun()) setGenerateMsg('Writing your article…');
         }
+        if (!isCurrentRun()) {
+          void cancelGenerationJob(jobId);
+          return;
+        }
+        generationJobIdRef.current = { runId, jobId };
 
         const started = Date.now();
         await new Promise<void>((resolve, reject) => {
           const tick = async () => {
+            if (!isCurrentRun()) { resolve(); return; }
             try {
               const r = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId!)}`);
               const d = await r.json().catch(() => ({})) as {
@@ -1968,6 +1998,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 progressMessage?: string;
                 totalProgress?: number;
               };
+              if (!isCurrentRun()) { resolve(); return; }
               if (typeof d.progressMessage === 'string' && d.progressMessage.trim()) {
                 setGenerateMsg(d.progressMessage.trim());
               }
@@ -1989,13 +2020,19 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setTimeout(tick, 1200);
         });
 
+        if (!isCurrentRun()) return;
+
         const artRes = await fetch(`/api/articles/${articleId}`);
         const artData = await artRes.json() as { article?: { content?: string | null } };
+        if (!isCurrentRun()) return;
         const html = artData.article?.content || '';
         if (!html.replace(/<[^>]+>/g, ' ').trim()) {
           throw new Error('Generation finished but no content was returned.');
         }
-        await playReveal(html, true);
+        generationRevealHtmlRef.current = { runId, html: editor.getHTML() };
+        await playReveal(html, true, 'preserve');
+        if (!isCurrentRun()) return;
+        generationRevealHtmlRef.current = null;
         setOutlineReviewMode(false);
         if (router.query.reviewOutline) {
           const q = { ...router.query };
@@ -2007,10 +2044,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         }
         toast.success('Article generated');
       } catch (e) {
-        toast.error(getErrorMessage(e) || 'Could not generate the article.');
+        if (isCurrentRun()) toast.error(getErrorMessage(e) || 'Could not generate the article.');
       } finally {
-        setGenerateBusy(false);
-        setGeneratePct(null);
+        if (isCurrentRun()) {
+          generationJobIdRef.current = null;
+          if (generationRevealHtmlRef.current?.runId === runId) generationRevealHtmlRef.current = null;
+          setGenerateBusy(false);
+          setGeneratePct(null);
+        }
       }
     };
 
@@ -2054,6 +2095,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     };
 
     const handleOutlineCancel = () => {
+      const activeJob = generationJobIdRef.current;
+      const activeReveal = generationRevealHtmlRef.current;
+      generationRunRef.current += 1;
+      generationJobIdRef.current = null;
+      revealAbortRef.current?.abort();
+      if (activeReveal && editorCanCommand(editor)) {
+        editor.commands.setContent(activeReveal.html, { emitUpdate: true });
+      }
+      generationRevealHtmlRef.current = null;
+      setGenerateBusy(false);
+      setGeneratePct(null);
+      if (activeJob) {
+        void cancelGenerationJob(activeJob.jobId);
+      }
       setOutlineReviewMode(false);
       const q = { ...router.query };
       delete q.reviewOutline;
