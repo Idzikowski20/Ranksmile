@@ -98,6 +98,7 @@ describe('AccessPolicy v1', () => {
     expect(allowsFrontend('BILLING_REQUIRED', '/dashboard')).toBe(false);
     expect(allowsFrontend('BILLING_REQUIRED', '/workspace/18/setup')).toBe(false);
     expect(allowsApi('BILLING_REQUIRED', 'POST:/api/workspaces/setup')).toBe(false);
+    expect(allowsApi('WORKSPACE_REQUIRED', 'POST:/api/workspaces/18/finish')).toBe(true);
     expect(allowsApi('BILLING_REQUIRED', 'POST:/api/billing/create-subscription')).toBe(true);
   });
 

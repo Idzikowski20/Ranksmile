@@ -64,7 +64,7 @@ describe('graphQuery + incremental runtime', () => {
     const dirty = first.model.ast.blocks.find((b) => b.type === 'paragraph')?.blockId;
     expect(dirty).toBeDefined();
     const inv = buildInvalidationGraph(first.model, dirty ? [dirty] : []);
-    expect(inv.dirtyPassIds).toEqual(expect.arrayContaining(['fact', 'evidence']));
+    expect(inv.dirtyPassIds).toEqual(expect.arrayContaining(['fact', 'evidence', 'intent']));
 
     const second = compile({
       articleId: 'inc2',

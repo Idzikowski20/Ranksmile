@@ -113,7 +113,7 @@ export function buildInvalidationGraph(
   }
 
   const dirtyPassIds: CompilerStageId[] = [];
-  if (dirtyBlocks.size > 0) dirtyPassIds.push('entity', 'fact', 'evidence');
+  if (dirtyBlocks.size > 0) dirtyPassIds.push('entity', 'fact', 'evidence', 'intent');
   const q = graphQuery(model);
   if (
     [...dirtyNodeIds].some((id) => {
