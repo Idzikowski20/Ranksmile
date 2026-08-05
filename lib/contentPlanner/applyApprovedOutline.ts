@@ -10,7 +10,37 @@ import { hashExecutionPlanPayload } from './executionPlan';
 export type ApprovedOutlineHeading = {
   level: number;
   text: string;
+  instructions?: string[];
+  targetWords?: number;
 };
+
+export function parseApprovedOutline(raw: unknown): ApprovedOutlineHeading[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const value = item as Record<string, unknown>;
+    const text = typeof value.text === 'string' ? value.text.trim() : '';
+    const level = typeof value.level === 'number' ? value.level : Number(value.level);
+    if (!text || !Number.isFinite(level)) return [];
+    const instructions = Array.isArray(value.instructions)
+      ? value.instructions
+        .filter((instruction): instruction is string => typeof instruction === 'string')
+        .map((instruction) => instruction.trim())
+        .filter(Boolean)
+      : [];
+    const targetWords = typeof value.targetWords === 'number'
+      && Number.isInteger(value.targetWords)
+      && value.targetWords > 0
+      ? value.targetWords
+      : undefined;
+    return [{
+      level,
+      text,
+      ...(instructions.length ? { instructions } : {}),
+      ...(targetWords ? { targetWords } : {}),
+    }];
+  });
+}
 
 const DEFAULT_BUDGET = {
   words: 300,
@@ -30,6 +60,12 @@ function normalizeHeadings(approved: ApprovedOutlineHeading[]): ApprovedOutlineH
     .map((h) => ({
       level: Math.min(Math.max(Number(h.level) || 2, 1), 4),
       text: String(h.text || '').trim(),
+      instructions: Array.isArray(h.instructions)
+        ? h.instructions.map((item) => String(item).trim()).filter(Boolean)
+        : undefined,
+      targetWords: Number.isFinite(Number(h.targetWords))
+        ? Math.min(2000, Math.max(80, Math.round(Number(h.targetWords))))
+        : undefined,
     }))
     .filter((h) => h.text.length > 0);
 }
@@ -73,6 +109,7 @@ export function applyApprovedOutlineToPlan(
   const use = body.length > 0 ? body : headings;
   if (use.length !== plan.sections.length) return null;
   const template = plan.sections[0];
+  const hasReviewedTargets = use.some((heading) => heading.targetWords !== undefined);
 
   const sections: ExecutionPlanSection[] = use.map((h, i) => {
     const base = plan.sections[i] ?? stubSection(i, template);
@@ -80,7 +117,11 @@ export function applyApprovedOutlineToPlan(
       ...base,
       id: base.id || `approved-${i}`,
       heading: h.text,
-      objective: base.objective || `Write section: ${h.text}`,
+      objective: h.instructions?.length
+        ? h.instructions.join('\n')
+        : (base.objective || `Write section: ${h.text}`),
+      expectedWords: h.targetWords ?? base.expectedWords,
+      budget: h.targetWords ? { ...base.budget, words: h.targetWords } : base.budget,
       reason: {
         summary: `User-approved outline: ${h.text}`,
         signals: base.reason?.signals ?? [],
@@ -89,10 +130,16 @@ export function applyApprovedOutlineToPlan(
   });
 
   const h1 = headings.find((h) => h.level === 1);
+  const reviewedWords = sections.reduce((total, section) => total + section.expectedWords, 0);
+  if (hasReviewedTargets && reviewedWords < plan.benchmark.targetWords) return null;
   const { planHash: _drop, ...rest } = plan;
   const payload: Omit<ArticleExecutionPlan, 'planHash'> = {
     ...rest,
     title: h1?.text || plan.title,
+    articleBudget: {
+      ...plan.articleBudget,
+      words: hasReviewedTargets ? reviewedWords : plan.articleBudget.words,
+    },
     sections,
   };
   return { ...payload, planHash: hashExecutionPlanPayload(payload) };

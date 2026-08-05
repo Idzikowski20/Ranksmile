@@ -1,4 +1,4 @@
-import { resolveArticleEntry, articleEntryHref } from '../../lib/articleFlow';
+import { resolveArticleEntry, articleEntryHref, articleOutlineReviewHref } from '../../lib/articleFlow';
 
 describe('resolveArticleEntry', () => {
   it('returns generating when status is generating', () => {
@@ -33,5 +33,15 @@ describe('articleEntryHref', () => {
 
   it('returns null for editor', () => {
     expect(articleEntryHref(42, { kind: 'editor' })).toBeNull();
+  });
+});
+
+describe('articleOutlineReviewHref', () => {
+  it('always opens outline review in the content editor', () => {
+    expect(articleOutlineReviewHref(42, {
+      contentType: 'blog',
+      internalLinks: true,
+      externalLinks: false,
+    })).toBe('/articles/42?reviewOutline=1&type=blog&internal=1&external=0');
   });
 });

@@ -76,8 +76,9 @@ export {
 export { buildRewritePlan, runKnowledgeCompletion } from './knowledgeCompletion';
 export { computeKnowledgeCoverage } from './knowledgeCoverage';
 export { buildArticleExecutionPlan, toSidecarExecutionPlan, hashExecutionPlanPayload } from './executionPlan';
-export { applyApprovedOutlineToPlan } from './applyApprovedOutline';
+export { applyApprovedOutlineToPlan, parseApprovedOutline } from './applyApprovedOutline';
 export type { ApprovedOutlineHeading } from './applyApprovedOutline';
+export { collectApprovedOutline, reviewOutlineFromBundle, reviewOutlineToHtml } from './reviewOutline';
 export { toSidecarCompiledPlan } from './knowledgePack/toSidecarCompiledPlan';
 export { generateQuickAnswer } from './quickAnswer';
 export { runContentPlanner, finalizePlannerForWrite } from './runContentPlanner';
