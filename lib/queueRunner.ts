@@ -9,8 +9,9 @@ const DEFAULT_STALE_SECS = 5 * 60;
 export const affectedRows = (out: unknown): number => {
   const meta = Array.isArray(out) ? (out as unknown[])[1] : undefined;
   if (typeof meta === 'number') return meta;
-  if (meta && typeof meta === 'object' && 'rowCount' in meta) {
-    return Number((meta as { rowCount?: unknown }).rowCount) || 0;
+  if (meta && typeof meta === 'object') {
+    const count = meta as { rowCount?: unknown; affectedRows?: unknown; changes?: unknown };
+    return Number(count.rowCount ?? count.affectedRows ?? count.changes) || 0;
   }
   return 0;
 };
