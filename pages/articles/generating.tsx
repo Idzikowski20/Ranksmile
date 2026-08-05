@@ -117,7 +117,19 @@ const GeneratingPage: NextPage = () => {
         }),
       });
       const genData = await genRes.json().catch(() => ({}));
-      if (!genRes.ok) throw new Error(genData?.error || 'Generation failed');
+      if (!genRes.ok) {
+        const detail = typeof genData?.message === 'string' && genData.message.trim()
+          ? genData.message.trim()
+          : (typeof genData?.error === 'string' ? genData.error : 'Generation failed');
+        const issues = Array.isArray(genData?.planValidation?.issues)
+          ? genData.planValidation.issues
+            .map((i: { code?: string; message?: string }) => i?.message || i?.code)
+            .filter(Boolean)
+            .slice(0, 2)
+            .join('; ')
+          : '';
+        throw new Error(issues ? `${detail}: ${issues}` : detail);
+      }
       await pollJob(genData.jobId as string);
       const after = await fetchArticleContent(articleId);
       if (!isUsableArticleHtml(after.content)) {
@@ -127,6 +139,8 @@ const GeneratingPage: NextPage = () => {
       setFinished(true);
     })().catch((e: unknown) => {
       const msg = e instanceof Error ? e.message : 'Generation failed';
+      setProgressMessage(msg);
+      setProgressPct(null);
       toast.error(msg);
       // Stay on this page so a retry (reload) can start a fresh generate.
     });
@@ -136,7 +150,7 @@ const GeneratingPage: NextPage = () => {
 
   useEffect(() => {
     if (!finished) return undefined;
-    const t = setTimeout(() => router.replace(articleId ? `/articles/${articleId}` : '/articles'), 700);
+    const t = setTimeout(() => router.replace(articleId ? `/articles/${articleId}?reveal=1` : '/articles'), 700);
     return () => clearTimeout(t);
   }, [finished, articleId, router]);
 

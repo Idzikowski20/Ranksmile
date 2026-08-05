@@ -267,6 +267,14 @@ describe('applyKnowledgeCoverageOverlay', () => {
     expect(patchedPlan).toBeTruthy();
     expect(patchedPlan!.planHash).not.toBe('abc');
     expect(patchedPlan!.sections[0].claims.some((c) => c.id === 'CLAIM_miss')).toBe(true);
+    // Persist path serializes overlay.scoreData — assert mutation landed in scoreData tree.
+    const planner = scoreData.content_planner_v2 as {
+      bundle?: { executionPlan?: { planHash?: string; sections?: Array<{ claims: Array<{ id: string }> }> } };
+    };
+    expect(planner?.bundle?.executionPlan?.planHash).toBe(patchedPlan!.planHash);
+    expect(
+      planner?.bundle?.executionPlan?.sections?.[0]?.claims.some((c) => c.id === 'CLAIM_miss'),
+    ).toBe(true);
     expect(Object.isFrozen(graph)).toBe(true);
   });
 });

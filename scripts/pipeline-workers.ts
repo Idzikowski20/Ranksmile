@@ -177,7 +177,11 @@ async function main(): Promise<void> {
         });
         console.log(`[pipeline-workers] done ${queueName} dbJobId=${dbJobId}`);
       },
-      { connection: { url }, concurrency: 2 },
+      {
+        connection: { url },
+        // Default 1 saves RAM vs 2 parallel jobs; set PIPELINE_WORKER_CONCURRENCY=2 if queue lags.
+        concurrency: Math.max(1, Number(process.env.PIPELINE_WORKER_CONCURRENCY || 1) || 1),
+      },
     );
     handle.on('failed', (job, err) => {
       console.error(`[pipeline-workers] ${queueName} job ${job?.id} failed:`, err.message);

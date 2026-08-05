@@ -34,9 +34,21 @@ CRON_SECRET=<required — platform cron Bearer>
 # Optional rotation: CRON_SECRET_CURRENT / CRON_SECRET_PREVIOUS
 PIPELINE_STAGE=5
 PIPELINE_INLINE_WORKERS=0
+PIPELINE_WORKER_CONCURRENCY=1
+# Optional: override Dockerfile defaults (app 768 / workers 512) if OOM
+# NODE_OPTIONS=--max-old-space-size=768
 # Sentry on in prod by default; set SENTRY_ENABLED=false to disable
 SENTRY_ENABLED=
 ```
+
+### Memory cost knobs (Railway bills RSS × time)
+
+| Lever | Where | Notes |
+|-------|--------|--------|
+| `NODE_OPTIONS=--max-old-space-size=…` | `app` / `pipeline-workers` images | Caps V8 heap; raise if OOM |
+| `PIPELINE_WORKER_CONCURRENCY` | `pipeline-workers` | `1` default (was hard-coded `2`) |
+| spaCy model cache | `python-sidecar` `ner.py` | Avoids re-`load` spike per `/ner` call |
+
 
 Staging: use the Railway HTTPS URL for `NEXT_PUBLIC_APP_URL` and add that origin to Neon Auth trusted origins.
 

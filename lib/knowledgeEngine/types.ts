@@ -17,23 +17,23 @@ export type ClaimEvidence = {
   favicon: string;
   title: string;
   weight: number;
-  roles: EvidenceRole[];
-  serpPositions?: number[];
+  roles: readonly EvidenceRole[];
+  serpPositions?: readonly number[];
   quote?: string;
 };
 
 export type SourceDiversity = {
-  official: boolean;
-  competitors: boolean;
-  aiOverview: boolean;
-  paa: boolean;
+  readonly official: boolean;
+  readonly competitors: boolean;
+  readonly aiOverview: boolean;
+  readonly paa: boolean;
   /** 0..1 from how many of the four channels are present. */
-  score: number;
+  readonly score: number;
 };
 
 export type ConsensusExplanation = {
-  percent: number;
-  because: string[];
+  readonly percent: number;
+  readonly because: readonly string[];
 };
 
 export type CanonicalClaim = {
@@ -44,11 +44,11 @@ export type CanonicalClaim = {
   /** Learning hook 0–100 (heuristic in MVP). */
   importanceScore: number;
   consensus: number;
-  evidence: ClaimEvidence[];
+  evidence: readonly ClaimEvidence[];
   usedByCompetitors: number;
   competitorsTotal: number;
-  usedInSections: string[];
-  generatedFrom: GeneratedFrom[];
+  usedInSections: readonly string[];
+  generatedFrom: readonly GeneratedFrom[];
   sourceDiversity: SourceDiversity;
   consensusExplanation: ConsensusExplanation;
 };
@@ -65,23 +65,23 @@ export type KnowledgeEntityVote = {
 export type TopicBlockRole = 'FOUNDATION' | 'ACTION' | 'MONITORING' | 'ADVANCED';
 
 export type TopicBlock = {
-  id: string;
-  title: string;
-  role: TopicBlockRole;
-  consensus: number;
-  memberHeadings: string[];
-  claimIds: string[];
+  readonly id: string;
+  readonly title: string;
+  readonly role: TopicBlockRole;
+  readonly consensus: number;
+  readonly memberHeadings: readonly string[];
+  readonly claimIds: readonly string[];
 };
 
 export type KnowledgeGapKind = 'consensus_gap' | 'opportunity_gap';
 
 export type KnowledgeGap = {
-  id: string;
-  kind: KnowledgeGapKind;
-  topic: string;
-  importance: PriorityClass;
-  novelty: number;
-  relatedClaimIds: string[];
+  readonly id: string;
+  readonly kind: KnowledgeGapKind;
+  readonly topic: string;
+  readonly importance: PriorityClass;
+  readonly novelty: number;
+  readonly relatedClaimIds: readonly string[];
 };
 
 export type CompetitorDocument = {
@@ -89,21 +89,21 @@ export type CompetitorDocument = {
   title: string;
   score: number;
   authority: number;
-  headings: string[];
-  entities: string[];
-  claimIds: string[];
-  topicBlockIds: string[];
+  headings: readonly string[];
+  entities: readonly string[];
+  claimIds: readonly string[];
+  topicBlockIds: readonly string[];
   serpPosition: number;
 };
 
 export type VerifierIssue = {
-  code: string;
-  message: string;
+  readonly code: string;
+  readonly message: string;
 };
 
 export type VerifierResult = {
-  ok: boolean;
-  issues: VerifierIssue[];
+  readonly ok: boolean;
+  readonly issues: readonly VerifierIssue[];
 };
 
 export type StageTimingsMs = {
@@ -116,15 +116,16 @@ export type StageTimingsMs = {
   verify: number;
 };
 
+/** Immutable Knowledge Graph — claims and nested evidence are frozen at build time. */
 export type KnowledgeGraph = {
-  knowledge_version: number;
-  claims: readonly CanonicalClaim[];
-  entities: readonly KnowledgeEntityVote[];
-  topicBlocks: readonly TopicBlock[];
-  gaps: readonly KnowledgeGap[];
-  competitors: readonly CompetitorDocument[];
-  stageTimingsMs: StageTimingsMs;
-  verifier: VerifierResult;
+  readonly knowledge_version: number;
+  readonly claims: readonly CanonicalClaim[];
+  readonly entities: readonly KnowledgeEntityVote[];
+  readonly topicBlocks: readonly TopicBlock[];
+  readonly gaps: readonly KnowledgeGap[];
+  readonly competitors: readonly CompetitorDocument[];
+  readonly stageTimingsMs: StageTimingsMs;
+  readonly verifier: VerifierResult;
 };
 
 export type PlannerQualityMetrics = {

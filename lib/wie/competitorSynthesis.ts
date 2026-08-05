@@ -223,10 +223,10 @@ export async function buildCompetitorSynthesisFromCorpus(opts: {
     return {
       ...parsed,
       meta: {
+        ...parsed.meta,
         keyword: opts.keyword,
         captured_at: new Date().toISOString(),
         competitor_count: excerpts.length,
-        ...parsed.meta,
       },
     };
   } catch {

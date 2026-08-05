@@ -3,6 +3,8 @@ WORKDIR /app
 ENV PIPELINE_INLINE_WORKERS=0
 ENV PIPELINE_STAGE=5
 ENV REDISMS_DISABLE_POSTINSTALL=1
+# Cap V8 heap — Railway bills RSS. Raise via Railway env if job OOM.
+ENV NODE_OPTIONS=--max-old-space-size=512
 
 COPY package.json package-lock.json .npmrc ./
 # tsx is a devDependency. Skip lifecycle scripts until sources are present

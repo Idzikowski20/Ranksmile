@@ -8,9 +8,12 @@ const BEGINNER_RE = /\b(jak|samemu|samodziel|beginner|dla pocz|od zera|krok po k
 export function buildReaderModel(opts: {
   intent: IntentBlueprint;
   brandNicheHint?: string;
+  language?: string;
 }): ReaderModel {
   const { intent } = opts;
   const beginner = BEGINNER_RE.test(intent.keyword) || intent.articleType === 'step-by-step';
+  const langHint = (opts.language || '').toLowerCase();
+  const language: 'pl' | 'en' = langHint.startsWith('en') ? 'en' : 'pl';
 
   // Brand niche never becomes the reader persona for generic SERP intents.
   void opts.brandNicheHint;
@@ -32,5 +35,6 @@ export function buildReaderModel(opts: {
     expectedCta: beginner
       ? 'Zacznij od Google Search Console i jednego audytu'
       : 'Wdróż checklistę i zmierz efekty w Search Console',
+    language,
   };
 }

@@ -23,6 +23,7 @@ import {
   requiredCoverageRate,
   validateClaims,
   validateFlow,
+  validatePlanConformity,
   validateQuestions,
   validateSeoAgainstBlueprint,
 } from './validators/postWriteValidators';
@@ -31,6 +32,7 @@ import { computeKnowledgeCoverage } from './knowledgeCoverage';
 import { buildArticleExecutionPlan } from './executionPlan';
 import { generateQuickAnswer } from './quickAnswer';
 import { validatePlanForWrite } from './validators/planValidators';
+import { titleizeH1 } from './sectionLabels';
 import type { CompetitorBenchmark, ContentPlannerBundle, ValidationResult } from './types';
 import { KNOWLEDGE_COVERAGE_MIN_PCT } from './types';
 import type { KnowledgeGraph } from '../knowledgeEngine/types';
@@ -52,6 +54,10 @@ export type RunContentPlannerInput = {
   knowledgeGraph?: KnowledgeGraph | null;
   /** CIE: median-first structural targets overlay on CompetitorBenchmark. */
   plannerTargets?: PlannerTargets | null;
+  /** Article/domain language (pl|en) for outline labels + H1. */
+  language?: string;
+  /** Competitor H2 titles from outlines cache. */
+  commonHeadings?: string[];
 };
 
 export type RunContentPlannerResult = {
@@ -67,6 +73,7 @@ export type RunContentPlannerResult = {
     claims: ValidationResult;
     questions: ValidationResult;
     seo: ValidationResult;
+    planConformity?: ValidationResult;
     coverageBefore: number;
     coverageAfter: number;
     rewriteSteps: number;
@@ -107,15 +114,22 @@ export function runContentPlanner(input: RunContentPlannerInput): RunContentPlan
     keyword: input.keyword,
     year: input.year,
     allowBrandNiche: input.allowBrandNiche,
+    language: input.language,
   });
   const reader = buildReaderModel({
     intent,
     brandNicheHint: input.brandNicheHint,
+    language: input.language,
   });
   const profiles = buildCompetitorProfiles(input.competitors);
   const competitorSynthesis = synthesizeCompetitors(profiles);
   const benchmark = applyPlannerTargets(
-    buildCompetitorBenchmark(competitorSynthesis),
+    {
+      ...buildCompetitorBenchmark(competitorSynthesis),
+      ...(input.commonHeadings?.length
+        ? { commonHeadings: input.commonHeadings }
+        : {}),
+    },
     input.plannerTargets,
   );
   let targetKg = input.knowledgeGraph
@@ -302,19 +316,24 @@ export function runContentPlanner(input: RunContentPlannerInput): RunContentPlan
   const claimsAfter = validateClaims(html, targetKg);
   const questionsAfter = validateQuestions(html, targetKg);
   const coverageAfter = requiredCoverageRate(claimsAfter.items);
+  const planConformity = validatePlanConformity(
+    html,
+    bundle.outline.sections.map((s) => s.heading),
+  );
 
   return {
     bundle,
     blueprintValidation,
     outlineValidation,
     briefValidation,
-    canWrite,
+    canWrite: canWrite && planConformity.ok,
     html,
     postWrite: {
       flow,
       claims: claimsAfter.result,
       questions: questionsAfter.result,
       seo: validateSeoAgainstBlueprint(html, blueprint),
+      planConformity,
       coverageBefore,
       coverageAfter,
       rewriteSteps: rewritePlan.steps.length,
@@ -374,9 +393,21 @@ export async function finalizePlannerForWrite(
   }
 
   bundle.quickAnswer = quickAnswer;
+  if (bundle.outline) {
+    const lang = bundle.reader.language === 'en' ? 'en' : 'pl';
+    bundle.outline = {
+      ...bundle.outline,
+      h1: titleizeH1({
+        keyword: bundle.keyword,
+        lang,
+        year: bundle.intent.yearHint,
+        quickAnswer,
+      }),
+    };
+  }
   bundle.knowledgeCoverage = computeKnowledgeCoverage({
     kg: bundle.targetKg,
-    outline: bundle.outline,
+    outline: bundle.outline!,
     briefs: bundle.briefs,
   });
 

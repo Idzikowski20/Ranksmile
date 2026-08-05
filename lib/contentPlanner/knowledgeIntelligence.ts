@@ -20,7 +20,8 @@ export type AiSearchIntelInput = {
 
 function slugId(prefix: string, text: string, i: number): string {
   const base = text.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/gi, '-').slice(0, 40);
-  return `${prefix}-${base || i}`;
+  // Always append index so long/punctuation-variant collisions cannot overwrite map keys.
+  return `${prefix}-${base || 'x'}-${i}`;
 }
 
 function sourceConfidence(url: string): number {
@@ -76,13 +77,10 @@ export function buildTargetKnowledgeGraph(opts: {
       claimCounts.set(k, (claimCounts.get(k) || 0) + 1);
     }
   }
-  for (const c of ai?.claims ?? []) {
-    const k = c.trim().toLowerCase();
-    if (!k) continue;
-    claimCounts.set(k, (claimCounts.get(k) || 0) + 1);
-  }
+  // Gain-frequency stays competitor-only — AI claims must not inflate core promotion.
 
   const statements = new Map<string, string>();
+  const claimHasAi = new Set<string>();
   for (const p of profiles) {
     for (const c of p.claims) {
       const k = c.trim().toLowerCase();
@@ -91,7 +89,9 @@ export function buildTargetKnowledgeGraph(opts: {
   }
   for (const c of ai?.claims ?? []) {
     const k = c.trim().toLowerCase();
-    if (k && !statements.has(k)) statements.set(k, c.trim());
+    if (!k) continue;
+    claimHasAi.add(k);
+    if (!statements.has(k)) statements.set(k, c.trim());
   }
 
   const aiSources = (ai?.sources ?? []).map((s) => ({
@@ -114,7 +114,8 @@ export function buildTargetKnowledgeGraph(opts: {
       importance,
       gainClass,
       priority,
-      sources: aiSources.slice(0, 3),
+      // AI citation URLs only for claims backed by AI evidence.
+      sources: claimHasAi.has(norm) ? aiSources.slice(0, 3) : [],
       citationHint: profiles.find((p) => p.claims.some((x) => x.toLowerCase() === norm))?.url,
     });
   }
