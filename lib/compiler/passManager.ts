@@ -63,7 +63,7 @@ export function createPassManager(passes: readonly CompilerPass[]) {
     const done = new Set<string>();
 
     function visit(id: string): void {
-      if (done.has(id) || !enabledSet.has(id)) return;
+      if (done.has(id)) return;
       if (visiting.has(id)) {
         throw new Error(`PassManager: cycle at ${id}`);
       }
@@ -76,7 +76,7 @@ export function createPassManager(passes: readonly CompilerPass[]) {
       ordered.push(pass);
     }
 
-    for (const id of enabled) visit(id);
+    for (const id of enabledSet) visit(id);
     return ordered;
   }
 

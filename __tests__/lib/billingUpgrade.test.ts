@@ -114,4 +114,15 @@ describe('applySubscriptionUpgrade pending updates', () => {
     expect(calls[1][1].payment_behavior).toBe('pending_if_incomplete');
     expect(calls[1][1]).not.toHaveProperty('cancel_at_period_end');
   });
+
+  it('does not request payment after an immediately paid upgrade', async () => {
+    const stripe = mockStripe({
+      ...baseSub,
+      latest_invoice: { confirmation_secret: { client_secret: 'pi_paid_secret' } },
+    });
+
+    const { result } = await applySubscriptionUpgrade(stripe, args);
+
+    expect(result).toEqual({ status: 'upgraded', subscriptionId: 'sub_x' });
+  });
 });

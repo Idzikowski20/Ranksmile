@@ -6,6 +6,7 @@ function nextId(n: { i: number }): string {
 }
 
 function textOf(node: TipTapNode): string {
+  if (node.type === 'hardBreak') return '\n';
   if (node.text) return node.text;
   if (!node.content) return '';
   return node.content.map(textOf).join('');
@@ -33,7 +34,17 @@ function walkTipTap(nodes: readonly TipTapNode[], out: LexToken[], ctr: { i: num
       continue;
     }
     if (type === 'listItem' || type === 'list_item') {
-      out.push({ kind: 'list_item', text: textOf(node).trim(), blockId: nextId(ctr) });
+      const text = (node.content ?? [])
+        .filter((child) => child.type !== 'bulletList' && child.type !== 'orderedList')
+        .map(textOf)
+        .join('')
+        .trim();
+      if (text) out.push({ kind: 'list_item', text, blockId: nextId(ctr) });
+      for (const child of node.content ?? []) {
+        if (child.type === 'bulletList' || child.type === 'orderedList') {
+          walkTipTap(child.content ?? [], out, ctr);
+        }
+      }
       continue;
     }
     if (type === 'bulletList' || type === 'orderedList' || type === 'doc') {
@@ -53,6 +64,12 @@ function lexPlain(text: string): readonly LexToken[] {
   const ctr = { i: 0 };
   const chunks = text.replace(/\r\n/g, '\n').split(/\n{2,}/);
   const out: LexToken[] = [];
+  const emitList = (lines: readonly string[]): boolean => {
+    const items = lines.map((line) => /^\s*(?:[-*+]\s+|\d+[.)]\s+)(.+)$/.exec(line)?.[1]?.trim() ?? '');
+    if (items.length === 0 || items.some((item) => !item)) return false;
+    for (const item of items) out.push({ kind: 'list_item', text: item, blockId: nextId(ctr) });
+    return true;
+  };
   for (const chunk of chunks) {
     const trimmed = chunk.trim();
     if (!trimmed) continue;
@@ -67,6 +84,8 @@ function lexPlain(text: string): readonly LexToken[] {
       });
       continue;
     }
+    if (emitList(trimmed.split('\n'))) continue;
+
     // multi-line chunk: first line heading, rest paragraph
     const lines = trimmed.split('\n');
     const first = lines[0] ?? '';
@@ -79,8 +98,9 @@ function lexPlain(text: string): readonly LexToken[] {
         headingLevel: level,
         blockId: nextId(ctr),
       });
-      const rest = lines.slice(1).join('\n').trim();
-      if (rest) {
+      const restLines = lines.slice(1);
+      const rest = restLines.join('\n').trim();
+      if (rest && !emitList(restLines)) {
         out.push({ kind: 'paragraph', text: rest, blockId: nextId(ctr) });
       }
       continue;

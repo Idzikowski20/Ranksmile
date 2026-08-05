@@ -319,19 +319,7 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
             return;
           }
 
-          const confirmParams = {
-            return_url: `${window.location.origin}/dashboard`,
-          };
-          const result = intentType === 'setup'
-            ? await stripe.confirmSetup({ elements, confirmParams, redirect: 'if_required' })
-            : await stripe.confirmPayment({ elements, confirmParams, redirect: 'if_required' });
-
-          if (result.error) {
-            onError(result.error.message ?? 'Payment failed');
-            return;
-          }
-
-          // Address is required for Stripe Tax before trial / payment.
+          // Stripe Tax must see a validated customer location before invoice payment.
           const addr = company.addressValue!.address;
           const response = await fetch('/api/billing/update-customer', {
             method: 'POST',
@@ -353,6 +341,18 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
           if (!response.ok) {
             const data = await response.json() as { error?: string };
             onError(data.error ?? 'Could not save billing address for tax');
+            return;
+          }
+
+          const confirmParams = {
+            return_url: `${window.location.origin}/dashboard`,
+          };
+          const result = intentType === 'setup'
+            ? await stripe.confirmSetup({ elements, confirmParams, redirect: 'if_required' })
+            : await stripe.confirmPayment({ elements, confirmParams, redirect: 'if_required' });
+
+          if (result.error) {
+            onError(result.error.message ?? 'Payment failed');
             return;
           }
 
