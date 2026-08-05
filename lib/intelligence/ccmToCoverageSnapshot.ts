@@ -121,21 +121,22 @@ export function projectCcmToCoverageSnapshot(
     intents.some((i) => i.primary && isCovered(i.status));
 
   // Cap CCM dump — UI checklist must stay near AI_COVERAGE_MAX (not 100+ facts).
-  const compacted = compactCoverageSnapshotItems(items);
+  const compacted = compactCoverageSnapshotItems(
+    items,
+    model.metadata.primaryQuery ?? model.metadata.title ?? '',
+  );
   const capped = compacted.length > AI_COVERAGE_MAX
     ? compacted.slice(0, AI_COVERAGE_MAX)
     : compacted;
 
   const { overall, buckets } = computeCoverageScores(capped, answersMainQuestionEarly);
 
-  const topics: CoverageTopicGroup[] = intents
-    .map((intentNode) => {
+  const topics = intents.reduce<CoverageTopicGroup[]>((groups, intentNode) => {
       const supporting = q.neighbors(intentNode.id, 'supports', 'in');
       const itemIds = supporting.map((n) => n.id).filter((id) => capped.some((it) => it.id === id));
-      if (!itemIds.length) return null;
-      return { title: intentNode.label, itemIds };
-    })
-    .filter((t): t is CoverageTopicGroup => t != null);
+      if (itemIds.length) groups.push({ title: intentNode.label, itemIds });
+      return groups;
+    }, []);
 
   return {
     schemaVersion: 1,

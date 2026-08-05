@@ -1,17 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { billingError } from '../../../../../../lib/billing/billingErrors';
-import { appendBillingDomainEvent } from '../../../../../../lib/billing/domainEvents';
+import { billingError } from '../../../../../lib/billing/billingErrors';
+import { appendBillingDomainEvent } from '../../../../../lib/billing/domainEvents';
 import {
   listPaymentMethods,
   setDefaultPaymentMethod,
-} from '../../../../../../lib/billing/paymentMethodService';
-import { BillingPolicy } from '../../../../../../lib/billing/billingPolicy';
-import { assertCanManage } from '../../../../../../lib/members';
-import { getOrgBillingState } from '../../../../../../lib/orgBilling';
-import { withOrgPaymentAccess } from '../../../../../../lib/requireOrgPaymentAccess';
-import { getStripe, isStripeConfigured } from '../../../../../../lib/stripe';
-import { ensureUserTenancy } from '../../../../../../lib/tenancy';
-import { getCurrentUserId } from '../../../../../../utils/getUser';
+} from '../../../../../lib/billing/paymentMethodService';
+import { BillingPolicy } from '../../../../../lib/billing/billingPolicy';
+import { assertCanManage } from '../../../../../lib/members';
+import { getOrgBillingState } from '../../../../../lib/orgBilling';
+import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
+import { getStripe, isStripeConfigured } from '../../../../../lib/stripe';
+import { ensureUserTenancy } from '../../../../../lib/tenancy';
+import { getCurrentUserId } from '../../../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

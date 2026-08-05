@@ -234,7 +234,7 @@ export async function deletePaymentMethod(
     newDefaultId = replacement.id;
   }
 
-  await stripe.paymentMethods.detach(args.paymentMethodId, {
+  await stripe.paymentMethods.detach(args.paymentMethodId, {}, {
     idempotencyKey: `org-${args.orgId}-pm-detach-${args.paymentMethodId}`,
   });
 

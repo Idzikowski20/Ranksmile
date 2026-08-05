@@ -845,7 +845,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                 synthesis: synth,
                 readerBrief: brief,
               });
-              (scoreData as Record<string, unknown>).wie_policy_hints = {
+              (scoreData as unknown as Record<string, unknown>).wie_policy_hints = {
                 dna_version: wie.policy?.dna_version,
                 dna_ab_variant: wie.policy?.dna_ab_variant,
                 opening: wie.policy?.decisions.find((d) => d.id === 'opening')?.value,

@@ -17,7 +17,7 @@ const schema = z.object({
   reason: z.string().min(1).max(500),
   decision: z.enum(['ALLOW', 'DENY', 'SKIP', 'ROLLBACK']),
   correlationId: z.string().min(1).max(120).optional(),
-  meta: z.record(z.unknown()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
 });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

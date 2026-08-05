@@ -134,5 +134,7 @@ export async function calculateStripeTaxPreview(
     }],
   });
 
-  return mapStripeTaxCalculation(calc, args.amountCents);
+  const calculationId = calc.id;
+  if (!calculationId) throw new Error('Stripe Tax calculation did not return an id');
+  return mapStripeTaxCalculation({ ...calc, id: calculationId }, args.amountCents);
 }
