@@ -79,14 +79,16 @@ describe('applyApprovedOutlineToPlan', () => {
     const next = applyApprovedOutlineToPlan(source, [
       { level: 1, text: 'Custom title' }, { level: 2, text: 'First' }, { level: 2, text: 'Second' },
     ]);
+    expect(next).not.toBeNull();
+    if (!next) throw new Error('Expected matching outline to produce a plan');
     expect(next.title).toBe('Custom title');
     expect(next.sections.map((item) => item.heading)).toEqual(['First', 'Second']);
     expect(next.sections[0].claims).toEqual(source.sections[0].claims);
   });
 
-  it('does not change section count and drop validated coverage', () => {
+  it('rejects a changed section count instead of silently dropping the approved outline', () => {
     const source = plan([section('one'), section('two')]);
-    expect(applyApprovedOutlineToPlan(source, [{ level: 2, text: 'Only one section' }])).toBe(source);
+    expect(applyApprovedOutlineToPlan(source, [{ level: 2, text: 'Only one section' }])).toBeNull();
   });
 });
 

@@ -295,7 +295,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (approvedHeadings.length > 0) {
-      writePlan = applyApprovedOutlineToPlan(writePlan, approvedHeadings);
+      const approvedPlan = applyApprovedOutlineToPlan(writePlan, approvedHeadings);
+      if (!approvedPlan) {
+        return res.status(422).json({
+          error: 'approved_outline_mismatch',
+          message: 'The approved outline must keep the validated section count. Regenerate the outline before writing.',
+        });
+      }
+      writePlan = approvedPlan;
     }
 
     const compiledResult = compileAndValidateWritePlan(writePlan, {
