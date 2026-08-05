@@ -27,11 +27,11 @@ import {
   competitorHeadingTitles,
 } from '../../../../lib/contentPlanner/fromArticleInputs';
 import {
+  compileAndValidateWritePlan,
   finalizePlannerForWrite,
   runContentPlanner,
-  toSidecarExecutionPlan,
   applyApprovedOutlineToPlan,
-  buildExecutionPlanFromApprovedOutline,
+  toSidecarCompiledPlan,
 } from '../../../../lib/contentPlanner';
 import type { ApprovedOutlineHeading } from '../../../../lib/contentPlanner';
 import {
@@ -281,24 +281,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const approvedHeadings = parseApprovedOutline(approvedOutline);
 
     let writePlan = finalized.bundle.executionPlan;
-    if (writePlan && approvedHeadings.length > 0) {
-      writePlan = applyApprovedOutlineToPlan(writePlan, approvedHeadings);
-    } else if (!writePlan && approvedHeadings.length > 0) {
-      // Outline-review path: user already approved Hn; don't block on CIE/Plan Validator.
-      writePlan = buildExecutionPlanFromApprovedOutline({
-        keyword,
-        headings: approvedHeadings,
-        bundle: {
-          intent: finalized.bundle.intent,
-          reader: finalized.bundle.reader,
-          benchmark: finalized.bundle.benchmark,
-          blueprint: finalized.bundle.blueprint,
-          builtAt: finalized.bundle.builtAt,
-        },
-      });
-    }
-
-    if (!writePlan) {
+    if (!finalized.canWrite || !writePlan) {
       return res.status(422).json({
         error: 'plan_validation_failed',
         message: 'Article Execution Plan failed Plan Validator — Write Engine not started',
@@ -311,7 +294,32 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
-    const executionPlan = toSidecarExecutionPlan(writePlan);
+    if (approvedHeadings.length > 0) {
+      writePlan = applyApprovedOutlineToPlan(writePlan, approvedHeadings);
+    }
+
+    const compiledResult = compileAndValidateWritePlan(writePlan, {
+      importantTerms: [],
+      allowBrandNiche,
+    });
+    if (!compiledResult.ok) {
+      return res.status(422).json({
+        error: 'compiled_write_plan_invalid',
+        issues: compiledResult.issues,
+        diagnostics: compiledResult.diagnostics,
+      });
+    }
+
+    const compiledWritePlan = toSidecarCompiledPlan(compiledResult.plan);
+    await db.query(
+      `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+      {
+        replacements: [
+          JSON.stringify({ ...nextScore, compiled_write_plan: compiledResult.plan }),
+          articleId,
+        ],
+      },
+    );
 
     // 6. Build the sidecar payload (snake_case keys match the sidecar GenerateRequest).
     const sidecarPayload = {
@@ -327,7 +335,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       review_outline: reviewOutline,
       brand_knowledge: allowBrandNiche ? brandKnowledge : '',
       voice_tone: voiceTone,
-      execution_plan: executionPlan,
+      compiled_write_plan: compiledWritePlan,
     };
 
     // 7. Async: enqueue a job, mark the article 'generating', and kick off the sidecar.
@@ -361,6 +369,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       jobId,
       articleId,
       planHash: writePlan.planHash,
+      diagnostics: compiledResult.diagnostics,
     });
   } catch (error) {
     console.error('[articles/[id]/generate] error:', error);

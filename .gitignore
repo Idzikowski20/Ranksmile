@@ -55,6 +55,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# generated Python bytecode and local SDD work products
+__pycache__/
+*.py[cod]
+.superpowers/sdd/
+
 
 #todo
 TODO

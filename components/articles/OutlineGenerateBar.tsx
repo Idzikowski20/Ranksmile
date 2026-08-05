@@ -78,7 +78,7 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Button type="button" variant="secondary" size="sm" onClick={onCancel} disabled={busy}>
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           Cancel
         </Button>
         <Button
