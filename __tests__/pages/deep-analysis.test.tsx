@@ -31,6 +31,10 @@ function response(body: Record<string, unknown>): Response {
   return { ok: true, json: async () => body } as unknown as Response;
 }
 
+function errorResponse(body: Record<string, unknown>): Response {
+  return { ok: false, json: async () => body } as unknown as Response;
+}
+
 function streamResponse(payload: string): Response {
   const bytes = Buffer.from(payload, 'utf8');
   let sent = false;
@@ -231,6 +235,46 @@ describe('DeepAnalysisPage', () => {
     unmount();
   });
 
+  it('keeps the failed article recovery action when retry fails before creating a job', async () => {
+    const firstStream = deferredStreamResponse();
+    let deepAnalysisCalls = 0;
+
+    fetchMock.mockImplementation((input) => {
+      const requestUrl = String(input);
+      if (requestUrl === '/api/articles/deep-analysis') {
+        deepAnalysisCalls += 1;
+        return Promise.resolve(deepAnalysisCalls === 1
+          ? firstStream.response
+          : errorResponse({ error: 'Retry request failed' }));
+      }
+      if (requestUrl === '/api/articles/job-progress?jobId=job_177_1') {
+        return Promise.resolve(response({ status: 'running', currentStage: 'fetch_page' }));
+      }
+      throw new Error(`Unexpected fetch: ${requestUrl}`);
+    });
+
+    const { unmount } = render(<DeepAnalysisPage />);
+
+    await act(async () => {
+      firstStream.release('event: created\ndata: {"articleId":177,"jobId":"job_177_1"}\n\n');
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/articles/job-progress?jobId=job_177_1'));
+    await act(async () => {
+      firstStream.release('event: error\ndata: {"step":"pipeline","message":"Initial pipeline failed"}\n\n');
+      firstStream.finish();
+    });
+
+    await waitFor(() => expect(screen.getByText('Initial pipeline failed')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    await waitFor(() => expect(screen.getByText('Retry request failed')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Open article' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Content type' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Open article' }));
+    expect(routerPush).toHaveBeenCalledWith('/articles/177');
+    unmount();
+  });
+
   it('marks the polling stage row when a background job fails', async () => {
     fetchMock.mockImplementation((input) => {
       const requestUrl = String(input);
@@ -243,7 +287,8 @@ describe('DeepAnalysisPage', () => {
         return Promise.resolve(response({
           status: 'failed',
           currentStage: 'scrape_serp',
-          progressMessage: 'SERP collection failed',
+          error: 'SERP collection failed',
+          progressMessage: 'Scraping competitor 7/10',
         }));
       }
       throw new Error(`Unexpected fetch: ${requestUrl}`);
@@ -251,11 +296,13 @@ describe('DeepAnalysisPage', () => {
 
     const { container } = render(<DeepAnalysisPage />);
 
-    await waitFor(() => expect(screen.getByText('SERP collection failed')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('SERP collection failed'));
     const errorRows = container.querySelectorAll<HTMLElement>('.deep-analysis-step--error');
     expect(errorRows).toHaveLength(1);
     expect(errorRows[0]).toHaveTextContent('Analyzing SERP competitors');
     expect(errorRows[0]).toHaveTextContent('SERP collection failed');
+    expect(screen.getByRole('alert')).toHaveTextContent('SERP collection failed');
+    expect(screen.queryByText('Scraping competitor 7/10')).not.toBeInTheDocument();
   });
 
   it('persists a job discovered by article polling and resumes it after remount', async () => {

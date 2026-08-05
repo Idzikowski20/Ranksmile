@@ -35,6 +35,7 @@ interface AnalysisProgressPayload {
   message?: string;
   status?: string;
   progressMessage?: string;
+  error?: string | null;
 }
 
 type StageName = 'fetch_page' | 'scrape_serp' | 'classify_content' | 'extract_terms' | 'score_ranking' | 'ai_search' | 'finalizing' | 'done';
@@ -176,6 +177,7 @@ const DeepAnalysisPage: NextPage = () => {
     STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })),
   );
   const [articleId, setArticleId] = useState<number | null>(null);
+  const [recoveryArticleId, setRecoveryArticleId] = useState<number | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [overallError, setOverallError] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
@@ -276,6 +278,7 @@ const DeepAnalysisPage: NextPage = () => {
                   setJobId(data.jobId);
                   writePageRun(runSessionKey, data.articleId, data.jobId);
                   retryArticleIdRef.current = null;
+                  setRecoveryArticleId(null);
                 }
               } else if (currentEvent === 'error') {
                 const message = data.message || 'Analysis failed';
@@ -341,7 +344,7 @@ const DeepAnalysisPage: NextPage = () => {
         }
 
         if (data.status === 'failed') {
-          const message = data.progressMessage || data.message || 'Analysis failed';
+          const message = data.error || data.progressMessage || data.message || 'Analysis failed';
           setSteps((prev) => markFailedStep(prev, data.step, data.currentStage, message));
           setOverallError(message);
           clearPageRun(runSessionKey);
@@ -392,7 +395,9 @@ const DeepAnalysisPage: NextPage = () => {
 
   const handleRetry = () => {
     runGenerationRef.current += 1;
-    retryArticleIdRef.current = articleId ?? retryArticleIdRef.current;
+    const retryArticleId = articleId ?? retryArticleIdRef.current;
+    retryArticleIdRef.current = retryArticleId;
+    setRecoveryArticleId(retryArticleId);
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     setOverallError(null);
     setArticleId(null);
@@ -403,6 +408,8 @@ const DeepAnalysisPage: NextPage = () => {
     startedRef.current = false;
     setRetryCount((c) => c + 1);
   };
+
+  const recoveryTargetArticleId = articleId ?? recoveryArticleId;
 
   useEffect(() => {
     if (!router.isReady || flow !== 'import') return undefined;
@@ -439,8 +446,8 @@ const DeepAnalysisPage: NextPage = () => {
             <Button variant="primary" size="sm" onClick={handleRetry}>
               Try again
             </Button>
-            {articleId && (
-              <Button variant="secondary" size="sm" onClick={() => router.push(`/articles/${articleId}`)}>
+            {recoveryTargetArticleId && (
+              <Button variant="secondary" size="sm" onClick={() => router.push(`/articles/${recoveryTargetArticleId}`)}>
                 Open article
               </Button>
             )}
