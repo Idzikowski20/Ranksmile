@@ -94,7 +94,7 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
         name="CheckCircle"
         size={20}
         weight="fill"
-        color="var(--koala-status-success)"
+        color="color-mix(in srgb, var(--koala-status-success) 50%, var(--koala-text-primary))"
         className="deep-analysis-step-icon__done"
       />
     );
@@ -105,7 +105,7 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
         name="XCircle"
         size={20}
         weight="fill"
-        color="var(--koala-status-danger)"
+        color="color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary))"
         className="deep-analysis-step-icon__error"
       />
     );
@@ -118,7 +118,7 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
       name="Circle"
       size={18}
       weight="bold"
-      color="var(--koala-border-strong)"
+      color="var(--koala-text-secondary)"
       className="deep-analysis-step-icon__pending"
     />
   );
