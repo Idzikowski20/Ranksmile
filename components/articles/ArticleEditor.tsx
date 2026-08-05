@@ -2352,7 +2352,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         {generateBusy && !outlineReviewMode && (
           <GenerateWritingOverlay message={generateMsg} pct={generatePct} />
         )}
-        {outlineReviewMode && (outlineHeadingCount > 0 || generateBusy || outlineBusy) && (
+        {outlineReviewMode && (
           <OutlineGenerateBar
             busy={generateBusy || outlineBusy}
             status={outlineBusy ? 'Building outline…' : generateMsg}

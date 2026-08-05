@@ -1,4 +1,11 @@
 export * from './types';
+export * from './knowledgePack/types';
+export { buildCompileDiagnostics } from './knowledgePack/compileDiagnostics';
+export { validateStructural } from './knowledgePack/validateStructural';
+export { validateSemantic } from './knowledgePack/validateSemantic';
+export { validateRuntime } from './knowledgePack/validateRuntime';
+export { validateCompiledWritePlan } from './knowledgePack/validateCompiledWritePlan';
+export { compileWritePlan, compileAndValidateWritePlan } from './knowledgePack/compileWritePlan';
 export { buildIntentBlueprint } from './intentBlueprint';
 export { buildReaderModel } from './readerModel';
 export { buildCompetitorProfile, buildCompetitorProfiles } from './competitorIntelligence';
@@ -69,8 +76,9 @@ export {
 export { buildRewritePlan, runKnowledgeCompletion } from './knowledgeCompletion';
 export { computeKnowledgeCoverage } from './knowledgeCoverage';
 export { buildArticleExecutionPlan, toSidecarExecutionPlan, hashExecutionPlanPayload } from './executionPlan';
-export { applyApprovedOutlineToPlan, buildExecutionPlanFromApprovedOutline } from './applyApprovedOutline';
-export type { ApprovedOutlineHeading, ApprovedOutlinePlanBundle } from './applyApprovedOutline';
+export { applyApprovedOutlineToPlan } from './applyApprovedOutline';
+export type { ApprovedOutlineHeading } from './applyApprovedOutline';
+export { toSidecarCompiledPlan } from './knowledgePack/toSidecarCompiledPlan';
 export { generateQuickAnswer } from './quickAnswer';
 export { runContentPlanner, finalizePlannerForWrite } from './runContentPlanner';
 export type { RunContentPlannerInput, RunContentPlannerResult } from './runContentPlanner';

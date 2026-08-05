@@ -128,6 +128,7 @@ class GenerateRequest(BaseModel):
     voice_tone: str = ""        # selected Custom Voice reference text — drives tone/style
     # Planner First — immutable Article Execution Plan (Write Engine executes only).
     execution_plan: dict | None = None
+    compiled_write_plan: dict | None = None
 
 
 class GenerateResponse(BaseModel):
@@ -204,6 +205,7 @@ async def generate_article(req: GenerateRequest):
         brand_knowledge=req.brand_knowledge,
         voice_tone=req.voice_tone,
         execution_plan=req.execution_plan,
+        compiled_write_plan=req.compiled_write_plan,
     )
 
     # Surfer-style mid-article images (Pollinations) — fail-soft
@@ -540,14 +542,18 @@ async def pipeline_generate(req: DomainSetupRequest):
 async def run_generate(job_id: str, payload: dict, nextjs_url: str) -> None:
     """Generate one article and post the result to job-progress. Never raises
     (runs as an asyncio background task) — always posts a terminal done/failed callback."""
-    from pipeline.domain_runner import post_terminal
+    from pipeline.domain_runner import post_progress, post_terminal
     try:
+        if "compiled_write_plan" in payload:
+            await post_progress(nextjs_url, job_id, 10, "Executing compiled write plan")
         resp = await generate_article(GenerateRequest(**payload))
         html = (resp.article_html or "").strip()
         plain = re.sub(r"<[^>]+>", " ", html)
         plain = re.sub(r"\s+", " ", plain).strip()
         if len(plain) < 80:
             raise RuntimeError(f"empty_article_html (chars={len(html)})")
+        if "compiled_write_plan" in payload:
+            await post_progress(nextjs_url, job_id, 90, "Compiled write plan rendered")
         await post_terminal(nextjs_url, job_id, "done", result=resp.model_dump())
     except Exception as exc:
         err = f"{type(exc).__name__}: {exc}"
