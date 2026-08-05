@@ -119,6 +119,50 @@ describe('Content Planner v2 — Competitor Benchmark', () => {
 });
 
 describe('Content Planner v2 — Planning gates + article', () => {
+  it('uses partial topic blocks without replacing the legacy knowledge graph', () => {
+    const result = runContentPlanner({
+      keyword: 'jak reagować na szantaż',
+      language: 'pl',
+      competitors: [{
+        url: 'https://example.com/szantaz',
+        position: 1,
+        wordCount: 2200,
+        paragraphs: 55,
+        headings: 9,
+        lists: 5,
+        tables: 1,
+        images: 2,
+        faq: 3,
+        examples: 4,
+        claims: [
+          'Nie należy płacić szantażyście.',
+          'Wiadomości trzeba zabezpieczyć jako dowody.',
+          'Groźby można zgłosić organom ścigania.',
+          'Szybka reakcja ogranicza ryzyko eskalacji.',
+          'Pomoc prawna porządkuje dalsze działania.',
+          'Wsparcie psychologiczne pomaga odzyskać kontrolę.',
+        ],
+        questions: ['Co zrobić natychmiast?', 'Jak zabezpieczyć dowody?', 'Gdzie zgłosić szantaż?'],
+        entities: ['szantaż', 'dowody', 'policja'],
+      }],
+      topicBlocks: [{
+        id: 'topic-emergency',
+        title: 'Procedura bezpieczeństwa krok po kroku',
+        role: 'ACTION',
+        consensus: 0.9,
+        memberHeadings: [],
+        claimIds: [],
+      }],
+      produceArticle: false,
+    });
+
+    expect(result.bundle.targetKg.claims).toHaveLength(6);
+    expect(result.blueprintValidation.ok).toBe(true);
+    expect(result.bundle.outline?.sections.some((section) => (
+      section.heading === 'Procedura bezpieczeństwa krok po kroku'
+    ))).toBe(true);
+  });
+
   it('passes blueprint/outline gates and improves coverage via KCE', () => {
     const profiles = sampleCompetitors();
     const result = runContentPlanner({

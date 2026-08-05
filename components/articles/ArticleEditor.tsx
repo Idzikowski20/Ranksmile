@@ -48,6 +48,12 @@ import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 import OutlineGenerateBar from './OutlineGenerateBar';
 import { revealHtmlInEditor, editorCanCommand } from '../../lib/editor/revealHtmlProgressive';
 import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
+import { clearWizardState } from '../../lib/wizardState';
+import {
+  collectApprovedOutline,
+  reviewOutlineToHtml,
+  type ApprovedOutlineHeading,
+} from '../../lib/contentPlanner';
 
 function collectOutlineHeadings(ed: Editor): Array<{ level: number; text: string }> {
   const out: Array<{ level: number; text: string }> = [];
@@ -1010,7 +1016,6 @@ const filterSlashItems = (query: string, askRanksmileRef: React.MutableRefObject
  * empty: import from URL, insert a competitor-derived outline, or open Ranksmile. */
 const CTA_FONT = 'var(--font-family-primary)';
 const IconGlobe = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18M5.25 6h.008v.008H5.25zM7.5 6h.008v.008H7.5zm2.25 0h.008v.008H9.75z" /></svg>);
-const IconOutline = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.008v.008H3.75zm0 5.25h.008v.008H3.75zm0 5.25h.008v.008H3.75z" /></svg>);
 const IconSpark = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="currentColor" d="M9 3l1.2 3.3L13.5 7.5L10.2 8.7L9 12L7.8 8.7L4.5 7.5L7.8 6.3zm7 6l.9 2.4l2.4.9l-2.4.9l-.9 2.4l-.9-2.4l-2.4-.9l2.4-.9z" /></svg>);
 const IconClose = () => (<svg viewBox="0 0 20 20" width={18} height={18}><path fill="currentColor" d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" /></svg>);
 
@@ -1141,6 +1146,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [outlineReviewMode, setOutlineReviewMode] = useState(false);
     const outlineAutoStarted = useRef(false);
     const [outlineHeadingCount, setOutlineHeadingCount] = useState(0);
+    const outlineRequestRef = useRef<AbortController | null>(null);
+    const outlineOriginalHtmlRef = useRef<string | null>(null);
     const revealAbortRef = useRef<AbortController | null>(null);
     const revealPlayingRef = useRef(false);
     const mountRevealDone = useRef(false);
@@ -1790,6 +1797,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     }, [content, editor, router.query.reveal]);
 
     useEffect(() => () => {
+      outlineRequestRef.current?.abort();
       revealAbortRef.current?.abort();
     }, []);
 
@@ -1857,26 +1865,32 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const articleId = commentArticleId ? Number(commentArticleId) : undefined;
       if (!kw && !articleId) { toast.error('No keyword available to build an outline.'); return; }
       if (!editor) return;
+      outlineRequestRef.current?.abort();
+      const request = new AbortController();
+      outlineRequestRef.current = request;
+      outlineOriginalHtmlRef.current ??= editor.getHTML();
       setOutlineBusy(true);
       try {
-        const res = await fetch('/api/articles/generate-outline', {
+        const res = await fetch(articleId ? `/api/articles/${articleId}/content-plan` : '/api/articles/generate-outline', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keyword: kw, articleId }),
+          body: JSON.stringify(articleId ? { persist: true } : { keyword: kw }),
+          signal: request.signal,
         });
-        const data = await res.json();
-        const headings: Array<{ level: number; text: string }> = Array.isArray(data.headings) ? data.headings : [];
+        const data = await res.json() as { headings?: ApprovedOutlineHeading[]; error?: string };
+        if (outlineRequestRef.current !== request || request.signal.aborted) return;
+        const headings = Array.isArray(data.headings) ? data.headings : [];
         if (!res.ok || headings.length === 0) throw new Error(data.error || 'Could not generate an outline.');
-        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const html = `${headings.map((h) => {
-          const lvl = Math.min(Math.max(h.level, 1), 4);
-          return `<h${lvl}>${esc(h.text)}</h${lvl}>`;
-        }).join('')}<p></p>`;
-        await playReveal(html, true);
+        const html = reviewOutlineToHtml(headings);
+        await playReveal(html, true, 'preserve');
+        if (outlineRequestRef.current !== request || request.signal.aborted) return;
         setOutlineHeadingCount(headings.length);
       } catch (e) {
-        toast.error(getErrorMessage(e) || 'Could not generate an outline.');
+        if (!request.signal.aborted) toast.error(getErrorMessage(e) || 'Could not generate an outline.');
       } finally {
-        setOutlineBusy(false);
+        if (outlineRequestRef.current === request) {
+          outlineRequestRef.current = null;
+          setOutlineBusy(false);
+        }
       }
     };
 
@@ -1890,7 +1904,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     };
 
     const handleWriteWithAi = async (opts?: {
-      approvedOutline?: Array<{ level: number; text: string }>;
+      approvedOutline?: ApprovedOutlineHeading[];
       internalLinks?: boolean;
       externalLinks?: boolean;
       contentType?: string;
@@ -2033,6 +2047,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         await playReveal(html, true, 'preserve');
         if (!isCurrentRun()) return;
         generationRevealHtmlRef.current = null;
+        outlineOriginalHtmlRef.current = null;
         setOutlineReviewMode(false);
         if (router.query.reviewOutline) {
           const q = { ...router.query };
@@ -2042,6 +2057,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           delete q.type;
           void router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
         }
+        void clearWizardState(String(articleId));
         toast.success('Article generated');
       } catch (e) {
         if (isCurrentRun()) toast.error(getErrorMessage(e) || 'Could not generate the article.');
@@ -2081,7 +2097,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     const handleOutlineGenerate = () => {
       if (!editor) return;
-      const approvedOutline = collectOutlineHeadings(editor);
+      const approvedOutline = collectApprovedOutline(editor.getJSON());
       if (!approvedOutline.length) {
         toast.error('Add at least one heading before generating.');
         return;
@@ -2094,16 +2110,30 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       });
     };
 
+    const handleStartOutlineReview = () => {
+      setOutlineReviewMode(true);
+      void router.replace({
+        pathname: router.pathname,
+        query: { ...router.query, reviewOutline: '1' },
+      }, undefined, { shallow: true });
+    };
+
     const handleOutlineCancel = () => {
       const activeJob = generationJobIdRef.current;
       const activeReveal = generationRevealHtmlRef.current;
+      outlineRequestRef.current?.abort();
+      outlineRequestRef.current = null;
       generationRunRef.current += 1;
       generationJobIdRef.current = null;
       revealAbortRef.current?.abort();
       if (activeReveal && editorCanCommand(editor)) {
         editor.commands.setContent(activeReveal.html, { emitUpdate: true });
+      } else if (outlineOriginalHtmlRef.current !== null && editorCanCommand(editor)) {
+        editor.commands.setContent(outlineOriginalHtmlRef.current, { emitUpdate: true });
       }
+      outlineOriginalHtmlRef.current = null;
       generationRevealHtmlRef.current = null;
+      setOutlineBusy(false);
       setGenerateBusy(false);
       setGeneratePct(null);
       if (activeJob) {
@@ -2318,8 +2348,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                     <div style={{ fontSize: 14, color: 'var(--koala-text-disabled)', margin: '0 0 12px' }}>or get started with</div>
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <CtaButton icon={<IconGlobe />} onClick={() => setCtaMode('import')}>Import content from URL</CtaButton>
-                      <CtaButton icon={<IconOutline />} onClick={handleInsertOutline} busy={outlineBusy}>Insert Outline</CtaButton>
-                      <CtaButton icon={<IconSpark />} onClick={() => { void handleWriteWithAi(); }} busy={generateBusy}>Write with Smily AI</CtaButton>
+                      <CtaButton icon={<IconSpark />} onClick={handleStartOutlineReview} busy={outlineBusy}>Write with Smily AI</CtaButton>
                     </div>
                   </>
                 )}

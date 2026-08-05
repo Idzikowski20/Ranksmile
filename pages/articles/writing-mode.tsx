@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
+import toast from 'react-hot-toast';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
 import { Switch } from '../../components/koala/core';
 import { saveWizardState, clearWizardState } from '../../lib/wizardState';
 import { useArticle } from '../../services/article';
+import { articleOutlineReviewHref } from '../../lib/articleFlow';
 
 const WritingModePage: NextPage = () => {
   const router = useRouter();
@@ -13,7 +15,6 @@ const WritingModePage: NextPage = () => {
 
   const [mode, setMode] = useState<'write' | 'generate'>('generate');
   const [customizeOpen, setCustomizeOpen] = useState(false);
-  const [reviewOutline, setReviewOutline] = useState(false);
   const [internalLinks, setInternalLinks] = useState(true);
   const [externalLinks, setExternalLinks] = useState(true);
   const [hydrated, setHydrated] = useState(false);
@@ -26,7 +27,6 @@ const WritingModePage: NextPage = () => {
       const ws = article?.wizard_state ? JSON.parse(article.wizard_state) : null;
       if (ws) {
         if (ws.mode === 'write' || ws.mode === 'generate') setMode(ws.mode);
-        if (typeof ws.outline === 'boolean') setReviewOutline(ws.outline);
         if (typeof ws.internal === 'boolean') setInternalLinks(ws.internal);
         if (typeof ws.external === 'boolean') setExternalLinks(ws.external);
       }
@@ -36,9 +36,11 @@ const WritingModePage: NextPage = () => {
 
   useEffect(() => {
     if (!hydrated || !articleId) return undefined;
-    const t = setTimeout(() => saveWizardState(articleId, { step: 'writing-mode', mode, outline: reviewOutline, internal: internalLinks, external: externalLinks }), 350);
+    const t = setTimeout(() => saveWizardState(articleId, {
+      step: 'writing-mode', mode, outline: true, internal: internalLinks, external: externalLinks,
+    }), 350);
     return () => clearTimeout(t);
-  }, [hydrated, articleId, mode, reviewOutline, internalLinks, externalLinks]);
+  }, [hydrated, articleId, mode, internalLinks, externalLinks]);
 
   const goBack = () => {
     const q = new URLSearchParams();
@@ -46,31 +48,26 @@ const WritingModePage: NextPage = () => {
     q.set('type', type);
     router.push(`/articles/context?${q.toString()}`);
   };
-  const goNext = () => {
+  const goNext = async () => {
     if (mode === 'write') {
-      if (articleId) { clearWizardState(articleId); router.push(`/articles/${articleId}`); return; }
-      router.push('/articles');
+      if (articleId) {
+        if (!await clearWizardState(articleId)) {
+          toast.error('Could not finish the setup. Please try again.');
+          return;
+        }
+        await router.push(`/articles/${articleId}`);
+        return;
+      }
+      await router.push('/articles');
       return;
     }
-    // Review outline: skip generating page — outline lands in the editor first.
-    if (reviewOutline) {
-      if (!articleId) { router.push('/articles'); return; }
-      clearWizardState(articleId);
-      const q = new URLSearchParams();
-      q.set('reviewOutline', '1');
-      q.set('type', type);
-      q.set('internal', internalLinks ? '1' : '0');
-      q.set('external', externalLinks ? '1' : '0');
-      router.push(`/articles/${articleId}?${q.toString()}`);
-      return;
-    }
-    const q = new URLSearchParams();
-    if (articleId) q.set('articleId', articleId);
-    q.set('type', type);
-    q.set('outline', '0');
-    q.set('internal', internalLinks ? '1' : '0');
-    q.set('external', externalLinks ? '1' : '0');
-    router.push(`/articles/generating?${q.toString()}`);
+    // Generated content always starts with outline review in the editor.
+    if (!articleId) { await router.push('/articles'); return; }
+    await router.push(articleOutlineReviewHref(articleId, {
+      contentType: type,
+      internalLinks,
+      externalLinks,
+    }));
   };
 
   const card = (active: boolean, onClick: () => void, children: React.ReactNode) => (
@@ -144,7 +141,6 @@ const WritingModePage: NextPage = () => {
               {customizeOpen && mode === 'generate' && (
                 <div onClick={(e) => e.stopPropagation()} className="koala-wizard-customize">
                   {[
-                    { l: 'Review outline before generating content', v: reviewOutline, set: (c: boolean) => setReviewOutline(c) },
                     { l: 'Insert internal links to your site', v: internalLinks, set: (c: boolean) => setInternalLinks(c) },
                     { l: 'Insert external links to third-party sources', v: externalLinks, set: (c: boolean) => setExternalLinks(c) },
                   ].map((row) => (

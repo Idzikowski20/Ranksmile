@@ -37,3 +37,16 @@ export function articleEntryHref(
   if (resolution.kind === 'wizard') return `/articles/${resolution.step}?articleId=${id}`;
   return null;
 }
+
+export function articleOutlineReviewHref(
+  articleId: number | string,
+  opts: { contentType: string; internalLinks: boolean; externalLinks: boolean },
+): string {
+  const query = new URLSearchParams({
+    reviewOutline: '1',
+    type: opts.contentType,
+    internal: opts.internalLinks ? '1' : '0',
+    external: opts.externalLinks ? '1' : '0',
+  });
+  return `/articles/${String(articleId)}?${query.toString()}`;
+}

@@ -1,5 +1,8 @@
 import * as approvedOutline from '../../../lib/contentPlanner/applyApprovedOutline';
-import { applyApprovedOutlineToPlan } from '../../../lib/contentPlanner/applyApprovedOutline';
+import {
+  applyApprovedOutlineToPlan,
+  parseApprovedOutline,
+} from '../../../lib/contentPlanner/applyApprovedOutline';
 import type { ArticleExecutionPlan, ExecutionPlanSection } from '../../../lib/contentPlanner/types';
 
 function section(id: string): ExecutionPlanSection {
@@ -86,9 +89,46 @@ describe('applyApprovedOutlineToPlan', () => {
     expect(next.sections[0].claims).toEqual(source.sections[0].claims);
   });
 
+  it('applies reviewed section instructions and word targets to the write plan', () => {
+    const source = plan([section('one'), section('two')]);
+    const next = applyApprovedOutlineToPlan(source, [
+      { level: 1, text: 'Custom title' },
+      { level: 2, text: 'First', instructions: ['Answer the urgent question.', 'Include three steps.'], targetWords: 500 },
+      { level: 2, text: 'Second', instructions: ['Give a practical example.'], targetWords: 500 },
+    ]);
+    expect(next).not.toBeNull();
+    if (!next) throw new Error('Expected matching outline to produce a plan');
+    expect(next.sections[0].objective).toBe('Answer the urgent question.\nInclude three steps.');
+    expect(next.sections[0].expectedWords).toBe(500);
+    expect(next.sections[0].budget.words).toBe(500);
+    expect(next.articleBudget.words).toBe(1000);
+  });
+
+  it('rejects reviewed word targets below the validated competitor benchmark', () => {
+    const source = plan([section('one'), section('two')]);
+    expect(applyApprovedOutlineToPlan(source, [
+      { level: 2, text: 'First', targetWords: 80 },
+      { level: 2, text: 'Second', targetWords: 80 },
+    ])).toBeNull();
+  });
+
   it('rejects a changed section count instead of silently dropping the approved outline', () => {
     const source = plan([section('one'), section('two')]);
     expect(applyApprovedOutlineToPlan(source, [{ level: 2, text: 'Only one section' }])).toBeNull();
+  });
+});
+
+describe('parseApprovedOutline', () => {
+  it.each([null, '', false, 0, -20, 12.5])('ignores invalid targetWords %p', (targetWords) => {
+    expect(parseApprovedOutline([{ level: 2, text: 'Section', targetWords }])).toEqual([
+      { level: 2, text: 'Section' },
+    ]);
+  });
+
+  it('accepts positive integer word targets', () => {
+    expect(parseApprovedOutline([{ level: 2, text: 'Section', targetWords: 320 }])).toEqual([
+      { level: 2, text: 'Section', targetWords: 320 },
+    ]);
   });
 });
 
