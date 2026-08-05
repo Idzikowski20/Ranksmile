@@ -55,6 +55,7 @@ import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
 import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articleAnalysisStorage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
 
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -460,6 +461,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (!sidecarResp.ok) {
       const errText = await sidecarResp.text();
+      console.error('[deep-analysis] sidecar error:', errText);
       if (await abortIfSuperseded(res, articleId, jobId)) return;
       await db.query(
         `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
@@ -469,7 +471,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         `UPDATE articles SET status = 'error', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
         { replacements: [articleId] },
       );
-      sse(res, 'error', { step: 'pipeline', message: errText });
+      sse(res, 'error', { step: 'pipeline', message: publicDeepAnalysisError(errText) });
       return res.end();
     }
 
@@ -1286,7 +1288,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `UPDATE articles SET status = 'error', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
       { replacements: [articleId] },
     ).catch(() => {});
-    sse(res, 'error', { step: 'pipeline', message: errorMessage });
+    sse(res, 'error', { step: 'pipeline', message: publicDeepAnalysisError(errorMessage) });
     return res.end();
   }
 }

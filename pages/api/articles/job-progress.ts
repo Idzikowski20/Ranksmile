@@ -10,6 +10,7 @@ import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership'
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
+import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
 
 const FINALIZING_STALE_SECS = 5 * 60;
 const isPg = Boolean(process.env.DATABASE_URL);
@@ -135,7 +136,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         j.error = 'finalizing timed out';
         j.progress_message = 'Finalization timed out';
       }
-      const publicJobError = j.status === 'failed' && j.job_type === 'deep_analysis' ? j.error : null;
+      const publicJobError = j.status === 'failed' && j.job_type === 'deep_analysis'
+        ? publicDeepAnalysisError(j.error, j.current_stage)
+        : null;
 
       return res.status(200).json({
         jobId: j.id,
@@ -151,7 +154,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     } catch (err) {
       const msg = (err instanceof Error ? err.message : String(err));
       console.error('[job-progress] GET failed:', msg);
-      return res.status(500).json({ error: msg });
+      return res.status(500).json({ error: 'Failed to load job progress' });
     }
   }
 
