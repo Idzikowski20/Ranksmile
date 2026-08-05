@@ -55,6 +55,7 @@ export function assembleCcm(input: AssembleInput): CanonicalContentModel {
     compiler: {
       ...base.compiler,
       deterministicHash,
+      partial: input.failedStages.length > 0,
       failedStages: input.failedStages,
       notes,
       mode: input.mode ?? 'full',

@@ -6,7 +6,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
  * Set to `false` to restore DeepSeek. Needs GEMINI_API_KEY (or GOOGLE_GENERATIVE_AI_API_KEY).
  * Model: gemini-2.5-flash is blocked for new AI Studio keys → use gemini-3.6-flash.
  */
-export const USE_GEMINI_FLASH = true;
+export const USE_GEMINI_FLASH = process.env.USE_GEMINI_FLASH === 'true';
 
 const GEMINI_FLASH_MODEL = 'gemini-3.6-flash';
 

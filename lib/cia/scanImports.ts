@@ -1,4 +1,4 @@
-const IMPORT_RE = /(?:import\s+(?:type\s+)?(?:[\s\S]*?)\s+from\s*|export\s+[\s\S]*?\s+from\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
+const IMPORT_RE = /(?:import\s+(?:type\s+)?(?:[\s\S]*?)\s+from\s*|import\s*|export\s+[\s\S]*?\s+from\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
 
 /** Bump when the static import grammar changes. */
 export const SCAN_IMPORTS_VERSION = 1;
