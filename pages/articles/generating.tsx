@@ -7,26 +7,16 @@ import GeneratingStage from '../../components/articles/GeneratingStage';
 import { clearWizardState } from '../../lib/wizardState';
 import { isUsableArticleHtml } from '../../lib/articleHtmlUsable';
 import { shouldSkipFreshGenerate } from '../../lib/generateResume';
+import { articleOutlineReviewHref } from '../../lib/articleFlow';
 
 async function fetchArticleContent(articleId: string): Promise<{
   content: string;
-  instructions: string;
-  voiceId: string;
 }> {
   const artRes = await fetch(`/api/articles/${articleId}`);
   const artData = await artRes.json().catch(() => ({})) as {
-    article?: { content?: string | null; wizard_state?: string | null };
+    article?: { content?: string | null };
   };
-  let instructions = '';
-  let voiceId = 'serp';
-  if (artData.article?.wizard_state) {
-    try {
-      const ws = JSON.parse(artData.article.wizard_state) as { instructions?: string; voiceId?: string };
-      instructions = ws.instructions || '';
-      voiceId = ws.voiceId || 'serp';
-    } catch { /* ignore bad wizard_state */ }
-  }
-  return { content: artData.article?.content || '', instructions, voiceId };
+  return { content: artData.article?.content || '' };
 }
 
 const GeneratingPage: NextPage = () => {
@@ -67,13 +57,7 @@ const GeneratingPage: NextPage = () => {
     });
 
     (async () => {
-      const pre = await fetchArticleContent(articleId).catch(() => ({
-        content: '', instructions: '', voiceId: 'serp',
-      }));
-      const { instructions, voiceId } = pre;
-
-      // Resume only an in-flight *generate* job. A prior "done" with empty HTML must
-      // NOT skip — that left article 170 stuck on a stub after an empty LLM result.
+      // Resume only an in-flight generation; every fresh attempt starts with review.
       try {
         const progRes = await fetch(
           `/api/articles/job-progress?articleId=${encodeURIComponent(articleId)}&jobType=article_generate`,
@@ -97,46 +81,25 @@ const GeneratingPage: NextPage = () => {
             setFinished(true);
             return;
           }
-          // fresh → fall through
+          if (action === 'review') {
+            await router.replace(articleOutlineReviewHref(articleId, {
+              contentType: typeof q.type === 'string' ? q.type : 'blog',
+              internalLinks: q.internal !== '0',
+              externalLinks: q.external !== '0',
+            }));
+            return;
+          }
         }
       } catch (e) {
         // Only swallow lookup errors; content-empty after poll must surface.
         if (e instanceof Error && e.message.includes('usable article')) throw e;
       }
 
-      const genRes = await fetch(`/api/articles/${articleId}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contentType: typeof q.type === 'string' ? q.type : 'blog',
-          instructions,
-          voiceId,
-          internalLinks: q.internal !== '0',
-          externalLinks: q.external !== '0',
-          reviewOutline: q.outline === '1',
-        }),
-      });
-      const genData = await genRes.json().catch(() => ({}));
-      if (!genRes.ok) {
-        const detail = typeof genData?.message === 'string' && genData.message.trim()
-          ? genData.message.trim()
-          : (typeof genData?.error === 'string' ? genData.error : 'Generation failed');
-        const issues = Array.isArray(genData?.planValidation?.issues)
-          ? genData.planValidation.issues
-            .map((i: { code?: string; message?: string }) => i?.message || i?.code)
-            .filter(Boolean)
-            .slice(0, 2)
-            .join('; ')
-          : '';
-        throw new Error(issues ? `${detail}: ${issues}` : detail);
-      }
-      await pollJob(genData.jobId as string);
-      const after = await fetchArticleContent(articleId);
-      if (!isUsableArticleHtml(after.content)) {
-        throw new Error('Generation finished without usable article content');
-      }
-      clearWizardState(articleId);
-      setFinished(true);
+      await router.replace(articleOutlineReviewHref(articleId, {
+        contentType: typeof q.type === 'string' ? q.type : 'blog',
+        internalLinks: q.internal !== '0',
+        externalLinks: q.external !== '0',
+      }));
     })().catch((e: unknown) => {
       const msg = e instanceof Error ? e.message : 'Generation failed';
       setProgressMessage(msg);

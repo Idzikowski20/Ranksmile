@@ -12,13 +12,13 @@ describe('shouldSkipFreshGenerate', () => {
     expect(shouldSkipFreshGenerate({ jobStatus: 'done', articleHtml: realHtml })).toBe('finish');
   });
 
-  it('starts fresh when done but article is empty (stale empty generate)', () => {
-    expect(shouldSkipFreshGenerate({ jobStatus: 'done', articleHtml: '' })).toBe('fresh');
-    expect(shouldSkipFreshGenerate({ jobStatus: 'done', articleHtml: '<h1>ghhg</h1><p>/</p>' })).toBe('fresh');
+  it('returns to review when done but article is empty', () => {
+    expect(shouldSkipFreshGenerate({ jobStatus: 'done', articleHtml: '' })).toBe('review');
+    expect(shouldSkipFreshGenerate({ jobStatus: 'done', articleHtml: '<h1>ghhg</h1><p>/</p>' })).toBe('review');
   });
 
-  it('starts fresh on failed or missing job', () => {
-    expect(shouldSkipFreshGenerate({ jobStatus: 'failed' })).toBe('fresh');
-    expect(shouldSkipFreshGenerate({})).toBe('fresh');
+  it('returns to review on failed or missing job', () => {
+    expect(shouldSkipFreshGenerate({ jobStatus: 'failed' })).toBe('review');
+    expect(shouldSkipFreshGenerate({})).toBe('review');
   });
 });

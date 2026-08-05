@@ -86,6 +86,21 @@ describe('applyApprovedOutlineToPlan', () => {
     expect(next.sections[0].claims).toEqual(source.sections[0].claims);
   });
 
+  it('applies reviewed section instructions and word targets to the write plan', () => {
+    const source = plan([section('one'), section('two')]);
+    const next = applyApprovedOutlineToPlan(source, [
+      { level: 1, text: 'Custom title' },
+      { level: 2, text: 'First', instructions: ['Answer the urgent question.', 'Include three steps.'], targetWords: 210 },
+      { level: 2, text: 'Second', instructions: ['Give a practical example.'], targetWords: 230 },
+    ]);
+    expect(next).not.toBeNull();
+    if (!next) throw new Error('Expected matching outline to produce a plan');
+    expect(next.sections[0].objective).toBe('Answer the urgent question.\nInclude three steps.');
+    expect(next.sections[0].expectedWords).toBe(210);
+    expect(next.sections[0].budget.words).toBe(210);
+    expect(next.articleBudget.words).toBe(440);
+  });
+
   it('rejects a changed section count instead of silently dropping the approved outline', () => {
     const source = plan([section('one'), section('two')]);
     expect(applyApprovedOutlineToPlan(source, [{ level: 2, text: 'Only one section' }])).toBeNull();

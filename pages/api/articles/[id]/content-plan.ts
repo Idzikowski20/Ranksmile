@@ -15,14 +15,19 @@ import { safeJsonParse } from '../../../../lib/safeJson';
 import {
   aiIntelFromScoreData,
   competitorsFromScoreData,
+  competitorHeadingTitles,
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
 } from '../../../../lib/contentPlanner/fromArticleInputs';
 import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlanner';
-import { toPlannerTargets } from '../../../../lib/benchmarkIntelligence';
+import { reviewOutlineFromBundle } from '../../../../lib/contentPlanner/reviewOutline';
+import {
+  benchmarkDocsFromCompetitors,
+  buildStructuralBenchmark,
+  toPlannerTargets,
+} from '../../../../lib/benchmarkIntelligence';
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine/types';
-import type { StructuralBenchmark } from '../../../../lib/benchmarkIntelligence/types';
-import type { PlannerTargets } from '../../../../lib/benchmarkIntelligence/types';
+import type { PlannerTargets, StructuralBenchmark } from '../../../../lib/benchmarkIntelligence/types';
 
 type ArticlePlanRow = {
   id: number;
@@ -89,12 +94,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const storedGraph = scoreData?.knowledge_graph && typeof scoreData.knowledge_graph === 'object'
       ? (scoreData.knowledge_graph as KnowledgeGraph)
       : null;
+    const storedGate = scoreData?.cie_gate && typeof scoreData.cie_gate === 'object'
+      ? scoreData.cie_gate as { reason?: unknown }
+      : null;
+    const usePartialTopics = storedGate?.reason === 'below_floor';
     const storedBenchmark = scoreData?.structural_benchmark && typeof scoreData.structural_benchmark === 'object'
       ? (scoreData.structural_benchmark as StructuralBenchmark)
       : null;
-    const plannerTargets: PlannerTargets | null = storedBenchmark
-      ? toPlannerTargets(storedBenchmark)
-      : null;
+    const benchmarkDocs = benchmarkDocsFromCompetitors(competitors);
+    const benchmark = storedBenchmark || (benchmarkDocs.length ? buildStructuralBenchmark(benchmarkDocs) : null);
+    const plannerTargets: PlannerTargets | null = benchmark ? toPlannerTargets(benchmark) : null;
 
     const result = runContentPlanner({
       keyword,
@@ -104,8 +113,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ai,
       paaQuestions: paa,
       produceArticle,
-      knowledgeGraph: storedGraph,
+      knowledgeGraph: usePartialTopics ? null : storedGraph,
+      topicBlocks: usePartialTopics ? storedGraph?.topicBlocks : null,
       plannerTargets,
+      language: row.language || undefined,
+      commonHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
     });
 
     if (persist && scoreData) {
@@ -160,6 +172,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       canWrite: result.canWrite,
       blueprint: result.bundle.blueprint,
       outline: result.bundle.outline,
+      headings: reviewOutlineFromBundle(result.bundle),
       reader: result.bundle.reader,
       benchmark: result.bundle.benchmark,
       validations: {
