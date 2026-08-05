@@ -133,6 +133,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (j.status === 'finalizing' && await failStaleFinalization(j)) {
         j.status = 'failed';
         j.error = 'finalizing timed out';
+        j.progress_message = 'Finalization timed out';
       }
       const publicJobError = j.status === 'failed' && j.job_type === 'deep_analysis' ? j.error : null;
 
