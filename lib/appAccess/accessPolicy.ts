@@ -156,6 +156,7 @@ export function apiRouteCapability(routeKey: string): RouteCapability {
   if (path === '/api/workspaces/setup' || path === '/api/onboarding') {
     return path === '/api/onboarding' ? 'Onboarding' : 'WorkspaceSetup';
   }
+  if (/^\/api\/workspaces\/\d+\/finish$/.test(path)) return 'WorkspaceSetup';
 
   return 'App';
 }

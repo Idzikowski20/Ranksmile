@@ -6,6 +6,7 @@ function nextId(n: { i: number }): string {
 }
 
 function textOf(node: TipTapNode): string {
+  if (node.type === 'hardBreak') return '\n';
   if (node.text) return node.text;
   if (!node.content) return '';
   return node.content.map(textOf).join('');
@@ -33,7 +34,17 @@ function walkTipTap(nodes: readonly TipTapNode[], out: LexToken[], ctr: { i: num
       continue;
     }
     if (type === 'listItem' || type === 'list_item') {
-      out.push({ kind: 'list_item', text: textOf(node).trim(), blockId: nextId(ctr) });
+      const text = (node.content ?? [])
+        .filter((child) => child.type !== 'bulletList' && child.type !== 'orderedList')
+        .map(textOf)
+        .join('')
+        .trim();
+      if (text) out.push({ kind: 'list_item', text, blockId: nextId(ctr) });
+      for (const child of node.content ?? []) {
+        if (child.type === 'bulletList' || child.type === 'orderedList') {
+          walkTipTap(child.content ?? [], out, ctr);
+        }
+      }
       continue;
     }
     if (type === 'bulletList' || type === 'orderedList' || type === 'doc') {

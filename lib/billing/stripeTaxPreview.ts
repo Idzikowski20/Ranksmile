@@ -64,11 +64,13 @@ export function mapStripeTaxCalculation(
   const taxAmountCents = calc.tax_amount_exclusive + calc.tax_amount_inclusive;
   const breakdown = calc.tax_breakdown ?? [];
   const primary = breakdown.find((row) => (row.amount ?? 0) > 0) ?? breakdown[0];
-  const pctRaw = primary?.tax_rate_details?.percentage_decimal;
+  const rates = new Set(breakdown.map((row) => row.tax_rate_details?.percentage_decimal).filter((rate): rate is string => Boolean(rate)));
+  const pctRaw = rates.size === 1 ? primary?.tax_rate_details?.percentage_decimal : null;
   const taxPercent = pctRaw != null && pctRaw !== ''
     ? Number.parseFloat(pctRaw)
     : null;
-  const taxType = primary?.tax_rate_details?.tax_type ?? null;
+  const taxTypes = new Set(breakdown.map((row) => row.tax_rate_details?.tax_type).filter((type): type is string => Boolean(type)));
+  const taxType = taxTypes.size === 1 ? primary?.tax_rate_details?.tax_type ?? null : null;
 
   return {
     calculationId: calc.id,
