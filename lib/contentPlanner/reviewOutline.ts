@@ -7,7 +7,7 @@ function unique(items: string[]): string[] {
 }
 
 export function reviewOutlineFromBundle(bundle: ContentPlannerBundle): ApprovedOutlineHeading[] {
-  if (!bundle.outline) return [];
+  if (!bundle.outline || bundle.briefs.length !== bundle.outline.sections.length) return [];
   const claims = new Map(bundle.targetKg.claims.map((claim) => [claim.id, claim.statement]));
   return [
     { level: 1, text: bundle.outline.h1 },

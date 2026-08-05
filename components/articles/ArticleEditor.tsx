@@ -48,6 +48,7 @@ import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 import OutlineGenerateBar from './OutlineGenerateBar';
 import { revealHtmlInEditor, editorCanCommand } from '../../lib/editor/revealHtmlProgressive';
 import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
+import { clearWizardState } from '../../lib/wizardState';
 import {
   collectApprovedOutline,
   reviewOutlineToHtml,
@@ -1145,6 +1146,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [outlineReviewMode, setOutlineReviewMode] = useState(false);
     const outlineAutoStarted = useRef(false);
     const [outlineHeadingCount, setOutlineHeadingCount] = useState(0);
+    const outlineRequestRef = useRef<AbortController | null>(null);
+    const outlineOriginalHtmlRef = useRef<string | null>(null);
     const revealAbortRef = useRef<AbortController | null>(null);
     const revealPlayingRef = useRef(false);
     const mountRevealDone = useRef(false);
@@ -1794,6 +1797,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     }, [content, editor, router.query.reveal]);
 
     useEffect(() => () => {
+      outlineRequestRef.current?.abort();
       revealAbortRef.current?.abort();
     }, []);
 
@@ -1861,22 +1865,32 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const articleId = commentArticleId ? Number(commentArticleId) : undefined;
       if (!kw && !articleId) { toast.error('No keyword available to build an outline.'); return; }
       if (!editor) return;
+      outlineRequestRef.current?.abort();
+      const request = new AbortController();
+      outlineRequestRef.current = request;
+      outlineOriginalHtmlRef.current ??= editor.getHTML();
       setOutlineBusy(true);
       try {
         const res = await fetch(articleId ? `/api/articles/${articleId}/content-plan` : '/api/articles/generate-outline', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(articleId ? { persist: true } : { keyword: kw }),
+          signal: request.signal,
         });
         const data = await res.json() as { headings?: ApprovedOutlineHeading[]; error?: string };
+        if (outlineRequestRef.current !== request || request.signal.aborted) return;
         const headings = Array.isArray(data.headings) ? data.headings : [];
         if (!res.ok || headings.length === 0) throw new Error(data.error || 'Could not generate an outline.');
         const html = reviewOutlineToHtml(headings);
-        await playReveal(html, true);
+        await playReveal(html, true, 'preserve');
+        if (outlineRequestRef.current !== request || request.signal.aborted) return;
         setOutlineHeadingCount(headings.length);
       } catch (e) {
-        toast.error(getErrorMessage(e) || 'Could not generate an outline.');
+        if (!request.signal.aborted) toast.error(getErrorMessage(e) || 'Could not generate an outline.');
       } finally {
-        setOutlineBusy(false);
+        if (outlineRequestRef.current === request) {
+          outlineRequestRef.current = null;
+          setOutlineBusy(false);
+        }
       }
     };
 
@@ -2033,6 +2047,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         await playReveal(html, true, 'preserve');
         if (!isCurrentRun()) return;
         generationRevealHtmlRef.current = null;
+        outlineOriginalHtmlRef.current = null;
         setOutlineReviewMode(false);
         if (router.query.reviewOutline) {
           const q = { ...router.query };
@@ -2042,6 +2057,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           delete q.type;
           void router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
         }
+        void clearWizardState(String(articleId));
         toast.success('Article generated');
       } catch (e) {
         if (isCurrentRun()) toast.error(getErrorMessage(e) || 'Could not generate the article.');
@@ -2105,13 +2121,19 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const handleOutlineCancel = () => {
       const activeJob = generationJobIdRef.current;
       const activeReveal = generationRevealHtmlRef.current;
+      outlineRequestRef.current?.abort();
+      outlineRequestRef.current = null;
       generationRunRef.current += 1;
       generationJobIdRef.current = null;
       revealAbortRef.current?.abort();
       if (activeReveal && editorCanCommand(editor)) {
         editor.commands.setContent(activeReveal.html, { emitUpdate: true });
+      } else if (outlineOriginalHtmlRef.current !== null && editorCanCommand(editor)) {
+        editor.commands.setContent(outlineOriginalHtmlRef.current, { emitUpdate: true });
       }
+      outlineOriginalHtmlRef.current = null;
       generationRevealHtmlRef.current = null;
+      setOutlineBusy(false);
       setGenerateBusy(false);
       setGeneratePct(null);
       if (activeJob) {

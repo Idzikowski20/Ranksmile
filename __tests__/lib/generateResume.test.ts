@@ -6,6 +6,7 @@ describe('shouldSkipFreshGenerate', () => {
   it('polls in-flight jobs', () => {
     expect(shouldSkipFreshGenerate({ jobStatus: 'running' })).toBe('poll');
     expect(shouldSkipFreshGenerate({ jobStatus: 'queued' })).toBe('poll');
+    expect(shouldSkipFreshGenerate({ jobStatus: 'finalizing' })).toBe('poll');
   });
 
   it('finishes only when done AND article has usable HTML', () => {

@@ -14,6 +14,34 @@ export type ApprovedOutlineHeading = {
   targetWords?: number;
 };
 
+export function parseApprovedOutline(raw: unknown): ApprovedOutlineHeading[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const value = item as Record<string, unknown>;
+    const text = typeof value.text === 'string' ? value.text.trim() : '';
+    const level = typeof value.level === 'number' ? value.level : Number(value.level);
+    if (!text || !Number.isFinite(level)) return [];
+    const instructions = Array.isArray(value.instructions)
+      ? value.instructions
+        .filter((instruction): instruction is string => typeof instruction === 'string')
+        .map((instruction) => instruction.trim())
+        .filter(Boolean)
+      : [];
+    const targetWords = typeof value.targetWords === 'number'
+      && Number.isInteger(value.targetWords)
+      && value.targetWords > 0
+      ? value.targetWords
+      : undefined;
+    return [{
+      level,
+      text,
+      ...(instructions.length ? { instructions } : {}),
+      ...(targetWords ? { targetWords } : {}),
+    }];
+  });
+}
+
 const DEFAULT_BUDGET = {
   words: 300,
   claims: 0,
@@ -81,6 +109,7 @@ export function applyApprovedOutlineToPlan(
   const use = body.length > 0 ? body : headings;
   if (use.length !== plan.sections.length) return null;
   const template = plan.sections[0];
+  const hasReviewedTargets = use.some((heading) => heading.targetWords !== undefined);
 
   const sections: ExecutionPlanSection[] = use.map((h, i) => {
     const base = plan.sections[i] ?? stubSection(i, template);
@@ -101,13 +130,15 @@ export function applyApprovedOutlineToPlan(
   });
 
   const h1 = headings.find((h) => h.level === 1);
+  const reviewedWords = sections.reduce((total, section) => total + section.expectedWords, 0);
+  if (hasReviewedTargets && reviewedWords < plan.benchmark.targetWords) return null;
   const { planHash: _drop, ...rest } = plan;
   const payload: Omit<ArticleExecutionPlan, 'planHash'> = {
     ...rest,
     title: h1?.text || plan.title,
     articleBudget: {
       ...plan.articleBudget,
-      words: sections.reduce((total, section) => total + section.expectedWords, 0),
+      words: hasReviewedTargets ? reviewedWords : plan.articleBudget.words,
     },
     sections,
   };

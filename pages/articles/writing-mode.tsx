@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
+import toast from 'react-hot-toast';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
 import { Switch } from '../../components/koala/core';
 import { saveWizardState, clearWizardState } from '../../lib/wizardState';
@@ -47,16 +48,22 @@ const WritingModePage: NextPage = () => {
     q.set('type', type);
     router.push(`/articles/context?${q.toString()}`);
   };
-  const goNext = () => {
+  const goNext = async () => {
     if (mode === 'write') {
-      if (articleId) { clearWizardState(articleId); router.push(`/articles/${articleId}`); return; }
-      router.push('/articles');
+      if (articleId) {
+        if (!await clearWizardState(articleId)) {
+          toast.error('Could not finish the setup. Please try again.');
+          return;
+        }
+        await router.push(`/articles/${articleId}`);
+        return;
+      }
+      await router.push('/articles');
       return;
     }
     // Generated content always starts with outline review in the editor.
-    if (!articleId) { router.push('/articles'); return; }
-    clearWizardState(articleId);
-    router.push(articleOutlineReviewHref(articleId, {
+    if (!articleId) { await router.push('/articles'); return; }
+    await router.push(articleOutlineReviewHref(articleId, {
       contentType: type,
       internalLinks,
       externalLinks,
