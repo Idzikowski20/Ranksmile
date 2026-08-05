@@ -11,10 +11,11 @@ import {
   type ConsumerContext,
   type ConsumerResult,
   type ContentConsumer,
+  type SyncContentConsumer,
 } from './consumerContext';
 import { benchmarkConsumer } from './benchmark';
 
-export const coverageConsumer: ContentConsumer<CoverageView> = {
+export const coverageConsumer: SyncContentConsumer<CoverageView> = {
   id: 'coverage_projection',
   accept(context: ConsumerContext): ConsumerResult<CoverageView> {
     if (!context.model.compiler.capabilities.ir) {
@@ -36,7 +37,7 @@ export const coverageConsumer: ContentConsumer<CoverageView> = {
   },
 };
 
-export const visibilityConsumer: ContentConsumer<VisibilityProjection> = {
+export const visibilityConsumer: SyncContentConsumer<VisibilityProjection> = {
   id: 'visibility_projection',
   accept(context: ConsumerContext): ConsumerResult<VisibilityProjection> {
     const result = projectVisibility(context.model);
@@ -51,7 +52,7 @@ export const visibilityConsumer: ContentConsumer<VisibilityProjection> = {
 
 export type ActionGraphBuildResult = ActionGraph;
 
-export const actionGraphConsumer: ContentConsumer<ActionGraphBuildResult> = {
+export const actionGraphConsumer: SyncContentConsumer<ActionGraphBuildResult> = {
   id: 'action_graph_builder',
   accept(context: ConsumerContext): ConsumerResult<ActionGraphBuildResult> {
     if (!context.model.compiler.capabilities.planner) {

@@ -357,7 +357,7 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
           }
 
           if (intentType === 'setup') {
-            const setupIntentId = result.setupIntent && typeof result.setupIntent === 'object'
+            const setupIntentId = 'setupIntent' in result && result.setupIntent && typeof result.setupIntent === 'object'
               ? result.setupIntent.id
               : null;
             if (!setupIntentId) {

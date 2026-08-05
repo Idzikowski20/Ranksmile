@@ -45,7 +45,7 @@ const STATUS_LABEL: Record<BillingInvoiceStatus, string> = {
 
 export function mapInvoiceStatus(status: Stripe.Invoice.Status | null): BillingInvoiceStatus {
   if (status === 'paid' || status === 'open' || status === 'draft' || status === 'void' || status === 'uncollectible') {
-    return status;
+    return status as BillingInvoiceStatus;
   }
   return 'unknown';
 }

@@ -1,15 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { billingError } from '../../../../../lib/billing/billingErrors';
+import { billingError } from '../../../../lib/billing/billingErrors';
 import {
   appendBillingDomainEvent,
-} from '../../../../../lib/billing/domainEvents';
-import { deletePaymentMethod } from '../../../../../lib/billing/paymentMethodService';
-import { assertCanManage } from '../../../../../lib/members';
-import { getOrgBillingState } from '../../../../../lib/orgBilling';
-import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
-import { getStripe, isStripeConfigured } from '../../../../../lib/stripe';
-import { ensureUserTenancy } from '../../../../../lib/tenancy';
-import { getCurrentUserId } from '../../../../../utils/getUser';
+} from '../../../../lib/billing/domainEvents';
+import { deletePaymentMethod } from '../../../../lib/billing/paymentMethodService';
+import { assertCanManage } from '../../../../lib/members';
+import { getOrgBillingState } from '../../../../lib/orgBilling';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { getStripe, isStripeConfigured } from '../../../../lib/stripe';
+import { ensureUserTenancy } from '../../../../lib/tenancy';
+import { getCurrentUserId } from '../../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {

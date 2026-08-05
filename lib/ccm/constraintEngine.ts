@@ -1,7 +1,7 @@
 import type { CanonicalContentModel } from './types/ccm';
 import { buildGraphIndexes } from './buildIndexes';
 import { graphQuery, type GraphQuery } from './graphQuery';
-import { isEvidenceSpanNode, isFactNode, isIntentNode } from './types/graph';
+import { isEvidenceSpanNode, isFactNode, isIntentNode, type IntentNode } from './types/graph';
 
 export type ConstraintSeverity = 'error' | 'warning';
 
@@ -106,7 +106,7 @@ const intentTreeAcyclic: GraphConstraint = {
           break;
         }
         seen.add(cur);
-        const parents = q.neighbors(cur, 'parentOf', 'in').filter(isIntentNode);
+        const parents: IntentNode[] = q.neighbors(cur, 'parentOf', 'in').filter(isIntentNode);
         cur = parents[0]?.id;
       }
     }
