@@ -4,7 +4,7 @@
  */
 import { ensurePipelineJobsTables } from './ensurePipelineJobsTables';
 import db from '../database/database';
-import { chatLlm } from './ai/deepseek';
+import { chatLlmFor } from './ai/deepseek';
 
 export type LlmProvider = 'deepseek' | 'openai' | 'anthropic' | 'ollama' | 'gemini' | 'openrouter';
 
@@ -102,8 +102,7 @@ async function callProvider(
   opts?: { seed?: number; responseFormat?: 'json_object' | 'text' },
 ): Promise<string> {
   if (provider === 'deepseek' || provider === 'openai' || provider === 'gemini' || provider === 'openrouter') {
-    // Node chat path: always OpenRouter GPT (chatLlm). Provider arg kept for telemetry labels.
-    const resolved = chatLlm();
+    const resolved = chatLlmFor(provider === 'openai' ? 'openrouter' : provider);
     const key = resolved.apiKey;
     if (!key) throw new Error(`${resolved.keyEnv} not configured`);
     const body: Record<string, unknown> = {
@@ -158,8 +157,15 @@ async function callProvider(
 }
 
 export async function llmGateway(req: LlmGatewayRequest): Promise<LlmGatewayResponse> {
+  const requestedProvider = req.provider || 'openrouter';
+  const defaultFallbacks = requestedProvider === 'openrouter'
+    ? ['deepseek', 'gemini'] as const
+    : requestedProvider === 'deepseek'
+      ? ['gemini'] as const
+      : [];
   const chain: LlmProvider[] = [
-    req.provider || 'openrouter',
+    requestedProvider,
+    ...defaultFallbacks,
     ...(req.fallbackProviders || []),
   ].filter((p, i, a) => a.indexOf(p) === i);
 
