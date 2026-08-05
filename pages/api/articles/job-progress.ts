@@ -106,12 +106,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         stage_progress: number | null;
         total_progress: number | null;
         progress_message: string | null;
+        error: string | null;
         updated_at: string | Date | null;
       }>(
         jobId
-          ? `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+          ? `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, error, updated_at
              FROM analysis_jobs WHERE id = ?`
-          : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+          : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, error, updated_at
              FROM analysis_jobs
              WHERE article_id = ? AND job_type = ?
              ORDER BY created_at DESC, id DESC
@@ -131,7 +132,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       if (j.status === 'finalizing' && await failStaleFinalization(j)) {
         j.status = 'failed';
-        j.progress_message = 'Finalization timed out';
+        j.error = 'finalizing timed out';
       }
 
       return res.status(200).json({
@@ -141,7 +142,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         currentStage: j.current_stage,
         stageProgress: j.stage_progress,
         totalProgress: j.total_progress,
-        progressMessage: j.progress_message,
+        progressMessage: j.status === 'failed' ? j.error || j.progress_message : j.progress_message,
+        error: j.error,
         updatedAt: j.updated_at ? new Date(j.updated_at).toISOString() : null,
       });
     } catch (err) {

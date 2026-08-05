@@ -100,6 +100,38 @@ it('denies polling a job for an article the caller cannot reach', async () => {
   expect(res.status).toHaveBeenCalledWith(403);
 });
 
+it('returns the stored job error instead of stale progress for failed jobs', async () => {
+  mockDbQuery.mockResolvedValueOnce(dbResult([{
+    id: 'job_123_456',
+    job_type: 'deep_analysis',
+    domain_id: null,
+    article_id: 123,
+    status: 'failed',
+    current_stage: 'scrape_serp',
+    stage_progress: null,
+    total_progress: null,
+    progress_message: 'Scraping competitor 7/10',
+    error: 'SERP collection failed',
+    updated_at: new Date(),
+  }]));
+  mockAssertArticleAccess.mockResolvedValueOnce(true);
+  const res = makeRes();
+
+  await handler({
+    method: 'GET',
+    headers: {},
+    body: {},
+    query: { jobId: 'job_123_456' },
+    cookies: {},
+  } as NextApiRequest, res);
+
+  expect(mockDbQuery.mock.calls[0]?.[0]).toContain('progress_message, error, updated_at');
+  expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+    error: 'SERP collection failed',
+    progressMessage: 'SERP collection failed',
+  }));
+});
+
 it('does not let the article cancellation endpoint cancel a domain setup job', async () => {
   mockDbQuery.mockResolvedValueOnce(dbResult([{
     id: 'domain_123', status: 'running', job_type: 'domain_setup', domain_id: 12, article_id: null,
@@ -160,6 +192,6 @@ it('recovers a stale finalizing job so polling can stop waiting forever', async 
   } as NextApiRequest, res);
 
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-    status: 'failed', progressMessage: 'Finalization timed out',
+    status: 'failed', error: 'finalizing timed out', progressMessage: 'finalizing timed out',
   }));
 });

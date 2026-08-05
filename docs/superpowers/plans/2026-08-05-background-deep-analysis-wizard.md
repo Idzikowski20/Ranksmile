@@ -198,7 +198,7 @@ Remove `apiProgressPct`, the `totalProgress` assignment, `completedCount`, `prog
 Replace the current return tree with:
 
 ```tsx
-  const canContinue = articleId !== null && jobId !== null;
+  const canContinue = articleId !== null && jobId !== null && !overallError;
   const continueToContentType = () => {
     if (!articleId) return;
     void router.push(`/articles/content-type?articleId=${articleId}`);
