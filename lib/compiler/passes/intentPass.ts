@@ -13,6 +13,7 @@ export const intentPass: CompilerPass = {
     const nodes = buildIntentNodes(input.ir);
     const withChildren = nodes.map((n) => ({
       ...n,
+      parentId: nodes.some((parent) => parent.id === n.parentId) ? n.parentId : undefined,
       childIds: nodes.filter((c) => c.parentId === n.id).map((c) => c.id),
     }));
     input.draft.nodes.push(...withChildren);

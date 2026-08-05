@@ -39,11 +39,14 @@ export type TimelineItem = {
 
 export async function ensureBillingDomainEventsTable(): Promise<void> {
   await ensureBillingTables();
+  const isPostgres = Boolean(process.env.DATABASE_URL);
+  const idColumn = isPostgres ? 'BIGSERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
+  const timestamp = isPostgres ? 'TIMESTAMPTZ NOT NULL DEFAULT NOW()' : 'TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP';
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS billing_domain_events (
-        id BIGSERIAL PRIMARY KEY,
-        at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        id ${idColumn},
+        at ${timestamp},
         org_id INTEGER NOT NULL,
         event_type TEXT NOT NULL,
         source TEXT NOT NULL,
