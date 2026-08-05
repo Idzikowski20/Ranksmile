@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Badge, Checkbox, Gauge, HoverTooltip } from '../koala/core';
+import { Badge, Checkbox, Gauge, HoverTooltip, TableLoadMore } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import GeneratingStage from './GeneratingStage';
 
@@ -197,18 +197,6 @@ const EMPTY_START_OPTIONS: Array<{
 ];
 
 const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore, onLoadMore, isLoadingMore, startLinks }: Props) => {
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!hasMore || !onLoadMore || isLoadingMore) return undefined;
-    const el = loadMoreRef.current;
-    if (!el) return undefined;
-    const obs = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting) onLoadMore();
-    }, { rootMargin: '200px' });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [hasMore, onLoadMore, isLoadingMore]);
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -539,15 +527,13 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
         );
       })}
 
-      {hasMore ? (
-        <div ref={loadMoreRef} className="text-gray-80 text-md py-lg block text-center" style={{ fontFamily: 'var(--font-family-primary)' }}>
-          {isLoadingMore ? 'Loading more…' : ''}
-        </div>
-      ) : (
-        <div className="text-gray-80 text-md py-lg block text-center" style={{ fontFamily: 'var(--font-family-primary)' }}>
-          No more results found.
-        </div>
-      )}
+      {typeof hasMore === 'boolean' && onLoadMore ? (
+        <TableLoadMore
+          hasMore={hasMore}
+          isLoading={Boolean(isLoadingMore)}
+          onLoadMore={onLoadMore}
+        />
+      ) : null}
 
       {/* ── Bulk selection bar ── */}
       {selectedIds.size > 0 && (

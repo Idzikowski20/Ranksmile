@@ -121,18 +121,26 @@ export async function wieLlmComplete(opts: {
     throw new Error(`${llm.keyEnv} not configured`);
   }
 
+  const maxTokens = opts.maxTokens ?? 4000;
+  const body: Record<string, unknown> = {
+    model: llm.model,
+    max_tokens: maxTokens,
+    temperature: opts.temperature ?? 0.2,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: opts.userPrompt },
+    ],
+  };
+
   const aiRes = await fetch(llm.url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${llm.apiKey}` },
-    body: JSON.stringify({
-      model: llm.model,
-      max_tokens: opts.maxTokens ?? 4000,
-      temperature: opts.temperature ?? 0.2,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: opts.userPrompt },
-      ],
-    }),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${llm.apiKey}`,
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://ranksmile.pl',
+      'X-Title': 'Ranksmile',
+    },
+    body: JSON.stringify(body),
     signal: opts.signal,
   });
   if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);

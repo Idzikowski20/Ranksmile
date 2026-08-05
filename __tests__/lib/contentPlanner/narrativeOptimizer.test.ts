@@ -19,10 +19,10 @@ describe('narrativeOptimizer', () => {
     const blocks: TopicBlock[] = [
       {
         id: 'TB_f',
-        title: 'Techniczne SEO',
+        title: 'Podstawy prawne',
         role: 'FOUNDATION',
         consensus: 0.9,
-        memberHeadings: ['Techniczne SEO'],
+        memberHeadings: ['Podstawy prawne'],
         claimIds: [],
       },
       {
@@ -50,7 +50,7 @@ describe('narrativeOptimizer', () => {
     });
     expect(seeds[0].heading).toMatch(/Quick Answer/i);
     const titles = seeds.map((s) => s.heading);
-    expect(titles.indexOf('Plan 7 dni')).toBeLessThan(titles.indexOf('Techniczne SEO'));
+    expect(titles.indexOf('Plan 7 dni')).toBeLessThan(titles.indexOf('Podstawy prawne'));
   });
 
   it('skips EN course fillers when enough topic blocks', () => {

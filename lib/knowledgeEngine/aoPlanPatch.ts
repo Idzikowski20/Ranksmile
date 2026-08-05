@@ -39,10 +39,8 @@ export function patchExecutionPlanFromCoverage(opts: {
     const claim = claimById.get(claimId);
     if (!claim) continue;
     const already = newPlan.sections.some((s) => s.claims.some((c) => c.id === claimId));
-    if (already) {
-      patchedClaimIds.push(claimId);
-      continue;
-    }
+    // Already assigned — no insertion; do not trigger a revision write.
+    if (already) continue;
     const target = pickSection(newPlan.sections, claim.cluster);
     if (!target || target.claims.length >= MAX_CLAIMS_PER_SECTION) continue;
     target.claims.push({
@@ -68,11 +66,15 @@ export function patchExecutionPlanFromCoverage(opts: {
     patchedClaimIds.push(claimId);
   }
 
-  const { planHash: _drop, ...withoutHash } = newPlan;
+  const { planHash: _drop, builtAt: _oldBuiltAt, ...rest } = newPlan;
   void _drop;
+  void _oldBuiltAt;
+  const withoutHash: Omit<ArticleExecutionPlan, 'planHash'> = {
+    ...rest,
+    builtAt: new Date().toISOString(),
+  };
   const rebuilt: ArticleExecutionPlan = {
     ...withoutHash,
-    builtAt: new Date().toISOString(),
     planHash: hashExecutionPlanPayload(withoutHash),
   };
 

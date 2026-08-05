@@ -206,6 +206,25 @@ async def generate_article(req: GenerateRequest):
         execution_plan=req.execution_plan,
     )
 
+    # Surfer-style mid-article images (Pollinations) — fail-soft
+    try:
+        from pipeline.article_images import inject_inline_images
+        budget_imgs = int(
+            ((req.execution_plan or {}).get("article_budget") or {}).get("images") or 0
+        )
+        max_imgs = min(4, budget_imgs) if budget_imgs > 0 else 4
+        if max_imgs < 3:
+            max_imgs = 3
+        print(f"[generate] Injecting up to {max_imgs} inline images...")
+        article_html = await inject_inline_images(
+            article_html,
+            keyword=req.keyword,
+            language=req.language or "pl",
+            max_images=max_imgs,
+        )
+    except Exception as img_err:
+        print(f"[generate] Inline images skipped: {img_err}")
+
     # 4. Meta dane
     print(f"[generate] Generating meta...")
     meta = generate_meta(article_html, req.keyword, req.language)

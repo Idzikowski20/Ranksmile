@@ -103,9 +103,12 @@ export function runKnowledgeCompletion(opts: {
   for (const step of opts.plan.steps) {
     const brief = opts.briefs.find((b) => b.sectionId === step.sectionId);
     const section = opts.outline.sections.find((s) => s.id === step.sectionId);
-    if (!brief || !section) continue;
+    // rewrite_intro reorders whole-article H2s — needs section, not a section brief.
+    if (!section) continue;
+    if (!brief && step.action !== 'rewrite_intro') continue;
 
     if (step.action === 'add_claims' || step.action === 'add_questions' || step.action === 'add_checklist' || step.action === 'add_evidence') {
+      if (!brief) continue;
       const patchBrief: SectionBrief = {
         ...brief,
         blocks:
@@ -124,8 +127,27 @@ export function runKnowledgeCompletion(opts: {
       }
       applied++;
     } else if (step.action === 'rewrite_intro') {
-      const intro = `<p>Chcesz działać od razu? Zacznij od Quick Start poniżej — teoria dopiero potem.</p>`;
-      html = html.replace(/<h1[\s\S]*?<\/h1>/i, (m) => `${m}\n${intro}`);
+      // Reorder H2 blocks so Quick Start precedes theory (not just inject a teaser).
+      const parts = html.split(/(?=<h2[\s>])/i);
+      const before = parts[0] || '';
+      const sections = parts.slice(1);
+      const h2Title = (s: string) => {
+        const m = s.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+        return (m?.[1] || '').replace(/<[^>]+>/g, '').trim().toLowerCase();
+      };
+      const isQuick = (s: string) => /quick|szyb|7\s*dni|pierwsze/.test(h2Title(s));
+      const isTheory = (s: string) => /podstaw|definic|czym jest|foundation/.test(h2Title(s));
+      const qi = sections.findIndex(isQuick);
+      const ti = sections.findIndex(isTheory);
+      if (qi >= 0 && ti >= 0 && qi > ti) {
+        const next = [...sections];
+        const [quick] = next.splice(qi, 1);
+        next.splice(ti, 0, quick);
+        html = before + next.join('');
+      } else {
+        const intro = `<p>Chcesz działać od razu? Zacznij od Quick Start poniżej — teoria dopiero potem.</p>`;
+        html = html.replace(/<h1[\s\S]*?<\/h1>/i, (m) => `${m}\n${intro}`);
+      }
       applied++;
     }
   }

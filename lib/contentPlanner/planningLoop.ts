@@ -136,9 +136,16 @@ export function runOutlinePlanningLoop(opts: {
       intent: opts.intent,
       targetH2: blueprint.targetH2,
       requiredSections: blueprint.requiredSections,
+      commonHeadings: opts.benchmark?.commonHeadings,
+      lang: opts.reader.language === 'en' ? 'en' : 'pl',
     })
     : null;
-  let outline = buildAdaptiveOutline({ ...opts, blueprint, narrativeSeeds });
+  let outline = buildAdaptiveOutline({
+    ...opts,
+    blueprint,
+    narrativeSeeds,
+    commonHeadings: opts.benchmark?.commonHeadings,
+  });
   let validation = validateOutline(outline, blueprint);
   if (opts.benchmark) {
     const bench = validateAgainstBenchmark({
@@ -172,9 +179,16 @@ export function runOutlinePlanningLoop(opts: {
           intent: opts.intent,
           targetH2: blueprint.targetH2,
           requiredSections: blueprint.requiredSections,
+          commonHeadings: opts.benchmark?.commonHeadings,
+          lang: opts.reader.language === 'en' ? 'en' : 'pl',
         })
         : null;
-      outline = buildAdaptiveOutline({ ...opts, blueprint, narrativeSeeds: seeds });
+      outline = buildAdaptiveOutline({
+        ...opts,
+        blueprint,
+        narrativeSeeds: seeds,
+        commonHeadings: opts.benchmark?.commonHeadings,
+      });
     } else {
       outline = improveOutline(outline, blueprint, opts.kg);
       outline = rebalanceOverloadedSections(outline, opts.kg);

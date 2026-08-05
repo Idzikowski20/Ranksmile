@@ -17,14 +17,24 @@ import type {
 } from './types';
 import type { NarrativeSeed } from './narrativeOptimizer';
 import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
+import {
+  headingFillersFromCompetitors,
+  orderSectionsFaqLast,
+  titleizeH1,
+  type OutlineLang,
+} from './sectionLabels';
 
 type TopicSeed = { role: string; heading: string; importance: number; reasonSummary?: string };
 
-function topicSeeds(reader: ReaderModel, blueprint: ArticleBlueprint): TopicSeed[] {
+function topicSeeds(
+  reader: ReaderModel,
+  blueprint: ArticleBlueprint,
+  commonHeadings?: string[],
+): TopicSeed[] {
   const seeds: TopicSeed[] = [];
   for (const name of blueprint.requiredSections) {
     const importance =
-      /quick start|quick answer/i.test(name) ? 10
+      /quick start|quick answer|szybka|szybki start|pierwsze kroki/i.test(name) ? 10
         : /mistake|błąd|cost|koszt/i.test(name) ? 8
           : /faq/i.test(name) ? 4
             : /summary|podsum/i.test(name) ? 2
@@ -35,29 +45,18 @@ function topicSeeds(reader: ReaderModel, blueprint: ArticleBlueprint): TopicSeed
       importance,
     });
   }
-  // Fill remaining H2 slots with foundation topics from keyword.
   const need = Math.max(blueprint.targetH2, h2FromWords(blueprint.targetWords));
-  const extras = [
-    { role: 'keywords', heading: 'Analiza słów kluczowych i intencji', importance: 7 },
-    { role: 'technical', heading: 'Techniczne SEO i indeksowanie', importance: 7 },
-    { role: 'content', heading: 'Tworzenie treści, które rankują', importance: 6 },
-    { role: 'links_internal', heading: 'Linkowanie wewnętrzne', importance: 5 },
-    { role: 'backlinks', heading: 'Linki zewnętrzne i autorytet', importance: 5 },
-    { role: 'local', heading: 'SEO lokalne', importance: 5 },
-    { role: 'monitor', heading: 'Monitorowanie wyników', importance: 6 },
-    { role: 'tools', heading: 'Narzędzia i stack', importance: 4 },
-  ];
-  for (const e of extras) {
+  const lang: OutlineLang = reader.language === 'en' ? 'en' : 'pl';
+  const fillers = headingFillersFromCompetitors(
+    commonHeadings || [],
+    reader.keyword,
+    lang,
+    Math.max(0, need - seeds.length),
+  );
+  for (const e of fillers) {
     if (seeds.length >= need) break;
-    if (seeds.some((s) => s.role === e.role)) continue;
+    if (seeds.some((s) => s.heading.toLowerCase() === e.heading.toLowerCase())) continue;
     seeds.push(e);
-  }
-  while (seeds.length < need) {
-    seeds.push({
-      role: `topic_${seeds.length}`,
-      heading: `Rozszerzenie: ${reader.keyword} (${seeds.length + 1})`,
-      importance: 3,
-    });
   }
   return seeds.slice(0, need);
 }
@@ -126,10 +125,12 @@ export function buildAdaptiveOutline(opts: {
   intent: IntentBlueprint;
   /** CIE Narrative Optimizer seeds — when set, replace default topicSeeds. */
   narrativeSeeds?: NarrativeSeed[] | null;
+  /** Competitor common H2s — fillers when no topic blocks. */
+  commonHeadings?: string[];
 }): AdaptiveOutline {
   const seeds: TopicSeed[] = opts.narrativeSeeds?.length
     ? opts.narrativeSeeds
-    : topicSeeds(opts.reader, opts.blueprint);
+    : topicSeeds(opts.reader, opts.blueprint, opts.commonHeadings);
   const totalImp = seeds.reduce((s, x) => s + x.importance, 0) || 1;
   const claimPool = [...opts.kg.claims];
   const questionPool = [...opts.kg.questions];
@@ -144,7 +145,7 @@ export function buildAdaptiveOutline(opts: {
       Math.round(opts.blueprint.targetClaims * share),
     ));
     const qQuota = Math.max(
-      /faq|quick/i.test(seed.role) ? 2 : 0,
+      /faq|quick|szybka|szybki/i.test(seed.role) ? 2 : 0,
       Math.round(opts.blueprint.targetQuestions * share),
     );
     const assignedClaimIds: string[] = [];
@@ -197,18 +198,28 @@ export function buildAdaptiveOutline(opts: {
     if (!progressed) break;
   }
   while (qIdx < questionPool.length) {
-    for (const s of byImp) {
+    let progressed = false;
+    const eligible = byImp.filter((s) => !/summary|podsum/i.test(s.role));
+    const targets = eligible.length ? eligible : byImp;
+    for (const s of targets) {
       if (qIdx >= questionPool.length) break;
-      if (/summary/i.test(s.role)) continue;
       s.assignedQuestionIds.push(questionPool[qIdx++].id);
       s.sectionBudget.questions = s.assignedQuestionIds.length;
+      progressed = true;
     }
+    if (!progressed) break;
   }
 
+  const ordered = orderSectionsFaqLast(sections);
+  const lang: OutlineLang = opts.reader.language === 'en' ? 'en' : 'pl';
   return {
-    h1: opts.reader.keyword,
-    sections,
-    narrativeOrder: sections.map((s) => s.id),
+    h1: titleizeH1({
+      keyword: opts.reader.keyword,
+      lang,
+      year: opts.intent.yearHint,
+    }),
+    sections: ordered.sections,
+    narrativeOrder: ordered.narrativeOrder,
   };
 }
 
@@ -292,7 +303,12 @@ export function improveOutline(
     }
   }
 
-  return next;
+  const ordered = orderSectionsFaqLast(next.sections);
+  return {
+    ...next,
+    sections: ordered.sections,
+    narrativeOrder: ordered.narrativeOrder,
+  };
 }
 
 export function buildSectionBriefs(

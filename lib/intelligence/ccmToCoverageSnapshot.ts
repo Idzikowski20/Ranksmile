@@ -14,6 +14,7 @@ import type { CanonicalContentModel } from '../ccm/types/ccm';
 import { graphQuery } from '../ccm/graphQuery';
 import type { CoverageStatus } from '../ccm/types/status';
 import { normalizeFactKey } from '../ccm/builders/factEngine';
+import { compactCoverageSnapshotItems, AI_COVERAGE_MAX } from '../curateCoverageItems';
 
 function statusToQuality(status: CoverageStatus): number {
   switch (status) {
@@ -119,12 +120,18 @@ export function projectCcmToCoverageSnapshot(
     opts.previous?.answersMainQuestionEarly ??
     intents.some((i) => i.primary && isCovered(i.status));
 
-  const { overall, buckets } = computeCoverageScores(items, answersMainQuestionEarly);
+  // Cap CCM dump — UI checklist must stay near AI_COVERAGE_MAX (not 100+ facts).
+  const compacted = compactCoverageSnapshotItems(items);
+  const capped = compacted.length > AI_COVERAGE_MAX
+    ? compacted.slice(0, AI_COVERAGE_MAX)
+    : compacted;
+
+  const { overall, buckets } = computeCoverageScores(capped, answersMainQuestionEarly);
 
   const topics: CoverageTopicGroup[] = intents
     .map((intentNode) => {
       const supporting = q.neighbors(intentNode.id, 'supports', 'in');
-      const itemIds = supporting.map((n) => n.id).filter((id) => items.some((it) => it.id === id));
+      const itemIds = supporting.map((n) => n.id).filter((id) => capped.some((it) => it.id === id));
       if (!itemIds.length) return null;
       return { title: intentNode.label, itemIds };
     })
@@ -136,7 +143,7 @@ export function projectCcmToCoverageSnapshot(
     promptVersion: 'ccm-v1',
     model: 'ccm',
     createdAt: opts.createdAt,
-    items,
+    items: capped,
     buckets,
     answersMainQuestionEarly,
     overall,

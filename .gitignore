@@ -74,3 +74,7 @@ static_analysis_codeql_1/
 # Sentry Config File
 .env.sentry-build-plugin
 .env.local
+
+# git worktrees (local)
+.worktrees/
+

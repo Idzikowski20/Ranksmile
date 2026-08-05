@@ -8,7 +8,7 @@ const SEED_NOISE_TOKENS = new Set([
   'znaczy', 'znaczenie', 'definicja', 'slownik', 'tlumacz', 'tlumaczenie', 'oznacza',
 ]);
 
-const OFF_TOPIC_PATTERNS = [
+  const OFF_TOPIC_PATTERNS = [
   /\btest z lektury\b/,
   /\bsubkonto zus\b/,
   /\bustaw(?:a|y)\b.*\bnawrocki\b/,
@@ -29,6 +29,14 @@ const OFF_TOPIC_PATTERNS = [
   /\bustawa a rozporzadzenie\b/,
   /\badministracji publicznej\b/,
   /\bwarunkowanie sprawcze\b/,
+  // Related-search / game / book pollution (e.g. "szantaz metin2", "… ksiazka")
+  /\bmetin2?\b/,
+  /\bminecraft\b/,
+  /\bfortnite\b/,
+  /\broblox\b/,
+  /\bksiazka\b/,
+  /\blektur\b/,
+  /\blubimyczytac\b/,
 ];
 
 /** Seed words used for whole-token matching (min 3 chars). */
@@ -120,15 +128,23 @@ export function filterNlpTermsForAnalysis<T extends { term: string }>(terms: T[]
   if (strict.length >= MIN_ANALYSIS_TERMS) return strict;
 
   const seeds = seedTokens(seedKeyword);
+  const strictSeeds = new Set<string>();
+  for (const t of strict) {
+    for (const w of normalizeTerm(t.term).split(/\s+/).filter((x) => x.length >= 3)) {
+      strictSeeds.add(w);
+    }
+  }
+  const relatedSeeds = [...seeds, ...strictSeeds];
+
   const soft = terms.filter((t) => {
     const term = normalizeTerm(t.term);
     if (isKnownNoiseTerm(term)) return false;
     const words = term.split(/\s+/).filter((w) => w.length >= 3);
     if (!words.length) return false;
-    if (sharesAnySeedToken(words, seeds)) return true;
-    // Competitor SERP phrases without exact seed overlap (related entities).
-    if (words.length >= 2) return true;
-    return words.length === 1 && words[0].length >= 6;
+    // Must share stem with seed OR already-accepted strict terms — no free multi-word pass.
+    if (sharesAnySeedToken(words, relatedSeeds)) return true;
+    // Topical long unigram co-occurring in SERP (e.g. "dezinformacja" near hybrid-war corpus).
+    return words.length === 1 && words[0].length >= 8 && strict.length > 0;
   });
 
   return soft.length > strict.length ? soft : strict;

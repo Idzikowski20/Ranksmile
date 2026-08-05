@@ -130,7 +130,7 @@ def _planned_h2_headings(plan: dict) -> list[str]:
 
 
 def _plan_conformity_ok(html: str, plan: dict) -> bool:
-    """Post-write: output H2 set should mostly match Execution Plan (no invented outline)."""
+    """Post-write: output H2 set should mostly match Execution Plan (exact normalized titles)."""
     planned = [h.lower() for h in _planned_h2_headings(plan)]
     if not planned:
         return True
@@ -140,11 +140,7 @@ def _plan_conformity_ok(html: str, plan: dict) -> bool:
     ]
     if not h2s:
         return False
-    covered = sum(
-        1
-        for p in planned
-        if any(h == p or p in h or h in p for h in h2s)
-    )
+    covered = sum(1 for p in planned if p in h2s)
     return (covered / len(planned)) >= 0.7
 
 
@@ -263,14 +259,30 @@ Zwróć POPRAWIONY HTML (tylko HTML):
 
 {article_html}""", max_tokens=8000))
 
-        if _is_usable_article(reviewed):
-            if _plan_conformity_ok(reviewed, plan):
-                return reviewed
+        if _is_usable_article(reviewed) and _plan_conformity_ok(reviewed, plan):
+            return reviewed
+        if _is_usable_article(reviewed) and not _plan_conformity_ok(reviewed, plan):
             print("[generate] Review broke plan conformity — keeping Phase write")
-        if _is_usable_article(article_html):
-            if not _plan_conformity_ok(article_html, plan):
-                print("[generate] WARNING: output H2 low conformity vs Execution Plan")
+
+        if _is_usable_article(article_html) and _plan_conformity_ok(article_html, plan):
             return article_html
+
+        if _is_usable_article(article_html):
+            print("[generate] Phase write H2 low conformity — retrying once")
+            article_html = _strip_code_fences(await _chat(
+                f"""Execute this Article Execution Plan as full HTML article.
+Keyword: "{keyword}". Language: {language}. ~{plan_words} words.
+{tone_directive}
+PLAN:
+{plan_block[:6000]}
+Start with <h1>. Use ONLY the planned H2 headings EXACTLY as written and in order. Do not invent sections. Only article HTML.""",
+                max_tokens=8000,
+            ))
+            if _is_usable_article(article_html) and _plan_conformity_ok(article_html, plan):
+                return article_html
+            print("[generate] Execution Plan conformity failed after retry — rejecting output")
+            return ""
+
         print("[generate] Execution Plan pipeline produced no usable HTML")
         return ""
 

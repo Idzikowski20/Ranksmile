@@ -15,7 +15,7 @@ export function benchmarkDocsFromCompetitors(competitors: CompetitorRawInput[]):
       tables: c.tables || 0,
       lists: c.lists || 0,
       images: c.images || 0,
-      examples: Math.max(0, Math.round((c.claims?.length || 0) * 0.3)),
+      examples: typeof c.examples === 'number' ? Math.max(0, c.examples) : 0,
       citations: Math.max(0, Math.round((c.claims?.length || 0) * 0.5)),
       sectionLens: h2 > 0 ? Array.from({ length: h2 }, () => sectionLen) : [sectionLen],
       introLen: Math.min(200, Math.round(words * 0.05) || 80),

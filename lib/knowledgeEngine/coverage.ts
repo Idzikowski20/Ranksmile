@@ -28,7 +28,12 @@ function statusFromScore(score: number): ClaimCoverageStatus {
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  // Drop non-visible blocks first so JSON-LD / scripts / styles cannot "cover" claims.
+  const withoutBlocks = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ');
+  return withoutBlocks.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /** Sliding windows + sentence slices for max-similarity coverage. */

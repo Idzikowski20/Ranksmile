@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -9,7 +9,7 @@ import ArticleList from '../../components/articles/ArticleList';
 import AddDomain from '../../components/domains/AddDomain';
 import Settings from '../../components/settings/Settings';
 import { KoalaPage, KoalaPageHeader, KoalaPageFilters, KoalaPanel } from '../../components/koala/layout';
-import { Button, CompactSelect, SearchBar } from '../../components/koala/core';
+import { Button, CompactSelect, SearchBar, useTableLoadMore } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
 import { useFetchSettings } from '../../services/settings';
 import { useWorkspaces } from '../../services/workspaces';
@@ -17,6 +17,41 @@ import { useQuery, useQueryClient } from 'react-query';
 import { getErrorMessage } from '../../lib/errors';
 import { deriveActiveId } from '../../lib/activeWorkspace';
 import { buildArticleWorkspaceLinks } from '../../lib/articleWorkspaceLinks';
+
+type ArticleRow = {
+  id: number | string;
+  title: string;
+  status: string;
+  score_data?: string;
+  content_score?: number;
+  target_keyword: string;
+  word_count: number | null;
+  publish_target: string | null;
+  publish_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function filterAndSortArticles(articles: ArticleRow[], searchQuery: string, sortBy: string): ArticleRow[] {
+  const q = searchQuery.trim().toLowerCase();
+  const filtered = q
+    ? articles.filter((a) => {
+        const title = (a.title || '').toLowerCase();
+        const kw = (a.target_keyword || '').toLowerCase();
+        return title.includes(q) || kw.includes(q);
+      })
+    : articles;
+
+  return [...filtered].sort((a, b) => {
+    if (sortBy === 'Title') return (a.title || '').localeCompare(b.title || '');
+    if (sortBy === 'CreatedAt') {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    const aTs = new Date(a.updated_at || a.created_at).getTime();
+    const bTs = new Date(b.updated_at || b.created_at).getTime();
+    return bTs - aTs;
+  });
+}
 
 const fetchArticles = async (domainId?: number) => {
   const url = domainId ? `/api/articles?domainId=${domainId}` : '/api/articles';
@@ -93,7 +128,15 @@ const ArticlesPage: NextPage = () => {
     }
   };
 
-  const articles = articlesData?.articles || [];
+  const articles: ArticleRow[] = articlesData?.articles || [];
+  const filteredArticles = useMemo(
+    () => filterAndSortArticles(articles, searchQuery, sortBy),
+    [articles, searchQuery, sortBy],
+  );
+  const articlesChunk = useTableLoadMore(filteredArticles, {
+    pageSize: 20,
+    resetKey: `articles-${selectedDomainId ?? 'all'}-${sortBy}-${searchQuery}-${filteredArticles.length}`,
+  });
 
   const headerActions = (
     <div className="articles-page-actions">
@@ -161,13 +204,32 @@ const ArticlesPage: NextPage = () => {
         </KoalaPageFilters>
 
         <KoalaPanel noPadding className="koala-panel--cards">
-          <ArticleList
-            articles={articles}
-            onDelete={handleDelete}
-            onDeleteMultiple={handleDeleteMultiple}
-            isLoading={isLoading}
-            startLinks={startLinks}
-          />
+          {!isLoading && articles.length > 0 && filteredArticles.length === 0 ? (
+            <p
+              style={{
+                margin: 0,
+                padding: '48px 24px',
+                textAlign: 'center',
+                fontSize: 14,
+                lineHeight: '20px',
+                color: 'var(--koala-text-secondary)',
+                fontFamily: 'var(--font-family-primary)',
+              }}
+            >
+              No articles match your search.
+            </p>
+          ) : (
+            <ArticleList
+              articles={articles.length === 0 ? articles : articlesChunk.visibleItems}
+              onDelete={handleDelete}
+              onDeleteMultiple={handleDeleteMultiple}
+              isLoading={isLoading}
+              hasMore={articlesChunk.hasMore}
+              onLoadMore={articlesChunk.loadMore}
+              isLoadingMore={articlesChunk.isLoading}
+              startLinks={startLinks}
+            />
+          )}
         </KoalaPanel>
       </KoalaPage>
 

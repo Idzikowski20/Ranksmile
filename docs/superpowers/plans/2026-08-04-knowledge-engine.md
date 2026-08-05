@@ -136,7 +136,7 @@ it('claim has importanceScore + sourceDiversity; no dependsOn', () => {
 
 - [ ] **Step 2: FAIL then implement types**
 
-`KnowledgeGraph` marked conceptually immutable: TypeScript `Readonly<>` on arrays/objects; `buildGraph` returns `Object.freeze` shallow + freeze claims array.
+`KnowledgeGraph` is **deeply immutable**: TypeScript `readonly` on claims and all nested evidence fields (`roles`, `serpPositions`, diversity, …); `buildGraph` returns `Object.freeze` recursively (claims + nested evidence arrays). Test must assert nested mutation fails (e.g. push to `claim.evidence[0].roles` throws / is ignored).
 
 - [ ] **Step 3: PASS**
 
@@ -268,13 +268,16 @@ Run: `npx jest __tests__/lib/benchmarkIntelligence __tests__/lib/knowledgeEngine
 - [x] Order in generate:
 
 ```ts
-const benchmark = buildStructuralBenchmark(docs);
-const targets = toPlannerTargets(benchmark);
-const { graph, verifier } = await runKnowledgeEngine(...);
-const gate = shouldUseKnowledgePlanner(graph, verifier, flag);
-// persist structural_benchmark + knowledge_graph (immutable snapshot)
-if (gate.use) runContentPlanner({ knowledgeGraph: graph, plannerTargets: targets, ... });
-else runContentPlanner({ /* legacy */ }); // + warning
+// Gate flag first — never run CIE when off (legacy / never-block fallback).
+if (useKnowledgeEngine) {
+  const { graph } = await runKnowledgeEngine(...);
+  const gate = shouldUseKnowledgePlanner(graph, true);
+  // persist structural_benchmark; knowledge_graph only when gate.use
+  if (gate.use) runContentPlanner({ knowledgeGraph: graph, plannerTargets: targets, ... });
+  else runContentPlanner({ /* legacy */ }); // + warning; clear prior knowledge_graph
+} else {
+  runContentPlanner({ /* legacy */ });
+}
 ```
 
 ---
