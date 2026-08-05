@@ -39,6 +39,7 @@ async function runEnsureBillingTables(): Promise<void> {
     { sql: 'ALTER TABLE organizations ADD COLUMN payment_lock_last_event_id TEXT', label: 'payment_lock_last_event_id' },
     // One free Growth trial per org — survives cancel / re-checkout.
     { sql: 'ALTER TABLE organizations ADD COLUMN trial_consumed_at TIMESTAMP', label: 'trial_consumed_at' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN trial_activation_claim_id TEXT', label: 'trial_activation_claim_id' },
   ];
 
   for (const column of columns) {
