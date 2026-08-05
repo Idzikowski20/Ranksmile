@@ -11,6 +11,9 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
 
+const FINALIZING_STALE_SECS = 5 * 60;
+const isPg = Boolean(process.env.DATABASE_URL);
+
 type JobAccessRow = {
   id: string;
   status?: string;
@@ -27,6 +30,35 @@ async function canReadJob(userId: string | null, job: JobAccessRow): Promise<boo
     return assertArticleAccess(userId, Number(job.article_id));
   }
   return false;
+}
+
+async function failStaleFinalization(job: JobAccessRow): Promise<boolean> {
+  const stalePredicate = isPg
+    ? `updated_at < NOW() - INTERVAL '${FINALIZING_STALE_SECS} seconds'`
+    : `updated_at < datetime('now', '-${FINALIZING_STALE_SECS} seconds')`;
+  const recovered = await db.transaction(async (transaction) => {
+    const claim = await db.query(
+      `UPDATE analysis_jobs
+       SET status = 'failed', error = 'finalizing timed out', updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND status = 'finalizing' AND ${stalePredicate}`,
+      { replacements: [job.id], transaction },
+    );
+    if (affectedRows(claim) === 0) return false;
+    if (job.article_id) {
+      const { getArticleIdSql } = await import('../../../lib/articleSql');
+      const articleIdSql = await getArticleIdSql();
+      await db.query(
+        `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+        { replacements: [job.article_id], transaction },
+      );
+    }
+    return true;
+  });
+  if (recovered && job.job_type === 'domain_setup' && job.domain_id) {
+    const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+    await releaseSiteAuditRun(Number(job.domain_id), job.id).catch(() => {});
+  }
+  return recovered;
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -97,6 +129,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
       }
 
+      if (j.status === 'finalizing' && await failStaleFinalization(j)) {
+        j.status = 'failed';
+        j.progress_message = 'Finalization timed out';
+      }
+
       return res.status(200).json({
         jobId: j.id,
         jobType: j.job_type,
@@ -165,6 +202,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         { replacements: [jobId], type: QueryTypes.SELECT },
       );
       if (!jrows.length) return res.status(404).json({ error: 'job not found' });
+      if (await failStaleFinalization({ id: jobId, ...jrows[0] })) {
+        return res.status(409).json({ error: 'job finalization timed out' });
+      }
       // Claim terminal handling before materializing any result. DELETE competes on the
       // same queued/running states, so exactly one of cancellation or materialization wins.
       const claim = await db.query(
