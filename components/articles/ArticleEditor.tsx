@@ -1894,14 +1894,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     };
 
-    const cancelGenerationJob = async (jobId: string) => {
-      try {
-        const response = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Cancellation was not confirmed');
-      } catch {
-        toast.error('Could not confirm cancellation. The generation may still finish.');
-      }
-    };
 
     const handleWriteWithAi = async (opts?: {
       approvedOutline?: ApprovedOutlineHeading[];
@@ -1959,10 +1951,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           }
         }
 
-        if (!isCurrentRun()) {
-          if (jobId) void cancelGenerationJob(jobId);
-          return;
-        }
+        if (!isCurrentRun()) return;
 
         if (!jobId) {
           const genRes = await fetch(`/api/articles/${articleId}/generate`, {
@@ -1995,10 +1984,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           jobId = genData.jobId;
           if (isCurrentRun()) setGenerateMsg('Writing your article…');
         }
-        if (!isCurrentRun()) {
-          void cancelGenerationJob(jobId);
-          return;
-        }
+        if (!isCurrentRun()) return;
         generationJobIdRef.current = { runId, jobId };
 
         // Two channels over one SSE response — the status line and the article as it is
@@ -2117,7 +2103,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     };
 
     const handleOutlineCancel = () => {
-      const activeJob = generationJobIdRef.current;
       const activeReveal = generationRevealHtmlRef.current;
       outlineRequestRef.current?.abort();
       outlineRequestRef.current = null;
@@ -2134,9 +2119,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       setOutlineBusy(false);
       setGenerateBusy(false);
       setGeneratePct(null);
-      if (activeJob) {
-        void cancelGenerationJob(activeJob.jobId);
-      }
       setOutlineReviewMode(false);
       const q = { ...router.query };
       delete q.reviewOutline;
