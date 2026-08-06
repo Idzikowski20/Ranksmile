@@ -111,3 +111,37 @@ def test_uppercase_mailto_scheme_is_kept():
     out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
     assert removed == 0
     assert out == html
+
+
+def test_strips_script_tag():
+    html = '<p>text</p><script>alert(1)</script>'
+    out, _ = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+    assert "<script" not in out
+    assert "alert" not in out
+
+
+def test_strips_svg_onload():
+    html = '<p>text</p><svg onload="alert(1)"></svg>'
+    out, _ = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+    assert "<svg" not in out
+    assert "onload" not in out
+
+
+def test_strips_iframe():
+    html = '<p>text</p><iframe src="https://evil.example"></iframe>'
+    out, _ = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+    assert "<iframe" not in out
+
+
+def test_strips_javascript_href_but_keeps_anchor_text():
+    html = '<p><a href="javascript:alert(1)">click</a></p>'
+    out, _ = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+    assert "javascript:" not in out
+    assert "click" in out
+
+
+def test_strips_javascript_src_on_img():
+    html = '<p><img src="javascript:alert(1)" onerror="alert(2)"></p>'
+    out, _ = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+    assert "javascript:" not in out
+    assert "onerror" not in out

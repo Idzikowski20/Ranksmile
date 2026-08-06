@@ -278,12 +278,34 @@ export async function ensureArticlesTables() {
    } catch {}
    // At most one active article_generate job per article — the DB-level half of the
    // single-in-flight-generation guard in /api/articles/[id]/generate (app-code check-
-   // then-act alone leaves a race between the check and the insert).
+   // then-act alone leaves a race between the check and the insert). Without this index
+   // as the arbiter, generate's `ON CONFLICT (article_id) WHERE ...` throws on every call
+   // (no matching unique constraint to target), so failing to create it can't be swallowed
+   // silently the way a purely-optional index can.
+   //
+   // Pre-existing duplicate active rows (e.g. seeded before this index existed) would
+   // block creation — self-heal by failing every duplicate but the earliest per article
+   // before attempting it, so a stale anomaly doesn't permanently disable generation.
+   try {
+      await db.query(`
+         UPDATE analysis_jobs SET status = 'failed', error = 'duplicate in-flight row cleared for unique index'
+          WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')
+            AND created_at > (
+                  SELECT MIN(t2.created_at) FROM analysis_jobs t2
+                   WHERE t2.article_id = analysis_jobs.article_id AND t2.job_type = 'article_generate'
+                     AND t2.status IN ('queued', 'running', 'finalizing'))
+      `);
+   } catch (dedupeErr) {
+      console.error('[articles] failed to dedupe in-flight article_generate rows:', dedupeErr);
+   }
    try {
       await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_analysis_jobs_generate_inflight
          ON analysis_jobs(article_id)
          WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')`);
-   } catch {}
+   } catch (indexErr) {
+      console.error('[articles] CRITICAL: could not create idx_analysis_jobs_generate_inflight — '
+         + 'the single-in-flight generate guard will fail closed (500) until this is fixed:', indexErr);
+   }
 
    tablesChecked = true;
    console.log('[articles] Tables ready');

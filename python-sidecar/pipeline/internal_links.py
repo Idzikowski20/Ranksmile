@@ -15,6 +15,38 @@ from bs4 import BeautifulSoup
 MAX_PROMPT_LINKS = 15
 KEEP_SCHEMES = ("mailto:", "tel:", "#")
 
+# No downstream HTML sanitizer sees this output — enforce_internal_links is the last
+# point that parses the LLM-generated body before storage, so it also has to close the
+# other stored-XSS vectors, not just on* handlers on <a>: tags that execute on their own
+# (script/svg/iframe/...) and javascript:/vbscript: URLs on any element that accepts one.
+DANGEROUS_TAGS = ("script", "style", "iframe", "object", "embed", "svg", "form", "base", "meta", "link")
+URL_ATTRS = ("href", "src", "action", "formaction")
+DANGEROUS_URL_SCHEMES = ("javascript:", "vbscript:", "data:text/html")
+
+
+def _strip_dangerous_markup(soup: BeautifulSoup) -> bool:
+    """Remove self-executing tags and neutralize script-URL attributes. Returns True
+    if anything was changed."""
+    mutated = False
+
+    for tag in soup.find_all(DANGEROUS_TAGS):
+        tag.decompose()
+        mutated = True
+
+    for tag in soup.find_all(True):
+        on_attrs = [a for a in tag.attrs if a.lower().startswith("on")]
+        for attr in on_attrs:
+            del tag[attr]
+        mutated = mutated or bool(on_attrs)
+
+        for attr in URL_ATTRS:
+            value = tag.get(attr)
+            if isinstance(value, str) and value.strip().lower().startswith(DANGEROUS_URL_SCHEMES):
+                del tag[attr]
+                mutated = True
+
+    return mutated
+
 
 def _host(value: str) -> str:
     return urlparse(value).netloc.lower().removeprefix("www.")
@@ -101,18 +133,9 @@ def enforce_internal_links(html: str, allowed: set[str], site_url: str) -> tuple
     site_host = _host(site_url)
     soup = BeautifulSoup(html, "html.parser")
     removed = 0
-    mutated = False
+    mutated = _strip_dangerous_markup(soup)
 
     for anchor in soup.find_all("a"):
-        # No downstream HTML sanitizer sees this output — a hallucinated or manipulated
-        # Writer response could embed event handlers on an otherwise-legitimate anchor.
-        # Stripped regardless of `removed` below: an allowlisted anchor keeps its href
-        # but must not keep an onclick either.
-        stripped_attrs = [a for a in anchor.attrs if a.lower().startswith("on")]
-        for attr in stripped_attrs:
-            del anchor[attr]
-        mutated = mutated or bool(stripped_attrs)
-
         href = (anchor.get("href") or "").strip()
         if not href or href.lower().startswith(KEEP_SCHEMES):
             continue

@@ -166,7 +166,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             // behind, and usedTopics above reads target_keyword from every article
             // regardless of status — an un-discarded skeleton permanently marks this
             // topic as used with no article ever written for it.
-            if (articleId) await discardAutopilotDraft(articleId).catch(() => {});
+            if (articleId) {
+               await discardAutopilotDraft(articleId).catch((cleanupErr) => {
+                  console.error(`Failed to discard orphaned draft ${articleId} for ${domain.domain}:`, cleanupErr);
+               });
+            }
          }
       }
 

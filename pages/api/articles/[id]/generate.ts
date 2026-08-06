@@ -130,6 +130,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
+    // Every rejection below the claim must release the row: these are ordinary
+    // res.status(...) returns (not throws), so the outer catch's cleanup never runs for
+    // them — under the partial unique index a row left 'queued' here would permanently
+    // 409 every future generate call for this article.
+    const rejectClaim = async (status: number, body: Record<string, unknown>) => {
+      if (jobId) {
+        await db.query("UPDATE analysis_jobs SET status = 'failed', error = ? WHERE id = ? AND status = 'queued'", {
+          replacements: [String(body.error || body.message || 'validation_failed').slice(0, 500), jobId],
+        }).catch(() => {});
+      }
+      return res.status(status).json(body);
+    };
+
     // 1. Load the existing article (keyword + domain + analysed language + score_data)
     const articleRows = await db.query<ArticleGenerateRow>(
       `SELECT target_keyword, domain_id, language, score_data, competitor_outlines_cache
@@ -137,9 +150,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       { replacements: [articleId], type: QueryTypes.SELECT },
     );
     const article = articleRows[0];
-    if (!article) return res.status(404).json({ error: 'Article not found' });
+    if (!article) return rejectClaim(404, { error: 'Article not found' });
     const keyword = article.target_keyword;
-    if (!keyword) return res.status(400).json({ error: 'Article has no target keyword' });
+    if (!keyword) return rejectClaim(400, { error: 'Article has no target keyword' });
     const locale = await resolveContentLocale({ domainId: article.domain_id, articleId: articleIdNum, bodyLanguage: language });
     const lang = article.language || locale.languageCode;
 
@@ -303,7 +316,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     let writePlan = finalized.bundle.executionPlan;
     if (!finalized.canWrite || !writePlan) {
-      return res.status(422).json({
+      return rejectClaim(422, {
         error: 'plan_validation_failed',
         message: 'Article Execution Plan failed Plan Validator — Write Engine not started',
         canWrite: false,
@@ -321,7 +334,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (approvedHeadings.length > 0) {
       const approvedPlan = applyApprovedOutlineToPlan(writePlan, approvedHeadings);
       if (!approvedPlan) {
-        return res.status(422).json({
+        return rejectClaim(422, {
           error: 'approved_outline_empty',
           message: 'The approved outline has no usable headings. Add at least one H2 before writing.',
         });
@@ -335,7 +348,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       allowBrandNiche,
     });
     if (!compiledResult.ok) {
-      return res.status(422).json({
+      return rejectClaim(422, {
         error: 'compiled_write_plan_invalid',
         issues: compiledResult.issues,
         diagnostics: compiledResult.diagnostics,
