@@ -1,0 +1,53 @@
+__tests__/lib/contentPlanner/applyApprovedOutline.test.ts
+  s_8d6cce368af4fd::t_ebca73e40694dd 108,110,113-127,130,132-153
+  s_8d6cce368af4fd::t_898a86f7b5abd2 4
+pages/api/articles/[id]/generate.ts
+  s_8d6cce368af4fd::t_c1c3fb0df42116 390
+  s_8d6cce368af4fd::t_0bc7f23d9b833b 34
+  s_8d6cce368af4fd::t_91edbc5c856f99 99-117
+  s_8d6cce368af4fd::t_5e5ff3fb6a7406 303-305,310-311,315
+python-sidecar/pipeline/internal_links.py
+  s_8d6cce368af4fd::t_57505e9fc199a3 42,49
+  s_8d6cce368af4fd::t_cbf80de2159ef3 1-41,43-48,50-97
+pages/api/cron/daily.ts
+  s_8d6cce368af4fd::t_959d0606e5e757 187-189
+  s_8d6cce368af4fd::t_b90f14ab744f5c 20-49
+  s_8d6cce368af4fd::t_fe0218537c09b0 174-179,185,190-192
+python-sidecar/pipeline/article_pipeline.py
+  s_8d6cce368af4fd::t_fe43299e543eaa 176-177
+  s_8d6cce368af4fd::t_ac326842449dee 269
+  s_8d6cce368af4fd::t_9679fb702dad4a 222-227,230-231
+  s_8d6cce368af4fd::t_a4192a9d5e3339 12
+  s_8d6cce368af4fd::t_8fb0ff1197be07 357
+  s_8d6cce368af4fd::t_54c256dc78684c 191-196
+lib/contentPlanner/index.ts
+  s_8d6cce368af4fd::t_e88ae30e4638bb 79
+lib/contentPlanner/applyApprovedOutline.ts
+  s_8d6cce368af4fd::t_c30abdb47e13ee 3-6,10,78-122,150-182,190-192,194,196,198-199,203-208,210,216-220,225,229,235-253
+python-sidecar/main.py
+  s_8d6cce368af4fd::t_1839d5adbff02e 5
+  s_8d6cce368af4fd::t_5601a6641beb97 258
+  s_8d6cce368af4fd::t_52b8b679a90003 218-219,222-229
+  s_8d6cce368af4fd::t_d22c80978a6248 76-82
+  s_8d6cce368af4fd::t_1255edb24e7716 567,570-573
+  s_8d6cce368af4fd::t_be5c64c960ec3a 200
+  s_8d6cce368af4fd::t_abb1051a0531b0 564-566
+python-sidecar/tests/test_internal_links.py
+  s_8d6cce368af4fd::t_749399982f76f9 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5ae9c70e82f95c6235c10d839774d1ed0a8cb870",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
