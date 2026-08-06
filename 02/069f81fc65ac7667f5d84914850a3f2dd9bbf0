@@ -1,0 +1,25 @@
+__tests__/lib/streamDelta.test.ts
+  s_8d6cce368af4fd::t_a8fd2f86ebb572 1-19
+pages/api/articles/[id]/generate-stream.ts
+  s_8d6cce368af4fd::t_fa6e7d28b68314 1-61,63-93
+  s_8d6cce368af4fd::t_586c407454b6a7 62
+lib/streamDelta.ts
+  s_8d6cce368af4fd::t_aee5c61f2a00d8 1-4,6-9
+  s_8d6cce368af4fd::t_48a2b594add399 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "02069f81fc65ac7667f5d84914850a3f2dd9bbf0",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
