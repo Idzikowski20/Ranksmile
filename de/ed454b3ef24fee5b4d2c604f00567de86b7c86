@@ -1,0 +1,53 @@
+pages/api/cron/daily.ts
+  s_5d38b41c00a7d7::t_b571e1795e30ad 18
+  s_5d38b41c00a7d7::t_e48879573e6c2d 144-145,151,165-169
+lib/ensureArticlesTables.ts
+  s_5d38b41c00a7d7::t_11373a4006d545 273-280
+lib/autopilot.ts
+  s_5d38b41c00a7d7::t_22cd7af50823d7 18-25
+  s_5d38b41c00a7d7::t_caecb74a28480d 225-243,249,269-275
+  s_5d38b41c00a7d7::t_dac1c147908db6 172-181,196,203-207
+  s_5d38b41c00a7d7::t_5df8b9be26b633 89-117,123,134-135,140-144
+pages/api/cron/autopilot.ts
+  s_5d38b41c00a7d7::t_5d5b86acf9caad 12,20-23
+pages/api/articles/[id]/generate.ts
+  s_5d38b41c00a7d7::t_3a7f72e7d29b62 407-410,412-414
+  s_5d38b41c00a7d7::t_a3574f1a13314a 375
+  s_5d38b41c00a7d7::t_1036d99e1d7aea 96,100-114,116-124,128
+  s_5d38b41c00a7d7::t_632913ef9c0b81 411
+  s_5d38b41c00a7d7::t_101dc004ebc232 373,376
+python-sidecar/main.py
+  s_5d38b41c00a7d7::t_f1d3fa094b0280 223-234
+python-sidecar/pipeline/article_pipeline.py
+  s_5d38b41c00a7d7::t_a9a3aa645da217 330
+  s_5d38b41c00a7d7::t_d3c14038a000d1 223-225,227,230-236,248-249
+  s_5d38b41c00a7d7::t_f3d9d6b1bc8258 301
+python-sidecar/tests/test_internal_links.py
+  s_5d38b41c00a7d7::t_58e8a2dc6d6679 66-113
+pages/api/articles/deep-analysis.ts
+  s_5d38b41c00a7d7::t_fb0f1975020113 196,198-200
+python-sidecar/pipeline/internal_links.py
+  s_5d38b41c00a7d7::t_36e1d44a9f2641 107-108,113,115,117-124,129-131,138-139
+  s_5d38b41c00a7d7::t_d362527905d99b 34-41
+  s_5d38b41c00a7d7::t_b1cdfda7ac1159 11,24-28,31
+  s_5d38b41c00a7d7::t_5ca1663c09324c 57,59-66,78,85
+  s_5d38b41c00a7d7::t_7f1d14af06a5e3 68
+  s_5d38b41c00a7d7::t_45d85d23c292b1 104,109-112,114
+  s_5d38b41c00a7d7::t_034fae817881e9 137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "deed454b3ef24fee5b4d2c604f00567de86b7c86",
+  "prompts": {},
+  "sessions": {
+    "s_5d38b41c00a7d7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaaeabc1-5a09-4e87-a961-21f36ea601b4",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
