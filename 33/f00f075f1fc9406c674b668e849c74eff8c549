@@ -1,0 +1,19 @@
+lib/stripeWebhookEvents.ts
+  s_5d38b41c00a7d7::t_6cbf9bae403bd7 1-45
+__tests__/lib/stripeWebhookEvents.test.ts
+  s_5d38b41c00a7d7::t_68d95b6eba76f2 1-34
+pages/api/cron/stripe-billing-reconcile.ts
+  s_5d38b41c00a7d7::t_f26f670ac52fbf 2,4,14-27
+pages/api/webhooks/stripe.ts
+  s_5d38b41c00a7d7::t_0af2ec53a2b166 5
+  s_5d38b41c00a7d7::t_6804028df7dbda 87-91
+  s_5d38b41c00a7d7::t_aab0e57f798cd8 435-438
+lib/ensureBillingTables.ts
+  s_5d38b41c00a7d7::t_6b4151254c2534 83-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "33f00f075f1fc9406c674b668e849c74eff8c549",
+  "prompts": {}
+}
