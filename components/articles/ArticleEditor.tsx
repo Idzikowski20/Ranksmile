@@ -51,7 +51,7 @@ import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
 import { clearWizardState } from '../../lib/wizardState';
 import {
   collectApprovedOutline,
-  reviewOutlineFromBundle,
+  outlineForReview,
   reviewOutlineToHtml,
 } from '../../lib/contentPlanner/reviewOutline';
 import type { ContentPlannerBundle } from '../../lib/contentPlanner/types';
@@ -2057,6 +2057,33 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     };
 
+    // Persist outline edits while reviewing. Without this the edited structure lives
+    // only in the TipTap document, so leaving review and returning restored the
+    // planner's version and silently discarded the reviewer's work.
+    useEffect(() => {
+      const articleId = commentArticleId ? Number(commentArticleId) : undefined;
+      if (!outlineReviewMode || !editor || !articleId || outlineBusy || generateBusy) return undefined;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const save = () => {
+        const approvedOutline = collectApprovedOutline(editor.getJSON());
+        if (!approvedOutline.length) return;
+        fetch(`/api/articles/${articleId}/content-plan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ approvedOutline }),
+        }).catch(() => {});
+      };
+      const onUpdate = () => {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(save, 1200);
+      };
+      editor.on('update', onUpdate);
+      return () => {
+        editor.off('update', onUpdate);
+        if (timer) clearTimeout(timer);
+      };
+    }, [outlineReviewMode, editor, commentArticleId, outlineBusy, generateBusy]);
+
     // ?reviewOutline=1 → review mode; false when param absent (not only Cancel).
     useEffect(() => {
       if (!router.isReady) return;
@@ -2092,10 +2119,15 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         try {
           const res = await fetch(`/api/articles/${articleId}/content-plan`);
           const data = await res.json() as {
-            content_planner_v2?: { bundle?: ContentPlannerBundle } | null;
+            content_planner_v2?: {
+              bundle?: ContentPlannerBundle;
+              approvedOutline?: unknown;
+            } | null;
           };
-          const bundle = data.content_planner_v2?.bundle;
-          const stored = bundle ? reviewOutlineFromBundle(bundle) : [];
+          const stored = outlineForReview({
+            approvedOutline: data.content_planner_v2?.approvedOutline,
+            bundle: data.content_planner_v2?.bundle,
+          });
           if (stored.length) {
             outlineOriginalHtmlRef.current ??= editor.getHTML();
             await playReveal(reviewOutlineToHtml(stored), true, 'preserve');
