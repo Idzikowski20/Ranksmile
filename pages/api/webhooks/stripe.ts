@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import type Stripe from 'stripe';
 import { getStripe, getStripeWebhookSecret } from '../../../lib/stripe';
 import { readRawBody } from '../../../lib/readRawBody';
+import { claimStripeEvent, releaseStripeEvent } from '../../../lib/stripeWebhookEvents';
 import {
   orgIdFromMetadata,
   syncCheckoutSessionToOrg,
@@ -81,6 +82,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Invalid webhook signature';
     return res.status(400).json({ error: message });
+  }
+
+  // Stripe delivers at-least-once; duplicates must not re-run side effects.
+  if (!(await claimStripeEvent(event))) {
+    return res.status(200).json({ received: true, duplicate: true });
   }
 
   try {
@@ -426,6 +432,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (err) {
     console.error('[stripe webhook]', event.type, err);
+    // Give the claim back — a 500 makes Stripe retry, and a kept claim would swallow it.
+    await releaseStripeEvent(event.id).catch((e) => {
+      console.error('[stripe webhook] release claim', event.id, e);
+    });
     return res.status(500).json({ error: 'Webhook handler failed' });
   }
 
