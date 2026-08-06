@@ -25,6 +25,8 @@ import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModa
 import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
 import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
 import { resolveArticleEntry, articleEntryHref } from '../../../lib/articleFlow';
+import AnalysisProgressPanel from '../../../components/articles/AnalysisProgressPanel';
+import type { AnalysisPhases } from '../../../lib/analysisPhases';
 import { computeOptimizeLiveSnapshot } from '../../../lib/computeLiveArticleScores';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { liveCoverageItems, scoreDeltaGate } from '../../../lib/liveCoverage';
@@ -513,6 +515,25 @@ const ArticleEditorPage: NextPage = () => {
   });
 
   const editorLocked = isDeepAnalyzing;
+
+  // Typed analysis phases for the side panel. The job row already carries them (the
+  // sidecar's stage events are mapped in job-progress), so this only reads.
+  const [analysisPhases, setAnalysisPhases] = useState<AnalysisPhases | null>(null);
+  useEffect(() => {
+    if (!id || Array.isArray(id) || !isDeepAnalyzing) return undefined;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/articles/job-progress?articleId=${id}&jobType=deep_analysis`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json() as { phases?: AnalysisPhases | null };
+        if (data.phases && !cancelled) setAnalysisPhases(data.phases);
+      } catch { /* the panel just keeps its last known phases */ }
+    };
+    tick().catch(() => {});
+    const timer = setInterval(() => { tick().catch(() => {}); }, 2000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [id, isDeepAnalyzing]);
 
   useEffect(() => {
     if (!isDeepAnalyzing) return;
@@ -2176,7 +2197,13 @@ const ArticleEditorPage: NextPage = () => {
 
             {/* Bottom card: keyword + content score OR panel */}
             <div className="koala-panel editor-side-panel-card">
-              {editorLocked ? (
+              {isDeepAnalyzing && analysisPhases ? (
+                // Entered the editor before the analysis finished — show what the
+                // pipeline is doing instead of an empty Content Score.
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
+                  <AnalysisProgressPanel phases={analysisPhases} />
+                </div>
+              ) : editorLocked ? (
                 <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
                   <ContentScorePanel
                     plainText={plainText}
