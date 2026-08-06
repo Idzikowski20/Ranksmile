@@ -31,6 +31,7 @@ import {
   finalizePlannerForWrite,
   runContentPlanner,
   applyApprovedOutlineToPlan,
+  approvedOutlineWarnings,
   parseApprovedOutline,
   toSidecarCompiledPlan,
 } from '../../../../lib/contentPlanner';
@@ -94,6 +95,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const articleIdSql = await getArticleIdSql();
+
+    // 0. One in-flight generation per article. Without this a double click runs the
+    // planner + Write Engine twice (double LLM spend) and races two terminal
+    // callbacks onto the same article row.
+    const inflight = await db.query<{ id: string }>(
+      `SELECT id FROM analysis_jobs
+        WHERE article_id = ? AND job_type = 'article_generate'
+          AND status IN ('queued', 'running', 'finalizing')
+        ORDER BY created_at DESC LIMIT 1`,
+      { replacements: [articleIdNum], type: QueryTypes.SELECT },
+    );
+    if (inflight[0]) {
+      return res.status(409).json({
+        error: 'generation_in_progress',
+        message: 'This article is already being generated.',
+        jobId: inflight[0].id,
+        articleId,
+      });
+    }
 
     // 1. Load the existing article (keyword + domain + analysed language + score_data)
     const articleRows = await db.query<ArticleGenerateRow>(
@@ -280,15 +300,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
+    // Reviewer owns the structure: added / removed / reordered H2 is applied as-is,
+    // benchmark shortfalls come back as warnings instead of blocking the write.
+    let outlineWarnings: string[] = [];
     if (approvedHeadings.length > 0) {
       const approvedPlan = applyApprovedOutlineToPlan(writePlan, approvedHeadings);
       if (!approvedPlan) {
         return res.status(422).json({
-          error: 'approved_outline_mismatch',
-          message: 'The approved outline must keep the validated section count. Regenerate the outline before writing.',
+          error: 'approved_outline_empty',
+          message: 'The approved outline has no usable headings. Add at least one H2 before writing.',
         });
       }
       writePlan = approvedPlan;
+      outlineWarnings = approvedOutlineWarnings(writePlan);
     }
 
     const compiledResult = compileAndValidateWritePlan(writePlan, {
@@ -363,6 +387,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       articleId,
       planHash: writePlan.planHash,
       diagnostics: compiledResult.diagnostics,
+      ...(outlineWarnings.length ? { outlineWarnings } : {}),
     });
   } catch (error) {
     console.error('[articles/[id]/generate] error:', error);

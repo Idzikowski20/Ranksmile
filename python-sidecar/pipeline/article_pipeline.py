@@ -9,6 +9,7 @@ import os
 import re
 from openai import AsyncOpenAI
 from pipeline.compiled_runtime import run_compiled_write_plan
+from pipeline.internal_links import format_internal_link_block
 
 
 _client: AsyncOpenAI | None = None
@@ -172,6 +173,8 @@ async def run_pipeline(
     voice_tone: str = "",
     execution_plan: dict | None = None,
     compiled_write_plan: dict | None = None,
+    existing_articles: list[dict] | None = None,
+    internal_links: bool = True,
 ) -> str:
     top_terms = [t["term"] for t in serp_data.get("terms", [])[:25]]
     terms_str = ", ".join(top_terms) if top_terms else "brak danych NLP"
@@ -184,6 +187,12 @@ async def run_pipeline(
     ext_req = (
         '- Wpleć 2-4 linki zewnętrzne <a href="..."> do wiarygodnych, autorytatywnych źródeł'
         if external_links else "- Nie dodawaj linków zewnętrznych"
+    )
+    # Internal links are written INTO the body (allowlist enforced after render),
+    # not appended as post-hoc suggestions.
+    link_articles = existing_articles or []
+    links_block = (
+        format_internal_link_block(link_articles, language) if internal_links else ""
     )
     brand_block = (
         f"\n\nWIEDZA O MARCE (użyj jako kontekst, nie kopiuj dosłownie):\n{brand_knowledge.strip()}"
@@ -210,9 +219,16 @@ async def run_pipeline(
         if not isinstance(compiled_write_plan, dict):
             raise ValueError("compiled_write_plan must be an object")
 
+        # Short list per paragraph — the full block would be re-sent for every paragraph.
+        paragraph_links_block = (
+            format_internal_link_block(link_articles, language, limit=8)
+            if internal_links else ""
+        )
+
         async def write_markdown(prompt: str) -> str:
             return await _chat(
-                f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}\n\n{prompt}",
+                f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}\n\n"
+                f"{prompt}{paragraph_links_block}",
                 max_tokens=1200,
                 system="Write SEO content as Markdown only. Never emit HTML.",
             )
@@ -250,7 +266,7 @@ ARTICLE EXECUTION PLAN:
 Kontekst strony (nie zmienia struktury planu):
 {site_info}
 
-NLP Terms (wpleć naturalnie, bez stuffingu): {terms_str}{brand_block}{instr_block}
+NLP Terms (wpleć naturalnie, bez stuffingu): {terms_str}{brand_block}{instr_block}{links_block}
 
 WYMAGANIA:
 - Zacznij od <h1> = title z planu (lub blisko)
@@ -338,7 +354,7 @@ Język: {language}, Target słów: {target_words}
 Outline:
 {outline}
 
-NLP Terms (wpleć naturalnie): {terms_str}{brand_block}{instr_block}
+NLP Terms (wpleć naturalnie): {terms_str}{brand_block}{instr_block}{links_block}
 
 WYMAGANIA:
 - Zacznij od <h1> z keyword w tytule
