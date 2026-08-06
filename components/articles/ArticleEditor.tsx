@@ -51,8 +51,10 @@ import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
 import { clearWizardState } from '../../lib/wizardState';
 import {
   collectApprovedOutline,
+  reviewOutlineFromBundle,
   reviewOutlineToHtml,
 } from '../../lib/contentPlanner/reviewOutline';
+import type { ContentPlannerBundle } from '../../lib/contentPlanner/types';
 import type { ApprovedOutlineHeading } from '../../lib/contentPlanner/applyApprovedOutline';
 
 function collectOutlineHeadings(ed: Editor): Array<{ level: number; text: string }> {
@@ -2065,6 +2067,46 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       if (!outlineReviewMode) outlineAutoStarted.current = false;
     }, [outlineReviewMode]);
 
+    /**
+     * Re-entering review must not re-plan. The outline lives only in the TipTap doc,
+     * never in articles.content, so a returning user arrives with an empty editor —
+     * but content-plan already persisted the bundle, so render that instead of paying
+     * for a second planner run.
+     */
+    const restoreOrGenerateOutline = async () => {
+      const articleId = commentArticleId ? Number(commentArticleId) : undefined;
+      if (!editor) return;
+      if (articleId) {
+        // A write already running for this article: re-attach rather than start a
+        // second one (the API's single-in-flight guard would reject it anyway).
+        try {
+          const jobRes = await fetch(
+            `/api/articles/job-progress?articleId=${articleId}&jobType=article_generate`,
+          );
+          const job = await jobRes.json() as { status?: string; jobId?: string };
+          if ((job.status === 'running' || job.status === 'queued') && job.jobId) {
+            handleWriteWithAi().catch(() => {});
+            return;
+          }
+        } catch { /* no running job to re-attach to */ }
+        try {
+          const res = await fetch(`/api/articles/${articleId}/content-plan`);
+          const data = await res.json() as {
+            content_planner_v2?: { bundle?: ContentPlannerBundle } | null;
+          };
+          const bundle = data.content_planner_v2?.bundle;
+          const stored = bundle ? reviewOutlineFromBundle(bundle) : [];
+          if (stored.length) {
+            outlineOriginalHtmlRef.current ??= editor.getHTML();
+            await playReveal(reviewOutlineToHtml(stored), true, 'preserve');
+            setOutlineHeadingCount(stored.filter((h) => h.level >= 2).length);
+            return;
+          }
+        } catch { /* no usable stored plan — fall through to a fresh one */ }
+      }
+      await handleInsertOutline();
+    };
+
     useEffect(() => {
       if (!outlineReviewMode || !editor || outlineAutoStarted.current || outlineBusy || generateBusy) return undefined;
       const t = setTimeout(() => {
@@ -2072,7 +2114,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         const existing = collectOutlineHeadings(editor);
         outlineAutoStarted.current = true;
         setOutlineHeadingCount(existing.length);
-        if (existing.length === 0) void handleInsertOutline();
+        if (existing.length === 0) void restoreOrGenerateOutline();
       }, 450);
       return () => clearTimeout(t);
       // ponytail: one-shot when review mode + editor ready (omit handleInsertOutline)
