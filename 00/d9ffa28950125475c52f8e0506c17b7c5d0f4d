@@ -1,0 +1,33 @@
+__tests__/lib/contentPlanner/reviewOutline.test.ts
+  s_8d6cce368af4fd::t_a6085bf5ed8cc9 72
+__tests__/lib/analysisPhases.test.ts
+  s_8d6cce368af4fd::t_c1bd816c4b7827 22-33
+pages/api/articles/job-progress.ts
+  s_8d6cce368af4fd::t_a77565d1cd2061 15-16,327-329,331-335
+lib/streamText.ts
+  s_8d6cce368af4fd::t_6457810896c3a2 1-9
+lib/ensureArticlesTables.ts
+  s_8d6cce368af4fd::t_a77565d1cd2061 290-291
+lib/contentPlanner/reviewOutline.ts
+  s_8d6cce368af4fd::t_3b2e246d618129 19,22
+lib/analysisPhases.ts
+  s_8d6cce368af4fd::t_3b2e246d618129 47-57,64-68,84-85
+components/articles/AnalysisProgressPanel.tsx
+  s_8d6cce368af4fd::t_fe897c388a4465 6-12,31,40,50,54-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "00d9ffa28950125475c52f8e0506c17b7c5d0f4d",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
