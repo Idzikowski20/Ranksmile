@@ -1,6 +1,6 @@
 import type { ArticleFact } from './articleFactTypes';
 import { factReadinessScore } from './factReadiness';
-import type { ScoreFactor } from './aiScore/factors';
+import { DEFAULT_WEIGHTS, type ScoreFactor } from './aiScore/factors';
 
 export type AiCitation = {
    prompt: string;
@@ -48,12 +48,10 @@ export function computeAiSearchScore(summary?: AiVisibilitySummary | null): numb
  * cannot disagree. Falls back to the legacy boolean when no factors were computed.
  */
 function intentFromIntroFactors(factors: ScoreFactor[]): number {
-   const weights: Record<string, number> = {
-      INTRODUCTION_COVERED_TOPICS: 1,
-      INTRODUCTION_TARGET_AUDIENCE: 1,
-      INTRODUCTION_EARLY_QUERY_ANSWER: 2,
-      INTRODUCTION_TOPIC_RELEVANCE: 1,
-   };
+   // Read from the same table AioScore uses — a second copy would drift on the first tune.
+   const weights = Object.fromEntries(
+      Object.entries(DEFAULT_WEIGHTS).filter(([name]) => name.startsWith('INTRODUCTION_')),
+   ) as Record<string, number>;
    const total = Object.values(weights).reduce((sum, w) => sum + w, 0);
    const earned = factors.reduce(
       (sum, factor) => sum + factor.score * (weights[factor.name] ?? 0),

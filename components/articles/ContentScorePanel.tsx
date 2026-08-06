@@ -586,7 +586,12 @@ const ContentScorePanel = ({
   const displayContent = optimizeLiveScores?.overall
     ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
 
-  const aiFactors = (html || '').trim() ? liveIntroFactors : (scoreData?.ai_factors ?? []);
+  const storedFactors = scoreData?.ai_factors ?? [];
+  // Introduction factors recompute from the text; FACTS_COVERAGE is article-wide and only
+  // written after generation, so keep the persisted one rather than dropping it.
+  const aiFactors = plainText.trim()
+    ? [...storedFactors.filter((f) => !f.name.startsWith('INTRODUCTION_')), ...liveIntroFactors]
+    : storedFactors;
 
   const historyDelta = useCoverageHistoryDelta(articleId);
   const trioDeltas = scoreDeltas ?? (historyDelta ? { ai: historyDelta.delta } : undefined);

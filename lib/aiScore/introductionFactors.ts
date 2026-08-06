@@ -2,6 +2,7 @@ import type { FactorName, ScoreFactor } from './factors';
 
 /** Surfer judges the opening hard; only the first few sentences count as introduction. */
 const INTRO_SENTENCE_LIMIT = 6;
+const STOPWORDS = new Set(['w', 'we', 'i', 'na', 'do', 'za', 'z', 'ze', 'o', 'the', 'a', 'an', 'of', 'to', 'in', 'on']);
 
 function introSentences(html: string): string[] {
   const withoutHeadings = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, ' ');
@@ -43,7 +44,11 @@ export function scoreIntroduction(opts: {
   audienceTerms: string[];
 }): ScoreFactor[] {
   const sentences = introSentences(opts.html);
-  const keywordTerms = opts.keyword.split(/\s+/).filter((word) => word.length > 2);
+  // Two-letter queries are real ("AI", "UX"); only drop the connectives that carry no intent.
+  const keywordTerms = opts.keyword
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length >= 2 && !STOPWORDS.has(word.toLowerCase()));
 
   const topics = findSpan(sentences, opts.coveredTopics);
   const audience = findSpan(sentences, opts.audienceTerms);
