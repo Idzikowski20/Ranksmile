@@ -220,13 +220,18 @@ async def generate_article(req: GenerateRequest):
     )
 
     # The Writer links from the allowlist; strip any internal URL it invented anyway.
-    if req.internal_links:
-        from pipeline.internal_links import allowed_link_urls, enforce_internal_links
-        article_html, dropped = enforce_internal_links(
-            article_html, allowed_link_urls(domain_articles), req.url,
-        )
-        if dropped:
-            print(f"[generate] Removed {dropped} hallucinated internal link(s)")
+    # Runs even when internal_links is off — the prompt instruction to not link
+    # internally is not a guarantee, and skipping this let a same-site link the
+    # Writer emitted anyway survive untouched. An empty allowlist here still leaves
+    # external/mailto/tel/fragment links alone (enforce_internal_links only unwraps
+    # same-host anchors).
+    from pipeline.internal_links import allowed_link_urls, enforce_internal_links
+    link_allowlist = allowed_link_urls(domain_articles) if req.internal_links else set()
+    article_html, dropped = enforce_internal_links(
+        article_html, link_allowlist, req.url,
+    )
+    if dropped:
+        print(f"[generate] Removed {dropped} hallucinated internal link(s)")
 
     # Surfer-style mid-article images (Pollinations) — fail-soft
     try:

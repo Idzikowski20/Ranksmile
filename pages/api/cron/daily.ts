@@ -15,6 +15,7 @@ import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
 import { cronSecrets } from '../../../lib/cronAuth';
 import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '../../../lib/autopilot';
+import { nextjsUrl } from '../../../lib/serviceUrls';
 
 export const config = { maxDuration: 60 };
 
@@ -140,13 +141,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
          const nextTopic = topics.find((t: string) => !usedTopics.includes(t)) || topics[0];
 
-         const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXTJS_URL || 'http://localhost:3000';
+         const baseUrl = nextjsUrl();
+         let articleId: number | null = null;
          try {
             // Seed only: draft row + deep-analysis. /api/cron/autopilot writes the article
             // once the analysis lands, so no cron request waits on the LLM pipeline.
             // (The old /api/articles/generate had no cron auth and blocked on a 300s
             // sidecar call inside a 60s function.)
-            const articleId = await createAutopilotDraft(domain.ID, nextTopic);
+            articleId = await createAutopilotDraft(domain.ID, nextTopic);
             const started = await triggerAutopilotAnalysis(
                { baseUrl, cronSecret: cronHeader },
                { articleId, domainId: domain.ID, keyword: nextTopic },
@@ -160,6 +162,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             }
          } catch (fetchErr) {
             console.error(`Failed to trigger for ${domain.domain}:`, fetchErr);
+            // A thrown error (network failure, timeout) still leaves the draft skeleton
+            // behind, and usedTopics above reads target_keyword from every article
+            // regardless of status — an un-discarded skeleton permanently marks this
+            // topic as used with no article ever written for it.
+            if (articleId) await discardAutopilotDraft(articleId).catch(() => {});
          }
       }
 

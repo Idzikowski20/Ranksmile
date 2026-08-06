@@ -63,3 +63,51 @@ def test_www_host_counts_as_the_same_site():
     out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
     assert removed == 1
     assert "<a" not in out
+
+
+def test_strips_event_handler_from_kept_anchor():
+    html = '<p><a href="https://example.pl/kurs" onclick="alert(1)">kurs</a></p>'
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+    assert removed == 0  # kept — on the allowlist
+    assert "onclick" not in out
+    assert "<a" in out
+
+
+def test_strips_event_handler_from_unwrapped_anchor():
+    html = '<p><a href="/blog/nie-istnieje" onmouseover="alert(1)">poradnik</a></p>'
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+    assert removed == 1
+    assert "onmouseover" not in out
+
+
+def test_path_case_is_not_folded():
+    articles = [{"id": 1, "title": "Guide", "url": "https://example.pl/Guide"}]
+    html = '<p><a href="/guide">x</a></p>'  # lowercase — not the allowlisted /Guide
+    out, removed = enforce_internal_links(html, allowed_link_urls(articles), "https://example.pl")
+    assert removed == 1
+    assert "<a" not in out
+
+
+def test_relative_href_without_leading_slash_resolves_against_site_root():
+    # Naive f"https://{host}{path}" concatenation drops the separator here and produces
+    # "https://example.plkurs/zapisy" — a mangled host, not a missing-allowlist miss.
+    articles = [{"id": 1, "title": "Zapisy", "url": "https://example.pl/kurs/zapisy"}]
+    html = '<p><a href="kurs/zapisy">zapisz się</a></p>'
+    out, removed = enforce_internal_links(html, allowed_link_urls(articles), "https://example.pl")
+    assert removed == 0
+    assert "<a" in out
+
+
+def test_malformed_href_is_unwrapped_not_raised():
+    html = '<p><a href="https://[::1">broken</a></p>'
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+    assert removed == 1
+    assert "<a" not in out
+    assert "broken" in out
+
+
+def test_uppercase_mailto_scheme_is_kept():
+    html = '<p><a href="MAILTO:a@b.pl">mail</a></p>'
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+    assert removed == 0
+    assert out == html

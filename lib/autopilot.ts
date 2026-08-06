@@ -15,9 +15,14 @@ const STALE_ANALYSIS_MINUTES = 15;
 export const MAX_ANALYSIS_ATTEMPTS = 3;
 
 const isPg = Boolean(process.env.DATABASE_URL);
-// ponytail: payload LIKE instead of a dedicated column — the flag is written once and
-// only read by this sweep. Add an autopilot column if it ever needs indexing/filtering.
-const autopilotJob = (alias: string) => `${alias}.job_type = 'deep_analysis' AND ${alias}.payload LIKE '%"autopilot":true%'`;
+// ponytail: payload lookup instead of a dedicated column — the flag is written once and
+// only read by this sweep. Add an autopilot column (with an index) if it ever needs to
+// scale past a periodic cron sweep of a bounded candidate window.
+// `payload` is JSONB on Postgres — LIKE has no implicit jsonb->text cast and errors on
+// every row, so Postgres needs the containment operator; SQLite keeps its TEXT payload.
+const autopilotJob = (alias: string) => (isPg
+  ? `${alias}.job_type = 'deep_analysis' AND ${alias}.payload @> '{"autopilot":true}'::jsonb`
+  : `${alias}.job_type = 'deep_analysis' AND ${alias}.payload LIKE '%"autopilot":true%'`);
 
 export type AutopilotAction = 'generate' | 'retry_analysis' | 'skip';
 
@@ -81,11 +86,41 @@ export async function discardAutopilotDraft(articleId: number): Promise<void> {
 
 type TriggerArgs = { baseUrl: string; cronSecret: string };
 
+/** Analysis materializes inside its own long-running request; we don't await that here. */
+const JOB_CONFIRM_ATTEMPTS = 4;
+const JOB_CONFIRM_DELAY_MS = 500;
+
+function sleep(ms: number): Promise<void> {
+   return new Promise((resolve) => { setTimeout(resolve, ms); });
+}
+
+/** Deep-analysis creates its job row after the SSE 200 has already been flushed (a plain
+ * JSON error would arrive as an SSE error frame past that point instead) — so a successful
+ * HTTP handshake alone doesn't mean the job was durably created. Poll for the row directly
+ * instead of trusting res.ok, and don't drain the (multi-minute) SSE body to check it. */
+async function confirmAnalysisJobCreated(articleId: number, sinceMs: number): Promise<boolean> {
+   const sinceIso = new Date(sinceMs).toISOString();
+   for (let attempt = 0; attempt < JOB_CONFIRM_ATTEMPTS; attempt += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const rows = await queryRows<{ id: string }>(
+         `SELECT id FROM analysis_jobs
+           WHERE article_id = ? AND job_type = 'deep_analysis' AND created_at >= ?
+           ORDER BY created_at DESC LIMIT 1`,
+         [articleId, sinceIso],
+      );
+      if (rows[0]) return true;
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(JOB_CONFIRM_DELAY_MS);
+   }
+   return false;
+}
+
 /** Fire-and-forget: deep-analysis materializes in its own request, we only start it. */
 export async function triggerAutopilotAnalysis(
    { baseUrl, cronSecret }: TriggerArgs,
    article: { articleId: number; domainId: number; keyword: string },
 ): Promise<boolean> {
+   const firedAt = Date.now();
    const res = await fetch(`${baseUrl}/api/articles/deep-analysis`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-cron-secret': cronSecret },
@@ -96,12 +131,17 @@ export async function triggerAutopilotAnalysis(
          autopilot: true,
       }),
    });
-   // The response is an SSE stream we deliberately don't drain — only the handshake matters.
+   // The response is an SSE stream we deliberately don't drain — only the handshake matters,
+   // and the job-row poll above is what actually confirms the enqueue.
    if (!res.ok) {
       console.error('[autopilot] deep-analysis rejected:', res.status, (await res.text().catch(() => '')).slice(0, 300));
       return false;
    }
-   return true;
+   const confirmed = await confirmAnalysisJobCreated(article.articleId, firedAt);
+   if (!confirmed) {
+      console.error('[autopilot] deep-analysis accepted the request but no job row appeared:', article.articleId);
+   }
+   return confirmed;
 }
 
 async function triggerGenerate(
@@ -126,12 +166,19 @@ type CandidateRow = {
    stale: number | boolean;
    domain_id: number | null;
    target_keyword: string | null;
-   content: string | null;
    attempts: number;
-   generate_jobs: number;
 };
 
-/** Latest autopilot analysis per article, with everything the decision needs. */
+/** article_generate statuses that mean "already spoken for" — exclude 'failed' so a
+ * kickoff failure (sidecar down, validator rejection) doesn't strand the article. */
+const GENERATE_ACTIVE_STATUSES = "'queued', 'running', 'finalizing'";
+
+/**
+ * Latest autopilot analysis per article, with everything the decision needs.
+ * Written articles and ones already handed to the Write Engine are excluded here, in
+ * SQL, before LIMIT — filtering them out in application code after the fetch let a
+ * `limit`-sized page of already-done rows starve genuinely actionable ones behind them.
+ */
 async function loadCandidates(limit: number): Promise<CandidateRow[]> {
    const { getArticleIdSql } = await import('./articleSql');
    const articleIdSql = await getArticleIdSql();
@@ -145,17 +192,19 @@ async function loadCandidates(limit: number): Promise<CandidateRow[]> {
               CASE WHEN ${stalePredicate} THEN 1 ELSE 0 END AS stale,
               a.domain_id,
               a.target_keyword,
-              a.content,
               (SELECT COUNT(*) FROM analysis_jobs t
-                WHERE t.article_id = j.article_id AND ${autopilotJob('t')}) AS attempts,
-              (SELECT COUNT(*) FROM analysis_jobs g
-                WHERE g.article_id = j.article_id AND g.job_type = 'article_generate') AS generate_jobs
+                WHERE t.article_id = j.article_id AND ${autopilotJob('t')}) AS attempts
          FROM analysis_jobs j
          JOIN articles a ON a.${articleIdSql} = j.article_id
         WHERE ${autopilotJob('j')}
           AND j.created_at = (
                 SELECT MAX(l.created_at) FROM analysis_jobs l
                  WHERE l.article_id = j.article_id AND l.job_type = 'deep_analysis')
+          AND (a.content IS NULL OR a.content = '')
+          AND NOT EXISTS (
+                SELECT 1 FROM analysis_jobs g
+                 WHERE g.article_id = j.article_id AND g.job_type = 'article_generate'
+                   AND g.status IN (${GENERATE_ACTIVE_STATUSES}))
         ORDER BY j.created_at ASC
         LIMIT ?`,
       [limit],
@@ -173,15 +222,31 @@ export type AutopilotSweepResult = {
  * whose analysis failed or stalled. Already-generating articles are filtered out here
  * and rejected again by the single-in-flight guard in /articles/[id]/generate.
  */
+/**
+ * MAX_ANALYSIS_ATTEMPTS is counted from job rows (loadCandidates' `attempts`), so a
+ * retry that never produces a row — the trigger request itself was rejected, not the
+ * analysis it would have started — doesn't count against the cap. A persistently
+ * rejecting endpoint (auth misconfigured, deep-analysis down) would then retry the
+ * same article every tick forever. Write a synthetic failed row so it counts.
+ */
+async function recordRejectedRetry(articleId: number, reason: string): Promise<void> {
+   const jobId = `job_${articleId}_${Date.now()}_rejected`;
+   const payload = JSON.stringify({ autopilot: true });
+   await db.query(
+      `INSERT INTO analysis_jobs (id, article_id, job_type, status, payload, error, created_at, updated_at)
+       VALUES (?, ?, 'deep_analysis', 'failed', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      { replacements: [jobId, articleId, payload, reason.slice(0, 500)] },
+   ).catch((err) => {
+      console.error('[autopilot] recordRejectedRetry failed:', articleId, err);
+   });
+}
+
 export async function runAutopilotSweep(
    args: TriggerArgs & { limit?: number },
 ): Promise<AutopilotSweepResult> {
    const limit = args.limit ?? 10;
    const result: AutopilotSweepResult = { generated: [], retried: [], skipped: 0 };
-   const all = await loadCandidates(limit);
-   // Written or already handed to the Write Engine — nothing left for the autopilot.
-   const rows = all.filter((row) => !(row.content || '').trim() && Number(row.generate_jobs) === 0);
-   result.skipped = all.length - rows.length;
+   const rows = await loadCandidates(limit);
 
    for (const row of rows) {
       const action = decideAutopilotAction({
@@ -201,7 +266,13 @@ export async function runAutopilotSweep(
             domainId: row.domain_id,
             keyword: row.target_keyword,
          });
-         if (ok) result.retried.push(row.article_id);
+         if (ok) {
+            result.retried.push(row.article_id);
+         } else {
+            // eslint-disable-next-line no-await-in-loop
+            await recordRejectedRetry(row.article_id, 'autopilot trigger rejected or unconfirmed');
+            result.skipped += 1;
+         }
       } else {
          result.skipped += 1;
       }
