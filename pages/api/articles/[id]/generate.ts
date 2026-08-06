@@ -93,24 +93,39 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     approvedOutline = null,
   } = req.body || {};
 
+  let jobId: string | null = null;
   try {
     const articleIdSql = await getArticleIdSql();
 
-    // 0. One in-flight generation per article. Without this a double click runs the
-    // planner + Write Engine twice (double LLM spend) and races two terminal
-    // callbacks onto the same article row.
-    const inflight = await db.query<{ id: string }>(
-      `SELECT id FROM analysis_jobs
-        WHERE article_id = ? AND job_type = 'article_generate'
-          AND status IN ('queued', 'running', 'finalizing')
-        ORDER BY created_at DESC LIMIT 1`,
-      { replacements: [articleIdNum], type: QueryTypes.SELECT },
+    // 0. One in-flight generation per article, enforced by a partial unique index
+    // (idx_analysis_jobs_generate_inflight, see ensureArticlesTables) rather than a
+    // plain check-then-act SELECT: the planner + Write Engine run for tens of seconds
+    // between the old check and its INSERT, wide enough for two concurrent requests to
+    // both pass the check, both spend an LLM run, and race two terminal callbacks onto
+    // the same article row. Claiming the job row up front — before any of that work —
+    // makes the guard atomic at the database level instead of racy in application code.
+    jobId = `gen_${articleIdNum}_${Date.now()}`;
+    const claimed = await db.query<{ id: string }>(
+      `INSERT INTO analysis_jobs (id, article_id, job_type, status, payload, created_at, updated_at)
+       VALUES (?, ?, 'article_generate', 'queued', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       ON CONFLICT (article_id) WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')
+       DO NOTHING
+       RETURNING id`,
+      { replacements: [jobId, articleIdNum], type: QueryTypes.SELECT },
     );
-    if (inflight[0]) {
+    if (!claimed[0]) {
+      jobId = null;
+      const inflight = await db.query<{ id: string }>(
+        `SELECT id FROM analysis_jobs
+          WHERE article_id = ? AND job_type = 'article_generate'
+            AND status IN ('queued', 'running', 'finalizing')
+          ORDER BY created_at DESC LIMIT 1`,
+        { replacements: [articleIdNum], type: QueryTypes.SELECT },
+      );
       return res.status(409).json({
         error: 'generation_in_progress',
         message: 'This article is already being generated.',
-        jobId: inflight[0].id,
+        jobId: inflight[0]?.id,
         articleId,
       });
     }
@@ -355,12 +370,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       compiled_write_plan: compiledWritePlan,
     };
 
-    // 7. Async: enqueue a job, mark the article 'generating', and kick off the sidecar.
-    const jobId = `gen_${articleId}_${Date.now()}`;
+    // 7. Fill in the job claimed at step 0, mark the article 'generating', kick off the sidecar.
     await db.query(
-      `INSERT INTO analysis_jobs (id, article_id, job_type, status, payload, created_at, updated_at)
-       VALUES (?, ?, 'article_generate', 'queued', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      { replacements: [jobId, articleIdNum, JSON.stringify(sidecarPayload)] },
+      'UPDATE analysis_jobs SET payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      { replacements: [JSON.stringify(sidecarPayload), jobId] },
     );
     await db.query(
       `UPDATE articles SET status = 'generating', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
@@ -391,6 +404,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   } catch (error) {
     console.error('[articles/[id]/generate] error:', error);
+    // A claimed-but-never-finished job would sit in 'queued' forever and permanently
+    // block this article under the single-in-flight index (planner/validator errors
+    // land here, before the sidecar-kickoff try/catch that already handles its own).
+    if (jobId) {
+      await db.query("UPDATE analysis_jobs SET status = 'failed', error = ? WHERE id = ? AND status = 'queued'", {
+        replacements: [getErrorMessage(error).slice(0, 500), jobId],
+      }).catch(() => {});
+    }
     return res.status(500).json({ error: getErrorMessage(error) || 'Generation failed' });
   }
 }

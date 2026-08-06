@@ -9,6 +9,7 @@ import { cronSecrets } from '../../../lib/cronAuth';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
+import { nextjsUrl } from '../../../lib/serviceUrls';
 
 export const config = { maxDuration: 60 };
 
@@ -16,7 +17,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     await db.sync();
     await ensureArticlesTables();
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXTJS_URL || 'http://localhost:3000';
+    // nextjsUrl() honors APP_BASE_URL/NEXTJS_URL and falls back to the real production
+    // HTTPS host in prod runtimes — a bare 'http://localhost:3000' fallback here would
+    // send the cron secret in cleartext the moment either env var is unset.
+    const baseUrl = nextjsUrl();
     const result = await runAutopilotSweep({ baseUrl, cronSecret: cronSecrets()[0] || '' });
     return res.status(200).json({ ok: true, ...result });
   } catch (e) {

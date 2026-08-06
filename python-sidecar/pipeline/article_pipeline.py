@@ -220,10 +220,20 @@ async def run_pipeline(
             raise ValueError("compiled_write_plan must be an object")
 
         # Short list per paragraph — the full block would be re-sent for every paragraph.
+        # quota="0–1": write_markdown runs once per paragraph, so the article-level
+        # "2–5" quota would ask for 2–5 links in EACH paragraph, compounding well past
+        # the intended per-article total as the plan grows more paragraphs.
         paragraph_links_block = (
-            format_internal_link_block(link_articles, language, limit=8)
+            format_internal_link_block(link_articles, language, limit=8, quota="0–1")
             if internal_links else ""
         )
+        link_note = (
+            "\n\nJeśli akapit zawiera markdown link `[tekst](url)`, zachowaj go dokładnie "
+            "— nie usuwaj i nie wymyślaj nowych adresów."
+            if language.startswith("pl") else
+            "\n\nIf the paragraph contains a markdown link `[text](url)`, preserve it "
+            "exactly — don't drop it or invent new ones."
+        ) if internal_links else ""
 
         async def write_markdown(prompt: str) -> str:
             return await _chat(
@@ -235,7 +245,8 @@ async def run_pipeline(
 
         async def rewrite_markdown(markdown: str) -> str:
             return await _chat(
-                f"Rewrite this Markdown paragraph for clarity and factual precision. Markdown only.\n\n{markdown}",
+                f"Rewrite this Markdown paragraph for clarity and factual precision. "
+                f"Markdown only.{link_note}\n\n{markdown}",
                 max_tokens=1200,
                 system="You are an editorial judge. Return only rewritten Markdown.",
             )
@@ -287,7 +298,7 @@ Keyword: "{keyword}". Language: {language}. ~{plan_words} words.
 {tone_directive}
 PLAN:
 {plan_block[:6000]}
-Start with <h1>. Use ONLY planned H2 headings in order. Only article HTML.""",
+Start with <h1>. Use ONLY planned H2 headings in order. Only article HTML.{links_block}""",
                 max_tokens=8000,
             ))
 
@@ -316,7 +327,7 @@ Keyword: "{keyword}". Language: {language}. ~{plan_words} words.
 {tone_directive}
 PLAN:
 {plan_block[:6000]}
-Start with <h1>. Use ONLY the planned H2 headings EXACTLY as written and in order. Do not invent sections. Only article HTML.""",
+Start with <h1>. Use ONLY the planned H2 headings EXACTLY as written and in order. Do not invent sections. Only article HTML.{links_block}""",
                 max_tokens=8000,
             ))
             if _is_usable_article(article_html) and _plan_conformity_ok(article_html, plan):

@@ -193,8 +193,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const {
     url: rawUrl, keywords = [], country: bodyCountry, language: bodyLanguage,
-    articleId: existingArticleId, domainId: reqDomainId, autopilot: isAutopilot = false,
+    articleId: existingArticleId, domainId: reqDomainId, autopilot: requestedAutopilot = false,
   } = req.body;
+  // The autopilot sweep only follows up jobs marked this way — a logged-in user hitting
+  // this endpoint directly must not be able to self-enroll a job into that cron flow.
+  const isAutopilot = isCron && Boolean(requestedAutopilot);
   const url: string = (rawUrl as string) || '';
   const primaryKeyword = (keywords as string[])[0] || '';
   const isKeywordMode = !url && !!primaryKeyword && (!!reqDomainId || !!existingArticleId);

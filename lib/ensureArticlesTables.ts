@@ -270,6 +270,14 @@ export async function ensureArticlesTables() {
 
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_status ON analysis_jobs(status)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article ON analysis_jobs(article_id)`); } catch {}
+   // At most one active article_generate job per article — the DB-level half of the
+   // single-in-flight-generation guard in /api/articles/[id]/generate (app-code check-
+   // then-act alone leaves a race between the check and the insert).
+   try {
+      await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_analysis_jobs_generate_inflight
+         ON analysis_jobs(article_id)
+         WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')`);
+   } catch {}
 
    tablesChecked = true;
    console.log('[articles] Tables ready');
