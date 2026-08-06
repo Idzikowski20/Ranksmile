@@ -9,12 +9,20 @@ export function resolveArticleEntry(article: {
   wizard_state?: string | null;
   content?: string | null;
   status?: string | null;
+}, opts?: {
+  /**
+   * The wizard hands generation over to the editor with an EMPTY draft
+   * (?reviewOutline=1) and only clears wizard_state once the article is written.
+   * Without this the resume guard reads that hand-off as an unfinished wizard and
+   * bounces the user straight back to the writing-mode step.
+   */
+  outlineReview?: boolean;
 }): ArticleEntryResolution {
   if (article.status === 'generating') {
     return { kind: 'generating' };
   }
   const hasContent = !!(article.content || '').trim();
-  if (!hasContent && article.wizard_state) {
+  if (!hasContent && article.wizard_state && !opts?.outlineReview) {
     try {
       const ws = JSON.parse(article.wizard_state) as { step?: string };
       const step = typeof ws.step === 'string' && WIZARD_STEPS.includes(ws.step as typeof WIZARD_STEPS[number])
