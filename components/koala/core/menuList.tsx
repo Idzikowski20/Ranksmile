@@ -67,7 +67,7 @@ export function MenuList({ children, header, search, footer, className, role = '
     <Root className={`koala-menu-list ${className ?? ''}`.trim()} role={role}>
       {header ? <Header className="koala-menu-list__header">{header}</Header> : null}
       {search ? <Search className="koala-menu-list__search">{search}</Search> : null}
-      <Body className="koala-menu-list__body koala-menu-list">{children}</Body>
+      <Body className="koala-menu-list__body koala-menu-list styled-scrollbar">{children}</Body>
       {footer ? <Footer className="koala-menu-list__footer">{footer}</Footer> : null}
     </Root>
   );
