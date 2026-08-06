@@ -1,0 +1,25 @@
+styles/globals.css
+  s_5d38b41c00a7d7::t_7b73f36f8f5d77 8544-8558
+components/koala/core/calendar/dateRangePicker.tsx
+  s_5d38b41c00a7d7::t_12478b96ef4555 27,31,35,38,40-41,43,46-47
+  s_5d38b41c00a7d7::t_e35bbded3de9a8 53
+  s_5d38b41c00a7d7::t_33f7c322101584 92,97-98
+  s_5d38b41c00a7d7::t_52f3abecb3ea74 80
+  s_5d38b41c00a7d7::t_937dc77bbfa252 129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "af2d151ff61c8d02445c3ac0f864566fe7e74a4a",
+  "prompts": {},
+  "sessions": {
+    "s_5d38b41c00a7d7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaaeabc1-5a09-4e87-a961-21f36ea601b4",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
