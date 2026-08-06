@@ -239,6 +239,10 @@ export async function ensureArticlesTables() {
    // can be resumed from the Content Editor. Cleared once generation starts.
    try { await db.query(`ALTER TABLE articles ADD COLUMN wizard_state TEXT`); } catch {}
 
+   // Which planner/writer pipeline produced the article — so a later quality drop
+   // can be traced back to the version that wrote it.
+   try { await db.query(`ALTER TABLE articles ADD COLUMN pipeline_version TEXT`); } catch {}
+
    // Cached Plagiarism Check result so it survives reloads (avoids re-scanning).
    try { await db.query(`ALTER TABLE articles ADD COLUMN plagiarism_json TEXT`); } catch {}
 
