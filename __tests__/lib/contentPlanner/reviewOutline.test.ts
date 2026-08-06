@@ -69,7 +69,7 @@ describe('review outline', () => {
     expect(section.instructions).toEqual([
       'Explain the legal basis.',
       'Cover: A detective licence is issued by the voivodeship police. [gov.pl, sejm.gov.pl]',
-      'Include blocks: table, steps — Criteria: cost, time, discretion',
+      'Include blocks: table, steps',
       'Include source: Criteria: cost, time, discretion',
       'Bridge: Move on to how detectives collect evidence',
     ]);

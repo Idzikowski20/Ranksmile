@@ -16,12 +16,10 @@ function claimLine(claim: TargetClaim): string {
   return `Cover: ${claim.statement}${cited}`;
 }
 
+/** Blocks only — the evidence hints get their own "Include <kind>: <hint>" lines below. */
 function blockLine(brief: SectionBrief): string[] {
   const blocks = brief.blocks || [];
-  if (!blocks.length) return [];
-  const hints = (brief.evidence || []).map((item) => item.hint).filter(Boolean);
-  const detail = hints.length ? ` — ${hints.slice(0, 2).join('; ')}` : '';
-  return [`Include blocks: ${blocks.join(', ')}${detail}`];
+  return blocks.length ? [`Include blocks: ${blocks.join(', ')}`] : [];
 }
 
 /** Surfer-style "bridge to the next section" so the writer doesn't restart each time. */

@@ -12,7 +12,8 @@ import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
 import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
 import { safeJsonParse } from '../../../lib/safeJson';
-import { appendChunk } from '../../../lib/streamText';
+import { MAX_STREAM_CHARS } from '../../../lib/streamText';
+import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
 import {
   mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
 } from '../../../lib/analysisPhases';
@@ -323,13 +324,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
     }
     if (typeof contentChunk === 'string' && contentChunk) {
-      const streamRows = await db.query<{ stream_text: string | null }>(
-        `SELECT stream_text FROM analysis_jobs WHERE id = ?`,
-        { replacements: [jobId], type: QueryTypes.SELECT },
-      );
+      // Appended in SQL: a read-modify-write here dropped chunks whenever two callbacks
+      // overlapped, and rewrote the whole column on every chunk. The cap lives in the
+      // same statement so the row can never grow past it.
       await db.query(
-        `UPDATE analysis_jobs SET stream_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        { replacements: [appendChunk(streamRows[0]?.stream_text ?? null, contentChunk), jobId] },
+        `UPDATE analysis_jobs
+         SET stream_text = substr(COALESCE(stream_text, '') || ?, 1, ${MAX_STREAM_CHARS}),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        { replacements: [sanitizeArticleHtml(contentChunk), jobId] },
       );
     }
 
