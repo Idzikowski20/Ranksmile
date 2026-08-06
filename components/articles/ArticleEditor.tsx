@@ -2001,37 +2001,35 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         }
         generationJobIdRef.current = { runId, jobId };
 
-        const started = Date.now();
+        // Two channels over one SSE response — the status line and the article as it is
+        // written. The browser no longer polls; the server tails the job row.
         await new Promise<void>((resolve, reject) => {
-          const tick = async () => {
-            if (!isCurrentRun()) { resolve(); return; }
-            try {
-              const r = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId!)}`);
-              const d = await r.json().catch(() => ({})) as {
-                status?: string;
-                progressMessage?: string;
-                totalProgress?: number;
-              };
-              if (!isCurrentRun()) { resolve(); return; }
-              if (typeof d.progressMessage === 'string' && d.progressMessage.trim()) {
-                setGenerateMsg(d.progressMessage.trim());
-              }
-              if (typeof d.totalProgress === 'number') {
-                setGeneratePct(Math.max(0, Math.min(100, d.totalProgress)));
-              }
-              if (d.status === 'done') { resolve(); return; }
-              if (d.status === 'failed') {
-                reject(new Error(d.progressMessage || 'Generation failed'));
-                return;
-              }
-            } catch { /* keep polling through transient errors */ }
-            if (Date.now() - started > 8 * 60 * 1000) {
-              reject(new Error('Generation timed out'));
-              return;
-            }
-            setTimeout(tick, 2500);
+          const source = new EventSource(
+            `/api/articles/${articleId}/generate-stream?jobId=${encodeURIComponent(jobId!)}`,
+          );
+          const finish = (err?: Error) => {
+            source.close();
+            if (err) reject(err); else resolve();
           };
-          setTimeout(tick, 1200);
+          const timeout = setTimeout(
+            () => finish(new Error('Generation timed out')),
+            8 * 60 * 1000,
+          );
+          source.addEventListener('status', (event) => {
+            if (!isCurrentRun()) { clearTimeout(timeout); finish(); return; }
+            const { text } = JSON.parse((event as MessageEvent).data) as { text: string };
+            if (text.trim()) setGenerateMsg(text.trim());
+          });
+          source.addEventListener('done', () => { clearTimeout(timeout); finish(); });
+          source.addEventListener('error', (event) => {
+            clearTimeout(timeout);
+            // A server-sent `error` event carries a message; a transport drop does not.
+            const raw = (event as MessageEvent).data;
+            const message = typeof raw === 'string' && raw
+              ? (JSON.parse(raw) as { message?: string }).message
+              : null;
+            finish(new Error(message || 'Generation failed'));
+          });
         });
 
         if (!isCurrentRun()) return;
