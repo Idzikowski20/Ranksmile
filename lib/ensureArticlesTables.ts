@@ -204,6 +204,14 @@ export async function ensureArticlesTables() {
       )
    `);
 
+   // Typed analysis phases (lib/analysisPhases) — the editor renders fields, not a
+   // progress sentence. IF NOT EXISTS on the Postgres path keeps the server log clean.
+   if (isPostgres) {
+      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS progress_json TEXT`); } catch {}
+   } else {
+      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN progress_json TEXT`); } catch {}
+   }
+
    // New columns for AI ranking score
    if (isPostgres) {
       try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_score INTEGER`); } catch {}
