@@ -16,6 +16,7 @@ import PrePublishPanel from './PrePublishPanel';
 import type { AiReadabilityResult } from './PrePublishPanel';
 import type { PlagiarismResult } from './PlagiarismPanel';
 import ScoreTrio from './ScoreTrio';
+import ScoreFactorList from './ScoreFactorList';
 import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
 import { useCompetitors } from '../../services/competitors';
@@ -577,6 +578,8 @@ const ContentScorePanel = ({
   const displayContent = optimizeLiveScores?.overall
     ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
 
+  const aiFactors = scoreData?.ai_factors ?? [];
+
   const historyDelta = useCoverageHistoryDelta(articleId);
   const trioDeltas = scoreDeltas ?? (historyDelta ? { ai: historyDelta.delta } : undefined);
 
@@ -701,6 +704,11 @@ const ContentScorePanel = ({
           onSeoClick={() => { setWriteSection('seo'); setView('write'); }}
           onAiClick={() => { setWriteSection('ai'); setView('write'); }}
         />
+        {aiFactors.length > 0 && (
+          <div style={{ padding: '12px 16px 0' }}>
+            <ScoreFactorList factors={aiFactors} />
+          </div>
+        )}
       </div>
 
       {optimizeState === 'idle' && (
