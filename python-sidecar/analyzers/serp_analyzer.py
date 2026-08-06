@@ -89,7 +89,13 @@ def _serp_snippet_texts(serp_results: list[dict]) -> list[str]:
     return texts
 
 
-async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10, include_texts: bool = False) -> dict:
+async def analyze_serp(
+    keyword: str,
+    language: str = "pl",
+    num_results: int = 10,
+    include_texts: bool = False,
+    on_page=None,
+) -> dict:
     serper_key = os.getenv("SERPER_API_KEY", "")
 
     if not serper_key:
@@ -107,7 +113,7 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
     if skipped:
         print(f"[serp_analyzer] skipping {skipped} non-HTML SERP URLs (pdf/docs)")
 
-    serp_texts, soups = await _scrape_pages(scrapeable) if scrapeable else ([], [])
+    serp_texts, soups = await _scrape_pages(scrapeable, on_page) if scrapeable else ([], [])
     snippet_texts = _serp_snippet_texts(serp_results)
 
     # Prefer scraped bodies; if thin/empty, fall back to SERP snippets so term extraction
@@ -149,7 +155,13 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
     return result
 
 
-async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]]:
+async def _scrape_pages(
+    urls: list[str],
+    on_page=None,
+) -> tuple[list[str], list[BeautifulSoup]]:
+    """on_page(finished, total, url) fires as each page settles, so the editor can show
+    "Crawling result 6/10". Pages are fetched concurrently, so the counter is arrival
+    order, not list order."""
     scrape_headers = {
         "User-Agent": BROWSER_UA,
         "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
@@ -195,7 +207,23 @@ async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]
             print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
             return ("", None)
 
-    results = await asyncio.gather(*(_fetch_one(url) for url in urls), return_exceptions=False)
+    total = len(urls)
+    finished = 0
+
+    async def _fetch_and_report(url: str):
+        nonlocal finished
+        result = await _fetch_one(url)
+        finished += 1
+        if on_page:
+            try:
+                await on_page(finished, total, url)
+            except Exception as exc:  # progress must never break the scrape
+                print(f"[serp_analyzer] progress callback failed: {exc}")
+        return result
+
+    results = await asyncio.gather(
+        *(_fetch_and_report(url) for url in urls), return_exceptions=False,
+    )
 
     texts = [r[0] for r in results if r[1] is not None]
     soups = [r[1] for r in results if r[1] is not None]
