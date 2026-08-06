@@ -1,0 +1,21 @@
+__tests__/components/OutlineGenerateBar.test.tsx
+  s_8d6cce368af4fd::t_468156a5502eb3 6-9,11-31
+components/articles/ArticleEditor.tsx
+  s_8d6cce368af4fd::t_3c94d61cf47928 2004-2005,2007-2012,2014-2032
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8d2f653638f1d7621cd24dbdfbc128cfbbefea1b",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
