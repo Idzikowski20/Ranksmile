@@ -11,6 +11,10 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
 import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
+import { safeJsonParse } from '../../../lib/safeJson';
+import {
+  mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
+} from '../../../lib/analysisPhases';
 
 const FINALIZING_STALE_SECS = 5 * 60;
 const isPg = Boolean(process.env.DATABASE_URL);
@@ -107,13 +111,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         stage_progress: number | null;
         total_progress: number | null;
         progress_message: string | null;
+        progress_json: string | null;
         error: string | null;
         updated_at: string | Date | null;
       }>(
         jobId
-          ? `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, error, updated_at
+          ? `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress,
+                    total_progress, progress_message, progress_json, error, updated_at
              FROM analysis_jobs WHERE id = ?`
-          : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, error, updated_at
+          : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress,
+                    total_progress, progress_message, progress_json, error, updated_at
              FROM analysis_jobs
              WHERE article_id = ? AND job_type = ?
              ORDER BY created_at DESC, id DESC
@@ -148,6 +155,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         stageProgress: j.stage_progress,
         totalProgress: j.total_progress,
         progressMessage: publicJobError || j.progress_message,
+        phases: safeJsonParse<AnalysisPhases | null>(j.progress_json, null),
         error: publicJobError,
         updatedAt: j.updated_at ? new Date(j.updated_at).toISOString() : null,
       });
@@ -338,6 +346,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(200).json({ ok: true });
     }
 
+    // Typed phases: an explicit patch from the sidecar wins, otherwise derive what the
+    // stage implies. Stored merged so a later event never erases an earlier phase.
+    const { phases: phasePatch } = req.body as { phases?: AnalysisPhasesPatch };
+    const prevRows = await db.query<{ progress_json: string | null }>(
+      `SELECT progress_json FROM analysis_jobs WHERE id = ?`,
+      { replacements: [jobId], type: QueryTypes.SELECT },
+    );
+    const prev = safeJsonParse<AnalysisPhases | null>(prevRows[0]?.progress_json ?? null, null);
+    const nextPhases = mergePhases(
+      prev,
+      phasePatch ?? phasesFromStage(currentStage || '', Number(stageProgress ?? 0)),
+    );
+
     await db.query(
       `UPDATE analysis_jobs
        SET status = 'running',
@@ -345,9 +366,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
            stage_progress = COALESCE(?, stage_progress),
            total_progress = COALESCE(?, total_progress),
            progress_message = COALESCE(?, progress_message),
+           progress_json = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND status IN ('queued', 'running')`,
-      { replacements: [currentStage || null, stageProgress ?? null, totalProgress ?? null, message || null, jobId] },
+      { replacements: [
+        currentStage || null,
+        stageProgress ?? null,
+        totalProgress ?? null,
+        message || null,
+        JSON.stringify(nextPhases),
+        jobId,
+      ] },
     );
     res.status(200).json({ ok: true });
   } catch (err) {
