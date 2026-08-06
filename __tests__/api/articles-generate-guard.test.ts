@@ -32,6 +32,8 @@ beforeEach(() => {
 it('rejects a second generate request while one is already in-flight', async () => {
   mockDbQuery
     .mockResolvedValueOnce(dbResult([])) // ON CONFLICT claim: someone else already holds the row
+    .mockResolvedValueOnce(dbResult([])) // stale-claim reclaim UPDATE: nothing stale, no-op
+    .mockResolvedValueOnce(dbResult([])) // retry claim after reclaim: still held by the other request
     .mockResolvedValueOnce(dbResult([{ id: 'job_123_current' }])); // inflight lookup for the response body
 
   const res = makeRes();
@@ -42,6 +44,6 @@ it('rejects a second generate request while one is already in-flight', async () 
 
   expect(res.status).toHaveBeenCalledWith(409);
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'generation_in_progress', jobId: 'job_123_current' }));
-  // Only the claim + inflight lookup — never reaches article/planner queries once the claim is lost.
-  expect(mockDbQuery).toHaveBeenCalledTimes(2);
+  // Claim, stale-reclaim attempt, retry claim, inflight lookup — never reaches article/planner queries once the claim is lost.
+  expect(mockDbQuery).toHaveBeenCalledTimes(4);
 });
