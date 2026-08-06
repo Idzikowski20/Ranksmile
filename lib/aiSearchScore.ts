@@ -100,6 +100,8 @@ export function resolveAiScore(opts: {
    intentScore?: number;
    answersMainQuestionEarly?: boolean;
    coverageOverall?: number | null;
+   /** Live introduction factors — keep the gauge and the factor list on one input. */
+   introFactors?: ScoreFactor[];
 }): number {
    // Prefer the best available signal. Facts-V2 alone can be 0 while citation readiness
    // (legacy summary) is healthy — article 159: V2=0 persisted, summary ≈37, UI showed 0.
@@ -110,6 +112,7 @@ export function resolveAiScore(opts: {
          articleText: opts.articleText,
          intentScore: opts.intentScore,
          answersMainQuestionEarly: opts.answersMainQuestionEarly,
+         introFactors: opts.introFactors,
       });
    }
    const fromCoverage = (opts.coverageOverall != null && opts.coverageOverall > 0)
