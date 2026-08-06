@@ -1,0 +1,31 @@
+__tests__/components/ScoreFactorList.test.tsx
+  s_61d03bda11a2e7::t_9b3952a6bc2fff 1-30
+components/articles/ScoreFactorList.tsx
+  s_61d03bda11a2e7::t_d4ebc68a9ad8fa 1-38
+lib/reconcilePostGenerateArticle.ts
+  s_61d03bda11a2e7::t_a7a1f9c23f1977 12-13
+  s_61d03bda11a2e7::t_1b0026fd2836bf 33-39
+  s_61d03bda11a2e7::t_8a70c6e9c72ad1 200-209
+components/articles/ContentScorePanel.tsx
+  s_61d03bda11a2e7::t_ef5f50c8af3c21 707-711
+  s_61d03bda11a2e7::t_66474297dd38cd 19
+  s_61d03bda11a2e7::t_9c349b19fdf31b 581-582
+lib/contentScore.ts
+  s_61d03bda11a2e7::t_b93af978cc5711 64-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5faac6b5902b20ff32086baf4eab9c11005b12e8",
+  "prompts": {},
+  "sessions": {
+    "s_61d03bda11a2e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20d5a2e3-3084-4d7f-b034-a194f2839eb4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
