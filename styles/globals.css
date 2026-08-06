@@ -2923,10 +2923,19 @@ html.editor-route .app-content {
 .koala-link--disabled { color: #878490; pointer-events: none; }
 
 /* ??? Mobile left sidebar (shadcn-style accordion drawer) ?????????????????? */
+/* Portal always mounts (open or not) so the close animation can play — nothing
+   here previously used the --open modifier the component already toggles, so
+   the backdrop + panel rendered fully visible from first mount, permanently. */
 .mobile-sidebar-root {
    position: fixed;
    inset: 0;
    z-index: 230;
+   visibility: hidden;
+   transition: visibility 0s linear 0.28s;
+}
+.mobile-sidebar-root--open {
+   visibility: visible;
+   transition-delay: 0s;
 }
 @media (min-width: 1024px) {
    .mobile-sidebar-root { display: none !important; }
@@ -2939,7 +2948,10 @@ html.editor-route .app-content {
    backdrop-filter: blur(2px);
    -webkit-backdrop-filter: blur(2px);
    cursor: pointer;
+   opacity: 0;
+   transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.mobile-sidebar-root--open .mobile-sidebar-backdrop { opacity: 1; }
 .mobile-sidebar-panel {
    position: absolute;
    top: 0;
@@ -2951,13 +2963,11 @@ html.editor-route .app-content {
    background: var(--koala-shell-bg, #252525);
    border-right: 1px solid #221e28;
    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
-   animation: mobile-sidebar-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+   transform: translateX(-100%);
+   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
    font-family: var(--font-family-shell, var(--font-family-primary));
 }
-@keyframes mobile-sidebar-in {
-   from { transform: translateX(-100%); }
-   to { transform: translateX(0); }
-}
+.mobile-sidebar-panel--open { transform: translateX(0); }
 .mobile-sidebar-header {
    display: flex;
    align-items: center;
