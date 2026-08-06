@@ -287,6 +287,8 @@ export async function ensureArticlesTables() {
 
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_status ON analysis_jobs(status)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article ON analysis_jobs(article_id)`); } catch {}
+   // Status polling filters by (article_id, job_type) and takes the newest row.
+   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article_type_created ON analysis_jobs(article_id, job_type, created_at)`); } catch {}
 
    tablesChecked = true;
    console.log('[articles] Tables ready');

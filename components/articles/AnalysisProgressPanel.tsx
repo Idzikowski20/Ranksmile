@@ -3,6 +3,13 @@ import { Icon } from '../koala/icons';
 import { analysisPhaseGroups, type PhaseRow } from '../../lib/analysisPhaseRows';
 import type { AnalysisPhases } from '../../lib/analysisPhases';
 
+const STATE_LABEL: Record<PhaseRow['state'], string> = {
+  done: 'Done',
+  active: 'In progress',
+  error: 'Error',
+  pending: 'Pending',
+};
+
 const Marker: React.FC<{ state: PhaseRow['state'] }> = ({ state }) => {
   if (state === 'done') return <Icon name="Check" size={16} weight="bold" />;
   if (state === 'error') return <Icon name="WarningCircle" size={16} weight="bold" />;
@@ -21,7 +28,7 @@ const Marker: React.FC<{ state: PhaseRow['state'] }> = ({ state }) => {
 
 /** Deep-analysis progress, rendered from typed phases (lib/analysisPhases). */
 const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 28, padding: '8px 4px' }} aria-live="polite">
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 28, padding: '8px 4px' }}>
     {analysisPhaseGroups(phases).map((group) => (
       <section key={group.id} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--koala-text-primary)', margin: 0 }}>
@@ -30,7 +37,7 @@ const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases })
         {group.rows.map((row) => (
           <div
             key={row.id}
-            aria-label={row.state === 'done' ? `Done: ${row.label}` : row.label}
+            aria-label={[STATE_LABEL[row.state], row.label, row.detail].filter(Boolean).join(': ')}
             style={{
               display: 'flex',
               gap: 10,
@@ -40,11 +47,14 @@ const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases })
                 : 'var(--koala-text-secondary)',
             }}
           >
-            <span style={{ paddingTop: 2 }}><Marker state={row.state} /></span>
+            <span style={{ paddingTop: 2 }} aria-hidden="true"><Marker state={row.state} /></span>
             <span style={{ fontSize: 14, lineHeight: 1.45 }}>
               {row.label}
               {row.detail ? (
-                <span style={{ display: 'block', fontSize: 13, color: 'var(--koala-text-secondary)' }}>
+                <span
+                  aria-live={row.state === 'active' ? 'polite' : 'off'}
+                  style={{ display: 'block', fontSize: 13, color: 'var(--koala-text-secondary)' }}
+                >
                   {row.detail}
                 </span>
               ) : null}
