@@ -6,22 +6,22 @@ import { parseWorkspaceId } from '../lib/activeWorkspace';
 import { SETUP_LOCATIONS, type SetupLocation } from '../lib/setupLocations';
 import BlogPathsField from '../components/domains/BlogPathsField';
 import DomainFavicon from '../components/common/DomainFavicon';
-import { Button, DropdownButton, Input, Textarea } from '../components/koala/core';
+import {
+  Badge, Button, DropdownButton, Input, MenuListItem, Textarea,
+} from '../components/koala/core';
 import {
   SetupShell,
   SetupWizardCard,
   SetupStepProgress,
   SetupHeader,
   SetupField,
-  ChevronDown,
   Spinner,
+  SetupLoadingLine,
   CheckCircle,
   OrDivider,
   SetupError,
   SetupSearchableMenu,
 } from '../components/setup/setupUi';
-
-const FONT = 'var(--font-family-primary)';
 
 // ─── Domain normaliser ────────────────────────────────────────────────────────
 function normalizeDomain(raw: string): string {
@@ -76,7 +76,7 @@ const Flag = ({ cc }: { cc: string }) => (
       aria-hidden="true"
       style={{
          display: 'inline-block', width: 20, height: 15, flexShrink: 0, borderRadius: 2,
-         backgroundColor: '#f4f4f5',
+         backgroundColor: 'var(--koala-bg-secondary)',
          backgroundImage: `url(https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${cc}.svg)`,
          backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
       }}
@@ -371,15 +371,13 @@ const SetupPage: NextPage = () => {
                               <DropdownButton
                                  isOpen={comboOpen}
                                  className="koala-setup-trigger"
-                                 showChevron={false}
                                  prefix={<SiteFavicon domain={domain} />}
                                  onClick={() => {
                                     if (availableGscSites.length > 0) setComboOpen((o) => !o);
                                     else { setDomain(null); setSelectedSite(''); setLocation(null); setStep1Error(''); }
                                  }}
                               >
-                                 <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</span>
-                                 <ChevronDown open={comboOpen} />
+                                 {domain}
                               </DropdownButton>
                            </div>
                         </SetupField>
@@ -397,26 +395,25 @@ const SetupPage: NextPage = () => {
                                     role="combobox"
                                     isOpen={comboOpen}
                                     className="koala-setup-trigger"
-                                    showChevron={false}
                                     prefix={<GoogleIcon />}
                                     onClick={() => setComboOpen((o) => !o)}
                                     disabled={configuring}
                                     aria-haspopup="listbox"
                                  >
-                                    <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                       {selectedSite ? normalizeDomain(selectedSite) : <span className="koala-setup-trigger-placeholder">Select site</span>}
-                                    </span>
-                                    <ChevronDown open={comboOpen} />
+                                    {selectedSite ? normalizeDomain(selectedSite) : <span className="koala-setup-trigger-placeholder">Select site</span>}
                                  </DropdownButton>
                               </div>
                            </SetupField>
                         ) : gscSites.length > 0 ? (
                            <div className="koala-setup-gsc-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: '#52525C', fontFamily: FONT }}>
+                              <p className="koala-setup-description">
                                  All Search Console sites linked to your account are already configured as workspaces.
                               </p>
-                              <Button type="button" variant="secondary" size="md" onClick={() => { setUrlMode(true); setStep1Error(''); }} style={{ width: '100%' }}>
-                                 Enter a different website URL
+                              <Button type="button" variant="secondary" size="md" disabled style={{ width: '100%' }}>
+                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                    Enter a different website URL
+                                    <Badge appearance="muted" size="sm">Soon</Badge>
+                                 </span>
                               </Button>
                            </div>
                         ) : (
@@ -460,21 +457,20 @@ const SetupPage: NextPage = () => {
                         renderItem={(site) => {
                            const dom = normalizeDomain(site.siteUrl);
                            return (
-                              <button
-                                 type="button"
-                                 className="koala-setup-menu-item"
+                              <MenuListItem
+                                 label={dom}
+                                 leadingItems={<SiteFavicon domain={dom} />}
                                  onClick={() => handleSiteSelect(site.siteUrl)}
-                              >
-                                 <SiteFavicon domain={dom} />
-                                 <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dom}</span>
-                              </button>
+                              />
                            );
                         }}
                         footer={(
-                           <button type="button" className="koala-setup-menu-footer" onClick={connectGsc}>
-                              <GoogleIcon />
-                              <span>Add another Search Console account</span>
-                           </button>
+                           <MenuListItem
+                              label="Add another Search Console account"
+                              leadingItems={<GoogleIcon />}
+                              priority="primary"
+                              onClick={connectGsc}
+                           />
                         )}
                      />
                   </div>
@@ -490,20 +486,14 @@ const SetupPage: NextPage = () => {
                                  <DropdownButton
                                     isOpen={locOpen}
                                     className="koala-setup-trigger"
-                                    showChevron={false}
+                                    prefix={location ? <Flag cc={location.cc} /> : undefined}
                                     onClick={() => setLocOpen((o) => !o)}
                                  >
-                                    <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                       {location ? (
-                                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                                             <Flag cc={location.cc} />
-                                             <span>{location.country} - {location.language}</span>
-                                          </span>
-                                       ) : (
-                                          <span className="koala-setup-trigger-placeholder">Select location</span>
-                                       )}
-                                    </span>
-                                    <ChevronDown open={locOpen} />
+                                    {location ? (
+                                       `${location.country} - ${location.language}`
+                                    ) : (
+                                       <span className="koala-setup-trigger-placeholder">Select location</span>
+                                    )}
                                  </DropdownButton>
                               </div>
                            </SetupField>
@@ -519,14 +509,11 @@ const SetupPage: NextPage = () => {
                               filterItem={(l, q) => `${l.country} ${l.language}`.toLowerCase().includes(q)}
                               getKey={(l) => `${l.country}-${l.language}-${l.code}`}
                               renderItem={(l) => (
-                                 <button
-                                    type="button"
-                                    className="koala-setup-menu-item"
+                                 <MenuListItem
+                                    label={`${l.country} - ${l.language}`}
+                                    leadingItems={<Flag cc={l.cc} />}
                                     onClick={() => { setLocation(l); setLocOpen(false); setLocFilter(''); }}
-                                 >
-                                    <Flag cc={l.cc} />
-                                    <span>{l.country} - {l.language}</span>
-                                 </button>
+                                 />
                               )}
                            />
                         </div>
@@ -537,9 +524,7 @@ const SetupPage: NextPage = () => {
                            hint="Leave empty to scan your whole site. Set a path to focus the audit on a section."
                         >
                            {blogDetecting ? (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#6a6772', fontFamily: FONT }}>
-                                 <Spinner /> Detecting your blog…
-                              </span>
+                              <SetupLoadingLine>Detecting your blog…</SetupLoadingLine>
                            ) : (
                               <BlogPathsField value={blogPaths} onChange={setBlogPaths} />
                            )}
@@ -569,8 +554,11 @@ const SetupPage: NextPage = () => {
                   ) : gscLoaded && availableGscSites.length > 0 ? (
                      <>
                         <OrDivider />
-                        <Button type="button" variant="secondary" size="md" onClick={() => { setUrlMode(true); setStep1Error(''); }} style={{ width: '100%' }}>
-                           Start with URL
+                        <Button type="button" variant="secondary" size="md" disabled style={{ width: '100%' }}>
+                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                              Start with URL
+                              <Badge appearance="muted" size="sm">Soon</Badge>
+                           </span>
                         </Button>
                      </>
                   ) : null}
@@ -603,9 +591,7 @@ const SetupPage: NextPage = () => {
                      <p className="koala-setup-brand-block-desc">What is your brand called?</p>
                   </div>
                   {loadingBrand ? (
-                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6a6772', fontFamily: FONT }}>
-                        <Spinner /> Fetching your brand name…
-                     </span>
+                     <SetupLoadingLine>Fetching your brand name…</SetupLoadingLine>
                   ) : (
                      <Input
                         ref={brandNameRef}
@@ -627,9 +613,7 @@ const SetupPage: NextPage = () => {
                      </p>
                   </div>
                   {loadingBrand ? (
-                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6a6772', fontFamily: FONT }}>
-                        <Spinner /> Digging into your business model…
-                     </span>
+                     <SetupLoadingLine>Digging into your business model…</SetupLoadingLine>
                   ) : (
                      <Textarea
                         ref={brandKnowledgeRef}
