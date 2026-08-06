@@ -4,19 +4,13 @@ import Domain from './models/domain';
 import Keyword from './models/keyword';
 import GscAccount from './models/gscAccount';
 import ArticleKeyword from './models/articleKeyword';
+// Shared with database/config.js (sequelize-cli) so migrations and the runtime
+// connection can never disagree about what counts as a local database.
+import { isLocalPostgresUrl } from './isLocalHost';
 
 const { DATABASE_URL } = process.env;
 
 const MODELS = [Domain, Keyword, GscAccount, ArticleKeyword];
-
-function isLocalHost(url: string): boolean {
-   try {
-      const { hostname } = new URL(url);
-      return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-   } catch {
-      return false;
-   }
-}
 
 function createConnection(): Sequelize {
    if (DATABASE_URL) {
@@ -31,7 +25,7 @@ function createConnection(): Sequelize {
          dialect: 'postgres',
          dialectModule: pg,
          // Local Postgres (docker/embedded dev DB) has no SSL cert — only Neon needs this.
-         dialectOptions: isLocalHost(DATABASE_URL) ? {} : {
+         dialectOptions: isLocalPostgresUrl(DATABASE_URL) ? {} : {
             ssl: {
                require: true,
                rejectUnauthorized: false,

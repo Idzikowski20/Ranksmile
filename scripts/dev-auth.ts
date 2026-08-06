@@ -14,6 +14,8 @@ import { toNodeHandler } from 'better-auth/node';
 // eslint-disable-next-line import/no-unresolved
 import { getMigrations } from 'better-auth/db/migration';
 import { sendMail } from '../lib/sendMail';
+import { isLocalPostgresUrl } from '../database/isLocalHost';
+import { parsePgUrl, pgReady, waitUntilReady } from './lib/net';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env.development' });
@@ -23,14 +25,29 @@ const PORT = 8765;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 async function main(): Promise<void> {
-  if (!process.env.DATABASE_URL) {
+  const databaseUrl = (process.env.DATABASE_URL || '').trim();
+  if (!databaseUrl) {
     throw new Error('[dev-auth] DATABASE_URL is missing after loading .env');
+  }
+  // Without .env.local this falls through to .env, which on a developer machine often
+  // still holds the production Neon DSN — running Better Auth's migrations against it
+  // would alter live tables. A local dev auth server only ever talks to a local database.
+  if (!isLocalPostgresUrl(databaseUrl)) {
+    throw new Error(
+      '[dev-auth] refusing to start: DATABASE_URL does not point at a local database. '
+      + 'Set a localhost DSN in .env.local (this server is for local development only).',
+    );
   }
   if (!process.env.BETTER_AUTH_SECRET) {
     throw new Error('[dev-auth] BETTER_AUTH_SECRET is missing after loading .env');
   }
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  // The dev-postgres pane starts in parallel — without this the first migration hits a
+  // connection refusal and the auth pane dies for the rest of the session.
+  const { host, port } = parsePgUrl(databaseUrl);
+  await waitUntilReady('dev-auth', `Postgres ${host}:${port}`, () => pgReady(databaseUrl));
+
+  const pool = new Pool({ connectionString: databaseUrl });
 
   const auth = betterAuth({
     database: pool,

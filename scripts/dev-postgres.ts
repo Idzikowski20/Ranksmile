@@ -1,72 +1,49 @@
 /**
- * Ensure Postgres on DATABASE_URL host:port (default 127.0.0.1:5432) for local mprocs.
+ * Ensure Postgres on DATABASE_URL host:port for local mprocs.
  * If nothing listens — start an embedded Postgres cluster (data persisted under
  * .local-postgres) and keep it alive.
  * If Postgres already exists (docker, native install, previous run) — stay UP
  * with a heartbeat (do not start a second instance).
+ *
+ * DATABASE_URL is required: every sibling pane reads it too, and a private default
+ * here would leave this pane green while Sequelize silently fell back to SQLite.
  */
-import net from 'net';
 import path from 'path';
 import { existsSync } from 'fs';
 import dotenv from 'dotenv';
 // Resolver can't follow the package's `exports` map; the shim in types.d.ts types it.
 // eslint-disable-next-line import/no-unresolved
 import EmbeddedPostgres from 'embedded-postgres';
+import {
+  parsePgUrl, tcpOpen, pgReady, heartbeat,
+} from './lib/net';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env.development' });
 dotenv.config({ path: '.env' });
 
-const DEFAULT_URL = 'postgresql://ranksmile:ranksmile@127.0.0.1:5432/ranksmile';
-
-function parsePgUrl(raw: string): { host: string; port: number; user: string; password: string; database: string } {
-  try {
-    const u = new URL(raw);
-    return {
-      host: u.hostname || '127.0.0.1',
-      port: u.port ? Number(u.port) : 5432,
-      user: decodeURIComponent(u.username) || 'ranksmile',
-      password: decodeURIComponent(u.password) || 'ranksmile',
-      database: u.pathname.replace(/^\//, '') || 'ranksmile',
-    };
-  } catch {
-    return { host: '127.0.0.1', port: 5432, user: 'ranksmile', password: 'ranksmile', database: 'ranksmile' };
-  }
-}
-
-function tcpOpen(host: string, port: number, timeoutMs = 800): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = net.createConnection({ host, port });
-    const done = (ok: boolean) => {
-      socket.removeAllListeners();
-      socket.destroy();
-      resolve(ok);
-    };
-    socket.setTimeout(timeoutMs);
-    socket.once('connect', () => done(true));
-    socket.once('timeout', () => done(false));
-    socket.once('error', () => done(false));
-  });
-}
-
-async function heartbeat(host: string, port: number): Promise<never> {
-  console.log(`[dev-postgres] using existing Postgres at ${host}:${port}`);
-  for (;;) {
-    const ok = await tcpOpen(host, port, 1500);
-    if (!ok) {
-      console.error(`[dev-postgres] lost connection to ${host}:${port}`);
-      process.exit(1);
-    }
-    await new Promise((resolve) => { setTimeout(resolve, 5000); });
-  }
-}
-
 async function main(): Promise<void> {
-  const url = process.env.DATABASE_URL || DEFAULT_URL;
-  const { host, port, user, password, database } = parsePgUrl(url);
+  const url = (process.env.DATABASE_URL || '').trim();
+  if (!url) {
+    throw new Error(
+      '[dev-postgres] DATABASE_URL is missing after loading .env — set it (e.g. '
+      + 'postgresql://ranksmile:ranksmile@127.0.0.1:5432/ranksmile) so every dev pane targets the same database',
+    );
+  }
+  // Throws on a malformed DSN — better than starting a cluster the rest of the stack can't reach.
+  const {
+    host, port, user, password, database,
+  } = parsePgUrl(url);
 
   if (await tcpOpen(host, port)) {
-    await heartbeat(host, port);
+    if (!await pgReady(url)) {
+      throw new Error(
+        `[dev-postgres] something is listening on ${host}:${port} but it does not answer as the Postgres in `
+        + 'DATABASE_URL — stop the conflicting service or fix the credentials/database name',
+      );
+    }
+    console.log(`[dev-postgres] using existing Postgres at ${host}:${port}`);
+    await heartbeat('dev-postgres', () => pgReady(url));
     return;
   }
 

@@ -17,6 +17,12 @@ export type ChipProps = {
   className?: string;
   type?: 'button' | 'submit' | 'reset';
   'aria-label'?: string;
+  /**
+   * Set to `radio` when the chip is one option of a single-choice set (wrap the set in
+   * `role="radiogroup"`). Without it a selected chip is announced as a pressed toggle,
+   * which hides the "exactly one of these" contract from screen readers.
+   */
+  role?: 'radio';
 };
 
 const SIZE: Record<ChipSize, { height: number; padX: number; fontSize: number; gap: number; icon: number }> = {
@@ -101,23 +107,33 @@ export function Chip({
   className,
   type = 'button',
   'aria-label': ariaLabel,
+  role,
 }: ChipProps) {
   const s = SIZE[size];
   const interactive = Boolean(onClick) || Boolean(onDismiss);
+  // A dismiss-only chip (a tag, not a filter) has nothing to click on the body, and a
+  // <button> around the dismiss <button> is invalid HTML that confuses screen readers.
+  // Only render the shell as a button when it actually handles a click.
+  const asButton = Boolean(onClick);
 
   const leading =
     typeof icon === 'string' ? <Icon name={icon} size={s.icon} weight="bold" /> : icon;
 
   return (
     <Root
-      type={type}
+      as={asButton ? 'button' : 'span'}
+      type={asButton ? type : undefined}
       className={className}
       $selected={selected}
       $disabled={disabled}
       $size={size}
       $interactive={interactive}
-      disabled={disabled}
-      aria-pressed={onClick ? selected : undefined}
+      disabled={asButton ? disabled : undefined}
+      role={role}
+      // A radio is described by aria-checked; aria-pressed on the same node would
+      // announce two conflicting states.
+      aria-checked={role === 'radio' ? selected : undefined}
+      aria-pressed={role || !onClick ? undefined : selected}
       aria-label={ariaLabel}
       onClick={disabled ? undefined : onClick}
     >

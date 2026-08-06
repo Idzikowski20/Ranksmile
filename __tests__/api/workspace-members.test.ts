@@ -1,4 +1,5 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest } from 'next';
+import { makeRes, callHandler, type MockRes } from '../../test-utils/apiHandler';
 import handler from '../../pages/api/workspaces/[id]/members';
 import { getCurrentUserId } from '../../utils/getUser';
 import { getCallerRole } from '../../lib/members';
@@ -14,18 +15,7 @@ jest.mock('../../lib/workspaceMembers', () => ({
 // and turns every case below into a 503.
 jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
-const makeRes = () => {
-  const r: Record<string, jest.Mock> = {};
-  r.status = jest.fn().mockReturnValue(r);
-  r.json = jest.fn().mockReturnValue(r);
-  r.setHeader = jest.fn();
-  return r;
-};
-
-const call = (req: Partial<NextApiRequest>, res: Record<string, jest.Mock>) => handler(
-  { headers: {}, cookies: {}, body: {}, ...req } as NextApiRequest,
-  res as unknown as NextApiResponse,
-);
+const call = (req: Partial<NextApiRequest>, res: MockRes) => callHandler(handler, req, res);
 
 describe('workspaces/[id]/members API', () => {
   beforeEach(() => {

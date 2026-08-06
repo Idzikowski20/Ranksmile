@@ -32,11 +32,22 @@ const BrandMark = () => (
 
 const headerRowStyle: React.CSSProperties = {
    flexShrink: 0,
-   display: 'flex',
+   // Three tracks, equal on both sides: the middle slot is screen-centered by the grid
+   // itself, so no invisible duplicate of the logo is needed to balance it. `minmax(0, …)`
+   // lets every track shrink below its content instead of forcing a horizontal scrollbar.
+   display: 'grid',
+   gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 360px) minmax(0, 1fr)',
    alignItems: 'center',
-   padding: '0 48px',
+   gap: 16,
+   padding: '0 clamp(16px, 4vw, 48px)',
    height: 96,
    boxSizing: 'border-box',
+};
+
+const headerCenterStyle: React.CSSProperties = {
+   minWidth: 0,
+   display: 'flex',
+   justifyContent: 'center',
 };
 
 const bodyColumnStyle: React.CSSProperties = {
@@ -66,12 +77,10 @@ const OnboardingShell = ({ children }: { children: React.ReactNode }) => {
          }}
       >
          <div style={headerRowStyle}>
-            <BrandMark />
-            <div ref={setCenterNode} style={{ flex: 1, display: 'flex', justifyContent: 'center' }} />
-            {/* Invisible spacer — same width as the logo, so the center slot is truly screen-centered. */}
-            <div style={{ visibility: 'hidden', pointerEvents: 'none' }} aria-hidden="true">
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
                <BrandMark />
             </div>
+            <div ref={setCenterNode} style={headerCenterStyle} />
          </div>
          <OnboardingHeaderCenterContext.Provider value={centerNode}>
             <div style={bodyColumnStyle}>

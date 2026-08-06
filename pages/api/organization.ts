@@ -20,14 +20,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method === 'PUT') {
       // The org name and logo are shared by everyone in it — only owners/admins may
       // change them. GET stays open: reading your own org's identity is harmless.
-      try { await assertCanManage(userId); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }
+      try {
+         await assertCanManage(userId);
+      } catch (err: unknown) {
+         // `assertCanManage` queries the DB, so only its own verdict may become a 403 —
+         // a connection failure surfacing as "Forbidden" would send people chasing permissions.
+         if (!(err instanceof Error) || err.message !== 'FORBIDDEN') throw err;
+         return res.status(403).json({ error: 'FORBIDDEN' });
+      }
       const { name, logoDataUrl } = req.body || {};
       const patch: { name?: string; logoUrl?: string | null } = {};
 
       if (name !== undefined) {
          // The name labels the org across the app and in invite subject lines, so a
          // blank or whitespace-only value is rejected rather than silently stored.
-         const trimmed = String(name).trim();
+         // Non-strings are rejected outright — `String(value)` would happily store
+         // "[object Object]" for a malformed body.
+         if (typeof name !== 'string') return res.status(400).json({ error: 'Organization name must be a string' });
+         const trimmed = name.trim();
          if (!trimmed) return res.status(400).json({ error: 'Organization name is required' });
          patch.name = trimmed.slice(0, ORG_NAME_MAX_LENGTH);
       }

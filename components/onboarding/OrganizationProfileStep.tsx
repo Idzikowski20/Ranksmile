@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import styled from '@emotion/styled';
+import ORG_NAME_MAX_LENGTH, { ORG_LOGO_MAX_BYTES, ORG_LOGO_MAX_LABEL } from '../../lib/organizationLimits';
 import Button from '../koala/primitives/Button';
 import Input from '../koala/primitives/Input';
 import { Icon } from '../koala/icons/Icon';
@@ -9,7 +10,6 @@ import { spacing } from '../koala/tokens/spacing';
 import { radius } from '../koala/tokens/effects';
 
 const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp';
-const MAX_BYTES = 5 * 1024 * 1024;
 
 export type OrganizationProfileValue = {
   name: string;
@@ -77,18 +77,32 @@ const rootStyle: React.CSSProperties = {
 /** Organization identity step — Koala register-flow "Complete your profile" (Figma `8740:416202`). */
 const OrganizationProfileStep = ({ value, onChange, onError, disabled = false }: Props) => {
   const fileRef = useRef<HTMLInputElement>(null);
+  // FileReader resolves a tick or more later, by which time the name the user kept
+  // typing has moved on — spreading the captured `value` there would restore the old
+  // one. Read the current value at callback time instead.
+  const latest = useRef(value);
+  useEffect(() => { latest.current = value; }, [value]);
+  // Only the newest pick may write; an earlier, slower read is discarded rather than
+  // overwriting the logo the user chose second.
+  const readToken = useRef(0);
 
   const pickFile = (file: File | undefined): void => {
     if (!file) return;
-    if (file.size > MAX_BYTES) {
-      onError('That image is over 5 MB. Pick a smaller one.');
+    if (file.size > ORG_LOGO_MAX_BYTES) {
+      onError(`That image is over ${ORG_LOGO_MAX_LABEL}. Pick a smaller one.`);
       return;
     }
+    readToken.current += 1;
+    const token = readToken.current;
     const reader = new FileReader();
     reader.onload = () => {
-      onChange({ ...value, logoDataUrl: typeof reader.result === 'string' ? reader.result : null });
+      if (token !== readToken.current) return;
+      onChange({ ...latest.current, logoDataUrl: typeof reader.result === 'string' ? reader.result : null });
     };
-    reader.onerror = () => onError("Couldn't read that file. Try another image.");
+    reader.onerror = () => {
+      if (token !== readToken.current) return;
+      onError("Couldn't read that file. Try another image.");
+    };
     reader.readAsDataURL(file);
   };
 
@@ -105,7 +119,7 @@ const OrganizationProfileStep = ({ value, onChange, onError, disabled = false }:
           size="lg"
           value={value.name}
           disabled={disabled}
-          maxLength={40}
+          maxLength={ORG_NAME_MAX_LENGTH}
           placeholder="e.g. Acme Marketing"
           onChange={(e) => onChange({ ...value, name: e.target.value })}
         />
@@ -130,7 +144,7 @@ const OrganizationProfileStep = ({ value, onChange, onError, disabled = false }:
                 </Button>
               )}
             </div>
-            <p style={hintStyle}>Up to 5 MB — PNG, JPG, GIF or WEBP.</p>
+            <p style={hintStyle}>{`Up to ${ORG_LOGO_MAX_LABEL} — PNG, JPG, GIF or WEBP.`}</p>
           </div>
         </div>
         <input
