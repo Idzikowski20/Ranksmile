@@ -1604,9 +1604,9 @@ Nothing writes `ai_factors` yet. Add it where the finished article is already re
       audienceTerms: readerAudienceTerms,
     }),
   ];
-  const ai = aioScore(factors);
-  scoreData.ai_factors = ai.factors;
-  scoreData.ai_score = ai.value;
+  // Only the factors are written. Overwriting ai_score would change the displayed
+  // AI Search number for every article — see the deviation note above.
+  scoreData.ai_factors = aioScore(factors).factors;
 ```
 
 `coverageSnapshot` is the snapshot the function already builds for `ai_info_to_cover`; `readerAudienceTerms` comes from `bundle.reader.readerPersona.split(/\s+/)` when `score_data.content_planner_v2` is present, otherwise `[]`. Extend the `ScoreData` type in `lib/contentScore.ts` with `ai_factors?: ScoreFactor[]` and `ai_score?: number`.

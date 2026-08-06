@@ -1,6 +1,8 @@
 import {
-  emptyPhases, mergePhases, phasesFromStage, type AnalysisPhasesPatch,
+  emptyPhases, mergePhases, phasesFromStage,
+  type AnalysisPhases, type AnalysisPhasesPatch,
 } from '../../lib/analysisPhases';
+import { safeJsonParse } from '../../lib/safeJson';
 
 /**
  * The handler is thin; what matters is the merge contract it must follow — an explicit
@@ -9,7 +11,7 @@ import {
 function storedPhases(prevJson: string | null, body: {
   currentStage?: string; stageProgress?: number; phases?: AnalysisPhasesPatch;
 }) {
-  const prev = prevJson ? JSON.parse(prevJson) : null;
+  const prev = safeJsonParse<AnalysisPhases | null>(prevJson, null);
   const patch = body.phases ?? phasesFromStage(body.currentStage || '', body.stageProgress ?? 0);
   return mergePhases(prev, patch);
 }
@@ -37,8 +39,9 @@ describe('job-progress phase persistence', () => {
     expect(second.aiSearch.status).toBe('RUNNING');
   });
 
-  it('survives a corrupt stored value by starting from empty', () => {
-    expect(() => storedPhases(null, {})).not.toThrow();
-    expect(storedPhases(null, {}).crawlingSerp.status).toBe('NEW');
+  it('starts from empty when the stored value is corrupt', () => {
+    const stored = storedPhases('{not json', { currentStage: 'ai_search', stageProgress: 0 });
+    expect(stored.crawlingSerp.status).toBe('NEW');
+    expect(stored.aiSearch.status).toBe('RUNNING');
   });
 });
