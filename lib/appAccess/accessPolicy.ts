@@ -31,6 +31,11 @@ const CAPABILITIES: Record<AppState, ReadonlySet<RouteCapability>> = {
     'Public',
     'Auth',
     'Plans',
+    // A first purchase lands here the moment the subscription activates — often before
+    // the checkout page has finished minting its confirmation token. Without these the
+    // order confirmation is unreachable and the user is bounced to /workspace/new.
+    'BillingCheckout',
+    'BillingSuccess',
     'BillingRead',
     'BillingManage',
     'WorkspaceSetup',
@@ -112,6 +117,33 @@ export function allowsFrontend(state: AppState, pathname: string): boolean {
 }
 
 /**
+ * The API calls `pages/setup.tsx` makes while creating the first workspace.
+ *
+ * WORKSPACE_REQUIRED grants the wizard's *route* but not `App`, so without this list
+ * the page renders and every action inside it is denied — "Connect Search Console"
+ * navigates the whole window to `/api/gsc/connect` and paints the raw denial JSON.
+ *
+ * Deliberately exact: these are the endpoints the wizard needs and nothing more.
+ * `/api/gsc/search-data`, `/api/gsc/pages` and the rest of the product stay `App`.
+ */
+const SETUP_WIZARD_ROUTES: ReadonlySet<string> = new Set([
+  'GET:/api/workspaces',
+  // Google OAuth round trip for the Search Console connection.
+  'GET:/api/gsc/connect',
+  'GET:/api/gsc/callback',
+  'GET:/api/gsc/sites',
+  'GET:/api/domains',
+  'POST:/api/domains/configure',
+  'POST:/api/domains/detect-blog-paths',
+  'POST:/api/domains/blog-paths',
+  'POST:/api/brand-knowledge',
+]);
+
+function isSetupWizardRoute(method: string, path: string): boolean {
+  return SETUP_WIZARD_ROUTES.has(`${method}:${path}`);
+}
+
+/**
  * Map `METHOD:/api/...` to capability. Unknown product APIs → App.
  */
 export function apiRouteCapability(routeKey: string): RouteCapability {
@@ -166,6 +198,7 @@ export function apiRouteCapability(routeKey: string): RouteCapability {
     return 'Onboarding';
   }
   if (/^\/api\/workspaces\/\d+\/finish$/.test(path)) return 'WorkspaceSetup';
+  if (isSetupWizardRoute(method, path)) return 'WorkspaceSetup';
 
   return 'App';
 }
