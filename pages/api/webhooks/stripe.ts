@@ -113,7 +113,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       case 'customer.subscription.updated':
       case 'customer.subscription.created': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const eventSubscription = event.data.object as Stripe.Subscription;
+        // Re-read: webhook delivery can be delayed/out of order, the event payload is a snapshot.
+        const subscription = await stripe.subscriptions
+          .retrieve(eventSubscription.id)
+          .catch(() => eventSubscription);
         const orgId = await resolveOrgId(stripe, subscription.metadata, subscription.customer);
         if (orgId) {
           await syncSubscriptionToOrg(orgId, subscription, undefined, {
@@ -127,7 +131,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         if (subscription.status === 'incomplete_expired' && orgId) {
-          const fresh = await stripe.subscriptions.retrieve(subscription.id);
+          const fresh = subscription;
           if (await shouldSendAbandonedForSubscription(stripe, fresh)) {
             const to = await resolveCustomerEmail(stripe, null, fresh.customer);
             if (to) {
