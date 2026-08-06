@@ -1,0 +1,29 @@
+python-sidecar/tests/test_emit_phase.py
+  s_8d6cce368af4fd::t_6aee5b76ef3e65 1-63
+python-sidecar/pipeline/contracts.py
+  s_8d6cce368af4fd::t_ead608513094bb 65-87
+python-sidecar/pipeline/runner.py
+  s_8d6cce368af4fd::t_e3147ee03e63c8 36-42
+python-sidecar/tests/test_scrape_progress.py
+  s_8d6cce368af4fd::t_c0d144dd018927 1-47
+python-sidecar/pipeline/stages/scrape_serp.py
+  s_8d6cce368af4fd::t_a60a03658eced3 19-45
+python-sidecar/analyzers/serp_analyzer.py
+  s_8d6cce368af4fd::t_b260b6578c19e5 92-98,116,158-164,210-226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "420c444a6de14d085c5750a4d6ce4b26a957cb0e",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
