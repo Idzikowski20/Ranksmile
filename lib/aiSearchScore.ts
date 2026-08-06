@@ -1,5 +1,6 @@
 import type { ArticleFact } from './articleFactTypes';
 import { factReadinessScore } from './factReadiness';
+import type { ScoreFactor } from './aiScore/factors';
 
 export type AiCitation = {
    prompt: string;
@@ -41,11 +42,33 @@ export function computeAiSearchScore(summary?: AiVisibilitySummary | null): numb
 }
 
 /** Ranksmile-style AI Search Score v2 — Facts Coverage (70%) + Upfront Intent (30%). */
+/**
+ * Intent part of the AI score, 0..100, from the four introduction factors. Weighted the
+ * same way as AioScore, so the number under the gauge and the factor list beside it
+ * cannot disagree. Falls back to the legacy boolean when no factors were computed.
+ */
+function intentFromIntroFactors(factors: ScoreFactor[]): number {
+   const weights: Record<string, number> = {
+      INTRODUCTION_COVERED_TOPICS: 1,
+      INTRODUCTION_TARGET_AUDIENCE: 1,
+      INTRODUCTION_EARLY_QUERY_ANSWER: 2,
+      INTRODUCTION_TOPIC_RELEVANCE: 1,
+   };
+   const total = Object.values(weights).reduce((sum, w) => sum + w, 0);
+   const earned = factors.reduce(
+      (sum, factor) => sum + factor.score * (weights[factor.name] ?? 0),
+      0,
+   );
+   return (earned / total) * 100;
+}
+
 export function computeAiSearchScoreV2(opts: {
    facts: ArticleFact[];
    articleText: string;
    intentScore?: number;
    answersMainQuestionEarly?: boolean;
+   /** Introduction factors (lib/aiScore) — replace the legacy boolean when present. */
+   introFactors?: ScoreFactor[];
 }): number {
    const { facts, articleText } = opts;
    if (!facts.length) return 0;
@@ -60,7 +83,11 @@ export function computeAiSearchScoreV2(opts: {
    const factsCoverage = weightSum > 0 ? (coveredSum / weightSum) * 70 : 0;
 
    let intentPart = opts.intentScore ?? 0;
-   if (opts.answersMainQuestionEarly) intentPart = Math.min(100, intentPart + 15);
+   if (opts.introFactors?.length) {
+      intentPart = intentFromIntroFactors(opts.introFactors);
+   } else if (opts.answersMainQuestionEarly) {
+      intentPart = Math.min(100, intentPart + 15);
+   }
    const intentScore = (Math.min(100, Math.max(0, intentPart)) / 100) * 30;
 
    return Math.round(Math.min(100, factsCoverage + intentScore));
