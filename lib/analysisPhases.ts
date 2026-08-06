@@ -22,6 +22,15 @@ export type AnalysisPhases = {
   aiSearch: SimplePhase;
 };
 
+/**
+ * An event patches fields inside a phase ("the crawl reached 6/10"), so both the phase
+ * set and each phase's own fields are optional — `Partial<AnalysisPhases>` would still
+ * demand a whole CrawlPhase.
+ */
+export type AnalysisPhasesPatch = {
+  [K in keyof AnalysisPhases]?: Partial<AnalysisPhases[K]>;
+};
+
 export function emptyPhases(): AnalysisPhases {
   const simple = (): SimplePhase => ({ status: 'NEW', error: null });
   return {
@@ -37,7 +46,7 @@ export function emptyPhases(): AnalysisPhases {
 
 export function mergePhases(
   prev: AnalysisPhases | null,
-  patch: Partial<AnalysisPhases>,
+  patch: AnalysisPhasesPatch,
 ): AnalysisPhases {
   const base = prev ?? emptyPhases();
   return {
@@ -50,7 +59,7 @@ export function mergePhases(
 }
 
 /** Fallback for stages that only report start/done (no per-item events yet). */
-export function phasesFromStage(stage: string, stagePercent: number): Partial<AnalysisPhases> {
+export function phasesFromStage(stage: string, stagePercent: number): AnalysisPhasesPatch {
   const done = stagePercent >= 100;
   switch (stage) {
     case 'fetch_page':
