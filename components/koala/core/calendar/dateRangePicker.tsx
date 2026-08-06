@@ -24,33 +24,33 @@ const StyledWrapper = styled.div`
 
   .rdrSelected, .rdrInRange, .rdrStartEdge, .rdrEndEdge {
     left: 0; right: 0; top: 3px; bottom: 3px;
-    background-color: #F5A978;
+    background-color: var(--brand-hover);
   }
 
   .rdrDayNumber { top: 3px; bottom: 3px; font-weight: 400; }
-  .rdrDayNumber span { color: #302E36; }
+  .rdrDayNumber span { color: var(--koala-text-primary); }
 
   .rdrDay:not(.rdrDayPassive) .rdrStartEdge ~ .rdrDayNumber span,
   .rdrDay:not(.rdrDayPassive) .rdrEndEdge ~ .rdrDayNumber span,
-  .rdrDay:not(.rdrDayPassive) .rdrInRange ~ .rdrDayNumber span { color: #FFFFFF; }
+  .rdrDay:not(.rdrDayPassive) .rdrInRange ~ .rdrDayNumber span { color: var(--koala-text-on-brand); }
 
   .rdrDayDisabled { background: none; }
-  .rdrDayDisabled .rdrDayNumber span, .rdrDayPassive .rdrDayNumber span { color: #6A6772; opacity: 0.5; }
+  .rdrDayDisabled .rdrDayNumber span, .rdrDayPassive .rdrDayNumber span { color: var(--koala-text-tertiary); opacity: 0.5; }
 
-  .rdrDayToday .rdrDayNumber span { color: #F84416; &:after { display: none; } }
-  .rdrDayToday .rdrDayNumber { border-radius: 2rem; box-shadow: inset 0 0 0 2px #F5A978; }
+  .rdrDayToday .rdrDayNumber span { color: var(--koala-text-brand); &:after { display: none; } }
+  .rdrDayToday .rdrDayNumber { border-radius: 2rem; box-shadow: inset 0 0 0 2px var(--brand-hover); }
 
-  .rdrDayNumber span:after { background-color: #F5A978; font-variant-numeric: tabular-nums; }
+  .rdrDayNumber span:after { background-color: var(--brand-hover); font-variant-numeric: tabular-nums; }
 
   .rdrDefinedRangesWrapper, .rdrDateDisplayWrapper, .rdrWeekDays { display: none; }
-  .rdrInRange { background: #F5A978; }
-  .rdrDayInPreview { background: #0000200F; }
+  .rdrInRange { background: var(--brand-hover); }
+  .rdrDayInPreview { background: var(--koala-btn-ghost-bg-hover); }
 
   .rdrMonth { width: 300px; font-size: 1.2em; padding: 0; }
   .rdrStartEdge { border-top-left-radius: 1.14em; border-bottom-left-radius: 1.14em; }
   .rdrEndEdge { border-top-right-radius: 1.14em; border-bottom-right-radius: 1.14em; }
 
-  .rdrDayStartPreview, .rdrDayEndPreview, .rdrDayInPreview { border: 0; background: #0000200F; z-index: -1; }
+  .rdrDayStartPreview, .rdrDayEndPreview, .rdrDayInPreview { border: 0; background: var(--koala-btn-ghost-bg-hover); z-index: -1; }
 
   .rdrDayStartOfMonth .rdrInRange, .rdrDayStartOfMonth .rdrDayInPreview,
   .rdrDayStartOfWeek .rdrInRange, .rdrDayStartOfWeek .rdrEndEdge, .rdrDayStartOfWeek .rdrDayInPreview,
@@ -77,7 +77,7 @@ const StyledWrapper = styled.div`
   .rdrDay { height: 2.5em; }
 
   .rdrMonthPicker select, .rdrYearPicker select {
-    background: none; color: #302E36; font-weight: 400; font-size: 16px; padding: 2px 8px;
+    background: none; color: var(--koala-text-primary); font-weight: 400; font-size: 16px; padding: 2px 8px;
   }
 
   .rdrMonthsVertical { align-items: center; }
@@ -89,13 +89,13 @@ const StyledWrapper = styled.div`
   }
   .rdrNextPrevButton:hover, .rdrMonthPicker:hover, .rdrYearPicker:hover {
     position: relative; background-color: transparent;
-    &::after { content: ''; position: absolute; inset: 0; border-radius: 6px; background: #FFFFFF; opacity: 0.08; z-index: -1; }
+    &::after { content: ''; position: absolute; inset: 0; border-radius: 6px; background: var(--koala-btn-ghost-bg-hover); z-index: -1; }
   }
   .rdrMonthPicker select:hover, .rdrYearPicker select:hover { background-color: transparent; }
   .rdrPprevButton { margin-left: 0; }
   .rdrNextButton { margin-right: 0; }
-  .rdrPprevButton i { border-right-color: #dbded4; margin: 0; }
-  .rdrNextButton i { border-left-color: #dbded4; margin: 0; }
+  .rdrPprevButton i { border-right-color: var(--koala-text-secondary); margin: 0; }
+  .rdrNextButton i { border-left-color: var(--koala-text-secondary); margin: 0; }
   .rdrDayPassive { visibility: hidden; }
 `;
 
@@ -126,7 +126,7 @@ export function DateRangePicker({ onChange: onCh, startDate, endDate, maxDate, m
         showPreview
         moveRangeOnFirstSelection={false}
         retainEndDateOnFirstSelection
-        rangeColors={['#F5A978']}
+        rangeColors={['var(--brand-hover)']}
         locale={enUS}
       />
     </StyledWrapper>
