@@ -3,12 +3,15 @@
  * `production` never falls back to SQLite.
  */
 
+const { isLocalPostgresUrl } = require('./isLocalHost');
+
 const url = (process.env.DATABASE_URL || '').trim();
 
 const postgres = {
   url,
   dialect: 'postgres',
-  dialectOptions: {
+  // Local Postgres (docker/embedded dev DB) has no SSL cert — only Neon needs this.
+  dialectOptions: isLocalPostgresUrl(url) ? {} : {
     ssl: {
       require: true,
       rejectUnauthorized: false,

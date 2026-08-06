@@ -3,6 +3,10 @@
 # Uses `cmd /C` instead of `shell:` so it doesn't depend on $SHELL
 # (which points at Git Bash here and breaks mprocs on Windows).
 procs:
+  postgres:
+    cmd: ["cmd", "/C", "npx tsx scripts/dev-postgres.ts"]
+  auth:
+    cmd: ["cmd", "/C", "npx tsx scripts/dev-auth.ts"]
   redis:
     cmd: ["cmd", "/C", "npx tsx scripts/dev-redis.ts"]
   app:

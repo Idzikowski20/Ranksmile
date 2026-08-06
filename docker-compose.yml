@@ -1,4 +1,23 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    ports:
+      # Loopback only — the credentials below are dev defaults, so exposing 5432 on
+      # 0.0.0.0 would hand any machine on the LAN a login to this database.
+      - "127.0.0.1:5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-ranksmile}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ranksmile}
+      - POSTGRES_DB=${POSTGRES_DB:-ranksmile}
+    volumes:
+      - ranksmile_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ranksmile"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -47,3 +66,4 @@ services:
 volumes:
   ranksmile_data:
   ranksmile_redis:
+  ranksmile_postgres:

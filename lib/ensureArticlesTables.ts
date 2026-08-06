@@ -4,6 +4,7 @@
  * Wywołuj na początku każdego API route artykułów.
  */
 import db from '../database/database';
+import { ensureUserOnboardingTable } from './onboardingState';
 
 let tablesChecked = false;
 
@@ -176,16 +177,9 @@ export async function ensureArticlesTables() {
       )
    `);
 
-   // user_onboarding — per-user onboarding survey state (gates app access)
-   await db.query(`
-      CREATE TABLE IF NOT EXISTS user_onboarding (
-         user_id    TEXT PRIMARY KEY,
-         completed  INTEGER DEFAULT 0,
-         answers    TEXT,
-         created_at TIMESTAMP DEFAULT ${NOW_DEFAULT},
-         updated_at TIMESTAMP DEFAULT ${NOW_DEFAULT}
-      )
-   `);
+   // user_onboarding — per-user onboarding survey state (gates app access).
+   // Owned by lib/onboardingState.ts, which invitation acceptance calls on its own.
+   await ensureUserOnboardingTable();
 
    // analysis_jobs — event-driven pipeline job queue
    await db.query(`

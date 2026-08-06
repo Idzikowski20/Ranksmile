@@ -156,6 +156,15 @@ export function apiRouteCapability(routeKey: string): RouteCapability {
   if (path === '/api/workspaces/setup' || path === '/api/onboarding') {
     return path === '/api/onboarding' ? 'Onboarding' : 'WorkspaceSetup';
   }
+  // The onboarding wizard names the organization, uploads its logo, and invites
+  // teammates before a plan exists, so these two writes must survive
+  // ONBOARDING_REQUIRED. Reads stay App — nothing in onboarding lists members.
+  if (
+    (path === '/api/organization' && method === 'PUT')
+    || (path === '/api/members' && method === 'POST')
+  ) {
+    return 'Onboarding';
+  }
   if (/^\/api\/workspaces\/\d+\/finish$/.test(path)) return 'WorkspaceSetup';
 
   return 'App';
