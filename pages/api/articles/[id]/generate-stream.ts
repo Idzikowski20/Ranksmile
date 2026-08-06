@@ -51,6 +51,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   flushHeaders(res);
   res.write(':ok\n\n');
 
+  // Quiet phases can outlast a proxy's idle timeout; a comment frame keeps it open.
+  const heartbeat = setInterval(() => { res.write(':hb\n\n'); flushSse(res); }, 20_000);
   let sentLength = 0;
   let lastStatus = '';
   let closed = false;
@@ -59,8 +61,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   for (let tick = 0; tick < MAX_TICKS && !closed; tick += 1) {
     // eslint-disable-next-line no-await-in-loop
     const rows = await db.query<JobRow>(
-      'SELECT status, status_text, stream_text, error FROM analysis_jobs WHERE id = ?',
-      { replacements: [jobId], type: QueryTypes.SELECT },
+      `SELECT status, status_text, stream_text, error FROM analysis_jobs
+        WHERE id = ? AND article_id = ? AND job_type = 'article_generate'`,
+      { replacements: [jobId, articleId], type: QueryTypes.SELECT },
     );
     const job = rows[0];
     if (!job) {
@@ -81,12 +84,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       break;
     }
     if (job.status === 'failed' || job.status === 'canceled') {
-      send(res, 'error', { message: job.error || job.status });
+      // job.error carries sidecar/exception text — keep internals off the wire.
+      send(res, 'error', { message: 'Generation failed' });
       break;
     }
     // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => { setTimeout(resolve, TICK_MS); });
   }
+  clearInterval(heartbeat);
   return res.end();
 }
 
