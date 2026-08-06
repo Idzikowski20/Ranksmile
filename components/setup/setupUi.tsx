@@ -5,7 +5,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode,
 import KoalaHeader from '../koala/shell/Header';
 import { KoalaPage, KoalaPanel, KoalaPanelBody } from '../koala/layout';
 import Input from '../koala/primitives/Input';
-import { MenuList, MenuListItem } from '../koala/core';
+import { MenuList } from '../koala/core';
 import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
 
 const SETUP_WIZARD_WIDTH_NARROW = 480;

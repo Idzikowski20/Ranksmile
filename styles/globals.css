@@ -2837,7 +2837,9 @@ html.editor-route .app-content {
 }
 .koala-menu-list-item:hover { background: var(--koala-btn-ghost-bg-hover); }
 .koala-menu-list-item--primary { color: var(--koala-text-brand); }
-.koala-menu-list-item--danger { color: var(--koala-status-danger); }
+/* status-danger alone fails text contrast on light/cream — same blend used
+   at .deep-analysis-step-icon__error for readable danger text on a surface. */
+.koala-menu-list-item--danger { color: color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary)); }
 .koala-menu-list-item:disabled, .koala-menu-list-item[aria-disabled="true"] { opacity: 0.5; cursor: default; }
 .koala-menu-list-item-leading, .koala-menu-list-item-trailing { flex-shrink: 0; display: flex; align-items: center; }
 .koala-menu-list-item-content { flex: 1; min-width: 0; }
@@ -5725,7 +5727,7 @@ html.editor-route .app-content {
 }
 .koala-setup-progress-seg--active { background: var(--koala-bg-brand); }
 /* Completed step: same brand hue, dimmed — reads as "done" in every theme. */
-.koala-setup-progress-seg--complete { background: var(--koala-bg-brand); opacity: 0.45; }
+.koala-setup-progress-seg--complete { background: color-mix(in srgb, var(--koala-bg-brand) 45%, transparent); }
 .koala-setup-title {
   margin: 0 0 8px;
   font-size: 20px;
