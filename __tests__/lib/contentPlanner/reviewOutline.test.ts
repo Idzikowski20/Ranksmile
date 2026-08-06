@@ -38,6 +38,63 @@ describe('review outline', () => {
     ]);
   });
 
+  it('carries each claim source and the bridge to the next section', () => {
+    const bundle = {
+      outline: { h1: 'Article title', sections: [{ id: 'one', heading: 'First section' }] },
+      briefs: [{
+        sectionId: 'one',
+        heading: 'First section',
+        objective: 'Explain the legal basis.',
+        claimIds: ['claim-1'],
+        mustAnswer: [],
+        blocks: ['table', 'steps'],
+        evidence: [{ kind: 'source', hint: 'Criteria: cost, time, discretion' }],
+        freshnessNotes: [],
+        budget: { words: 300 },
+        writerHints: { transition: 'Move on to how detectives collect evidence', nextSection: 'Methods' },
+      }],
+      targetKg: {
+        claims: [{
+          id: 'claim-1',
+          statement: 'A detective licence is issued by the voivodeship police.',
+          sources: [
+            { url: 'https://gov.pl/licencja', label: 'gov.pl', confidence: 0.9 },
+            { url: 'https://sejm.gov.pl/ustawa', label: 'sejm.gov.pl', confidence: 0.8 },
+          ],
+        }],
+      },
+    } as unknown as ContentPlannerBundle;
+
+    const [, section] = reviewOutlineFromBundle(bundle);
+    expect(section.instructions).toEqual([
+      'Explain the legal basis.',
+      'Cover: A detective licence is issued by the voivodeship police. [gov.pl, sejm.gov.pl]',
+      'Include blocks: table, steps — Criteria: cost, time, discretion',
+      'Include source: Criteria: cost, time, discretion',
+      'Bridge: Move on to how detectives collect evidence',
+    ]);
+  });
+
+  it('falls back to naming the next section when no transition was planned', () => {
+    const bundle = {
+      outline: { h1: 'T', sections: [{ id: 'one', heading: 'First' }] },
+      briefs: [{
+        sectionId: 'one',
+        heading: 'First',
+        objective: 'Do the thing.',
+        claimIds: [],
+        mustAnswer: [],
+        evidence: [],
+        freshnessNotes: [],
+        budget: { words: 200 },
+        writerHints: { transition: '   ', nextSection: 'Methods of work' },
+      }],
+      targetKg: { claims: [] },
+    } as unknown as ContentPlannerBundle;
+
+    expect(reviewOutlineFromBundle(bundle)[1].instructions).toContain('Bridge to: Methods of work');
+  });
+
   it('round-trips edited prompts and target length through TipTap JSON', () => {
     const outline = [
       { level: 1, text: 'Article title' },

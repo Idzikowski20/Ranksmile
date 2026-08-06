@@ -1,14 +1,40 @@
 import type { JSONContent } from '@tiptap/core';
 import type { ApprovedOutlineHeading } from './applyApprovedOutline';
-import type { ContentPlannerBundle } from './types';
+import type { ContentPlannerBundle, SectionBrief, TargetClaim } from './types';
 
 function unique(items: string[]): string[] {
   return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
 }
 
+// Bundles are persisted into articles.score_data, so briefs written by an older
+// planner can reach this code without the newer fields — read them defensively.
+
+/** "Cover: <claim> [gov.pl, sejm.gov.pl]" — the section's evidence travels with it. */
+function claimLine(claim: TargetClaim): string {
+  const labels = unique((claim.sources || []).map((source) => source.label || source.url));
+  const cited = labels.length ? ` [${labels.slice(0, 3).join(', ')}]` : '';
+  return `Cover: ${claim.statement}${cited}`;
+}
+
+function blockLine(brief: SectionBrief): string[] {
+  const blocks = brief.blocks || [];
+  if (!blocks.length) return [];
+  const hints = (brief.evidence || []).map((item) => item.hint).filter(Boolean);
+  const detail = hints.length ? ` — ${hints.slice(0, 2).join('; ')}` : '';
+  return [`Include blocks: ${blocks.join(', ')}${detail}`];
+}
+
+/** Surfer-style "bridge to the next section" so the writer doesn't restart each time. */
+function bridgeLine(brief: SectionBrief): string[] {
+  const transition = brief.writerHints?.transition?.trim();
+  if (transition) return [`Bridge: ${transition}`];
+  const next = brief.writerHints?.nextSection?.trim();
+  return next ? [`Bridge to: ${next}`] : [];
+}
+
 export function reviewOutlineFromBundle(bundle: ContentPlannerBundle): ApprovedOutlineHeading[] {
   if (!bundle.outline || bundle.briefs.length !== bundle.outline.sections.length) return [];
-  const claims = new Map(bundle.targetKg.claims.map((claim) => [claim.id, claim.statement]));
+  const claims = new Map(bundle.targetKg.claims.map((claim) => [claim.id, claim]));
   return [
     { level: 1, text: bundle.outline.h1 },
     ...bundle.briefs.map((brief) => ({
@@ -16,10 +42,15 @@ export function reviewOutlineFromBundle(bundle: ContentPlannerBundle): ApprovedO
       text: brief.heading,
       instructions: unique([
         brief.objective,
-        ...brief.claimIds.map((id) => claims.get(id)).filter((claim): claim is string => Boolean(claim)).map((claim) => `Cover: ${claim}`),
-        ...brief.mustAnswer.map((question) => `Answer: ${question}`),
-        ...brief.evidence.map((item) => `Include ${item.kind}: ${item.hint}`),
-        ...brief.freshnessNotes,
+        ...brief.claimIds
+          .map((id) => claims.get(id))
+          .filter((claim): claim is TargetClaim => Boolean(claim))
+          .map(claimLine),
+        ...(brief.mustAnswer || []).map((question) => `Answer: ${question}`),
+        ...blockLine(brief),
+        ...(brief.evidence || []).map((item) => `Include ${item.kind}: ${item.hint}`),
+        ...(brief.freshnessNotes || []),
+        ...bridgeLine(brief),
       ]),
       targetWords: brief.budget.words,
     })),
