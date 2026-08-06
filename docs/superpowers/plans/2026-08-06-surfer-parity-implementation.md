@@ -1481,7 +1481,12 @@ git commit -m "feat(score): typed AI factors with the sentence that earned each 
 
 ---
 
-### Task 9: Show the factors
+### Task 9: Show the factors — DONE (5faac6b5)
+
+> Deviation: `scoreData.ai_score` is left as the coverage overall. Only `ai_factors`
+> is written; overwriting the gauge value with the weighted factor score would change
+> the displayed AI Search number for every article.
+
 
 **Files:**
 - Modify: `components/articles/ContentScorePanel.tsx`
