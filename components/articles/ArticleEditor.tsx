@@ -2438,8 +2438,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         )}
         {outlineReviewMode && (
           <OutlineGenerateBar
-            busy={generateBusy || outlineBusy}
-            status={outlineBusy ? 'Building outline…' : generateMsg}
+            planning={outlineBusy}
+            busy={generateBusy}
+            status={generateMsg}
             progressPct={generatePct}
             headingCount={outlineHeadingCount}
             onGenerate={handleOutlineGenerate}
