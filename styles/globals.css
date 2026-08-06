@@ -3785,7 +3785,7 @@ html.editor-route .app-content {
 }
 
 .article-list-card {
-  background: transparent;
+  background: var(--koala-bg-secondary);
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
