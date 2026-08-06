@@ -11,6 +11,11 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
 import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
+import { safeJsonParse } from '../../../lib/safeJson';
+import { appendChunk } from '../../../lib/streamText';
+import {
+  mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
+} from '../../../lib/analysisPhases';
 
 const FINALIZING_STALE_SECS = 5 * 60;
 const isPg = Boolean(process.env.DATABASE_URL);
@@ -107,13 +112,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         stage_progress: number | null;
         total_progress: number | null;
         progress_message: string | null;
+        progress_json: string | null;
         error: string | null;
         updated_at: string | Date | null;
       }>(
         jobId
-          ? `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, error, updated_at
+          ? `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress,
+                    total_progress, progress_message, progress_json, error, updated_at
              FROM analysis_jobs WHERE id = ?`
-          : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, error, updated_at
+          : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress,
+                    total_progress, progress_message, progress_json, error, updated_at
              FROM analysis_jobs
              WHERE article_id = ? AND job_type = ?
              ORDER BY created_at DESC, id DESC
@@ -148,6 +156,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         stageProgress: j.stage_progress,
         totalProgress: j.total_progress,
         progressMessage: publicJobError || j.progress_message,
+        phases: safeJsonParse<AnalysisPhases | null>(j.progress_json, null),
         error: publicJobError,
         updatedAt: j.updated_at ? new Date(j.updated_at).toISOString() : null,
       });
@@ -159,43 +168,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   // ── POST: update progress (Python sidecar) ──────────────────────
-  if (req.method === 'DELETE') {
-    const jobId = typeof req.query.jobId === 'string' ? req.query.jobId : '';
-    if (!jobId) return res.status(400).json({ error: 'jobId query param is required' });
-    const userId = await getCurrentUserId(req, res);
-    const rows = await db.query<JobAccessRow>(
-      'SELECT id, status, job_type, domain_id, article_id FROM analysis_jobs WHERE id = ?',
-      { replacements: [jobId], type: QueryTypes.SELECT },
-    );
-    const job = rows[0];
-    if (!job) return res.status(404).json({ error: 'job not found' });
-    if (!(await canReadJob(userId, job))) return res.status(403).json({ error: 'Access denied.' });
-    // This endpoint is used only by ArticleEditor. Domain setup owns a separate quota
-    // reservation lifecycle and must not be canceled here.
-    if (job.job_type !== 'article_generate' || !job.article_id) {
-      return res.status(409).json({ error: 'job cannot be canceled here' });
-    }
-
-    const canceled = await db.transaction(async (transaction) => {
-      const claim = await db.query(
-        `UPDATE analysis_jobs
-         SET status = 'canceled', error = 'canceled_by_user', updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND status IN ('queued', 'running')`,
-        { replacements: [jobId], transaction },
-      );
-      if (affectedRows(claim) === 0) return false;
-      const { getArticleIdSql } = await import('../../../lib/articleSql');
-      const articleIdSql = await getArticleIdSql();
-      await db.query(
-        `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-        { replacements: [job.article_id], transaction },
-      );
-      return true;
-    });
-    if (!canceled) return res.status(409).json({ error: 'job already finishing or finished' });
-    return res.status(200).json({ ok: true });
-  }
-
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!isInternal) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -338,6 +310,42 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(200).json({ ok: true });
     }
 
+    // Generation channels: the status line and the content stream are written
+    // independently of the phase merge below (Surfer splits these across two
+    // subscriptions; we keep them as two fields on one job).
+    const { statusText, contentChunk } = req.body as {
+      statusText?: string; contentChunk?: string;
+    };
+    if (typeof statusText === 'string' && statusText.trim()) {
+      await db.query(
+        `UPDATE analysis_jobs SET status_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        { replacements: [statusText.trim().slice(0, 300), jobId] },
+      );
+    }
+    if (typeof contentChunk === 'string' && contentChunk) {
+      const streamRows = await db.query<{ stream_text: string | null }>(
+        `SELECT stream_text FROM analysis_jobs WHERE id = ?`,
+        { replacements: [jobId], type: QueryTypes.SELECT },
+      );
+      await db.query(
+        `UPDATE analysis_jobs SET stream_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        { replacements: [appendChunk(streamRows[0]?.stream_text ?? null, contentChunk), jobId] },
+      );
+    }
+
+    // Typed phases: an explicit patch from the sidecar wins, otherwise derive what the
+    // stage implies. Stored merged so a later event never erases an earlier phase.
+    const { phases: phasePatch } = req.body as { phases?: AnalysisPhasesPatch };
+    const prevRows = await db.query<{ progress_json: string | null }>(
+      `SELECT progress_json FROM analysis_jobs WHERE id = ?`,
+      { replacements: [jobId], type: QueryTypes.SELECT },
+    );
+    const prev = safeJsonParse<AnalysisPhases | null>(prevRows[0]?.progress_json ?? null, null);
+    const nextPhases = mergePhases(
+      prev,
+      phasePatch ?? phasesFromStage(currentStage || '', Number(stageProgress ?? 0)),
+    );
+
     await db.query(
       `UPDATE analysis_jobs
        SET status = 'running',
@@ -345,9 +353,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
            stage_progress = COALESCE(?, stage_progress),
            total_progress = COALESCE(?, total_progress),
            progress_message = COALESCE(?, progress_message),
+           progress_json = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND status IN ('queued', 'running')`,
-      { replacements: [currentStage || null, stageProgress ?? null, totalProgress ?? null, message || null, jobId] },
+      { replacements: [
+        currentStage || null,
+        stageProgress ?? null,
+        totalProgress ?? null,
+        message || null,
+        JSON.stringify(nextPhases),
+        jobId,
+      ] },
     );
     res.status(200).json({ ok: true });
   } catch (err) {

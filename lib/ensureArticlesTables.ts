@@ -204,6 +204,19 @@ export async function ensureArticlesTables() {
       )
    `);
 
+   // Typed analysis phases (lib/analysisPhases) — the editor renders fields, not a
+   // progress sentence. IF NOT EXISTS on the Postgres path keeps the server log clean.
+   // status_text / stream_text carry the two generation channels (lib/streamText).
+   if (isPostgres) {
+      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS progress_json TEXT`); } catch {}
+      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS status_text TEXT`); } catch {}
+      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS stream_text TEXT`); } catch {}
+   } else {
+      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN progress_json TEXT`); } catch {}
+      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN status_text TEXT`); } catch {}
+      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN stream_text TEXT`); } catch {}
+   }
+
    // New columns for AI ranking score
    if (isPostgres) {
       try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_score INTEGER`); } catch {}
@@ -225,6 +238,10 @@ export async function ensureArticlesTables() {
    // Saved New-Content wizard progress (step + selections) so an unfinished draft
    // can be resumed from the Content Editor. Cleared once generation starts.
    try { await db.query(`ALTER TABLE articles ADD COLUMN wizard_state TEXT`); } catch {}
+
+   // Which planner/writer pipeline produced the article — so a later quality drop
+   // can be traced back to the version that wrote it.
+   try { await db.query(`ALTER TABLE articles ADD COLUMN pipeline_version TEXT`); } catch {}
 
    // Cached Plagiarism Check result so it survives reloads (avoids re-scanning).
    try { await db.query(`ALTER TABLE articles ADD COLUMN plagiarism_json TEXT`); } catch {}

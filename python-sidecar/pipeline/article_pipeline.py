@@ -172,6 +172,7 @@ async def run_pipeline(
     voice_tone: str = "",
     execution_plan: dict | None = None,
     compiled_write_plan: dict | None = None,
+    on_status=None,
 ) -> str:
     top_terms = [t["term"] for t in serp_data.get("terms", [])[:25]]
     terms_str = ", ".join(top_terms) if top_terms else "brak danych NLP"
@@ -210,7 +211,17 @@ async def run_pipeline(
         if not isinstance(compiled_write_plan, dict):
             raise ValueError("compiled_write_plan must be an object")
 
+        written = 0
+
         async def write_markdown(prompt: str) -> str:
+            nonlocal written
+            written += 1
+            if on_status:
+                # Status feedback must never break the write.
+                try:
+                    await on_status(f"Writing section {written}…")
+                except Exception as exc:
+                    print(f"[generate] status callback failed: {exc}")
             return await _chat(
                 f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}\n\n{prompt}",
                 max_tokens=1200,
@@ -223,6 +234,12 @@ async def run_pipeline(
                 max_tokens=1200,
                 system="You are an editorial judge. Return only rewritten Markdown.",
             )
+
+        if on_status:
+            try:
+                await on_status("Reading competitor outlines…")
+            except Exception as exc:
+                print(f"[generate] status callback failed: {exc}")
 
         compiled = await run_compiled_write_plan(compiled_write_plan, write_markdown, rewrite_markdown)
         if not compiled.html:

@@ -61,6 +61,8 @@ export interface ScoreData {
    seo_score?: number;
    /** AI Search score (Facts + Intent) — persisted after deep-analysis. */
    ai_score?: number;
+   /** Typed AI factors with the sentence that earned each one — shown under the score. */
+   ai_factors?: import('./aiScore/factors').ScoreFactor[];
    /** Persisted gauge values (not part of scoring formula). */
    _heading_count?: number;
    _paragraph_count?: number;

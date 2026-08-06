@@ -21,6 +21,7 @@ import {
 } from '../../../../lib/contentPlanner/fromArticleInputs';
 import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlanner';
 import { reviewOutlineFromBundle } from '../../../../lib/contentPlanner/reviewOutline';
+import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
 import {
   benchmarkDocsFromCompetitors,
   buildStructuralBenchmark,
@@ -66,6 +67,28 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === 'GET') {
       const existing = scoreData?.content_planner_v2 ?? null;
       return res.status(200).json({ ok: true, content_planner_v2: existing });
+    }
+
+    // Persist the reviewer's edited outline without re-planning. Manual edits live only
+    // in the TipTap document otherwise, so leaving review discarded them.
+    if (req.body?.approvedOutline !== undefined) {
+      const approvedOutline = parseApprovedOutline(req.body.approvedOutline);
+      const planner = scoreData?.content_planner_v2 && typeof scoreData.content_planner_v2 === 'object'
+        ? scoreData.content_planner_v2 as Record<string, unknown>
+        : {};
+      const next = {
+        ...(scoreData || {}),
+        content_planner_v2: {
+          ...planner,
+          approvedOutline,
+          approvedOutlineAt: new Date().toISOString(),
+        },
+      };
+      await db.query(
+        `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+        { replacements: [JSON.stringify(next), articleId] },
+      );
+      return res.status(200).json({ ok: true, saved: approvedOutline.length });
     }
 
     const produceArticle = !!(req.body?.produceArticle);
@@ -130,6 +153,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const next = {
         ...scoreData,
         content_planner_v2: {
+          // A fresh plan intentionally drops any saved approvedOutline: the reviewer
+          // asked for a new structure, so their edits to the old one no longer apply.
           bundle: {
             ...result.bundle,
             // Preserve CIE write artifacts when this endpoint rebuilds without finalize.
@@ -167,12 +192,38 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
     }
 
+    // An empty outline is a failure, not an empty success: the planner gates on the
+    // knowledge harvested by deep-analysis, so returning 200 + [] left the editor with
+    // nothing but a generic "Could not generate an outline" and no way to see why.
+    const headings = reviewOutlineFromBundle(result.bundle);
+    if (!headings.length) {
+      const reason = [
+        ...result.blueprintValidation.issues,
+        ...result.outlineValidation.issues,
+        ...result.briefValidation.issues,
+      ].map((issue) => issue.message).find(Boolean);
+      return res.status(422).json({
+        error: reason
+          ? `Outline planner has too little analysis data: ${reason}. Re-run the article analysis, then try again.`
+          : 'Outline planner produced no sections — re-run the article analysis, then try again.',
+        headings: [],
+        canWrite: result.canWrite,
+        validations: {
+          blueprint: result.blueprintValidation,
+          outline: result.outlineValidation,
+          brief: result.briefValidation,
+        },
+        claimCount: result.bundle.targetKg.claims.length,
+        questionCount: result.bundle.targetKg.questions.length,
+      });
+    }
+
     return res.status(200).json({
       ok: true,
       canWrite: result.canWrite,
       blueprint: result.bundle.blueprint,
       outline: result.bundle.outline,
-      headings: reviewOutlineFromBundle(result.bundle),
+      headings,
       reader: result.bundle.reader,
       benchmark: result.bundle.benchmark,
       validations: {

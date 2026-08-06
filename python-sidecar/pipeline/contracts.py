@@ -62,6 +62,29 @@ class StageContext:
         except Exception as exc:
             print(f"[pipeline] progress update failed: {type(exc).__name__}: {exc}")
 
+    async def emit_phase(self, patch: dict, message: str = "") -> None:
+        """Post a typed phase patch (Node merges it into analysis_jobs.progress_json).
+
+        Progress events must never break the pipeline, so every failure is logged
+        and swallowed — same contract as emit_progress."""
+        if not self._nextjs_url:
+            print(f"[pipeline] phase {patch} {message}")
+            return
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.post(
+                    f"{self._nextjs_url}/api/articles/job-progress",
+                    headers={
+                        "Content-Type": "application/json",
+                        "x-internal-token": os.environ.get("INTERNAL_PIPELINE_TOKEN", ""),
+                    },
+                    json={"jobId": self.job_id, "phases": patch, "message": message},
+                )
+                if resp.status_code >= 400:
+                    print(f"[pipeline] phase update HTTP {resp.status_code}: {resp.text[:200]}")
+        except Exception as exc:
+            print(f"[pipeline] phase update failed: {type(exc).__name__}: {exc}")
+
     async def mark_failed(self, error: str):
         """Store error in state. Caller (runner) propagates to DB via final response."""
         self._state["error"] = error

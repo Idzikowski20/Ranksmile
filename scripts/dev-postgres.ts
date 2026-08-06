@@ -11,12 +11,69 @@
 import path from 'path';
 import { existsSync } from 'fs';
 import dotenv from 'dotenv';
+import { Client } from 'pg';
 // Resolver can't follow the package's `exports` map; the shim in types.d.ts types it.
 // eslint-disable-next-line import/no-unresolved
 import EmbeddedPostgres from 'embedded-postgres';
 import {
   parsePgUrl, tcpOpen, pgReady, heartbeat,
 } from './lib/net';
+
+type PgTarget = {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database: string;
+};
+
+/**
+ * The app stores SERP results, LLM output and scraped pages — text that routinely
+ * carries characters outside any single-byte codepage. `initdb` inherits the OS
+ * locale, so on a Polish Windows the cluster (and every database created from
+ * template1) lands on WIN1250 and those INSERTs die with
+ * `character with byte sequence 0x.. has no equivalent in encoding "WIN1250"`,
+ * failing analysis jobs halfway. template0 lets a UTF8 database live in such a
+ * cluster, so create ours explicitly and refuse to run against a non-UTF8 one.
+ */
+async function ensureUtf8Database(target: PgTarget): Promise<void> {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(target.database)) {
+    throw new Error(`[dev-postgres] unsupported database name: ${target.database}`);
+  }
+  const admin = new Client({
+    host: target.host,
+    port: target.port,
+    user: target.user,
+    password: target.password,
+    database: 'postgres',
+  });
+  await admin.connect();
+  try {
+    const existing = await admin.query<{ enc: string }>(
+      'SELECT pg_encoding_to_char(encoding) AS enc FROM pg_database WHERE datname = $1',
+      [target.database],
+    );
+    if (!existing.rows.length) {
+      await admin.query(
+        `CREATE DATABASE "${target.database}" WITH ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
+      );
+      console.log(`[dev-postgres] created database ${target.database} (UTF8)`);
+      return;
+    }
+    const encoding = existing.rows[0].enc;
+    if (encoding !== 'UTF8') {
+      throw new Error(
+        `[dev-postgres] database "${target.database}" is ${encoding}, not UTF8 — analysis jobs will fail on any\n`
+        + 'character outside that codepage. Recreate it (dev data is disposable):\n'
+        + `  psql -h ${target.host} -p ${target.port} -U ${target.user} -d postgres `
+        + `-c 'DROP DATABASE "${target.database}"'\n`
+        + 'then restart this pane, which recreates it as UTF8.',
+      );
+    }
+  } finally {
+    await admin.end().catch(() => {});
+  }
+}
 
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env.development' });
@@ -43,6 +100,9 @@ async function main(): Promise<void> {
       );
     }
     console.log(`[dev-postgres] using existing Postgres at ${host}:${port}`);
+    await ensureUtf8Database({
+      host, port, user, password, database,
+    });
     await heartbeat('dev-postgres', () => pgReady(url));
     return;
   }
@@ -62,12 +122,9 @@ async function main(): Promise<void> {
     await pg.initialise();
   }
   await pg.start();
-  try {
-    await pg.createDatabase(database);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!/already exists/i.test(msg)) throw err;
-  }
+  await ensureUtf8Database({
+    host, port, user, password, database,
+  });
   console.log(`[dev-postgres] ready at postgresql://${user}:***@${host}:${port}/${database}`);
 
   const shutdown = async () => {

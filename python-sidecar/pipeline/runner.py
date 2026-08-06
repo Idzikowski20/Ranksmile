@@ -33,6 +33,13 @@ class PipelineRunner:
             self.ctx.total_progress += stage.progress_weight * 100
             await self.ctx.emit_progress(stage, 100, f"{stage.name} done")
 
+        # Terminal phases — the panel must not be left with a spinner after the last stage.
+        await self.ctx.emit_phase({
+            "crawlingSerp": {"status": "DONE"},
+            "loadingCompetitors": {"status": "DONE"},
+            "aiSearch": {"status": "DONE"},
+        })
+
         return result
 
     @staticmethod
