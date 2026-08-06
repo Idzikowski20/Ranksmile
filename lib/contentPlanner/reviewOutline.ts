@@ -1,5 +1,5 @@
 import type { JSONContent } from '@tiptap/core';
-import type { ApprovedOutlineHeading } from './applyApprovedOutline';
+import { parseApprovedOutline, type ApprovedOutlineHeading } from './applyApprovedOutline';
 import type { ContentPlannerBundle, SectionBrief, TargetClaim } from './types';
 
 function unique(items: string[]): string[] {
@@ -117,4 +117,18 @@ export function collectApprovedOutline(doc: JSONContent): ApprovedOutlineHeading
     }
   }
   return outline;
+}
+
+/**
+ * What the reviewer should see when they open (or re-open) outline review: their own
+ * saved edits if there are any, otherwise the planner's outline. Without this the
+ * planner version always wins and manual edits are silently discarded on re-entry.
+ */
+export function outlineForReview(opts: {
+  approvedOutline: unknown;
+  bundle: ContentPlannerBundle | null | undefined;
+}): ApprovedOutlineHeading[] {
+  const saved = parseApprovedOutline(opts.approvedOutline);
+  if (saved.length) return saved;
+  return opts.bundle ? reviewOutlineFromBundle(opts.bundle) : [];
 }
