@@ -167,12 +167,38 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
     }
 
+    // An empty outline is a failure, not an empty success: the planner gates on the
+    // knowledge harvested by deep-analysis, so returning 200 + [] left the editor with
+    // nothing but a generic "Could not generate an outline" and no way to see why.
+    const headings = reviewOutlineFromBundle(result.bundle);
+    if (!headings.length) {
+      const reason = [
+        ...result.blueprintValidation.issues,
+        ...result.outlineValidation.issues,
+        ...result.briefValidation.issues,
+      ].map((issue) => issue.message).find(Boolean);
+      return res.status(422).json({
+        error: reason
+          ? `Outline planner has too little analysis data: ${reason}. Re-run the article analysis, then try again.`
+          : 'Outline planner produced no sections — re-run the article analysis, then try again.',
+        headings: [],
+        canWrite: result.canWrite,
+        validations: {
+          blueprint: result.blueprintValidation,
+          outline: result.outlineValidation,
+          brief: result.briefValidation,
+        },
+        claimCount: result.bundle.targetKg.claims.length,
+        questionCount: result.bundle.targetKg.questions.length,
+      });
+    }
+
     return res.status(200).json({
       ok: true,
       canWrite: result.canWrite,
       blueprint: result.bundle.blueprint,
       outline: result.bundle.outline,
-      headings: reviewOutlineFromBundle(result.bundle),
+      headings,
       reader: result.bundle.reader,
       benchmark: result.bundle.benchmark,
       validations: {
