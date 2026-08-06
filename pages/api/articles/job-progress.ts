@@ -12,6 +12,7 @@ import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
 import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
 import { safeJsonParse } from '../../../lib/safeJson';
+import { appendChunk } from '../../../lib/streamText';
 import {
   mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
 } from '../../../lib/analysisPhases';
@@ -344,6 +345,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         ] },
       );
       return res.status(200).json({ ok: true });
+    }
+
+    // Generation channels: the status line and the content stream are written
+    // independently of the phase merge below (Surfer splits these across two
+    // subscriptions; we keep them as two fields on one job).
+    const { statusText, contentChunk } = req.body as {
+      statusText?: string; contentChunk?: string;
+    };
+    if (typeof statusText === 'string' && statusText.trim()) {
+      await db.query(
+        `UPDATE analysis_jobs SET status_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        { replacements: [statusText.trim().slice(0, 300), jobId] },
+      );
+    }
+    if (typeof contentChunk === 'string' && contentChunk) {
+      const streamRows = await db.query<{ stream_text: string | null }>(
+        `SELECT stream_text FROM analysis_jobs WHERE id = ?`,
+        { replacements: [jobId], type: QueryTypes.SELECT },
+      );
+      await db.query(
+        `UPDATE analysis_jobs SET stream_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        { replacements: [appendChunk(streamRows[0]?.stream_text ?? null, contentChunk), jobId] },
+      );
     }
 
     // Typed phases: an explicit patch from the sidecar wins, otherwise derive what the
