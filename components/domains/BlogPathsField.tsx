@@ -30,6 +30,7 @@ const BlogPathsField = ({ value, onChange }: BlogPathsFieldProps) => {
             </Chip>
          ))}
          <input
+            className="koala-blog-path-input"
             value={draft}
             placeholder="/blog/"
             onChange={(e) => setDraft(e.target.value)}
@@ -40,10 +41,6 @@ const BlogPathsField = ({ value, onChange }: BlogPathsFieldProps) => {
                }
             }}
             onBlur={addDraft}
-            style={{
-               border: '1px solid #D4D4D8', borderRadius: 8, padding: '4px 10px',
-               fontSize: 13, fontFamily: 'var(--font-family-primary)', outline: 'none',
-            }}
          />
       </div>
    );

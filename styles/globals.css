@@ -2833,16 +2833,18 @@ html.editor-route .app-content {
   display: flex; align-items: center; gap: 10px; width: 100%;
   padding: 8px 12px; border: none; background: transparent; cursor: pointer;
   border-radius: 8px; text-align: left; font-family: var(--font-family-shell);
-  font-size: 14px; color: #302E36; transition: background 150ms ease;
+  font-size: 14px; color: var(--koala-text-primary); transition: background 150ms ease;
 }
-.koala-menu-list-item:hover { background: rgba(0,0,32,0.06); }
-.koala-menu-list-item--primary { color: #F84416; }
-.koala-menu-list-item--danger { color: #D50000; }
+.koala-menu-list-item:hover { background: var(--koala-btn-ghost-bg-hover); }
+.koala-menu-list-item--primary { color: var(--koala-text-brand); }
+/* status-danger alone fails text contrast on light/cream — same blend used
+   at .deep-analysis-step-icon__error for readable danger text on a surface. */
+.koala-menu-list-item--danger { color: color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary)); }
 .koala-menu-list-item:disabled, .koala-menu-list-item[aria-disabled="true"] { opacity: 0.5; cursor: default; }
 .koala-menu-list-item-leading, .koala-menu-list-item-trailing { flex-shrink: 0; display: flex; align-items: center; }
 .koala-menu-list-item-content { flex: 1; min-width: 0; }
 .koala-menu-list-item-label { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.koala-menu-list-item-details { display: block; font-size: 12px; color: #6A6772; margin-top: 2px; }
+.koala-menu-list-item-details { display: block; font-size: 12px; color: var(--koala-text-tertiary); margin-top: 2px; }
 
 /* ??? Status indicator ????????????????????????????????????????????????????? */
 .koala-status-indicator {
@@ -5663,10 +5665,11 @@ html.editor-route .app-content {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: center;
+  /* Top-anchored, not vertically centered — a centered wizard jumps up/down
+     between step 1 and step 2 as content height changes. */
+  justify-content: flex-start;
   width: 100%;
   margin: 0 auto;
-  min-height: 100%;
   padding: 48px 0 64px;
   box-sizing: border-box;
 }
@@ -5684,14 +5687,6 @@ html.editor-route .app-content {
 .koala-panel--setup {
   overflow: visible;
 }
-.koala-setup-menu--portal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: auto;
-  z-index: 200;
-  max-width: min(880px, calc(100vw - 24px));
-}
 .koala-setup-card .koala-panel-body {
   padding: 24px;
 }
@@ -5701,27 +5696,92 @@ html.editor-route .app-content {
   width: 100%;
   margin-bottom: 20px;
 }
+.koala-setup-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.koala-setup-logo:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.koala-setup-logo-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.koala-setup-logo-word {
+  font-family: var(--font-family-primary);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--koala-text-primary);
+}
 .koala-setup-progress-seg {
   height: 3px;
   border-radius: 9999px;
-  background: #e4e4e7;
+  background: var(--koala-border-primary);
   flex: 1;
   transition: background 150ms ease;
 }
-.koala-setup-progress-seg--active { background: #F84416; }
-.koala-setup-progress-seg--complete { background: #F5A978; }
+.koala-setup-progress-seg--active { background: var(--koala-bg-brand); }
+/* Completed step: same brand hue, dimmed — reads as "done" in every theme. */
+.koala-setup-progress-seg--complete { background: color-mix(in srgb, var(--koala-bg-brand) 45%, transparent); }
+.koala-setup-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--koala-text-primary);
+  font-family: var(--font-family-primary);
+}
+.koala-setup-description {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--koala-text-secondary);
+  font-family: var(--font-family-primary);
+}
+.koala-setup-spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  border: 2px solid var(--koala-border-primary);
+  border-top-color: var(--koala-bg-brand);
+  border-radius: 50%;
+  animation: koala-setup-spin 0.7s linear infinite;
+}
+.koala-setup-loading-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--koala-text-secondary);
+  font-family: var(--font-family-primary);
+}
+.koala-setup-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--koala-status-danger);
+  font-family: var(--font-family-primary);
+}
+.koala-setup-field-optional {
+  font-weight: 400;
+  color: var(--koala-text-secondary);
+}
 .koala-setup-field-label {
   display: block;
   margin: 0 0 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #302e36;
+  color: var(--koala-text-primary);
   font-family: var(--font-family-shell);
 }
 .koala-setup-field-hint {
   margin: -4px 0 8px;
   font-size: 12px;
-  color: #6a6772;
+  color: var(--koala-text-secondary);
   line-height: 1.45;
   font-family: var(--font-family-shell);
 }
@@ -5732,80 +5792,42 @@ html.editor-route .app-content {
   width: 100%;
   height: 36px;
   padding: 0 12px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--koala-input-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--koala-input-bg);
   box-shadow: none;
   font-size: 14px;
-  color: #302e36;
+  color: var(--koala-text-primary);
   font-family: var(--font-family-shell);
   text-align: left;
   cursor: pointer;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
-.koala-setup-trigger:hover:not(:disabled) { border-color: #c4c3ca; }
+.koala-setup-trigger:hover:not(:disabled) { border-color: var(--koala-input-border-hover); }
 .koala-setup-trigger:focus-visible {
   outline: none;
-  border-color: #F5A978;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #F5A978, 0 2px 0 -1px #e5e5e5;
+  border-color: var(--koala-input-border-focus);
+  box-shadow: var(--shadow-focus);
 }
 .koala-setup-trigger:disabled { opacity: 0.6; cursor: not-allowed; }
-.koala-setup-trigger-placeholder { color: #6a6772; }
-.koala-setup-menu {
-  position: absolute;
-  z-index: 150;
-  top: calc(100% + 4px);
+.koala-setup-trigger-placeholder { color: var(--koala-input-placeholder); }
+/* Positioning only — MenuList (koala-setup-menu-panel below) is the one visual panel. */
+.koala-setup-menu-portal {
+  position: fixed;
+  top: 0;
   left: 0;
-  right: 0;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(24, 18, 37, 0.12);
+  z-index: 200;
+  max-width: min(880px, calc(100vw - 24px));
+}
+.koala-setup-menu-panel {
   animation: growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
 }
-.koala-setup-menu-search { padding: 8px; border-bottom: 1px solid #ececee; }
-.koala-setup-menu-list { max-height: 220px; overflow-y: auto; }
-.koala-setup-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  color: #302e36;
-  text-align: left;
-  cursor: pointer;
-  font-family: var(--font-family-shell);
-  transition: background 150ms ease;
-}
-.koala-setup-menu-item:hover { background: #f4f4f5; }
-.koala-setup-menu-footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  border: none;
-  border-top: 1px solid #ececee;
-  background: #fafafa;
-  font-size: 14px;
-  font-weight: 500;
-  color: #302e36;
-  text-align: left;
-  cursor: pointer;
-  font-family: var(--font-family-shell);
-  transition: background 150ms ease;
-}
-.koala-setup-menu-footer:hover { background: #f4f4f5; }
 .koala-setup-or {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
-  color: #6a6772;
+  color: var(--koala-text-secondary);
   font-size: 13px;
   font-family: var(--font-family-shell);
 }
@@ -5814,16 +5836,16 @@ html.editor-route .app-content {
   content: '';
   flex: 1;
   height: 1px;
-  background: #e5e5e5;
+  background: var(--koala-border-primary);
 }
 .koala-setup-gsc-card {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 20px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--koala-border-primary);
   border-radius: 12px;
-  background: #f5f5f5;
+  background: var(--koala-bg-secondary);
   box-shadow: none;
 }
 .koala-setup-benefit {
@@ -5831,7 +5853,7 @@ html.editor-route .app-content {
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  color: #302e36;
+  color: var(--koala-text-primary);
   font-family: var(--font-family-shell);
 }
 .koala-setup-benefit-check {
@@ -5841,7 +5863,7 @@ html.editor-route .app-content {
   width: 18px;
   height: 18px;
   border-radius: 9999px;
-  background: #F84416;
+  background: var(--koala-bg-brand);
   flex-shrink: 0;
 }
 .koala-setup-brand-block {
@@ -5849,22 +5871,22 @@ html.editor-route .app-content {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--koala-border-primary);
   border-radius: 8px;
-  background: #fafafa;
+  background: var(--koala-bg-tertiary);
   box-shadow: none;
 }
 .koala-setup-brand-block-title {
   margin: 0;
   font-size: 14px;
   font-weight: 500;
-  color: #181225;
+  color: var(--koala-text-primary);
   font-family: var(--font-family-shell);
 }
 .koala-setup-brand-block-desc {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #6a6772;
+  color: var(--koala-text-secondary);
   line-height: 1.45;
   font-family: var(--font-family-shell);
 }
@@ -5875,6 +5897,28 @@ html.editor-route .app-content {
   width: 100%;
 }
 .koala-setup-actions > button:last-child { margin-left: auto; }
+
+/* BlogPathsField draft input — sized to sit inline with Chip (size sm, 24px/pill),
+   not the full-width form Input primitive. */
+.koala-blog-path-input {
+  height: 24px;
+  min-width: 90px;
+  padding: 0 10px;
+  border: 1px solid var(--koala-input-border);
+  border-radius: 999px;
+  background: var(--koala-input-bg);
+  color: var(--koala-text-primary);
+  font-size: 12px;
+  font-family: var(--font-family-primary);
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.koala-blog-path-input::placeholder { color: var(--koala-input-placeholder); }
+.koala-blog-path-input:hover { border-color: var(--koala-input-border-hover); }
+.koala-blog-path-input:focus-visible {
+  border-color: var(--koala-input-border-focus);
+  box-shadow: var(--shadow-focus);
+}
 
 /* ?? Site Audit ? Issue Detail (Sentry layout) ????????????????????????????? */
 .koala-issue-detail {

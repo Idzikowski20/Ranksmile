@@ -11,9 +11,16 @@ type KoalaPageProps = {
 /** Main scrollable page — Koala Dashboard template chrome. */
 export function KoalaPage({ children, maxWidth = 1200, className = '', unified, fillHeight }: KoalaPageProps) {
   const maxW = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
+  const pageClassName = [
+    'koala-page', 'styled-scrollbar',
+    unified ? 'koala-page--unified' : '',
+    fillHeight ? 'koala-page--fill' : '',
+    className,
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className={`koala-page ${unified ? 'koala-page--unified' : ''} ${fillHeight ? 'koala-page--fill' : ''} ${className}`.trim()}>
-      <div className="koala-page-inner styled-scrollbar" style={{ maxWidth: maxW, width: '100%' }}>
+    <div className={pageClassName}>
+      <div className="koala-page-inner" style={{ maxWidth: maxW, width: '100%' }}>
         {children}
       </div>
     </div>
