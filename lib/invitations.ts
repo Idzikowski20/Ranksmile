@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import db from '../database/database';
 import { ensureUserTenancy } from './tenancy';
-import { ensureArticlesTables } from './ensureArticlesTables';
+import { markOnboardingCompleted } from './onboardingState';
 import type { DbRow, SqlReplacements } from './types/db';
 
 export type Invitation = {
@@ -61,31 +61,6 @@ export async function revokeInvitation(userId: string, id: number): Promise<void
    await db.query("UPDATE invitations SET status = 'revoked' WHERE id = ? AND org_id = ?", { replacements: [id, orgId] });
 }
 
-/**
- * Joining an existing organization completes onboarding for that user.
- *
- * The wizard exists to configure a *brand-new* org — it names it, uploads its logo
- * and invites its team. Someone joining an org that is already set up has nothing
- * to fill in, and `resolveAppState` checks ONBOARDING before BILLING, so leaving
- * this unmarked routes every invited member into a wizard whose closing step would
- * overwrite the org's name and logo.
- *
- * Dialect-agnostic upsert (no ON CONFLICT — not every SQLite build supports it),
- * mirroring `pages/api/onboarding.ts`. Answers are left untouched so a partially
- * filled survey survives.
- */
-async function markOnboardingCompleted(userId: string): Promise<void> {
-   await ensureArticlesTables();
-   const seen = await select('SELECT user_id FROM user_onboarding WHERE user_id = ? LIMIT 1', [userId]);
-   if (seen.length) {
-      await db.query('UPDATE user_onboarding SET completed = 1, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
-         { replacements: [userId] });
-      return;
-   }
-   await db.query('INSERT INTO user_onboarding (user_id, completed, updated_at) VALUES (?, 1, CURRENT_TIMESTAMP)',
-      { replacements: [userId] });
-}
-
 export async function acceptInvitation(sessionUserId: string, sessionEmail: string | null, token: string): Promise<void> {
    const inv = await getInvitationByToken(token);
    if (!inv || inv.status !== 'pending') throw new Error('INVITE_NOT_PENDING');
@@ -101,6 +76,11 @@ export async function acceptInvitation(sessionUserId: string, sessionEmail: stri
       await db.query("INSERT INTO organization_members (org_id, user_id, email, role, status, workspace_ids) VALUES (?, ?, ?, ?, 'active', ?)",
          { replacements: [inv.org_id, sessionUserId, inv.email, inv.role, inv.workspace_ids] });
    }
+   // Joining an org that is already set up means there is nothing for the wizard to
+   // configure, and `resolveAppState` checks ONBOARDING before BILLING — leaving this
+   // unmarked routes every invited member into a wizard whose closing step would
+   // overwrite the org's name and logo.
+   //
    // Before the status flip, so a failure here leaves the invite pending and the
    // whole accept stays retryable (the membership insert above is already guarded).
    await markOnboardingCompleted(sessionUserId);

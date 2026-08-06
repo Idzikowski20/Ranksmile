@@ -9,13 +9,18 @@ import { spacing } from '../../tokens/spacing';
 /** Loose format check — the server is the authority on deliverability. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Splits a pasted or typed run of addresses — whitespace, comma and semicolon all separate. */
+const SEPARATORS = /[\s,;]+/;
+
 export type EmailTagInputProps = {
-  /** Committed addresses, rendered as removable chips. */
+  /** Committed addresses (lowercased), rendered as removable chips. */
   value: string[];
   onChange: (emails: string[]) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** Accessible name for the field — the placeholder disappears once typing starts. */
+  label?: string;
 };
 
 const Root = styled.div`
@@ -41,25 +46,48 @@ const Error = styled.p`
 
 /** Type an address, then Enter, space, comma or semicolon turns it into a chip. Blur commits too. */
 export function EmailTagInput({
-  value, onChange, placeholder = 'name@company.com', disabled = false, className,
+  value,
+  onChange,
+  placeholder = 'name@company.com',
+  disabled = false,
+  className,
+  label = 'Email address',
 }: EmailTagInputProps) {
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const errorId = 'email-tag-input-error';
 
+  /**
+   * Commits every address in `raw` — a list pasted in one go becomes one chip each,
+   * instead of being rejected wholesale as a single malformed address.
+   *
+   * Addresses are lowercased: the invite API lowercases them too, so `A@x.com` and
+   * `a@x.com` would otherwise pass the duplicate check here and mail the same person twice.
+   */
   const commit = (raw: string): void => {
-    const email = raw.trim().replace(/[,;]$/, '');
-    if (!email) return;
-    if (!EMAIL_RE.test(email)) {
-      setError(`"${email}" is not a valid email address.`);
-      return;
+    const candidates = raw.split(SEPARATORS).map((part) => part.trim().toLowerCase()).filter(Boolean);
+    if (!candidates.length) return;
+
+    const accepted: string[] = [];
+    const rejected: string[] = [];
+    candidates.forEach((email) => {
+      if (!EMAIL_RE.test(email)) {
+        rejected.push(email);
+        return;
+      }
+      if (value.includes(email) || accepted.includes(email)) return;
+      accepted.push(email);
+    });
+
+    if (rejected.length) {
+      setError(`"${rejected.join('", "')}" is not a valid email address.`);
+      // Keep only what failed in the box so the user can fix it without retyping the rest.
+      setDraft(rejected.join(' '));
+    } else {
+      setError(null);
+      setDraft('');
     }
-    if (value.includes(email)) {
-      setError(`${email} is already on the list.`);
-      return;
-    }
-    setError(null);
-    setDraft('');
-    onChange([...value, email]);
+    if (accepted.length) onChange([...value, ...accepted]);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -84,11 +112,14 @@ export function EmailTagInput({
         disabled={disabled}
         placeholder={placeholder}
         hasError={Boolean(error)}
+        aria-label={label}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : undefined}
         onChange={(e) => { setDraft(e.target.value); setError(null); }}
         onKeyDown={handleKeyDown}
         onBlur={() => commit(draft)}
       />
-      {error ? <Error role="alert">{error}</Error> : null}
+      {error ? <Error id={errorId} role="alert">{error}</Error> : null}
       {value.length > 0 && (
         <Chips>
           {value.map((email) => (

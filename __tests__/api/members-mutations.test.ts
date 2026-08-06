@@ -1,4 +1,5 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest } from 'next';
+import { makeRes, callHandler, type ApiHandler, type MockRes } from '../../test-utils/apiHandler';
 import idHandler from '../../pages/api/members/[id]';
 import wsHandler from '../../pages/api/members/[id]/workspaces';
 import { getCurrentUserId } from '../../utils/getUser';
@@ -17,20 +18,7 @@ jest.mock('../../lib/members', () => ({
 // and turns every case below into a 503.
 jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
-type Handler = (req: NextApiRequest, res: NextApiResponse) => unknown;
-
-const makeRes = () => {
-  const r: Record<string, jest.Mock> = {};
-  r.status = jest.fn().mockReturnValue(r);
-  r.json = jest.fn().mockReturnValue(r);
-  r.setHeader = jest.fn();
-  return r;
-};
-
-const call = (handler: Handler, req: Partial<NextApiRequest>, res: Record<string, jest.Mock>) => handler(
-  { headers: {}, cookies: {}, body: {}, ...req } as NextApiRequest,
-  res as unknown as NextApiResponse,
-);
+const call = (handler: ApiHandler, req: Partial<NextApiRequest>, res: MockRes) => callHandler(handler, req, res);
 
 describe('members [id] mutations API', () => {
   beforeEach(() => {

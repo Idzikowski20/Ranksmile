@@ -1,4 +1,5 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest } from 'next';
+import { makeRes, callHandler, type MockRes } from '../../test-utils/apiHandler';
 import { assertCanManage } from '../../lib/members';
 import { writeOrganization } from '../../lib/organization';
 import handler from '../../pages/api/organization';
@@ -15,19 +16,8 @@ jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h
 const mockAssert = assertCanManage as jest.Mock;
 const mockWrite = writeOrganization as jest.Mock;
 
-const makeRes = () => {
-  const res: Record<string, jest.Mock> = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  res.setHeader = jest.fn();
-  return res;
-};
-
 // withOrgPaymentAccess is mocked to a pass-through, so the default export is the raw handler.
-const call = (req: Partial<NextApiRequest>, res: Record<string, jest.Mock>) => handler(
-  req as NextApiRequest,
-  res as unknown as NextApiResponse,
-);
+const call = (req: Partial<NextApiRequest>, res: MockRes) => callHandler(handler, req, res);
 
 beforeEach(() => {
   mockAssert.mockReset();
@@ -58,5 +48,15 @@ describe('PUT /api/organization role guard', () => {
     await call({ method: 'GET' }, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(mockAssert).not.toHaveBeenCalled();
+  });
+
+  it('does not turn a database failure into 403', async () => {
+    // The role lookup queries the DB — reporting an outage as "Forbidden" would send
+    // people hunting for a permission they already have.
+    mockAssert.mockRejectedValue(new Error('ECONNREFUSED'));
+    const res = makeRes();
+    await expect(call({ method: 'PUT', body: { name: 'Renamed' } }, res)).rejects.toThrow('ECONNREFUSED');
+    expect(res.status).not.toHaveBeenCalledWith(403);
+    expect(mockWrite).not.toHaveBeenCalled();
   });
 });

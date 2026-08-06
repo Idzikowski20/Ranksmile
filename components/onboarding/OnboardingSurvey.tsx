@@ -136,6 +136,10 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
 
    const choose = (option: string) => {
       if (!q) return;
+      // Switching the team size back to "Just me" drops the invite step — the addresses
+      // typed into it must go too, or Finish would still mail people the user changed
+      // their mind about.
+      if (q.id === INVITE_AFTER && option === SOLO_ANSWER) setInvites([]);
       setAnswers((prev) => {
          if (q.type !== 'checkbox') return { ...prev, [q.id]: [option] };
          const cur = prev[q.id] ?? [];
@@ -148,21 +152,27 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
    const sendInvites = async (): Promise<void> => {
       if (!invites.length) return;
       setSending(true);
+      const sent: string[] = [];
       const failed: string[] = [];
       for (const email of invites) {
          try {
             // Sequential on purpose — the invite endpoint writes one membership row per call.
             // eslint-disable-next-line no-await-in-loop
             await invite.mutateAsync({ email, role: 'member', workspaceIds: null });
+            sent.push(email);
          } catch {
             failed.push(email);
          }
       }
+      // Drop what actually went out. If the onboarding-completion call after this fails,
+      // the user is left on this step with Finish enabled — retrying must not mail the
+      // same teammates a second time.
+      setInvites(failed);
       setSending(false);
       if (failed.length) {
          toast.error(`Couldn't invite ${failed.join(', ')}. You can retry from Settings › People.`);
       } else {
-         toast.success(invites.length === 1 ? 'Invitation sent' : `${invites.length} invitations sent`);
+         toast.success(sent.length === 1 ? 'Invitation sent' : `${sent.length} invitations sent`);
       }
    };
 
@@ -200,6 +210,7 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
    };
 
    const back = () => {
+      if (sending || submitting) return;
       setDir(-1);
       setStep((s) => s - 1);
    };
@@ -228,12 +239,25 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
       if (isInvite) {
          return (
             <div style={{ width: '100%', maxWidth: 400 }}>
-               <EmailTagInput value={invites} onChange={setInvites} disabled={sending} />
+               <EmailTagInput
+                  label="Teammate email address"
+                  value={invites}
+                  onChange={setInvites}
+                  disabled={sending}
+               />
             </div>
          );
       }
+      // Radio questions take exactly one answer, so the set is a radiogroup and each
+      // chip a radio — as plain toggle buttons the single-choice rule is invisible to
+      // screen readers. Checkbox questions stay pressable toggles inside a plain group.
+      const isRadio = q?.type === 'radio';
       return (
-         <div className="ob-chips">
+         <div
+            className="ob-chips"
+            role={isRadio ? 'radiogroup' : 'group'}
+            aria-label={q?.title}
+         >
             {(q?.options ?? []).map((option, i) => (
                <motion.div
                   key={option}
@@ -241,7 +265,12 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, ease: EASE, delay: 0.06 + i * 0.02 }}
                >
-                  <Chip size="md" selected={selected.includes(option)} onClick={() => choose(option)}>
+                  <Chip
+                     size="md"
+                     role={isRadio ? 'radio' : undefined}
+                     selected={selected.includes(option)}
+                     onClick={() => choose(option)}
+                  >
                      {option}
                   </Chip>
                </motion.div>
@@ -270,14 +299,28 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
    return (
       <>
       <OnboardingHeaderCenter>
-         <ProgressBar label="Getting started" completed={step} total={steps.length} style={{ width: 360 }} />
+         <ProgressBar
+            label="Getting started"
+            completed={step}
+            total={steps.length}
+            style={{ width: '100%', maxWidth: 360 }}
+         />
       </OnboardingHeaderCenter>
       <WizardLayout
          className="ob-wizard-fill"
          footer={(
             <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', display: 'flex', gap: spacing.lg }}>
                {step > 0 && (
-                  <Button type="button" variant="secondary" size="lg" onClick={back} style={{ flexShrink: 0 }}>
+                  <Button
+                     type="button"
+                     variant="secondary"
+                     size="lg"
+                     // Finish is a chain of network calls; leaving Back live lets the user
+                     // navigate away and still be redirected when `onFinish` fires later.
+                     disabled={sending || submitting}
+                     onClick={back}
+                     style={{ flexShrink: 0 }}
+                  >
                      Back
                   </Button>
                )}

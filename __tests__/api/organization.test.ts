@@ -1,4 +1,6 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest } from 'next';
+import { makeRes, callHandler, type MockRes } from '../../test-utils/apiHandler';
+import ORG_NAME_MAX_LENGTH from '../../lib/organizationLimits';
 import { writeOrganization } from '../../lib/organization';
 import { uploadImageBuffer } from '../../lib/uploadToBlob';
 import { getCurrentUserId } from '../../utils/getUser';
@@ -29,18 +31,7 @@ const mockWrite = writeOrganization as jest.Mock;
 const mockUpload = uploadImageBuffer as jest.Mock;
 const mockUserId = getCurrentUserId as jest.Mock;
 
-const makeRes = () => {
-  const res: Record<string, jest.Mock> = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  res.setHeader = jest.fn();
-  return res;
-};
-
-const call = (req: Partial<NextApiRequest>, res: Record<string, jest.Mock>) => handler(
-  { headers: {}, cookies: {}, ...req } as NextApiRequest,
-  res as unknown as NextApiResponse,
-);
+const call = (req: Partial<NextApiRequest>, res: MockRes) => callHandler(handler, req, res);
 
 beforeEach(() => {
   mockWrite.mockClear();
@@ -96,7 +87,14 @@ describe('/api/organization', () => {
   it('PUT caps an over-long name at the shared limit', async () => {
     const res = makeRes();
     await call({ method: 'PUT', body: { name: 'x'.repeat(200) } }, res);
-    expect((mockWrite.mock.calls[0][1] as { name: string }).name).toHaveLength(80);
+    expect((mockWrite.mock.calls[0][1] as { name: string }).name).toHaveLength(ORG_NAME_MAX_LENGTH);
+  });
+
+  it('PUT rejects a non-string name instead of coercing it', async () => {
+    const res = makeRes();
+    await call({ method: 'PUT', body: { name: { evil: true } } }, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockWrite).not.toHaveBeenCalled();
   });
 
   it('rejects methods other than GET and PUT', async () => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import ORG_NAME_MAX_LENGTH from '../../lib/organizationLimits';
+import ORG_NAME_MAX_LENGTH, { ORG_LOGO_MAX_BYTES, ORG_LOGO_MAX_LABEL } from '../../lib/organizationLimits';
 import { useOrganization, useUpdateOrganization } from '../../services/organization';
 import { usePeople } from '../../services/people';
 import { Button, Input } from '../koala/core';
@@ -60,11 +60,15 @@ const OrganizationGeneralSettings = () => {
   return (
     <>
       <KoalaSettingsSection title="Logo">
-        <KoalaSettingsRow layout="stack" label="Organization logo" description="PNG, JPG, GIF or WEBP.">
+        <KoalaSettingsRow
+          layout="stack"
+          label="Organization logo"
+          description={`PNG, JPG, GIF or WEBP — up to ${ORG_LOGO_MAX_LABEL}.`}
+        >
           <FileUpload
             className="koala-settings-file-upload"
             accept="image/png,image/jpeg,image/gif,image/webp"
-            maxSize={5 * 1024 * 1024}
+            maxSize={ORG_LOGO_MAX_BYTES}
             preview
             disabled={!canManage}
             valueUrl={displayLogo}
