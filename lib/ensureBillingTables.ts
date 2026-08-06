@@ -80,6 +80,27 @@ async function runEnsureBillingTables(): Promise<void> {
     ignoreExisting('billing_activation_events', e);
   }
 
+  // Webhook dedup ledger — Stripe delivers at-least-once and retries for 3 days.
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+        event_id TEXT PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        event_created_at TIMESTAMP,
+        processed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`);
+  } catch (e) {
+    ignoreExisting('stripe_webhook_events', e);
+  }
+
+  try {
+    await db.query(
+      'CREATE INDEX IF NOT EXISTS idx_stripe_webhook_events_processed ON stripe_webhook_events(processed_at)',
+    );
+  } catch (e) {
+    ignoreExisting('idx_stripe_webhook_events_processed', e);
+  }
+
   try {
     await db.query(
       'CREATE INDEX IF NOT EXISTS idx_billing_activation_corr ON billing_activation_events(correlation_id)',
