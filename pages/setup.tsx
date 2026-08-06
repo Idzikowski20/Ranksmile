@@ -486,11 +486,13 @@ const SetupPage: NextPage = () => {
                                  <DropdownButton
                                     isOpen={locOpen}
                                     className="koala-setup-trigger"
-                                    prefix={location ? <Flag cc={location.cc} /> : undefined}
                                     onClick={() => setLocOpen((o) => !o)}
                                  >
                                     {location ? (
-                                       `${location.country} - ${location.language}`
+                                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                          <Flag cc={location.cc} />
+                                          <span>{location.country} - {location.language}</span>
+                                       </span>
                                     ) : (
                                        <span className="koala-setup-trigger-placeholder">Select location</span>
                                     )}
