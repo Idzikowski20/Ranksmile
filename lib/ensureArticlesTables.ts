@@ -270,6 +270,12 @@ export async function ensureArticlesTables() {
 
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_status ON analysis_jobs(status)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article ON analysis_jobs(article_id)`); } catch {}
+   // Covers the in-flight guard's per-article/job_type/status lookup and loadCandidates'
+   // per-article created_at ordering, which the single-column article index above can't
+   // satisfy without a scan+sort as the job table grows.
+   try {
+      await db.query('CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article_type_created ON analysis_jobs(article_id, job_type, created_at)');
+   } catch {}
    // At most one active article_generate job per article — the DB-level half of the
    // single-in-flight-generation guard in /api/articles/[id]/generate (app-code check-
    // then-act alone leaves a race between the check and the insert).

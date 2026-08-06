@@ -132,11 +132,14 @@ export async function triggerAutopilotAnalysis(
       }),
    });
    // The response is an SSE stream we deliberately don't drain — only the handshake matters,
-   // and the job-row poll above is what actually confirms the enqueue.
+   // and the job-row poll above is what actually confirms the enqueue. Left open, the
+   // socket stays allocated to this stream for the full analysis (up to 3 minutes) —
+   // cancel it now that the handshake has been read.
    if (!res.ok) {
       console.error('[autopilot] deep-analysis rejected:', res.status, (await res.text().catch(() => '')).slice(0, 300));
       return false;
    }
+   await res.body?.cancel().catch(() => {});
    const confirmed = await confirmAnalysisJobCreated(article.articleId, firedAt);
    if (!confirmed) {
       console.error('[autopilot] deep-analysis accepted the request but no job row appeared:', article.articleId);
