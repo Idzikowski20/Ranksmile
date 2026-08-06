@@ -87,6 +87,18 @@ export function assertCanUpgradeSubscription(
   if (!billing.planSlug || !billing.billingPeriod) {
     return { ok: false, status: 409, error: 'Current plan is unknown; cannot upgrade' };
   }
+  // Proration on an unpaid subscription would grant the higher plan before the debt is settled.
+  if (
+    billing.paymentFailedLockedAt != null
+    || billing.subscriptionStatus === 'past_due'
+    || billing.subscriptionStatus === 'unpaid'
+  ) {
+    return {
+      ok: false,
+      status: 409,
+      error: 'Settle the outstanding invoice before changing your plan',
+    };
+  }
   if (billing.planSlug === targetSlug && billing.billingPeriod === targetBilling) {
     return { ok: false, status: 409, error: 'You are already on this plan' };
   }
