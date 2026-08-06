@@ -135,7 +135,8 @@ const SETUP_WIZARD_ROUTES: ReadonlySet<string> = new Set([
   'GET:/api/domains',
   'POST:/api/domains/configure',
   'POST:/api/domains/detect-blog-paths',
-  'POST:/api/domains/blog-paths',
+  // PUT, not POST — the endpoint serves GET/PUT only and the wizard saves with PUT.
+  'PUT:/api/domains/blog-paths',
   'POST:/api/brand-knowledge',
 ]);
 
