@@ -52,8 +52,8 @@ import { clearWizardState } from '../../lib/wizardState';
 import {
   collectApprovedOutline,
   reviewOutlineToHtml,
-  type ApprovedOutlineHeading,
-} from '../../lib/contentPlanner';
+} from '../../lib/contentPlanner/reviewOutline';
+import type { ApprovedOutlineHeading } from '../../lib/contentPlanner/applyApprovedOutline';
 
 function collectOutlineHeadings(ed: Editor): Array<{ level: number; text: string }> {
   const out: Array<{ level: number; text: string }> = [];

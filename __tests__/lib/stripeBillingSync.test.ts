@@ -1,9 +1,11 @@
 import type Stripe from 'stripe';
 import { syncSubscriptionToOrg } from '../../lib/stripeBillingSync';
-import { updateOrgBillingState } from '../../lib/orgBilling';
+import { getOrgBillingState, updateOrgBillingState, type OrgBillingState } from '../../lib/orgBilling';
 
 jest.mock('../../lib/orgBilling', () => ({
   updateOrgBillingState: jest.fn(async () => undefined),
+  getOrgBillingState: jest.fn(async () => null),
+  isTerminalSubscriptionStatus: (status: string | null | undefined) => status === 'canceled' || status === 'incomplete_expired',
 }));
 
 jest.mock('../../lib/billingAudit', () => ({
@@ -32,6 +34,7 @@ jest.mock('../../lib/stripePrices', () => ({
 }));
 
 const mockUpdate = updateOrgBillingState as jest.MockedFunction<typeof updateOrgBillingState>;
+const mockGetState = getOrgBillingState as jest.MockedFunction<typeof getOrgBillingState>;
 
 function sub(partial: {
   status: Stripe.Subscription.Status;
@@ -69,6 +72,8 @@ function sub(partial: {
 describe('syncSubscriptionToOrg plan assignment', () => {
   beforeEach(() => {
     mockUpdate.mockClear();
+    mockGetState.mockReset();
+    mockGetState.mockResolvedValue(null);
   });
 
   it('does not write planSlug while subscription is incomplete (pre-payment)', async () => {
@@ -143,6 +148,24 @@ describe('syncSubscriptionToOrg plan assignment', () => {
     expect(patch.subscriptionStatus).toBe('active');
     expect(patch).not.toHaveProperty('planSlug');
     expect(patch).not.toHaveProperty('billingPeriod');
+  });
+
+  it('ignores a canceled webhook for a subscription the org no longer tracks', async () => {
+    mockGetState.mockResolvedValueOnce({ stripeSubscriptionId: 'sub_current' } as OrgBillingState);
+
+    await syncSubscriptionToOrg(1, sub({ status: 'canceled', priceId: 'price_growth_m' }));
+
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('applies a canceled webhook for the subscription the org tracks', async () => {
+    mockGetState.mockResolvedValueOnce({ stripeSubscriptionId: 'sub_test' } as OrgBillingState);
+
+    await syncSubscriptionToOrg(1, sub({ status: 'canceled', priceId: 'price_growth_m' }));
+
+    const patch = mockUpdate.mock.calls[0][1];
+    expect(patch.subscriptionStatus).toBe('canceled');
+    expect(patch.planSlug).toBeNull();
   });
 
   it('ignores fallback slug while incomplete (upgrade pending payment)', async () => {

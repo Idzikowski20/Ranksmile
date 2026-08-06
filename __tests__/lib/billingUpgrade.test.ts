@@ -62,6 +62,35 @@ describe('billingUpgrade helpers', () => {
     expect(down.ok).toBe(false);
     if (!down.ok) expect(down.error).toMatch(/Downgrade/i);
   });
+
+  it('blocks plan changes while an invoice is unpaid', () => {
+    const base = {
+      orgId: 1,
+      stripeCustomerId: 'cus_x',
+      stripeSubscriptionId: 'sub_x',
+      planSlug: 'growth',
+      billingPeriod: 'monthly',
+      subscriptionStatus: 'past_due',
+      trialEndsAt: null,
+      trialConsumedAt: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      lastCheckoutStartedAt: null,
+      starterNudgeSentAt: null,
+    } as OrgBillingState;
+
+    const pastDue = assertCanUpgradeSubscription(base, 'scale', 'monthly');
+    expect(pastDue.ok).toBe(false);
+    if (!pastDue.ok) expect(pastDue.status).toBe(409);
+
+    const locked = assertCanUpgradeSubscription(
+      { ...base, subscriptionStatus: 'active', paymentFailedLockedAt: '2026-01-01T00:00:00.000Z' },
+      'scale',
+      'monthly',
+    );
+    expect(locked.ok).toBe(false);
+    if (!locked.ok) expect(locked.error).toMatch(/outstanding invoice/i);
+  });
 });
 
 describe('applySubscriptionUpgrade pending updates', () => {
