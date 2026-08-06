@@ -19,6 +19,18 @@ describe('mergePhases', () => {
     expect(next.fetchingSerp.status).toBe('NEW');
   });
 
+  it('keeps a finished phase finished when a coarse stage event follows', () => {
+    const done = mergePhases(emptyPhases(), { crawlingSerp: { status: 'DONE', finished: 10, total: 10 } });
+    const after = mergePhases(done, phasesFromStage('classify_content', 0));
+    expect(after.crawlingSerp.status).toBe('DONE');
+    expect(after.loadingCompetitors.status).toBe('RUNNING');
+  });
+
+  it('still lets a phase move forward from RUNNING', () => {
+    const running = mergePhases(emptyPhases(), { aiSearch: { status: 'RUNNING' } });
+    expect(mergePhases(running, { aiSearch: { status: 'DONE' } }).aiSearch.status).toBe('DONE');
+  });
+
   it('treats null previous state as empty', () => {
     expect(mergePhases(null, { fetchingSerp: { status: 'DONE' } }).fetchingSerp.status).toBe('DONE');
   });
