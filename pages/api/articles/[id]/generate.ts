@@ -50,6 +50,9 @@ import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchm
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
+/** A claimed job with no update this long is presumed dead (killed function, timeout) and reclaimable. */
+const GENERATE_STALE_MINUTES = 10;
+
 type ArticleGenerateRow = {
   target_keyword: string;
   domain_id: number;
@@ -115,19 +118,46 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     );
     if (!claimed[0]) {
       jobId = null;
-      const inflight = await db.query<{ id: string }>(
-        `SELECT id FROM analysis_jobs
+      // Self-heal: a claim survives a thrown error via the catch blocks below, but not a
+      // Vercel timeout or hard kill between the claim and the sidecar callback — that
+      // leaves a 'queued'/'running' row with no reaper, permanently blocking this article
+      // under the partial unique index. Reclaim it here if it's gone stale instead of
+      // requiring an operator to clear it by hand.
+      const isPg = Boolean(process.env.DATABASE_URL);
+      const staleCutoff = isPg
+        ? `updated_at < NOW() - INTERVAL '${GENERATE_STALE_MINUTES} minutes'`
+        : `updated_at < datetime('now', '-${GENERATE_STALE_MINUTES} minutes')`;
+      await db.query(
+        `UPDATE analysis_jobs SET status = 'failed', error = 'stale in-flight claim reclaimed'
           WHERE article_id = ? AND job_type = 'article_generate'
-            AND status IN ('queued', 'running', 'finalizing')
-          ORDER BY created_at DESC LIMIT 1`,
-        { replacements: [articleIdNum], type: QueryTypes.SELECT },
+            AND status IN ('queued', 'running', 'finalizing') AND ${staleCutoff}`,
+        { replacements: [articleIdNum] },
+      ).catch(() => {});
+      jobId = `gen_${articleIdNum}_${Date.now()}`;
+      const retried = await db.query<{ id: string }>(
+        `INSERT INTO analysis_jobs (id, article_id, job_type, status, payload, created_at, updated_at)
+         VALUES (?, ?, 'article_generate', 'queued', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT (article_id) WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')
+         DO NOTHING
+         RETURNING id`,
+        { replacements: [jobId, articleIdNum], type: QueryTypes.SELECT },
       );
-      return res.status(409).json({
-        error: 'generation_in_progress',
-        message: 'This article is already being generated.',
-        jobId: inflight[0]?.id,
-        articleId,
-      });
+      if (!retried[0]) {
+        jobId = null;
+        const inflight = await db.query<{ id: string }>(
+          `SELECT id FROM analysis_jobs
+            WHERE article_id = ? AND job_type = 'article_generate'
+              AND status IN ('queued', 'running', 'finalizing')
+            ORDER BY created_at DESC LIMIT 1`,
+          { replacements: [articleIdNum], type: QueryTypes.SELECT },
+        );
+        return res.status(409).json({
+          error: 'generation_in_progress',
+          message: 'This article is already being generated.',
+          jobId: inflight[0]?.id,
+          articleId,
+        });
+      }
     }
 
     // Every rejection below the claim must release the row: these are ordinary
@@ -136,9 +166,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // 409 every future generate call for this article.
     const rejectClaim = async (status: number, body: Record<string, unknown>) => {
       if (jobId) {
+        // Swallowed on failure rather than retried: a transient failure here doesn't
+        // strand the article permanently — the stale-claim reclaim above frees it on the
+        // next generate attempt once GENERATE_STALE_MINUTES elapses.
         await db.query("UPDATE analysis_jobs SET status = 'failed', error = ? WHERE id = ? AND status = 'queued'", {
           replacements: [String(body.error || body.message || 'validation_failed').slice(0, 500), jobId],
-        }).catch(() => {});
+        }).catch((cleanupErr) => {
+          console.error('[articles/[id]/generate] rejectClaim cleanup failed:', jobId, cleanupErr);
+        });
       }
       return res.status(status).json(body);
     };

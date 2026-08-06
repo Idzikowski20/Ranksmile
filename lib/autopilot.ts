@@ -209,7 +209,7 @@ async function loadCandidates(limit: number): Promise<CandidateRow[]> {
           AND j.created_at = (
                 SELECT MAX(l.created_at) FROM analysis_jobs l
                  WHERE l.article_id = j.article_id AND l.job_type = 'deep_analysis')
-          AND (a.content IS NULL OR a.content = '')
+          AND (a.content IS NULL OR TRIM(a.content) = '')
           AND NOT EXISTS (
                 SELECT 1 FROM analysis_jobs g
                  WHERE g.article_id = j.article_id AND g.job_type = 'article_generate'
@@ -274,6 +274,9 @@ export async function runAutopilotSweep(
             articleId: row.article_id,
             domainId: row.domain_id,
             keyword: row.target_keyword,
+         }).catch((err) => {
+            console.error('[autopilot] triggerAutopilotAnalysis threw:', row.article_id, err);
+            return false;
          });
          if (ok) {
             result.retried.push(row.article_id);

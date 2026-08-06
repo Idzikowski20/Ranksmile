@@ -290,10 +290,12 @@ export async function ensureArticlesTables() {
       await db.query(`
          UPDATE analysis_jobs SET status = 'failed', error = 'duplicate in-flight row cleared for unique index'
           WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')
-            AND created_at > (
-                  SELECT MIN(t2.created_at) FROM analysis_jobs t2
+            AND id <> (
+                  SELECT t2.id FROM analysis_jobs t2
                    WHERE t2.article_id = analysis_jobs.article_id AND t2.job_type = 'article_generate'
-                     AND t2.status IN ('queued', 'running', 'finalizing'))
+                     AND t2.status IN ('queued', 'running', 'finalizing')
+                   ORDER BY t2.created_at ASC, t2.id ASC
+                   LIMIT 1)
       `);
    } catch (dedupeErr) {
       console.error('[articles] failed to dedupe in-flight article_generate rows:', dedupeErr);

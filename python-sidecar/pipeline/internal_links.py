@@ -41,9 +41,14 @@ def _strip_dangerous_markup(soup: BeautifulSoup) -> bool:
 
         for attr in URL_ATTRS:
             value = tag.get(attr)
-            if isinstance(value, str) and value.strip().lower().startswith(DANGEROUS_URL_SCHEMES):
-                del tag[attr]
-                mutated = True
+            if isinstance(value, str):
+                # Browsers (and urlparse) strip tabs/newlines/CR before scheme sniffing,
+                # so "java&#9;script:" decodes to a literal tab here but would still be
+                # recognized as javascript: by the browser — strip the same way first.
+                cleaned = value.strip().lower().translate(str.maketrans("", "", "\t\n\r"))
+                if cleaned.startswith(DANGEROUS_URL_SCHEMES):
+                    del tag[attr]
+                    mutated = True
 
     return mutated
 
