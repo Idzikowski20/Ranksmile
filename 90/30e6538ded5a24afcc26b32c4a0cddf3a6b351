@@ -1,0 +1,30 @@
+lib/ensureArticlesTables.ts
+  s_668ab4f91e9d5a::t_bfc0f3b47f19d9 293-294,296-298
+lib/autopilot.ts
+  s_668ab4f91e9d5a::t_ffcf2b963c03c1 212
+  s_668ab4f91e9d5a::t_497190b3069274 277-279
+python-sidecar/pipeline/internal_links.py
+  s_668ab4f91e9d5a::t_5b2c184f2af1c2 44-51
+__tests__/api/articles-generate-guard.test.ts
+  s_668ab4f91e9d5a::t_cfcd450323226f 35-36,47-48
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_65523ed0d655c5 121-131,133-143,145-160
+  s_668ab4f91e9d5a::t_14870c637a1c60 169-171,174-176
+  s_668ab4f91e9d5a::t_7a34e12889161d 53-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9030e6538ded5a24afcc26b32c4a0cddf3a6b351",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
