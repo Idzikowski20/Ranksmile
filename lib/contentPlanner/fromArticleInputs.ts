@@ -12,7 +12,9 @@ type LooseCompetitor = {
   title?: string;
   word_count?: number;
   wordCount?: number;
-  headings?: string[] | number;
+  /** Outlines cache stores `{ level, text }` objects; score_data stores strings or a count. */
+  headings?: Array<string | { level?: number; text?: string }> | number;
+  heading_count?: number;
   h2_count?: number;
   paragraphs?: number;
   p_count?: number;
@@ -55,7 +57,13 @@ export function competitorsFromScoreData(scoreData: unknown): CompetitorRawInput
       ? c.url
       : (typeof c.domain === 'string' && c.domain ? `https://${c.domain}` : '');
     if (!url) return;
-    const headingsArr = Array.isArray(c.headings) ? c.headings.filter((h): h is string => typeof h === 'string') : [];
+    // The outlines cache holds `{ level, text }` objects — counting only strings dropped
+    // every competitor's structure, so the benchmark reported averageH2: 0 for a SERP
+    // whose pages carry 20+ headings.
+    const headingsArr = Array.isArray(c.headings)
+      ? c.headings.filter((h) => (typeof h === 'string' && h.trim())
+        || (!!h && typeof h === 'object' && typeof h.text === 'string' && !!h.text.trim()))
+      : [];
     const entities = asStringList(c.entities).length
       ? asStringList(c.entities)
       : asStringList(c.terms);
@@ -66,7 +74,7 @@ export function competitorsFromScoreData(scoreData: unknown): CompetitorRawInput
       paragraphs: c.paragraphs ?? c.p_count ?? values.p_count ?? 0,
       headings: typeof c.headings === 'number'
         ? c.headings
-        : (c.h2_count ?? values.h2_h6_count ?? headingsArr.length),
+        : (c.h2_count ?? values.h2_h6_count ?? c.heading_count ?? headingsArr.length),
       lists: c.lists ?? values.ul_ol_count ?? 0,
       tables: c.tables ?? values.table_count ?? 0,
       images: c.images ?? values.img_count ?? 0,
