@@ -1,0 +1,35 @@
+lib/billingUpgrade.ts
+  s_5d38b41c00a7d7::t_7f707e00930acd 90-101
+lib/orgBilling.ts
+  s_5d38b41c00a7d7::t_550918705cc886 53-58
+__tests__/lib/billingUpgrade.test.ts
+  s_5d38b41c00a7d7::t_822e2e69c9703e 65-93
+lib/stripeBillingSync.ts
+  s_5d38b41c00a7d7::t_45e2e01ae8db05 105-126
+  s_5d38b41c00a7d7::t_bd80740e076e5d 10-15
+pages/api/webhooks/stripe.ts
+  s_5d38b41c00a7d7::t_373797cdbe5f39 116-120
+  s_5d38b41c00a7d7::t_42d5014dbea655 134
+__tests__/lib/stripeBillingSync.test.ts
+  s_5d38b41c00a7d7::t_75b10190e949be 3
+  s_5d38b41c00a7d7::t_1bc551c59faa43 37
+  s_5d38b41c00a7d7::t_8d2fca318eee61 75-76
+  s_5d38b41c00a7d7::t_ab55bc50ccb695 153-170
+  s_5d38b41c00a7d7::t_21951883dd2ce4 7-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "06e3b3adcae5df104ba226cb94f29cf3551fe2b5",
+  "prompts": {},
+  "sessions": {
+    "s_5d38b41c00a7d7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaaeabc1-5a09-4e87-a961-21f36ea601b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
