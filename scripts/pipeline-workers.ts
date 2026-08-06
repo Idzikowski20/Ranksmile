@@ -12,50 +12,29 @@
  * back to SQLite while Next.js writes jobs to Neon, so workers "succeed" against
  * the wrong DB and Neon rows stay queued forever (then DLQ as stale orphans).
  */
-import net from 'net';
 import dotenv from 'dotenv';
 import { Worker, Queue } from 'bullmq';
+import {
+  parseRedisUrl, parsePgUrl, tcpOpen, pgReady, waitUntilReady,
+} from './lib/net';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env.development' });
 dotenv.config({ path: '.env' });
 
-function parseRedisUrl(raw: string): { host: string; port: number } {
-  try {
-    const u = new URL(raw);
-    return { host: u.hostname || '127.0.0.1', port: u.port ? Number(u.port) : 6379 };
-  } catch {
-    return { host: '127.0.0.1', port: 6379 };
-  }
-}
-
-function tcpOpen(host: string, port: number, timeoutMs = 800): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = net.createConnection({ host, port });
-    const done = (ok: boolean) => {
-      socket.removeAllListeners();
-      socket.destroy();
-      resolve(ok);
-    };
-    socket.setTimeout(timeoutMs);
-    socket.once('connect', () => done(true));
-    socket.once('timeout', () => done(false));
-    socket.once('error', () => done(false));
-  });
-}
-
 async function waitForRedis(url: string, maxMs = 60_000): Promise<void> {
   const { host, port } = parseRedisUrl(url);
-  const started = Date.now();
-  while (Date.now() - started < maxMs) {
-    if (await tcpOpen(host, port)) {
-      console.log(`[pipeline-workers] Redis ready at ${host}:${port}`);
-      return;
-    }
-    console.log(`[pipeline-workers] waiting for Redis ${host}:${port}…`);
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-  throw new Error(`Redis not reachable at ${host}:${port} within ${maxMs}ms`);
+  await waitUntilReady('pipeline-workers', `Redis ${host}:${port}`, () => tcpOpen(host, port), maxMs);
+}
+
+/**
+ * `SELECT 1`, not just an open socket: an embedded cluster still starting up (or a
+ * foreign listener on 5432) accepts connections long before it can serve queries,
+ * and workers that proceed then die on their first Sequelize call.
+ */
+async function waitForPostgres(url: string, maxMs = 60_000): Promise<void> {
+  const { host, port } = parsePgUrl(url);
+  await waitUntilReady('pipeline-workers', `Postgres ${host}:${port}`, () => pgReady(url), maxMs);
 }
 
 /** After Redis wipe, DB may still have queued rows — push them back onto BullMQ. */
@@ -119,6 +98,7 @@ async function main(): Promise<void> {
   );
 
   await waitForRedis(url);
+  await waitForPostgres(process.env.DATABASE_URL);
 
   // Dynamic imports AFTER dotenv so database/database.ts sees DATABASE_URL (Neon), not SQLite.
   const { listWorkers, resetWorkerRegistry } = await import('../lib/workers/registry');
@@ -147,9 +127,8 @@ async function main(): Promise<void> {
           dbJobId?: number;
         };
         const payload = data.payload || (job.data as Record<string, unknown>);
-        const jobKey =
-          data.jobKey ||
-          String(job.id || `${w.queue}-${Date.now()}`);
+        const jobKey = data.jobKey
+          || String(job.id || `${w.queue}-${Date.now()}`);
 
         let dbJobId = Number(data.dbJobId || 0);
         if (!dbJobId) {
@@ -203,11 +182,12 @@ async function main(): Promise<void> {
     await Promise.all(handles.map((h) => h.close()));
     process.exit(0);
   };
-  process.on('SIGINT', () => void shutdown());
-  process.on('SIGTERM', () => void shutdown());
+  const onSignal = () => { shutdown().catch(() => process.exit(1)); };
+  process.on('SIGINT', onSignal);
+  process.on('SIGTERM', onSignal);
 }
 
-void main().catch((err: unknown) => {
+main().catch((err: unknown) => {
   console.error('[pipeline-workers] fatal:', err);
   process.exit(1);
 });

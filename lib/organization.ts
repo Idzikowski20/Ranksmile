@@ -20,9 +20,10 @@ export async function readOrganization(userId: string): Promise<OrganizationProf
    return { name: strOrNull(r.name), logoUrl: strOrNull(r.logo_url) };
 }
 
+/** `logoUrl: null` clears the logo; omitting the key leaves it untouched. */
 export async function writeOrganization(
    userId: string,
-   patch: { name?: string; logoUrl?: string },
+   patch: { name?: string; logoUrl?: string | null },
 ): Promise<OrganizationProfile> {
    const { orgId } = await ensureUserTenancy(userId);
    const sets: string[] = [];
