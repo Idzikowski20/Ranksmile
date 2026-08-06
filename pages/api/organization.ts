@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../utils/getUser';
 import { readOrganization, writeOrganization } from '../../lib/organization';
+import ORG_NAME_MAX_LENGTH from '../../lib/organizationLimits';
 import { parseDataUrl, uploadImageBuffer } from '../../lib/uploadToBlob';
+import { assertCanManage } from '../../lib/members';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 // Logo data URLs can be a few MB — raise the JSON body limit above the 1mb default.
@@ -16,16 +18,31 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    }
 
    if (req.method === 'PUT') {
+      // The org name and logo are shared by everyone in it — only owners/admins may
+      // change them. GET stays open: reading your own org's identity is harmless.
+      try { await assertCanManage(userId); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }
       const { name, logoDataUrl } = req.body || {};
-      const patch: { name?: string; logoUrl?: string } = {};
-      if (name !== undefined) patch.name = String(name).slice(0, 80);
-      if (typeof logoDataUrl === 'string' && logoDataUrl.startsWith('data:')) {
+      const patch: { name?: string; logoUrl?: string | null } = {};
+
+      if (name !== undefined) {
+         // The name labels the org across the app and in invite subject lines, so a
+         // blank or whitespace-only value is rejected rather than silently stored.
+         const trimmed = String(name).trim();
+         if (!trimmed) return res.status(400).json({ error: 'Organization name is required' });
+         patch.name = trimmed.slice(0, ORG_NAME_MAX_LENGTH);
+      }
+
+      // `null` clears the logo (the settings form's Remove); a data URL replaces it.
+      if (logoDataUrl === null) {
+         patch.logoUrl = null;
+      } else if (typeof logoDataUrl === 'string' && logoDataUrl.startsWith('data:')) {
          const parsed = parseDataUrl(logoDataUrl);
          if (!parsed) return res.status(400).json({ error: 'Invalid image' });
          const url = await uploadImageBuffer(parsed.buffer, parsed.contentType, 'org-logo', 'org-logos');
          if (!url) return res.status(502).json({ error: 'Logo upload failed (R2 not configured?)' });
          patch.logoUrl = url;
       }
+
       return res.status(200).json(await writeOrganization(userId, patch));
    }
 

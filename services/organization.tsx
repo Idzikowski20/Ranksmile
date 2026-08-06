@@ -13,7 +13,8 @@ export function useOrganization() {
 
 export function useUpdateOrganization() {
    const qc = useQueryClient();
-   return useMutation(async (patch: { name?: string; logoDataUrl?: string }) => {
+   // `logoDataUrl: null` clears the logo server-side; omitting it leaves it alone.
+   return useMutation(async (patch: { name?: string; logoDataUrl?: string | null }) => {
       const res = await fetch('/api/organization', {
          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
       });

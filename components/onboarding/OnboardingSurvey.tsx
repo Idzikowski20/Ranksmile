@@ -1,5 +1,18 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import toast from 'react-hot-toast';
+import { WizardLayout } from '../koala/layout';
+import { OnboardingHeaderCenter } from './OnboardingShell';
+import Button from '../koala/primitives/Button';
+import { Chip } from '../koala/core/chip/chip';
+import { EmailTagInput } from '../koala/core/emailTagInput/emailTagInput';
+import { ProgressBar } from '../koala/core/progressBar/progressBar';
+import OrganizationProfileStep, { OrganizationProfileValue } from './OrganizationProfileStep';
+import { useInviteMember } from '../../services/people';
+import { useUpdateOrganization } from '../../services/organization';
+import { semantic } from '../koala/tokens/semantic';
+import { typeface, textScale, fontWeight } from '../koala/tokens/typography';
+import { spacing } from '../koala/tokens/spacing';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const stepVariants = {
@@ -8,62 +21,93 @@ const stepVariants = {
    exit: (dir: number) => ({ x: dir > 0 ? -44 : 44, opacity: 0 }),
 };
 
-const F = 'var(--font-family-primary)';
-const PURPLE = '#F84416';
-
 type QType = 'radio' | 'checkbox';
 type Question = { id: string; type: QType; title: string; subtitle?: string; options: string[] };
+
+/** Team-size answer that means "no one else to invite" — keeps the invite step out of the flow. */
+const SOLO_ANSWER = 'Just me';
 
 const QUESTIONS: Question[] = [
    {
       id: 'business',
       type: 'radio',
       title: 'Which of these describes your business best?',
-      options: ['Blogger', 'Professional Services', 'Local Business', 'Affiliate Marketer', 'Marketing / SEO Agency', 'E-commerce', 'Freelancer', 'Tech Company', 'Other'],
+      options: [
+         'Blogger', 'Professional Services', 'Local Business', 'Affiliate Marketer',
+         'Marketing / SEO Agency', 'E-commerce', 'Freelancer', 'Tech Company', 'Other',
+      ],
    },
    {
       id: 'team',
       type: 'radio',
       title: 'How many people are working on SEO and content?',
-      options: ['Just me', '2-5', '6-10', '11-20', '20+'],
+      options: [SOLO_ANSWER, '2-5', '6-10', '11-20', '20+'],
    },
    {
       id: 'role',
       type: 'radio',
       title: 'What is your role?',
-      options: ['SEO Manager', 'Content Manager', 'SEO Specialist', 'Content Writer', 'Marketing Manager / Head of Marketing', 'Owner / CEO / GM', 'Other'],
+      options: [
+         'SEO Manager', 'Content Manager', 'SEO Specialist', 'Content Writer',
+         'Marketing Manager / Head of Marketing', 'Owner / CEO / GM', 'Other',
+      ],
    },
    {
       id: 'interests',
       type: 'checkbox',
       title: 'What are you most interested in?',
       subtitle: 'Select as many features as you want:',
-      options: ['AI writer', 'AI visibility', 'Domain performance reporting', 'SEO audit', 'Keyword research', 'Local marketing', 'SEO data for API', 'Topical research', 'AI detection / Humanizing content', 'Rank tracking', 'Content creation', 'Competitive research', 'Backlink analytics', 'Other'],
+      options: [
+         'AI writer', 'AI visibility', 'Domain performance reporting', 'SEO audit', 'Keyword research',
+         'Local marketing', 'SEO data for API', 'Topical research', 'AI detection / Humanizing content',
+         'Rank tracking', 'Content creation', 'Competitive research', 'Backlink analytics', 'Other',
+      ],
    },
    {
       id: 'source',
       type: 'checkbox',
       title: 'How did you hear about Ranksmile?',
       subtitle: 'Select as many channels as you want:',
-      options: ['Events', 'LinkedIn', 'YouTube', 'Facebook', 'External Advisors', 'Content Optimization Masterclass', 'Software reviews (G2, Capterra)', 'Google Search', 'Word of mouth and peers', 'ChatGPT or other AI', 'Other'],
+      options: [
+         'Events', 'LinkedIn', 'YouTube', 'Facebook', 'External Advisors',
+         'Content Optimization Masterclass', 'Software reviews (G2, Capterra)', 'Google Search',
+         'Word of mouth and peers', 'ChatGPT or other AI', 'Other',
+      ],
    },
 ];
 
-const RadioMark = ({ on }: { on: boolean }) => (
-   <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', border: `1.5px solid ${on ? PURPLE : '#D4D4D8'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 150ms ease' }}>
-      {on && <span style={{ width: 8, height: 8, borderRadius: '50%', background: PURPLE }} />}
-   </span>
-);
+/** Invite lands right after the team-size question it depends on. */
+const INVITE_AFTER = 'team';
 
-const CheckMark = ({ on }: { on: boolean }) => (
-   <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${on ? PURPLE : '#D4D4D8'}`, background: on ? PURPLE : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease' }}>
-      {on && (
-         <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M16.7 4.15a.75.75 0 0 1 .14 1.05l-8 10.5a.75.75 0 0 1-1.13.08l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.9 3.89 7.48-9.82a.75.75 0 0 1 1.05-.14Z" fill="#fff" />
-         </svg>
-      )}
-   </span>
-);
+type Step = { kind: 'org' } | { kind: 'question'; question: Question } | { kind: 'invite' };
+
+/** Copy for the two non-survey steps; questions carry their own title/subtitle. */
+const STEP_COPY: Record<'org' | 'invite' | 'question', { title: string; subtitle: string }> = {
+   org: {
+      title: 'Set up your organization',
+      subtitle: 'Name it and add a logo. Both show up across the app and on invites you send.',
+   },
+   invite: {
+      title: 'Invite your team',
+      subtitle: 'Add teammates by email. They can join now, or you can invite them later from Settings.',
+   },
+   // Unreachable — a question step always resolves its copy from the question itself.
+   question: { title: '', subtitle: '' },
+};
+
+function buildSteps(teamAnswer: string | undefined): Step[] {
+   const steps: Step[] = [];
+   QUESTIONS.forEach((question) => {
+      steps.push({ kind: 'question', question });
+      if (question.id === INVITE_AFTER && teamAnswer && teamAnswer !== SOLO_ANSWER) {
+         steps.push({ kind: 'invite' });
+      }
+   });
+   // Org goes last — it closes the flow, and invite emails quote its name, so it
+   // must be saved before the collected invites are flushed on Finish.
+   steps.push({ kind: 'org' });
+   return steps;
+}
 
 type Props = {
    onFinish: (answers: Record<string, string[]>) => void;
@@ -74,26 +118,85 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
    const [step, setStep] = useState(0);
    const [dir, setDir] = useState(1);
    const [answers, setAnswers] = useState<Record<string, string[]>>({});
+   const [invites, setInvites] = useState<string[]>([]);
+   const [org, setOrg] = useState<OrganizationProfileValue>({ name: '', logoDataUrl: null });
+   const [sending, setSending] = useState(false);
+   const invite = useInviteMember();
+   const updateOrg = useUpdateOrganization();
 
-   const q = QUESTIONS[step];
-   const selected = answers[q.id] ?? [];
-   const valid = selected.length > 0;
-   const isLast = step === QUESTIONS.length - 1;
+   const steps = useMemo(() => buildSteps(answers.team?.[0]), [answers.team]);
+   const current = steps[Math.min(step, steps.length - 1)];
+   const isOrg = current.kind === 'org';
+   const isInvite = current.kind === 'invite';
+   const q = current.kind === 'question' ? current.question : null;
+   const selected = q ? answers[q.id] ?? [] : [];
+   // Invite is skippable so it never blocks Next; org needs at least a name.
+   const valid = isInvite || (isOrg ? org.name.trim().length > 0 : selected.length > 0);
+   const isLast = step === steps.length - 1;
 
    const choose = (option: string) => {
+      if (!q) return;
       setAnswers((prev) => {
+         if (q.type !== 'checkbox') return { ...prev, [q.id]: [option] };
          const cur = prev[q.id] ?? [];
-         if (q.type === 'radio') return { ...prev, [q.id]: [option] };
-         const next = cur.includes(option) ? cur.filter((o) => o !== option) : [...cur, option];
-         return { ...prev, [q.id]: next };
+         const nextValues = cur.includes(option) ? cur.filter((o) => o !== option) : [...cur, option];
+         return { ...prev, [q.id]: nextValues };
       });
    };
 
+   /** Fire one invite per address; a failure is reported but never blocks the flow. */
+   const sendInvites = async (): Promise<void> => {
+      if (!invites.length) return;
+      setSending(true);
+      const failed: string[] = [];
+      for (const email of invites) {
+         try {
+            // Sequential on purpose — the invite endpoint writes one membership row per call.
+            // eslint-disable-next-line no-await-in-loop
+            await invite.mutateAsync({ email, role: 'member', workspaceIds: null });
+         } catch {
+            failed.push(email);
+         }
+      }
+      setSending(false);
+      if (failed.length) {
+         toast.error(`Couldn't invite ${failed.join(', ')}. You can retry from Settings › People.`);
+      } else {
+         toast.success(invites.length === 1 ? 'Invitation sent' : `${invites.length} invitations sent`);
+      }
+   };
+
+   /** Persist the organization name + logo. Rejects so the caller can keep the user on the step. */
+   const saveOrg = async (): Promise<void> => {
+      setSending(true);
+      try {
+         const patch: { name?: string; logoDataUrl?: string } = { name: org.name.trim() };
+         if (org.logoDataUrl) patch.logoDataUrl = org.logoDataUrl;
+         await updateOrg.mutateAsync(patch);
+      } finally {
+         setSending(false);
+      }
+   };
+
    const next = () => {
-      if (!valid || submitting) return;
-      if (isLast) { onFinish(answers); return; }
-      setDir(1);
-      setStep((s) => s + 1);
+      if (!valid || submitting || sending) return;
+      const advance = () => {
+         if (isLast) { onFinish(answers); return; }
+         setDir(1);
+         setStep((s) => s + 1);
+      };
+      if (isOrg) {
+         // Closing step: save the org first (invite emails quote its name), then flush
+         // the addresses collected earlier. A failed save keeps the user here.
+         saveOrg()
+            .then(sendInvites)
+            .then(advance)
+            .catch(() => {
+               toast.error("Couldn't save your organization. Check your connection and try again.");
+            });
+         return;
+      }
+      advance();
    };
 
    const back = () => {
@@ -101,120 +204,134 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
       setStep((s) => s - 1);
    };
 
-   return (
-      <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px clamp(20px, 4vw, 48px)', fontFamily: F }}>
-         <style>{`
-            .ob-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-            @media (min-width: 720px) { .ob-grid { grid-template-columns: 1fr 1fr; } }
-         `}</style>
-         <div style={{ width: '100%', maxWidth: 860, display: 'flex', flexDirection: 'column', gap: 40 }}>
-               {/* Header: back + progress */}
-               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div>
-                     {step > 0 && (
-                        <button
-                           type="button"
-                           onClick={back}
-                           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: '#18181B', fontFamily: F, fontSize: 15, fontWeight: 500, padding: 0, transition: 'opacity 150ms ease' }}
-                           onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
-                           onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-                        >
-                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                              <path fillRule="evenodd" clipRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.61l4.16 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.61 9.25H16.25A.75.75 0 0 1 17 10Z" fill="currentColor" />
-                           </svg>
-                           Back
-                        </button>
-                     )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                     <span style={{ color: '#52525C', fontSize: 14 }}>Question {step + 1} of {QUESTIONS.length}</span>
-                     <div style={{ display: 'flex', gap: 5 }}>
-                        {QUESTIONS.map((_, i) => (
-                           <span key={i} style={{ width: 28, height: 4, borderRadius: 2, background: i <= step ? PURPLE : '#E4E4E7', transition: 'background 200ms ease' }} />
-                        ))}
-                     </div>
-                  </div>
-               </div>
+   const primaryLabel = (): string => {
+      // Invites are only collected here — they go out on Finish, once the org has a name.
+      if (isInvite && !invites.length) return 'Skip for now';
+      return isLast ? 'Finish' : 'Next';
+   };
 
-               {/* Question */}
-               <AnimatePresence mode="wait" custom={dir} initial={false}>
+   const stepKey = q ? q.id : current.kind;
+   const title = q ? q.title : STEP_COPY[current.kind].title;
+   const subtitle = q ? q.subtitle : STEP_COPY[current.kind].subtitle;
+
+   const renderStepBody = (): React.ReactNode => {
+      if (isOrg) {
+         return (
+            <OrganizationProfileStep
+               value={org}
+               onChange={setOrg}
+               onError={(message) => toast.error(message)}
+               disabled={sending}
+            />
+         );
+      }
+      if (isInvite) {
+         return (
+            <div style={{ width: '100%', maxWidth: 400 }}>
+               <EmailTagInput value={invites} onChange={setInvites} disabled={sending} />
+            </div>
+         );
+      }
+      return (
+         <div className="ob-chips">
+            {(q?.options ?? []).map((option, i) => (
                <motion.div
-                  key={q.id}
-                  custom={dir}
-                  variants={stepVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.3, ease: EASE }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}
+                  key={option}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: EASE, delay: 0.06 + i * 0.02 }}
                >
-                  <motion.div
-                     initial={{ opacity: 0, y: 6 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     transition={{ duration: 0.3, ease: EASE }}
-                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}
-                  >
-                     <h1 style={{ margin: 0, fontSize: 23, fontWeight: 600, color: '#18181B', letterSpacing: '-0.01em' }}>{q.title}</h1>
-                     {q.subtitle && <p style={{ margin: 0, fontSize: 15, color: '#52525C' }}>{q.subtitle}</p>}
-                  </motion.div>
-
-                  <div className="ob-grid" style={{ width: '100%' }}>
-                     {q.options.map((option, i) => {
-                        const on = selected.includes(option);
-                        return (
-                           <motion.button
-                              key={option}
-                              type="button"
-                              role={q.type}
-                              aria-checked={on}
-                              onClick={() => choose(option)}
-                              initial={{ opacity: 0, y: 8 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.25, ease: EASE, delay: 0.06 + i * 0.03 }}
-                              whileTap={{ scale: 0.98 }}
-                              style={{
-                                 display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
-                                 padding: '13px 16px', borderRadius: 12, cursor: 'pointer', fontFamily: F, fontSize: 14.5, color: '#18181B',
-                                 background: '#fff',
-                                 border: `1px solid ${on ? PURPLE : '#E4E4E7'}`,
-                                 boxShadow: on ? '0 0 0 3px rgba(242,153,100,0.08)' : 'none',
-                                 transition: 'border-color 150ms ease, box-shadow 150ms ease',
-                              }}
-                              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { if (!on) e.currentTarget.style.borderColor = '#D4D4D8'; }}
-                              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { if (!on) e.currentTarget.style.borderColor = '#E4E4E7'; }}
-                           >
-                              {q.type === 'radio' ? <RadioMark on={on} /> : <CheckMark on={on} />}
-                              <span>{option}</span>
-                           </motion.button>
-                        );
-                     })}
-                  </div>
-
-                  {/* Next / Finish */}
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', paddingTop: 4 }}>
-                     <motion.button
-                        type="button"
-                        onClick={next}
-                        disabled={!valid || submitting}
-                        whileTap={valid && !submitting ? { scale: 0.97 } : undefined}
-                        style={{
-                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                           padding: '10px 22px', borderRadius: 10, border: 'none', fontFamily: F, fontSize: 14.5, fontWeight: 600, color: '#fff',
-                           background: valid ? '#2F2F34' : '#A1A1AA',
-                           opacity: valid ? 1 : 0.6,
-                           cursor: valid && !submitting ? 'pointer' : 'not-allowed',
-                           transition: 'background 150ms ease',
-                        }}
-                        onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { if (valid && !submitting) e.currentTarget.style.background = PURPLE; }}
-                        onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { if (valid && !submitting) e.currentTarget.style.background = '#2F2F34'; }}
-                     >
-                        {isLast ? (submitting ? 'Finishing…' : 'Finish') : 'Next'}
-                     </motion.button>
-                  </div>
+                  <Chip size="md" selected={selected.includes(option)} onClick={() => choose(option)}>
+                     {option}
+                  </Chip>
                </motion.div>
-               </AnimatePresence>
+            ))}
          </div>
-      </section>
+      );
+   };
+
+   const titleStyle: React.CSSProperties = {
+      margin: 0,
+      fontFamily: typeface.heading,
+      fontSize: textScale['2xl'].fontSize,
+      lineHeight: textScale['2xl'].lineHeight,
+      fontWeight: fontWeight.bold,
+      color: semantic.text.primary,
+      letterSpacing: textScale['2xl'].letterSpacing,
+   };
+
+   const subtitleStyle: React.CSSProperties = {
+      margin: 0,
+      fontSize: textScale.base.fontSize,
+      lineHeight: textScale.base.lineHeight,
+      color: semantic.text.secondary,
+   };
+
+   return (
+      <>
+      <OnboardingHeaderCenter>
+         <ProgressBar label="Getting started" completed={step} total={steps.length} style={{ width: 360 }} />
+      </OnboardingHeaderCenter>
+      <WizardLayout
+         className="ob-wizard-fill"
+         footer={(
+            <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', display: 'flex', gap: spacing.lg }}>
+               {step > 0 && (
+                  <Button type="button" variant="secondary" size="lg" onClick={back} style={{ flexShrink: 0 }}>
+                     Back
+                  </Button>
+               )}
+               <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  disabled={!valid}
+                  busy={sending || (submitting && isLast)}
+                  onClick={next}
+                  style={{ flex: 1 }}
+               >
+                  {primaryLabel()}
+               </Button>
+            </div>
+         )}
+      >
+         <section className="ob-body">
+            <style>{`
+               .ob-body {
+                  height: 100%; min-width: 0; overflow-y: auto; overflow-x: hidden; box-sizing: border-box;
+                  display: flex; flex-direction: column; align-items: center; justify-content: center;
+                  padding: ${spacing['2xl']} 0; font-family: ${typeface.body};
+               }
+               .ob-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: ${spacing.md}; }
+               .ob-wizard-fill { flex: 1; min-height: 0; }
+            `}</style>
+            <AnimatePresence mode="wait" custom={dir} initial={false}>
+            <motion.div
+               key={stepKey}
+               custom={dir}
+               variants={stepVariants}
+               initial="enter"
+               animate="center"
+               exit="exit"
+               transition={{ duration: 0.3, ease: EASE }}
+               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['2xl'], width: '100%', maxWidth: 640 }}
+            >
+               <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: EASE }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing.xs, textAlign: 'center' }}
+               >
+                  <h1 style={titleStyle}>{title}</h1>
+                  {subtitle ? <p style={subtitleStyle}>{subtitle}</p> : null}
+               </motion.div>
+
+               {renderStepBody()}
+            </motion.div>
+            </AnimatePresence>
+         </section>
+      </WizardLayout>
+      </>
    );
 };
 

@@ -5,10 +5,20 @@
 
 const url = (process.env.DATABASE_URL || '').trim();
 
+function isLocalHost(raw) {
+  try {
+    const { hostname } = new URL(raw);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  } catch {
+    return false;
+  }
+}
+
 const postgres = {
   url,
   dialect: 'postgres',
-  dialectOptions: {
+  // Local Postgres (docker/embedded dev DB) has no SSL cert — only Neon needs this.
+  dialectOptions: isLocalHost(url) ? {} : {
     ssl: {
       require: true,
       rejectUnauthorized: false,

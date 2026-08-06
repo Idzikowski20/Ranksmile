@@ -34,6 +34,8 @@ If it exists → reuse. If not → import once and append a row.
 | Tooltip | `3950:179137` | `core/tooltip` | gallery-tooltip-* | ranksmile-frontend | Stable |
 | Dialog | `2612:115790` | `primitives/Modal.tsx` | gallery-dialog-* | ranksmile-frontend | Stable |
 | Select | `3950:55879` | `core/select/select.tsx` (+ `CompactSelect`) | gallery-select-* | ranksmile-frontend | Stable |
+| ProgressBar | `7674:106575` | `core/progressBar/progressBar.tsx` | — | ranksmile-frontend | Draft |
+| EmailTagInput | Product | `core/emailTagInput/emailTagInput.tsx` (Input + dismissable Chip) | — | ranksmile-frontend | Draft |
 | WidgetShell (+ state) | Dashboard | `product/widgets.tsx` | gallery-widget-* | ranksmile-frontend | Stable |
 | Chart (presets SoT) | Product / Figma charts | `charts/Chart.tsx` | gallery-widget / dashboard-chart | ranksmile-frontend | Stable |
 | Sparkline (appearances) | `6988:208171` | `charts/Sparkline.tsx` | gallery-widget | ranksmile-frontend | Stable |

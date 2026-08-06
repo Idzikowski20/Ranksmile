@@ -306,3 +306,13 @@ declare module 'react-date-range/dist/locale' {
    export default locales;
    export const enUS: any;
 }
+
+// embedded-postgres's package "exports" map only exposes the bare package root
+// ("./dist/index.js", no "types" condition), so TS node resolution can't find its
+// shipped .d.ts — same gap as the shims above. Re-export from the physical path
+// (used by scripts/dev-postgres.ts, the local Postgres dev process).
+declare module 'embedded-postgres' {
+   import EmbeddedPostgres from 'embedded-postgres/dist/index';
+
+   export = EmbeddedPostgres;
+}
