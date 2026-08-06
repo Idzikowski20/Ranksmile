@@ -8,6 +8,20 @@
 
 **Tech Stack:** Next.js Pages Router (TypeScript, no `any`), Sequelize raw SQL over Postgres/SQLite, FastAPI + httpx sidecar (Python 3.12), Jest + React Testing Library, pytest, Koala UI v11 tokens.
 
+## Deployment facts (verified 2026-08-06 — do not assume otherwise)
+
+- The app runs on **Railway** from the repo `Dockerfile` (`next start` in a container),
+  not on Vercel. There is no `vercel.json`. Cron is a separate Railway service driven by
+  `cron.js`.
+- Therefore `export const config = { maxDuration: N }` — present in 39 API files — is
+  **dead configuration**. It is a Vercel knob; Next.js ignores it in a container. There is
+  no 60-second function ceiling, and long-lived HTTP responses (SSE) are fine.
+- **Redis is already in the stack** (`ioredis`, `bullmq`, `REDIS_URL`, `lib/pipeline/*`,
+  `scripts/pipeline-workers.ts`). Use it for live fan-out rather than inventing a
+  transport.
+- The Python sidecar is a separate always-on service; it already POSTs to
+  `/api/articles/job-progress` with `x-internal-token`.
+
 ## Global Constraints
 
 - Never introduce TypeScript `any` — use `unknown` + narrowing or types from `lib/types/` (CLAUDE.md §7).
@@ -826,7 +840,23 @@ git commit -m "feat(editor): deep-analysis progress panel in the side column"
 
 ## Phase B — Streamed generation
 
-Surfer runs two subscriptions per draft: `AiArticleStatusStreaming` (the status line) and `AiArticleContentStreaming` (the text). We reproduce both channels over one SSE response, because a Vercel function cannot hold an Absinthe socket. The sidecar keeps posting to `/api/articles/job-progress`; Node tails the row and pushes deltas, so the browser polls nothing.
+Surfer runs two subscriptions per draft: `AiArticleStatusStreaming` (the status line) and
+`AiArticleContentStreaming` (the text). Absinthe fans those out through Phoenix.PubSub.
+
+We do the same thing with the Redis already in this stack: the sidecar POSTs an event,
+the receiving Node process **publishes it to a Redis channel keyed by job id**, and every
+Node instance holding an open SSE connection for that job forwards it. No database
+polling, and it survives more than one web replica — which an in-process EventEmitter
+would not.
+
+Events are also appended to the job row (Task 6) so a client that reconnects or refreshes
+mid-write can replay what it missed before joining the live channel. Surfer does the
+equivalent: the article row holds `content` while the subscription carries the deltas.
+
+Client transport stays SSE rather than a WebSocket: it is one-directional, which is all
+these two channels need, it survives proxies without extra config, and `EventSource`
+reconnects on its own. Railway supports WebSockets if a future feature needs
+bidirectional traffic.
 
 ### Task 6: Status and content columns
 
@@ -1168,6 +1198,17 @@ git commit -m "feat(generation): stream status and content instead of polling"
 
 ## Phase C — Typed scoring
 
+Scoring is an **asynchronous assessment**, not a synchronous post-write calculation.
+Surfer's `AioScore` carries `status: SCHEDULED | EXECUTING | READY` alongside its
+factors, has its own `RequestAssessment` / `ActiveAssessment` operations and a
+`LlmScoreAssessmentUpdated` subscription, and the observed number climbs in steps
+(20 → 40 → 45 → 60 → 70 → 90) as individual factors land.
+
+So Phase C publishes factors one at a time onto the Redis channel from Phase B, keyed
+by article id, and the panel re-renders on each. `aioScore()` divides by the full factor
+weight, so a partial assessment reads low and rises — the existing odometer animation on
+the gauge then does the right thing for free.
+
 ### Task 8: Factor model and introduction scorers
 
 **Files:**
@@ -1240,13 +1281,28 @@ describe('scoreIntroduction', () => {
 });
 
 describe('aioScore', () => {
-  it('is the weighted mean of its factors on a 0-100 scale', () => {
-    const value = aioScore([
-      { name: 'FACTS_COVERAGE', found: true, score: 0.8, value: 80 },
+  it('climbs as factors land instead of starting high on the first one', () => {
+    const facts = { name: 'FACTS_COVERAGE', found: true, score: 1 } as const;
+    const topics = { name: 'INTRODUCTION_COVERED_TOPICS', found: true, score: 1 } as const;
+    const early = { name: 'INTRODUCTION_EARLY_QUERY_ANSWER', found: true, score: 1 } as const;
+
+    const first = aioScore([facts]).value;
+    const second = aioScore([facts, topics]).value;
+    const third = aioScore([facts, topics, early]).value;
+
+    expect(first).toBeLessThan(second);
+    expect(second).toBeLessThan(third);
+    expect(first).toBeLessThan(100);
+  });
+
+  it('reaches 100 only when every factor is perfect', () => {
+    expect(aioScore([
+      { name: 'FACTS_COVERAGE', found: true, score: 1 },
       { name: 'INTRODUCTION_COVERED_TOPICS', found: true, score: 1 },
-    ]).value;
-    expect(value).toBeGreaterThan(80);
-    expect(value).toBeLessThanOrEqual(100);
+      { name: 'INTRODUCTION_TARGET_AUDIENCE', found: true, score: 1 },
+      { name: 'INTRODUCTION_EARLY_QUERY_ANSWER', found: true, score: 1 },
+      { name: 'INTRODUCTION_TOPIC_RELEVANCE', found: true, score: 1 },
+    ]).value).toBe(100);
   });
 
   it('turns a coverage ratio into a factor', () => {
@@ -1309,12 +1365,19 @@ export function factsCoverageFactor(covered: number, total: number): ScoreFactor
   };
 }
 
+export type AioScoreStatus = 'SCHEDULED' | 'EXECUTING' | 'READY' | 'ERROR';
+
+/**
+ * Weighted over the FULL factor set, not just the factors computed so far — the
+ * assessment publishes factors one at a time, and the score has to climb as evidence
+ * lands (20 → 40 → 45 → 60 → 70 → 90), never start high off a single lucky factor.
+ */
 export function aioScore(
   factors: ScoreFactor[],
   weights: Partial<Record<FactorName, number>> = {},
 ): { value: number; factors: ScoreFactor[] } {
   const merged = { ...DEFAULT_WEIGHTS, ...weights };
-  const totalWeight = factors.reduce((sum, factor) => sum + (merged[factor.name] ?? 1), 0);
+  const totalWeight = Object.values(merged).reduce((sum, weight) => sum + weight, 0);
   if (!totalWeight) return { value: 0, factors };
   const weighted = factors.reduce(
     (sum, factor) => sum + factor.score * (merged[factor.name] ?? 1),
