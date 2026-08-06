@@ -99,14 +99,20 @@ function sleep(ms: number): Promise<void> {
  * HTTP handshake alone doesn't mean the job was durably created. Poll for the row directly
  * instead of trusting res.ok, and don't drain the (multi-minute) SSE body to check it. */
 async function confirmAnalysisJobCreated(articleId: number, sinceMs: number): Promise<boolean> {
-   const sinceIso = new Date(sinceMs).toISOString();
+   // SQLite's CURRENT_TIMESTAMP stores "YYYY-MM-DD HH:MM:SS" (no 'T', no 'Z', no millis) —
+   // comparing that against a full ISO string breaks string ordering right at the 'T'
+   // (space < 'T' lexicographically), so created_at >= cutoff is false even for a row
+   // created after `sinceMs`. Match SQLite's own format there; Postgres timestamps parse
+   // ISO strings fine as-is.
+   const iso = new Date(sinceMs).toISOString();
+   const sinceCutoff = isPg ? iso : iso.replace('T', ' ').replace(/\.\d+Z$/, '');
    for (let attempt = 0; attempt < JOB_CONFIRM_ATTEMPTS; attempt += 1) {
       // eslint-disable-next-line no-await-in-loop
       const rows = await queryRows<{ id: string }>(
          `SELECT id FROM analysis_jobs
            WHERE article_id = ? AND job_type = 'deep_analysis' AND created_at >= ?
            ORDER BY created_at DESC LIMIT 1`,
-         [articleId, sinceIso],
+         [articleId, sinceCutoff],
       );
       if (rows[0]) return true;
       // eslint-disable-next-line no-await-in-loop
