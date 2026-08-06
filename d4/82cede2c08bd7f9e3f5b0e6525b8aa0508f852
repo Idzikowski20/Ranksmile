@@ -1,0 +1,56 @@
+pages/setup.tsx
+  s_5d38b41c00a7d7::t_e827153ac825cd 380
+  s_5d38b41c00a7d7::t_c3e139449d1c87 79,409,527,594,616
+  s_5d38b41c00a7d7::t_4c6c73c796dd44 557-561
+  s_5d38b41c00a7d7::t_b01880eb166407 19
+  s_5d38b41c00a7d7::t_d21b301042a47f 403
+  s_5d38b41c00a7d7::t_43ce8c27ce9553 10
+  s_5d38b41c00a7d7::t_1af41f23523449 412-416
+  s_5d38b41c00a7d7::t_7eeacf7ade070a 460-462,464,468-473
+  s_5d38b41c00a7d7::t_610d979f5e3757 489,492-496
+  s_5d38b41c00a7d7::t_3985b2cec5a7a5 9,11
+  s_5d38b41c00a7d7::t_89f98481293014 512-514,516
+components/setup/setupUi.tsx
+  s_5d38b41c00a7d7::t_89c23f7650a004 8-9
+  s_5d38b41c00a7d7::t_86f5eaf2d19f3b 20-22,24-27
+  s_5d38b41c00a7d7::t_1cba509c590e44 23
+  s_5d38b41c00a7d7::t_0f6abb2033306e 118-120,125
+  s_5d38b41c00a7d7::t_5c2d056dfcde7d 203-204,216,225,228-237,252
+  s_5d38b41c00a7d7::t_79c7a1f8773c3f 241
+  s_5d38b41c00a7d7::t_c5f64c76b39ca3 2
+  s_5d38b41c00a7d7::t_50fa54248f9347 170
+  s_5d38b41c00a7d7::t_fe7db8e0f6b328 31-40
+components/domains/BlogPathsField.tsx
+  s_5d38b41c00a7d7::t_5cb8a6785cd72e 33
+styles/globals.css
+  s_5d38b41c00a7d7::t_38caa1e5ba10d2 5812-5815,5817-5818,5820
+  s_5d38b41c00a7d7::t_3b543e456bb1a4 5697-5718,5722,5726-5728,5776,5782
+  s_5d38b41c00a7d7::t_35fddcb6125589 5793,5795,5798,5804,5807-5808,5811
+  s_5d38b41c00a7d7::t_17e6e1cbf52194 5729-5770
+  s_5d38b41c00a7d7::t_ad9412b9333738 5666-5668
+  s_5d38b41c00a7d7::t_f9a21019331a0a 5828,5837,5844,5846,5854
+  s_5d38b41c00a7d7::t_7b7ab226cf3c9d 5864,5872,5874,5881,5887
+  s_5d38b41c00a7d7::t_ef30e9fe564551 5899-5920
+  s_5d38b41c00a7d7::t_a19de924106ce5 2836,2838-2840,2845
+components/koala/layout/Page.tsx
+  s_5d38b41c00a7d7::t_238c3484107f53 23
+  s_5d38b41c00a7d7::t_a3b92f61f9cc19 14-20,22
+components/koala/core/menuList.tsx
+  s_5d38b41c00a7d7::t_fd687f3b7f9a89 70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d482cede2c08bd7f9e3f5b0e6525b8aa0508f852",
+  "prompts": {},
+  "sessions": {
+    "s_5d38b41c00a7d7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaaeabc1-5a09-4e87-a961-21f36ea601b4",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
