@@ -168,43 +168,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   // ── POST: update progress (Python sidecar) ──────────────────────
-  if (req.method === 'DELETE') {
-    const jobId = typeof req.query.jobId === 'string' ? req.query.jobId : '';
-    if (!jobId) return res.status(400).json({ error: 'jobId query param is required' });
-    const userId = await getCurrentUserId(req, res);
-    const rows = await db.query<JobAccessRow>(
-      'SELECT id, status, job_type, domain_id, article_id FROM analysis_jobs WHERE id = ?',
-      { replacements: [jobId], type: QueryTypes.SELECT },
-    );
-    const job = rows[0];
-    if (!job) return res.status(404).json({ error: 'job not found' });
-    if (!(await canReadJob(userId, job))) return res.status(403).json({ error: 'Access denied.' });
-    // This endpoint is used only by ArticleEditor. Domain setup owns a separate quota
-    // reservation lifecycle and must not be canceled here.
-    if (job.job_type !== 'article_generate' || !job.article_id) {
-      return res.status(409).json({ error: 'job cannot be canceled here' });
-    }
-
-    const canceled = await db.transaction(async (transaction) => {
-      const claim = await db.query(
-        `UPDATE analysis_jobs
-         SET status = 'canceled', error = 'canceled_by_user', updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND status IN ('queued', 'running')`,
-        { replacements: [jobId], transaction },
-      );
-      if (affectedRows(claim) === 0) return false;
-      const { getArticleIdSql } = await import('../../../lib/articleSql');
-      const articleIdSql = await getArticleIdSql();
-      await db.query(
-        `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-        { replacements: [job.article_id], transaction },
-      );
-      return true;
-    });
-    if (!canceled) return res.status(409).json({ error: 'job already finishing or finished' });
-    return res.status(200).json({ ok: true });
-  }
-
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!isInternal) return res.status(401).json({ error: 'Unauthorized' });
 
