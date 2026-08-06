@@ -1,0 +1,156 @@
+__tests__/api/invitations.test.ts
+  s_f8bebb535e8a2c::t_2540d5360e1fc4 2-7,13-16,19-21,24-26,35-41
+  s_f8bebb535e8a2c::t_fc29762daec93b 29-31
+  s_f8bebb535e8a2c::t_e01c9ec0705928 33,42-46,52,55,58,62,66,69,72
+  s_f8bebb535e8a2c::t_7170153b966aa2 1
+docker-compose.yml
+  s_f8bebb535e8a2c::t_25599e0c2158a5 2-18,67
+components/onboarding/OnboardingShell.tsx
+  s_f8bebb535e8a2c::t_bffa74f834fe63 4-5,26,28,54
+  s_f8bebb535e8a2c::t_6795d3b6efa11e 17-25,29
+  s_f8bebb535e8a2c::t_efeea0b2e0bf13 1-2,7-16,27,55-67,69-76,78-80,82-83
+  s_f8bebb535e8a2c::t_a6b79ee112e824 43,49
+  s_f8bebb535e8a2c::t_da565b489603cf 81
+  s_f8bebb535e8a2c::t_a2f3b360fd7468 68,77
+  s_f8bebb535e8a2c::t_d94cd2023cd908 34-39,44-48,50-51
+  s_f8bebb535e8a2c::t_bbffe7a82e165c 33,40-42,52-53
+components/settings/OrganizationGeneralSettings.tsx
+  s_f8bebb535e8a2c::t_9e9f69850037a1 22-24,35-39,42,44,47,49
+  s_f8bebb535e8a2c::t_48b9213cd28f36 3
+  s_f8bebb535e8a2c::t_c7ae4bdfe1635b 5
+  s_f8bebb535e8a2c::t_b03ecb7101474c 79,84
+  s_f8bebb535e8a2c::t_2c38bb708b823d 69
+  s_f8bebb535e8a2c::t_5734aac0f4a5a0 96,103-104,113-120
+  s_f8bebb535e8a2c::t_e0ec022d2353a6 14,16-18
+  s_f8bebb535e8a2c::t_e40090fe517205 105-112
+  s_f8bebb535e8a2c::t_c3ac0498498177 99
+components/onboarding/OnboardingSurvey.tsx
+  s_f8bebb535e8a2c::t_b83f8311509028 10,12
+  s_f8bebb535e8a2c::t_e92856f8c863c4 9
+  s_f8bebb535e8a2c::t_5248c4226994a7 217-252
+  s_f8bebb535e8a2c::t_13169b2b9492cd 325
+  s_f8bebb535e8a2c::t_0b654112ecd22b 99,106-108
+  s_f8bebb535e8a2c::t_eb01115bd9abf1 4,275,277-278,280,284-288,290-292,294,296-297,299,305,307,317,332-333
+  s_f8bebb535e8a2c::t_1bd79dd1012960 326
+  s_f8bebb535e8a2c::t_5d1651a4751b13 329
+  s_f8bebb535e8a2c::t_715433810ad24c 334
+  s_f8bebb535e8a2c::t_87b2341dcb099e 189-196
+  s_f8bebb535e8a2c::t_b446a903647688 5
+  s_f8bebb535e8a2c::t_a3c29287fd982e 35-38,50-53,60-64,71-75,253-269,298,300,302-304
+  s_f8bebb535e8a2c::t_2005b2ffbc7831 310
+  s_f8bebb535e8a2c::t_9f87d31e700055 82
+  s_f8bebb535e8a2c::t_d01afb76168b4b 306
+  s_f8bebb535e8a2c::t_8068309e2e86a8 301
+  s_f8bebb535e8a2c::t_fce8314013ec1c 216
+  s_f8bebb535e8a2c::t_a1f94b27fe0181 84-97
+  s_f8bebb535e8a2c::t_4091d7a9a4343a 6-7,13-15,140,279,281-283,295,308-309,311-316,318,320-321,323,330-331
+  s_f8bebb535e8a2c::t_7fadd46140b93b 208-209
+  s_f8bebb535e8a2c::t_ad1c17d0e8aa5c 1,3,8,11,27-29,44,79-81,83,98,100-105,109-110,121,123-124,127-128,130-132,135,138,142-143,147-168,182-187,197-199,207,210-212,273,289,293
+  s_f8bebb535e8a2c::t_28fbd71622ddef 213-215
+  s_f8bebb535e8a2c::t_3f230c1bbf14d2 271-272,274
+  s_f8bebb535e8a2c::t_89533685713d5c 122,125,129,133-134
+  s_f8bebb535e8a2c::t_dbce636d9696db 169-180,188
+  s_f8bebb535e8a2c::t_655549ab562efa 276
+lib/appAccess/accessPolicy.ts
+  s_f8bebb535e8a2c::t_822b07d1ee3d59 159-167
+database/config.js
+  s_f8bebb535e8a2c::t_25599e0c2158a5 8-16,20-21
+__tests__/lib/invitations.test.ts
+  s_f8bebb535e8a2c::t_fa4b97e4eb9644 1-5,7-12,43-46,53-63,65-76,78-82
+  s_f8bebb535e8a2c::t_79ff5d755f27b9 47,64,77
+utils/getUser.ts
+  s_f8bebb535e8a2c::t_21dac55384cdc2 4
+scripts/dev-postgres.ts
+  s_f8bebb535e8a2c::t_fabcd32131da32 1-112
+pages/api/organization.ts
+  s_f8bebb535e8a2c::t_39386e47eae8ad 4
+  s_f8bebb535e8a2c::t_51aecab6fdfd14 6
+  s_f8bebb535e8a2c::t_54945bd4b77c04 21-23
+  s_f8bebb535e8a2c::t_64162018eb55a1 25-38,45
+__tests__/api/workspace-finish.test.ts
+  s_f8bebb535e8a2c::t_e253e215158734 1,6-11,13,20-24,35,41,48,54,60,69
+lib/organizationLimits.ts
+  s_f8bebb535e8a2c::t_a042dfc326aa80 2,8,10
+  s_f8bebb535e8a2c::t_a749314005b150 1,3-7,9
+lib/invitations.ts
+  s_f8bebb535e8a2c::t_a67416253e135b 52-56
+  s_f8bebb535e8a2c::t_17e9fc61c4ccb8 7-17,19-23,27-30
+  s_f8bebb535e8a2c::t_95e71db5fcda39 64-88
+  s_f8bebb535e8a2c::t_ced95428f33c94 36-40
+  s_f8bebb535e8a2c::t_11f73cf4f3df25 104-106
+  s_f8bebb535e8a2c::t_31f81a6cbb0a4b 4
+__tests__/api/members-mutations.test.ts
+  s_f8bebb535e8a2c::t_39391ef98bb11a 1-6,16-18,20-28,30-33,45,51,58,64,69,76,81,86,92
+components/koala/REGISTRY.md
+  s_f8bebb535e8a2c::t_cc5a8763dd9026 38
+  s_f8bebb535e8a2c::t_8218e0605a079d 37
+__tests__/api/workspace-members.test.ts
+  s_f8bebb535e8a2c::t_ef972a11117e6e 1-6,13-15,17-23,25-28,40,48,56,63,69
+scripts/pipeline-workers.ts
+  s_f8bebb535e8a2c::t_cee93e119e76c1 56,61-83,145,174-175,229-231,234
+lib/organization.ts
+  s_f8bebb535e8a2c::t_9ddcaf71c266f6 23,26
+__tests__/api/organization.test.ts
+  s_f8bebb535e8a2c::t_4ceb1d2829ea90 1-6,10-15,21,24-26,28-30,32-48,53,60-62,67,69,71-106
+  s_f8bebb535e8a2c::t_046e1330c90d8b 22-23
+.claude/launch.json
+  s_f8bebb535e8a2c::t_b79d0087f0d57e 6-7
+database/database.ts
+  s_f8bebb535e8a2c::t_25599e0c2158a5 12-19
+  s_f8bebb535e8a2c::t_96b9953d32bac7 8,10,21-38,40-49,51,53,62,67
+components/koala/core/emailTagInput/emailTagInput.tsx
+  s_f8bebb535e8a2c::t_a8ee49ca13411d 66-68
+  s_f8bebb535e8a2c::t_b33153941e2bc3 1-41,43-49,51-65,69-110
+  s_f8bebb535e8a2c::t_5ad9e393b0176c 50
+  s_f8bebb535e8a2c::t_f7ac1239c87945 42
+__tests__/api/organization-role-guard.test.ts
+  s_f8bebb535e8a2c::t_afc09b4b375a63 6-12,14-25,31-62
+  s_f8bebb535e8a2c::t_8b01b98488d8a8 26-30
+  s_f8bebb535e8a2c::t_52b7577b0b7601 1-5,13
+types.d.ts
+  s_f8bebb535e8a2c::t_01bbf7d324bf30 316
+  s_f8bebb535e8a2c::t_d7f0e633bb68b4 309-314,318
+  s_f8bebb535e8a2c::t_b5130694cd95ee 315,317
+services/organization.tsx
+  s_f8bebb535e8a2c::t_e1f770f5a3d0d5 16-17
+.env.example
+  s_f8bebb535e8a2c::t_df571425f1bca9 110-119
+scripts/dev-auth.ts
+  s_f8bebb535e8a2c::t_fabcd32131da32 1-68,74-82,84-92
+  s_f8bebb535e8a2c::t_c72ecd734708e9 69-73
+  s_f8bebb535e8a2c::t_d44c1520378d2c 83
+package.json
+  s_f8bebb535e8a2c::t_00824c9823964f 160
+  s_f8bebb535e8a2c::t_1507c9baf593aa 150
+components/koala/core/progressBar/progressBar.tsx
+  s_f8bebb535e8a2c::t_b3dc68e40c03e7 16
+  s_f8bebb535e8a2c::t_7f06ffc93d1065 70,72
+  s_f8bebb535e8a2c::t_fea1cd80ea487b 1-15,17-69,71,73-86
+components/onboarding/OrganizationProfileStep.tsx
+  s_f8bebb535e8a2c::t_252c8f7577f20e 96
+  s_f8bebb535e8a2c::t_a11f740c26fda5 60-76
+  s_f8bebb535e8a2c::t_a70ca6a3469933 1,3-59,77-95,97-118,120-148
+  s_f8bebb535e8a2c::t_a6d671a52220eb 2
+  s_f8bebb535e8a2c::t_8df8929b7ccbfb 119
+.gitignore
+  s_f8bebb535e8a2c::t_25599e0c2158a5 54-56
+mprocs.yaml
+  s_f8bebb535e8a2c::t_0bdf76ff3767d6 6-7
+  s_f8bebb535e8a2c::t_75b569c008af52 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f6a7fab56488784238abb2025676180eb50aded9",
+  "prompts": {},
+  "sessions": {
+    "s_f8bebb535e8a2c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4ac1093e-a3ec-4681-a078-d9518a2f7458",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
