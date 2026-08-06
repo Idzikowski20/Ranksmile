@@ -1726,3 +1726,77 @@ If you want the gate softened anyway, that is a one-line change in
 `lib/contentPlanner/validators/planValidators.ts:26` plus
 `lib/contentPlanner/types.ts:368` — but it belongs in its own commit with its own
 before/after comparison on a real keyword, not folded into this plan.
+
+---
+
+## Task 11: Outline survives leaving the page
+
+**Requirement:** leaving the editor while the outline is generating, or after it is
+generated, must change nothing. Coming back shows the current state — a finished
+outline ready to write, or the work still in progress. Surfer does this because the
+outline lives on the server (`ContentEditor.outlines`, `wizardStep`) and the client
+re-subscribes on mount.
+
+**What already exists (verified):**
+- `POST /api/articles/[id]/content-plan` persists the whole bundle into
+  `articles.score_data.content_planner_v2` when `persist !== false`.
+- The same route has a `GET` branch returning `{ ok, content_planner_v2 }`.
+- `reviewOutlineFromBundle(bundle)` is pure and runs client-side.
+- `GET /api/articles/job-progress?articleId=…&jobType=article_generate` reports a
+  running write, and `generate-stream` can be re-attached to it by job id.
+
+**So the outline is already saved; the editor just never reads it back.** The
+auto-start effect in `ArticleEditor` (`outlineAutoStarted`) always calls
+`handleInsertOutline`, which POSTs a fresh plan.
+
+**Files:**
+- Modify: `components/articles/ArticleEditor.tsx` — the `outlineReviewMode` auto-start effect
+- Test: `__tests__/lib/contentPlanner/reviewOutline.test.ts` (bundle → headings is already covered)
+
+- [ ] **Step 1: Read before generating**
+
+In the auto-start effect, before calling `handleInsertOutline()`:
+
+```ts
+const res = await fetch(`/api/articles/${articleId}/content-plan`);
+const data = await res.json() as {
+  content_planner_v2?: { bundle?: ContentPlannerBundle } | null;
+};
+const bundle = data.content_planner_v2?.bundle;
+const stored = bundle ? reviewOutlineFromBundle(bundle) : [];
+if (stored.length) {
+  await playReveal(reviewOutlineToHtml(stored), true, 'preserve');
+  setOutlineHeadingCount(stored.filter((h) => h.level >= 2).length);
+  return;              // nothing to regenerate — the outline is already planned
+}
+await handleInsertOutline();
+```
+
+- [ ] **Step 2: Re-attach to a running write**
+
+Still in that effect, before the outline read, ask whether a write is already going:
+
+```ts
+const jobRes = await fetch(
+  `/api/articles/${articleId}/../job-progress?articleId=${articleId}&jobType=article_generate`,
+);
+const job = await jobRes.json() as { status?: string; jobId?: string };
+if ((job.status === 'running' || job.status === 'queued') && job.jobId) {
+  setGenerateBusy(true);
+  // same EventSource block handleWriteWithAi uses, keyed by job.jobId
+}
+```
+
+- [ ] **Step 3: Verify by hand**
+
+Start an outline, leave to `/articles`, come back with `?reviewOutline=1`: the
+headings are there, no second planner run (watch the sidecar log for a single
+content-plan call). Repeat while a write is running: the pill shows
+"Generating content" and the article lands without a second job.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add components/articles/ArticleEditor.tsx
+git commit -m "feat(editor): restore outline and running write when re-entering"
+```
