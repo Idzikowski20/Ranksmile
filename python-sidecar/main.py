@@ -2,6 +2,7 @@
 SEO Autopilot — Python Sidecar (FastAPI)
 Uruchomienie: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 """
+import asyncio
 import os
 import re
 from pathlib import Path
@@ -71,6 +72,13 @@ async def _start_ai_vis_scheduler() -> None:
 
 
 _EXEMPT_PATHS = {"/health", "/ready"}
+
+# Article generation is the heaviest LLM path and /pipeline/generate returns immediately
+# after spawning a detached task — cap how many run at once per container so a burst of
+# jobs queues instead of firing unbounded parallel LLM calls.
+_generate_slots = asyncio.Semaphore(
+    max(1, int(os.getenv("SIDECAR_MAX_CONCURRENT_GENERATES", "3")))
+)
 
 
 def _is_deployed_host() -> bool:
@@ -189,6 +197,7 @@ async def generate_article(req: GenerateRequest):
 
     # 3. Generuj artykuł — Write Engine executes Execution Plan when present (no outline invent).
     print("[generate] Running AI pipeline (Write Engine)...")
+    domain_articles = [a.model_dump() for a in req.existing_articles]
     article_html = await run_pipeline(
         site_context=site_context,
         serp_data=serp_data,
@@ -206,7 +215,18 @@ async def generate_article(req: GenerateRequest):
         voice_tone=req.voice_tone,
         execution_plan=req.execution_plan,
         compiled_write_plan=req.compiled_write_plan,
+        existing_articles=domain_articles,
+        internal_links=req.internal_links,
     )
+
+    # The Writer links from the allowlist; strip any internal URL it invented anyway.
+    if req.internal_links:
+        from pipeline.internal_links import allowed_link_urls, enforce_internal_links
+        article_html, dropped = enforce_internal_links(
+            article_html, allowed_link_urls(domain_articles), req.url,
+        )
+        if dropped:
+            print(f"[generate] Removed {dropped} hallucinated internal link(s)")
 
     # Surfer-style mid-article images (Pollinations) — fail-soft
     try:
@@ -235,7 +255,7 @@ async def generate_article(req: GenerateRequest):
     links = await suggest_internal_links(
         article_html=article_html,
         site_url=req.url,
-        existing_articles=[a.model_dump() for a in req.existing_articles],
+        existing_articles=domain_articles,
     ) if req.internal_links else []
 
     import datetime as dt
@@ -541,12 +561,16 @@ async def pipeline_generate(req: DomainSetupRequest):
 
 async def run_generate(job_id: str, payload: dict, nextjs_url: str) -> None:
     """Generate one article and post the result to job-progress. Never raises
-    (runs as an asyncio background task) — always posts a terminal done/failed callback."""
+    (runs as an asyncio background task) — always posts a terminal done/failed callback.
+
+    Runs under a process-wide slot limit: /pipeline/generate spawns detached tasks, so
+    without it a burst of jobs runs unbounded parallel LLM calls on one container."""
     from pipeline.domain_runner import post_progress, post_terminal
     try:
-        if "compiled_write_plan" in payload:
-            await post_progress(nextjs_url, job_id, 10, "Executing compiled write plan")
-        resp = await generate_article(GenerateRequest(**payload))
+        async with _generate_slots:
+            if "compiled_write_plan" in payload:
+                await post_progress(nextjs_url, job_id, 10, "Executing compiled write plan")
+            resp = await generate_article(GenerateRequest(**payload))
         html = (resp.article_html or "").strip()
         plain = re.sub(r"<[^>]+>", " ", html)
         plain = re.sub(r"\s+", " ", plain).strip()

@@ -1,6 +1,7 @@
 import * as approvedOutline from '../../../lib/contentPlanner/applyApprovedOutline';
 import {
   applyApprovedOutlineToPlan,
+  approvedOutlineWarnings,
   parseApprovedOutline,
 } from '../../../lib/contentPlanner/applyApprovedOutline';
 import type { ArticleExecutionPlan, ExecutionPlanSection } from '../../../lib/contentPlanner/types';
@@ -104,17 +105,52 @@ describe('applyApprovedOutlineToPlan', () => {
     expect(next.articleBudget.words).toBe(1000);
   });
 
-  it('rejects reviewed word targets below the validated competitor benchmark', () => {
+  it('applies reviewed word targets below the benchmark and reports them as warnings', () => {
     const source = plan([section('one'), section('two')]);
-    expect(applyApprovedOutlineToPlan(source, [
+    const next = applyApprovedOutlineToPlan(source, [
       { level: 2, text: 'First', targetWords: 80 },
       { level: 2, text: 'Second', targetWords: 80 },
-    ])).toBeNull();
+    ]);
+    if (!next) throw new Error('Expected a short outline to still produce a plan');
+    expect(next.articleBudget.words).toBe(160);
+    expect(approvedOutlineWarnings(next).join(' ')).toContain('below the competitor benchmark');
   });
 
-  it('rejects a changed section count instead of silently dropping the approved outline', () => {
+  it('keeps added sections and stubs their brief', () => {
     const source = plan([section('one'), section('two')]);
-    expect(applyApprovedOutlineToPlan(source, [{ level: 2, text: 'Only one section' }])).toBeNull();
+    const next = applyApprovedOutlineToPlan(source, [
+      { level: 2, text: 'First' }, { level: 2, text: 'Second' }, { level: 2, text: 'Third' },
+    ]);
+    if (!next) throw new Error('Expected an extended outline to produce a plan');
+    expect(next.sections.map((item) => item.heading)).toEqual(['First', 'Second', 'Third']);
+    expect(next.sections[2].claims).toEqual([]);
+    expect(next.articleBudget.h2).toBe(3);
+  });
+
+  it('absorbs knowledge from removed sections into the last kept one', () => {
+    const source = plan([section('one'), section('two')]);
+    const next = applyApprovedOutlineToPlan(source, [{ level: 2, text: 'Only one section' }]);
+    if (!next) throw new Error('Expected a shortened outline to produce a plan');
+    expect(next.sections).toHaveLength(1);
+    expect(next.sections[0].claims.map((c) => c.id)).toEqual(['one-claim', 'two-claim']);
+    expect(next.sections[0].mustAnswer).toEqual(['answer']);
+  });
+
+  it('folds H3 into the parent H2 instructions instead of adding sections', () => {
+    const source = plan([section('one'), section('two')]);
+    const next = applyApprovedOutlineToPlan(source, [
+      { level: 2, text: 'First', instructions: ['Open with the answer.'] },
+      { level: 3, text: 'Nested detail', instructions: ['Use a table.'] },
+      { level: 2, text: 'Second' },
+    ]);
+    if (!next) throw new Error('Expected a nested outline to produce a plan');
+    expect(next.sections.map((item) => item.heading)).toEqual(['First', 'Second']);
+    expect(next.sections[0].objective).toBe('Open with the answer.\nH3: Nested detail\n- Use a table.');
+  });
+
+  it('returns null when the approved outline has no usable heading', () => {
+    const source = plan([section('one')]);
+    expect(applyApprovedOutlineToPlan(source, [{ level: 1, text: 'Title only' }])).toBeNull();
   });
 });
 
