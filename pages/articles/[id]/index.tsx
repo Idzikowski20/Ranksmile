@@ -24,6 +24,7 @@ import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
 import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
 import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
+import { resolveArticleEntry, articleEntryHref } from '../../../lib/articleFlow';
 import { computeOptimizeLiveSnapshot } from '../../../lib/computeLiveArticleScores';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { liveCoverageItems, scoreDeltaGate } from '../../../lib/liveCoverage';
@@ -585,13 +586,15 @@ const ArticleEditorPage: NextPage = () => {
       .then(async (data) => {
         if (cancelled) return;
         // Unfinished New-Content wizard (draft has saved state, no body yet) → resume.
-        if (data.article?.wizard_state && !(data.article.content || '').trim()) {
-          try {
-            const ws = JSON.parse(data.article.wizard_state);
-            const step = ['content-type', 'context', 'writing-mode'].includes(ws.step) ? ws.step : 'content-type';
-            router.replace(`/articles/${step}?articleId=${id}`);
-            return;
-          } catch { /* fall through to the normal editor */ }
+        // Outline review is the exception: the wizard sends the user here with an empty
+        // draft on purpose, so resuming would bounce them back to writing-mode forever.
+        const entry = resolveArticleEntry(data.article || {}, {
+          outlineReview: router.query.reviewOutline === '1',
+        });
+        const resumeHref = articleEntryHref(String(id), entry);
+        if (entry.kind === 'wizard' && resumeHref) {
+          router.replace(resumeHref);
+          return;
         }
         if (data.article) {
           let art = data.article as Article;
