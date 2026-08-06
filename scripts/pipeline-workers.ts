@@ -53,9 +53,32 @@ async function waitForRedis(url: string, maxMs = 60_000): Promise<void> {
       return;
     }
     console.log(`[pipeline-workers] waiting for Redis ${host}:${port}…`);
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((resolve) => { setTimeout(resolve, 1500); });
   }
   throw new Error(`Redis not reachable at ${host}:${port} within ${maxMs}ms`);
+}
+
+function parsePgUrl(raw: string): { host: string; port: number } {
+  try {
+    const u = new URL(raw);
+    return { host: u.hostname || '127.0.0.1', port: u.port ? Number(u.port) : 5432 };
+  } catch {
+    return { host: '127.0.0.1', port: 5432 };
+  }
+}
+
+async function waitForPostgres(url: string, maxMs = 60_000): Promise<void> {
+  const { host, port } = parsePgUrl(url);
+  const started = Date.now();
+  while (Date.now() - started < maxMs) {
+    if (await tcpOpen(host, port)) {
+      console.log(`[pipeline-workers] Postgres ready at ${host}:${port}`);
+      return;
+    }
+    console.log(`[pipeline-workers] waiting for Postgres ${host}:${port}…`);
+    await new Promise((resolve) => { setTimeout(resolve, 1500); });
+  }
+  throw new Error(`Postgres not reachable at ${host}:${port} within ${maxMs}ms`);
 }
 
 /** After Redis wipe, DB may still have queued rows — push them back onto BullMQ. */
@@ -119,6 +142,7 @@ async function main(): Promise<void> {
   );
 
   await waitForRedis(url);
+  await waitForPostgres(process.env.DATABASE_URL);
 
   // Dynamic imports AFTER dotenv so database/database.ts sees DATABASE_URL (Neon), not SQLite.
   const { listWorkers, resetWorkerRegistry } = await import('../lib/workers/registry');
@@ -147,9 +171,8 @@ async function main(): Promise<void> {
           dbJobId?: number;
         };
         const payload = data.payload || (job.data as Record<string, unknown>);
-        const jobKey =
-          data.jobKey ||
-          String(job.id || `${w.queue}-${Date.now()}`);
+        const jobKey = data.jobKey
+          || String(job.id || `${w.queue}-${Date.now()}`);
 
         let dbJobId = Number(data.dbJobId || 0);
         if (!dbJobId) {
@@ -203,11 +226,12 @@ async function main(): Promise<void> {
     await Promise.all(handles.map((h) => h.close()));
     process.exit(0);
   };
-  process.on('SIGINT', () => void shutdown());
-  process.on('SIGTERM', () => void shutdown());
+  const onSignal = () => { shutdown().catch(() => process.exit(1)); };
+  process.on('SIGINT', onSignal);
+  process.on('SIGTERM', onSignal);
 }
 
-void main().catch((err: unknown) => {
+main().catch((err: unknown) => {
   console.error('[pipeline-workers] fatal:', err);
   process.exit(1);
 });

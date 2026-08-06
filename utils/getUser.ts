@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 const NEON_AUTH_BASE_URL = process.env.NEON_AUTH_BASE_URL!;
-const SESSION_COOKIE = '__Secure-neon-auth.session_token';
+const SESSION_COOKIE = process.env.AUTH_SESSION_COOKIE_NAME || '__Secure-neon-auth.session_token';
 
 export type SessionUser = { id: string; email: string | null };
 const sessionCache = new WeakMap<NextApiRequest, Promise<SessionUser | null>>();
