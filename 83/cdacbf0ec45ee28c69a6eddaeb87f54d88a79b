@@ -1,0 +1,26 @@
+lib/ensureArticlesTables.ts
+  s_8d6cce368af4fd::t_bf6e0ddc2742f2 209,212-213,216-217
+lib/streamText.ts
+  s_8d6cce368af4fd::t_d5498b6b3a95bf 1-8
+__tests__/api/jobProgressStream.test.ts
+  s_8d6cce368af4fd::t_d27d486d112e98 1-20
+pages/api/articles/job-progress.ts
+  s_8d6cce368af4fd::t_8cd4d92927f880 15
+  s_8d6cce368af4fd::t_609c8ddef19c47 350-372
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "83cdacbf0ec45ee28c69a6eddaeb87f54d88a79b",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
