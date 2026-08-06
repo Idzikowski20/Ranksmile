@@ -8541,7 +8541,21 @@ html.koala-shell[data-theme="cream"] .app-content {
   .koala-sidebar { display: none; }
   .koala-header__menu-btn { display: inline-flex; }
   .koala-header { padding: 8px 12px; }
-  .koala-header__search { flex: 1; max-width: none; }
+  /* Full search field has no room next to the menu button on mobile — collapse
+     to the same icon-only trigger, still opens the full CommandMenu overlay. */
+  .koala-header__search { flex: 0 0 auto; max-width: none; }
+  .koala-header-search {
+    width: 32px;
+    min-width: 32px;
+    padding: 0;
+    justify-content: center;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+  .koala-header-search:hover { background: var(--koala-bg-secondary); }
+  .koala-header-search__label,
+  .koala-header-search__kbd { display: none; }
 }
 
 .koala-mobile-panel {
