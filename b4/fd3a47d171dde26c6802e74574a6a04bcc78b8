@@ -1,0 +1,24 @@
+scripts/dev-postgres.ts
+  s_8d6cce368af4fd::t_b6d7e2df7ce4ae 103-105
+  s_8d6cce368af4fd::t_0b84a72b56d463 125-127
+  s_8d6cce368af4fd::t_12df2df2372029 14,22-76
+pages/api/articles/[id]/content-plan.ts
+  s_8d6cce368af4fd::t_33eddfa8624a8f 170-195
+  s_8d6cce368af4fd::t_cd4d450172f0c1 201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b4fd3a47d171dde26c6802e74574a6a04bcc78b8",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
