@@ -50,6 +50,12 @@ const TERMINAL_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
   'incomplete_expired',
 ]);
 
+export function isTerminalSubscriptionStatus(
+  status: SubscriptionStatus | null | undefined,
+): boolean {
+  return status != null && TERMINAL_SUBSCRIPTION_STATUSES.has(status);
+}
+
 export function hasNonTerminalStripeSubscription(
   billing: Pick<OrgBillingState, 'stripeSubscriptionId' | 'subscriptionStatus'> | null | undefined,
 ): boolean {

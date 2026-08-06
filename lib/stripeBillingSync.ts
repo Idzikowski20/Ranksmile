@@ -7,7 +7,12 @@ import {
   ensureCorrelationId,
   type BillingAuditContext,
 } from './billingAudit';
-import { updateOrgBillingState, type SubscriptionStatus } from './orgBilling';
+import {
+  getOrgBillingState,
+  isTerminalSubscriptionStatus,
+  updateOrgBillingState,
+  type SubscriptionStatus,
+} from './orgBilling';
 import { getPlanFromPriceId, type LegacyPlanSlug, type PlanSlug } from './stripePrices';
 
 function toDate(unixSeconds: number | null | undefined): Date | null {
@@ -96,6 +101,28 @@ export async function syncSubscriptionToOrg(
       projectedStatus: subscriptionStatus,
     },
   };
+
+  // A terminal event for a subscription the org no longer tracks must not wipe the current one.
+  // create-subscription cancels dangling checkouts, so canceled/incomplete_expired webhooks for
+  // old ids can land after the replacement subscription is already active.
+  if (isTerminalSubscriptionStatus(subscriptionStatus)) {
+    const current = await getOrgBillingState(orgId);
+    if (current?.stripeSubscriptionId && current.stripeSubscriptionId !== subscription.id) {
+      await emitBillingEvent({
+        kind: 'SUBSCRIPTION_SYNCED',
+        source: resolvedAudit.source,
+        reason: `${resolvedAudit.reason}.stale_subscription_ignored`,
+        decision: 'SKIP',
+        correlationId,
+        orgId,
+        stripeSubscriptionId: subscription.id,
+        setupIntentId: resolvedAudit.setupIntentId ?? null,
+        newStatus: subscriptionStatus,
+        meta: { ...resolvedAudit.meta, trackedSubscriptionId: current.stripeSubscriptionId },
+      });
+      return;
+    }
+  }
 
   // Basil+/dahlia: current_period_end lives on SubscriptionItem, not Subscription.
   const itemPeriodEnd = subscription.items?.data?.[0]?.current_period_end;

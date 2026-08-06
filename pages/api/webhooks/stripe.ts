@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import type Stripe from 'stripe';
 import { getStripe, getStripeWebhookSecret } from '../../../lib/stripe';
 import { readRawBody } from '../../../lib/readRawBody';
+import { claimStripeEvent, releaseStripeEvent } from '../../../lib/stripeWebhookEvents';
 import {
   orgIdFromMetadata,
   syncCheckoutSessionToOrg,
@@ -83,6 +84,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: message });
   }
 
+  // Stripe delivers at-least-once; duplicates must not re-run side effects.
+  if (!(await claimStripeEvent(event))) {
+    return res.status(200).json({ received: true, duplicate: true });
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -113,7 +119,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       case 'customer.subscription.updated':
       case 'customer.subscription.created': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const eventSubscription = event.data.object as Stripe.Subscription;
+        // Re-read: webhook delivery can be delayed/out of order, the event payload is a snapshot.
+        const subscription = await stripe.subscriptions
+          .retrieve(eventSubscription.id)
+          .catch(() => eventSubscription);
         const orgId = await resolveOrgId(stripe, subscription.metadata, subscription.customer);
         if (orgId) {
           await syncSubscriptionToOrg(orgId, subscription, undefined, {
@@ -127,7 +137,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         if (subscription.status === 'incomplete_expired' && orgId) {
-          const fresh = await stripe.subscriptions.retrieve(subscription.id);
+          const fresh = subscription;
           if (await shouldSendAbandonedForSubscription(stripe, fresh)) {
             const to = await resolveCustomerEmail(stripe, null, fresh.customer);
             if (to) {
@@ -422,6 +432,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (err) {
     console.error('[stripe webhook]', event.type, err);
+    // Give the claim back — a 500 makes Stripe retry, and a kept claim would swallow it.
+    await releaseStripeEvent(event.id).catch((e) => {
+      console.error('[stripe webhook] release claim', event.id, e);
+    });
     return res.status(500).json({ error: 'Webhook handler failed' });
   }
 
