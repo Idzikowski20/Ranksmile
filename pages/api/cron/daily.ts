@@ -14,38 +14,9 @@ import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
 import { cronSecrets } from '../../../lib/cronAuth';
+import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '../../../lib/autopilot';
 
 export const config = { maxDuration: 60 };
-
-/** Autopilot draft row — the shape /articles/[id]/generate expects (keyword mode). */
-async function createAutopilotDraft(domainId: number, keyword: string): Promise<number> {
-   const { QueryTypes } = await import('sequelize');
-   const { ensureArticlesTables } = await import('../../../lib/ensureArticlesTables');
-   const { getArticleIdSql } = await import('../../../lib/articleSql');
-   const { getDomainLocale } = await import('../../../lib/domainLanguage');
-   await ensureArticlesTables();
-   const articleIdSql = await getArticleIdSql();
-   const { languageCode } = await getDomainLocale(domainId);
-   const values = [domainId, keyword, '', '', keyword, languageCode];
-
-   if (process.env.DATABASE_URL) {
-      const rows = await db.query<{ id: number }>(
-         `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, language, status, created_at, updated_at)
-          VALUES (?, ?, ?, ?, '', ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          RETURNING ${articleIdSql} AS id`,
-         { replacements: values, type: QueryTypes.SELECT },
-      );
-      const id = rows[0]?.id;
-      if (!id) throw new Error('autopilot draft insert returned no id');
-      return id;
-   }
-   const [newId] = await db.query(
-      `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, language, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, '', ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      { replacements: values, type: QueryTypes.INSERT },
-   );
-   return newId as unknown as number;
-}
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -171,24 +142,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
          const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXTJS_URL || 'http://localhost:3000';
          try {
-            // Planner-first path: create the draft row, then let /articles/[id]/generate
-            // build + validate the Execution Plan and hand it to the Write Engine (202,
-            // sidecar posts the result back). The old /api/articles/generate had no cron
-            // auth and blocked on a 5-minute sidecar call inside a 60s function.
+            // Seed only: draft row + deep-analysis. /api/cron/autopilot writes the article
+            // once the analysis lands, so no cron request waits on the LLM pipeline.
+            // (The old /api/articles/generate had no cron auth and blocked on a 300s
+            // sidecar call inside a 60s function.)
             const articleId = await createAutopilotDraft(domain.ID, nextTopic);
-            const genRes = await fetch(`${baseUrl}/api/articles/${articleId}/generate`, {
-               method: 'POST',
-               headers: {
-                  'Content-Type': 'application/json',
-                  'x-cron-secret': cronHeader,
-               },
-               body: JSON.stringify({ contentType: 'blog' }),
-            });
-            if (genRes.ok) {
+            const started = await triggerAutopilotAnalysis(
+               { baseUrl, cronSecret: cronHeader },
+               { articleId, domainId: domain.ID, keyword: nextTopic },
+            );
+            if (started) {
                triggered.push(`${domain.domain}: ${nextTopic}`);
             } else {
-               const detail = await genRes.text().catch(() => '');
-               console.error(`[cron] generate rejected for ${domain.domain}:`, genRes.status, detail.slice(0, 300));
+               // No job row was created, so the sweep would never see this article —
+               // drop the empty skeleton and leave the topic free for the next tick.
+               await discardAutopilotDraft(articleId);
             }
          } catch (fetchErr) {
             console.error(`Failed to trigger for ${domain.domain}:`, fetchErr);
