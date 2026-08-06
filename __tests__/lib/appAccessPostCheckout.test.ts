@@ -53,7 +53,9 @@ describe('WORKSPACE_REQUIRED — the state right after a first purchase', () => 
       'GET:/api/domains',
       'POST:/api/domains/configure',
       'POST:/api/domains/detect-blog-paths',
-      'POST:/api/domains/blog-paths',
+      // Methods here mirror pages/setup.tsx exactly — the whitelist matches on the
+      // full `METHOD:path` key, so a wrong verb silently leaves the call denied.
+      'PUT:/api/domains/blog-paths',
       'POST:/api/brand-knowledge',
       'POST:/api/workspaces/7/finish',
     ])('allows %s', (routeKey) => {
@@ -67,6 +69,10 @@ describe('WORKSPACE_REQUIRED — the state right after a first purchase', () => 
       'GET:/api/keywords',
       'GET:/api/gsc/search-data',
       'GET:/api/insight',
+      // Verb-specific: the wizard only reads the workspace list, so the create verb on
+      // the same path must not ride along on the whitelist entry.
+      'POST:/api/workspaces',
+      'DELETE:/api/domains',
     ])('denies %s', (routeKey) => {
       expect(allowsApi(AFTER_FIRST_PURCHASE, routeKey)).toBe(false);
     });
