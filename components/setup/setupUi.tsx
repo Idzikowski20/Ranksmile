@@ -1,15 +1,15 @@
 import Head from 'next/head';
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import KoalaHeader from '../koala/shell/Header';
 import { KoalaPage, KoalaPanel, KoalaPanelBody } from '../koala/layout';
 import Input from '../koala/primitives/Input';
-import { MenuList } from '../koala/core';
+import { MenuList, MenuListItem } from '../koala/core';
+import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
 
 const SETUP_WIZARD_WIDTH_NARROW = 480;
 const SETUP_WIZARD_WIDTH_WIDE = 880;
-const FONT = 'var(--font-family-primary)';
-
 export type SetupLayout = 'narrow' | 'wide';
 
 function layoutMaxWidth(layout: SetupLayout): number {
@@ -17,20 +17,27 @@ function layoutMaxWidth(layout: SetupLayout): number {
 }
 
 export const SetupLogo = () => (
-  <a href="/" aria-label="Home" style={{ display: 'inline-flex', alignItems: 'center' }}>
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: 28, height: 28, borderRadius: 7, background: '#F84416', flexShrink: 0,
-    }}
-    >
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
-        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-      </svg>
-    </span>
-  </a>
+  <Link href="/" passHref>
+    <a aria-label="Ranksmile home" className="koala-setup-logo">
+      <span className="koala-setup-logo-mark" aria-hidden="true">
+        <BounceSmileyAnimation compact size={28} entrance={false} />
+      </span>
+      <span className="koala-setup-logo-word">Ranksmile</span>
+    </a>
+  </Link>
 );
 
 export function SetupShell({ title, children, layout = 'narrow' }: { title: string; children: ReactNode; layout?: SetupLayout }) {
+  // AppShell toggles these on <html> for every dashboard route. Setup doesn't render
+  // AppShell (no sidebar), so without this the legacy `body { padding: 8px }` rule
+  // (desktop-only, pre-Koala) leaks through and insets the whole page.
+  useEffect(() => {
+    document.documentElement.classList.add('app-framed', 'koala-shell');
+    return () => {
+      document.documentElement.classList.remove('app-framed', 'koala-shell');
+    };
+  }, []);
+
   return (
     <>
       <Head>
@@ -108,13 +115,15 @@ export function SetupDropdownMenu({ open, anchorRef, onClose, children, id }: Se
 
   if (!open || !mounted) return null;
 
+  // Pure positioning box — no border/background/shadow of its own. MenuList (the
+  // actual Koala dropdown panel) supplies the single visual chrome; giving this
+  // wrapper its own card styling nested a square inside a square.
   return createPortal(
     <div
       ref={menuRef}
       id={id}
-      className="koala-setup-menu koala-setup-menu--portal"
+      className="koala-setup-menu-portal"
       style={{ top: pos.top, left: pos.left, width: pos.width }}
-      role="listbox"
     >
       {children}
     </div>,
@@ -158,6 +167,7 @@ export function SetupSearchableMenu<T>({
   return (
     <SetupDropdownMenu open={open} anchorRef={anchorRef} onClose={onClose}>
       <MenuList
+        className="koala-setup-menu-panel"
         search={(
           <Input
             autoFocus
@@ -190,16 +200,8 @@ export function SetupStepProgress({ step }: { step: 1 | 2 }) {
 export function SetupHeader({ title, description }: { title: string; description: string }) {
   return (
     <header style={{ marginBottom: 24 }}>
-      <h1 style={{
-        margin: '0 0 8px', fontSize: 20, fontWeight: 500, lineHeight: 1.2,
-        color: '#181225', letterSpacing: '-0.01em', fontFamily: FONT,
-      }}
-      >
-        {title}
-      </h1>
-      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: '#6a6772', fontFamily: FONT }}>
-        {description}
-      </p>
+      <h1 className="koala-setup-title">{title}</h1>
+      <p className="koala-setup-description">{description}</p>
     </header>
   );
 }
@@ -211,7 +213,7 @@ export function SetupField({
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
       <label className="koala-setup-field-label">
         {label}
-        {optional && <span style={{ fontWeight: 400, color: '#6a6772' }}> (optional)</span>}
+        {optional && <span className="koala-setup-field-optional"> (optional)</span>}
       </label>
       {hint && <p className="koala-setup-field-hint">{hint}</p>}
       {children}
@@ -219,36 +221,24 @@ export function SetupField({
   );
 }
 
-export const ChevronDown = ({ open }: { open: boolean }) => (
-  <span
-    aria-hidden="true"
-    style={{
-      marginLeft: 'auto', display: 'inline-flex', flexShrink: 0,
-      transition: 'transform 150ms ease', transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-      color: '#6a6772',
-    }}
-  >
-    <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
-      <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
-    </svg>
-  </span>
+export const Spinner = ({ size = 14 }: { size?: number }) => (
+  <span aria-hidden="true" className="koala-setup-spinner" style={{ width: size, height: size }} />
 );
 
-export const Spinner = ({ size = 14 }: { size?: number }) => (
-  <span
-    aria-hidden="true"
-    style={{
-      display: 'inline-block', width: size, height: size, flexShrink: 0,
-      border: '2px solid #e5e5e5', borderTopColor: '#F84416', borderRadius: '50%',
-          animation: 'koala-setup-spin 0.7s linear infinite',
-    }}
-  />
-);
+/** Inline "working on it" line — spinner + label, used while brand data loads. */
+export function SetupLoadingLine({ children }: { children: ReactNode }) {
+  return (
+    <span className="koala-setup-loading-line">
+      <Spinner />
+      {children}
+    </span>
+  );
+}
 
 export const CheckCircle = () => (
   <span className="koala-setup-benefit-check" aria-hidden="true">
     <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-      <path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 12.5l4.5 4.5L19 7" stroke="var(--koala-text-on-brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   </span>
 );
@@ -259,8 +249,6 @@ export function OrDivider() {
 
 export function SetupError({ message }: { message: string }) {
   return (
-    <p style={{ margin: 0, fontSize: 13, color: '#d50000', fontFamily: FONT }} role="alert">
-      {message}
-    </p>
+    <p className="koala-setup-error" role="alert">{message}</p>
   );
 }
