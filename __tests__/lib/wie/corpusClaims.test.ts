@@ -188,4 +188,34 @@ describe('Polish morphology and the source domain', () => {
       'https://x.pl/',
     )).toHaveLength(1);
   });
+  /**
+   * Scraped sentences mix the two spellings freely. Choosing a single branch on "does
+   * this contain any Polish letter" meant an ASCII verb carrying one accented noun was
+   * routed to the rule that cannot see it, and the testimonial survived.
+   */
+  it('rejects a testimonial whose verb is ASCII but whose nouns are not', () => {
+    expect(extractCorpusClaims(
+      'Powierzylam agencji detektywistycznej sledzenie męża i otrzymalam pelen raport.',
+      'prywatny detektyw warszawa',
+      24,
+      'https://x.pl/',
+    )).toEqual([]);
+  });
+
+  /** Both spellings of the same testimonial, and the noun guard still holds. */
+  it.each([
+    ['fully accented', 'Powierzyłam agencji śledzenie męża i otrzymałam pełen raport z obserwacji.'],
+    ['fully ASCII', 'Powierzylam agencji sledzenie meza i otrzymalam pelen raport z obserwacji.'],
+  ])('rejects the %s testimonial', (_label, sentence) => {
+    expect(extractCorpusClaims(sentence, 'prywatny detektyw warszawa', 24, 'https://x.pl/')).toEqual([]);
+  });
+
+  it('still keeps instrumental nouns that merely look like the verb ending', () => {
+    expect(extractCorpusClaims(
+      'Dowody zabezpieczane są profilem DNA oraz kanalem szyfrowanym w kazdej sprawie.',
+      'prywatny detektyw warszawa',
+      24,
+      'https://x.pl/',
+    )).toHaveLength(1);
+  });
 });

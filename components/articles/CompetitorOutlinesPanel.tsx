@@ -253,10 +253,10 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
                 border: '1px solid var(--koala-bg-secondary)', borderRadius: 10, padding: '10px 12px',
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
-                <div style={{ width: 16, height: 16, borderRadius: 3, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
+                <div style={{ width: 16, height: 16, borderRadius: 3, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ width: '70%', height: 12, borderRadius: 4, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.05}s` }} />
-                  <div style={{ width: '40%', height: 10, borderRadius: 4, background: 'var(--koala-bg-secondary)', marginTop: 6, animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.1}s` }} />
+                  <div style={{ width: '70%', height: 12, borderRadius: 4, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.05}s` }} />
+                  <div style={{ width: '40%', height: 10, borderRadius: 4, background: 'var(--koala-bg-secondary)', marginTop: 6, animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.1}s` }} />
                 </div>
               </div>
             ))}

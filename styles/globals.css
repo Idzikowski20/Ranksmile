@@ -3170,6 +3170,16 @@ html.editor-route .app-content {
 .koala-search-bar { position: relative; }
 .koala-search-bar-icon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #6A6772; pointer-events: none; display: flex; z-index: 1; }
 .koala-skeleton-block { background: var(--koala-bg-secondary); animation: skeletonPulse 1.6s ease-in-out infinite; }
+/* Article canvas skeleton (components/articles/ArticleGenerationSkeleton) — sits over the
+   empty document for the length of a generate run. Opaque, so the empty ProseMirror lines
+   behind it don't show through; pointer-events:none so it never eats a click. Same
+   max-width/padding as `.art-editor-scroll .ProseMirror`, so the bars land on the text column. */
+.art-gen-skeleton {
+   position: absolute; top: 0; left: 0; right: 0; z-index: 2; pointer-events: none;
+   background: var(--koala-bg-primary);
+   max-width: 860px; margin: 0 auto; padding: 32px 64px 80px; box-sizing: border-box;
+}
+.art-gen-skeleton[data-static='true'] .koala-skeleton-block { animation: none; }
 .koala-secret-field-wrap { position: relative; display: inline-block; }
 .koala-secret-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: #6A6772; cursor: pointer; padding: 4px; }
 .koala-toggle-field-row { display: flex; justify-content: flex-end; }

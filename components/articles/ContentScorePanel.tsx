@@ -737,10 +737,10 @@ const ContentScorePanel = ({
                 {isLoadingCompetitors ? (
                   [1, 2, 3].map((i) => (
                     <div key={i} style={{ border: '1px solid var(--koala-bg-secondary)', borderRadius: 8, padding: '8px 10px', display: 'flex', gap: 8 }}>
-                      <div style={{ width: 14, height: 14, borderRadius: 2, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite' }} />
+                      <div style={{ width: 14, height: 14, borderRadius: 2, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.6s ease-in-out infinite' }} />
                       <div style={{ flex: 1 }}>
-                        <div style={{ width: '65%', height: 11, borderRadius: 3, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.05s' }} />
-                        <div style={{ width: '40%', height: 9, borderRadius: 3, background: 'var(--koala-bg-secondary)', marginTop: 5, animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.1s' }} />
+                        <div style={{ width: '65%', height: 11, borderRadius: 3, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.05s' }} />
+                        <div style={{ width: '40%', height: 9, borderRadius: 3, background: 'var(--koala-bg-secondary)', marginTop: 5, animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.1s' }} />
                       </div>
                     </div>
                   ))
