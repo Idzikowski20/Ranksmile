@@ -148,6 +148,29 @@ describe('writeOutlineBrief', () => {
     expect(headings?.[2].instructions).toEqual(['Wymień usługi']);
   });
 
+  /**
+   * The tokens are spent whether or not the ledger write lands. Reporting them from
+   * inside the LLM try/catch meant a failing accounting call returned `null` and threw
+   * away a brief that already existed.
+   */
+  it('keeps the brief when token accounting fails, and reports what was spent', async () => {
+    const seen: number[] = [];
+
+    const headings = await writeOutlineBrief({
+      keyword: 'k',
+      bundle: bundle(),
+      brandKnowledge: BRAND,
+      llmEdit: async () => ({ html: GOOD, tokens: 4321 }),
+      onTokens: async (tokens) => { seen.push(tokens); throw new Error('ledger down'); },
+    });
+
+    expect(seen).toEqual([4321]);
+    expect(headings?.[1].instructions).toEqual([
+      'Krótki lead o ProDetektyw.',
+      'Wspomnij licencję RD-58/2020.',
+    ]);
+  });
+
   /** A brief is an upgrade on the extracted outline, never a precondition for it. */
   it.each([
     ['unparseable output', 'sorry, I cannot help with that'],

@@ -33,7 +33,7 @@ export type BriefWriterInput = {
   competitorHeadings?: string[];
   language?: string;
   /** Charged to the org's shared pool: the gate that blocks the call also has to see it. */
-  onTokens?: (tokens: number) => void;
+  onTokens?: (tokens: number) => void | Promise<void>;
   signal?: AbortSignal;
   llmEdit?: (userPrompt: string, systemPrompt: string) => Promise<{ html: string; tokens: number }>;
 };
@@ -207,6 +207,7 @@ export async function writeOutlineBrief(input: BriefWriterInput): Promise<Approv
 
   const { system, user } = buildPrompt(input);
   let raw = '';
+  let spent = 0;
   try {
     const { wieLlmComplete } = await import('../wie/writer');
     const res = await wieLlmComplete({
@@ -220,10 +221,21 @@ export async function writeOutlineBrief(input: BriefWriterInput): Promise<Approv
       llmEdit: input.llmEdit,
     });
     raw = res.html;
-    input.onTokens?.(res.tokens);
+    spent = res.tokens;
   } catch (err) {
     console.warn('[briefWriter] LLM brief failed:', err instanceof Error ? err.message : err);
     return null;
+  }
+
+  // Outside that catch, and awaited: the tokens are already spent whether or not the
+  // accounting write succeeds, so a failing ledger must not discard a brief that exists —
+  // and the next request's gate has to see this spend before it decides.
+  if (spent > 0) {
+    try {
+      await input.onTokens?.(spent);
+    } catch (err) {
+      console.warn('[briefWriter] token accounting failed:', err instanceof Error ? err.message : err);
+    }
   }
 
   const parsed = parseBrief(raw.replace(/<[^>]+>/g, ''));
