@@ -1,0 +1,36 @@
+python-sidecar/pipeline/article_pipeline.py
+  s_668ab4f91e9d5a::t_a7085343e60546 246-248
+python-sidecar/pipeline/section_writer.py
+  s_668ab4f91e9d5a::t_2bf6883b2428ca 66-105,107-135,137,143,145
+python-sidecar/tests/test_compiled_runtime.py
+  s_668ab4f91e9d5a::t_0eaf69b7da9912 38-76
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_23fcc3f8437d82 272-279,281-283
+  s_668ab4f91e9d5a::t_43699bb18cdc46 60-74
+  s_668ab4f91e9d5a::t_39b9756099b742 251
+  s_668ab4f91e9d5a::t_383e50fcab1249 26
+  s_668ab4f91e9d5a::t_dd0d22df209bd6 51-52
+  s_668ab4f91e9d5a::t_de4318b37f775b 418
+python-sidecar/pipeline/compiled_runtime.py
+  s_668ab4f91e9d5a::t_e458e2584f7481 26-51
+  s_668ab4f91e9d5a::t_0e69ebb6bc0bfb 68-69,80-87,92
+python-sidecar/tests/test_section_writer.py
+  s_668ab4f91e9d5a::t_7efb28a63446dd 4,11-20
+  s_668ab4f91e9d5a::t_2b2bec221fe470 57-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "529e1150ee6b90b8e00fca93ded9185416186461",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
