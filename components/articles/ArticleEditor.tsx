@@ -2497,7 +2497,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           <OutlineGenerateBar
             planning={outlineBusy}
             busy={generateBusy}
-            status={generateMsg}
             progressPct={generatePct}
             headingCount={outlineHeadingCount}
             onGenerate={handleOutlineGenerate}

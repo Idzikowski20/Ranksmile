@@ -32,16 +32,33 @@ it('shows a progress pill with no controls while writing', () => {
 });
 
 /**
- * The editor passes its generation-status state straight through here. That state used
- * to be seeded with "Generating article…", so an idle review bar announced a run that
- * had not started and the reviewer never saw how many headings were waiting.
+ * All three states are one pill that changes its label. The review state used to be a
+ * wide bar restating "Outline / Review outline / N headings ready" — the outline being
+ * described is on screen already — so the control changed shape on every transition.
  */
-it('falls back to the heading count when no status is in flight', () => {
-  render(<OutlineGenerateBar busy={false} status="" headingCount={12} onGenerate={noop} />);
-  expect(screen.getByText('12 headings ready — edit freely, then generate')).toBeInTheDocument();
+it('is the same pill in every state, not a wider bar while reviewing', () => {
+  const { container: idle } = render(<OutlineGenerateBar busy={false} headingCount={12} onGenerate={noop} />);
+  const { container: writing } = render(<OutlineGenerateBar busy headingCount={12} onGenerate={noop} />);
+
+  const shapeOf = (el: HTMLElement) => {
+    const { height, borderRadius, width } = el.style;
+    return { height, borderRadius, width };
+  };
+  expect(shapeOf(idle.firstElementChild as HTMLElement))
+    .toEqual(shapeOf(writing.firstElementChild as HTMLElement));
 });
 
-it('shows a live status while one is supplied', () => {
-  render(<OutlineGenerateBar busy={false} status="Writing your article…" headingCount={12} onGenerate={noop} />);
-  expect(screen.getByText('Writing your article…')).toBeInTheDocument();
+it('says nothing but its own action while reviewing', () => {
+  render(<OutlineGenerateBar busy={false} headingCount={12} onGenerate={noop} />);
+
+  expect(screen.queryByText('Review outline')).toBeNull();
+  expect(screen.queryByText(/headings ready/)).toBeNull();
+  expect(screen.getByRole('button')).toHaveTextContent('Generate content');
+});
+
+it('explains why it is disabled instead of just going dead', () => {
+  render(<OutlineGenerateBar busy={false} headingCount={0} onGenerate={noop} />);
+
+  expect(screen.getByRole('button', { name: /Generate content/ }))
+    .toHaveAttribute('title', 'Add at least one heading to the outline first');
 });
