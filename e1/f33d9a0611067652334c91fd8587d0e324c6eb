@@ -1,0 +1,26 @@
+python-sidecar/pipeline/article_pipeline.py
+  s_668ab4f91e9d5a::t_aa18d2b292c270 86,95-105
+  s_668ab4f91e9d5a::t_798f076f96c843 52-71
+python-sidecar/tests/test_article_pipeline_reasoning.py
+  s_668ab4f91e9d5a::t_0bbcb656ed6471 1-27
+python-sidecar/pipeline/compiled_runtime.py
+  s_668ab4f91e9d5a::t_b1dfefab12ddd2 97-109
+python-sidecar/tests/test_compiled_runtime.py
+  s_668ab4f91e9d5a::t_0abeb0cd0260ba 80-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e1f33d9a0611067652334c91fd8587d0e324c6eb",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
