@@ -23,6 +23,7 @@ import { pipelineVersionTag } from '../../../../lib/pipelineVersion';
 import {
   aiIntelFromScoreData,
   competitorsFromScoreData,
+  enrichWithCorpusClaims,
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
   competitorHeadingTitles,
@@ -47,12 +48,29 @@ import {
 } from '../../../../lib/knowledgeEngine';
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
 import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchmarkIntelligence';
+import { mergeArticleTermSources } from '../../../../lib/mergeArticleTerms';
+import type { NlpTerm } from '../../../../lib/contentScore';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
 /** A claimed job with no update this long is presumed dead (killed function, timeout) and reclaimable. */
 const GENERATE_STALE_MINUTES = 10;
+
+/**
+ * NLP terms the Write Engine must weave in, strongest first.
+ *
+ * `allocateTerms` hands these out round-robin across paragraph plans, and they are the
+ * only keyword signal a paragraph prompt carries — passing an empty list (as this route
+ * used to) left every paragraph with nothing but its goal and word budget.
+ */
+function importantTermsFromScoreData(scoreData: Record<string, unknown>): string[] {
+  const terms = Array.isArray(scoreData.terms) ? (scoreData.terms as NlpTerm[]) : [];
+  return mergeArticleTermSources({ scoreDataTerms: terms })
+    .slice(0, 24)
+    .map((t) => t.term)
+    .filter(Boolean);
+}
 
 type ArticleGenerateRow = {
   target_keyword: string;
@@ -230,6 +248,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!competitors.length) {
       competitors = parseCompetitorCacheJson(article.competitor_outlines_cache);
     }
+    competitors = enrichWithCorpusClaims(competitors, scoreData.competitor_claims ?? null);
     competitors = enrichWithWieSynthesis(
       competitors,
       scoreData.competitor_synthesis ?? null,
@@ -250,9 +269,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let cieWarning: string | null = null;
 
     try {
+      // Prefer the benchmark deep-analysis stored, exactly as /content-plan does. Deriving
+      // it only from `competitors` here meant the two endpoints planned against different
+      // structural targets whenever the competitor rows had lost the fields
+      // benchmarkDocsFromCompetitors needs: the outline passed its gate in /content-plan
+      // and the same article then failed the write gate, with no way to tell why.
+      const storedBenchmark = scoreData.structural_benchmark && typeof scoreData.structural_benchmark === 'object'
+        ? (scoreData.structural_benchmark as StructuralBenchmark)
+        : null;
       const benchDocs = benchmarkDocsFromCompetitors(competitors);
-      if (benchDocs.length) {
-        structuralBenchmark = buildStructuralBenchmark(benchDocs);
+      structuralBenchmark = storedBenchmark
+        ?? (benchDocs.length ? buildStructuralBenchmark(benchDocs) : null);
+      if (structuralBenchmark) {
         plannerTargets = toPlannerTargets(structuralBenchmark);
       }
       if (useKnowledgeEngine) {
@@ -387,7 +415,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const compiledResult = compileAndValidateWritePlan(writePlan, {
-      importantTerms: [],
+      importantTerms: importantTermsFromScoreData(scoreData),
       allowBrandNiche,
     });
     if (!compiledResult.ok) {
