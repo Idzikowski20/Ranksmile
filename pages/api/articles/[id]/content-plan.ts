@@ -23,6 +23,9 @@ import {
 } from '../../../../lib/contentPlanner/fromArticleInputs';
 import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlanner';
 import { reviewOutlineFromBundle } from '../../../../lib/contentPlanner/reviewOutline';
+import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
+import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
+import { readContentSettings } from '../../../../lib/contentSettings';
 import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
 import {
   benchmarkDocsFromCompetitors,
@@ -198,7 +201,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // An empty outline is a failure, not an empty success: the planner gates on the
     // knowledge harvested by deep-analysis, so returning 200 + [] left the editor with
     // nothing but a generic "Could not generate an outline" and no way to see why.
-    const headings = reviewOutlineFromBundle(result.bundle);
+    // Loaded here rather than at the top of the handler: only the outline branch needs it,
+    // and the approvedOutline save path above returns long before this point.
+    const brand = await readContentSettings().catch(() => ({ brandName: '', brandKnowledge: '', voices: [] }));
+
+    // Brand knowledge finally reaches the planner. Without it the only company facts in
+    // scope were the competitors', which is exactly how a rival's address, licence number
+    // and testimonials ended up as instructions in a reviewed outline.
+    const written = await writeOutlineBrief({
+      keyword,
+      bundle: result.bundle,
+      brandKnowledge: brand.brandKnowledge,
+      brandName: brand.brandName,
+      importantTerms: importantTermsFromScoreData(scoreData ?? {}),
+      language: row.language || undefined,
+    });
+    const headings = written ?? reviewOutlineFromBundle(result.bundle);
     if (!headings.length) {
       const reason = [
         ...result.blueprintValidation.issues,

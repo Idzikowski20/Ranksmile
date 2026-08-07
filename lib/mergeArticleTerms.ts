@@ -28,3 +28,21 @@ export function termsForOptimize(opts: {
 }): NlpTerm[] {
   return mergeArticleTermSources(opts);
 }
+
+/**
+ * NLP terms an article must weave in, strongest first.
+ *
+ * Shared by the Write Engine (round-robin across paragraph plans) and the outline brief
+ * writer (terms handed to the model as a list to distribute), so the two cannot disagree
+ * about which vocabulary the article is being graded on.
+ */
+export function importantTermsFromScoreData(
+  scoreData: Record<string, unknown> | null | undefined,
+  max = 24,
+): string[] {
+  const raw = scoreData && Array.isArray(scoreData.terms) ? (scoreData.terms as NlpTerm[]) : [];
+  return mergeArticleTermSources({ scoreDataTerms: raw })
+    .slice(0, max)
+    .map((t) => t.term)
+    .filter(Boolean);
+}
