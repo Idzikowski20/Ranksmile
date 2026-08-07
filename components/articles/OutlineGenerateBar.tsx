@@ -12,7 +12,6 @@ export type OutlineGenerateBarProps = {
   progressPct?: number | null;
   headingCount: number;
   onGenerate: () => void;
-  onCancel: () => void;
   rightReserve?: number;
 };
 
@@ -71,21 +70,9 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
   progressPct,
   headingCount,
   onGenerate,
-  onCancel,
   rightReserve = 0,
 }) => {
   const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
-
-  // The Cancel button is gone, but discarding the review still has to be reachable:
-  // it aborts the in-flight request and restores the article the reviewer started
-  // from, which nothing else undoes. Escape carries it while the bar is idle.
-  const reviewable = !planning && !busy;
-  React.useEffect(() => {
-    if (!reviewable) return undefined;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [reviewable, onCancel]);
 
   if (planning) {
     return <ProgressPill label="Generating outline" rightReserve={rightReserve} />;
@@ -123,8 +110,9 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
         </span>
       </div>
 
-      {/* One action only. Cancel sat next to the button being aimed at and had no
-          undo — the outline is saved, so leaving the review is just navigating away. */}
+      {/* One action only, by request. Cancel sat next to the button being aimed at;
+          it is gone rather than hidden behind a shortcut, because a global Escape that
+          discards the review is a worse trade than no discard control at all. */}
       <Button
         type="button"
         variant="primary"
