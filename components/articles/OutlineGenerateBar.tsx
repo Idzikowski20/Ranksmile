@@ -12,7 +12,6 @@ export type OutlineGenerateBarProps = {
   progressPct?: number | null;
   headingCount: number;
   onGenerate: () => void;
-  onCancel: () => void;
   rightReserve?: number;
 };
 
@@ -71,7 +70,6 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
   progressPct,
   headingCount,
   onGenerate,
-  onCancel,
   rightReserve = 0,
 }) => {
   const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
@@ -112,21 +110,19 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          onClick={onGenerate}
-          disabled={headingCount < 1}
-          icon={<Icon name="Sparkle" size={16} weight="fill" />}
-        >
-          Generate content
-        </Button>
-      </div>
+      {/* One action only, by request. Cancel sat next to the button being aimed at;
+          it is gone rather than hidden behind a shortcut, because a global Escape that
+          discards the review is a worse trade than no discard control at all. */}
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        onClick={onGenerate}
+        disabled={headingCount < 1}
+        icon={<Icon name="Sparkle" size={16} weight="fill" />}
+      >
+        Generate content
+      </Button>
     </div>
   );
 };

@@ -50,7 +50,7 @@ export function CheckoutPageSkeleton() {
           gap: 0 40px;
           align-items: start;
         }
-        .cko-skel-rail { width: 1px; background: #e5e5e5; align-self: stretch; min-height: 480px; }
+        .cko-skel-rail { width: 1px; background: var(--koala-border-primary); align-self: stretch; min-height: 480px; }
         .cko-skel-left { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
         .cko-skel-right { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
         .cko-skel-methods { display: flex; gap: 16px; }
@@ -91,7 +91,7 @@ export function CheckoutPageSkeleton() {
                 <div
                   key={i}
                   style={{
-                    border: '1px solid #e5e5e5',
+                    border: '1px solid var(--koala-border-primary)',
                     borderRadius: 16,
                     padding: 16,
                     display: 'flex',
@@ -114,7 +114,7 @@ export function CheckoutPageSkeleton() {
                 <div
                   key={i}
                   style={{
-                    border: '1px solid #e5e5e5',
+                    border: '1px solid var(--koala-border-primary)',
                     borderRadius: 16,
                     padding: 12,
                     display: 'flex',

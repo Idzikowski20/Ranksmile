@@ -3,19 +3,20 @@ import toast from 'react-hot-toast';
 import Button from '../koala/primitives/Button';
 import { Textarea } from '../koala/core';
 import { Icon } from '../koala/icons';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { shadow } from '../koala/tokens/effects';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 import type { BillingConfirmation } from '../../lib/billingConfirmation';
 
 const F = 'var(--font-family-primary)';
-const BRAND = '#F84416';
-const BORDER = '#e5e5e5';
-const TEXT = '#1a1a1a';
-const MUTED = '#575757';
+const BORDER = 'var(--koala-border-primary)';
+const TEXT = 'var(--koala-text-primary)';
+const MUTED = 'var(--koala-text-secondary)';
+const SURFACE = 'var(--koala-bg-primary)';
 const CARD: React.CSSProperties = {
   border: `1px solid ${BORDER}`,
   borderRadius: 16,
   padding: 24,
-  background: '#fff',
+  background: SURFACE,
   boxSizing: 'border-box',
 };
 
@@ -92,7 +93,7 @@ export default function OrderConfirmationBody({
         justifyContent: 'center',
       }}
       >
-        <Icon name="CheckCircle" size={32} weight="fill" color="#1AB25E" />
+        <Icon name="CheckCircle" size={32} weight="fill" color="var(--koala-status-success)" />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
@@ -102,11 +103,11 @@ export default function OrderConfirmationBody({
           padding: '2px 6px',
           borderRadius: 8,
           border: `1px solid ${BORDER}`,
-          background: '#fff',
+          background: SURFACE,
           fontSize: 14,
           fontWeight: 500,
           color: MUTED,
-          boxShadow: '0 1px 1px rgba(0,0,0,0.04)',
+          boxShadow: shadow.xs,
         }}
         >
           {data.orderId}
@@ -126,7 +127,7 @@ export default function OrderConfirmationBody({
           type="button"
           variant="primary"
           size="md"
-          icon={<Icon name="ArrowRight" size={16} weight="bold" color="#fff" />}
+          icon={<Icon name="ArrowRight" size={16} weight="bold" color="var(--koala-text-on-brand)" />}
           onClick={onContinue}
         >
           Go to dashboard
@@ -182,8 +183,8 @@ export default function OrderConfirmationBody({
                         height: 40,
                         borderRadius: 12,
                         border: `1px solid ${BORDER}`,
-                        background: '#fff',
-                        boxShadow: active ? '0 1px 1px rgba(0,0,0,0.04)' : '0 1px 2px rgba(0,0,0,0.04)',
+                        background: SURFACE,
+                        boxShadow: active ? shadow.xs : shadow.sm,
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -222,7 +223,7 @@ export default function OrderConfirmationBody({
               border: `1px solid ${BORDER}`,
               borderRadius: 8,
               padding: '2px 8px',
-              background: '#fff',
+              background: SURFACE,
             }}
             >
               {data.lines.length} {data.lines.length === 1 ? 'item' : 'items'}
@@ -246,7 +247,7 @@ export default function OrderConfirmationBody({
                   height: 48,
                   borderRadius: 12,
                   border: `1px solid ${BORDER}`,
-                  background: '#fff',
+                  background: SURFACE,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

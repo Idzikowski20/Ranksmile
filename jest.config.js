@@ -11,6 +11,13 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   // Add more setup options before each test is run
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  // Git worktrees live inside the repo, so every checked-out branch's copy of
+  // every test was being collected and run alongside the real one.
+  // testPathIgnorePatterns stops them running; modulePathIgnorePatterns keeps
+  // haste-map from indexing them at all, which is what makes each worktree's
+  // __mocks__/{ai,data,utils} a "duplicate manual mock" of the real one.
+  testPathIgnorePatterns: ['/node_modules/', '/\\.next/', '/\\.worktrees/', '/\\.claude/worktrees/'],
+  modulePathIgnorePatterns: ['<rootDir>/\\.worktrees/', '<rootDir>/\\.claude/worktrees/'],
   // if using TypeScript with a baseUrl set to the root directory then you need the below for alias' to work
   moduleDirectories: ['node_modules', '<rootDir>/'],
   testEnvironment: 'jest-environment-jsdom',

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from '@emotion/styled';
 import { Button } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 import { semantic } from '../koala/tokens/semantic';
 import { fontWeight, typeface } from '../koala/tokens/typography';
 

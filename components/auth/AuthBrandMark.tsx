@@ -1,5 +1,5 @@
 import React from 'react';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 /** Animated Ranksmile / Smily mark for auth card headers. */
 export default function AuthBrandMark({ size = 56 }: { size?: number }) {

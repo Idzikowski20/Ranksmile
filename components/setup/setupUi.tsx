@@ -6,7 +6,7 @@ import KoalaHeader from '../koala/shell/Header';
 import { KoalaPage, KoalaPanel, KoalaPanelBody } from '../koala/layout';
 import Input from '../koala/primitives/Input';
 import { MenuList } from '../koala/core';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 const SETUP_WIZARD_WIDTH_NARROW = 480;
 const SETUP_WIZARD_WIDTH_WIDE = 880;

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { semantic } from '../koala/tokens/semantic';
 import { typeface, fontWeight } from '../koala/tokens/typography';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 /** DOM node for the header's center slot — set by OnboardingShell, consumed by OnboardingHeaderCenter. */
 export const OnboardingHeaderCenterContext = React.createContext<HTMLDivElement | null>(null);

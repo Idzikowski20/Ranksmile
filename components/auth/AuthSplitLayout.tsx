@@ -1,5 +1,5 @@
 import React from 'react';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 const F = 'var(--font-family-primary)';
 
