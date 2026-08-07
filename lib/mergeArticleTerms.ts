@@ -50,7 +50,19 @@ export function importantTermsFromScoreData(
 ): string[] {
   const max = opts?.max ?? 24;
   const raw = scoreData && Array.isArray(scoreData.terms) ? (scoreData.terms as NlpTerm[]) : [];
+  // Ranked before the cut. `mergeNlpTerms` returns Map insertion order — table rows in
+  // whatever order the query returned them, then score-data terms — so slicing straight
+  // off it dropped whichever strong term happened to land past the cap, and dropped a
+  // different one whenever the row order changed.
   return mergeArticleTermSources({ scoreDataTerms: raw, tableTerms: opts?.tableTerms })
+    .slice()
+    .sort((a, b) => (
+      (b.target_count || 0) - (a.target_count || 0)
+      || (b.doc_freq || 0) - (a.doc_freq || 0)
+      || (b.salience || 0) - (a.salience || 0)
+      // Last resort so the same inputs always yield the same list.
+      || a.term.localeCompare(b.term)
+    ))
     .slice(0, max)
     .map((t) => t.term)
     .filter(Boolean);

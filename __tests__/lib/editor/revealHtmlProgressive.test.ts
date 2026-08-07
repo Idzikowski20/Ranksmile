@@ -171,21 +171,26 @@ describe('revealHtmlInEditor document integrity', () => {
     const mine = new AbortController();
     const theirs = new AbortController();
 
-    const revealMine = revealHtmlInEditor(editor, OUTLINE, { signal: mine.signal });
-    const revealTheirs = revealHtmlInEditor(other, OUTLINE, { signal: theirs.signal });
+    // try/finally: the shared afterEach only destroys `editor`, so a failed expectation
+    // here used to leak the second editor into every later test in the file.
+    try {
+      const revealMine = revealHtmlInEditor(editor, OUTLINE, { signal: mine.signal });
+      const revealTheirs = revealHtmlInEditor(other, OUTLINE, { signal: theirs.signal });
 
-    // Same observable as the supersede test above, inverted: this cleanup must run.
-    const removed = jest.spyOn(CSSStyleDeclaration.prototype, 'removeProperty');
-    mine.abort();
-    await revealMine;
-    const cleared = removed.mock.calls.map(([prop]) => prop);
-    removed.mockRestore();
+      // Same observable as the supersede test above, inverted: this cleanup must run.
+      const removed = jest.spyOn(CSSStyleDeclaration.prototype, 'removeProperty');
+      mine.abort();
+      await revealMine;
+      const cleared = removed.mock.calls.map(([prop]) => prop);
+      removed.mockRestore();
 
-    expect(cleared).toContain('opacity');
+      expect(cleared).toContain('opacity');
 
-    theirs.abort();
-    await revealTheirs;
-    other.destroy();
+      theirs.abort();
+      await revealTheirs;
+    } finally {
+      other.destroy();
+    }
   });
 
   it('clears the document for empty html', async () => {

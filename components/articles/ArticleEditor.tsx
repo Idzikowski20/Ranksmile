@@ -46,6 +46,7 @@ import IconSmily from './IconSmily';
 import ProgressiveBlur from '../common/ProgressiveBlur';
 import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 import OutlineGenerateBar from './OutlineGenerateBar';
+import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
 import { revealHtmlInEditor, editorCanCommand } from '../../lib/editor/revealHtmlProgressive';
 import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
 import { clearWizardState } from '../../lib/wizardState';
@@ -2232,6 +2233,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       if (editor && highlightTerms) editor.view.dispatch(editor.state.tr);
     }, [scoreData?.terms, highlightTerms, editor]);
 
+    // Outline planning / article writing into a still-empty document. `docEmpty` is recomputed
+    // from the editor on every content change, and every reveal in a run commits with
+    // emitUpdate:true — so the skeleton is gone the moment setContent lands, before the
+    // block-by-block fade starts touching inline styles on view.dom.children.
+    const generating = (outlineBusy || generateBusy) && docEmpty;
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', background: 'var(--koala-bg-primary)', position: 'relative' }}>
         <style>{`
@@ -2303,6 +2310,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll[data-empty="true"] .ProseMirror { min-height: 0; padding-bottom: 8px; }
           /* Hide the paragraph placeholder while importing so only "Importing your content…" shows. */
           .art-editor-scroll[data-importing="true"] .ProseMirror p.is-empty::before { content: none; }
+          /* While a run is writing into the document, drop BOTH placeholders instead of swapping in
+             busy copy: "Untitled" + "Start writing…" invite the user to type into a doc that is about
+             to be overwritten, and any replacement label would just repeat the progress pill. The
+             skeleton is the state; idle keeps the invitation, which is correct when nothing is running. */
+          .art-editor-scroll[data-generating="true"] .ProseMirror h1.is-empty::before,
+          .art-editor-scroll[data-generating="true"] .ProseMirror p.is-empty::before { content: none; }
           .art-editor-scroll .ProseMirror a { color: var(--koala-text-link); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
           .art-editor-scroll .ProseMirror a:hover { color: var(--koala-text-link); }
           .art-editor-scroll[data-review="true"] .ProseMirror a { background: var(--koala-text-brand); color: var(--koala-text-on-brand) !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
@@ -2347,7 +2360,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         {/* Scrollable editor — Featured image sits above the body; Title/Description
             live in Publish or Export. Relative wrapper pins blur fades to scroll edges. */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'} data-readonly={readOnly ? 'true' : 'false'} data-empty={docEmpty && !readOnly ? 'true' : 'false'} data-importing={importBusy ? 'true' : 'false'}>
+        <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'} data-readonly={readOnly ? 'true' : 'false'} data-empty={docEmpty && !readOnly ? 'true' : 'false'} data-importing={importBusy ? 'true' : 'false'} data-generating={generating ? 'true' : 'false'}>
           <div
             ref={editorWrapRef}
             className={ranksmileSelection ? 'ranksmile-selection-highlight' : ''}
@@ -2386,7 +2399,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 />
               </div>
             ) : null}
-            <EditorContent editor={editor} style={{ background: 'var(--koala-bg-primary)' }} />
+            {/* Relative so the skeleton overlays the document box only — never the featured image above it. */}
+            <div style={{ position: 'relative' }}>
+              <EditorContent editor={editor} style={{ background: 'var(--koala-bg-primary)' }} />
+              <ArticleGenerationSkeleton busy={outlineBusy || generateBusy} empty={docEmpty} />
+            </div>
             {editor && docEmpty && !readOnly && !generateBusy && !outlineReviewMode && (
               <div style={{ maxWidth: 860, margin: '0 auto', padding: '4px 64px 80px', fontFamily: CTA_FONT }}>
                 {importBusy ? (

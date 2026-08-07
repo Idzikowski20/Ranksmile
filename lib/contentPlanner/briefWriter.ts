@@ -103,10 +103,13 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
     '"Jak dziala prywatny detektyw w Warszawie - od pierwszej rozmowy do raportu", not "Kim jestesmy".',
     'Keep the given order and count, one heading per role. FAQ and the closing section keep their plain names.',
     '',
-    'INSTRUCTIONS: 4-6 per section, in this shape —',
-    'open with the lead and its length ("Krotki wstep (2-3 zdania), ze ..."),',
-    'then what to enumerate or explain, one directive per bullet,',
-    'and close with a bullet naming the exact phrases to weave in.',
+    'INSTRUCTIONS: 5-6 per section, 25-40 words each. A one-line summary is not a brief —',
+    'each bullet must carry the concrete detail the writer would otherwise have to invent.',
+    'First bullet: the lead and how long it runs — "Krotki wstep (2-3 zdania), ze ...".',
+    'Middle bullets: "Punkt o <temat>: <konkretne wyliczenie>" — name the actual services,',
+    'registries, documents, courts, districts or steps, not the category they belong to.',
+    'Last bullet: "Wplec frazy: ..." listing the exact phrases from the terms above.',
+    'Never tell the writer to copy a competitor; say what to cover, from the BRAND section.',
   ].join(' ');
 
   const sections = bundle.briefs.map((brief, i) => {

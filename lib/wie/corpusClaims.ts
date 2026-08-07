@@ -69,13 +69,14 @@ const MARKETING_MARKS = /[!®™]|\bzobacz wiecej\b|\bskontaktuj sie\b|\bzadzwon
  */
 const FIRST_PERSON_PAST = /\p{L}{2,}(?:łem|łam|liśmy|łyśmy)\b/iu;
 
-/** Any Polish letter the fold would change — the signal that the rule above can work. */
-const POLISH_DIACRITIC = /[ąćęłńóśźż]/iu;
-
 /**
- * The same check for a page scraped without diacritics, where `-łem` and `-lem` are the
- * same string and the rule above can never fire — those pages had no first-person check
- * at all, so their testimonials and consent copy reached the outline.
+ * The same check for text written without diacritics, where `-łem` and `-lem` are the
+ * same string and the rule above can never fire.
+ *
+ * Applied alongside the Polish rule, never instead of it: scraped sentences mix the two
+ * freely, and picking a single branch on "does this sentence contain any Polish letter"
+ * let `Powierzylam ... męża` through — an ASCII verb carrying one accented noun routed
+ * the whole sentence to the rule that cannot see it.
  *
  * `-lam/-liśmy/-łyśmy` fold to endings no Polish noun has, so they stay general. `-lem`
  * cannot: folded, it is also the instrumental of every noun ending in l/ł ("profilem",
@@ -98,9 +99,7 @@ const FIRST_PERSON_PAST_ASCII = new RegExp(
  *  otherwise be two codepoints and never match. */
 function isFirstPersonPast(sentence: string): boolean {
   const text = sentence.normalize('NFC');
-  return POLISH_DIACRITIC.test(text)
-    ? FIRST_PERSON_PAST.test(text)
-    : FIRST_PERSON_PAST_ASCII.test(text);
+  return FIRST_PERSON_PAST.test(text) || FIRST_PERSON_PAST_ASCII.test(text);
 }
 
 /**

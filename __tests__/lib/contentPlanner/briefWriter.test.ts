@@ -221,4 +221,29 @@ describe('writeOutlineBrief', () => {
     expect(c.seen[0].user).toContain('Claim nothing about any company');
     expect(c.seen[0].user).not.toContain('what we are, who we serve');
   });
+  /**
+   * Measured off Surfer's own `outlineMd` for a comparable keyword: 28 bullets across 5
+   * sections, 15-41 words each (median 28), the first naming the lead's sentence count,
+   * ten of them in the "Punkt o <temat>: <wyliczenie>" form, and the last weaving the
+   * exact phrases. Ours were four short summary sentences with none of that.
+   */
+  it('asks for the bullet shape the reference briefs actually use', async () => {
+    const c = call(GOOD, { importantTerms: ['wykrywanie podsluchow', 'wywiad gospodarczy'] });
+    await c.run();
+
+    const { system, user } = c.seen[0];
+    expect(system).toMatch(/25-40 words each/);
+    expect(system).toMatch(/Krotki wstep \(2-3 zdania\)/);
+    expect(system).toMatch(/Punkt o <temat>/);
+    expect(system).toMatch(/Wplec frazy/);
+    // The phrases the closing bullet is meant to name have to be in the prompt.
+    expect(user).toContain('wykrywanie podsluchow');
+  });
+
+  it('tells the model to source detail from the brand document, not a competitor', async () => {
+    const c = call(GOOD);
+    await c.run();
+
+    expect(c.seen[0].system).toMatch(/Never tell the writer to copy a competitor/);
+  });
 });
