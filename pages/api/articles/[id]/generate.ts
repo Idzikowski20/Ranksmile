@@ -411,6 +411,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         brandName: cs.brandName,
         importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
         language: lang,
+        competitorHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
         signal: AbortSignal.timeout(BRIEF_TIMEOUT_MS),
       }));
 

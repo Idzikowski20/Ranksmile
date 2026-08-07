@@ -105,9 +105,14 @@ export function buildCompetitorBenchmark(
   const targetWords = Math.round(
     Math.max(BENCHMARK_WORDS_FLOOR, synth.recommendedWords, synth.averageWords * 1.02),
   );
-  const targetH2 = Math.max(
-    BENCHMARK_H2_FLOOR,
-    Math.round(synth.averageH2 || h2FromWords(targetWords)),
+  // A ceiling as well as a floor. `averageH2` counts every heading a competitor renders —
+  // H3s, nav, footer — so a SERP of long pages asked for 22 top-level sections, and the
+  // outline builder padded to match at ~100 words each. The reference tool reports the
+  // same wide heading range for this keyword ("Headings: 19-52") and still briefs six H2:
+  // the rest are H3 inside a section. The word budget is what decides how many H2 fit.
+  const targetH2 = Math.min(
+    Math.max(BENCHMARK_H2_FLOOR, Math.round(synth.averageH2 || h2FromWords(targetWords))),
+    h2FromWords(targetWords),
   );
   return {
     averageWords: synth.averageWords,

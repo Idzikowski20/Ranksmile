@@ -246,4 +246,56 @@ describe('writeOutlineBrief', () => {
 
     expect(c.seen[0].system).toMatch(/Never tell the writer to copy a competitor/);
   });
+
+  /**
+   * The planner's roles are generic ("Kim jesteśmy"). How specific a heading has to be is
+   * only visible in what the ranking pages call their own sections — the one input the
+   * model never saw, which is why it had nothing better than the role to work from.
+   */
+  it('shows the model how the ranking pages title their sections', async () => {
+    const c = call(GOOD, {
+      competitorHeadings: ['W jakich sprawach pomaga prywatny detektyw?', 'Kiedy nie warto działać samodzielnie?'],
+    });
+    await c.run();
+
+    expect(c.seen[0].user).toContain('RANKING PAGES');
+    expect(c.seen[0].user).toContain('W jakich sprawach pomaga prywatny detektyw?');
+    expect(c.seen[0].system).toMatch(/Never reuse a title that names a company/);
+  });
+
+  /**
+   * Twenty-two sections did not fit the model's output cap, so the reply came back cut
+   * mid-JSON and the whole brief was dropped — the caller then fell back to the planner's
+   * own `Cover: <scraped sentence>` wording, which is what this module replaces. The
+   * sections that did arrive are worth keeping.
+   */
+  it('keeps the sections a truncated reply did deliver', async () => {
+    const truncated = '{"title":"T","sections":[{"n":1,"heading":"Jak działa detektyw",'
+      + '"instructions":["Krótki wstęp (2-3 zdania)."]},{"n":2,"heading":"Zakres usł';
+
+    const headings = await call(truncated).run();
+
+    expect(headings?.[1].text).toBe('Jak działa detektyw');
+    expect(headings?.[1].instructions).toEqual(['Krótki wstęp (2-3 zdania).']);
+    // The section that never arrived keeps the planner's own wording.
+    expect(headings?.[2].text).toBe('Zakres usług');
+  });
+
+  /**
+   * Pairing on array position alone means one dropped section re-labels every section
+   * after it: section 2's brief would be written under section 1's role.
+   */
+  it('pairs a section with the role it was given, not its position in the reply', async () => {
+    const middleDropped = JSON.stringify({
+      title: 'T',
+      sections: [{ n: 2, heading: 'Zakres usług detektywistycznych', instructions: ['b'] }],
+    });
+
+    const headings = await call(middleDropped).run();
+
+    expect(headings?.[1].text).toBe('Kim jesteśmy');
+    expect(headings?.[1].instructions).toEqual(['Przedstaw agencję']);
+    expect(headings?.[2].text).toBe('Zakres usług detektywistycznych');
+    expect(headings?.[2].instructions).toEqual(['b']);
+  });
 });
