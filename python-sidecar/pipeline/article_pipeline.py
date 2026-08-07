@@ -243,7 +243,9 @@ async def run_pipeline(
             if on_status:
                 # Status feedback must never break the write.
                 try:
-                    await on_status(f"Writing section {written}…")
+                    # Paragraphs, not sections: write_markdown runs once per paragraph
+                    # plan, so a 12-section outline reports well past 12.
+                    await on_status(f"Writing paragraph {written}…")
                 except Exception as exc:
                     print(f"[generate] status callback failed: {exc}")
             return await _chat(

@@ -1,11 +1,23 @@
 import asyncio
 from dataclasses import FrozenInstanceError
 
-from pipeline.section_writer import ParagraphResult, write_paragraph
+from pipeline.section_writer import ParagraphResult, _prompt, write_paragraph
 
 
 async def _markdown(_: str) -> str:
     return "Audyt SEO wskazuje priorytety. Audyt pokazuje kolejne kroki."
+
+
+CONTEXT = {
+    "title": "Audyt SEO krok po kroku",
+    "heading": "Ile trwa audyt SEO",
+    "objective": "Wyjasnij zakres audytu\nCover: audyt trwa 2-4 tygodnie",
+    "index": {
+        "claims": {"c1": "Audyt trwa 2-4 tygodnie"},
+        "questions": {"q1": "Ile kosztuje audyt?"},
+        "entities": {"e1": "Google Search Console"},
+    },
+}
 
 
 PARAGRAPH = {
@@ -42,3 +54,41 @@ def test_write_paragraph_returns_frozen_markdown_result():
         pass
     else:
         raise AssertionError("ParagraphResult must be immutable")
+
+
+def test_prompt_carries_the_section_the_paragraph_belongs_to():
+    """
+    The reason generated articles ignored the reviewed outline: the prompt was built from
+    `goal` + `expected_words` + terms only, so the model never learned which section it
+    was writing, and every paragraph came back as generic filler about the keyword.
+    """
+    prompt = _prompt(PARAGRAPH, CONTEXT)
+
+    assert "Audyt SEO krok po kroku" in prompt
+    assert "Ile trwa audyt SEO" in prompt
+    assert "Wyjasnij zakres audytu" in prompt
+    assert "Cover: audyt trwa 2-4 tygodnie" in prompt
+
+
+def test_prompt_resolves_reference_ids_into_their_text():
+    """Paragraph plans point at the knowledge graph by ID; unresolved IDs teach nothing."""
+    prompt = _prompt(PARAGRAPH, CONTEXT)
+
+    assert "Audyt trwa 2-4 tygodnie" in prompt
+    assert "Ile kosztuje audyt?" in prompt
+    assert "Google Search Console" in prompt
+    assert "c1" not in prompt and "q1" not in prompt
+
+
+def test_prompt_omits_sections_with_nothing_to_say():
+    """No context (legacy callers, empty graph) must not emit dangling empty labels."""
+    prompt = _prompt({"id": "p1", "goal": "intro", "expected_words": 40})
+
+    assert "Article title" not in prompt
+    assert "Must cover" not in prompt
+    assert "Paragraph role: intro" in prompt
+
+
+def test_prompt_scopes_the_model_to_a_single_paragraph():
+    """Handed a heading and a brief, the model will happily write the whole section."""
+    assert "Write only this paragraph" in _prompt(PARAGRAPH, CONTEXT)
