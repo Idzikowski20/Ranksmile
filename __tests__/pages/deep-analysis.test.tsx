@@ -348,6 +348,34 @@ describe('DeepAnalysisPage', () => {
     second.unmount();
   });
 
+  /**
+   * The article a resumed run points at can be gone — deleted from the list while the tab
+   * sat open. `job-progress` then answers 403/404, which the poll swallowed along with
+   * every other non-OK response: no step ever moved, no error appeared, and the session
+   * pointer made each reload resume the same dead run.
+   */
+  it('stops and reports when the run it resumes no longer exists', async () => {
+    const runKey = 'ranksmile-deep-analysis-page:new:https://example.com/article::';
+    sessionStorage.setItem(runKey, JSON.stringify({ articleId: 177, jobId: 'job_177_1' }));
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url === '/api/articles/job-progress?jobId=job_177_1') {
+        return Promise.resolve({
+          ok: false,
+          status: 404,
+          json: async () => ({ error: 'job not found' }),
+        } as unknown as Response);
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    render(<DeepAnalysisPage />);
+
+    await waitFor(() => expect(screen.getByText('Analysis failed')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Content type' })).toBeDisabled();
+    expect(sessionStorage.getItem(runKey)).toBeNull();
+  });
+
   it('marks every row complete when the background job finishes', async () => {
     fetchMock.mockImplementation((input) => {
       const url = String(input);
