@@ -228,7 +228,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       importantTerms: importantTermsFromScoreData(scoreData ?? {}, { tableTerms }),
       language: row.language || undefined,
       competitorHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
-      onTokens: (tokens) => { recordAiTokens(orgId, tokens).catch(() => {}); },
+      onTokens: (tokens) => recordAiTokens(orgId, tokens),
     });
     const headings = written ?? reviewOutlineFromBundle(result.bundle);
     if (!headings.length) {

@@ -415,7 +415,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
         language: lang,
         competitorHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
-        onTokens: (tokens) => { recordAiTokens(orgId, tokens).catch(() => {}); },
+        // Cron runs resolve no org and skip the budget gate entirely, so there is nothing
+        // to charge — same shape deep-analysis uses for its coverage spend.
+        onTokens: orgId == null ? undefined : (tokens) => recordAiTokens(orgId, tokens),
         signal: AbortSignal.timeout(BRIEF_TIMEOUT_MS),
       }));
 
