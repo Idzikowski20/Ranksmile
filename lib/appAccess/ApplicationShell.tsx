@@ -6,7 +6,7 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
 import { fetchBootstrapOrNull } from '../fetchBootstrap';
-import { isPublicPath } from '../isPublicPath';
+import { isPublicRoute } from '../isPublicPath';
 import {
   allowsFrontend,
   emitAccessTimeline,
@@ -26,8 +26,8 @@ type Props = { children: React.ReactNode };
 export function ApplicationShell({ children }: Props) {
   const router = useRouter();
   const asPath = router.asPath;
-  const path = asPath.split('?')[0] ?? router.pathname;
-  const isPublic = isPublicPath(path);
+  const path = asPath.split('?')[0] || router.pathname;
+  const isPublic = isPublicRoute(asPath, router.pathname);
 
   const [completedOverride, setCompleted] = React.useState<boolean | null>(null);
   const [confirmedOverride, setConfirmed] = React.useState<boolean | null>(null);
