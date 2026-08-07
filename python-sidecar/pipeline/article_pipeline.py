@@ -49,39 +49,11 @@ które rankują na pierwszej stronie Google. Artykuły muszą być:
 Zwracaj TYLKO HTML artykułu (bez DOCTYPE, body, head — czysty HTML artykułu)."""
 
 
-#: What OpenRouter accepts. Anything else is a typo, not a setting.
-_REASONING_LEVELS = frozenset({"low", "medium", "high"})
-_REASONING_OFF = frozenset({"", "off", "none", "0", "false"})
-
-
-def _reasoning_effort() -> str:
-    """
-    Off by default, and deliberately so.
-
-    A hardcoded `reasoning: {effort: medium}` made every single writer call come back
-    with empty content: reasoning tokens count against max_tokens, and at the 1200 the
-    paragraph writer asks for, the model spent the whole budget thinking and emitted
-    nothing. Eleven consecutive empty responses produced an article of headings and
-    images with no prose — which then passed as a successful generation.
-
-    Set OPENROUTER_REASONING_EFFORT to turn it back on; raise the paragraph budget with it.
-
-    Only the provider's own levels are accepted. An unrecognised value used to be sent
-    verbatim, and the request error that came back was swallowed by `_chat`'s catch-all
-    into the same empty string this whole guard exists to prevent — a typo in an env var
-    would have looked exactly like the bug.
-    """
-    effort = (os.getenv("OPENROUTER_REASONING_EFFORT") or "").strip().lower()
-    if effort in _REASONING_LEVELS:
-        return effort
-    if effort and effort not in _REASONING_OFF:
-        print(f"[generate] ignoring OPENROUTER_REASONING_EFFORT={effort!r} (expected one of {sorted(_REASONING_LEVELS)})")
-    return ""
-
-
-def _reasoning_body() -> dict:
-    effort = _reasoning_effort()
-    return {"extra_body": {"reasoning": {"effort": effort}}} if effort else {}
+# No `reasoning` parameter here, deliberately. A hardcoded `reasoning: {effort: medium}`
+# made every writer call come back with empty content: reasoning tokens count against
+# max_tokens, and at the 1200 the paragraph writer asks for, the model spent the whole
+# budget thinking and emitted nothing. Eleven consecutive empty responses produced an
+# article of headings and images with no prose, which then passed as a success.
 
 
 async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYSTEM_PROMPT) -> str:
@@ -98,7 +70,6 @@ async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYS
             model=MODEL,
             max_tokens=max_tokens,
             messages=messages,
-            **_reasoning_body(),
         )
     except Exception as exc:
         print(f"[generate] OpenRouter chat failed: {type(exc).__name__}: {exc}")
@@ -115,8 +86,7 @@ async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYS
             "[generate] _chat returned empty content"
             f" (finish_reason={getattr(choice, 'finish_reason', None)},"
             f" max_tokens={max_tokens},"
-            f" completion_tokens={getattr(usage, 'completion_tokens', None)},"
-            f" reasoning={_reasoning_effort() or 'off'})"
+            f" completion_tokens={getattr(usage, 'completion_tokens', None)})"
         )
     return content
 
