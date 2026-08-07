@@ -1,0 +1,42 @@
+pages/api/articles/[id]/content-plan.ts
+  s_668ab4f91e9d5a::t_b9301a37ce7602 19
+  s_668ab4f91e9d5a::t_5e137f5411f24a 103
+  s_668ab4f91e9d5a::t_98a59a91c8807f 20
+  s_668ab4f91e9d5a::t_ad9623618a9034 208-209,216-219,221,223-225
+  s_668ab4f91e9d5a::t_769545239ad0e4 210-214,220
+  s_668ab4f91e9d5a::t_8797eaccd79626 215
+lib/contentPlanner/runContentPlanner.ts
+  s_668ab4f91e9d5a::t_9a9c7d98fe0d6b 349-387
+  s_668ab4f91e9d5a::t_120770e11f4279 406-410
+  s_668ab4f91e9d5a::t_fdfe35b10e800f 36-38
+__tests__/lib/contentPlanner/sectionLabels.test.ts
+  s_668ab4f91e9d5a::t_6d97bc8375863d 98-172
+  s_668ab4f91e9d5a::t_6f3369e9d218a3 6
+lib/contentPlanner/intentBlueprint.ts
+  s_668ab4f91e9d5a::t_50b75b69653db8 29-59
+  s_668ab4f91e9d5a::t_46be2f4887fc59 90-102
+lib/contentPlanner/sectionLabels.ts
+  s_668ab4f91e9d5a::t_3c660d14639b2c 21-47
+  s_668ab4f91e9d5a::t_c17001e00d1636 120,123,133-136
+  s_668ab4f91e9d5a::t_cbddaff294b887 8-12
+  s_668ab4f91e9d5a::t_fc89541327d9f0 180-204
+  s_668ab4f91e9d5a::t_a633c41cbdb98e 155
+lib/contentPlanner/types.ts
+  s_668ab4f91e9d5a::t_16cf2bfd1bd95e 12-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "87a78a177994c99eec5e291d306626d2da70ae4e",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
