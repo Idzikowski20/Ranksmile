@@ -94,6 +94,19 @@ async def run_compiled_write_plan(
             reviewed.append(judged)
             markdown.append(judged.markdown)
 
+    # Headings come from the plan, so an article whose every write returned nothing still
+    # renders as valid HTML and sails past a "is there any text" check. That is exactly
+    # what shipped: eleven empty completions in a row became a page of headings and
+    # stock images that the pipeline reported as done.
+    written = sum(1 for item in reviewed if item.markdown.strip())
+    if reviewed and written == 0:
+        raise RuntimeError(
+            f"writer produced no prose for any of {len(reviewed)} paragraphs "
+            "(headings would render but the article would be empty)"
+        )
+    if written < len(reviewed):
+        print(f"[compiled_runtime] {len(reviewed) - written}/{len(reviewed)} paragraphs came back empty")
+
     return CompiledRunResult(
         html=render_html(parse_markdown("\n\n".join(markdown))),
         paragraphs=tuple(reviewed),
