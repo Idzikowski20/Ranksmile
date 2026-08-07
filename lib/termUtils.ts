@@ -45,12 +45,27 @@ export function isDictionaryQueryNoise(term: string): boolean {
   return DICTIONARY_QUERY_PATTERNS.some((re) => re.test(normalized));
 }
 
-export function normalizeTerm(term: string): string {
-  return term
+/**
+ * Lowercase and fold Polish letters to ASCII, leaving everything else — punctuation,
+ * regex metacharacters — untouched.
+ *
+ * Split out from `normalizeTerm` because that one also blanks non-alphanumerics, which
+ * is right for a term but would wreck a regex source — word boundaries, quantifiers
+ * and escapes would all be blanked. Safe to apply to a pattern and its input alike.
+ *
+ * NFD runs after the table so decomposed input (`z` + combining dot) folds as well —
+ * scraped HTML arrives in either form and the table only sees composed characters.
+ */
+export function foldPolishLetters(value: string): string {
+  return value
     .toLowerCase()
     .replace(/[ąćęłńóśźż]/g, (c) => PL_DIACRITICS[c] || c)
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+export function normalizeTerm(term: string): string {
+  return foldPolishLetters(term)
     .replace(/[^a-z0-9\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();

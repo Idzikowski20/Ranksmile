@@ -14,7 +14,7 @@ if SIDECAR_ROOT not in sys.path:
 @pytest.fixture
 def reload_service_urls(monkeypatch):
     def _reload(**env):
-        for key in ("NEXTJS_URL", "APP_BASE_URL", "NEXT_PUBLIC_APP_URL", "RENDER", "RAILWAY_ENVIRONMENT", "VERCEL"):
+        for key in ("NEXTJS_URL", "APP_BASE_URL", "NEXT_PUBLIC_APP_URL", "RENDER", "RAILWAY_ENVIRONMENT"):
             monkeypatch.delenv(key, raising=False)
         for key, value in env.items():
             if value is None:
@@ -32,8 +32,8 @@ def test_deployed_ignores_local_nextjs_url(reload_service_urls):
 
 
 def test_deployed_uses_explicit_public_url(reload_service_urls):
-    mod = reload_service_urls(RENDER="true", NEXTJS_URL="https://my-app.vercel.app")
-    assert mod.nextjs_url() == "https://my-app.vercel.app"
+    mod = reload_service_urls(RENDER="true", NEXTJS_URL="https://my-app.up.railway.app")
+    assert mod.nextjs_url() == "https://my-app.up.railway.app"
 
 
 def test_local_dev_defaults_to_localhost(reload_service_urls):

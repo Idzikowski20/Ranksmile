@@ -63,8 +63,7 @@ async function getSeoMeta(ctx: ToolCtx) {
   return ctx.cache.seoMeta;
 }
 
-// ms — one LLM call (same budget as the dedicated social/readability endpoints). The agent route's
-// maxDuration (300) covers DeepSeek steps plus up to two of these sequential calls (apply_readability).
+// ms — one LLM call (same budget as the dedicated social/readability endpoints).
 const ACTION_TIMEOUT = 60_000;
 
 // The /social-posts sidecar returns { variants: string[] } (SocialMediaModal reads data.variants).

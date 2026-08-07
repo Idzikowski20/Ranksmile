@@ -17,8 +17,6 @@ import { cronSecrets } from '../../../lib/cronAuth';
 import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '../../../lib/autopilot';
 import { nextjsUrl } from '../../../lib/serviceUrls';
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
 

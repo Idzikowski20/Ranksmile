@@ -12,8 +12,6 @@ import { getConnectionForWorkspace } from '../../../lib/wpConnection';
 import { wpRestFetch } from '../../../lib/wpRest';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 30 };
-
 // WordPress post statuses the plugin accepts (resolve_post_status validates against these).
 const STATUSES = [
    { value: 'draft', label: 'Draft' },

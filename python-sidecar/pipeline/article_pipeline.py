@@ -49,6 +49,13 @@ które rankują na pierwszej stronie Google. Artykuły muszą być:
 Zwracaj TYLKO HTML artykułu (bez DOCTYPE, body, head — czysty HTML artykułu)."""
 
 
+# No `reasoning` parameter here, deliberately. A hardcoded `reasoning: {effort: medium}`
+# made every writer call come back with empty content: reasoning tokens count against
+# max_tokens, and at the 1200 the paragraph writer asks for, the model spent the whole
+# budget thinking and emitted nothing. Eleven consecutive empty responses produced an
+# article of headings and images with no prose, which then passed as a success.
+
+
 async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYSTEM_PROMPT) -> str:
     if not get_openrouter_api_key():
         print("[generate] OPENROUTER_API_KEY missing — skipping chat")
@@ -63,7 +70,6 @@ async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYS
             model=MODEL,
             max_tokens=max_tokens,
             messages=messages,
-            extra_body={"reasoning": {"effort": "medium"}},
         )
     except Exception as exc:
         print(f"[generate] OpenRouter chat failed: {type(exc).__name__}: {exc}")
@@ -72,7 +78,16 @@ async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYS
     choice = response.choices[0] if response.choices else None
     content = ((choice.message.content if choice and choice.message else None) or "").strip()
     if not content:
-        print("[generate] _chat returned empty content")
+        # "empty content" alone is not a diagnosis — it looks identical whether the model
+        # refused, returned nothing, or spent the whole budget before emitting a token.
+        # finish_reason plus the usage split tells them apart at a glance.
+        usage = getattr(response, "usage", None)
+        print(
+            "[generate] _chat returned empty content"
+            f" (finish_reason={getattr(choice, 'finish_reason', None)},"
+            f" max_tokens={max_tokens},"
+            f" completion_tokens={getattr(usage, 'completion_tokens', None)})"
+        )
     return content
 
 
@@ -243,7 +258,9 @@ async def run_pipeline(
             if on_status:
                 # Status feedback must never break the write.
                 try:
-                    await on_status(f"Writing section {written}…")
+                    # Paragraphs, not sections: write_markdown runs once per paragraph
+                    # plan, so a 12-section outline reports well past 12.
+                    await on_status(f"Writing paragraph {written}…")
                 except Exception as exc:
                     print(f"[generate] status callback failed: {exc}")
             return await _chat(

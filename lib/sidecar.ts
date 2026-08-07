@@ -10,10 +10,9 @@ export function sidecarBase(): string {
    return sidecarUrl();
 }
 
-/** True when a reachable remote sidecar is configured (Render URL on Vercel, local sidecar in dev). */
+/** True when a reachable sidecar is configured (PYTHON_SIDECAR_URL on Railway, local sidecar in dev). */
 export function isSidecarConfigured(): boolean {
    const url = sidecarBase();
-   if (process.env.VERCEL) return !isLocalServiceUrl(url);
    return !isLocalServiceUrl(url) || Boolean(process.env.PYTHON_SIDECAR_URL?.trim());
 }
 

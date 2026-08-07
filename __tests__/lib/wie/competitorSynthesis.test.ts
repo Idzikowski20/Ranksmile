@@ -45,6 +45,49 @@ describe('WIE competitorSynthesis', () => {
     expect(block).toContain('COMPETITOR SYNTHESIS');
     expect(block.length).toBeLessThanOrEqual(1000);
   });
+
+  /**
+   * This fallback is the planner's floor whenever the synthesis LLM is unreachable, and
+   * the Plan Validator refuses a blueprint under five claims. Capping `critical` at four
+   * made that gate unreachable by construction: every fallback run 422'd on
+   * "targetClaims below minimum 5" no matter how rich the corpus was.
+   */
+  it('yields enough claims for the five-claim plan gate', () => {
+    const corpus = Array.from(
+      { length: 12 },
+      (_, i) => `Uslugi detektywistyczne w wariancie ${i} kosztuja okolo ${(i + 1) * 100} zlotych netto.`,
+    ).join(' ');
+
+    const s = heuristicCompetitorSynthesis({ keyword: 'detektyw', corpusTexts: [corpus] });
+
+    expect(s.critical.length).toBeGreaterThanOrEqual(5);
+  });
+
+  /** Information gain used to be `expert.slice(0, 2)`, so no expert phrasing meant none. */
+  it('derives information gain from figures, not from expert phrasing', () => {
+    const corpus = 'Audyt zajmuje zwykle 14 dni roboczych od podpisania umowy. '
+      + 'Raport obejmuje ponad 40 sprawdzanych czynnikow technicznych na stronie. '
+      + 'Klient otrzymuje liste rekomendacji uporzadkowana wedlug priorytetu wdrozenia.';
+
+    const s = heuristicCompetitorSynthesis({ keyword: 'audyt seo', corpusTexts: [corpus] });
+
+    expect(s.expert_claims).toHaveLength(0);
+    expect(s.information_gain.length).toBeGreaterThan(0);
+  });
+
+  it('does not promote cookie banners to critical insights', () => {
+    const s = heuristicCompetitorSynthesis({
+      keyword: 'detektyw',
+      corpusTexts: [
+        'This website uses cookies to improve your experience on our site. '
+        + 'Wszelkie prawa zastrzeżone przez właściciela serwisu internetowego. '
+        + 'Detektyw prowadzi obserwacje oraz ustala miejsce pobytu osób zaginionych.',
+      ],
+    });
+
+    expect(s.critical.join(' ')).not.toMatch(/cookies|prawa zastrzeżone/i);
+    expect(s.critical.join(' ')).toMatch(/Detektyw prowadzi obserwacje/);
+  });
 });
 
 describe('WIE rxQualityGate', () => {

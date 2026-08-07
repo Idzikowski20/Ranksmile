@@ -22,7 +22,11 @@ interface Props {
   articleId: number;
   keyword: string;
   cachedOutlines: string | null;
-  onClose: () => void;
+  /**
+   * Omitted when the panel *is* the side column rather than something opened on top of
+   * it — there is nothing to go back to, so the back button is dropped with it.
+   */
+  onClose?: () => void;
 }
 
 /* ── Single competitor card ────────────────────────────────────────── */
@@ -165,36 +169,6 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [briefHeadings, setBriefHeadings] = useState<Array<{ level: number; text: string }> | null>(null);
-  const [briefLoading, setBriefLoading] = useState(false);
-
-  const handleGenerateBrief = async () => {
-    if (!keyword || briefLoading) return;
-    setBriefLoading(true);
-    setBriefHeadings(null);
-    try {
-      const mapped = competitors.map((c) => ({
-        url: c.url,
-        title: c.title,
-        favicon: '',
-        headings: c.headings,
-        heading_count: c.heading_count ?? c.headings.length,
-        word_count: c.word_count,
-      }));
-      const res = await fetch('/api/articles/generate-outline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, competitors: mapped, articleId }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
-      setBriefHeadings(data.headings || []);
-    } catch {
-      setError('Could not generate brief from competitors.');
-    } finally {
-      setBriefLoading(false);
-    }
-  };
 
   useEffect(() => {
     // Try cache first
@@ -236,6 +210,7 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
         padding: '12px 16px', borderBottom: '1px solid var(--koala-bg-secondary)', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {onClose && (
           <button
             onClick={onClose}
             style={{
@@ -252,6 +227,7 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
               <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0" clipRule="evenodd" />
             </svg>
           </button>
+          )}
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
             Competitors
           </span>
@@ -264,20 +240,6 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
             </span>
           )}
         </div>
-        {competitors.length > 0 && (
-          <button
-            type="button"
-            disabled={briefLoading}
-            onClick={handleGenerateBrief}
-            style={{
-              padding: '6px 12px', borderRadius: 8, border: 'none', cursor: briefLoading ? 'wait' : 'pointer',
-              background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)', fontSize: 12, fontWeight: 600,
-              fontFamily: 'var(--font-family-primary)', opacity: briefLoading ? 0.7 : 1,
-            }}
-          >
-            {briefLoading ? 'Generating…' : 'Generate brief'}
-          </button>
-        )}
       </div>
 
       {/* Content */}
@@ -291,10 +253,10 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
                 border: '1px solid var(--koala-bg-secondary)', borderRadius: 10, padding: '10px 12px',
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
-                <div style={{ width: 16, height: 16, borderRadius: 3, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
+                <div style={{ width: 16, height: 16, borderRadius: 3, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ width: '70%', height: 12, borderRadius: 4, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.05}s` }} />
-                  <div style={{ width: '40%', height: 10, borderRadius: 4, background: 'var(--koala-bg-secondary)', marginTop: 6, animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.1}s` }} />
+                  <div style={{ width: '70%', height: 12, borderRadius: 4, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.05}s` }} />
+                  <div style={{ width: '40%', height: 10, borderRadius: 4, background: 'var(--koala-bg-secondary)', marginTop: 6, animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1 + 0.1}s` }} />
                 </div>
               </div>
             ))}
@@ -310,21 +272,6 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
         {!isLoading && !error && competitors.map((comp, i) => (
           <CompetitorCard key={comp.url + i} competitor={comp} defaultOpen={i === 0} />
         ))}
-
-        {briefHeadings && briefHeadings.length > 0 && (
-          <div style={{ marginTop: 8, padding: 12, border: '1px solid var(--koala-bg-secondary)', borderRadius: 12, background: 'var(--koala-bg-primary)' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--koala-text-primary)', marginBottom: 8, fontFamily: 'var(--font-family-primary)' }}>
-              Generated brief · {briefHeadings.length} headings
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {briefHeadings.map((h, idx) => (
-                <div key={`${h.level}-${idx}`} style={{ fontSize: 13, color: 'var(--koala-text-secondary)', paddingLeft: (h.level - 1) * 12, fontFamily: 'var(--font-family-primary)' }}>
-                  H{h.level}: {h.text}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

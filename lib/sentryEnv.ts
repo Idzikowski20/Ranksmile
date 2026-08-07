@@ -2,14 +2,12 @@
 export function sentryEnvironment(): string {
   if (process.env.SENTRY_ENVIRONMENT) return process.env.SENTRY_ENVIRONMENT;
   if (process.env.RAILWAY_ENVIRONMENT) return process.env.RAILWAY_ENVIRONMENT;
-  if (process.env.VERCEL_ENV) return process.env.VERCEL_ENV;
   return process.env.NODE_ENV === 'production' ? 'production' : 'development';
 }
 
 export function sentryRelease(): string {
   return (
     process.env.SENTRY_RELEASE
-    || process.env.VERCEL_GIT_COMMIT_SHA
     || process.env.RAILWAY_GIT_COMMIT_SHA
     || process.env.GITHUB_SHA
     || process.env.npm_package_version

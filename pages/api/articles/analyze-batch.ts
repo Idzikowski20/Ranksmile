@@ -14,8 +14,6 @@ import { queryRows } from '../../../lib/db/query';
 import { mapPool } from '../../../lib/mapPool';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 60 };
-
 const ANALYZE_BATCH_CONCURRENCY = 3;
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

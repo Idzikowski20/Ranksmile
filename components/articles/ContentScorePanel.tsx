@@ -9,8 +9,6 @@ import type { KeywordItem } from './KeywordResearchSection';
 import KeywordResearchSection from './KeywordResearchSection';
 import DomainFavicon from '../common/DomainFavicon';
 import WriteOptimizePanel from './WriteOptimizePanel';
-import DeepAnalysisProgressPanel from './DeepAnalysisProgressPanel';
-import type { DeepAnalysisUiState } from '../../lib/deepAnalysisProgress';
 import PublishExportPanel from './PublishExportPanel';
 import PrePublishPanel from './PrePublishPanel';
 import type { AiReadabilityResult } from './PrePublishPanel';
@@ -119,8 +117,6 @@ interface Props {
   /** AO-8b: live post-optimize scores — seo, ai, and overall from one synchronous pass. */
   optimizeLiveScores?: { seo?: number; ai?: number; overall?: number };
   /** Background deep analysis (import flow) — replaces panel with progress UI. */
-  isDeepAnalyzing?: boolean;
-  deepAnalysisUi?: DeepAnalysisUiState | null;
   /** Bump from editor chrome to open Publish or Export (toolbar Publish button). */
   openPublishSignal?: number;
 }
@@ -321,8 +317,6 @@ const ContentScorePanel = ({
   scoreDeltas,
   optimizeLiveScores,
   domainSlug,
-  isDeepAnalyzing,
-  deepAnalysisUi,
   openPublishSignal,
 }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
@@ -596,21 +590,9 @@ const ContentScorePanel = ({
   const historyDelta = useCoverageHistoryDelta(articleId);
   const trioDeltas = scoreDeltas ?? (historyDelta ? { ai: historyDelta.delta } : undefined);
 
-  if (isDeepAnalyzing) {
-    return (
-      <div className="editor-side-panel editor-side-panel--analyzing" style={{ height: '100%', boxSizing: 'border-box', padding: '16px' }}>
-        <PipelineStatusStrip articleId={articleId} />
-        <DeepAnalysisProgressPanel
-          state={deepAnalysisUi ?? {
-            aiSearch: [],
-            googleSearch: [{ key: 'fetch_page', label: 'Starting analysis…', status: 'running' }],
-            error: null,
-            isComplete: false,
-          }}
-        />
-      </div>
-    );
-  }
+  // No deep-analysis branch here on purpose. The editor page owns that state and renders
+  // AnalysisProgressPanel instead; a second panel behind the same flag meant whichever
+  // rendered won, and this one dragged the background-queue chips along with it.
 
   if (view === 'write') {
     return (
@@ -755,10 +737,10 @@ const ContentScorePanel = ({
                 {isLoadingCompetitors ? (
                   [1, 2, 3].map((i) => (
                     <div key={i} style={{ border: '1px solid var(--koala-bg-secondary)', borderRadius: 8, padding: '8px 10px', display: 'flex', gap: 8 }}>
-                      <div style={{ width: 14, height: 14, borderRadius: 2, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite' }} />
+                      <div style={{ width: 14, height: 14, borderRadius: 2, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.6s ease-in-out infinite' }} />
                       <div style={{ flex: 1 }}>
-                        <div style={{ width: '65%', height: 11, borderRadius: 3, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.05s' }} />
-                        <div style={{ width: '40%', height: 9, borderRadius: 3, background: 'var(--koala-bg-secondary)', marginTop: 5, animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.1s' }} />
+                        <div style={{ width: '65%', height: 11, borderRadius: 3, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.05s' }} />
+                        <div style={{ width: '40%', height: 9, borderRadius: 3, background: 'var(--koala-bg-secondary)', marginTop: 5, animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.1s' }} />
                       </div>
                     </div>
                   ))

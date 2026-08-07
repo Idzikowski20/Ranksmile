@@ -30,3 +30,39 @@ it('shows a progress pill with no controls while writing', () => {
   expect(screen.getByText('Generating content 42%')).toBeInTheDocument();
   expect(screen.queryAllByRole('button')).toHaveLength(0);
 });
+
+/**
+ * All three states are one pill that changes its label. The review state used to be a
+ * wide bar restating "Outline / Review outline / N headings ready" — the outline being
+ * described is on screen already — so the control changed shape on every transition.
+ */
+it('is the same pill in every state, not a wider bar while reviewing', () => {
+  const { container: idle } = render(<OutlineGenerateBar busy={false} headingCount={12} onGenerate={noop} />);
+  const { container: planning } = render(<OutlineGenerateBar planning busy={false} headingCount={0} onGenerate={noop} />);
+  const { container: writing } = render(<OutlineGenerateBar busy headingCount={12} onGenerate={noop} />);
+
+  const shapeOf = (el: HTMLElement) => {
+    const { height, borderRadius, width } = el.style;
+    return { height, borderRadius, width };
+  };
+  const idleShape = shapeOf(idle.firstElementChild as HTMLElement);
+
+  expect(idleShape).toEqual({ height: '44px', borderRadius: '999px', width: '' });
+  expect(shapeOf(planning.firstElementChild as HTMLElement)).toEqual(idleShape);
+  expect(shapeOf(writing.firstElementChild as HTMLElement)).toEqual(idleShape);
+});
+
+it('says nothing but its own action while reviewing', () => {
+  render(<OutlineGenerateBar busy={false} headingCount={12} onGenerate={noop} />);
+
+  expect(screen.queryByText('Review outline')).toBeNull();
+  expect(screen.queryByText(/headings ready/)).toBeNull();
+  expect(screen.getByRole('button')).toHaveTextContent('Generate content');
+});
+
+it('explains why it is disabled instead of just going dead', () => {
+  render(<OutlineGenerateBar busy={false} headingCount={0} onGenerate={noop} />);
+
+  expect(screen.getByRole('button', { name: /Generate content/ }))
+    .toHaveAttribute('title', 'Add at least one heading to the outline first');
+});

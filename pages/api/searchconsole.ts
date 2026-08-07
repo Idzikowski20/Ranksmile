@@ -15,7 +15,6 @@ import { assertCronSecret } from '../../lib/cronAuth';
  */
 export const config = {
   api: { responseLimit: '32mb' },
-  maxDuration: 60,
 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

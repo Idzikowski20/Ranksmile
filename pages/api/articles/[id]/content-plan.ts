@@ -16,11 +16,18 @@ import {
   aiIntelFromScoreData,
   competitorsFromScoreData,
   competitorHeadingTitles,
+  diagnosePlannerInputs,
+  enrichWithCorpusClaims,
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
 } from '../../../../lib/contentPlanner/fromArticleInputs';
 import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlanner';
 import { reviewOutlineFromBundle } from '../../../../lib/contentPlanner/reviewOutline';
+import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
+import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
+import { readContentSettings } from '../../../../lib/contentSettings';
+import { readArticleTerms } from '../../../../lib/articleTerms';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
 import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
 import {
   benchmarkDocsFromCompetitors,
@@ -98,6 +105,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!competitors.length) {
       competitors = parseCompetitorCacheJson(row.competitor_outlines_cache);
     }
+    competitors = enrichWithCorpusClaims(competitors, scoreData?.competitor_claims ?? null);
     competitors = enrichWithWieSynthesis(
       competitors,
       scoreData?.competitor_synthesis ?? null,
@@ -195,17 +203,63 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // An empty outline is a failure, not an empty success: the planner gates on the
     // knowledge harvested by deep-analysis, so returning 200 + [] left the editor with
     // nothing but a generic "Could not generate an outline" and no way to see why.
-    const headings = reviewOutlineFromBundle(result.bundle);
+    // Loaded here rather than at the top of the handler: only the outline branch needs it,
+    // and the approvedOutline save path above returns long before this point.
+    const brand = await readContentSettings().catch(() => ({ brandName: '', brandKnowledge: '', voices: [] }));
+    // Same list /generate compiles the write plan from — terms activated after the
+    // analysis live only in article_terms, and a brief written against the stale half
+    // would tell the writer to weave in words the editor does not grade.
+    const tableTerms = await readArticleTerms(articleId).catch(() => []);
+
+    // The brief is the first LLM spend this route ever made, and nothing stopped a client
+    // from re-requesting an outline in a loop. Same gate every other generating route uses.
+    const orgId = await resolveOrgId(req, res);
+    const over = await orgBudgetBlocked(orgId);
+    if (over) return res.status(429).json(over);
+
+    // Brand knowledge finally reaches the planner. Without it the only company facts in
+    // scope were the competitors', which is exactly how a rival's address, licence number
+    // and testimonials ended up as instructions in a reviewed outline.
+    const written = await writeOutlineBrief({
+      keyword,
+      bundle: result.bundle,
+      brandKnowledge: brand.brandKnowledge,
+      brandName: brand.brandName,
+      importantTerms: importantTermsFromScoreData(scoreData ?? {}, { tableTerms }),
+      language: row.language || undefined,
+      competitorHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
+      onTokens: (tokens) => recordAiTokens(orgId, tokens),
+    });
+    const headings = written ?? reviewOutlineFromBundle(result.bundle);
     if (!headings.length) {
       const reason = [
         ...result.blueprintValidation.issues,
         ...result.outlineValidation.issues,
         ...result.briefValidation.issues,
       ].map((issue) => issue.message).find(Boolean);
+      // Which data gap this is decides what the reader should do about it; the validator
+      // code (`claims_too_low`) only names the gate that tripped.
+      //
+      // `finalizing` counts as running: job-progress sets it while results are still
+      // being persisted, and mid-finish the reader was told to start an analysis that
+      // was seconds from producing the very data they were missing.
+      const analysisRunning = await db.query<{ id: string }>(
+        `SELECT id FROM analysis_jobs
+          WHERE article_id = ? AND job_type = 'deep_analysis'
+            AND status IN ('queued', 'running', 'finalizing')
+          LIMIT 1`,
+        { replacements: [articleId], type: QueryTypes.SELECT },
+      ).then((jobs) => jobs.length > 0).catch(() => false);
+      const gap = diagnosePlannerInputs({
+        scoreData,
+        competitorCount: competitors.length,
+        claimCount: result.bundle.targetKg.claims.length,
+        analysisRunning,
+      });
       return res.status(422).json({
-        error: reason
-          ? `Outline planner has too little analysis data: ${reason}. Re-run the article analysis, then try again.`
-          : 'Outline planner produced no sections — re-run the article analysis, then try again.',
+        error: gap.message,
+        cause: gap.code,
+        validatorReason: reason ?? null,
         headings: [],
         canWrite: result.canWrite,
         validations: {

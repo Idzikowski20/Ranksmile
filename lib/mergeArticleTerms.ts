@@ -28,3 +28,42 @@ export function termsForOptimize(opts: {
 }): NlpTerm[] {
   return mergeArticleTermSources(opts);
 }
+
+/**
+ * NLP terms an article must weave in, strongest first.
+ *
+ * Shared by the Write Engine (round-robin across paragraph plans) and the outline brief
+ * writer (terms handed to the model as a list to distribute), so the two cannot disagree
+ * about which vocabulary the article is being graded on.
+ */
+export function importantTermsFromScoreData(
+  scoreData: Record<string, unknown> | null | undefined,
+  opts?: {
+    max?: number;
+    /**
+     * Rows from `article_terms`. Terms activated after the analysis live only there, so
+     * omitting them left the Write Engine allocating keywords from a stale list while the
+     * editor graded the article against the full one.
+     */
+    tableTerms?: ArticleTermRow[];
+  },
+): string[] {
+  const max = opts?.max ?? 24;
+  const raw = scoreData && Array.isArray(scoreData.terms) ? (scoreData.terms as NlpTerm[]) : [];
+  // Ranked before the cut. `mergeNlpTerms` returns Map insertion order — table rows in
+  // whatever order the query returned them, then score-data terms — so slicing straight
+  // off it dropped whichever strong term happened to land past the cap, and dropped a
+  // different one whenever the row order changed.
+  return mergeArticleTermSources({ scoreDataTerms: raw, tableTerms: opts?.tableTerms })
+    .slice()
+    .sort((a, b) => (
+      (b.target_count || 0) - (a.target_count || 0)
+      || (b.doc_freq || 0) - (a.doc_freq || 0)
+      || (b.salience || 0) - (a.salience || 0)
+      // Last resort so the same inputs always yield the same list.
+      || a.term.localeCompare(b.term)
+    ))
+    .slice(0, max)
+    .map((t) => t.term)
+    .filter(Boolean);
+}

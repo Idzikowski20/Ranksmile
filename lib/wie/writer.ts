@@ -107,6 +107,8 @@ export async function wieLlmComplete(opts: {
   systemPrompt?: string;
   maxTokens?: number;
   temperature?: number;
+  /** Ask the provider to enforce valid JSON. Asking in the prompt alone is not enough. */
+  json?: boolean;
   signal?: AbortSignal;
   llmEdit?: (userPrompt: string, systemPrompt: string) => Promise<{ html: string; tokens: number }>;
 }): Promise<{ html: string; tokens: number }> {
@@ -131,6 +133,10 @@ export async function wieLlmComplete(opts: {
       { role: 'user', content: opts.userPrompt },
     ],
   };
+  // "Reply with JSON only" in the prompt is a request, not a guarantee: sampled replies
+  // came back closing a section object without closing its instructions array, and one
+  // malformed character costs the whole call. The provider's own JSON mode enforces it.
+  if (opts.json) body.response_format = { type: 'json_object' };
 
   const aiRes = await fetch(llm.url, {
     method: 'POST',

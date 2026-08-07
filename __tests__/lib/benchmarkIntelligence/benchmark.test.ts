@@ -38,4 +38,36 @@ describe('Benchmark Intelligence', () => {
     expect(t.h2).toBeGreaterThanOrEqual(7);
     expect(t.wordsSoftCeiling).toBeGreaterThanOrEqual(t.words);
   });
+
+  /**
+   * `h2` here is every heading a competitor renders — H3s, nav, footer — not its count of
+   * top-level sections. Taken literally it asked for 22 H2 on a 2200-word budget: ~100
+   * words each, and a section brief too long for the model's output cap, which silently
+   * dropped the whole brief. The reference tool reports the same wide heading range for
+   * this keyword and still briefs six H2; the rest are H3 inside a section.
+   */
+  it('caps the section target at what the word budget supports', () => {
+    const shortSectioned = (wordCount: number, h2: number) => ({
+      wordCount,
+      h2,
+      faq: 8,
+      tables: 2,
+      lists: 12,
+      images: 4,
+      examples: 6,
+      citations: 14,
+      sectionLens: [Math.round(wordCount / h2)],
+      introLen: 100,
+      paragraphLens: [50],
+    });
+
+    const t = toPlannerTargets(buildStructuralBenchmark([
+      shortSectioned(2100, 22),
+      shortSectioned(2200, 24),
+    ]));
+
+    expect(t.h2).toBe(11);
+    expect(t.h2SoftCeiling).toBe(t.h2);
+    expect(Math.round(t.words / t.h2)).toBeGreaterThan(150);
+  });
 });

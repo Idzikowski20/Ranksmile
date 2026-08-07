@@ -2,6 +2,7 @@ import React from 'react';
 import { Icon } from '../koala/icons';
 import { Spinner } from '../koala/primitives/Spinner';
 import { analysisPhaseGroups, type PhaseRow } from '../../lib/analysisPhaseRows';
+import { AiEngineIcons, GoogleEngineIcon } from './EngineIcons';
 import type { AnalysisPhases } from '../../lib/analysisPhases';
 
 const STATE_LABEL: Record<PhaseRow['state'], string> = {
@@ -40,15 +41,32 @@ function activeSummary(groups: ReturnType<typeof analysisPhaseGroups>): string {
 }
 
 const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 28, padding: '8px 4px' }}>
+  // Centred in the panel rather than pinned to the top: for most of a run this is the
+  // only thing in the column, and a short list hugging the toolbar reads as a leftover
+  // fragment instead of the thing the user is waiting on. Centred horizontally too —
+  // `4px` of side padding left the list glued to the panel's left border.
+  <div style={{
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: 28,
+    minHeight: '100%',
+    maxWidth: 340,
+    margin: '0 auto',
+    padding: '8px 24px',
+  }}
+  >
     {/* One focused live region: announcing the whole tree re-read every row on each tick;
         announcing nothing left completions and failures silent. */}
     <div aria-live="polite" style={HIDDEN}>{activeSummary(analysisPhaseGroups(phases))}</div>
     {analysisPhaseGroups(phases).map((group) => (
       <section key={group.id} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--koala-text-primary)', margin: 0 }}>
-          {group.title}
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--koala-text-primary)', margin: 0 }}>
+            {group.title}
+          </h3>
+          {group.id === 'ai-search' ? <AiEngineIcons /> : <GoogleEngineIcon />}
+        </div>
         {group.rows.map((row) => (
           <div
             key={row.id}

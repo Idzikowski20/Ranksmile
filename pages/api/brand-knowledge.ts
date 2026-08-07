@@ -7,9 +7,6 @@ import { assertPublicUrl } from '../../lib/ssrfGuard';
 import { getErrorMessage } from '../../lib/errors';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
-// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });

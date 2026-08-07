@@ -26,7 +26,8 @@ import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
 import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
 import { resolveArticleEntry, articleEntryHref } from '../../../lib/articleFlow';
 import AnalysisProgressPanel from '../../../components/articles/AnalysisProgressPanel';
-import type { AnalysisPhases } from '../../../lib/analysisPhases';
+import CompetitorOutlinesPanel from '../../../components/articles/CompetitorOutlinesPanel';
+import { emptyPhases, type AnalysisPhases } from '../../../lib/analysisPhases';
 import { computeOptimizeLiveSnapshot } from '../../../lib/computeLiveArticleScores';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { liveCoverageItems, scoreDeltaGate } from '../../../lib/liveCoverage';
@@ -514,7 +515,14 @@ const ArticleEditorPage: NextPage = () => {
     onError: onAnalysisError,
   });
 
+  /**
+   * Exactly `isDeepAnalyzing`, kept as a name because ~20 `disabled=`/`readOnly=` props read
+   * better as "the editor is locked" than as "deep analysis is running". It is NOT a second
+   * condition: never branch on both, or the second branch is unreachable.
+   */
   const editorLocked = isDeepAnalyzing;
+  /** Same flag the editor reads for its bottom bar — the side panel has to agree with it. */
+  const outlineReviewMode = router.query.reviewOutline === '1';
 
 
   useEffect(() => {
@@ -2178,31 +2186,27 @@ const ArticleEditorPage: NextPage = () => {
 
             {/* Bottom card: keyword + content score OR panel */}
             <div className="koala-panel editor-side-panel-card">
-              {isDeepAnalyzing && analysisPhases ? (
+              {isDeepAnalyzing ? (
                 // Entered the editor before the analysis finished — show what the
                 // pipeline is doing instead of an empty Content Score.
+                //
+                // Unconditional on `analysisPhases`: falling through to ContentScorePanel
+                // when the first patch had not landed yet swapped this for a second,
+                // older progress panel plus the background-queue chips, so the column
+                // changed shape mid-run and showed NER work the user never asked about.
                 <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
-                  <AnalysisProgressPanel phases={analysisPhases} />
+                  <AnalysisProgressPanel phases={analysisPhases ?? emptyPhases()} />
                 </div>
-              ) : editorLocked ? (
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
-                  <ContentScorePanel
-                    plainText={plainText}
-                    wordCount={wordCount}
-                    headingCount={headingCount}
-                    scoreData={scoreData}
-                    internalLinksCount={internalLinksCount}
-                    html={editorHtml}
-                    keyword={article?.target_keyword || ''}
+              ) : outlineReviewMode ? (
+                // Outline review: the competitor structures are the only reference that
+                // helps here. A Content Score of an outline is meaningless — it grades an
+                // article that has not been written — and the terms panel invites edits
+                // to a document whose whole purpose is to be replaced by the generator.
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                  <CompetitorOutlinesPanel
                     articleId={article.id}
-                    domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
+                    keyword={article.target_keyword || ''}
                     cachedOutlines={article.competitor_outlines_cache}
-                    fallbackScore={article.content_score}
-                    title={article.title || ''}
-                    metaTitle={article.meta_title || ''}
-                    metaDescription={article.meta_description || ''}
-                    isDeepAnalyzing={isDeepAnalyzing}
-                    deepAnalysisUi={deepAnalysisUi}
                   />
                 </div>
               ) : ranksmileDockOpen ? (
@@ -2295,8 +2299,6 @@ const ArticleEditorPage: NextPage = () => {
                       onApplyReadability={handleApplyReadability}
                       onPlagiarismHighlight={handlePlagiarismHighlight}
                       readabilityAccepted={readabilityAcceptKey}
-                      isDeepAnalyzing={isDeepAnalyzing}
-                      deepAnalysisUi={deepAnalysisUi}
                     />
                   </div>
                 </>

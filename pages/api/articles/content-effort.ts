@@ -15,8 +15,6 @@ import { safeJsonParse } from '../../../lib/safeJson';
 import type { ScoreData } from '../../../lib/contentScore';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 60 };
-
 type EffortBody = { score?: unknown; reasons?: unknown; source?: unknown };
 
 function normalizeInsight(raw: EffortBody, fallback: ContentEffortInsight): ContentEffortInsight {

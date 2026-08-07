@@ -65,7 +65,7 @@ import {
 } from '../../../lib/ao/runPrecisionOptimize';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
+export const config = { api: { responseLimit: '10mb' } };
 
 const PROMPT_VERSION = 'ao-precision-v4.1';
 

@@ -81,8 +81,8 @@ Przez API: `POST /api/articles/publish-targets`
 }
 ```
 
-### Automatyczny cron (Vercel)
-`vercel.json` konfiguruje cron na **codziennie o 8:00**.
+### Automatyczny cron (Railway)
+`cron.js` (dedykowany serwis Railway) uruchamia joba **codziennie o 8:00**.
 Wymaga zmiennej `CRON_SECRET` i skonfigurowanych `topics` w `site_context`.
 
 ---
@@ -102,7 +102,7 @@ ranksmile/
 │   ├── accept.ts              ← POST: akceptuj/odrzuć
 │   └── publish-targets.ts     ← CRUD konfiguracji publikacji
 ├── pages/api/cron/
-│   └── daily.ts               ← Vercel Cron handler
+│   └── daily.ts               ← handler cron (wywoływany z cron.js)
 ├── components/articles/
 │   ├── ArticleEditor.tsx      ← TipTap wrapper
 │   ├── ContentScorePanel.tsx  ← gauge + NLP terms
@@ -123,5 +123,5 @@ ranksmile/
 │   │   └── meta_generator.py  ← meta title/desc/URL
 │   └── pipeline/
 │       └── article_pipeline.py ← Claude multi-step pipeline
-└── vercel.json                ← Cron schedule
+└── cron.js                    ← Cron schedule
 ```

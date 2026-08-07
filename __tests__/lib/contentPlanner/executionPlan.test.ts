@@ -10,6 +10,7 @@ import {
   toSidecarExecutionPlan,
   validateAgainstBenchmark,
   validateKnowledgeCoverageGate,
+  validatePlanConformity,
   validatePlanForWrite,
   KNOWLEDGE_COVERAGE_MIN_PCT,
 } from '../../../lib/contentPlanner';
@@ -392,6 +393,97 @@ describe('Article Execution Plan', () => {
     });
     expect(planVal.ok).toBe(false);
     expect(planVal.issues.some((i) => i.code === 'quick_answer_empty')).toBe(true);
+  });
+
+  /**
+   * The last-resort branch fires only when a gate reports `ok: false` with no issues to
+   * show for it — the one case where the caller has nothing else to go on. "Structural
+   * planner gates failed" is exactly the message the per-gate reporting replaced.
+   */
+  it('names the gate that failed silently instead of reporting "gates failed"', async () => {
+    const result = runContentPlanner({
+      keyword: 'jak pozycjonować stronę',
+      year: 2026,
+      competitors: [
+        {
+          url: 'https://a.example/seo',
+          wordCount: 3600,
+          headings: 14,
+          paragraphs: 90,
+          lists: 18,
+          tables: 2,
+          faq: 6,
+          examples: 8,
+          claims: Array.from({ length: 8 }, (_, i) => `Claim fact number ${i} about SEO`),
+          questions: Array.from({ length: 6 }, (_, i) => `Question ${i} about SEO?`),
+          entities: ['ssl'],
+        },
+      ],
+    });
+
+    const finalized = await finalizePlannerForWrite({
+      ...result,
+      canWrite: false,
+      outlineValidation: { ok: false, issues: [] },
+    });
+
+    const blocked = finalized.planValidation?.issues.find((i) => i.code === 'structure_blocked');
+    expect(blocked).toBeDefined();
+    expect(blocked!.message).toMatch(/outline/i);
+  });
+
+  /**
+   * Plan conformity is ANDed into `canWrite` like the other gates, so its heading
+   * mismatches have to travel with it — reported as a silent gate they told the caller
+   * nothing about which heading the writer invented.
+   */
+  it('forwards the plan-conformity heading mismatches, not just the gate name', async () => {
+    const result = runContentPlanner({
+      keyword: 'jak pozycjonować stronę',
+      year: 2026,
+      competitors: [
+        {
+          url: 'https://a.example/seo',
+          wordCount: 3600,
+          headings: 14,
+          paragraphs: 90,
+          lists: 18,
+          tables: 2,
+          faq: 6,
+          examples: 8,
+          claims: Array.from({ length: 8 }, (_, i) => `Claim fact number ${i} about SEO`),
+          questions: Array.from({ length: 6 }, (_, i) => `Question ${i} about SEO?`),
+          entities: ['ssl'],
+        },
+      ],
+    });
+
+    const planConformity = validatePlanConformity(
+      '<h2>Nagłówek, którego nie było w planie</h2>',
+      ['Czym jest pozycjonowanie'],
+    );
+    expect(planConformity.ok).toBe(false);
+
+    const finalized = await finalizePlannerForWrite({
+      ...result,
+      canWrite: false,
+      postWrite: {
+        flow: { ok: true, issues: [] },
+        claims: { ok: true, issues: [] },
+        questions: { ok: true, issues: [] },
+        seo: { ok: true, issues: [] },
+        planConformity,
+        coverageBefore: 1,
+        coverageAfter: 1,
+        rewriteSteps: 0,
+        kceApplied: 0,
+      },
+    });
+
+    const codes = finalized.planValidation?.issues.map((i) => i.code) ?? [];
+    expect(codes).toContain('h2_not_in_plan');
+    expect(finalized.planValidation?.issues.find((i) => i.code === 'h2_not_in_plan')?.message)
+      .toMatch(/nie było w planie/i);
   });
 
   it('finalizePlannerForWrite returns canWrite false when Quick Answer LLM fails', async () => {

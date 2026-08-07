@@ -3,6 +3,7 @@
  * Small JSON brief from Top-N competitor bodies — never dump full HTML into Writer.
  */
 import { safeJsonParse } from '../safeJson';
+import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
 
 export type CompetitorSynthesis = {
   critical: string[];
@@ -135,13 +136,29 @@ export function heuristicCompetitorSynthesis(opts: {
   for (const token of ['Messenger', 'Facebook', 'Bitcoin', 'WhatsApp', 'e-mail', 'HR', 'policja']) {
     if (joined.includes(token) || lower.includes(token.toLowerCase())) examples.push(token);
   }
-  const sentences = joined.split(/(?<=[.!?])\s+/).filter((s) => s.length > 40 && s.length < 220);
-  const critical = sentences.slice(0, 4);
+  // Noise-filtered rather than length-filtered: the raw split happily promoted cookie
+  // banners and contact forms to "critical insights".
+  const sentences = joined
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 40 && !isCorpusNoiseSentence(s));
+  // Eight, not four. The Plan Validator requires five claims and this fallback is the
+  // planner's floor when the synthesis LLM is unreachable — capping at four made that
+  // gate mathematically impossible to pass, so every fallback run 422'd.
+  const critical = sentences.slice(0, 8);
   const expert = sentences.filter((s) => /w praktyce|najczęściej|z doświadczenia|usually|in practice/i.test(s)).slice(0, 3);
+  // Independent of `expert`: information gain is a sentence carrying a checkable figure,
+  // not an expert-voice tell. Deriving it from `expert` meant no expert phrasing in the
+  // corpus produced zero information gain as a side effect.
+  //
+  // Overlap with `critical` is allowed on purpose. Excluding it starved short corpora
+  // completely — under eight sentences everything is already critical — and the Target
+  // Knowledge Graph deduplicates claims by normalized text anyway.
+  const withFigures = sentences.filter((s) => /\d/.test(s)).slice(0, 6);
 
   return {
     critical: critical.length ? critical : [`Cover practical answer for: ${opts.keyword}`],
-    important: sentences.slice(4, 7),
+    important: sentences.slice(8, 14),
     optional: [],
     opening_style: {
       problem_first: problemFirst,
@@ -156,7 +173,7 @@ export function heuristicCompetitorSynthesis(opts: {
     examples,
     cta: { tone: 'soft', location: 'last_10_percent' },
     faq: {},
-    information_gain: expert.slice(0, 2),
+    information_gain: withFigures,
     meta: {
       keyword: opts.keyword,
       captured_at: new Date().toISOString(),

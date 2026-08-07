@@ -104,7 +104,14 @@ export function filterOnTopicTerms<T extends { term: string }>(terms: T[], seedK
   return terms.filter((t) => isKeywordOnTopic(t.term, seedKeyword));
 }
 
-const MIN_ANALYSIS_TERMS = 12;
+/**
+ * Competitor documents a term must appear in before the corpus itself counts as proof
+ * of topicality. Two is the smallest number that means "more than one page thought this
+ * mattered". It only means that while `doc_freq` really is a distinct-document count —
+ * `semantic_terms.py` used to fill it with a per-heading chunk count, so one page saying
+ * something twice bought a free pass past every topic check.
+ */
+const CORPUS_EVIDENCE_MIN_DOCS = 2;
 
 function isKnownNoiseTerm(term: string): boolean {
   if (!term || !isUsefulTerm(term)) return true;
@@ -113,19 +120,26 @@ function isKnownNoiseTerm(term: string): boolean {
 }
 
 /**
- * Deep-analysis term filter — strict seed matching first, soft fallback when SERP
- * terms are topical but don't share seed tokens (e.g. "sposoby na wykrycie zdrady").
+ * Deep-analysis term filter.
  *
- * Soft path trusts competitor-SERP phrases: multi-word useful terms and longer
- * unigrams that aren't known off-topic noise. Stem matching covers Polish endings.
+ * Seed overlap is a weak signal for NLP terms and was being used as the only one. The
+ * terms arrive from the sidecar's competitor extractor, which already establishes
+ * topicality by counting how many ranking pages use a phrase — so a term appearing
+ * across several competitors is on-topic whether or not it repeats the keyword.
+ *
+ * Requiring the keyword threw away exactly the vocabulary that makes an article rank:
+ * measured against Surfer's own list for "prywatny detektyw warszawa" this kept 12 of
+ * 39 terms, and every survivor contained "detektyw". Gone were "wykrywanie podsłuchów",
+ * "sprawy rozwodowej", "materiałów dowodowych", "wywiad gospodarczy" — the substance.
+ *
+ * So: strict seed matches, plus anything the corpus vouches for, minus known noise.
  */
-export function filterNlpTermsForAnalysis<T extends { term: string }>(terms: T[], seedKeyword: string): T[] {
-  const strict = filterOnTopicTerms(terms, seedKeyword);
+export function filterNlpTermsForAnalysis<
+  T extends { term: string; doc_freq?: number },
+>(terms: T[], seedKeyword: string): T[] {
   if (!terms.length) return [];
-  // Only skip soft expansion once we already have a Ranksmile-like term floor.
-  // (Do not early-return on keep-ratio — 3/9 seed matches would otherwise drop
-  // related competitor phrases like "dezinformacja".)
-  if (strict.length >= MIN_ANALYSIS_TERMS) return strict;
+  const strict = filterOnTopicTerms(terms, seedKeyword);
+  const strictTerms = new Set(strict.map((t) => t.term));
 
   const seeds = seedTokens(seedKeyword);
   const strictSeeds = new Set<string>();
@@ -137,15 +151,18 @@ export function filterNlpTermsForAnalysis<T extends { term: string }>(terms: T[]
   const relatedSeeds = [...seeds, ...strictSeeds];
 
   const soft = terms.filter((t) => {
+    if (strictTerms.has(t.term)) return false;
     const term = normalizeTerm(t.term);
     if (isKnownNoiseTerm(term)) return false;
     const words = term.split(/\s+/).filter((w) => w.length >= 3);
     if (!words.length) return false;
-    // Must share stem with seed OR already-accepted strict terms — no free multi-word pass.
+    // Several competitors used it — that is the corpus establishing the topic, not us.
+    if ((t.doc_freq ?? 0) >= CORPUS_EVIDENCE_MIN_DOCS) return true;
     if (sharesAnySeedToken(words, relatedSeeds)) return true;
-    // Topical long unigram co-occurring in SERP (e.g. "dezinformacja" near hybrid-war corpus).
+    // Single-document term with no seed overlap: keep only longer unigrams, and only
+    // once the strict pass proved the extraction itself was sane.
     return words.length === 1 && words[0].length >= 8 && strict.length > 0;
   });
 
-  return soft.length > strict.length ? soft : strict;
+  return [...strict, ...soft];
 }
