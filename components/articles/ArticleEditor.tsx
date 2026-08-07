@@ -51,8 +51,10 @@ import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
 import { clearWizardState } from '../../lib/wizardState';
 import {
   collectApprovedOutline,
+  outlineForReview,
   reviewOutlineToHtml,
 } from '../../lib/contentPlanner/reviewOutline';
+import type { ContentPlannerBundle } from '../../lib/contentPlanner/types';
 import type { ApprovedOutlineHeading } from '../../lib/contentPlanner/applyApprovedOutline';
 
 function collectOutlineHeadings(ed: Editor): Array<{ level: number; text: string }> {
@@ -1894,14 +1896,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     };
 
-    const cancelGenerationJob = async (jobId: string) => {
-      try {
-        const response = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Cancellation was not confirmed');
-      } catch {
-        toast.error('Could not confirm cancellation. The generation may still finish.');
-      }
-    };
 
     const handleWriteWithAi = async (opts?: {
       approvedOutline?: ApprovedOutlineHeading[];
@@ -1959,10 +1953,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           }
         }
 
-        if (!isCurrentRun()) {
-          if (jobId) void cancelGenerationJob(jobId);
-          return;
-        }
+        if (!isCurrentRun()) return;
 
         if (!jobId) {
           const genRes = await fetch(`/api/articles/${articleId}/generate`, {
@@ -1995,43 +1986,38 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           jobId = genData.jobId;
           if (isCurrentRun()) setGenerateMsg('Writing your article…');
         }
-        if (!isCurrentRun()) {
-          void cancelGenerationJob(jobId);
-          return;
-        }
+        if (!isCurrentRun()) return;
         generationJobIdRef.current = { runId, jobId };
 
-        const started = Date.now();
+        // Two channels over one SSE response — the status line and the article as it is
+        // written. The browser no longer polls; the server tails the job row.
         await new Promise<void>((resolve, reject) => {
-          const tick = async () => {
-            if (!isCurrentRun()) { resolve(); return; }
-            try {
-              const r = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId!)}`);
-              const d = await r.json().catch(() => ({})) as {
-                status?: string;
-                progressMessage?: string;
-                totalProgress?: number;
-              };
-              if (!isCurrentRun()) { resolve(); return; }
-              if (typeof d.progressMessage === 'string' && d.progressMessage.trim()) {
-                setGenerateMsg(d.progressMessage.trim());
-              }
-              if (typeof d.totalProgress === 'number') {
-                setGeneratePct(Math.max(0, Math.min(100, d.totalProgress)));
-              }
-              if (d.status === 'done') { resolve(); return; }
-              if (d.status === 'failed') {
-                reject(new Error(d.progressMessage || 'Generation failed'));
-                return;
-              }
-            } catch { /* keep polling through transient errors */ }
-            if (Date.now() - started > 8 * 60 * 1000) {
-              reject(new Error('Generation timed out'));
-              return;
-            }
-            setTimeout(tick, 2500);
+          const source = new EventSource(
+            `/api/articles/${articleId}/generate-stream?jobId=${encodeURIComponent(jobId!)}`,
+          );
+          const finish = (err?: Error) => {
+            source.close();
+            if (err) reject(err); else resolve();
           };
-          setTimeout(tick, 1200);
+          const timeout = setTimeout(
+            () => finish(new Error('Generation timed out')),
+            8 * 60 * 1000,
+          );
+          source.addEventListener('status', (event) => {
+            if (!isCurrentRun()) { clearTimeout(timeout); finish(); return; }
+            const { text } = JSON.parse((event as MessageEvent).data) as { text: string };
+            if (text.trim()) setGenerateMsg(text.trim());
+          });
+          source.addEventListener('done', () => { clearTimeout(timeout); finish(); });
+          source.addEventListener('error', (event) => {
+            clearTimeout(timeout);
+            // A server-sent `error` event carries a message; a transport drop does not.
+            const raw = (event as MessageEvent).data;
+            const message = typeof raw === 'string' && raw
+              ? (JSON.parse(raw) as { message?: string }).message
+              : null;
+            finish(new Error(message || 'Generation failed'));
+          });
         });
 
         if (!isCurrentRun()) return;
@@ -2071,6 +2057,33 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     };
 
+    // Persist outline edits while reviewing. Without this the edited structure lives
+    // only in the TipTap document, so leaving review and returning restored the
+    // planner's version and silently discarded the reviewer's work.
+    useEffect(() => {
+      const articleId = commentArticleId ? Number(commentArticleId) : undefined;
+      if (!outlineReviewMode || !editor || !articleId || outlineBusy || generateBusy) return undefined;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const save = () => {
+        const approvedOutline = collectApprovedOutline(editor.getJSON());
+        if (!approvedOutline.length) return;
+        fetch(`/api/articles/${articleId}/content-plan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ approvedOutline }),
+        }).catch(() => {});
+      };
+      const onUpdate = () => {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(save, 1200);
+      };
+      editor.on('update', onUpdate);
+      return () => {
+        editor.off('update', onUpdate);
+        if (timer) clearTimeout(timer);
+      };
+    }, [outlineReviewMode, editor, commentArticleId, outlineBusy, generateBusy]);
+
     // ?reviewOutline=1 → review mode; false when param absent (not only Cancel).
     useEffect(() => {
       if (!router.isReady) return;
@@ -2081,6 +2094,51 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       if (!outlineReviewMode) outlineAutoStarted.current = false;
     }, [outlineReviewMode]);
 
+    /**
+     * Re-entering review must not re-plan. The outline lives only in the TipTap doc,
+     * never in articles.content, so a returning user arrives with an empty editor —
+     * but content-plan already persisted the bundle, so render that instead of paying
+     * for a second planner run.
+     */
+    const restoreOrGenerateOutline = async () => {
+      const articleId = commentArticleId ? Number(commentArticleId) : undefined;
+      if (!editor) return;
+      if (articleId) {
+        // A write already running for this article: re-attach rather than start a
+        // second one (the API's single-in-flight guard would reject it anyway).
+        try {
+          const jobRes = await fetch(
+            `/api/articles/job-progress?articleId=${articleId}&jobType=article_generate`,
+          );
+          const job = await jobRes.json() as { status?: string; jobId?: string };
+          if ((job.status === 'running' || job.status === 'queued') && job.jobId) {
+            handleWriteWithAi().catch(() => {});
+            return;
+          }
+        } catch { /* no running job to re-attach to */ }
+        try {
+          const res = await fetch(`/api/articles/${articleId}/content-plan`);
+          const data = await res.json() as {
+            content_planner_v2?: {
+              bundle?: ContentPlannerBundle;
+              approvedOutline?: unknown;
+            } | null;
+          };
+          const stored = outlineForReview({
+            approvedOutline: data.content_planner_v2?.approvedOutline,
+            bundle: data.content_planner_v2?.bundle,
+          });
+          if (stored.length) {
+            outlineOriginalHtmlRef.current ??= editor.getHTML();
+            await playReveal(reviewOutlineToHtml(stored), true, 'preserve');
+            setOutlineHeadingCount(stored.filter((h) => h.level >= 2).length);
+            return;
+          }
+        } catch { /* no usable stored plan — fall through to a fresh one */ }
+      }
+      await handleInsertOutline();
+    };
+
     useEffect(() => {
       if (!outlineReviewMode || !editor || outlineAutoStarted.current || outlineBusy || generateBusy) return undefined;
       const t = setTimeout(() => {
@@ -2088,7 +2146,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         const existing = collectOutlineHeadings(editor);
         outlineAutoStarted.current = true;
         setOutlineHeadingCount(existing.length);
-        if (existing.length === 0) void handleInsertOutline();
+        if (existing.length === 0) void restoreOrGenerateOutline();
       }, 450);
       return () => clearTimeout(t);
       // ponytail: one-shot when review mode + editor ready (omit handleInsertOutline)
@@ -2119,7 +2177,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     };
 
     const handleOutlineCancel = () => {
-      const activeJob = generationJobIdRef.current;
       const activeReveal = generationRevealHtmlRef.current;
       outlineRequestRef.current?.abort();
       outlineRequestRef.current = null;
@@ -2136,9 +2193,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       setOutlineBusy(false);
       setGenerateBusy(false);
       setGeneratePct(null);
-      if (activeJob) {
-        void cancelGenerationJob(activeJob.jobId);
-      }
       setOutlineReviewMode(false);
       const q = { ...router.query };
       delete q.reviewOutline;
@@ -2438,8 +2492,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         )}
         {outlineReviewMode && (
           <OutlineGenerateBar
-            busy={generateBusy || outlineBusy}
-            status={outlineBusy ? 'Building outline…' : generateMsg}
+            planning={outlineBusy}
+            busy={generateBusy}
+            status={generateMsg}
             progressPct={generatePct}
             headingCount={outlineHeadingCount}
             onGenerate={handleOutlineGenerate}

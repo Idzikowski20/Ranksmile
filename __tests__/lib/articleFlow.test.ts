@@ -20,6 +20,20 @@ describe('resolveArticleEntry', () => {
   it('returns editor when content exists', () => {
     expect(resolveArticleEntry({ status: 'draft', content: '<p>Hi</p>', wizard_state: '{"step":"context"}' })).toEqual({ kind: 'editor' });
   });
+
+  it('stays in the editor for outline review — the wizard hands the draft over empty', () => {
+    expect(resolveArticleEntry(
+      { status: 'draft', content: '', wizard_state: JSON.stringify({ step: 'writing-mode' }) },
+      { outlineReview: true },
+    )).toEqual({ kind: 'editor' });
+  });
+
+  it('still resumes the wizard while generating even in review mode', () => {
+    expect(resolveArticleEntry(
+      { status: 'generating', content: '', wizard_state: null },
+      { outlineReview: true },
+    )).toEqual({ kind: 'generating' });
+  });
 });
 
 describe('articleEntryHref', () => {

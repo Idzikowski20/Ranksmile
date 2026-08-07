@@ -171,6 +171,12 @@ def ready():
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate_article(req: GenerateRequest):
+    """HTTP entry point. FastAPI would read any extra parameter as a query field,
+    so the status callback lives on _generate_article, which run_generate calls."""
+    return await _generate_article(req)
+
+
+async def _generate_article(req: GenerateRequest, on_status=None):
     """
     Główny endpoint — pipeline:
     1. Audyt techniczny SEO strony (site_analyzer)
@@ -199,6 +205,7 @@ async def generate_article(req: GenerateRequest):
     print("[generate] Running AI pipeline (Write Engine)...")
     domain_articles = [a.model_dump() for a in req.existing_articles]
     article_html = await run_pipeline(
+        on_status=on_status,
         site_context=site_context,
         serp_data=serp_data,
         keyword=req.keyword,
@@ -570,12 +577,21 @@ async def run_generate(job_id: str, payload: dict, nextjs_url: str) -> None:
 
     Runs under a process-wide slot limit: /pipeline/generate spawns detached tasks, so
     without it a burst of jobs runs unbounded parallel LLM calls on one container."""
-    from pipeline.domain_runner import post_progress, post_terminal
+    from pipeline.domain_runner import post_progress, post_status, post_terminal
     try:
         async with _generate_slots:
+            keyword = (payload.get("keyword") or "").strip()
+            await post_status(
+                nextjs_url, job_id,
+                f'Researching "{keyword}"…' if keyword else "Researching…",
+            )
             if "compiled_write_plan" in payload:
                 await post_progress(nextjs_url, job_id, 10, "Executing compiled write plan")
-            resp = await generate_article(GenerateRequest(**payload))
+
+            async def on_status(text: str) -> None:
+                await post_status(nextjs_url, job_id, text)
+
+            resp = await _generate_article(GenerateRequest(**payload), on_status=on_status)
         html = (resp.article_html or "").strip()
         plain = re.sub(r"<[^>]+>", " ", html)
         plain = re.sub(r"\s+", " ", plain).strip()
