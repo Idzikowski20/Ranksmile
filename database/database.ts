@@ -16,8 +16,8 @@ function createConnection(): Sequelize {
    if (DATABASE_URL) {
       // Neon PostgreSQL (or local Postgres — see isLocalHost below).
       // Pass `pg` explicitly: Sequelize loads the dialect via a dynamic require, which
-      // Next.js' serverless dependency tracer can't see — so `pg` is left out of the
-      // Vercel function bundle and the runtime throws "Please install pg package manually".
+      // Next.js' standalone dependency tracer can't see — so `pg` is left out of the
+      // build output and the runtime throws "Please install pg package manually".
       // A static require here makes the tracer include it (mirrors the sqlite3 branch below).
       // eslint-disable-next-line global-require
       const pg = require('pg');

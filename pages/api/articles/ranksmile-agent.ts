@@ -20,9 +20,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { flushSse } from '../../../lib/types/api';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-// maxDuration 300: the route covers DeepSeek steps PLUS up to two sequential sidecar LLM
-// calls (apply_readability), so it must be >= the sum of the action tool budgets (ACTION_TIMEOUT).
-export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
+export const config = { api: { responseLimit: '10mb' } };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

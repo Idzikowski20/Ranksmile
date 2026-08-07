@@ -19,8 +19,6 @@ import { resolveContentLocale, languageDisplayName } from '../../../lib/domainLa
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { chatLlm } from '../../../lib/ai/deepseek';
 
-export const config = { maxDuration: 60 };
-
 type CachedOutlines = { competitors?: CompetitorOutline[] };
 
 function formatCompetitorStructures(competitors: CompetitorOutline[]): string {

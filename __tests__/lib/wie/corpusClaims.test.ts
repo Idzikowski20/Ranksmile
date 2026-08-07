@@ -137,6 +137,18 @@ describe('Polish morphology and the source domain', () => {
     expect(extractCorpusClaims(sentence, KW, 24, 'https://x.pl/')).toHaveLength(1);
   });
 
+  /**
+   * Requiring the `ł` also means a page scraped without diacritics gets no first-person
+   * check at all, and its testimonials came back as things for our article to cover.
+   */
+  it.each([
+    'Juz drugi raz skorzystalem z uslug tego biura detektywistycznego.',
+    'Powierzylam agencji detektywistycznej obserwacje meza przez 2 tygodnie.',
+    'Zdecydowalem sie na wspolprace z detektywem po rozmowie o kosztach 300 zlotych.',
+  ])('drops a first-person testimonial written without diacritics: %s', (sentence) => {
+    expect(extractCorpusClaims(sentence, KW, 24, 'https://x.pl/')).toEqual([]);
+  });
+
   /** A domain concatenates what the page spells out, and the brand slipped through. */
   it('drops a self-reference whose brand is concatenated in the domain', () => {
     expect(extractCorpusClaims(

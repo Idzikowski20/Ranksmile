@@ -160,6 +160,34 @@ describe('revealHtmlInEditor document integrity', () => {
     await revealB;
   });
 
+  /**
+   * Two editors reveal at the same time (article + outline preview). They share no DOM,
+   * so neither supersedes the other — with one counter for the whole module the second
+   * reveal to start made the first one's cleanup a no-op and its blocks stayed parked at
+   * opacity 0 forever.
+   */
+  it('does not let a reveal in another editor block its own cleanup', async () => {
+    const other = new Editor({ extensions: [StarterKit], content: '' });
+    const mine = new AbortController();
+    const theirs = new AbortController();
+
+    const revealMine = revealHtmlInEditor(editor, OUTLINE, { signal: mine.signal });
+    const revealTheirs = revealHtmlInEditor(other, OUTLINE, { signal: theirs.signal });
+
+    // Same observable as the supersede test above, inverted: this cleanup must run.
+    const removed = jest.spyOn(CSSStyleDeclaration.prototype, 'removeProperty');
+    mine.abort();
+    await revealMine;
+    const cleared = removed.mock.calls.map(([prop]) => prop);
+    removed.mockRestore();
+
+    expect(cleared).toContain('opacity');
+
+    theirs.abort();
+    await revealTheirs;
+    other.destroy();
+  });
+
   it('clears the document for empty html', async () => {
     await revealHtmlInEditor(editor, '   ');
     expect(editor.getText()).toBe('');

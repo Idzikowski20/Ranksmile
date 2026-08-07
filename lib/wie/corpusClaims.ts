@@ -62,12 +62,46 @@ const MARKETING_MARKS = /[!®™]|\bzobacz wiecej\b|\bskontaktuj sie\b|\bzadzwon
  * "przekazywany kanalem szyfrowanym" were both thrown away. Requiring the `ł` itself puts
  * the check back on the verb ending instead of the noun's stem.
  *
- * ponytail: surface morphology, no lemmatiser. Two corners stay open — a noun whose stem
- * really ends in `ł` ("materiałem") still looks like an `-ałem` verb, and a page scraped
- * without diacritics is not checked at all. Upgrade path if either reaches an outline: a
- * Polish stemmer, or the sidecar's NLP pass, which already tags parts of speech.
+ * ponytail: surface morphology, no lemmatiser. One corner stays open — a noun whose stem
+ * really ends in `ł` ("materiałem") still looks like an `-ałem` verb. Upgrade path if that
+ * reaches an outline: a Polish stemmer, or the sidecar's NLP pass, which already tags
+ * parts of speech.
  */
 const FIRST_PERSON_PAST = /\p{L}{2,}(?:łem|łam|liśmy|łyśmy)\b/iu;
+
+/** Any Polish letter the fold would change — the signal that the rule above can work. */
+const POLISH_DIACRITIC = /[ąćęłńóśźż]/iu;
+
+/**
+ * The same check for a page scraped without diacritics, where `-łem` and `-lem` are the
+ * same string and the rule above can never fire — those pages had no first-person check
+ * at all, so their testimonials and consent copy reached the outline.
+ *
+ * `-lam/-liśmy/-łyśmy` fold to endings no Polish noun has, so they stay general. `-lem`
+ * cannot: folded, it is also the instrumental of every noun ending in l/ł ("profilem",
+ * "kanalem"), which is exactly what this rule was rewritten to stop eating. It is
+ * therefore matched only after the verbs testimonials and consent copy are written with.
+ *
+ * ponytail: a closed verb list, and only reached on diacritic-free pages. A first-person
+ * masculine verb outside it still gets through. Upgrade path is the same stemmer or the
+ * sidecar's POS tags — until then the list grows only when a real outline shows a form
+ * it missed.
+ */
+const FIRST_PERSON_PAST_ASCII = new RegExp(
+  '\\p{L}{2,}(?:lam|lismy|lysmy)\\b'
+  + '|\\b(?:zapozna|skorzysta|korzysta|powierzy|otrzyma|zamowi|zdecydowa|wybra|poleci|'
+  + 'mia|by|znalaz|trafi|dosta|umowi|zglosi|napisa|przeczyta|zwroci|poprosi)lem\\b',
+  'iu',
+);
+
+/** NFC first: scraped HTML arrives decomposed often enough that the `ś` of `liśmy` would
+ *  otherwise be two codepoints and never match. */
+function isFirstPersonPast(sentence: string): boolean {
+  const text = sentence.normalize('NFC');
+  return POLISH_DIACRITIC.test(text)
+    ? FIRST_PERSON_PAST.test(text)
+    : FIRST_PERSON_PAST_ASCII.test(text);
+}
 
 /**
  * A navigation strip that the scraper flattened into one "sentence" —
@@ -92,6 +126,14 @@ function looksLikeNavigation(sentence: string): boolean {
  * The article's own seed tokens are excluded: a competitor at `detektyw.pl` would
  * otherwise donate the token `detektyw` and delete every sentence about the subject the
  * article is being written on.
+ *
+ * ponytail: a host whose every label token overlaps the seeds (`detektyw.pl`) therefore
+ * gets no brand filter at all, and its third-person self-references survive on
+ * `SELF_PROMOTION` alone. Narrowing is not available here — the only token to filter on
+ * IS the keyword, and filtering on it costs the article its subject, which is the larger
+ * loss. Upgrade path when a keyword-named competitor leaks: match the whole host label as
+ * a phrase ("detektyw.pl", "Detektyw Warszawa sp. z o.o.") or take the brand from the
+ * scraped page's organisation name instead of the URL.
  */
 function ownBrandTokens(url: string, seeds: string[]): string[] {
   try {
@@ -180,9 +222,7 @@ export function extractCorpusClaims(
     const folded = foldPolishLetters(s);
     const isAboutTheTopic = !SELF_PROMOTION.test(folded)
       && !MARKETING_MARKS.test(folded)
-      // NFC first: scraped HTML arrives decomposed often enough that the `ś` of `liśmy`
-      // would otherwise be two codepoints and never match.
-      && !FIRST_PERSON_PAST.test(s.normalize('NFC'))
+      && !isFirstPersonPast(s)
       && !mentionsOwnBrand(folded, brandTokens)
       && !looksLikeNavigation(s);
     const saysSomething = mentionsSeed(folded, seeds)

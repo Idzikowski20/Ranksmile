@@ -253,7 +253,14 @@ TEXT:
 
 
 def _fallback_terms(texts: list[str], keyword: str) -> list[dict]:
-    """TF-IDF phrase extraction when DeepSeek is unavailable — Ranksmile-style n-grams."""
+    """TF-IDF phrase extraction when DeepSeek is unavailable — Ranksmile-style n-grams.
+
+    `doc_freq` passes straight through and means the same thing on both paths: the number
+    of distinct pages containing the term (`extract_nlp_terms` counts `docs_with_term`,
+    the DeepSeek path above counts pages with a non-zero occurrence). The one exception is
+    the keyword row TF-IDF seeds, which reports `n_docs` by assumption rather than by
+    counting — consumers gating on "more than one page" read it as a floor there.
+    """
     if not texts:
         return [{"term": keyword, "target_count": 3, "type": "core"}] if keyword else []
 

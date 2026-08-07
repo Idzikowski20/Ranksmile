@@ -11,8 +11,6 @@ import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
 import { nextjsUrl } from '../../../lib/serviceUrls';
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     await db.sync();

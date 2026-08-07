@@ -6,8 +6,6 @@ import { getErrorMessage } from '../../../../../lib/errors';
 import { regenerateDomainTopics } from '../../../../../lib/regenerateDomainTopics';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });

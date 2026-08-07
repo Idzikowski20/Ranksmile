@@ -10,7 +10,7 @@ function ignoreExisting(label: string, e: unknown): void {
 /**
  * Single-row app settings blob. Replaces the local file `data/settings.json`
  * (SMTP/notification + GSC service-account creds) so settings persist on a
- * serverless host (Vercel) whose filesystem is ephemeral/read-only. Idempotent.
+ * host whose filesystem is ephemeral/read-only. Idempotent.
  */
 export async function ensureAppSettingsTable(): Promise<void> {
    if (checked) return;

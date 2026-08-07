@@ -89,13 +89,19 @@ def _resolved(
     return [text for text in texts if isinstance(text, str) and text]
 
 
+#: Any spelling of the fence tag. Stripping the two literal strings left every variant a
+#: model reads the same way — `</CONTEXT>`, `</ context>`, `</context foo>` — able to close
+#: the reference block.
+_FENCE_TAG = re.compile(r"<\s*/?\s*context\b[^>]*>", re.IGNORECASE)
+
+
 def _inline(value: object) -> str:
     """
     One line, no fence. A newline would let scraped text start what reads as a new
-    directive, and a literal </context> would let it close the reference block.
+    directive, and a context tag would let it close the reference block.
     """
     text = re.sub(r"\s+", " ", str(value or "")).strip()
-    return text.replace("<context>", "").replace("</context>", "")
+    return _FENCE_TAG.sub("", text)
 
 
 def _prompt(

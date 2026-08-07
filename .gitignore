@@ -48,9 +48,6 @@ yarn-error.log*
 !.env.production
 !.env.development
 
-# vercel
-.vercel
-
 # local embedded Postgres data (scripts/dev-postgres.ts)
 .local-postgres
 

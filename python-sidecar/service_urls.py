@@ -6,7 +6,7 @@ LOCAL_NEXTJS_URL = "http://127.0.0.1:3000"
 
 
 def _is_deployed() -> bool:
-    return bool(os.getenv("RENDER") or os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("VERCEL"))
+    return bool(os.getenv("RENDER") or os.getenv("RAILWAY_ENVIRONMENT"))
 
 
 def _is_local_url(url: str) -> bool:

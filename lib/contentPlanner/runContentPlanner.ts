@@ -358,6 +358,10 @@ function structuralBlockIssues(result: RunContentPlannerResult): ValidationIssue
   if (!result.blueprintValidation.ok) issues.push(...result.blueprintValidation.issues);
   if (!result.outlineValidation.ok) issues.push(...result.outlineValidation.issues);
   if (!result.briefValidation.ok) issues.push(...result.briefValidation.issues);
+  // `canWrite` is ANDed with plan conformity too, so its heading mismatches belong here —
+  // without them a conformity failure was reported only as "failed silently".
+  const conformity = result.postWrite?.planConformity;
+  if (conformity && !conformity.ok) issues.push(...conformity.issues);
 
   if (!result.bundle.outline) {
     issues.push({ code: 'no_outline', message: 'Planner produced no outline' });

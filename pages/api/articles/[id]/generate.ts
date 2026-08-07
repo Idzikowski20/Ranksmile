@@ -52,10 +52,8 @@ import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readArticleTerms } from '../../../../lib/articleTerms';
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 
-// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
-export const config = { maxDuration: 60 };
-
-/** Leaves the rest of the 60s handler for the compile and the sidecar kickoff. */
+/** Bounds the brief LLM call: nothing else force-kills this request, so an unbounded
+ *  completion would hang it forever and starve the compile and the sidecar kickoff. */
 const BRIEF_TIMEOUT_MS = 25_000;
 
 /** A claimed job with no update this long is presumed dead (killed function, timeout) and reclaimable. */
@@ -127,14 +125,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!claimed[0]) {
       jobId = null;
       // Self-heal: a claim survives a thrown error via the catch blocks below, but not a
-      // Vercel timeout or hard kill between the claim and the sidecar kickoff — that
+      // process crash or a deploy restart between the claim and the sidecar kickoff — that
       // leaves a 'queued' row with no reaper, permanently blocking this article under the
       // partial unique index. Reclaim it here if it's gone stale instead of requiring an
       // operator to clear it by hand.
       //
-      // Only 'queued' is eligible: this route's maxDuration is 60s, so a claim that never
-      // reached the sidecar kickoff is stuck for at most ~60s, making GENERATE_STALE_MINUTES
-      // a generous margin. 'running'/'finalizing' rows are a live sidecar generation with
+      // Only 'queued' is eligible: the window between the claim and the sidecar kickoff is
+      // seconds of local work, so GENERATE_STALE_MINUTES is a generous margin for a row that
+      // never got there. 'running'/'finalizing' rows are a live sidecar generation with
       // its own heartbeat (job-progress bumps updated_at on every status/stream event) —
       // reclaiming those on a flat timeout would start a duplicate LLM run racing the one
       // still in flight.
@@ -399,6 +397,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // strands the 'queued' job claim made at step 0. If the brief is slow we write from
     // the plan's own objectives instead — worse copy, but an article rather than a failed
     // request and an article that can no longer be generated.
+    // article_terms holds terms activated after the analysis ran; score_data alone is the
+    // stale half of the list the editor grades against. Loaded before the brief so the
+    // brief and the compiled plan cannot be written against different vocabularies.
+    const tableTerms = await readArticleTerms(articleIdNum).catch(() => []);
+
     const approvedHeadings = reviewed.length > 0
       ? reviewed
       : parseApprovedOutline(await writeOutlineBrief({
@@ -406,7 +409,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         bundle: finalized.bundle,
         brandKnowledge,
         brandName: cs.brandName,
-        importantTerms: importantTermsFromScoreData(scoreData),
+        importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
         language: lang,
         signal: AbortSignal.timeout(BRIEF_TIMEOUT_MS),
       }));
@@ -426,9 +429,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       outlineWarnings = approvedOutlineWarnings(writePlan);
     }
 
-    // article_terms holds terms activated after the analysis ran; score_data alone is the
-    // stale half of the list the editor grades against.
-    const tableTerms = await readArticleTerms(articleIdNum).catch(() => []);
     const compiledResult = compileAndValidateWritePlan(writePlan, {
       importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
       allowBrandNiche,
