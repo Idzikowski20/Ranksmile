@@ -70,4 +70,33 @@ describe('Benchmark Intelligence', () => {
     expect(t.h2SoftCeiling).toBe(t.h2);
     expect(Math.round(t.words / t.h2)).toBeGreaterThan(150);
   });
+
+  /**
+   * The real SERP for "prywatny detektyw warszawa": 447-1440 words, median 920, and the
+   * reference tool recommends 1110-1277 across seven H2. The old 2200 floor overrode the
+   * measurement and asked for twice the article, which the section count is derived from —
+   * eleven sections of ~200 words, several covering the same ground.
+   */
+  it('follows a short SERP instead of doubling it', () => {
+    const page = (wordCount: number, h2: number) => ({
+      wordCount,
+      h2,
+      faq: 5,
+      tables: 1,
+      lists: 8,
+      images: 2,
+      examples: 4,
+      citations: 6,
+      sectionLens: [Math.round(wordCount / h2)],
+      introLen: 90,
+      paragraphLens: [45],
+    });
+
+    const t = toPlannerTargets(buildStructuralBenchmark([
+      page(628, 8), page(1440, 14), page(1080, 12), page(447, 6), page(920, 10),
+    ]));
+
+    expect(t.words).toBeLessThan(1400);
+    expect(t.h2).toBe(7);
+  });
 });
