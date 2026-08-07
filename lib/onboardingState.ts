@@ -21,6 +21,18 @@ function isDuplicateRow(err: unknown): boolean {
    return name === 'SequelizeUniqueConstraintError' || original?.code === '23505';
 }
 
+/**
+ * "This column already exists" across both dialects — Postgres 42701, SQLite's message.
+ * Duck-typed for the same reason `isDuplicateRow` is: importing Sequelize's error
+ * classes drags the real package into every Jest suite that touches this module.
+ */
+function isDuplicateColumn(err: unknown): boolean {
+   if (typeof err !== 'object' || err === null) return false;
+   const { message, original } = err as { message?: string; original?: { code?: string; message?: string } };
+   if (original?.code === '42701') return true;
+   return /duplicate column|already exists/i.test(`${message ?? ''} ${original?.message ?? ''}`);
+}
+
 /** Creates only `user_onboarding`. Also called by `ensureArticlesTables` so there is one DDL. */
 export async function ensureUserOnboardingTable(): Promise<void> {
    if (tableChecked) return;
@@ -34,11 +46,17 @@ export async function ensureUserOnboardingTable(): Promise<void> {
       )
    `);
    // When the post-onboarding page tour was last dismissed. Added after the table
-   // shipped, so it arrives as a migration; both dialects throw a harmless "duplicate
-   // column" on re-run, which is the established idiom here.
+   // shipped, so it arrives as a migration and re-runs on every cold start.
+   //
+   // Only "the column is already there" is swallowed: a bare catch would also hide a
+   // read-only database or a dropped connection, and `tableChecked` is set right after,
+   // so the column would never be retried and every later read of tour_seen_at would
+   // fail at runtime instead of here.
    try {
       await db.query('ALTER TABLE user_onboarding ADD COLUMN tour_seen_at TIMESTAMP');
-   } catch { /* column already exists */ }
+   } catch (err: unknown) {
+      if (!isDuplicateColumn(err)) throw err;
+   }
    tableChecked = true;
 }
 

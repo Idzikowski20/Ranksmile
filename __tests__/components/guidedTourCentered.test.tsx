@@ -16,6 +16,20 @@ describe('GuidedTour centered steps', () => {
     expect(screen.getByTestId('scene-a')).toBeInTheDocument();
   });
 
+  /**
+   * Centring must be real pixels, not `translate(-50%, -50%)`: popoverMotion animates
+   * `transform` with fill-mode `both`, so its closing `translateY(0)` outranks an inline
+   * transform and leaves the card's top-left corner at the viewport centre — most of the
+   * card off-screen. Asserting the inline style alone missed this, so assert the shape.
+   */
+  it('centres with computed offsets that no animation can override', () => {
+    render(<GuidedTour open steps={steps} onClose={() => {}} />);
+    const card = screen.getByRole('dialog', { name: 'Dashboard' });
+    expect(card.style.transform).toBe('');
+    expect(card.style.top).toMatch(/^\d+px$/);
+    expect(card.style.left).toMatch(/^\d+px$/);
+  });
+
   it('ignores backdrop clicks — a stray click must not dismiss and persist the tour', () => {
     const onClose = jest.fn();
     render(<GuidedTour open steps={steps} onClose={onClose} storageKey="page_tour_seen" />);

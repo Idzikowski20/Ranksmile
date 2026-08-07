@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '../koala/core';
 import { KoalaPanel, KoalaPanelHeader, KoalaPanelBody } from '../koala/layout';
@@ -94,7 +94,7 @@ const ApiSettings = () => (
             <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--koala-text-secondary)', lineHeight: 1.45 }}>
               API access is not available on your plan. Upgrade to unlock API access and integrate Ranksmile with your tools.
             </p>
-            <Button type="button" variant="primary" onClick={() => toast.success('Upgrade to Scale â€” coming soon!')}>
+            <Button type="button" variant="primary" onClick={() => toast.success('Upgrade to Scale — coming soon!')}>
               Upgrade to Scale
             </Button>
           </KoalaPanelBody>

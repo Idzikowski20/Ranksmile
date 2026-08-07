@@ -14,13 +14,17 @@ import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
  */
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const userId = await getCurrentUserId(req, res);
-  if (!userId) return res.status(200).json({ seen: true });
 
   if (req.method === 'GET') {
+    // Fail closed: a signed-out visitor must never be shown the walkthrough.
+    if (!userId) return res.status(200).json({ seen: true });
     return res.status(200).json({ seen: await isPageTourSeen(userId) });
   }
 
   if (req.method === 'POST') {
+    // Never acknowledge a dismissal we cannot persist — a 200 here would let the
+    // client believe the tour is permanently closed when nothing was written.
+    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
     await markPageTourSeen(userId);
     return res.status(200).json({ seen: true });
   }

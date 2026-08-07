@@ -76,6 +76,17 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
 }) => {
   const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
 
+  // The Cancel button is gone, but discarding the review still has to be reachable:
+  // it aborts the in-flight request and restores the article the reviewer started
+  // from, which nothing else undoes. Escape carries it while the bar is idle.
+  const reviewable = !planning && !busy;
+  React.useEffect(() => {
+    if (!reviewable) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [reviewable, onCancel]);
+
   if (planning) {
     return <ProgressPill label="Generating outline" rightReserve={rightReserve} />;
   }
@@ -112,21 +123,18 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          onClick={onGenerate}
-          disabled={headingCount < 1}
-          icon={<Icon name="Sparkle" size={16} weight="fill" />}
-        >
-          Generate content
-        </Button>
-      </div>
+      {/* One action only. Cancel sat next to the button being aimed at and had no
+          undo — the outline is saved, so leaving the review is just navigating away. */}
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        onClick={onGenerate}
+        disabled={headingCount < 1}
+        icon={<Icon name="Sparkle" size={16} weight="fill" />}
+      >
+        Generate content
+      </Button>
     </div>
   );
 };
