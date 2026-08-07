@@ -317,15 +317,22 @@ export async function ensureArticlesTables() {
    } catch (dedupeErr) {
       console.error('[articles] failed to dedupe in-flight article_generate rows:', dedupeErr);
    }
+   let generateIndexReady = false;
    try {
       await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_analysis_jobs_generate_inflight
          ON analysis_jobs(article_id)
          WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')`);
+      generateIndexReady = true;
    } catch (indexErr) {
       console.error('[articles] CRITICAL: could not create idx_analysis_jobs_generate_inflight — '
          + 'the single-in-flight generate guard will fail closed (500) until this is fixed:', indexErr);
    }
 
-   tablesChecked = true;
+   // Only mark ready when the index actually exists — a transient failure here (lock
+   // contention, brief outage) would otherwise permanently disable /generate for this
+   // process, since tablesChecked short-circuits every future call before this point runs
+   // again. CREATE TABLE IF NOT EXISTS above is idempotent, so retrying the whole function
+   // on the next request costs nothing once the index does succeed.
+   tablesChecked = generateIndexReady;
    console.log('[articles] Tables ready');
 }

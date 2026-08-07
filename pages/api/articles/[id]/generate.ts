@@ -120,10 +120,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!claimed[0]) {
       jobId = null;
       // Self-heal: a claim survives a thrown error via the catch blocks below, but not a
-      // Vercel timeout or hard kill between the claim and the sidecar callback — that
-      // leaves a 'queued'/'running' row with no reaper, permanently blocking this article
-      // under the partial unique index. Reclaim it here if it's gone stale instead of
-      // requiring an operator to clear it by hand.
+      // Vercel timeout or hard kill between the claim and the sidecar kickoff — that
+      // leaves a 'queued' row with no reaper, permanently blocking this article under the
+      // partial unique index. Reclaim it here if it's gone stale instead of requiring an
+      // operator to clear it by hand.
+      //
+      // Only 'queued' is eligible: this route's maxDuration is 60s, so a claim that never
+      // reached the sidecar kickoff is stuck for at most ~60s, making GENERATE_STALE_MINUTES
+      // a generous margin. 'running'/'finalizing' rows are a live sidecar generation with
+      // its own heartbeat (job-progress bumps updated_at on every status/stream event) —
+      // reclaiming those on a flat timeout would start a duplicate LLM run racing the one
+      // still in flight.
       const isPg = Boolean(process.env.DATABASE_URL);
       const staleCutoff = isPg
         ? `updated_at < NOW() - INTERVAL '${GENERATE_STALE_MINUTES} minutes'`
@@ -131,7 +138,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       await db.query(
         `UPDATE analysis_jobs SET status = 'failed', error = 'stale in-flight claim reclaimed'
           WHERE article_id = ? AND job_type = 'article_generate'
-            AND status IN ('queued', 'running', 'finalizing') AND ${staleCutoff}`,
+            AND status = 'queued' AND ${staleCutoff}`,
         { replacements: [articleIdNum] },
       ).catch(() => {});
       jobId = `gen_${articleIdNum}_${Date.now()}`;
