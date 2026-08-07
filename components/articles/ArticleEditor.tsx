@@ -2125,6 +2125,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const restoreOrGenerateOutline = async () => {
       const articleId = commentArticleId ? Number(commentArticleId) : undefined;
       if (!editor) return;
+      // Busy from the first probe, not from the fetch that eventually sets it. Both
+      // lookups below are round-trips, and until one of them resolved the reviewer sat
+      // looking at "Untitled / Start writing" under an idle Generate pill — nothing on
+      // screen said a run had already started.
+      setOutlineBusy(true);
+      try {
+        await restoreOrPlanOutline(articleId);
+      } finally {
+        setOutlineBusy(false);
+      }
+    };
+
+    const restoreOrPlanOutline = async (articleId: number | undefined) => {
+      if (!editor) return;
       if (articleId) {
         // A write already running for this article: re-attach rather than start a
         // second one (the API's single-in-flight guard would reject it anyway).
