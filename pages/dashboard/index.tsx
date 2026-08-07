@@ -16,6 +16,7 @@ import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSectio
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
 import DashboardGreeting from '../../components/dashboard/DashboardGreeting';
+import PageTour from '../../components/onboarding/PageTour';
 import GetStartedCard from '../../components/dashboard/GetStartedCard';
 import QuickStartSection from '../../components/dashboard/QuickStartSection';
 import BrandPerformance from '../../components/dashboard/BrandPerformance';
@@ -251,6 +252,7 @@ const DashboardPage: NextPage = () => {
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
+        <PageTour />
         <KoalaPage maxWidth="100%">
           <div ref={revealRef}>
             <KoalaDashboardLayout

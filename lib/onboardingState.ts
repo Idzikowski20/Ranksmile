@@ -33,7 +33,50 @@ export async function ensureUserOnboardingTable(): Promise<void> {
          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
    `);
+   // When the post-onboarding page tour was last dismissed. Added after the table
+   // shipped, so it arrives as a migration; both dialects throw a harmless "duplicate
+   // column" on re-run, which is the established idiom here.
+   try {
+      await db.query('ALTER TABLE user_onboarding ADD COLUMN tour_seen_at TIMESTAMP');
+   } catch { /* column already exists */ }
    tableChecked = true;
+}
+
+/**
+ * Whether the user has finished (or skipped) the page tour. Server-side rather than
+ * localStorage so the tour does not reappear on every new browser, and so clearing site
+ * data cannot silently replay it.
+ */
+export async function isPageTourSeen(userId: string): Promise<boolean> {
+   await ensureUserOnboardingTable();
+   const [rows] = await db.query(
+      'SELECT tour_seen_at FROM user_onboarding WHERE user_id = ?',
+      { replacements: [userId] },
+   ) as [Array<{ tour_seen_at: string | null }>, unknown];
+   return rows.length > 0 && rows[0].tour_seen_at != null;
+}
+
+/**
+ * Records that the tour is done. Same insert-then-recover shape as
+ * `markOnboardingCompleted`: the user may have no row yet (tour finished before the
+ * survey), and two tabs finishing at once must not collide on the primary key.
+ */
+export async function markPageTourSeen(userId: string): Promise<void> {
+   await ensureUserOnboardingTable();
+   try {
+      await db.query(
+         'INSERT INTO user_onboarding (user_id, tour_seen_at, updated_at) VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+         { replacements: [userId] },
+      );
+      return;
+   } catch (err: unknown) {
+      if (!isDuplicateRow(err)) throw err;
+   }
+
+   await db.query(
+      'UPDATE user_onboarding SET tour_seen_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
+      { replacements: [userId] },
+   );
 }
 
 export async function isOnboardingCompleted(userId: string): Promise<boolean> {
