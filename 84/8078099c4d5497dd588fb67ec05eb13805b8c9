@@ -1,0 +1,26 @@
+AGENTS.md
+  s_8d6cce368af4fd::t_ae806389b6e1ff 94
+.gitignore
+  s_8d6cce368af4fd::t_7ab447a44cf7bc 88
+CLAUDE.md
+  s_8d6cce368af4fd::t_d731b2925e6983 112,114
+  s_8d6cce368af4fd::t_54a3713e5f1673 101
+jest.config.js
+  s_8d6cce368af4fd::t_0a014e1ca12215 14-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "848078099c4d5497dd588fb67ec05eb13805b8c9",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
