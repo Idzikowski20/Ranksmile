@@ -1,0 +1,89 @@
+python-sidecar/analyzers/semantic_terms.py
+  s_668ab4f91e9d5a::t_e30daa4021967c 256-263
+pages/api/articles/ranksmile-agent.ts
+  s_668ab4f91e9d5a::t_6edb5f460d8fc6 23
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_7f7b70dd7a2ce6 128,133-135
+  s_668ab4f91e9d5a::t_4da1f87d7de3e3 55-56
+  s_668ab4f91e9d5a::t_d564523783e7af 400-404,412
+python-sidecar/pipeline/ai_vis_scan.py
+  s_668ab4f91e9d5a::t_c3af13db6e2bec 28
+python-sidecar/service_urls.py
+  s_668ab4f91e9d5a::t_0da0ecec032a87 9
+python-sidecar/pipeline/section_writer.py
+  s_668ab4f91e9d5a::t_24efa5c520e2e5 92-97,101,104
+lib/ensureGscDataTable.ts
+  s_668ab4f91e9d5a::t_4f46d96b6df79e 12-13
+lib/ai/tools.ts
+  s_668ab4f91e9d5a::t_0beda933e6947c 66
+python-sidecar/.env.example
+  s_668ab4f91e9d5a::t_95dbeef5cebd12 11
+pages/api/articles/optimize-sections.ts
+  s_668ab4f91e9d5a::t_6edb5f460d8fc6 68
+cron.js
+  s_668ab4f91e9d5a::t_f7efa13f55221d 150
+python-sidecar/tests/test_section_writer.py
+  s_668ab4f91e9d5a::t_4f539762ad2c22 100-118,121-122,124-132,134
+  s_668ab4f91e9d5a::t_91ec16cd39f9c4 2,5
+lib/editor/revealHtmlProgressive.ts
+  s_668ab4f91e9d5a::t_c4d8d232f95f80 76-83,85,139-140,157-158
+SEO_AUTOPILOT.md
+  s_668ab4f91e9d5a::t_aa5961ca0b60bc 84-85
+  s_668ab4f91e9d5a::t_8eac4e5b4e7a72 105
+  s_668ab4f91e9d5a::t_e80edb63cc27ec 126
+__tests__/components/CompetitorOutlinesPanel.test.tsx
+  s_668ab4f91e9d5a::t_78b030f1493d42 63-67
+database/database.ts
+  s_668ab4f91e9d5a::t_c4d8ffb3ba2111 19-20
+lib/sidecar.ts
+  s_668ab4f91e9d5a::t_a576ecb95f25cb 13
+.env.production
+  s_668ab4f91e9d5a::t_41f8437149534b 1
+lib/aiVisibilityScan.ts
+  s_668ab4f91e9d5a::t_7cdea1f34107b4 55
+pages/api/articles/ask-ranksmile.ts
+  s_668ab4f91e9d5a::t_6edb5f460d8fc6 20
+__tests__/lib/contentPlanner/executionPlan.test.ts
+  s_668ab4f91e9d5a::t_af58fb26f5f425 435-488
+  s_668ab4f91e9d5a::t_827d5cea2ec299 13
+pages/api/articles/import.ts
+  s_668ab4f91e9d5a::t_ddabb38761ddbf 353
+__tests__/python/test_service_urls.py
+  s_668ab4f91e9d5a::t_7f1db3d7e65a41 35-36
+  s_668ab4f91e9d5a::t_4bc4ac455546f4 17
+__tests__/lib/editor/revealHtmlProgressive.test.ts
+  s_668ab4f91e9d5a::t_1c426987dc47dc 163-176,179-180,183,185-190
+  s_668ab4f91e9d5a::t_88834d9ea34b9a 177-178,181-182,184
+lib/contentPlanner/runContentPlanner.ts
+  s_668ab4f91e9d5a::t_e21b4cfc388cd8 361-364
+python-sidecar/main.py
+  s_668ab4f91e9d5a::t_c4b668d7d812d2 85
+  s_668ab4f91e9d5a::t_69a0e20722a01c 563
+pages/api/ai-visibility/[slug]/scan.ts
+  s_668ab4f91e9d5a::t_c5e7ff5dd516af 62-64
+__tests__/lib/wie/corpusClaims.test.ts
+  s_668ab4f91e9d5a::t_b20fba1601e012 140-145,148-151
+  s_668ab4f91e9d5a::t_f203bbad86d886 146-147
+lib/wie/corpusClaims.ts
+  s_668ab4f91e9d5a::t_286efa48f55a61 65-68,72-104
+  s_668ab4f91e9d5a::t_fa8561245517dc 225
+  s_668ab4f91e9d5a::t_42b1b5bb8d5f94 129-136
+lib/appSettingsStore.ts
+  s_668ab4f91e9d5a::t_83c970566f613e 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0c74da18fa3bbadda9af1a78d73711dc3f854fb4",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
