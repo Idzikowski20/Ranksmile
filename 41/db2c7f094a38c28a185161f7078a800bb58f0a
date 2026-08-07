@@ -1,0 +1,40 @@
+styles/globals.css
+  s_668ab4f91e9d5a::t_42a75266f4bf82 16
+  s_668ab4f91e9d5a::t_02e98b144d01bc 142,191,240
+__tests__/lib/koalaThemes.test.ts
+  s_668ab4f91e9d5a::t_b493bc1e101426 1-2,22-64
+lib/contentPlanner/briefWriter.ts
+  s_668ab4f91e9d5a::t_c257d52e3585cb 105,111
+components/articles/ArticleList.tsx
+  s_668ab4f91e9d5a::t_e366191cee2ae8 549-550,566,584
+components/koala/tokens/semantic.ts
+  s_668ab4f91e9d5a::t_c332714a8489b7 24
+vercel.json
+  s_668ab4f91e9d5a::t_d7675574bfd460 4-30
+components/articles/OutlineGenerateBar.tsx
+  s_668ab4f91e9d5a::t_76ba7fe2793f91 38-42
+pages/api/articles/deep-analysis.ts
+  s_668ab4f91e9d5a::t_d7675574bfd460 179-182
+components/koala/tokens/themes.ts
+  s_668ab4f91e9d5a::t_c332714a8489b7 20-21,92,159,226,293,365
+pages/api/articles/[id]/content-plan.ts
+  s_668ab4f91e9d5a::t_c257d52e3585cb 29,214-217,233
+lib/contentPlanner/fromArticleInputs.ts
+  s_668ab4f91e9d5a::t_c257d52e3585cb 103-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "41db2c7f094a38c28a185161f7078a800bb58f0a",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
