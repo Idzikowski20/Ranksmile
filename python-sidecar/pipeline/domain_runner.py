@@ -96,6 +96,35 @@ async def post_progress(nextjs_url: str, job_id: str, total_progress: int, messa
         print(f"[domain_runner] progress callback failed: {type(exc).__name__}: {exc}")
 
 
+async def _post_job_field(nextjs_url: str, job_id: str, field: dict) -> None:
+    """One-field patch on the job row. Generation feedback must never break the write,
+    so transport errors are logged and swallowed."""
+    if not nextjs_url:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            await client.post(
+                f"{nextjs_url.rstrip('/')}/api/articles/job-progress",
+                headers={
+                    "Content-Type": "application/json",
+                    "x-internal-token": os.environ.get("INTERNAL_PIPELINE_TOKEN", ""),
+                },
+                json={"jobId": job_id, **field},
+            )
+    except Exception as exc:
+        print(f"[domain_runner] job field callback failed: {type(exc).__name__}: {exc}")
+
+
+async def post_status(nextjs_url: str, job_id: str, text: str) -> None:
+    """The line the editor shows while writing (Surfer: AiArticleStatusStreaming)."""
+    await _post_job_field(nextjs_url, job_id, {"statusText": text})
+
+
+async def post_chunk(nextjs_url: str, job_id: str, chunk: str) -> None:
+    """A piece of the article as it is written (Surfer: AiArticleContentStreaming)."""
+    await _post_job_field(nextjs_url, job_id, {"contentChunk": chunk})
+
+
 async def run_domain_setup(job_id: str, payload: dict, nextjs_url: str) -> None:
     """Execute the 4-stage domain pipeline with per-stage timeouts.
 

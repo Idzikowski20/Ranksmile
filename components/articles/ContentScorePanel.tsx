@@ -16,7 +16,9 @@ import PrePublishPanel from './PrePublishPanel';
 import type { AiReadabilityResult } from './PrePublishPanel';
 import type { PlagiarismResult } from './PlagiarismPanel';
 import ScoreTrio from './ScoreTrio';
+import ScoreFactorList from './ScoreFactorList';
 import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '../../lib/aiSearchScore';
+import { introFactorsFromScoreData } from '../../lib/aiScore/liveFactors';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
 import { useCompetitors } from '../../services/competitors';
 import { Gauge } from '../koala/core';
@@ -563,12 +565,19 @@ const ContentScorePanel = ({
 
   const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0);
   const intentScore = coverageBuckets?.find((b) => b.key === 'intent')?.score;
+  // Recomputed as the user types, so the gauge and the factor list below never disagree.
+  // Falls back to the factors stored at generation when there is no text yet.
+  const liveIntroFactors = useMemo(
+    () => introFactorsFromScoreData({ html: html || '', keyword: keyword || '', scoreData }),
+    [html, keyword, scoreData],
+  );
   const resolvedAi = resolveAiScore({
     summary: aiVisibilitySummary,
     articleText: plainText,
     intentScore,
     answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
     coverageOverall: aiCoverageScore,
+    introFactors: liveIntroFactors,
   });
   // Stored ai_score can be 0 from a facts-V2 miss while citation summary is healthy — never let 0 mask that.
   const baseAiScore = Math.max(scoreData?.ai_score ?? 0, resolvedAi);
@@ -576,6 +585,8 @@ const ContentScorePanel = ({
   const displayAi = optimizeLiveScores?.ai ?? baseAiScore;
   const displayContent = optimizeLiveScores?.overall
     ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
+
+  const aiFactors = (html || '').trim() ? liveIntroFactors : (scoreData?.ai_factors ?? []);
 
   const historyDelta = useCoverageHistoryDelta(articleId);
   const trioDeltas = scoreDeltas ?? (historyDelta ? { ai: historyDelta.delta } : undefined);
@@ -701,6 +712,11 @@ const ContentScorePanel = ({
           onSeoClick={() => { setWriteSection('seo'); setView('write'); }}
           onAiClick={() => { setWriteSection('ai'); setView('write'); }}
         />
+        {aiFactors.length > 0 && (
+          <div style={{ padding: '12px 16px 0' }}>
+            <ScoreFactorList factors={aiFactors} />
+          </div>
+        )}
       </div>
 
       {optimizeState === 'idle' && (

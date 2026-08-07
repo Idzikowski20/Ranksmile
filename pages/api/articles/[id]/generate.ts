@@ -19,6 +19,7 @@ import { getErrorMessage } from '../../../../lib/errors';
 import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 import { safeJsonParse } from '../../../../lib/safeJson';
+import { pipelineVersionTag } from '../../../../lib/pipelineVersion';
 import {
   aiIntelFromScoreData,
   competitorsFromScoreData,
@@ -424,8 +425,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       { replacements: [JSON.stringify(sidecarPayload), jobId] },
     );
     await db.query(
-      `UPDATE articles SET status = 'generating', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-      { replacements: [articleId] },
+      `UPDATE articles SET status = 'generating', pipeline_version = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE ${articleIdSql} = ?`,
+      { replacements: [pipelineVersionTag({ manualOutline: approvedHeadings.length > 0 }), articleId] },
     );
 
     const base = sidecarUrl();

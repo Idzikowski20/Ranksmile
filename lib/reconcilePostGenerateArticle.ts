@@ -9,6 +9,8 @@ import { computeCoverageScores } from './aiCoverage';
 import { computeOverallContentScore } from './aiSearchScore';
 import { filterUsefulNlpTerms, isWeakTermList } from './competitorTermCalibration';
 import { countOccurrences, computeContentScore, type NlpTerm, type ScoreData } from './contentScore';
+import { factsCoverageFactor } from './aiScore/factors';
+import { scoreIntroduction } from './aiScore/introductionFactors';
 import { parseSnapshot } from './coverageStore';
 import { liveCoverageItems } from './liveCoverage';
 import { filterNlpTermsForAnalysis } from './topicRelevance';
@@ -27,6 +29,13 @@ type ArticleRow = {
   language: string | null;
   domain_id: number | null;
 };
+
+/** The planner's reader persona, split into the words the introduction has to hit. */
+function readerAudienceTerms(scoreData: ScoreData): string[] {
+  const persona = (scoreData as { content_planner_v2?: { bundle?: { reader?: { readerPersona?: string } } } })
+    .content_planner_v2?.bundle?.reader?.readerPersona;
+  return persona ? persona.split(/\s+/).filter(Boolean) : [];
+}
 
 function normalizeTerms(terms: NlpTerm[], plainText: string): NlpTerm[] {
   return terms.map((t) => ({
@@ -187,6 +196,16 @@ export async function reconcilePostGenerateArticle(opts: {
     coverageItems = [...liveItems];
     scoreData.ai_score = overall;
   }
+
+  scoreData.ai_factors = [
+    factsCoverageFactor(coverageItems.filter((item) => item.covered).length, coverageItems.length),
+    ...scoreIntroduction({
+      html: opts.html,
+      keyword,
+      coveredTopics: coverageItems.slice(0, 8).map((item) => item.label),
+      audienceTerms: readerAudienceTerms(existingScore),
+    }),
+  ];
 
   const seoScore = computeContentScore(
     plainText,
