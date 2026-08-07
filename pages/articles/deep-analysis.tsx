@@ -334,6 +334,16 @@ const DeepAnalysisPage: NextPage = () => {
           : `articleId=${articleId}`;
         const res = await fetch(`/api/articles/job-progress?${query}`);
         if (runGeneration !== runGenerationRef.current) return;
+        // The run this page is polling no longer exists — its article was deleted, or the
+        // session lost access to it. Swallowing that with every other non-OK response left
+        // the page polling a dead job forever: no step ever moved, no error was shown, and
+        // the session pointer kept every reload resuming the same missing run.
+        if (res.status === 404 || res.status === 403) {
+          setOverallError('This analysis run is no longer available — its article may have been deleted.');
+          clearPageRun(runSessionKey);
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          return;
+        }
         if (!res.ok) return;
         const data = await res.json() as AnalysisProgressPayload;
         if (runGeneration !== runGenerationRef.current) return;
