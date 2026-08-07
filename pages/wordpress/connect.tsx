@@ -1,8 +1,8 @@
-import type { NextPage } from 'next';
+﻿import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
-import { BounceSmileyAnimation } from '../../components/pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../../components/common/BounceSmileyAnimation';
 import Button from '../../components/koala/primitives/Button';
 import { Icon } from '../../components/koala/icons';
 import DomainFaviconAvatar from '../../components/common/DomainFaviconAvatar';
@@ -256,7 +256,7 @@ const WordPressConnect: NextPage = () => {
           <IconRing name="WarningCircle" />
           <Heading
             title="Connect your WordPress site"
-            subtitle="This page is opened from the Ranksmile plugin in WordPress. We couldn’t find a connection token — start again from WordPress (Ranksmile → Connect)."
+            subtitle="This page is opened from the Ranksmile plugin in WordPress. We couldnâ€™t find a connection token â€” start again from WordPress (Ranksmile â†’ Connect)."
           />
         </Column>
       );
@@ -362,7 +362,7 @@ const WordPressConnect: NextPage = () => {
             disabled={disabled}
             busy={busy}
           >
-            {busy ? 'Connecting…' : 'Connect'}
+            {busy ? 'Connectingâ€¦' : 'Connect'}
           </Button>
         </div>
       </Column>
@@ -372,7 +372,7 @@ const WordPressConnect: NextPage = () => {
   return (
     <div style={{ ...authPageStyle, fontFamily: AUTH_FONT, position: 'relative' }}>
       <Head>
-        <title>Connect WordPress — Ranksmile</title>
+        <title>Connect WordPress â€” Ranksmile</title>
       </Head>
       <BrandMark />
       <style>{`

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import styled from '@emotion/styled';
 import { Button } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 import { semantic } from '../koala/tokens/semantic';
 import { fontWeight, typeface } from '../koala/tokens/typography';
 
@@ -180,7 +180,7 @@ type Props = {
   compact?: boolean;
 };
 
-/** Vertical “Easy connect” stepper: download plugin → upload → activate. */
+/** Vertical â€śEasy connectâ€ť stepper: download plugin â†’ upload â†’ activate. */
 export function WpConnectWizard({ className, compact }: Props) {
   const [downloaded, setDownloaded] = useState(false);
 
@@ -255,7 +255,7 @@ export function WpConnectWizard({ className, compact }: Props) {
             <StepTitle>Upload to your server</StepTitle>
             <StepCopy>
               In WordPress go to{' '}
-              <PathHint>Plugins → Add New → Upload Plugin</PathHint>
+              <PathHint>Plugins â†’ Add New â†’ Upload Plugin</PathHint>
               . Choose the downloaded ZIP, then click <strong>Install Now</strong>.
             </StepCopy>
           </StepBody>
@@ -269,7 +269,7 @@ export function WpConnectWizard({ className, compact }: Props) {
             <StepTitle>Activate &amp; connect</StepTitle>
             <StepCopy>
               After install, click <strong>Activate</strong>. Open the Ranksmile plugin screen and connect
-              your Ranksmile account — the site will then appear in this settings page.
+              your Ranksmile account â€” the site will then appear in this settings page.
             </StepCopy>
           </StepBody>
         </Step>

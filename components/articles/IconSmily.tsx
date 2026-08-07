@@ -1,5 +1,5 @@
-import React from 'react';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+﻿import React from 'react';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 /** Smily mark (Ranksmile assistant). Compact rotating face for toolbars / chat chrome. */
 const IconSmily = ({ size = 20, animate = true }: { size?: number; animate?: boolean }) => (
