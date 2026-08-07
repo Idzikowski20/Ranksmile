@@ -22,6 +22,28 @@ describe('AnalysisProgressPanel', () => {
     expect(screen.getByText('pl.wikipedia.org')).toBeInTheDocument();
   });
 
+  it('announces the step that is running, not the whole panel', () => {
+    const phases = mergePhases(emptyPhases(), {
+      fetchingSerp: { status: 'DONE' },
+      crawlingSerp: { status: 'RUNNING', finished: 6, total: 10 },
+    });
+    const { container } = render(<AnalysisProgressPanel phases={phases} />);
+    const live = container.querySelector('[aria-live="polite"]');
+    expect(live?.textContent).toBe('In progress: Crawling result 6/10');
+  });
+
+  it('announces completion once every step is done', () => {
+    const done = mergePhases(emptyPhases(), {
+      importingContent: { status: 'DONE' },
+      fetchingSerp: { status: 'DONE' },
+      crawlingSerp: { status: 'DONE' },
+      loadingCompetitors: { status: 'DONE' },
+      aiSearch: { status: 'DONE' },
+    });
+    const { container } = render(<AnalysisProgressPanel phases={done} />);
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe('Analysis complete');
+  });
+
   it('marks finished rows for assistive tech', () => {
     const phases = mergePhases(emptyPhases(), { fetchingSerp: { status: 'DONE' } });
     render(<AnalysisProgressPanel phases={phases} />);
