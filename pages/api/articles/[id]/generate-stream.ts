@@ -12,10 +12,15 @@ import { flushHeaders, flushSse } from '../../../../lib/types/api';
 import { streamDelta } from '../../../../lib/streamDelta';
 import { staleFinalizationSql } from '../../../../lib/staleFinalization';
 
-// Without this the platform kills the response at its default (~10s) while the sidecar
-// keeps writing: the browser saw a dead stream, reported "Generation failed", and the
-// article then appeared on its own minutes later. 300s is the ceiling on Vercel's paid
-// tiers; the client reconnects for runs longer than that.
+// The platform kills the response at its default (~10s) while the sidecar keeps writing:
+// the browser saw a dead stream, reported "Generation failed", and the article then
+// appeared on its own minutes later. The client reconnects for runs longer than the cap.
+//
+// This export does NOT set the limit on its own — route-level `maxDuration` only lands
+// from Next 13.4.10, and this project is on 12.3.7 (no `maxDuration` anywhere in
+// next/dist). The value that actually applies comes from the `functions` block in
+// vercel.json; the export is kept so the two are read together. Every other route in
+// pages/api declares one the same way and has been equally inert.
 export const config = { maxDuration: 300 };
 
 const TICK_MS = 700;

@@ -108,6 +108,58 @@ describe('revealHtmlInEditor document integrity', () => {
     expect(hidden).toHaveLength(0);
   });
 
+  /**
+   * `hide()` parks every block at opacity 0 and the loop shows block 0 in the same
+   * synchronous pass. Without a forced style recalculation in between, the browser never
+   * paints the hidden state, no transition starts, and block 0 pops in while the rest
+   * fade. jsdom does no layout, so the observable is the layout read itself — it has to
+   * happen while a block is still parked.
+   */
+  it('forces a style recalculation between hiding the blocks and showing the first', async () => {
+    const seenOpacities: string[] = [];
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get(this: HTMLElement) {
+        seenOpacities.push(this.style.opacity);
+        return 0;
+      },
+    });
+
+    try {
+      await revealHtmlInEditor(editor, OUTLINE);
+    } finally {
+      if (original) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original);
+    }
+
+    expect(seenOpacities).toContain('0');
+  });
+
+  /**
+   * Reveal B supersedes reveal A: ProseMirror reuses the DOM nodes, so A's abort cleanup
+   * used to strip the inline styles off the blocks B had just parked — the new article
+   * appeared all at once instead of fading.
+   */
+  it('does not clear the styles of the reveal that superseded it', async () => {
+    const first = new AbortController();
+    const second = new AbortController();
+    const revealA = revealHtmlInEditor(editor, OUTLINE, { signal: first.signal });
+    const revealB = revealHtmlInEditor(editor, OUTLINE, { signal: second.signal });
+
+    // ProseMirror reconciles the DOM on its own between ticks, so the surviving inline
+    // styles are not a stable observable here — the unstyling itself is.
+    const removed = jest.spyOn(CSSStyleDeclaration.prototype, 'removeProperty');
+    first.abort();
+    await revealA;
+    const cleared = removed.mock.calls.map(([prop]) => prop);
+    removed.mockRestore();
+
+    expect(cleared).toHaveLength(0);
+
+    second.abort();
+    await revealB;
+  });
+
   it('clears the document for empty html', async () => {
     await revealHtmlInEditor(editor, '   ');
     expect(editor.getText()).toBe('');

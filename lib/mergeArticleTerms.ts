@@ -38,10 +38,19 @@ export function termsForOptimize(opts: {
  */
 export function importantTermsFromScoreData(
   scoreData: Record<string, unknown> | null | undefined,
-  max = 24,
+  opts?: {
+    max?: number;
+    /**
+     * Rows from `article_terms`. Terms activated after the analysis live only there, so
+     * omitting them left the Write Engine allocating keywords from a stale list while the
+     * editor graded the article against the full one.
+     */
+    tableTerms?: ArticleTermRow[];
+  },
 ): string[] {
+  const max = opts?.max ?? 24;
   const raw = scoreData && Array.isArray(scoreData.terms) ? (scoreData.terms as NlpTerm[]) : [];
-  return mergeArticleTermSources({ scoreDataTerms: raw })
+  return mergeArticleTermSources({ scoreDataTerms: raw, tableTerms: opts?.tableTerms })
     .slice(0, max)
     .map((t) => t.term)
     .filter(Boolean);

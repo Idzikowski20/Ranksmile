@@ -24,6 +24,5 @@ export function isPublicPath(pathname: string): boolean {
  * 404 page — and rendered a different tree on each side of hydration.
  */
 export function isPublicRoute(asPath: string, pathname: string): boolean {
-  const resolved = (asPath || '').split('?')[0] || pathname;
-  return isPublicPath(resolved) || isPublicPath(pathname);
+  return isPublicPath((asPath || '').split('?')[0]) || isPublicPath(pathname);
 }

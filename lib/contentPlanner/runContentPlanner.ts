@@ -365,6 +365,7 @@ function structuralBlockIssues(result: RunContentPlannerResult): ValidationIssue
     issues.push({ code: 'no_briefs', message: 'Planner produced an outline with no section briefs' });
   }
 
+  // No coverage means no outline, which `no_outline` above already reported.
   const coverage = result.bundle.knowledgeCoverage;
   if (coverage && coverage.knowledgeCoveragePct < KNOWLEDGE_COVERAGE_MIN_PCT) {
     issues.push({
@@ -374,13 +375,24 @@ function structuralBlockIssues(result: RunContentPlannerResult): ValidationIssue
         + `questions ${coverage.questions.assigned}/${coverage.questions.total}, `
         + `evidence ${coverage.evidenceNeeds.assigned}/${coverage.evidenceNeeds.total})`,
     });
-  } else if (!coverage && result.bundle.outline) {
-    issues.push({ code: 'coverage_missing', message: 'Knowledge coverage was never computed for this plan' });
   }
 
-  // Only when every named check passed — otherwise the caller sees a phantom extra issue.
+  // Reachable only when a gate says `ok: false` and hands over an empty `issues` array,
+  // so name that gate — "gates failed" was the unactionable message this function exists
+  // to replace, and it would be the one message left for the hardest case to diagnose.
   if (!issues.length) {
-    issues.push({ code: 'structure_blocked', message: 'Structural planner gates failed' });
+    const silent = ([
+      ['blueprint', result.blueprintValidation],
+      ['outline', result.outlineValidation],
+      ['brief', result.briefValidation],
+      ['planConformity', result.postWrite?.planConformity],
+    ] as const).filter(([, v]) => v && !v.ok).map(([name]) => name);
+    issues.push({
+      code: 'structure_blocked',
+      message: silent.length
+        ? `${silent.join(', ')} validation failed but reported no issue`
+        : 'canWrite is false while every planner gate reports ok',
+    });
   }
   return issues;
 }

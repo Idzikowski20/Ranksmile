@@ -2,6 +2,7 @@
  * Localized outline skeleton + H1 titleizer + FAQ/Summary order.
  * No product-SEO meta headings (keywords/links/CWV) in article outlines.
  */
+import { tokensShareStem } from '../topicRelevance';
 
 export type OutlineLang = 'pl' | 'en';
 
@@ -9,7 +10,9 @@ const TAIL_ROLES = /^(faq|summary|podsumowanie|podsum|contact|kontakt)$/i;
 
 /** Closing sections, in the order they must appear after the body. */
 const CLOSING = /faq/i;
-const SIGN_OFF = /summary|podsum|contact|kontakt/i;
+// Polish stems ("podsumowanie", "dane kontaktowe") but whole-word English, so
+// "Contactless payments" stays in the body instead of being filed as a sign-off.
+const SIGN_OFF = /(?:^|[^\p{L}])(?:podsum\p{L}*|kontakt\p{L}*|summary|contact)(?!\p{L})/iu;
 
 /** Guide / help skeleton — action path, no SEO meta sections. */
 export function localizedRequiredSections(
@@ -191,12 +194,11 @@ export function headingFillersFromCompetitors(
  */
 export function namesAnotherBrand(heading: string, keyword: string, lang: OutlineLang): boolean {
   if (lang !== 'pl') return false;
-  const known = new Set(
-    keyword.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean),
-  );
+  const known = keyword.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
   const tokens = heading.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
   return tokens.slice(1).some((token) => {
-    if (known.has(token.toLowerCase())) return false;
+    // "Detektywa", "Warszawie" are the keyword declined, not a rival's name.
+    if (known.some((k) => tokensShareStem(token.toLowerCase(), k))) return false;
     if (token.length <= 4 && token === token.toUpperCase()) return false;
     return token[0] === token[0].toUpperCase() && token[0] !== token[0].toLowerCase();
   });

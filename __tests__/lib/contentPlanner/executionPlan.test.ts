@@ -394,6 +394,43 @@ describe('Article Execution Plan', () => {
     expect(planVal.issues.some((i) => i.code === 'quick_answer_empty')).toBe(true);
   });
 
+  /**
+   * The last-resort branch fires only when a gate reports `ok: false` with no issues to
+   * show for it — the one case where the caller has nothing else to go on. "Structural
+   * planner gates failed" is exactly the message the per-gate reporting replaced.
+   */
+  it('names the gate that failed silently instead of reporting "gates failed"', async () => {
+    const result = runContentPlanner({
+      keyword: 'jak pozycjonować stronę',
+      year: 2026,
+      competitors: [
+        {
+          url: 'https://a.example/seo',
+          wordCount: 3600,
+          headings: 14,
+          paragraphs: 90,
+          lists: 18,
+          tables: 2,
+          faq: 6,
+          examples: 8,
+          claims: Array.from({ length: 8 }, (_, i) => `Claim fact number ${i} about SEO`),
+          questions: Array.from({ length: 6 }, (_, i) => `Question ${i} about SEO?`),
+          entities: ['ssl'],
+        },
+      ],
+    });
+
+    const finalized = await finalizePlannerForWrite({
+      ...result,
+      canWrite: false,
+      outlineValidation: { ok: false, issues: [] },
+    });
+
+    const blocked = finalized.planValidation?.issues.find((i) => i.code === 'structure_blocked');
+    expect(blocked).toBeDefined();
+    expect(blocked!.message).toMatch(/outline/i);
+  });
+
   it('finalizePlannerForWrite returns canWrite false when Quick Answer LLM fails', async () => {
     const result = runContentPlanner({
       keyword: 'jak pozycjonować stronę',

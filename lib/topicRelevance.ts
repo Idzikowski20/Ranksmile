@@ -105,15 +105,11 @@ export function filterOnTopicTerms<T extends { term: string }>(terms: T[], seedK
 }
 
 /**
- * Below this the strict pass is treated as a failed extraction and the soft pass runs
- * unconditionally. It is a floor, never a ceiling — the soft pass runs above it too.
- */
-const MIN_ANALYSIS_TERMS = 12;
-
-/**
  * Competitor documents a term must appear in before the corpus itself counts as proof
  * of topicality. Two is the smallest number that means "more than one page thought this
- * mattered", and the sidecar's extractor already requires a minimum document count.
+ * mattered". It only means that while `doc_freq` really is a distinct-document count —
+ * `semantic_terms.py` used to fill it with a per-heading chunk count, so one page saying
+ * something twice bought a free pass past every topic check.
  */
 const CORPUS_EVIDENCE_MIN_DOCS = 2;
 
@@ -168,8 +164,5 @@ export function filterNlpTermsForAnalysis<
     return words.length === 1 && words[0].length >= 8 && strict.length > 0;
   });
 
-  const merged = [...strict, ...soft];
-  // A strict pass under the floor means extraction went wrong, not that the topic is
-  // narrow — take whatever the soft pass salvaged rather than shipping four terms.
-  return merged.length >= strict.length ? merged : strict;
+  return [...strict, ...soft];
 }

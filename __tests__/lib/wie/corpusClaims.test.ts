@@ -116,3 +116,64 @@ describe('page furniture and competitor identity', () => {
     expect(extractCorpusClaims('Expertus posiada polisę OC w PZU.', KW, 24, url)).toEqual([]);
   });
 });
+
+/**
+ * The filters run over Polish, and each of these is a case where the rule matched the
+ * wrong thing — either because folding erased the letter the rule depended on, or because
+ * `\b` cannot see a Polish one.
+ */
+describe('Polish morphology and the source domain', () => {
+  const KW = 'prywatny detektyw warszawa';
+
+  /**
+   * The first-person guard keys on the verb ending `-łem/-łam`. Folded to ASCII it also
+   * matched the instrumental case of any noun whose stem ends in `l`, so ordinary facts
+   * about how evidence is secured and delivered were thrown away as testimonials.
+   */
+  it.each([
+    'Dowody zabezpieczane są profilem DNA w akredytowanym laboratorium.',
+    'Raport przekazywany kanalem szyfrowanym trafia do klienta w ciagu 24 godzin.',
+  ])('keeps instrumental-case nouns: %s', (sentence) => {
+    expect(extractCorpusClaims(sentence, KW, 24, 'https://x.pl/')).toHaveLength(1);
+  });
+
+  /** A domain concatenates what the page spells out, and the brand slipped through. */
+  it('drops a self-reference whose brand is concatenated in the domain', () => {
+    expect(extractCorpusClaims(
+      'Agencja Temida prowadzi obserwacje w całej Polsce od 2005 roku.',
+      KW,
+      24,
+      'https://agencjatemida.pl/x',
+    )).toEqual([]);
+  });
+
+  /** A competitor named after the subject must not delete the subject from the corpus. */
+  it('does not treat the article keyword as the competitor brand', () => {
+    expect(extractCorpusClaims(
+      'Licencja detektywistyczna jest wymagana przez ustawę z 2001 roku.',
+      KW,
+      24,
+      'https://detektyw.pl/',
+    )).toHaveLength(1);
+  });
+
+  /** `\bsą\b` can never fire — the boundary after `ą` does not exist for JavaScript. */
+  it('recognises an assertion whose verb ends in a Polish letter', () => {
+    expect(extractCorpusClaims(
+      'Dowody zebrane w toku obserwacji są dopuszczalne w postępowaniu rozwodowym.',
+      KW,
+      24,
+      'https://x.pl/',
+    )).toHaveLength(1);
+  });
+
+  /** Seed tokens arrive folded, so a keyword written properly missed its own mention. */
+  it('matches a keyword mention written with diacritics', () => {
+    expect(extractCorpusClaims(
+      'Prywatne śledztwo bywa prowadzone dyskretnie przez kilka tygodni w terenie.',
+      'śledztwo gospodarcze',
+      24,
+      'https://x.pl/',
+    )).toHaveLength(1);
+  });
+});

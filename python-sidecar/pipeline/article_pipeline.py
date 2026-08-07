@@ -49,6 +49,11 @@ które rankują na pierwszej stronie Google. Artykuły muszą być:
 Zwracaj TYLKO HTML artykułu (bez DOCTYPE, body, head — czysty HTML artykułu)."""
 
 
+#: What OpenRouter accepts. Anything else is a typo, not a setting.
+_REASONING_LEVELS = frozenset({"low", "medium", "high"})
+_REASONING_OFF = frozenset({"", "off", "none", "0", "false"})
+
+
 def _reasoning_effort() -> str:
     """
     Off by default, and deliberately so.
@@ -60,8 +65,18 @@ def _reasoning_effort() -> str:
     images with no prose — which then passed as a successful generation.
 
     Set OPENROUTER_REASONING_EFFORT to turn it back on; raise the paragraph budget with it.
+
+    Only the provider's own levels are accepted. An unrecognised value used to be sent
+    verbatim, and the request error that came back was swallowed by `_chat`'s catch-all
+    into the same empty string this whole guard exists to prevent — a typo in an env var
+    would have looked exactly like the bug.
     """
-    return (os.getenv("OPENROUTER_REASONING_EFFORT") or "").strip().lower()
+    effort = (os.getenv("OPENROUTER_REASONING_EFFORT") or "").strip().lower()
+    if effort in _REASONING_LEVELS:
+        return effort
+    if effort and effort not in _REASONING_OFF:
+        print(f"[generate] ignoring OPENROUTER_REASONING_EFFORT={effort!r} (expected one of {sorted(_REASONING_LEVELS)})")
+    return ""
 
 
 def _reasoning_body() -> dict:

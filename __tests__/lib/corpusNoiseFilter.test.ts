@@ -58,6 +58,22 @@ describe('isCorpusNoiseSentence', () => {
     expect(isCorpusNoiseSentence(sentence)).toBe(true);
   });
 
+  /** A street address is boilerplate in any casing — CMSes are not careful about it. */
+  it.each([
+    'Nasze biuro znajduje się przy ul. warszawska 12 obok dworca kolejowego.',
+    'Adres korespondencyjny to UL. Warszawska 12 w centrum stolicy kraju.',
+    'Zapraszamy do biura przy ulicy Złotej w samym sercu miasta stołecznego.',
+  ])('rejects a street address whatever its case: %s', (sentence) => {
+    expect(isCorpusNoiseSentence(sentence)).toBe(true);
+  });
+
+  /** "ulicach" is a plural noun in a sentence about the work, not an address. */
+  it('keeps a topical sentence that merely mentions streets', () => {
+    expect(isCorpusNoiseSentence(
+      'Obserwacja prowadzona na ulicach Warszawy oraz w galeriach handlowych centrum.',
+    )).toBe(false);
+  });
+
   /** A phone number is boilerplate; a figure with a plus sign is the kind of claim we want. */
   it('does not mistake a statistic for a phone number', () => {
     expect(isCorpusNoiseSentence('Ruch organiczny wzrósł o +20 000 wizyt w skali całego kwartału.')).toBe(false);

@@ -38,14 +38,18 @@ it('shows a progress pill with no controls while writing', () => {
  */
 it('is the same pill in every state, not a wider bar while reviewing', () => {
   const { container: idle } = render(<OutlineGenerateBar busy={false} headingCount={12} onGenerate={noop} />);
+  const { container: planning } = render(<OutlineGenerateBar planning busy={false} headingCount={0} onGenerate={noop} />);
   const { container: writing } = render(<OutlineGenerateBar busy headingCount={12} onGenerate={noop} />);
 
   const shapeOf = (el: HTMLElement) => {
     const { height, borderRadius, width } = el.style;
     return { height, borderRadius, width };
   };
-  expect(shapeOf(idle.firstElementChild as HTMLElement))
-    .toEqual(shapeOf(writing.firstElementChild as HTMLElement));
+  const idleShape = shapeOf(idle.firstElementChild as HTMLElement);
+
+  expect(idleShape).toEqual({ height: '44px', borderRadius: '999px', width: '' });
+  expect(shapeOf(planning.firstElementChild as HTMLElement)).toEqual(idleShape);
+  expect(shapeOf(writing.firstElementChild as HTMLElement)).toEqual(idleShape);
 });
 
 it('says nothing but its own action while reviewing', () => {

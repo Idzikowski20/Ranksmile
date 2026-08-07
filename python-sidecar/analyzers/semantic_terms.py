@@ -141,7 +141,10 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
             continue
         if not is_useful_phrase(term):
             continue
-        doc_freq = len(group["relevances"])
+        # How many CHUNKS produced the term. Chunks are per-heading, so one page can
+        # contribute several — this is not a document frequency and must never be sent
+        # out as one (consumers gate topicality on "more than one page used it").
+        chunk_hits = len(group["relevances"])
         avg_relevance = sum(group["relevances"]) / len(group["relevances"])
         type_counts = defaultdict(int)
         for tp in group["types"]:
@@ -151,7 +154,7 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
         if group["occurrences"]:
             target_count = max(1, round(sum(group["occurrences"]) / len(group["occurrences"])))
         else:
-            target_count = max(1, round(doc_freq * avg_relevance * 3))
+            target_count = max(1, round(chunk_hits * avg_relevance * 3))
 
         # Suggested range = spread of real per-competitor occurrence counts (Ranksmile
         # shows e.g. "1-4"): min/max across the pages that actually use the term.
@@ -164,7 +167,9 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
             "term": term,
             "target_count": target_count,
             "type": dominant_type,
-            "doc_freq": doc_freq,
+            # Distinct pages using the term — same primitive competitor_terms.py counts.
+            "doc_freq": len(nonzero),
+            "chunk_hits": chunk_hits,
             "relevance": round(avg_relevance, 2),
             "suggested_min": s_min,
             "suggested_max": s_max,
@@ -173,12 +178,12 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
     # 5. Filter by chunk-hit frequency. Short SERP-snippet corpora produce few chunks —
     # require only 1 hit so DeepSeek phrases aren't discarded before TF-IDF fallback.
     min_docs = 1 if n_docs <= 6 else max(2, round(0.3 * n_docs))
-    aggregated = [t for t in aggregated if t["doc_freq"] >= min_docs]
+    aggregated = [t for t in aggregated if t["chunk_hits"] >= min_docs]
 
     if not aggregated:
         return _fallback_terms(texts, keyword)
 
-    aggregated.sort(key=lambda t: (t["doc_freq"] * t["relevance"]), reverse=True)
+    aggregated.sort(key=lambda t: (t["chunk_hits"] * t["relevance"]), reverse=True)
 
     return [
         {
