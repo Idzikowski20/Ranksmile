@@ -43,14 +43,17 @@ function activeSummary(groups: ReturnType<typeof analysisPhaseGroups>): string {
 const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases }) => (
   // Centred in the panel rather than pinned to the top: for most of a run this is the
   // only thing in the column, and a short list hugging the toolbar reads as a leftover
-  // fragment instead of the thing the user is waiting on.
+  // fragment instead of the thing the user is waiting on. Centred horizontally too —
+  // `4px` of side padding left the list glued to the panel's left border.
   <div style={{
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
     gap: 28,
     minHeight: '100%',
-    padding: '8px 4px',
+    maxWidth: 340,
+    margin: '0 auto',
+    padding: '8px 24px',
   }}
   >
     {/* One focused live region: announcing the whole tree re-read every row on each tick;

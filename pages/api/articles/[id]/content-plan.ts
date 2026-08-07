@@ -227,6 +227,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       brandName: brand.brandName,
       importantTerms: importantTermsFromScoreData(scoreData ?? {}, { tableTerms }),
       language: row.language || undefined,
+      competitorHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
     });
     const headings = written ?? reviewOutlineFromBundle(result.bundle);
     if (!headings.length) {
