@@ -2,6 +2,7 @@ import type { FactorName, ScoreFactor } from './factors';
 
 /** Surfer judges the opening hard; only the first few sentences count as introduction. */
 const INTRO_SENTENCE_LIMIT = 6;
+const STOPWORDS = new Set(['w', 'we', 'i', 'na', 'do', 'za', 'z', 'ze', 'o', 'the', 'a', 'an', 'of', 'to', 'in', 'on']);
 
 function introSentences(html: string): string[] {
   const withoutHeadings = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, ' ');
@@ -17,6 +18,18 @@ function normalize(value: string): string {
   return value.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Whole-term match. Substring matching scored "AI" against email/said/main, and the
+ * short-token support below makes that failure mode common rather than rare.
+ */
+function matches(haystack: string, term: string): boolean {
+  return new RegExp(`(^|[^\\p{L}\\p{N}_])${escapeRegExp(term)}([^\\p{L}\\p{N}_]|$)`, 'u').test(haystack);
+}
+
 /** First sentence containing the most terms; the span is returned verbatim. */
 function findSpan(sentences: string[], terms: string[]): { span?: string; hits: number } {
   const wanted = terms.map(normalize).filter(Boolean);
@@ -24,7 +37,7 @@ function findSpan(sentences: string[], terms: string[]): { span?: string; hits: 
   let best: { span: string; hits: number } | null = null;
   for (const sentence of sentences) {
     const haystack = normalize(sentence);
-    const hits = wanted.filter((term) => haystack.includes(term)).length;
+    const hits = wanted.filter((term) => matches(haystack, term)).length;
     if (hits && (!best || hits > best.hits)) best = { span: sentence, hits };
   }
   return best ? { span: best.span, hits: best.hits } : { hits: 0 };
@@ -43,7 +56,10 @@ export function scoreIntroduction(opts: {
   audienceTerms: string[];
 }): ScoreFactor[] {
   const sentences = introSentences(opts.html);
-  const keywordTerms = opts.keyword.split(/\s+/).filter((word) => word.length > 2);
+  // Two-letter queries are real ("AI", "UX"); only drop the connectives that carry no intent.
+  const keywordTerms = opts.keyword
+    .split(/\s+/)
+    .filter((word) => word.length >= 2 && !STOPWORDS.has(word.toLowerCase()));
 
   const topics = findSpan(sentences, opts.coveredTopics);
   const audience = findSpan(sentences, opts.audienceTerms);

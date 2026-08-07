@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AnalysisPhases } from '../lib/analysisPhases';
 import {
   clearAnalyzeSession,
   deriveDeepAnalysisUi,
@@ -51,6 +52,7 @@ async function fetchLatestJob(articleId: number): Promise<{ jobId: string; snaps
       currentStage: data.currentStage,
       stageProgress: data.stageProgress,
       progressMessage: data.progressMessage,
+      phases: data.phases ?? null,
       updatedAt: data.updatedAt ?? null,
     },
   };
@@ -68,6 +70,7 @@ async function pollJob(jobId: string): Promise<PollOutcome> {
       status: data.status,
       currentStage: data.currentStage,
       stageProgress: data.stageProgress,
+      phases: data.phases ?? null,
       progressMessage: data.progressMessage,
       updatedAt: data.updatedAt ?? null,
     },
@@ -84,6 +87,11 @@ export function useBackgroundDeepAnalysis({
   onError,
 }: Options) {
   const [ui, setUi] = useState<DeepAnalysisUiState | null>(null);
+  // Served from this poll so the editor does not run a second interval for it.
+  const [phases, setPhases] = useState<AnalysisPhases | null>(null);
+  // Phases belong to one article's run; carrying them across would show the previous
+  // article's progress until the first poll answers.
+  useEffect(() => { setPhases(null); }, [articleId]);
   const [isActive, setIsActive] = useState(false);
   const runGenRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -177,6 +185,7 @@ export function useBackgroundDeepAnalysis({
       }
 
       setUi(deriveDeepAnalysisUi(snap));
+      if (snap.phases) setPhases(snap.phases);
       if (snap.status === 'failed') {
         stopPolling();
         setIsActive(false);
@@ -352,6 +361,7 @@ export function useBackgroundDeepAnalysis({
 
   return {
     ui,
+    phases,
     isActive,
     // Lock only while a run is actually in flight — never infer from DB status alone (stale 'analyzing' rows freeze the editor).
     isAnalyzing: isActive,

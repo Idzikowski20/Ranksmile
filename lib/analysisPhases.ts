@@ -44,17 +44,28 @@ export function emptyPhases(): AnalysisPhases {
   };
 }
 
+/**
+ * A finished phase stays finished. Stage events keep arriving after a phase reports
+ * DONE (the runner reports every stage), and the coarse stage fallback would otherwise
+ * push a completed crawl back to RUNNING and reopen the spinner.
+ */
+function mergePhase<T extends SimplePhase>(base: T, patch?: Partial<T>): T {
+  if (!patch) return base;
+  const reopensDone = base.status === 'DONE' && patch.status === 'RUNNING';
+  return { ...base, ...patch, ...(reopensDone ? { status: base.status } : {}) };
+}
+
 export function mergePhases(
   prev: AnalysisPhases | null,
   patch: AnalysisPhasesPatch,
 ): AnalysisPhases {
   const base = prev ?? emptyPhases();
   return {
-    importingContent: { ...base.importingContent, ...patch.importingContent },
-    fetchingSerp: { ...base.fetchingSerp, ...patch.fetchingSerp },
-    crawlingSerp: { ...base.crawlingSerp, ...patch.crawlingSerp },
-    loadingCompetitors: { ...base.loadingCompetitors, ...patch.loadingCompetitors },
-    aiSearch: { ...base.aiSearch, ...patch.aiSearch },
+    importingContent: mergePhase(base.importingContent, patch.importingContent),
+    fetchingSerp: mergePhase(base.fetchingSerp, patch.fetchingSerp),
+    crawlingSerp: mergePhase(base.crawlingSerp, patch.crawlingSerp),
+    loadingCompetitors: mergePhase(base.loadingCompetitors, patch.loadingCompetitors),
+    aiSearch: mergePhase(base.aiSearch, patch.aiSearch),
   };
 }
 
@@ -70,10 +81,8 @@ export function phasesFromStage(stage: string, stagePercent: number): AnalysisPh
         : { fetchingSerp: { status: 'RUNNING' } };
     case 'classify_content':
     case 'extract_terms':
-      return {
-        crawlingSerp: { status: done ? 'DONE' : 'RUNNING' },
-        loadingCompetitors: { status: done ? 'DONE' : 'RUNNING' },
-      };
+      // These read the already-crawled pages; only competitor loading is in flight.
+      return { loadingCompetitors: { status: done ? 'DONE' : 'RUNNING' } };
     case 'ai_search':
       return { aiSearch: { status: done ? 'DONE' : 'RUNNING' } };
     default:

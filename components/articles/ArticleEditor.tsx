@@ -1937,7 +1937,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         );
         if (progRes.ok) {
           const prog = await progRes.json() as { status?: string; jobId?: string };
-          if ((prog.status === 'running' || prog.status === 'queued') && prog.jobId) {
+          if (['running', 'queued', 'finalizing'].includes(prog.status || '') && prog.jobId) {
             jobId = prog.jobId;
           } else if (prog.status === 'done' && !opts?.approvedOutline?.length) {
             const artRes = await fetch(`/api/articles/${articleId}`);
@@ -2111,7 +2111,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             `/api/articles/job-progress?articleId=${articleId}&jobType=article_generate`,
           );
           const job = await jobRes.json() as { status?: string; jobId?: string };
-          if ((job.status === 'running' || job.status === 'queued') && job.jobId) {
+          if (['running', 'queued', 'finalizing'].includes(job.status || '') && job.jobId) {
             handleWriteWithAi().catch(() => {});
             return;
           }
