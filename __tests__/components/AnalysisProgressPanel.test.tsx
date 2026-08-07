@@ -64,4 +64,16 @@ describe('AnalysisProgressPanel', () => {
     render(<AnalysisProgressPanel phases={phases} />);
     expect(screen.getByLabelText('Done: Getting search results')).toBeInTheDocument();
   });
+  /** The engine badges are decoration: the group heading already names the sources. */
+  it('keeps the engine badges out of the accessibility tree', () => {
+    const { container } = render(<AnalysisProgressPanel phases={emptyPhases()} />);
+    const svgs = container.querySelectorAll('svg[aria-hidden="true"]');
+    expect(svgs.length).toBeGreaterThan(0);
+  });
+
+  it('renders both groups from a blank phase set rather than nothing', () => {
+    render(<AnalysisProgressPanel phases={emptyPhases()} />);
+    expect(screen.getByText('AI Search')).toBeInTheDocument();
+    expect(screen.getByText('Google Search results')).toBeInTheDocument();
+  });
 });

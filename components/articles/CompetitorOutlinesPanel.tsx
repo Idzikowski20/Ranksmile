@@ -22,7 +22,13 @@ interface Props {
   articleId: number;
   keyword: string;
   cachedOutlines: string | null;
-  onClose: () => void;
+  /**
+   * Omitted when the panel *is* the side column rather than something opened on top of
+   * it — there is nothing to go back to, and the header's own generate action is dropped
+   * with it: outline review already has one generate control in the bottom bar, and a
+   * second one that writes a different thing is how reviewers lose their edits.
+   */
+  onClose?: () => void;
 }
 
 /* ── Single competitor card ────────────────────────────────────────── */
@@ -236,6 +242,7 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
         padding: '12px 16px', borderBottom: '1px solid var(--koala-bg-secondary)', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {onClose && (
           <button
             onClick={onClose}
             style={{
@@ -252,6 +259,7 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
               <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0" clipRule="evenodd" />
             </svg>
           </button>
+          )}
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
             Competitors
           </span>
@@ -264,7 +272,7 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
             </span>
           )}
         </div>
-        {competitors.length > 0 && (
+        {onClose && competitors.length > 0 && (
           <button
             type="button"
             disabled={briefLoading}

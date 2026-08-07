@@ -12,6 +12,12 @@ import { flushHeaders, flushSse } from '../../../../lib/types/api';
 import { streamDelta } from '../../../../lib/streamDelta';
 import { staleFinalizationSql } from '../../../../lib/staleFinalization';
 
+// Without this the platform kills the response at its default (~10s) while the sidecar
+// keeps writing: the browser saw a dead stream, reported "Generation failed", and the
+// article then appeared on its own minutes later. 300s is the ceiling on Vercel's paid
+// tiers; the client reconnects for runs longer than that.
+export const config = { maxDuration: 300 };
+
 const TICK_MS = 700;
 
 /** Stop tailing a job that never reaches a terminal state (~20 min of writing). */

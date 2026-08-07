@@ -30,3 +30,18 @@ it('shows a progress pill with no controls while writing', () => {
   expect(screen.getByText('Generating content 42%')).toBeInTheDocument();
   expect(screen.queryAllByRole('button')).toHaveLength(0);
 });
+
+/**
+ * The editor passes its generation-status state straight through here. That state used
+ * to be seeded with "Generating article…", so an idle review bar announced a run that
+ * had not started and the reviewer never saw how many headings were waiting.
+ */
+it('falls back to the heading count when no status is in flight', () => {
+  render(<OutlineGenerateBar busy={false} status="" headingCount={12} onGenerate={noop} />);
+  expect(screen.getByText('12 headings ready — edit freely, then generate')).toBeInTheDocument();
+});
+
+it('shows a live status while one is supplied', () => {
+  render(<OutlineGenerateBar busy={false} status="Writing your article…" headingCount={12} onGenerate={noop} />);
+  expect(screen.getByText('Writing your article…')).toBeInTheDocument();
+});

@@ -1,11 +1,16 @@
 /**
  * @jest-environment jsdom
  */
+import { Editor } from '@tiptap/core';
+import StarterKit from '@tiptap/starter-kit';
 import {
   revealHtmlInEditor,
   splitHtmlTopLevelBlocks,
   editorCanCommand,
 } from '../../../lib/editor/revealHtmlProgressive';
+
+// jsdom implements neither, and the reveal calls both on every block.
+Element.prototype.scrollIntoView = () => {};
 
 describe('splitHtmlTopLevelBlocks', () => {
   it('splits sibling top-level tags', () => {
@@ -34,70 +39,77 @@ describe('editorCanCommand', () => {
   });
 });
 
-/** Minimal ProseMirror-ish doc: `size` plus the trailing-node shape the insert checks. */
-const docState = (opts: { size: number; empty?: boolean }) => ({
-  doc: {
-    content: { size: opts.size },
-    childCount: opts.empty ? 1 : 3,
-    lastChild: opts.empty
-      ? { type: { name: 'paragraph' }, content: { size: 0 } }
-      : { type: { name: 'heading' }, content: { size: 9 } },
-  },
-});
-
 /**
- * `insertContent` inserts at the current selection, and after a <ul> the selection sits
- * inside the last <li>. Every following block then landed inside that list item, so an
- * outline nested one level deeper per section until it read as one runaway bullet list.
- * Blocks must be appended at the end of the document instead.
+ * A reviewed outline: heading, its instruction bullets, its target-length line. Both
+ * document-corrupting bugs the reveal has shipped only show up on shapes like this —
+ * a list followed by more blocks.
  */
-it('appends each block at the end of the doc, not at the cursor', async () => {
-  const insertContentAt = jest.fn();
-  const insertContent = jest.fn();
+const OUTLINE = '<h1>Detektyw</h1>'
+  + '<h2>Zakres uslug</h2><ul><li>Wyjasnij zakres</li><li>Cover: licencja</li></ul>'
+  + '<p>Target length: ~300 words</p>'
+  + '<h2>Cennik</h2><ul><li>Cover: stawki</li></ul>';
 
-  await revealHtmlInEditor({
-    isDestroyed: false,
-    state: docState({ size: 42 }),
-    view: { dom: {} },
-    commands: { setContent: jest.fn(), insertContent, insertContentAt },
-  } as never, '<h2>A</h2><ul><li>one</li></ul><h2>B</h2><ul><li>two</li></ul>');
+describe('revealHtmlInEditor document integrity', () => {
+  let editor: Editor;
 
-  expect(insertContent).not.toHaveBeenCalled();
-  expect(insertContentAt).toHaveBeenCalledTimes(4);
-  expect(insertContentAt.mock.calls.every(([pos]) => pos === 42)).toBe(true);
-});
+  beforeEach(() => { editor = new Editor({ extensions: [StarterKit], content: '' }); });
+  afterEach(() => editor.destroy());
 
-/**
- * `setContent('')` leaves behind the empty paragraph the schema requires. Appending at
- * `doc.content.size` would then drop the first block *under* it, so every reveal opened
- * with a blank line above the H1.
- */
-it('replaces the placeholder paragraph instead of inserting after it', async () => {
-  const insertContentAt = jest.fn();
+  /**
+   * The reveal must be presentation-only. Building the document up block by block broke
+   * it twice: `insertContent` inserts at the selection, which sits inside the last <li>
+   * after a list, so every following section nested one level deeper; `insertContentAt`
+   * with an HTML string appends a trailing empty paragraph per call, so a blank line
+   * opened under every heading and every list.
+   */
+  it('leaves exactly the document a plain setContent would have produced', async () => {
+    await revealHtmlInEditor(editor, OUTLINE);
 
-  await revealHtmlInEditor({
-    isDestroyed: false,
-    state: docState({ size: 2, empty: true }),
-    view: { dom: {} },
-    commands: { setContent: jest.fn(), insertContent: jest.fn(), insertContentAt },
-  } as never, '<h1>Title</h1><p>body</p>');
-
-  expect(insertContentAt.mock.calls[0][0]).toEqual({ from: 0, to: 2 });
-});
-
-it('does not flush the complete article when an explicit cancellation aborts reveal', async () => {
-  const setContent = jest.fn();
-  const controller = new AbortController();
-  controller.abort();
-
-  await revealHtmlInEditor({
-    isDestroyed: false,
-    commands: { setContent, insertContent: jest.fn() },
-  } as never, '<h2>One</h2><p>Two</p>', {
-    signal: controller.signal,
-    abortBehavior: 'preserve',
+    const expected = new Editor({ extensions: [StarterKit], content: '' });
+    expected.commands.setContent(OUTLINE);
+    expect(editor.getHTML()).toBe(expected.getHTML());
+    expected.destroy();
   });
 
-  expect(setContent).toHaveBeenCalledWith('', { emitUpdate: false });
-  expect(setContent).not.toHaveBeenCalledWith('<h2>One</h2><p>Two</p>', expect.anything());
+  it('nests nothing inside the list and inserts no empty paragraphs between blocks', async () => {
+    await revealHtmlInEditor(editor, OUTLINE);
+
+    // The single trailing paragraph is TipTap's own trailing-node guarantee, so only
+    // empty paragraphs BETWEEN blocks indicate the reveal padded the document.
+    const html = editor.getHTML().replace(/<p><\/p>$/, '');
+    expect(html).not.toContain('<p></p>');
+    // A heading swallowed by the preceding list is the nesting signature.
+    expect(html).not.toMatch(/<li>(?:(?!<\/li>)[\s\S])*<h[1-4]/);
+    expect(html.match(/<h2>/g)).toHaveLength(2);
+  });
+
+  it('clears the inline fade styles it applied', async () => {
+    await revealHtmlInEditor(editor, OUTLINE);
+
+    const styled = Array.from(editor.view.dom.children)
+      .filter((el) => (el as HTMLElement).style.opacity !== '');
+    expect(styled).toHaveLength(0);
+  });
+
+  /**
+   * Aborting is a superseded or unmounted reveal, never a request to drop content: the
+   * document is committed before the first frame, so a cancelled animation must still
+   * leave a complete, fully visible article.
+   */
+  it('keeps the whole document visible when aborted mid-animation', async () => {
+    const controller = new AbortController();
+    const reveal = revealHtmlInEditor(editor, OUTLINE, { signal: controller.signal });
+    controller.abort();
+    await reveal;
+
+    expect(editor.getHTML()).toContain('Cennik');
+    const hidden = Array.from(editor.view.dom.children)
+      .filter((el) => (el as HTMLElement).style.opacity === '0');
+    expect(hidden).toHaveLength(0);
+  });
+
+  it('clears the document for empty html', async () => {
+    await revealHtmlInEditor(editor, '   ');
+    expect(editor.getText()).toBe('');
+  });
 });
