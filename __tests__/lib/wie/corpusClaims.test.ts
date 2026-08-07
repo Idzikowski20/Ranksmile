@@ -149,6 +149,23 @@ describe('Polish morphology and the source domain', () => {
     expect(extractCorpusClaims(sentence, KW, 24, 'https://x.pl/')).toEqual([]);
   });
 
+  /**
+   * `-lam` is a verb ending but not only a verb ending: it is also the genitive plural of
+   * `reklama` and a noun in its own right, so the ASCII branch was eating ordinary facts.
+   */
+  it.each([
+    'Obserwacja prowadzona jest bez reklam i bez ujawniania danych zleceniodawcy.',
+    'Detektyw zabezpiecza szlam i osad z miejsca zdarzenia jako material porownawczy.',
+  ])('keeps a fact whose noun merely ends like a verb: %s', (sentence) => {
+    expect(extractCorpusClaims(sentence, KW, 24, 'https://x.pl/')).toHaveLength(1);
+  });
+
+  it('still drops a first-person sentence that also contains such a noun', () => {
+    const sentence = 'Powierzylam agencji detektywistycznej sprawe zakazu reklam konkurencji.';
+
+    expect(extractCorpusClaims(sentence, KW, 24, 'https://x.pl/')).toEqual([]);
+  });
+
   /** A domain concatenates what the page spells out, and the brand slipped through. */
   it('drops a self-reference whose brand is concatenated in the domain', () => {
     expect(extractCorpusClaims(

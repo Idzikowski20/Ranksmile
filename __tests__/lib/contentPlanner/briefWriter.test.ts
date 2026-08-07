@@ -281,6 +281,16 @@ describe('writeOutlineBrief', () => {
     expect(headings?.[2].text).toBe('Zakres usług');
   });
 
+  /** A brace inside an instruction must not be read as the end of a section object. */
+  it('salvages a truncated reply whose prose contains a brace', async () => {
+    const truncated = '{"title":"T","sections":[{"n":1,"heading":"Jak działa detektyw",'
+      + '"instructions":["Użyj szablonu {miasto} w nagłówku."]},{"n":2,"heading":"Zakr';
+
+    const headings = await call(truncated).run();
+
+    expect(headings?.[1].instructions).toEqual(['Użyj szablonu {miasto} w nagłówku.']);
+  });
+
   /**
    * Pairing on array position alone means one dropped section re-labels every section
    * after it: section 2's brief would be written under section 1's role.

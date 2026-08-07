@@ -1711,8 +1711,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     useEffect(() => {
       if (!editor) return;
-      editor.setEditable(!readOnly);
-    }, [editor, readOnly]);
+      // Locked while a run is preparing content: the document behind the loading skeleton
+      // stayed editable, and anything typed into it was thrown away by the `setContent`
+      // that lands when the run finishes.
+      editor.setEditable(!readOnly && !((outlineBusy || generateBusy) && docEmpty));
+    }, [editor, readOnly, outlineBusy, generateBusy, docEmpty]);
 
     const toolbarLocked = !!formattingSuspended || !!readOnly;
 

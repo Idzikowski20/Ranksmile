@@ -78,10 +78,11 @@ const FIRST_PERSON_PAST = /\p{L}{2,}(?:łem|łam|liśmy|łyśmy)\b/iu;
  * let `Powierzylam ... męża` through — an ASCII verb carrying one accented noun routed
  * the whole sentence to the rule that cannot see it.
  *
- * `-lam/-liśmy/-łyśmy` fold to endings no Polish noun has, so they stay general. `-lem`
- * cannot: folded, it is also the instrumental of every noun ending in l/ł ("profilem",
- * "kanalem"), which is exactly what this rule was rewritten to stop eating. It is
- * therefore matched only after the verbs testimonials and consent copy are written with.
+ * `-lam/-lismy/-lysmy` stay general, but `-lam` is not exclusive to verbs — it is also
+ * the genitive plural of a handful of nouns ("zakaz reklam", "szlam"), which NOT_FIRST_PERSON
+ * blanks before the test. `-lem` is worse: folded, it is the instrumental of every noun
+ * ending in l/ł ("profilem", "kanalem"), which is exactly what this rule was rewritten to
+ * stop eating, so it is matched only after the verbs testimonials are written with.
  *
  * ponytail: a closed verb list, and only reached on diacritic-free pages. A first-person
  * masculine verb outside it still gets through. Upgrade path is the same stemmer or the
@@ -95,11 +96,25 @@ const FIRST_PERSON_PAST_ASCII = new RegExp(
   'iu',
 );
 
+/**
+ * Nouns that end in the same letters as a de-diacriticised `-łam`. `zakaz reklam` is not
+ * somebody describing what she did.
+ *
+ * ponytail: a closed list, and it is the ceiling of the `-lam` branch — any other noun
+ * with that ending costs the corpus a factual sentence. Upgrade path is the same stemmer
+ * or POS tags the verb list above is waiting on; until then this grows the same way, when
+ * a real corpus shows a word it drops.
+ */
+const NOT_FIRST_PERSON = /\b(?:reklam|szlam|islam|salam|kalam)\b/giu;
+
 /** NFC first: scraped HTML arrives decomposed often enough that the `ś` of `liśmy` would
  *  otherwise be two codepoints and never match. */
 function isFirstPersonPast(sentence: string): boolean {
   const text = sentence.normalize('NFC');
-  return FIRST_PERSON_PAST.test(text) || FIRST_PERSON_PAST_ASCII.test(text);
+  if (FIRST_PERSON_PAST.test(text)) return true;
+  // Blanked rather than used to veto the sentence: "Powierzylam im zakaz reklam" is still
+  // first person.
+  return FIRST_PERSON_PAST_ASCII.test(text.replace(NOT_FIRST_PERSON, ' '));
 }
 
 /**
