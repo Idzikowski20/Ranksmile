@@ -1,0 +1,23 @@
+__tests__/components/OutlineGenerateBar.test.tsx
+  s_668ab4f91e9d5a::t_b3a52c033a64b4 35-37,39-56,59-63
+components/articles/OutlineGenerateBar.tsx
+  s_668ab4f91e9d5a::t_c2d47be4e16670 56
+  s_668ab4f91e9d5a::t_f8f2e596af70ab 77,87-92,94,96-99,102,105-107,110-112
+  s_668ab4f91e9d5a::t_3c35f4d2215ae9 16-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d759e1b4b2044235c72697030689326152f48a59",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
