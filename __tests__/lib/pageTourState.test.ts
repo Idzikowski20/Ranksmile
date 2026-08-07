@@ -67,6 +67,33 @@ describe('page tour state', () => {
     await expect(markPageTourSeen('u1')).rejects.toThrow('connection lost');
   });
 
+  /**
+   * The migration guard decides whether a failed ALTER is benign. Getting it wrong is
+   * silent: `tableChecked` is set right after, so a swallowed real failure leaves
+   * `tour_seen_at` missing and every later read blowing up far from here.
+   */
+  it.each([
+    ['SQLite duplicate column', { message: 'SQLITE_ERROR: duplicate column name: tour_seen_at' }, true],
+    ['Postgres 42701', { message: 'boom', original: { code: '42701' } }, true],
+    ['relation already exists', { message: 'relation "user_onboarding" already exists' }, false],
+    ['read-only database', { message: 'attempt to write a readonly database' }, false],
+    ['not an object', 'nope', false],
+  ])('isDuplicateColumn: %s', async (_label, err, expected) => {
+    const { isDuplicateColumn } = await import('../../lib/onboardingState');
+    expect(isDuplicateColumn(err)).toBe(expected);
+  });
+
+  it('rethrows a non-duplicate ALTER failure instead of marking the schema ready', async () => {
+    jest.resetModules();
+    const dbModule = await import('../../database/database');
+    const query = dbModule.default.query as jest.Mock;
+    query.mockReset();
+    query.mockResolvedValueOnce(rows([]));
+    query.mockRejectedValueOnce(new Error('attempt to write a readonly database'));
+    const { isPageTourSeen } = await import('../../lib/onboardingState');
+    await expect(isPageTourSeen('u1')).rejects.toThrow('readonly');
+  });
+
   /** The migration re-runs on every cold start; a duplicate-column error is expected. */
   it('survives the ALTER failing because the column already exists', async () => {
     jest.resetModules();

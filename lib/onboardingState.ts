@@ -22,15 +22,20 @@ function isDuplicateRow(err: unknown): boolean {
 }
 
 /**
- * "This column already exists" across both dialects — Postgres 42701, SQLite's message.
- * Duck-typed for the same reason `isDuplicateRow` is: importing Sequelize's error
- * classes drags the real package into every Jest suite that touches this module.
+ * "This column already exists" across both dialects — Postgres 42701, SQLite's
+ * "duplicate column name" message. Duck-typed for the same reason `isDuplicateRow` is:
+ * importing Sequelize's error classes drags the real package into every Jest suite that
+ * touches this module.
+ *
+ * Deliberately narrower than a bare `already exists`: that phrase also covers "relation
+ * already exists" and friends, so a genuinely broken DDL would be swallowed as a
+ * successful migration while `tableChecked` marks the schema ready.
  */
-function isDuplicateColumn(err: unknown): boolean {
+export function isDuplicateColumn(err: unknown): boolean {
    if (typeof err !== 'object' || err === null) return false;
    const { message, original } = err as { message?: string; original?: { code?: string; message?: string } };
    if (original?.code === '42701') return true;
-   return /duplicate column|already exists/i.test(`${message ?? ''} ${original?.message ?? ''}`);
+   return /duplicate column/i.test(`${message ?? ''} ${original?.message ?? ''}`);
 }
 
 /** Creates only `user_onboarding`. Also called by `ensureArticlesTables` so there is one DDL. */

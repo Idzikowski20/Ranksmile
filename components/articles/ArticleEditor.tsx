@@ -2176,28 +2176,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }, undefined, { shallow: true });
     };
 
-    const handleOutlineCancel = () => {
-      const activeReveal = generationRevealHtmlRef.current;
-      outlineRequestRef.current?.abort();
-      outlineRequestRef.current = null;
-      generationRunRef.current += 1;
-      generationJobIdRef.current = null;
-      revealAbortRef.current?.abort();
-      if (activeReveal && editorCanCommand(editor)) {
-        editor.commands.setContent(activeReveal.html, { emitUpdate: true });
-      } else if (outlineOriginalHtmlRef.current !== null && editorCanCommand(editor)) {
-        editor.commands.setContent(outlineOriginalHtmlRef.current, { emitUpdate: true });
-      }
-      outlineOriginalHtmlRef.current = null;
-      generationRevealHtmlRef.current = null;
-      setOutlineBusy(false);
-      setGenerateBusy(false);
-      setGeneratePct(null);
-      setOutlineReviewMode(false);
-      const q = { ...router.query };
-      delete q.reviewOutline;
-      void router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
-    };
 
     // Repaint comment decorations when the comment list changes (no-op tx forces
     // the decorations prop to re-run, reading the latest commentsRef).
@@ -2498,7 +2476,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             progressPct={generatePct}
             headingCount={outlineHeadingCount}
             onGenerate={handleOutlineGenerate}
-            onCancel={handleOutlineCancel}
             rightReserve={bottomBarRightReserve}
           />
         )}

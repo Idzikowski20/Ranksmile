@@ -112,6 +112,8 @@ export function GuidedTour({ steps, open, onClose, storageKey }: GuidedTourProps
    *  it off the screen. Defaults ≈ an illustrated card until the first measurement. */
   const [cardH, setCardH] = useState(380);
   const [cardW, setCardW] = useState(380);
+  /** Re-render source for viewport changes; centered cards have no rect to watch. */
+  const [viewport, setViewport] = useState({ w: 0, h: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
   /** The single exit: marks the tour seen so it doesn't reappear. Skip, Done and
@@ -195,7 +197,13 @@ export function GuidedTour({ steps, open, onClose, storageKey }: GuidedTourProps
       if (w) setCardW(w);
     });
 
-    const remeasure = () => { if (el) setRect(el.getBoundingClientRect()); };
+    // Centered steps have no anchor rect, so re-measuring only the target would never
+    // re-render them — the card would keep its old pixel offsets and drift off-screen
+    // on a resize or an orientation change. Bump the viewport tick either way.
+    const remeasure = () => {
+      if (el) setRect(el.getBoundingClientRect());
+      setViewport({ w: window.innerWidth, h: window.innerHeight });
+    };
     // Escape is Skip's keyboard equivalent, not a separate dismissal — a pointer-blocked
     // overlay with no keyboard way out would be a trap.
     const onKey = (e: KeyboardEvent) => {
@@ -224,21 +232,24 @@ export function GuidedTour({ steps, open, onClose, storageKey }: GuidedTourProps
   // hold their position instead of sliding off-screen.
   const CARD_W = 348;
   const MARGIN = 16;
-  const maxTop = Math.max(MARGIN, window.innerHeight - cardH - MARGIN);
+  // Read from state, not `window`, so a resize re-runs this maths (see remeasure).
+  const vw = viewport.w || window.innerWidth;
+  const vh = viewport.h || window.innerHeight;
+  const maxTop = Math.max(MARGIN, vh - cardH - MARGIN);
   // Upper bound never below the lower one: on a narrow phone `innerWidth - cardW` goes
   // negative and would push the card off the left edge.
-  const maxLeft = Math.max(MARGIN, window.innerWidth - cardW - MARGIN);
+  const maxLeft = Math.max(MARGIN, vw - cardW - MARGIN);
   const position: React.CSSProperties = (() => {
     if (centered) {
       // Centred in pixels, never `translate(-50%, -50%)`: popoverMotion animates
       // `transform` with fill-mode `both`, so its final `translateY(0)` outranks an
       // inline transform and dumped the card's top-left corner at the viewport centre.
       return {
-        top: Math.max(MARGIN, Math.round((window.innerHeight - cardH) / 2)),
-        left: Math.max(MARGIN, Math.round((window.innerWidth - cardW) / 2)),
+        top: Math.max(MARGIN, Math.round((vh - cardH) / 2)),
+        left: Math.max(MARGIN, Math.round((vw - cardW) / 2)),
       };
     }
-    if (window.innerWidth - rect.right >= CARD_W + 24) {
+    if (vw - rect.right >= CARD_W + 24) {
       return {
         top: Math.max(MARGIN, Math.min(rect.top - 8, maxTop)),
         left: Math.min(rect.right + MARGIN, maxLeft),
