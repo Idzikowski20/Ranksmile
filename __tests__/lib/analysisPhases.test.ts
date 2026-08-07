@@ -26,6 +26,13 @@ describe('mergePhases', () => {
     expect(after.loadingCompetitors.status).toBe('RUNNING');
   });
 
+  it('refuses to reopen a DONE phase with an explicit RUNNING patch', () => {
+    const done = mergePhases(emptyPhases(), { crawlingSerp: { status: 'DONE', finished: 10, total: 10 } });
+    const after = mergePhases(done, { crawlingSerp: { status: 'RUNNING', finished: 3, total: 10 } });
+    expect(after.crawlingSerp.status).toBe('DONE');
+    expect(after.crawlingSerp.finished).toBe(3);
+  });
+
   it('still lets a phase move forward from RUNNING', () => {
     const running = mergePhases(emptyPhases(), { aiSearch: { status: 'RUNNING' } });
     expect(mergePhases(running, { aiSearch: { status: 'DONE' } }).aiSearch.status).toBe('DONE');

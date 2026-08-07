@@ -235,7 +235,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const { getArticleIdSql } = await import('../../../lib/articleSql');
         const articleIdSql = await getArticleIdSql();
         if (status === 'done') {
-          const html = (result?.article_html as string) || '';
+          // articles.content is the canonical body rendered by the editor, preview and
+          // publish surfaces — sanitize at this boundary, not at each render site.
+          const html = sanitizeArticleHtml((result?.article_html as string) || '');
           const { isUsableArticleHtml, stripHtmlToPlain } = await import('../../../lib/articleHtmlUsable');
           // Never wipe a draft with an empty LLM response — fail the job so the UI can retry.
           if (!isUsableArticleHtml(html)) {
@@ -332,7 +334,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          SET stream_text = substr(COALESCE(stream_text, '') || ?, 1, ${MAX_STREAM_CHARS}),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        { replacements: [sanitizeArticleHtml(contentChunk), jobId] },
+        { replacements: [sanitizeArticleHtml(contentChunk), jobId] },  // ponytail: fragment-level
+        // sanitizing cannot catch a tag split across two chunks; the terminal write above
+        // sanitizes the assembled article, which is what any surface actually renders.
       );
     }
 
