@@ -16,6 +16,8 @@ import {
   aiIntelFromScoreData,
   competitorsFromScoreData,
   competitorHeadingTitles,
+  diagnosePlannerInputs,
+  enrichWithCorpusClaims,
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
 } from '../../../../lib/contentPlanner/fromArticleInputs';
@@ -98,6 +100,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!competitors.length) {
       competitors = parseCompetitorCacheJson(row.competitor_outlines_cache);
     }
+    competitors = enrichWithCorpusClaims(competitors, scoreData?.competitor_claims ?? null);
     competitors = enrichWithWieSynthesis(
       competitors,
       scoreData?.competitor_synthesis ?? null,
@@ -202,10 +205,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         ...result.outlineValidation.issues,
         ...result.briefValidation.issues,
       ].map((issue) => issue.message).find(Boolean);
+      // Which of the three data gaps this is decides what the reader should do about it;
+      // the validator code (`claims_too_low`) only says the gate that tripped.
+      const analysisRunning = await db.query<{ id: string }>(
+        `SELECT id FROM analysis_jobs
+          WHERE article_id = ? AND job_type = 'deep_analysis' AND status IN ('queued', 'running')
+          LIMIT 1`,
+        { replacements: [articleId], type: QueryTypes.SELECT },
+      ).then((jobs) => jobs.length > 0).catch(() => false);
+      const gap = diagnosePlannerInputs({
+        scoreData,
+        competitorCount: competitors.length,
+        claimCount: result.bundle.targetKg.claims.length,
+        analysisRunning,
+      });
       return res.status(422).json({
-        error: reason
-          ? `Outline planner has too little analysis data: ${reason}. Re-run the article analysis, then try again.`
-          : 'Outline planner produced no sections — re-run the article analysis, then try again.',
+        error: gap.message,
+        cause: gap.code,
+        validatorReason: reason ?? null,
         headings: [],
         canWrite: result.canWrite,
         validations: {

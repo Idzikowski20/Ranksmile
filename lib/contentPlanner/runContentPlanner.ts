@@ -33,7 +33,9 @@ import { buildArticleExecutionPlan } from './executionPlan';
 import { generateQuickAnswer } from './quickAnswer';
 import { validatePlanForWrite } from './validators/planValidators';
 import { titleizeH1 } from './sectionLabels';
-import type { CompetitorBenchmark, ContentPlannerBundle, ValidationResult } from './types';
+import type {
+  CompetitorBenchmark, ContentPlannerBundle, ValidationIssue, ValidationResult,
+} from './types';
 import { KNOWLEDGE_COVERAGE_MIN_PCT } from './types';
 import type { KnowledgeGraph, TopicBlock } from '../knowledgeEngine/types';
 import { knowledgeGraphToTargetKg } from '../knowledgeEngine/toTargetKg';
@@ -344,6 +346,46 @@ export function runContentPlanner(input: RunContentPlannerInput): RunContentPlan
 }
 
 /**
+ * Which structural gate actually blocked the write.
+ *
+ * `canWrite` is an AND over four independent checks, so a bare "gates failed" tells the
+ * reader nothing they can act on: re-running the analysis fixes a coverage shortfall but
+ * not a blueprint that is short of claims, and neither is the same as a planner that
+ * produced no outline at all. Each surviving issue keeps its own code and message.
+ */
+function structuralBlockIssues(result: RunContentPlannerResult): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (!result.blueprintValidation.ok) issues.push(...result.blueprintValidation.issues);
+  if (!result.outlineValidation.ok) issues.push(...result.outlineValidation.issues);
+  if (!result.briefValidation.ok) issues.push(...result.briefValidation.issues);
+
+  if (!result.bundle.outline) {
+    issues.push({ code: 'no_outline', message: 'Planner produced no outline' });
+  } else if (!result.bundle.briefs.length) {
+    issues.push({ code: 'no_briefs', message: 'Planner produced an outline with no section briefs' });
+  }
+
+  const coverage = result.bundle.knowledgeCoverage;
+  if (coverage && coverage.knowledgeCoveragePct < KNOWLEDGE_COVERAGE_MIN_PCT) {
+    issues.push({
+      code: 'coverage_too_low',
+      message: `Knowledge coverage ${coverage.knowledgeCoveragePct}% is below the ${KNOWLEDGE_COVERAGE_MIN_PCT}% required to write `
+        + `(critical claims ${coverage.criticalClaims.assigned}/${coverage.criticalClaims.total}, `
+        + `questions ${coverage.questions.assigned}/${coverage.questions.total}, `
+        + `evidence ${coverage.evidenceNeeds.assigned}/${coverage.evidenceNeeds.total})`,
+    });
+  } else if (!coverage && result.bundle.outline) {
+    issues.push({ code: 'coverage_missing', message: 'Knowledge coverage was never computed for this plan' });
+  }
+
+  // Only when every named check passed — otherwise the caller sees a phantom extra issue.
+  if (!issues.length) {
+    issues.push({ code: 'structure_blocked', message: 'Structural planner gates failed' });
+  }
+  return issues;
+}
+
+/**
  * Planner First write gate: Quick Answer LLM → Plan Validator → immutable Execution Plan.
  * Writer must not run when canWrite is false.
  */
@@ -361,10 +403,11 @@ export async function finalizePlannerForWrite(
     return {
       ...result,
       bundle,
-      planValidation: {
-        ok: false,
-        issues: [{ code: 'structure_blocked', message: 'Structural planner gates failed' }],
-      },
+      // Forward the gate that actually tripped. Collapsing blueprint, outline, brief and
+      // knowledge-coverage failures into one "Structural planner gates failed" left the
+      // only user-visible signal unactionable — and undebuggable, since the response is
+      // all a caller ever sees of this run.
+      planValidation: { ok: false, issues: structuralBlockIssues(result) },
       canWrite: false,
     };
   }
