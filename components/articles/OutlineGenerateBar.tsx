@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from '../koala/core';
 import { Icon } from '../koala/icons';
 import { useEntrance } from '../../lib/motion/useEntrance';
 
@@ -8,11 +7,21 @@ export type OutlineGenerateBarProps = {
   planning?: boolean;
   /** Article is being written from the approved outline. */
   busy: boolean;
-  status?: string;
   progressPct?: number | null;
   headingCount: number;
   onGenerate: () => void;
   rightReserve?: number;
+};
+
+/** Shared geometry: the three states are one control that changes label, not three bars. */
+const PILL: React.CSSProperties = {
+  height: 44,
+  gap: 10,
+  padding: '0 20px',
+  borderRadius: 999,
+  fontSize: 14,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
 };
 
 const SHELL: React.CSSProperties = {
@@ -44,15 +53,9 @@ const ProgressPill: React.FC<{ label: string; rightReserve: number }> = ({ label
       ref={ref}
       style={{
         ...SHELL,
+        ...PILL,
         left: `calc((100vw - ${rightReserve}px) / 2)`,
         transform: 'translateX(-50%)',
-        height: 44,
-        gap: 10,
-        padding: '0 20px',
-        borderRadius: 999,
-        fontSize: 14,
-        fontWeight: 600,
-        whiteSpace: 'nowrap',
       }}
       aria-live="polite"
     >
@@ -66,13 +69,12 @@ const ProgressPill: React.FC<{ label: string; rightReserve: number }> = ({ label
 const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
   planning = false,
   busy,
-  status,
   progressPct,
   headingCount,
   onGenerate,
   rightReserve = 0,
 }) => {
-  const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
+  const barEntranceRef = useEntrance<HTMLButtonElement>({ y: 0 });
 
   if (planning) {
     return <ProgressPill label="Generating outline" rightReserve={rightReserve} />;
@@ -82,48 +84,32 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
     return <ProgressPill label={`Generating content${pct}`} rightReserve={rightReserve} />;
   }
 
+  const empty = headingCount < 1;
+
+  // The same pill the two running states use, now clickable. It used to be a wide bar
+  // restating "Outline / Review outline / N headings ready" — none of which the reviewer
+  // needs, since the outline they are reading is the thing being described, and the bar
+  // then changed shape on every state change.
   return (
-    <div
+    <button
       ref={barEntranceRef}
+      type="button"
+      onClick={onGenerate}
+      disabled={empty}
+      title={empty ? 'Add at least one heading to the outline first' : undefined}
       style={{
         ...SHELL,
+        ...PILL,
         left: `calc((100vw - ${rightReserve}px) / 2)`,
         transform: 'translateX(-50%)',
-        width: `min(calc((100vw - ${rightReserve}px) * 0.833), 1000px)`,
-        height: 52,
-        justifyContent: 'space-between',
-        gap: 12,
-        padding: '0 16px',
-        borderRadius: 12,
+        border: 'none',
+        cursor: empty ? 'not-allowed' : 'pointer',
+        opacity: empty ? 0.6 : 1,
       }}
     >
-      <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>Outline</span>
-
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0, flex: 1 }}>
-        <span style={{ fontSize: 14 }}>Review outline</span>
-        <span
-          style={{ fontSize: 12, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}
-          aria-live="polite"
-        >
-          {status?.trim()
-            || `${headingCount} heading${headingCount === 1 ? '' : 's'} ready — edit freely, then generate`}
-        </span>
-      </div>
-
-      {/* One action only, by request. Cancel sat next to the button being aimed at;
-          it is gone rather than hidden behind a shortcut, because a global Escape that
-          discards the review is a worse trade than no discard control at all. */}
-      <Button
-        type="button"
-        variant="primary"
-        size="sm"
-        onClick={onGenerate}
-        disabled={headingCount < 1}
-        icon={<Icon name="Sparkle" size={16} weight="fill" />}
-      >
-        Generate content
-      </Button>
-    </div>
+      <Icon name="Sparkle" size={16} weight="fill" />
+      Generate content
+    </button>
   );
 };
 
