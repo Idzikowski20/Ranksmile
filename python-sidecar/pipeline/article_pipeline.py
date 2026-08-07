@@ -9,6 +9,7 @@ import os
 import re
 from openai import AsyncOpenAI
 from pipeline.compiled_runtime import run_compiled_write_plan
+from pipeline.internal_links import format_internal_link_block
 
 
 _client: AsyncOpenAI | None = None
@@ -172,6 +173,8 @@ async def run_pipeline(
     voice_tone: str = "",
     execution_plan: dict | None = None,
     compiled_write_plan: dict | None = None,
+    existing_articles: list[dict] | None = None,
+    internal_links: bool = True,
     on_status=None,
 ) -> str:
     top_terms = [t["term"] for t in serp_data.get("terms", [])[:25]]
@@ -185,6 +188,12 @@ async def run_pipeline(
     ext_req = (
         '- Wpleć 2-4 linki zewnętrzne <a href="..."> do wiarygodnych, autorytatywnych źródeł'
         if external_links else "- Nie dodawaj linków zewnętrznych"
+    )
+    # Internal links are written INTO the body (allowlist enforced after render),
+    # not appended as post-hoc suggestions.
+    link_articles = existing_articles or []
+    links_block = (
+        format_internal_link_block(link_articles, language) if internal_links else ""
     )
     brand_block = (
         f"\n\nWIEDZA O MARCE (użyj jako kontekst, nie kopiuj dosłownie):\n{brand_knowledge.strip()}"
@@ -211,6 +220,21 @@ async def run_pipeline(
         if not isinstance(compiled_write_plan, dict):
             raise ValueError("compiled_write_plan must be an object")
 
+        # Short list per paragraph — the full block would be re-sent for every paragraph.
+        # quota="0–1": write_markdown runs once per paragraph, so the article-level
+        # "2–5" quota would ask for 2–5 links in EACH paragraph, compounding well past
+        # the intended per-article total as the plan grows more paragraphs.
+        paragraph_links_block = (
+            format_internal_link_block(link_articles, language, limit=8, quota="0–1")
+            if internal_links else ""
+        )
+        link_note = (
+            "\n\nJeśli akapit zawiera markdown link `[tekst](url)`, zachowaj go dokładnie "
+            "— nie usuwaj i nie wymyślaj nowych adresów."
+            if language.startswith("pl") else
+            "\n\nIf the paragraph contains a markdown link `[text](url)`, preserve it "
+            "exactly — don't drop it or invent new ones."
+        ) if internal_links else ""
         written = 0
 
         async def write_markdown(prompt: str) -> str:
@@ -223,14 +247,16 @@ async def run_pipeline(
                 except Exception as exc:
                     print(f"[generate] status callback failed: {exc}")
             return await _chat(
-                f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}\n\n{prompt}",
+                f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}\n\n"
+                f"{prompt}{paragraph_links_block}",
                 max_tokens=1200,
                 system="Write SEO content as Markdown only. Never emit HTML.",
             )
 
         async def rewrite_markdown(markdown: str) -> str:
             return await _chat(
-                f"Rewrite this Markdown paragraph for clarity and factual precision. Markdown only.\n\n{markdown}",
+                f"Rewrite this Markdown paragraph for clarity and factual precision. "
+                f"Markdown only.{link_note}\n\n{markdown}",
                 max_tokens=1200,
                 system="You are an editorial judge. Return only rewritten Markdown.",
             )
@@ -267,7 +293,7 @@ ARTICLE EXECUTION PLAN:
 Kontekst strony (nie zmienia struktury planu):
 {site_info}
 
-NLP Terms (wpleć naturalnie, bez stuffingu): {terms_str}{brand_block}{instr_block}
+NLP Terms (wpleć naturalnie, bez stuffingu): {terms_str}{brand_block}{instr_block}{links_block}
 
 WYMAGANIA:
 - Zacznij od <h1> = title z planu (lub blisko)
@@ -288,7 +314,7 @@ Keyword: "{keyword}". Language: {language}. ~{plan_words} words.
 {tone_directive}
 PLAN:
 {plan_block[:6000]}
-Start with <h1>. Use ONLY planned H2 headings in order. Only article HTML.""",
+Start with <h1>. Use ONLY planned H2 headings in order. Only article HTML.{links_block}""",
                 max_tokens=8000,
             ))
 
@@ -317,7 +343,7 @@ Keyword: "{keyword}". Language: {language}. ~{plan_words} words.
 {tone_directive}
 PLAN:
 {plan_block[:6000]}
-Start with <h1>. Use ONLY the planned H2 headings EXACTLY as written and in order. Do not invent sections. Only article HTML.""",
+Start with <h1>. Use ONLY the planned H2 headings EXACTLY as written and in order. Do not invent sections. Only article HTML.{links_block}""",
                 max_tokens=8000,
             ))
             if _is_usable_article(article_html) and _plan_conformity_ok(article_html, plan):
@@ -355,7 +381,7 @@ Język: {language}, Target słów: {target_words}
 Outline:
 {outline}
 
-NLP Terms (wpleć naturalnie): {terms_str}{brand_block}{instr_block}
+NLP Terms (wpleć naturalnie): {terms_str}{brand_block}{instr_block}{links_block}
 
 WYMAGANIA:
 - Zacznij od <h1> z keyword w tytule

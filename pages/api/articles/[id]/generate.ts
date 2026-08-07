@@ -32,6 +32,7 @@ import {
   finalizePlannerForWrite,
   runContentPlanner,
   applyApprovedOutlineToPlan,
+  approvedOutlineWarnings,
   parseApprovedOutline,
   toSidecarCompiledPlan,
 } from '../../../../lib/contentPlanner';
@@ -49,6 +50,9 @@ import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchm
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
+
+/** A claimed job with no update this long is presumed dead (killed function, timeout) and reclaimable. */
+const GENERATE_STALE_MINUTES = 10;
 
 type ArticleGenerateRow = {
   target_keyword: string;
@@ -93,8 +97,94 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     approvedOutline = null,
   } = req.body || {};
 
+  let jobId: string | null = null;
   try {
     const articleIdSql = await getArticleIdSql();
+
+    // 0. One in-flight generation per article, enforced by a partial unique index
+    // (idx_analysis_jobs_generate_inflight, see ensureArticlesTables) rather than a
+    // plain check-then-act SELECT: the planner + Write Engine run for tens of seconds
+    // between the old check and its INSERT, wide enough for two concurrent requests to
+    // both pass the check, both spend an LLM run, and race two terminal callbacks onto
+    // the same article row. Claiming the job row up front — before any of that work —
+    // makes the guard atomic at the database level instead of racy in application code.
+    jobId = `gen_${articleIdNum}_${Date.now()}`;
+    const claimed = await db.query<{ id: string }>(
+      `INSERT INTO analysis_jobs (id, article_id, job_type, status, payload, created_at, updated_at)
+       VALUES (?, ?, 'article_generate', 'queued', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       ON CONFLICT (article_id) WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')
+       DO NOTHING
+       RETURNING id`,
+      { replacements: [jobId, articleIdNum], type: QueryTypes.SELECT },
+    );
+    if (!claimed[0]) {
+      jobId = null;
+      // Self-heal: a claim survives a thrown error via the catch blocks below, but not a
+      // Vercel timeout or hard kill between the claim and the sidecar kickoff — that
+      // leaves a 'queued' row with no reaper, permanently blocking this article under the
+      // partial unique index. Reclaim it here if it's gone stale instead of requiring an
+      // operator to clear it by hand.
+      //
+      // Only 'queued' is eligible: this route's maxDuration is 60s, so a claim that never
+      // reached the sidecar kickoff is stuck for at most ~60s, making GENERATE_STALE_MINUTES
+      // a generous margin. 'running'/'finalizing' rows are a live sidecar generation with
+      // its own heartbeat (job-progress bumps updated_at on every status/stream event) —
+      // reclaiming those on a flat timeout would start a duplicate LLM run racing the one
+      // still in flight.
+      const isPg = Boolean(process.env.DATABASE_URL);
+      const staleCutoff = isPg
+        ? `updated_at < NOW() - INTERVAL '${GENERATE_STALE_MINUTES} minutes'`
+        : `updated_at < datetime('now', '-${GENERATE_STALE_MINUTES} minutes')`;
+      await db.query(
+        `UPDATE analysis_jobs SET status = 'failed', error = 'stale in-flight claim reclaimed'
+          WHERE article_id = ? AND job_type = 'article_generate'
+            AND status = 'queued' AND ${staleCutoff}`,
+        { replacements: [articleIdNum] },
+      ).catch(() => {});
+      jobId = `gen_${articleIdNum}_${Date.now()}`;
+      const retried = await db.query<{ id: string }>(
+        `INSERT INTO analysis_jobs (id, article_id, job_type, status, payload, created_at, updated_at)
+         VALUES (?, ?, 'article_generate', 'queued', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT (article_id) WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')
+         DO NOTHING
+         RETURNING id`,
+        { replacements: [jobId, articleIdNum], type: QueryTypes.SELECT },
+      );
+      if (!retried[0]) {
+        jobId = null;
+        const inflight = await db.query<{ id: string }>(
+          `SELECT id FROM analysis_jobs
+            WHERE article_id = ? AND job_type = 'article_generate'
+              AND status IN ('queued', 'running', 'finalizing')
+            ORDER BY created_at DESC LIMIT 1`,
+          { replacements: [articleIdNum], type: QueryTypes.SELECT },
+        );
+        return res.status(409).json({
+          error: 'generation_in_progress',
+          message: 'This article is already being generated.',
+          jobId: inflight[0]?.id,
+          articleId,
+        });
+      }
+    }
+
+    // Every rejection below the claim must release the row: these are ordinary
+    // res.status(...) returns (not throws), so the outer catch's cleanup never runs for
+    // them — under the partial unique index a row left 'queued' here would permanently
+    // 409 every future generate call for this article.
+    const rejectClaim = async (status: number, body: Record<string, unknown>) => {
+      if (jobId) {
+        // Swallowed on failure rather than retried: a transient failure here doesn't
+        // strand the article permanently — the stale-claim reclaim above frees it on the
+        // next generate attempt once GENERATE_STALE_MINUTES elapses.
+        await db.query("UPDATE analysis_jobs SET status = 'failed', error = ? WHERE id = ? AND status = 'queued'", {
+          replacements: [String(body.error || body.message || 'validation_failed').slice(0, 500), jobId],
+        }).catch((cleanupErr) => {
+          console.error('[articles/[id]/generate] rejectClaim cleanup failed:', jobId, cleanupErr);
+        });
+      }
+      return res.status(status).json(body);
+    };
 
     // 1. Load the existing article (keyword + domain + analysed language + score_data)
     const articleRows = await db.query<ArticleGenerateRow>(
@@ -103,9 +193,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       { replacements: [articleId], type: QueryTypes.SELECT },
     );
     const article = articleRows[0];
-    if (!article) return res.status(404).json({ error: 'Article not found' });
+    if (!article) return rejectClaim(404, { error: 'Article not found' });
     const keyword = article.target_keyword;
-    if (!keyword) return res.status(400).json({ error: 'Article has no target keyword' });
+    if (!keyword) return rejectClaim(400, { error: 'Article has no target keyword' });
     const locale = await resolveContentLocale({ domainId: article.domain_id, articleId: articleIdNum, bodyLanguage: language });
     const lang = article.language || locale.languageCode;
 
@@ -269,7 +359,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     let writePlan = finalized.bundle.executionPlan;
     if (!finalized.canWrite || !writePlan) {
-      return res.status(422).json({
+      return rejectClaim(422, {
         error: 'plan_validation_failed',
         message: 'Article Execution Plan failed Plan Validator — Write Engine not started',
         canWrite: false,
@@ -281,15 +371,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
+    // Reviewer owns the structure: added / removed / reordered H2 is applied as-is,
+    // benchmark shortfalls come back as warnings instead of blocking the write.
+    let outlineWarnings: string[] = [];
     if (approvedHeadings.length > 0) {
       const approvedPlan = applyApprovedOutlineToPlan(writePlan, approvedHeadings);
       if (!approvedPlan) {
-        return res.status(422).json({
-          error: 'approved_outline_mismatch',
-          message: 'The approved outline must keep the validated section count. Regenerate the outline before writing.',
+        return rejectClaim(422, {
+          error: 'approved_outline_empty',
+          message: 'The approved outline has no usable headings. Add at least one H2 before writing.',
         });
       }
       writePlan = approvedPlan;
+      outlineWarnings = approvedOutlineWarnings(writePlan);
     }
 
     const compiledResult = compileAndValidateWritePlan(writePlan, {
@@ -297,7 +391,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       allowBrandNiche,
     });
     if (!compiledResult.ok) {
-      return res.status(422).json({
+      return rejectClaim(422, {
         error: 'compiled_write_plan_invalid',
         issues: compiledResult.issues,
         diagnostics: compiledResult.diagnostics,
@@ -332,12 +426,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       compiled_write_plan: compiledWritePlan,
     };
 
-    // 7. Async: enqueue a job, mark the article 'generating', and kick off the sidecar.
-    const jobId = `gen_${articleId}_${Date.now()}`;
+    // 7. Fill in the job claimed at step 0, mark the article 'generating', kick off the sidecar.
     await db.query(
-      `INSERT INTO analysis_jobs (id, article_id, job_type, status, payload, created_at, updated_at)
-       VALUES (?, ?, 'article_generate', 'queued', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      { replacements: [jobId, articleIdNum, JSON.stringify(sidecarPayload)] },
+      'UPDATE analysis_jobs SET payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      { replacements: [JSON.stringify(sidecarPayload), jobId] },
     );
     await db.query(
       `UPDATE articles SET status = 'generating', pipeline_version = ?, updated_at = CURRENT_TIMESTAMP
@@ -365,9 +457,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       articleId,
       planHash: writePlan.planHash,
       diagnostics: compiledResult.diagnostics,
+      ...(outlineWarnings.length ? { outlineWarnings } : {}),
     });
   } catch (error) {
     console.error('[articles/[id]/generate] error:', error);
+    // A claimed-but-never-finished job would sit in 'queued' forever and permanently
+    // block this article under the single-in-flight index (planner/validator errors
+    // land here, before the sidecar-kickoff try/catch that already handles its own).
+    if (jobId) {
+      await db.query("UPDATE analysis_jobs SET status = 'failed', error = ? WHERE id = ? AND status = 'queued'", {
+        replacements: [getErrorMessage(error).slice(0, 500), jobId],
+      }).catch(() => {});
+    }
     return res.status(500).json({ error: getErrorMessage(error) || 'Generation failed' });
   }
 }

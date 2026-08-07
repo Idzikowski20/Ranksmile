@@ -287,7 +287,52 @@ export async function ensureArticlesTables() {
 
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_status ON analysis_jobs(status)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article ON analysis_jobs(article_id)`); } catch {}
+   // Covers the in-flight guard's per-article/job_type/status lookup and loadCandidates'
+   // per-article created_at ordering, which the single-column article index above can't
+   // satisfy without a scan+sort as the job table grows.
+   try {
+      await db.query('CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article_type_created ON analysis_jobs(article_id, job_type, created_at)');
+   } catch {}
+   // At most one active article_generate job per article — the DB-level half of the
+   // single-in-flight-generation guard in /api/articles/[id]/generate (app-code check-
+   // then-act alone leaves a race between the check and the insert). Without this index
+   // as the arbiter, generate's `ON CONFLICT (article_id) WHERE ...` throws on every call
+   // (no matching unique constraint to target), so failing to create it can't be swallowed
+   // silently the way a purely-optional index can.
+   //
+   // Pre-existing duplicate active rows (e.g. seeded before this index existed) would
+   // block creation — self-heal by failing every duplicate but the earliest per article
+   // before attempting it, so a stale anomaly doesn't permanently disable generation.
+   try {
+      await db.query(`
+         UPDATE analysis_jobs SET status = 'failed', error = 'duplicate in-flight row cleared for unique index'
+          WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')
+            AND id <> (
+                  SELECT t2.id FROM analysis_jobs t2
+                   WHERE t2.article_id = analysis_jobs.article_id AND t2.job_type = 'article_generate'
+                     AND t2.status IN ('queued', 'running', 'finalizing')
+                   ORDER BY t2.created_at ASC, t2.id ASC
+                   LIMIT 1)
+      `);
+   } catch (dedupeErr) {
+      console.error('[articles] failed to dedupe in-flight article_generate rows:', dedupeErr);
+   }
+   let generateIndexReady = false;
+   try {
+      await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_analysis_jobs_generate_inflight
+         ON analysis_jobs(article_id)
+         WHERE job_type = 'article_generate' AND status IN ('queued', 'running', 'finalizing')`);
+      generateIndexReady = true;
+   } catch (indexErr) {
+      console.error('[articles] CRITICAL: could not create idx_analysis_jobs_generate_inflight — '
+         + 'the single-in-flight generate guard will fail closed (500) until this is fixed:', indexErr);
+   }
 
-   tablesChecked = true;
+   // Only mark ready when the index actually exists — a transient failure here (lock
+   // contention, brief outage) would otherwise permanently disable /generate for this
+   // process, since tablesChecked short-circuits every future call before this point runs
+   // again. CREATE TABLE IF NOT EXISTS above is idempotent, so retrying the whole function
+   // on the next request costs nothing once the index does succeed.
+   tablesChecked = generateIndexReady;
    console.log('[articles] Tables ready');
 }
