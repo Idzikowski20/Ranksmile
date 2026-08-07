@@ -23,7 +23,13 @@ export function sanitizeArticleHtml(html: string): string {
       if (name === 'href' || name === 'src' || name === 'xlink:href') {
         const v = (val || '').trim();
         // Block javascript: and data:text/html (script-bearing); keep data:image/* for inline images.
-        if (/^javascript:/i.test(v) || /^data:text\/html/i.test(v)) $(el).removeAttr(name);
+        // Legacy IE still honours vbscript:, and control/whitespace padding is stripped by
+        // normalized value rather than the raw attribute.
+        // eslint-disable-next-line no-control-regex -- padding is exactly what we strip
+        const scheme = v.replace(/[\u0000-\u0020]/g, '').toLowerCase();
+        if (/^(javascript|vbscript|livescript):/.test(scheme) || /^data:text\/html/.test(scheme)) {
+          $(el).removeAttr(name);
+        }
       }
       if (name === 'srcset') $(el).removeAttr(name); // can smuggle data:text/html candidates
     });

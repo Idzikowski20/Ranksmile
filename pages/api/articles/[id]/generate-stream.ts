@@ -12,11 +12,18 @@ import { flushHeaders, flushSse } from '../../../../lib/types/api';
 import { streamDelta } from '../../../../lib/streamDelta';
 
 const TICK_MS = 700;
+/**
+ * A job stuck in 'finalizing' has no reaper on this path — job-progress runs that check
+ * on its own GET. Rather than leaving the editor to wait out its 8-minute timeout, the
+ * stream applies the same cutoff and reports the failure.
+ */
+const FINALIZING_STALE_MS = 3 * 60 * 1000;
 /** Stop tailing a job that never reaches a terminal state (~20 min of writing). */
 const MAX_TICKS = 1700;
 
 type JobRow = {
   status: string;
+  updated_at: string | Date | null;
   status_text: string | null;
   stream_text: string | null;
   error: string | null;
@@ -64,7 +71,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     for (let tick = 0; tick < MAX_TICKS && !closed; tick += 1) {
     // eslint-disable-next-line no-await-in-loop
     const rows = await db.query<JobRow>(
-      `SELECT status, status_text, stream_text, error FROM analysis_jobs
+      `SELECT status, status_text, stream_text, error, updated_at FROM analysis_jobs
         WHERE id = ? AND article_id = ? AND job_type = 'article_generate'`,
       { replacements: [jobId, articleId], type: QueryTypes.SELECT },
     );
@@ -85,6 +92,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (job.status === 'done') {
       send(res, 'done', { html: job.stream_text ?? '' });
       break;
+    }
+    if (job.status === 'finalizing' && job.updated_at) {
+      const idleMs = Date.now() - new Date(job.updated_at).getTime();
+      if (Number.isFinite(idleMs) && idleMs > FINALIZING_STALE_MS) {
+        send(res, 'error', { message: 'Generation stalled while finalizing' });
+        break;
+      }
     }
     if (job.status === 'failed' || job.status === 'canceled') {
       // job.error carries sidecar/exception text — keep internals off the wire.
