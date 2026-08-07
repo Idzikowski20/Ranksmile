@@ -8272,20 +8272,56 @@ html.koala-shell[data-theme="cream"] .app-content {
 .koala-sidebar-user__trigger--header.koala-sidebar-user__trigger--open {
   background: var(--koala-bg-secondary);
 }
+/* Profile select menu — Figma 7806:109082 (Koala UI v11). */
 .koala-sidebar-user__menu--header {
   left: auto;
   right: 0;
   bottom: auto;
   top: calc(100% + 8px);
-  width: 220px;
+  width: 264px;
+  gap: 4px;
+  padding: 4px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.05);
 }
 .koala-sidebar-user__menu-head {
   display: flex;
+  align-items: center;
+  gap: 8px;
+  /* 4px from the card edge, 6px inside the row — the row keeps card radius
+     so it lines up with the hover shape of the links below. */
+  margin: 0 4px;
+  padding: 4px 6px;
+  border-radius: 16px;
+  border-bottom: none;
+}
+.koala-sidebar-user__menu-head-meta {
+  display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 8px 10px 10px;
-  border-bottom: 1px solid var(--koala-border-primary);
-  margin-bottom: 4px;
+  min-width: 0;
+}
+.koala-sidebar-user__menu-head + .koala-sidebar-user__divider {
+  height: 1px;
+  margin: 0;
+  background: var(--koala-border-primary);
+}
+.koala-sidebar-user__menu--header .koala-sidebar-user__name {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
+}
+.koala-sidebar-user__menu--header .koala-sidebar-user__handle {
+  font-weight: 500;
+  letter-spacing: -0.06px;
+}
+.koala-sidebar-user__menu--header .koala-sidebar-user__link {
+  /* base rule pins width:100%, which would overflow past these margins */
+  width: auto;
+  margin: 0 6px;
+  padding: 6px 6px 6px 8px;
+  border-radius: 12px;
+  letter-spacing: -0.4px;
+  line-height: 20px;
 }
 
 /* Product Header — Figma 6959:74257 */
