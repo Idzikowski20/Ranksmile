@@ -13,21 +13,47 @@ import { streamDelta } from '../../../../lib/streamDelta';
 
 const TICK_MS = 700;
 /**
- * A job stuck in 'finalizing' has no reaper on this path — job-progress runs that check
- * on its own GET. Rather than leaving the editor to wait out its 8-minute timeout, the
- * stream applies the same cutoff and reports the failure.
+ * Same cutoff as job-progress's reaper. Nothing else reaps on this path — the editor no
+ * longer polls job-progress during a write — so the stream performs the reap itself,
+ * atomically in SQL: a timezone-less SQLite timestamp compared in JS is read as local
+ * time and skews the window by the host's offset.
  */
-const FINALIZING_STALE_MS = 3 * 60 * 1000;
+const FINALIZING_STALE_SECS = 5 * 60;
 /** Stop tailing a job that never reaches a terminal state (~20 min of writing). */
 const MAX_TICKS = 1700;
 
 type JobRow = {
   status: string;
-  updated_at: string | Date | null;
   status_text: string | null;
   stream_text: string | null;
   error: string | null;
 };
+
+/**
+ * Flip a hung finalization to failed and release the article, in one statement so two
+ * readers cannot both claim it. Returns true when this call did the reaping.
+ */
+async function failStaleFinalization(jobId: string, articleId: number): Promise<boolean> {
+  const isPg = Boolean(process.env.DATABASE_URL);
+  const stale = isPg
+    ? `updated_at < NOW() - INTERVAL '${FINALIZING_STALE_SECS} seconds'`
+    : `updated_at < datetime('now', '-${FINALIZING_STALE_SECS} seconds')`;
+  const rows = await db.query<{ id: string }>(
+    `UPDATE analysis_jobs SET status = 'failed', error = 'finalizing timed out',
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND status = 'finalizing' AND ${stale}
+      RETURNING id`,
+    { replacements: [jobId], type: QueryTypes.SELECT },
+  );
+  if (!rows.length) return false;
+  const { getArticleIdSql } = await import('../../../../lib/articleSql');
+  const articleIdSql = await getArticleIdSql();
+  await db.query(
+    `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+    { replacements: [articleId] },
+  ).catch(() => {});
+  return true;
+}
 
 function send(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -71,7 +97,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     for (let tick = 0; tick < MAX_TICKS && !closed; tick += 1) {
     // eslint-disable-next-line no-await-in-loop
     const rows = await db.query<JobRow>(
-      `SELECT status, status_text, stream_text, error, updated_at FROM analysis_jobs
+      `SELECT status, status_text, stream_text, error FROM analysis_jobs
         WHERE id = ? AND article_id = ? AND job_type = 'article_generate'`,
       { replacements: [jobId, articleId], type: QueryTypes.SELECT },
     );
@@ -93,9 +119,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       send(res, 'done', { html: job.stream_text ?? '' });
       break;
     }
-    if (job.status === 'finalizing' && job.updated_at) {
-      const idleMs = Date.now() - new Date(job.updated_at).getTime();
-      if (Number.isFinite(idleMs) && idleMs > FINALIZING_STALE_MS) {
+    if (job.status === 'finalizing') {
+      // eslint-disable-next-line no-await-in-loop
+      const reaped = await failStaleFinalization(jobId, articleId);
+      if (reaped) {
         send(res, 'error', { message: 'Generation stalled while finalizing' });
         break;
       }
