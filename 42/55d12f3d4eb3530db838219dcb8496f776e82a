@@ -1,0 +1,26 @@
+lib/deepAnalysisProgress.ts
+  s_8d6cce368af4fd::t_28b61b8b178ff9 1-2,21-22
+pages/articles/[id]/index.tsx
+  s_8d6cce368af4fd::t_a740f8d535994e 507
+hooks/useBackgroundDeepAnalysis.ts
+  s_8d6cce368af4fd::t_374e3d0afca902 2
+  s_8d6cce368af4fd::t_58c296f9f22085 55,89-90,184,360
+components/articles/AnalysisProgressPanel.tsx
+  s_8d6cce368af4fd::t_a740f8d535994e 3,17-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4255d12f3d4eb3530db838219dcb8496f776e82a",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
