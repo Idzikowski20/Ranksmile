@@ -19,6 +19,9 @@ const CORPUS_NOISE: RegExp[] = [
   /\bcreative commons\b/i,
   /\bparsoid\b/i,
   /\bcookie/i,
+  // The Polish word for them, which `cookie` never matched — this is how a consent
+  // paragraph reached a reviewed outline as something to cover.
+  /\bciasteczk/i,
   /\bprivacy policy\b/i,
   /\bwyrażam zgodę\b/i,
   /\bwszelkie prawa zastrzeżone\b/i,
@@ -59,7 +62,9 @@ const CORPUS_NOISE_RAW: RegExp[] = [
   // which left this pattern as dead as the Polish ones above. Matching the whole number
   // rather than `+NN NNN` also keeps it off statistics like "+20 000 zł".
   /\+\d{2}[\s-]?(?:\d[\s-]?){9}/,
-  /\bul\.\s*[A-ZĄĆĘŁŃÓŚŹŻ]/,
+  // Abbreviated and spelled out: "ul. Złota" and "przy ulicy Złotej" are both a
+  // competitor's street address, and both were being handed to our writer.
+  /\b(ul\.|ulic\w+)\s*[A-ZĄĆĘŁŃÓŚŹŻ]/,
   /\bo nas\s*-->/i,
 ];
 

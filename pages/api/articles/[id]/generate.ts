@@ -49,6 +49,7 @@ import {
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
 import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchmarkIntelligence';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
+import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -367,7 +368,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       { replacements: [JSON.stringify(nextScore), articleId] },
     );
 
-    const approvedHeadings = parseApprovedOutline(approvedOutline);
+    const reviewed = parseApprovedOutline(approvedOutline);
 
     let writePlan = finalized.bundle.executionPlan;
     if (!finalized.canWrite || !writePlan) {
@@ -382,6 +383,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         knowledgeCoverage: finalized.bundle.knowledgeCoverage,
       });
     }
+
+    // Straight to Generate, no outline review: the plan's own section objectives carry
+    // nothing about our company, so the writer would produce a service page that never
+    // names the business it is selling. Write the brief here too, from the same brand
+    // document /content-plan uses, and feed it in exactly as a reviewed outline would be.
+    //
+    // After the plan gate on purpose — a rejected plan must not cost an LLM call.
+    const approvedHeadings = reviewed.length > 0
+      ? reviewed
+      : parseApprovedOutline(await writeOutlineBrief({
+        keyword,
+        bundle: finalized.bundle,
+        brandKnowledge,
+        brandName: cs.brandName,
+        importantTerms: importantTermsFromScoreData(scoreData),
+        language: lang,
+      }));
 
     // Reviewer owns the structure: added / removed / reordered H2 is applied as-is,
     // benchmark shortfalls come back as warnings instead of blocking the write.
@@ -446,7 +464,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     await db.query(
       `UPDATE articles SET status = 'generating', pipeline_version = ?, updated_at = CURRENT_TIMESTAMP
        WHERE ${articleIdSql} = ?`,
-      { replacements: [pipelineVersionTag({ manualOutline: approvedHeadings.length > 0 }), articleId] },
+      // `reviewed`, not `approvedHeadings`: the tag records that a human approved the
+      // structure, and an auto-written brief is not that however it is applied.
+      { replacements: [pipelineVersionTag({ manualOutline: reviewed.length > 0 }), articleId] },
     );
 
     const base = sidecarUrl();
