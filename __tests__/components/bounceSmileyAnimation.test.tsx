@@ -1,6 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
 import { render } from '@testing-library/react';
-import { BounceSmileyAnimation } from '../../components/pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../../components/common/BounceSmileyAnimation';
 
 describe('BounceSmileyAnimation', () => {
   it('wires CSS loop classes for compact animated mark (Surfy-style)', () => {
@@ -20,7 +20,7 @@ describe('BounceSmileyAnimation', () => {
   });
 
   it('smily-wobble CSS uses alternate so the loop does not jump angle', () => {
-    // Root cause regression: non-closed keyframes (0° → 100°) + infinite
+    // Root cause regression: non-closed keyframes (0Â° â†’ 100Â°) + infinite
     // snapped every cycle. alternate (or 0%===100%) keeps motion continuous.
     const fs = require('fs') as typeof import('fs');
     const path = require('path') as typeof import('path');

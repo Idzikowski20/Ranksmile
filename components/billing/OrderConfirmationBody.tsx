@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import Button from '../koala/primitives/Button';
 import { Textarea } from '../koala/core';
 import { Icon } from '../koala/icons';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 import type { BillingConfirmation } from '../../lib/billingConfirmation';
 
 const F = 'var(--font-family-primary)';
@@ -156,10 +156,10 @@ export default function OrderConfirmationBody({
                   : <span style={{ color: MUTED }}>On file with Stripe</span>}
               </MetaBlock>
               <MetaBlock icon="CalendarBlank" label={data.isTrialing ? 'Trial ends' : 'Next billing'}>
-                <span>{data.nextBillingLabel || '—'}</span>
+                <span>{data.nextBillingLabel || 'â€”'}</span>
               </MetaBlock>
               <MetaBlock icon="CreditCard" label="Payment method">
-                <span>{data.paymentMethodLabel || (data.isTrialing ? 'Card on file' : '—')}</span>
+                <span>{data.paymentMethodLabel || (data.isTrialing ? 'Card on file' : 'â€”')}</span>
               </MetaBlock>
             </div>
           </section>
@@ -199,14 +199,14 @@ export default function OrderConfirmationBody({
             </div>
             <Textarea
               label="Help us improve"
-              placeholder="Tell us what went well or what we can improve…"
+              placeholder="Tell us what went well or what we can improveâ€¦"
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               rows={4}
             />
             <div>
               <Button type="button" variant="primary" size="md" onClick={submitFeedback} disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Submit feedback'}
+                {submitting ? 'Submittingâ€¦' : 'Submit feedback'}
               </Button>
             </div>
           </section>

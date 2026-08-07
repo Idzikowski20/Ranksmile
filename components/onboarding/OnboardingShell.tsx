@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { semantic } from '../koala/tokens/semantic';
 import { typeface, fontWeight } from '../koala/tokens/typography';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
-/** DOM node for the header's center slot — set by OnboardingShell, consumed by OnboardingHeaderCenter. */
+/** DOM node for the header's center slot â€” set by OnboardingShell, consumed by OnboardingHeaderCenter. */
 export const OnboardingHeaderCenterContext = React.createContext<HTMLDivElement | null>(null);
 
-/** Portal helper — renders into the shell header's center slot (screen-centered, logo stays left). */
+/** Portal helper â€” renders into the shell header's center slot (screen-centered, logo stays left). */
 export const OnboardingHeaderCenter = ({ children }: { children: React.ReactNode }) => {
    const node = React.useContext(OnboardingHeaderCenterContext);
    if (!node) return null;
@@ -33,7 +33,7 @@ const BrandMark = () => (
 const headerRowStyle: React.CSSProperties = {
    flexShrink: 0,
    // Three tracks, equal on both sides: the middle slot is screen-centered by the grid
-   // itself, so no invisible duplicate of the logo is needed to balance it. `minmax(0, …)`
+   // itself, so no invisible duplicate of the logo is needed to balance it. `minmax(0, â€¦)`
    // lets every track shrink below its content instead of forcing a horizontal scrollbar.
    display: 'grid',
    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 360px) minmax(0, 1fr)',
@@ -62,7 +62,7 @@ const bodyColumnStyle: React.CSSProperties = {
    flexDirection: 'column',
 };
 
-/** Koala onboarding stage — single page background (no nested card), matches Koala UI v11 register-flow reference. */
+/** Koala onboarding stage â€” single page background (no nested card), matches Koala UI v11 register-flow reference. */
 const OnboardingShell = ({ children }: { children: React.ReactNode }) => {
    const [centerNode, setCenterNode] = useState<HTMLDivElement | null>(null);
 
