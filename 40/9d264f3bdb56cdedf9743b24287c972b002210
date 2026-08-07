@@ -1,0 +1,21 @@
+lib/articleWorkspaceLinks.ts
+  s_668ab4f91e9d5a::t_9e8b66cd34904e 10-14,18-19
+__tests__/lib/articleWorkspaceLinks.test.ts
+  s_668ab4f91e9d5a::t_8397a631c768d4 1-2,9-10,19-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "409d264f3bdb56cdedf9743b24287c972b002210",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
