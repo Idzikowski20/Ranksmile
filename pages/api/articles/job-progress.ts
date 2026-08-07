@@ -12,13 +12,21 @@ import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
 import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
 import { safeJsonParse } from '../../../lib/safeJson';
-import { appendChunk } from '../../../lib/streamText';
+import { MAX_STREAM_CHARS } from '../../../lib/streamText';
+import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
+import { staleFinalizationSql } from '../../../lib/staleFinalization';
+
 import {
   mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
 } from '../../../lib/analysisPhases';
 
-const FINALIZING_STALE_SECS = 5 * 60;
-const isPg = Boolean(process.env.DATABASE_URL);
+/** Same boundary as articles.content: no raw article HTML survives in the job row. */
+function sanitizedResult(result: unknown): unknown {
+  if (!result || typeof result !== 'object') return result;
+  const row = result as Record<string, unknown>;
+  if (typeof row.article_html !== 'string') return result;
+  return { ...row, article_html: sanitizeArticleHtml(row.article_html) };
+}
 
 type JobAccessRow = {
   id: string;
@@ -39,9 +47,7 @@ async function canReadJob(userId: string | null, job: JobAccessRow): Promise<boo
 }
 
 async function failStaleFinalization(job: JobAccessRow): Promise<boolean> {
-  const stalePredicate = isPg
-    ? `updated_at < NOW() - INTERVAL '${FINALIZING_STALE_SECS} seconds'`
-    : `updated_at < datetime('now', '-${FINALIZING_STALE_SECS} seconds')`;
+  const stalePredicate = staleFinalizationSql();
   const recovered = await db.transaction(async (transaction) => {
     const claim = await db.query(
       `UPDATE analysis_jobs
@@ -234,7 +240,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const { getArticleIdSql } = await import('../../../lib/articleSql');
         const articleIdSql = await getArticleIdSql();
         if (status === 'done') {
-          const html = (result?.article_html as string) || '';
+          // articles.content is the canonical body rendered by the editor, preview and
+          // publish surfaces — sanitize at this boundary, not at each render site.
+          const html = sanitizeArticleHtml((result?.article_html as string) || '');
           const { isUsableArticleHtml, stripHtmlToPlain } = await import('../../../lib/articleHtmlUsable');
           // Never wipe a draft with an empty LLM response — fail the job so the UI can retry.
           if (!isUsableArticleHtml(html)) {
@@ -301,7 +309,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          WHERE id = ? AND status = 'finalizing'`,
         { replacements: [
           status,
-          result ? JSON.stringify(result) : null,
+          // The article body was sanitized above; the job row must not keep a raw copy
+          // for debug tooling or a later reader to render.
+          result ? JSON.stringify(sanitizedResult(result)) : null,
           status === 'failed' ? (message || 'failed') : null,
           status === 'done' ? 100 : null,
           jobId,
@@ -323,13 +333,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
     }
     if (typeof contentChunk === 'string' && contentChunk) {
-      const streamRows = await db.query<{ stream_text: string | null }>(
-        `SELECT stream_text FROM analysis_jobs WHERE id = ?`,
-        { replacements: [jobId], type: QueryTypes.SELECT },
-      );
+      // Appended in SQL: a read-modify-write here dropped chunks whenever two callbacks
+      // overlapped, and rewrote the whole column on every chunk. The cap lives in the
+      // same statement so the row can never grow past it.
       await db.query(
-        `UPDATE analysis_jobs SET stream_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        { replacements: [appendChunk(streamRows[0]?.stream_text ?? null, contentChunk), jobId] },
+        `UPDATE analysis_jobs
+         SET stream_text = substr(COALESCE(stream_text, '') || ?, 1, ${MAX_STREAM_CHARS}),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        { replacements: [sanitizeArticleHtml(contentChunk), jobId] },  // ponytail: fragment-level
+        // sanitizing cannot catch a tag split across two chunks; the terminal write above
+        // sanitizes the assembled article, which is what any surface actually renders.
       );
     }
 

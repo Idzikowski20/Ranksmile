@@ -42,6 +42,36 @@ describe('scoreIntroduction', () => {
     }
   });
 
+  it('does not let a short query match inside another word', () => {
+    const factors = scoreIntroduction({
+      html: '<p>Wysyłamy email do klienta i czekamy na odpowiedź.</p>',
+      keyword: 'AI',
+      coveredTopics: [],
+      audienceTerms: [],
+    });
+    expect(factors.find((f) => f.name === 'INTRODUCTION_TOPIC_RELEVANCE')?.found).toBe(false);
+  });
+
+  it('does not match a short query inside an underscored identifier', () => {
+    const factors = scoreIntroduction({
+      html: '<p>Zmienna AI_email trafia do logu.</p>',
+      keyword: 'AI',
+      coveredTopics: [],
+      audienceTerms: [],
+    });
+    expect(factors.find((f) => f.name === 'INTRODUCTION_TOPIC_RELEVANCE')?.found).toBe(false);
+  });
+
+  it('matches a two-letter query when it stands on its own', () => {
+    const factors = scoreIntroduction({
+      html: '<p>AI zmienia sposób, w jaki szukamy informacji.</p>',
+      keyword: 'AI',
+      coveredTopics: [],
+      audienceTerms: [],
+    });
+    expect(factors.find((f) => f.name === 'INTRODUCTION_EARLY_QUERY_ANSWER')?.found).toBe(true);
+  });
+
   it('reports a miss instead of inventing a span', () => {
     const empty = scoreIntroduction({
       html: '<h1>T</h1><p>Lorem ipsum dolor sit amet.</p>',

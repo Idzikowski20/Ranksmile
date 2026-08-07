@@ -10,6 +10,14 @@ const LABELS: Record<FactorName, string> = {
   INTRODUCTION_TOPIC_RELEVANCE: 'Stays on topic',
 };
 
+/** FACTS_COVERAGE measures the whole article, so the introduction note must not apply. */
+function missingLabel(factor: ScoreFactor): string {
+  if (!factor.name.startsWith('INTRODUCTION_')) {
+    return factor.found ? 'Covered across the article' : 'Not covered yet';
+  }
+  return 'Not found in the introduction';
+}
+
 const ScoreFactorList: React.FC<{ factors: ScoreFactor[] }> = ({ factors }) => (
   <ul style={{ display: 'flex', flexDirection: 'column', gap: 12, listStyle: 'none', margin: 0, padding: 0 }}>
     {factors.map((factor) => (
@@ -27,7 +35,9 @@ const ScoreFactorList: React.FC<{ factors: ScoreFactor[] }> = ({ factors }) => (
             <span style={{ marginLeft: 6, color: 'var(--koala-text-secondary)' }}>{`${factor.value}%`}</span>
           ) : null}
           <span style={{ display: 'block', fontSize: 13, color: 'var(--koala-text-secondary)' }}>
-            {factor.textSpan ? `“${factor.textSpan}”` : 'Not found in the introduction'}
+            {factor.textSpan
+              ? `“${factor.textSpan}”`
+              : missingLabel(factor)}
           </span>
         </span>
       </li>
