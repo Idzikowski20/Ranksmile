@@ -35,8 +35,11 @@ const SHELL: React.CSSProperties = {
   fontFamily: 'var(--font-family-primary)',
 };
 
-const INVERSE_BG = 'var(--koala-bg-inverse, #1a1a1a)';
-const INVERSE_FG = 'var(--koala-text-on-inverse, #fff)';
+// No literal fallbacks: both vars are defined on every `[data-theme]` block, and the
+// `#fff` this used to fall back to was wrong in dark and moonlight, where the inverse
+// surface is near-white. A missing token should look broken, not silently unreadable.
+const INVERSE_BG = 'var(--koala-bg-inverse)';
+const INVERSE_FG = 'var(--koala-text-on-inverse)';
 const LIFT = '0 8px 40px rgba(0,0,0,0.45)';
 
 /** The black surface, shared by all three states. */

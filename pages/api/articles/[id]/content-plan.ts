@@ -26,6 +26,7 @@ import { reviewOutlineFromBundle } from '../../../../lib/contentPlanner/reviewOu
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readContentSettings } from '../../../../lib/contentSettings';
+import { readArticleTerms } from '../../../../lib/articleTerms';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
 import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
 import {
@@ -210,6 +211,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Loaded here rather than at the top of the handler: only the outline branch needs it,
     // and the approvedOutline save path above returns long before this point.
     const brand = await readContentSettings().catch(() => ({ brandName: '', brandKnowledge: '', voices: [] }));
+    // Same list /generate compiles the write plan from — terms activated after the
+    // analysis live only in article_terms, and a brief written against the stale half
+    // would tell the writer to weave in words the editor does not grade.
+    const tableTerms = await readArticleTerms(articleId).catch(() => []);
 
     // The brief is the first LLM spend this route ever made, and nothing stopped a client
     // from re-requesting an outline in a loop. Same gate every other generating route uses.
@@ -225,7 +230,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       bundle: result.bundle,
       brandKnowledge: brand.brandKnowledge,
       brandName: brand.brandName,
-      importantTerms: importantTermsFromScoreData(scoreData ?? {}),
+      importantTerms: importantTermsFromScoreData(scoreData ?? {}, { tableTerms }),
       language: row.language || undefined,
     });
     const headings = written ?? reviewOutlineFromBundle(result.bundle);

@@ -17,6 +17,8 @@ export type ThemeSemantic = {
     disabled: string;
     onBrand: string;
     onBrandSecondary: string;
+    /** Foreground for `background.inverse`, which flips with the theme. */
+    onInverse: string;
     brand: string;
     link: string;
   };
@@ -87,6 +89,7 @@ export const lightTheme: ThemeSemantic = {
     disabled: greyNeutral[400],
     onBrand: '#ffffff',
     onBrandSecondary: 'rgba(255,255,255,0.8)',
+    onInverse: greyNeutral[50],
     brand: brandMain,
     link: darkOrange[600],
   },
@@ -153,6 +156,7 @@ export const darkTheme: ThemeSemantic = {
     disabled: greyNeutral[600],
     onBrand: '#ffffff',
     onBrandSecondary: 'rgba(255,255,255,0.8)',
+    onInverse: greyNeutral[900],
     brand: darkOrange[400],
     link: darkOrange[400],
   },
@@ -219,6 +223,7 @@ export const creamTheme: ThemeSemantic = {
     disabled: cream[400],
     onBrand: '#ffffff',
     onBrandSecondary: 'rgba(255,255,255,0.8)',
+    onInverse: cream[50],
     brand: brandMain,
     link: darkOrange[600],
   },
@@ -285,6 +290,7 @@ export const moonlightTheme: ThemeSemantic = {
     disabled: slate[600],
     onBrand: '#ffffff',
     onBrandSecondary: 'rgba(255,255,255,0.8)',
+    onInverse: slate[950],
     brand: darkOrange[400],
     link: darkBlue[400],
   },
@@ -356,6 +362,7 @@ export function themeToCssVars(t: ThemeSemantic): Record<string, string> {
     '--koala-text-disabled': t.text.disabled,
     '--koala-text-on-brand': t.text.onBrand,
     '--koala-text-on-brand-secondary': t.text.onBrandSecondary,
+    '--koala-text-on-inverse': t.text.onInverse,
     '--koala-text-brand': t.text.brand,
     '--koala-text-link': t.text.link,
     '--koala-border-primary': t.border.primary,
