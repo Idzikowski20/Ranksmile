@@ -124,7 +124,7 @@ const ConfirmAccount: NextPage = () => {
       <AuthShell>
          <Head><title>Confirm your e-mail - Ranksmile</title></Head>
          <AuthPageLayout>
-            <Card elevated>
+            <Card elevated style={{ border: 'none' }}>
                {!ready ? (
                   <LoadingState label="Sending confirmation email…" />
                ) : (

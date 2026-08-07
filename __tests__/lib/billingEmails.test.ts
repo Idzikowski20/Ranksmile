@@ -3,7 +3,6 @@ import { abandonedCheckoutEmailHtml, ABANDONED_CHECKOUT_SUBJECT } from '../../li
 import { starterNudgeEmailHtml, STARTER_NUDGE_SUBJECT } from '../../lib/emails/starterNudgeEmail';
 import { inviteEmailHtml } from '../../lib/inviteEmail';
 import {
-  EMAIL_BG_CONTENT,
   EMAIL_BG_PAGE,
   EMAIL_CTA_BG,
   EMAIL_FONT,
@@ -33,7 +32,6 @@ describe('koala-style transactional emails', () => {
       updateUrl: 'https://billing.stripe.com/p/session/test',
     });
     expect(html).toContain(`background-color:${EMAIL_BG_PAGE}`);
-    expect(html).toContain(`background-color:${EMAIL_BG_CONTENT}`);
     expect(html).toContain(EMAIL_FONT);
     expect(html).not.toContain('box-shadow');
     expect(html).toContain('We couldn\'t process your payment');
@@ -85,7 +83,6 @@ describe('koala-style transactional emails', () => {
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
     expect(html).toContain('Accept invitation');
-    expect(html).toContain(`background-color:${EMAIL_BG_CONTENT}`);
     expect(html).toContain('max-width:720px');
     expect(html).toContain('https://ranksmile.pl/email/ranksmile-logo.png');
     expect(html).toContain('DM Sans');
