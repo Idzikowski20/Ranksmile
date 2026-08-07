@@ -807,6 +807,31 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       };
     }
 
+    // Per-competitor claims straight from the corpus. Cheap (no LLM) and independent of
+    // the synthesis below, which is one bounded call over 1200-char excerpts and used to
+    // be the planner's ONLY claim source — when it fell back to its heuristic the Target
+    // KG capped at four claims and the Plan Validator's five-claim floor could never pass.
+    if (corpusTexts.length && (resolvedKeyword || pipelineKeyword || keyword)) {
+      try {
+        const { extractCorpusClaimsByUrl } = await import('../../../lib/wie/corpusClaims');
+        const byUrl = extractCorpusClaimsByUrl(
+          competitorBenchmarks?.corpusByUrl ?? {},
+          resolvedKeyword || pipelineKeyword || keyword || '',
+        );
+        const total = Object.values(byUrl).reduce((sum, list) => sum + list.length, 0);
+        if (total > 0) {
+          scoreData.competitor_claims = byUrl;
+          console.log(
+            `[deep-analysis] competitor_claims: ${total} across ${Object.keys(byUrl).length} pages`,
+          );
+        } else {
+          console.warn('[deep-analysis] competitor_claims: corpus yielded no claim sentences');
+        }
+      } catch (err) {
+        console.warn('[deep-analysis] competitor_claims failed (non-fatal):', getErrorMessage(err));
+      }
+    }
+
     // WIE Source A — Competitor Synthesis (bounded JSON from corpus; non-fatal)
     if (corpusTexts.length && (resolvedKeyword || pipelineKeyword || keyword)) {
       try {

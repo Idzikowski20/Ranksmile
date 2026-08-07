@@ -35,7 +35,18 @@ export async function buildCompetitorBenchmarks(
   ownUrl: string,
   competitors: Array<{ url?: string; domain?: string }>,
   terms: RichTerm[],
-): Promise<{ real: RealAuditData; targets: CompetitorScoreTargets; corpusTexts: string[]; corpusHtmls: string[] } | null> {
+): Promise<{
+  real: RealAuditData;
+  targets: CompetitorScoreTargets;
+  corpusTexts: string[];
+  corpusHtmls: string[];
+  /**
+   * Same bodies as `corpusTexts`, but addressable. `corpusTexts` drops empties, so its
+   * indices do not line up with `real.competitors` — anything that needs to attribute
+   * text back to a competitor must go through this.
+   */
+  corpusByUrl: Record<string, string>;
+} | null> {
   let ownHost = '';
   try { ownHost = bareHost(new URL(ownUrl).hostname); } catch { ownHost = ''; }
 
@@ -104,5 +115,8 @@ export async function buildCompetitorBenchmarks(
     targets,
     corpusTexts,
     corpusHtmls,
+    corpusByUrl: Object.fromEntries(
+      rows.filter((r) => r.bodyText).map((r) => [r.url, r.bodyText]),
+    ),
   };
 }

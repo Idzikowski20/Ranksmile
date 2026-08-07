@@ -113,3 +113,54 @@ describe('isKeywordOnTopic Polish stems', () => {
     expect(isKeywordOnTopic('dzialania hybrydowe', seed)).toBe(true);
   });
 });
+
+/**
+ * Measured against Surfer's published term list for "prywatny detektyw warszawa".
+ * The seed-overlap rule kept 12 of these 39 and every survivor contained "detektyw" —
+ * the vocabulary that actually differentiates the article was thrown away.
+ */
+describe('filterNlpTermsForAnalysis keeps corpus-backed vocabulary', () => {
+  const KEYWORD = 'prywatny detektyw warszawa';
+  const term = (t: string, doc_freq = 3) => ({ term: t, doc_freq });
+
+  const OFF_SEED = [
+    'wykrywanie podsłuchów', 'sprawy rozwodowej', 'materiałów dowodowych',
+    'wywiadzie gospodarczym', 'ubezpieczenie oc', 'kancelarie prawne',
+    'nieuczciwej konkurencji', 'postępowaniach sądowych', 'sprawach rodzinnych',
+  ];
+
+  it('keeps terms several competitors used even without the keyword in them', () => {
+    const kept = filterNlpTermsForAnalysis(OFF_SEED.map((t) => term(t)), KEYWORD);
+
+    expect(kept.map((t) => t.term)).toEqual(expect.arrayContaining(OFF_SEED));
+  });
+
+  it('still keeps the strict seed matches', () => {
+    const kept = filterNlpTermsForAnalysis(
+      [term('prywatny detektyw'), term('biuro detektywistyczne'), ...OFF_SEED.map((t) => term(t))],
+      KEYWORD,
+    );
+
+    expect(kept.map((t) => t.term)).toEqual(expect.arrayContaining(['prywatny detektyw', 'biuro detektywistyczne']));
+    expect(new Set(kept.map((t) => t.term)).size).toBe(kept.length);
+  });
+
+  /** Corpus evidence is the licence to skip seed matching — one stray page is not. */
+  it('does not let a single-document off-topic phrase in', () => {
+    const kept = filterNlpTermsForAnalysis(
+      [term('prywatny detektyw'), term('subkonto zus', 1), term('test z lektury', 1)],
+      KEYWORD,
+    );
+
+    expect(kept.map((t) => t.term)).not.toEqual(expect.arrayContaining(['subkonto zus', 'test z lektury']));
+  });
+
+  it('rejects known noise however many competitors repeat it', () => {
+    const kept = filterNlpTermsForAnalysis(
+      [term('prywatny detektyw'), term('metin2', 9), term('lubimyczytac', 9)],
+      KEYWORD,
+    );
+
+    expect(kept.map((t) => t.term)).toEqual(['prywatny detektyw']);
+  });
+});
