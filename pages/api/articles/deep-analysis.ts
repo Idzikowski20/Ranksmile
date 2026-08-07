@@ -176,7 +176,10 @@ function addSelectedKeywordTerms(terms: NlpTerm[], selected: string[], plainText
 }
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
-export const config = { maxDuration: 60 };
+// 300, not 60: this route streams progress and waits on a sidecar run with its own
+// 3-minute abort below, so a 60s cap kills it mid-analysis. The value that applies
+// comes from vercel.json — route config is inert on Next 12.
+export const config = { maxDuration: 300 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('[deep-analysis] handler invoked', req.method);

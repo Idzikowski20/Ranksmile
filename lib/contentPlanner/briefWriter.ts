@@ -102,14 +102,13 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
 
   const sections = bundle.briefs.map((brief, i) => {
     const questions = [...(brief.mustAnswer || [])].slice(0, QUESTIONS_PER_SECTION);
+    const evidence = claimTexts(brief, claims);
     return [
       `${i + 1}. ${brief.heading}`,
       `   objective: ${brief.objective}`,
       `   words: ~${brief.budget.words}`,
       questions.length ? `   must answer: ${questions.map(asEvidence).join(' | ')}` : '',
-      claimTexts(brief, claims).length
-        ? `   <evidence>${claimTexts(brief, claims).join(' | ')}</evidence>`
-        : '',
+      evidence.length ? `   <evidence>${evidence.join(' | ')}</evidence>` : '',
     ].filter(Boolean).join('\n');
   }).join('\n\n');
 

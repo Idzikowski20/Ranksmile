@@ -100,7 +100,11 @@ function urlKey(raw: string): string {
     const host = u.hostname.replace(/^www\./, '').toLowerCase();
     return `${host}${u.pathname.replace(/\/+$/, '')}`;
   } catch {
-    return raw.trim();
+    // Same contract for a malformed or scheme-less URL: host case-folded, path kept.
+    // Diverging here would silently miss claims for exactly the rows most likely to be
+    // written by hand.
+    const [head, ...rest] = raw.trim().split('/');
+    return [head.toLowerCase(), ...rest].join('/');
   }
 }
 
