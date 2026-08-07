@@ -94,15 +94,47 @@ describe('writeOutlineBrief', () => {
     expect(system).toMatch(/[Nn]ever name, quote or describe a competitor/);
   });
 
-  it('keeps the planner headings exactly, whatever the model returns', async () => {
-    const renamed = JSON.stringify({
+  /**
+   * The planner's labels are roles, not titles. Surfer's own briefs name the topic in
+   * every H2 — "Jak działa prywatny detektyw w Warszawie – od pierwszej rozmowy do
+   * raportu", never "Kim jesteśmy" — so the model is asked to write them and its heading
+   * wins. Order and count still come from the planner.
+   */
+  it('takes the headings the model wrote, in the planner order', async () => {
+    const rewritten = JSON.stringify({
       title: 'T',
-      sections: [{ heading: 'Coś zupełnie innego', instructions: ['x'] }],
+      sections: [
+        { heading: 'Jak działa prywatny detektyw w Warszawie', instructions: ['a'] },
+        { heading: 'Sprawy rodzinne – zdrada, rozwód, dzieci', instructions: ['b'] },
+      ],
     });
 
-    const headings = await call(renamed).run();
+    const headings = await call(rewritten).run();
 
-    expect(headings?.map((h) => h.text)).toEqual(['T', 'Kim jesteśmy', 'Zakres usług']);
+    expect(headings?.map((h) => h.text)).toEqual([
+      'T',
+      'Jak działa prywatny detektyw w Warszawie',
+      'Sprawy rodzinne – zdrada, rozwód, dzieci',
+    ]);
+  });
+
+  it('keeps the planner label for a section the model did not rename', async () => {
+    const partial = JSON.stringify({
+      title: 'T',
+      sections: [{ heading: '', instructions: ['a'] }],
+    });
+
+    const headings = await call(partial).run();
+
+    expect(headings?.[1].text).toBe('Kim jesteśmy');
+  });
+
+  it('asks for a written heading rather than the role it was given', async () => {
+    const c = call(GOOD);
+    await c.run();
+
+    expect(c.seen[0].user).toContain('role: Kim jesteśmy');
+    expect(c.seen[0].system).toMatch(/Write the real H2 for it/);
   });
 
   it('falls back to the objective for a section the model skipped', async () => {
