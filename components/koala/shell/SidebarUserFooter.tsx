@@ -101,25 +101,39 @@ export default function SidebarUserFooter({ variant = 'sidebar' }: Props) {
           role="menu"
         >
           {isHeader ? (
-            <div className="koala-sidebar-user__menu-head">
-              <span className="koala-sidebar-user__name">{userName}</span>
-              {handle ? <span className="koala-sidebar-user__handle">{handle}</span> : null}
-            </div>
-          ) : null}
-          <UserMenuLink href="/settings/profile" onClick={() => setOpen(false)}>
-            <Icon name="User" size={16} weight="bold" />
-            Profile
-          </UserMenuLink>
-          <UserMenuLink href="/settings/billing_subscription" onClick={() => setOpen(false)}>
-            <Icon name="CreditCard" size={16} weight="bold" />
-            Billing
-          </UserMenuLink>
+            <>
+              <div className="koala-sidebar-user__menu-head">
+                <Avatar src={userPic || undefined} initials={userInitial} size={32} />
+                <span className="koala-sidebar-user__menu-head-meta">
+                  <span className="koala-sidebar-user__name">{userName}</span>
+                  {handle ? <span className="koala-sidebar-user__handle">{handle}</span> : null}
+                </span>
+              </div>
+              <div className="koala-sidebar-user__divider" />
+            </>
+          ) : (
+            <>
+              <UserMenuLink href="/settings/profile" onClick={() => setOpen(false)}>
+                <Icon name="User" size={16} weight="bold" />
+                Profile
+              </UserMenuLink>
+              <UserMenuLink href="/settings/billing_subscription" onClick={() => setOpen(false)}>
+                <Icon name="CreditCard" size={16} weight="bold" />
+                Billing
+              </UserMenuLink>
+            </>
+          )}
           <UserMenuLink href="/settings/general" onClick={() => setOpen(false)}>
-            <Icon name="Gear" size={16} weight="bold" />
+            <Icon name="Gear" size={isHeader ? 20 : 16} weight="bold" />
             Settings
           </UserMenuLink>
-          <button type="button" className="koala-sidebar-user__link koala-sidebar-user__link--danger" role="menuitem" onClick={() => { void signOut(); }}>
-            <Icon name="SignOut" size={16} weight="bold" />
+          <button
+            type="button"
+            className={`koala-sidebar-user__link${isHeader ? '' : ' koala-sidebar-user__link--danger'}`}
+            role="menuitem"
+            onClick={() => { void signOut(); }}
+          >
+            <Icon name="SignOut" size={isHeader ? 20 : 16} weight="bold" />
             Sign out
           </button>
         </div>
