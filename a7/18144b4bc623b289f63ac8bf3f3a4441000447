@@ -1,0 +1,36 @@
+__tests__/lib/pageTourState.test.ts
+  s_668ab4f91e9d5a::t_6418e63b6fb3f8 81-82
+  s_668ab4f91e9d5a::t_2595bfde70ba39 70-80,83-96
+lib/editor/revealHtmlProgressive.ts
+  s_668ab4f91e9d5a::t_e28626e3fdcb7f 54
+  s_668ab4f91e9d5a::t_c0840c14216d7c 119-123
+  s_668ab4f91e9d5a::t_dfa7f25196c552 48-53,55-62
+__tests__/components/OutlineGenerateBar.test.tsx
+  s_668ab4f91e9d5a::t_2595bfde70ba39 1,9,15,23,29
+components/koala/product/GuidedTour.tsx
+  s_668ab4f91e9d5a::t_e28626e3fdcb7f 235-238,241,248-249,252
+  s_668ab4f91e9d5a::t_868dc4fc327f14 115-116
+  s_668ab4f91e9d5a::t_703bf1d462a66f 200-206
+lib/onboardingState.ts
+  s_668ab4f91e9d5a::t_868dc4fc327f14 25-32,34,38
+components/articles/OutlineGenerateBar.tsx
+  s_668ab4f91e9d5a::t_b367c79998ff56 113-115
+__tests__/lib/editor/revealHtmlProgressive.test.ts
+  s_668ab4f91e9d5a::t_bc51f08db80d29 37-47,60,70-75,80,82-83,85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a718144b4bc623b289f63ac8bf3f3a4441000447",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
