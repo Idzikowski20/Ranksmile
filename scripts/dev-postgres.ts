@@ -49,16 +49,32 @@ async function ensureUtf8Database(target: PgTarget): Promise<void> {
   });
   await admin.connect();
   try {
-    const existing = await admin.query<{ enc: string }>(
+    let existing = await admin.query<{ enc: string }>(
       'SELECT pg_encoding_to_char(encoding) AS enc FROM pg_database WHERE datname = $1',
       [target.database],
     );
     if (!existing.rows.length) {
-      await admin.query(
-        `CREATE DATABASE "${target.database}" WITH ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
-      );
-      console.log(`[dev-postgres] created database ${target.database} (UTF8)`);
-      return;
+      try {
+        await admin.query(
+          `CREATE DATABASE "${target.database}" WITH ENCODING 'UTF8' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C'`,
+        );
+        console.log(`[dev-postgres] created database ${target.database} (UTF8)`);
+        return;
+      } catch (err) {
+        // The check above and this CREATE aren't atomic, so a second dev-postgres.ts
+        // process (stale pane from a previous session, restarted pane racing the old one)
+        // can create it between our SELECT and our CREATE. Verified against a real
+        // concurrent race (two clients racing this exact query): Postgres reports it as
+        // 23505 (unique_violation on the pg_database catalog index), not the friendlier
+        // 42P04 (duplicate_database) you'd get from a serial "it already existed" call —
+        // catch both. Not a real failure — re-fetch below to verify what the winner made.
+        const { code } = err as { code?: string };
+        if (code !== '42P04' && code !== '23505') throw err;
+        existing = await admin.query<{ enc: string }>(
+          'SELECT pg_encoding_to_char(encoding) AS enc FROM pg_database WHERE datname = $1',
+          [target.database],
+        );
+      }
     }
     const encoding = existing.rows[0].enc;
     if (encoding !== 'UTF8') {
