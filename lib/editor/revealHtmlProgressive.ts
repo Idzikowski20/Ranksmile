@@ -72,6 +72,13 @@ function clearInlineMotion(elements: HTMLElement[]): void {
   }
 }
 
+/**
+ * Which reveal currently owns the rendered blocks. A superseded reveal aborts, and its
+ * cleanup would otherwise strip the inline styles off elements the new reveal is already
+ * animating — ProseMirror reuses the DOM nodes, so the new article popped in at once.
+ */
+let revealGeneration = 0;
+
 export type RevealHtmlOptions = {
   signal?: AbortSignal;
   /**
@@ -118,6 +125,14 @@ export async function revealHtmlInEditor(
 
   const delayMs = Math.max(55, Math.min(180, Math.floor(2800 / elements.length)));
   elements.forEach((_, i) => hide(elements, i));
+  // Force a style recalculation so the hidden state is the one the browser starts from.
+  // Without it `show(0)` lands in the same synchronous pass as `hide`, no transition ever
+  // starts for the first block, and it pops in while every other block fades.
+  // eslint-disable-next-line no-void
+  void elements[elements.length - 1].offsetHeight;
+
+  revealGeneration += 1;
+  const generation = revealGeneration;
 
   try {
     for (let i = 0; i < elements.length; i += 1) {
@@ -134,6 +149,7 @@ export async function revealHtmlInEditor(
     // Unmount / supersede: the content is already committed, so there is nothing to
     // restore — just make sure no block is left parked at opacity 0.
   } finally {
-    clearInlineMotion(elements);
+    // Only the reveal that still owns the blocks may unstyle them.
+    if (generation === revealGeneration) clearInlineMotion(elements);
   }
 }

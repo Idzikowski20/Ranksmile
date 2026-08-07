@@ -26,6 +26,7 @@ import { reviewOutlineFromBundle } from '../../../../lib/contentPlanner/reviewOu
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readContentSettings } from '../../../../lib/contentSettings';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
 import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
 import {
   benchmarkDocsFromCompetitors,
@@ -34,6 +35,11 @@ import {
 } from '../../../../lib/benchmarkIntelligence';
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine/types';
 import type { PlannerTargets, StructuralBenchmark } from '../../../../lib/benchmarkIntelligence/types';
+
+// The outline brief is a 6000-token completion, so this route now runs for tens of
+// seconds. Route config alone is inert on Next 12 — the value that applies lives in the
+// `functions` block of vercel.json; this export documents the intent next to the code.
+export const config = { maxDuration: 120 };
 
 type ArticlePlanRow = {
   id: number;
@@ -205,6 +211,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // and the approvedOutline save path above returns long before this point.
     const brand = await readContentSettings().catch(() => ({ brandName: '', brandKnowledge: '', voices: [] }));
 
+    // The brief is the first LLM spend this route ever made, and nothing stopped a client
+    // from re-requesting an outline in a loop. Same gate every other generating route uses.
+    const orgId = await resolveOrgId(req, res);
+    const over = await orgBudgetBlocked(orgId);
+    if (over) return res.status(429).json(over);
+
     // Brand knowledge finally reaches the planner. Without it the only company facts in
     // scope were the competitors', which is exactly how a rival's address, licence number
     // and testimonials ended up as instructions in a reviewed outline.
@@ -223,11 +235,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         ...result.outlineValidation.issues,
         ...result.briefValidation.issues,
       ].map((issue) => issue.message).find(Boolean);
-      // Which of the three data gaps this is decides what the reader should do about it;
-      // the validator code (`claims_too_low`) only says the gate that tripped.
+      // Which data gap this is decides what the reader should do about it; the validator
+      // code (`claims_too_low`) only names the gate that tripped.
+      //
+      // `finalizing` counts as running: job-progress sets it while results are still
+      // being persisted, and mid-finish the reader was told to start an analysis that
+      // was seconds from producing the very data they were missing.
       const analysisRunning = await db.query<{ id: string }>(
         `SELECT id FROM analysis_jobs
-          WHERE article_id = ? AND job_type = 'deep_analysis' AND status IN ('queued', 'running')
+          WHERE article_id = ? AND job_type = 'deep_analysis'
+            AND status IN ('queued', 'running', 'finalizing')
           LIMIT 1`,
         { replacements: [articleId], type: QueryTypes.SELECT },
       ).then((jobs) => jobs.length > 0).catch(() => false);

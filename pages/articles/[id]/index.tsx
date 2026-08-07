@@ -515,6 +515,11 @@ const ArticleEditorPage: NextPage = () => {
     onError: onAnalysisError,
   });
 
+  /**
+   * Exactly `isDeepAnalyzing`, kept as a name because ~20 `disabled=`/`readOnly=` props read
+   * better as "the editor is locked" than as "deep analysis is running". It is NOT a second
+   * condition: never branch on both, or the second branch is unreachable.
+   */
   const editorLocked = isDeepAnalyzing;
   /** Same flag the editor reads for its bottom bar — the side panel has to agree with it. */
   const outlineReviewMode = router.query.reviewOutline === '1';
@@ -2202,25 +2207,6 @@ const ArticleEditorPage: NextPage = () => {
                     articleId={article.id}
                     keyword={article.target_keyword || ''}
                     cachedOutlines={article.competitor_outlines_cache}
-                  />
-                </div>
-              ) : editorLocked ? (
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
-                  <ContentScorePanel
-                    plainText={plainText}
-                    wordCount={wordCount}
-                    headingCount={headingCount}
-                    scoreData={scoreData}
-                    internalLinksCount={internalLinksCount}
-                    html={editorHtml}
-                    keyword={article?.target_keyword || ''}
-                    articleId={article.id}
-                    domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
-                    cachedOutlines={article.competitor_outlines_cache}
-                    fallbackScore={article.content_score}
-                    title={article.title || ''}
-                    metaTitle={article.meta_title || ''}
-                    metaDescription={article.meta_description || ''}
                   />
                 </div>
               ) : ranksmileDockOpen ? (

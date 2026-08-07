@@ -1,4 +1,5 @@
 import React from 'react';
+import styled from '@emotion/styled';
 import { Icon } from '../koala/icons';
 import { useEntrance } from '../../lib/motion/useEntrance';
 
@@ -24,6 +25,7 @@ const PILL: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
+/** Placement only. Inline because `left` is computed from a runtime prop. */
 const SHELL: React.CSSProperties = {
   position: 'fixed',
   bottom: 32,
@@ -31,10 +33,47 @@ const SHELL: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   fontFamily: 'var(--font-family-primary)',
-  background: 'var(--koala-bg-inverse, #1a1a1a)',
-  boxShadow: '0 8px 40px rgba(0,0,0,0.45)',
-  color: 'var(--koala-text-on-inverse, #fff)',
 };
+
+const INVERSE_BG = 'var(--koala-bg-inverse, #1a1a1a)';
+const INVERSE_FG = 'var(--koala-text-on-inverse, #fff)';
+const LIFT = '0 8px 40px rgba(0,0,0,0.45)';
+
+/** The black surface, shared by all three states. */
+const SURFACE: React.CSSProperties = {
+  background: INVERSE_BG,
+  boxShadow: LIFT,
+  color: INVERSE_FG,
+};
+
+/**
+ * Same surface as the two progress states, but interactive. Emotion rather than `style`
+ * because hover / active / focus-visible are pseudo-classes, and an inline `background`
+ * would win over any rule that tried to change it. Mirrors the Koala `Button` contract:
+ * 120ms background transition, `--shadow-focus` ring, dimmed + not-allowed when disabled.
+ */
+const PillButton = styled.button({
+  ...SURFACE,
+  border: 'none',
+  cursor: 'pointer',
+  transition: 'background 120ms ease, box-shadow 120ms ease, opacity 120ms ease',
+  // Nudges the surface toward its own text colour, so it lightens on the dark pill and
+  // darkens on the light one without needing a second token per theme.
+  '&:hover:not(:disabled)': {
+    background: `color-mix(in srgb, ${INVERSE_BG} 86%, ${INVERSE_FG})`,
+  },
+  '&:active:not(:disabled)': {
+    background: `color-mix(in srgb, ${INVERSE_BG} 74%, ${INVERSE_FG})`,
+  },
+  '&:focus-visible': {
+    outline: 'none',
+    boxShadow: `var(--shadow-focus), ${LIFT}`,
+  },
+  '&:disabled': {
+    cursor: 'not-allowed',
+    opacity: 0.6,
+  },
+});
 
 const Spinner: React.FC = () => (
   <span
@@ -54,6 +93,7 @@ const ProgressPill: React.FC<{ label: string; rightReserve: number }> = ({ label
       style={{
         ...SHELL,
         ...PILL,
+        ...SURFACE,
         left: `calc((100vw - ${rightReserve}px) / 2)`,
         transform: 'translateX(-50%)',
       }}
@@ -91,7 +131,7 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
   // needs, since the outline they are reading is the thing being described, and the bar
   // then changed shape on every state change.
   return (
-    <button
+    <PillButton
       ref={barEntranceRef}
       type="button"
       onClick={onGenerate}
@@ -102,14 +142,11 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
         ...PILL,
         left: `calc((100vw - ${rightReserve}px) / 2)`,
         transform: 'translateX(-50%)',
-        border: 'none',
-        cursor: empty ? 'not-allowed' : 'pointer',
-        opacity: empty ? 0.6 : 1,
       }}
     >
       <Icon name="Sparkle" size={16} weight="fill" />
       Generate content
-    </button>
+    </PillButton>
   );
 };
 

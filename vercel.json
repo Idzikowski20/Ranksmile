@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "pages/api/articles/[id]/generate-stream.ts": { "maxDuration": 300 },
+    "pages/api/articles/optimize-sections.ts": { "maxDuration": 300 },
+    "pages/api/articles/ranksmile-agent.ts": { "maxDuration": 300 },
+    "pages/api/articles/[id]/content-plan.ts": { "maxDuration": 120 },
+    "pages/api/ai-visibility/internal/run-chunk.ts": { "maxDuration": 300 },
+    "pages/api/cron/ccm-compile.ts": { "maxDuration": 300 },
+    "pages/api/cron/wie-eval.ts": { "maxDuration": 300 },
+    "pages/api/**/*.ts": { "maxDuration": 60 }
+  }
+}

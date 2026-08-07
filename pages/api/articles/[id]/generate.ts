@@ -49,10 +49,14 @@ import {
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
 import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchmarkIntelligence';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
+import { readArticleTerms } from '../../../../lib/articleTerms';
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
+
+/** Leaves the rest of the 60s handler for the compile and the sidecar kickoff. */
+const BRIEF_TIMEOUT_MS = 25_000;
 
 /** A claimed job with no update this long is presumed dead (killed function, timeout) and reclaimable. */
 const GENERATE_STALE_MINUTES = 10;
@@ -390,6 +394,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // document /content-plan uses, and feed it in exactly as a reviewed outline would be.
     //
     // After the plan gate on purpose — a rejected plan must not cost an LLM call.
+    //
+    // Bounded: this handler has ~60s before the platform kills it, and being killed here
+    // strands the 'queued' job claim made at step 0. If the brief is slow we write from
+    // the plan's own objectives instead — worse copy, but an article rather than a failed
+    // request and an article that can no longer be generated.
     const approvedHeadings = reviewed.length > 0
       ? reviewed
       : parseApprovedOutline(await writeOutlineBrief({
@@ -399,6 +408,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         brandName: cs.brandName,
         importantTerms: importantTermsFromScoreData(scoreData),
         language: lang,
+        signal: AbortSignal.timeout(BRIEF_TIMEOUT_MS),
       }));
 
     // Reviewer owns the structure: added / removed / reordered H2 is applied as-is,
@@ -416,8 +426,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       outlineWarnings = approvedOutlineWarnings(writePlan);
     }
 
+    // article_terms holds terms activated after the analysis ran; score_data alone is the
+    // stale half of the list the editor grades against.
+    const tableTerms = await readArticleTerms(articleIdNum).catch(() => []);
     const compiledResult = compileAndValidateWritePlan(writePlan, {
-      importantTerms: importantTermsFromScoreData(scoreData),
+      importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
       allowBrandNiche,
     });
     if (!compiledResult.ok) {

@@ -145,14 +145,18 @@ describe('filterNlpTermsForAnalysis keeps corpus-backed vocabulary', () => {
     expect(new Set(kept.map((t) => t.term)).size).toBe(kept.length);
   });
 
-  /** Corpus evidence is the licence to skip seed matching — one stray page is not. */
+  /**
+   * Corpus evidence is the licence to skip seed matching — one stray page is not. These
+   * phrases are deliberately NOT on the noise list and share no token with the seed, so
+   * only the doc_freq rule can reject them.
+   */
   it('does not let a single-document off-topic phrase in', () => {
     const kept = filterNlpTermsForAnalysis(
-      [term('prywatny detektyw'), term('subkonto zus', 1), term('test z lektury', 1)],
+      [term('prywatny detektyw'), term('kredyt hipoteczny', 1), term('wymiana opon', 1)],
       KEYWORD,
     );
 
-    expect(kept.map((t) => t.term)).not.toEqual(expect.arrayContaining(['subkonto zus', 'test z lektury']));
+    expect(kept.map((t) => t.term)).not.toEqual(expect.arrayContaining(['kredyt hipoteczny', 'wymiana opon']));
   });
 
   it('rejects known noise however many competitors repeat it', () => {

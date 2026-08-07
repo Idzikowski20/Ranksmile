@@ -93,9 +93,14 @@ export function competitorsFromScoreData(scoreData: unknown): CompetitorRawInput
 function urlKey(raw: string): string {
   try {
     const u = new URL(raw);
-    return `${u.hostname.replace(/^www\./, '')}${u.pathname.replace(/\/+$/, '')}`.toLowerCase();
+    // Hostnames are case-insensitive; paths are not. Lower-casing the whole key made
+    // `/Uslugi` and `/uslugi` the same competitor, so one page's claims could be filed
+    // under another — and claim frequency is exactly what decides a core claim from an
+    // information gap.
+    const host = u.hostname.replace(/^www\./, '').toLowerCase();
+    return `${host}${u.pathname.replace(/\/+$/, '')}`;
   } catch {
-    return raw.trim().toLowerCase();
+    return raw.trim();
   }
 }
 

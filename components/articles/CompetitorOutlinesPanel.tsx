@@ -24,9 +24,7 @@ interface Props {
   cachedOutlines: string | null;
   /**
    * Omitted when the panel *is* the side column rather than something opened on top of
-   * it — there is nothing to go back to, and the header's own generate action is dropped
-   * with it: outline review already has one generate control in the bottom bar, and a
-   * second one that writes a different thing is how reviewers lose their edits.
+   * it — there is nothing to go back to, so the back button is dropped with it.
    */
   onClose?: () => void;
 }
@@ -171,36 +169,6 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [briefHeadings, setBriefHeadings] = useState<Array<{ level: number; text: string }> | null>(null);
-  const [briefLoading, setBriefLoading] = useState(false);
-
-  const handleGenerateBrief = async () => {
-    if (!keyword || briefLoading) return;
-    setBriefLoading(true);
-    setBriefHeadings(null);
-    try {
-      const mapped = competitors.map((c) => ({
-        url: c.url,
-        title: c.title,
-        favicon: '',
-        headings: c.headings,
-        heading_count: c.heading_count ?? c.headings.length,
-        word_count: c.word_count,
-      }));
-      const res = await fetch('/api/articles/generate-outline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, competitors: mapped, articleId }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
-      setBriefHeadings(data.headings || []);
-    } catch {
-      setError('Could not generate brief from competitors.');
-    } finally {
-      setBriefLoading(false);
-    }
-  };
 
   useEffect(() => {
     // Try cache first
@@ -272,20 +240,6 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
             </span>
           )}
         </div>
-        {onClose && competitors.length > 0 && (
-          <button
-            type="button"
-            disabled={briefLoading}
-            onClick={handleGenerateBrief}
-            style={{
-              padding: '6px 12px', borderRadius: 8, border: 'none', cursor: briefLoading ? 'wait' : 'pointer',
-              background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)', fontSize: 12, fontWeight: 600,
-              fontFamily: 'var(--font-family-primary)', opacity: briefLoading ? 0.7 : 1,
-            }}
-          >
-            {briefLoading ? 'Generating…' : 'Generate brief'}
-          </button>
-        )}
       </div>
 
       {/* Content */}
@@ -318,21 +272,6 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
         {!isLoading && !error && competitors.map((comp, i) => (
           <CompetitorCard key={comp.url + i} competitor={comp} defaultOpen={i === 0} />
         ))}
-
-        {briefHeadings && briefHeadings.length > 0 && (
-          <div style={{ marginTop: 8, padding: 12, border: '1px solid var(--koala-bg-secondary)', borderRadius: 12, background: 'var(--koala-bg-primary)' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--koala-text-primary)', marginBottom: 8, fontFamily: 'var(--font-family-primary)' }}>
-              Generated brief · {briefHeadings.length} headings
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {briefHeadings.map((h, idx) => (
-                <div key={`${h.level}-${idx}`} style={{ fontSize: 13, color: 'var(--koala-text-secondary)', paddingLeft: (h.level - 1) * 12, fontFamily: 'var(--font-family-primary)' }}>
-                  H{h.level}: {h.text}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

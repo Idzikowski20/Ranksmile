@@ -64,7 +64,11 @@ const CORPUS_NOISE_RAW: RegExp[] = [
   /\+\d{2}[\s-]?(?:\d[\s-]?){9}/,
   // Abbreviated and spelled out: "ul. Złota" and "przy ulicy Złotej" are both a
   // competitor's street address, and both were being handed to our writer.
-  /\b(ul\.|ulic\w+)\s*[A-ZĄĆĘŁŃÓŚŹŻ]/,
+  // The abbreviation is address enough on its own, whatever its case ("UL. Warszawska",
+  // "ul. warszawska 12"). The spelled-out form is not: it has to be singular and followed
+  // by a proper noun, or "na ulicach Warszawy" — ordinary prose — gets thrown away too.
+  /\bul\.\s*[a-ząćęłńóśźż]/i,
+  /\bulic[ayąę]\s*[A-ZĄĆĘŁŃÓŚŹŻ]/,
   /\bo nas\s*-->/i,
 ];
 

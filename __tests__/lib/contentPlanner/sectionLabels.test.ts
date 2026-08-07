@@ -52,6 +52,16 @@ describe('sectionLabels + outline fixes', () => {
     expect(narrativeOrder[narrativeOrder.length - 1]).toBe('3');
   });
 
+  it('only treats a whole-word contact/summary as the sign-off', () => {
+    const ordered = orderSectionsFaqLast([
+      { id: 'c', role: 'body', heading: 'Contactless payments' },
+      { id: 'f', role: 'faq', heading: 'FAQ' },
+      { id: 'k', role: 'body', heading: 'Dane kontaktowe' },
+    ]);
+
+    expect(ordered.sections.map((s) => s.id)).toEqual(['c', 'f', 'k']);
+  });
+
   it('buildAdaptiveOutline for szantaz: titled H1, no SEO meta, FAQ last', () => {
     const intent = buildIntentBlueprint({ keyword: 'szantaz', language: 'pl', year: 2026 });
     const reader = buildReaderModel({ intent, language: 'pl' });
@@ -119,6 +129,19 @@ describe('service-page skeleton for hiring intent', () => {
     expect(buildIntentBlueprint({ keyword, language: 'pl' }).articleType).toBe(type);
   });
 
+  /** A city next to a provider is not a licence to eat every other intent. */
+  it.each([
+    ['ile kosztuje detektyw w warszawie', 'comparison'],
+    ['najlepszy detektyw warszawa vs agencja', 'comparison'],
+    ['cennik usług detektywistycznych warszawa', 'comparison'],
+    ['jak zostać detektywem w warszawie', 'step-by-step'],
+    ['jak otworzyć biuro detektywistyczne w warszawie', 'step-by-step'],
+    ['jak studiować prawo w warszawie', 'step-by-step'],
+    ['jak wynająć mieszkanie w warszawie', 'step-by-step'],
+  ])('does not sell a service page for %s', (keyword, type) => {
+    expect(buildIntentBlueprint({ keyword, language: 'pl' }).articleType).toBe(type);
+  });
+
   it('plans a service page instead of a tutorial', () => {
     const sections = localizedRequiredSections('service', 'pl');
 
@@ -162,6 +185,14 @@ describe('namesAnotherBrand', () => {
     'Ile kosztuje obserwacja w warszawie',
     'Sprawy rozwodowe i alimentacyjne',
   ])('keeps the topical heading %s', (heading) => {
+    expect(namesAnotherBrand(heading, KW, 'pl')).toBe(false);
+  });
+
+  /** Inflected keyword words are still the keyword, not a rival's name. */
+  it.each([
+    'Cennik usług Detektywa',
+    'Prywatny detektyw w Warszawie — zakres',
+  ])('keeps the inflected keyword heading %s', (heading) => {
     expect(namesAnotherBrand(heading, KW, 'pl')).toBe(false);
   });
 

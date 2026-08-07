@@ -25,6 +25,18 @@ describe('buildArticleWorkspaceLinks', () => {
    */
   it('points every link at a page that exists', () => {
     const pagesDir = path.join(process.cwd(), 'pages');
+    const PAGE_EXT = ['.tsx', '.ts', '.jsx', '.js'];
+    const isDir = (p: string) => fs.existsSync(p) && fs.statSync(p).isDirectory();
+
+    /**
+     * A final segment only resolves if it lands on a real page module: `seg.tsx`, or
+     * `seg/index.tsx`. Accepting a bare directory (what this used to do) would pass a
+     * route that Next.js 404s, which is the exact class of bug this test exists to catch.
+     */
+    const resolvesToPage = (dir: string, seg: string) => PAGE_EXT.some((ext) => fs.existsSync(path.join(dir, `${seg}${ext}`)))
+      || (isDir(path.join(dir, seg))
+        && PAGE_EXT.some((ext) => fs.existsSync(path.join(dir, seg, `index${ext}`))));
+
     const routeExists = (route: string) => {
       const segments = route.replace(/^\//, '').split('/');
       let dir = pagesDir;
@@ -33,12 +45,14 @@ describe('buildArticleWorkspaceLinks', () => {
         const entries = fs.existsSync(dir) ? fs.readdirSync(dir) : [];
         const dynamic = entries.find((e) => e.startsWith('['));
         if (last) {
-          if (entries.includes(`${segments[i]}.tsx`) || entries.includes(segments[i])) return true;
-          return Boolean(dynamic);
+          if (resolvesToPage(dir, segments[i])) return true;
+          // A dynamic entry may be `[id].tsx` or an `[id]/` folder — both reduce to `[id]`.
+          const dynamicSeg = dynamic?.replace(/\.(tsx|ts|jsx|js)$/, '');
+          return Boolean(dynamicSeg && resolvesToPage(dir, dynamicSeg));
         }
-        if (entries.includes(segments[i])) {
+        if (isDir(path.join(dir, segments[i]))) {
           dir = path.join(dir, segments[i]);
-        } else if (dynamic && fs.statSync(path.join(dir, dynamic)).isDirectory()) {
+        } else if (dynamic && isDir(path.join(dir, dynamic))) {
           dir = path.join(dir, dynamic);
         } else {
           return false;
@@ -46,6 +60,9 @@ describe('buildArticleWorkspaceLinks', () => {
       }
       return false;
     };
+
+    // The helper must reject a directory that has no index page, or it proves nothing.
+    expect(routeExists('/sites')).toBe(false);
 
     // Without a workspace prefix the hrefs are plain app routes.
     const links = buildArticleWorkspaceLinks(null, 'example-com');

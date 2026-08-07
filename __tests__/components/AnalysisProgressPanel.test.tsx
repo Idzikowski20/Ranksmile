@@ -71,9 +71,22 @@ describe('AnalysisProgressPanel', () => {
     expect(svgs.length).toBeGreaterThan(0);
   });
 
-  it('renders both groups from a blank phase set rather than nothing', () => {
+  /**
+   * A blank phase set is what the editor renders the instant it opens mid-analysis, so
+   * every row has to be listed as pending — not just the two group headings above them.
+   */
+  it('lists every step from a blank phase set, not just the headings', () => {
     render(<AnalysisProgressPanel phases={emptyPhases()} />);
-    expect(screen.getByText('AI Search')).toBeInTheDocument();
-    expect(screen.getByText('Google Search results')).toBeInTheDocument();
+
+    for (const label of [
+      'Generated prompts',
+      'Scraping answers from ChatGPT, AI Overviews, Gemini, AI Mode, Perplexity',
+      'Calculating AI Search guidelines',
+      'Getting search results',
+      'Crawling…',
+      'Calculating Content Scores and SEO guidelines',
+    ]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
   });
 });

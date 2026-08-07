@@ -15,7 +15,14 @@ import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
 import { seedTokens, tokensShareStem } from '../topicRelevance';
 import { foldPolishLetters } from '../termUtils';
 
-/** Claims kept per competitor document — enough for gain frequency, short of a dump. */
+/**
+ * Claims kept per competitor document — enough for gain frequency, short of a dump.
+ *
+ * ponytail: a flat ceiling taken off the front of the document, not a ranking. A page
+ * that states its best figures late loses them. Upgrade path when that shows up in an
+ * outline: score sentences (figure + seed mention) and keep the top `MAX_CLAIMS_PER_DOC`
+ * instead of the first ones.
+ */
 const MAX_CLAIMS_PER_DOC = 24;
 
 /** Numbers, money, dates, durations — the sentences that carry checkable substance. */
@@ -48,8 +55,19 @@ const MARKETING_MARKS = /[!®™]|\bzobacz wiecej\b|\bskontaktuj sie\b|\bzadzwon
  * this way — a customer testimonial always is ("Już drugi raz skorzystałem z usług tego
  * biura", "Powierzyłam agencji śledzenie męża"), and so is consent copy ("Zapoznałem się
  * z polityką prywatności"). Both reached the outline as things to cover.
+ *
+ * Matched against the raw sentence, never the folded one. Folding `ł` to `l` makes the
+ * verb ending `-łem` and the noun ending `-em` the same string, and the old folded
+ * pattern ate ordinary instrumental nouns with it: "zabezpieczane są profilem DNA" and
+ * "przekazywany kanalem szyfrowanym" were both thrown away. Requiring the `ł` itself puts
+ * the check back on the verb ending instead of the noun's stem.
+ *
+ * ponytail: surface morphology, no lemmatiser. Two corners stay open — a noun whose stem
+ * really ends in `ł` ("materiałem") still looks like an `-ałem` verb, and a page scraped
+ * without diacritics is not checked at all. Upgrade path if either reaches an outline: a
+ * Polish stemmer, or the sidecar's NLP pass, which already tags parts of speech.
  */
-const FIRST_PERSON_PAST = /\b\w{3,}(lem|lam|lismy|lysmy)\b/i;
+const FIRST_PERSON_PAST = /\p{L}{2,}(?:łem|łam|liśmy|łyśmy)\b/iu;
 
 /**
  * A navigation strip that the scraper flattened into one "sentence" —
@@ -70,32 +88,53 @@ function looksLikeNavigation(sentence: string): boolean {
  * Brand tokens taken from the page's own URL, so a competitor's self-references drop out
  * precisely — without a blanket "no proper nouns" rule that would also lose the
  * institutions a real claim needs (MSWiA, PZU, RODO).
+ *
+ * The article's own seed tokens are excluded: a competitor at `detektyw.pl` would
+ * otherwise donate the token `detektyw` and delete every sentence about the subject the
+ * article is being written on.
  */
-function ownBrandTokens(url: string): string[] {
+function ownBrandTokens(url: string, seeds: string[]): string[] {
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
     return host
       .split('.')[0]
       .split('-')
       .map(foldPolishLetters)
-      .filter((t) => t.length >= 5 && !['grupa', 'agencja', 'biuro', 'firma'].includes(t));
+      .filter((t) => t.length >= 5
+        && !['grupa', 'agencja', 'biuro', 'firma'].includes(t)
+        && !seeds.some((seed) => tokensShareStem(t, seed)));
   } catch {
     return [];
   }
 }
 
+/**
+ * Also matched against the sentence with its spaces removed. A domain concatenates the
+ * brand — `agencjatemida.pl` is one label — while the page spells it out, so "Agencja
+ * Temida" never contained the token and every self-reference survived.
+ */
 function mentionsOwnBrand(folded: string, brandTokens: string[]): boolean {
-  return brandTokens.some((token) => folded.includes(token));
+  if (!brandTokens.length) return false;
+  const joined = folded.replace(/\s+/g, '');
+  return brandTokens.some((token) => folded.includes(token) || joined.includes(token));
 }
 
 /**
  * Verbs that make a sentence a statement about the subject rather than narration.
  * Polish first (the writer's primary language), English for mixed SERPs.
+ *
+ * Written folded, like `SELF_PROMOTION`, and matched against folded text — `\b` is
+ * ASCII-only, so `\bsą\b` could never fire on the verb (the boundary after `ą` does not
+ * exist) but fired happily inside "sądem" and "sądowym", where a boundary does. It both
+ * missed the assertion it was written for and passed sentences that assert nothing.
  */
 const ASSERTIVE = new RegExp(
   '\\b('
-  + 'jest|są|wynosi|kosztuje|trwa|wymaga|wymagane|musi|powinien|powinna|powinno|'
-  + 'oznacza|polega|obejmuje|zawiera|umożliwia|pozwala|zależy|dotyczy|reguluje|'
+  // `moze` joins the modals here because the broken boundary was hiding its absence:
+  // "Raport może zostać wykorzystany jako dowód" only ever qualified by matching the
+  // stray "są" inside "sądowym".
+  + 'jest|sa|wynosi|kosztuje|trwa|wymaga|wymagane|musi|moze|powinien|powinna|powinno|'
+  + 'oznacza|polega|obejmuje|zawiera|umozliwia|pozwala|zalezy|dotyczy|reguluje|'
   + 'is|are|means|requires|must|should|includes|involves|costs|takes|depends'
   + ')\\b',
   'i',
@@ -109,9 +148,14 @@ function splitSentences(text: string): string[] {
     .filter(Boolean);
 }
 
-function mentionsSeed(sentence: string, seeds: string[]): boolean {
+/**
+ * Takes the folded sentence: `seedTokens` returns ASCII-folded tokens, so comparing them
+ * against a merely lowercased sentence lost every mention written with diacritics —
+ * "śledztwo" never matched the seed "sledztwo".
+ */
+function mentionsSeed(folded: string, seeds: string[]): boolean {
   if (!seeds.length) return false;
-  const words = sentence.toLowerCase().split(/[^a-z0-9ąćęłńóśźż]+/i).filter((w) => w.length >= 3);
+  const words = folded.split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
   return seeds.some((seed) => words.some((word) => tokensShareStem(word, seed)));
 }
 
@@ -131,22 +175,25 @@ export function extractCorpusClaims(
   sourceUrl = '',
 ): string[] {
   const seeds = seedTokens(keyword || '');
-  const brandTokens = ownBrandTokens(sourceUrl);
-  const saysSomething = (s: string) => (
-    mentionsSeed(s, seeds) || HAS_FIGURE.test(s) || ASSERTIVE.test(s)
-  );
-  const isAboutTheTopic = (s: string) => {
+  const brandTokens = ownBrandTokens(sourceUrl, seeds);
+  const isClaim = (s: string) => {
     const folded = foldPolishLetters(s);
-    return !SELF_PROMOTION.test(folded)
+    const isAboutTheTopic = !SELF_PROMOTION.test(folded)
       && !MARKETING_MARKS.test(folded)
-      && !FIRST_PERSON_PAST.test(folded)
+      // NFC first: scraped HTML arrives decomposed often enough that the `ś` of `liśmy`
+      // would otherwise be two codepoints and never match.
+      && !FIRST_PERSON_PAST.test(s.normalize('NFC'))
       && !mentionsOwnBrand(folded, brandTokens)
       && !looksLikeNavigation(s);
+    const saysSomething = mentionsSeed(folded, seeds)
+      || HAS_FIGURE.test(folded)
+      || ASSERTIVE.test(folded);
+    return isAboutTheTopic && saysSomething;
   };
 
   const seen = new Set<string>();
   return splitSentences(bodyText || '')
-    .filter((s) => !isCorpusNoiseSentence(s) && isAboutTheTopic(s) && saysSomething(s))
+    .filter((s) => !isCorpusNoiseSentence(s) && isClaim(s))
     .filter((s) => {
       const key = s.toLowerCase();
       if (seen.has(key)) return false;
