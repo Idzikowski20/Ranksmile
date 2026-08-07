@@ -162,14 +162,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             }
          } catch (fetchErr) {
             console.error(`Failed to trigger for ${domain.domain}:`, fetchErr);
-            // A thrown error (network failure, timeout) still leaves the draft skeleton
-            // behind, and usedTopics above reads target_keyword from every article
-            // regardless of status — an un-discarded skeleton permanently marks this
-            // topic as used with no article ever written for it.
+            // A thrown error (network failure, timeout waiting for confirmation) doesn't
+            // mean the deep-analysis request itself was lost — /api/articles/deep-analysis
+            // may still create its job row after our client gave up. Deleting the draft
+            // unconditionally here would leave that job writing into an article that no
+            // longer exists, so only discard when no job actually landed.
             if (articleId) {
-               await discardAutopilotDraft(articleId).catch((cleanupErr) => {
-                  console.error(`Failed to discard orphaned draft ${articleId} for ${domain.domain}:`, cleanupErr);
-               });
+               const job = await queryRows<{ id: string }>(
+                  `SELECT id FROM analysis_jobs WHERE article_id = ? AND job_type = 'deep_analysis' LIMIT 1`,
+                  [articleId],
+               ).catch(() => []);
+               if (!job.length) {
+                  await discardAutopilotDraft(articleId).catch((cleanupErr) => {
+                     console.error(`Failed to discard orphaned draft ${articleId} for ${domain.domain}:`, cleanupErr);
+                  });
+               }
             }
          }
       }

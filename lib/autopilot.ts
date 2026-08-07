@@ -110,7 +110,7 @@ async function confirmAnalysisJobCreated(articleId: number, sinceMs: number): Pr
       // eslint-disable-next-line no-await-in-loop
       const rows = await queryRows<{ id: string }>(
          `SELECT id FROM analysis_jobs
-           WHERE article_id = ? AND job_type = 'deep_analysis' AND created_at >= ?
+           WHERE article_id = ? AND ${autopilotJob('analysis_jobs')} AND created_at >= ?
            ORDER BY created_at DESC LIMIT 1`,
          [articleId, sinceCutoff],
       );
