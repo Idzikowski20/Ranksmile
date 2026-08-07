@@ -26,6 +26,37 @@ function detectKeywordLang(keyword: string, languageHint?: string): 'pl' | 'en' 
 /** Crisis / help-seeking queries → step-by-step even without "jak". */
 const HELP_RE = /(?:^|[^\p{L}])(?:szanta[zż]|blackmail|ofiar|pomoc|policj|zg[łl]osz|gro[zź]b|wymuszen)\p{L}*/iu;
 
+/**
+ * Someone you hire, or a business that provides it. Stems, so Polish inflection is
+ * covered ("detektywa", "kancelarii", "usługi").
+ */
+const PROVIDER_RE = new RegExp(
+  '(?:^|[^\\p{L}])(?:'
+  + 'detektyw|adwokat|prawnik|radca|kancelari|notariusz|komornik|'
+  + 'agencj|biuro|firma|serwis|warsztat|klinik|gabinet|salon|studio|'
+  + 'hydraulik|elektryk|mechanik|ksi[eę]gow|t[łl]umacz|architekt|geodet|'
+  + 'lawyer|attorney|agency|contractor|plumber|electrician|accountant|clinic'
+  + ')\\p{L}*',
+  'iu',
+);
+
+/** Hiring language that carries the same intent without naming a profession. */
+const HIRE_RE = /(?:^|[^\p{L}])(?:us[łl]ug|zatrudni|wynaj|zlec|obs[łl]ug|hire|near\s+me|services?)\p{L}*/iu;
+
+/**
+ * A Polish city in the query is the strongest local-service signal there is — nobody
+ * appends a city to an informational question. Kept to the largest cities plus the
+ * locative forms search actually sees ("w warszawie", "krakowie").
+ */
+const CITY_RE = new RegExp(
+  '(?:^|[^\\p{L}])(?:'
+  + 'warszaw|krak[oó]w|krakow|[łl][oó]d[zź]|wroc[łl]aw|pozna[nń]|gda[nń]sk|szczecin|'
+  + 'bydgoszcz|lublin|bia[łl]ystok|katowic|gdyni|cz[eę]stochow|radom|torun|toru[nń]|'
+  + 'sosnowiec|kielc|rzesz[oó]w|gliwic|zabrz|olsztyn|bielsko|bytom|ruda|tychy|opol'
+  + ')\\p{L}*',
+  'iu',
+);
+
 function first60sForLang(keyword: string, lang: 'pl' | 'en'): string[] {
   if (lang === 'en') {
     return [
@@ -56,7 +87,19 @@ export function buildIntentBlueprint(opts: {
   let narrativePreference: IntentBlueprint['narrativePreference'] = 'problem_solution';
   let primaryIntent: IntentBlueprint['primaryIntent'] = 'informational';
 
-  if (PRICE_RE.test(keyword)) {
+  // A provider plus a city, or explicit hiring language, is someone shopping for a
+  // supplier. Checked before the how-to rules: "jak wybrać detektywa w warszawie" is
+  // still a hiring query, and answering it with a generic action plan misses what the
+  // ranking pages actually are.
+  const looksLocalService = (PROVIDER_RE.test(keyword) && CITY_RE.test(keyword))
+    || (PROVIDER_RE.test(keyword) && HIRE_RE.test(keyword))
+    || (HIRE_RE.test(keyword) && CITY_RE.test(keyword));
+
+  if (looksLocalService) {
+    primaryIntent = 'commercial';
+    articleType = 'service';
+    narrativePreference = 'problem_solution';
+  } else if (PRICE_RE.test(keyword)) {
     primaryIntent = 'commercial';
     articleType = 'comparison';
   } else if (COMPARE_RE.test(keyword)) {
