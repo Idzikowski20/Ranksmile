@@ -94,8 +94,20 @@ function parseObject(text: string): LlmBrief | null {
  */
 function parseBrief(raw: string): LlmBrief | null {
   const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
+  if (start < 0) return null;
+  // Last `}` that is structure rather than a character inside a heading or instruction.
+  // A brace in the prose would otherwise cut the salvage mid-string and lose everything.
+  let end = -1;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < raw.length; i += 1) {
+    const ch = raw[i];
+    if (escaped) escaped = false;
+    else if (ch === '\\') escaped = true;
+    else if (ch === '"') inString = !inString;
+    else if (ch === '}' && !inString) end = i;
+  }
+  if (end <= start) return null;
   return parseObject(raw.slice(start, end + 1)) ?? parseObject(`${raw.slice(start, end + 1)}]}`);
 }
 

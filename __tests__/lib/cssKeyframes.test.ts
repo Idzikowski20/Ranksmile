@@ -20,9 +20,9 @@ describe('inline animations reference keyframes that exist', () => {
       return /\.tsx?$/.test(e.name) ? [full] : [];
     });
 
-  it('every animation name used in components/ resolves to a keyframe', () => {
-    const files = sourceFiles(path.join(root, 'components'));
-    const declaring = [...files, ...sourceFiles(path.join(root, 'pages'))];
+  it('every animation name used in components/ and pages/ resolves to a keyframe', () => {
+    const files = [...sourceFiles(path.join(root, 'components')), ...sourceFiles(path.join(root, 'pages'))];
+    const declaring = files;
     // Components are free to declare their own keyframes inline (Emotion, <style> tags),
     // so the defined set is globals.css plus everything the component tree declares.
     const defined = new Set([
@@ -33,7 +33,10 @@ describe('inline animations reference keyframes that exist', () => {
 
     for (const file of files) {
       const src = fs.readFileSync(file, 'utf8');
-      const used = [...src.matchAll(/animation:\s*'([A-Za-z][A-Za-z0-9_-]*)\s/g)]
+      // Quoted and template-literal forms both: `animation: \`${x} 1s\`` hides the name
+      // from a quote-only match, and a broken keyframe written that way would render as
+      // the same silent static block.
+      const used = [...src.matchAll(/animation:\s*['`]([A-Za-z][A-Za-z0-9_-]*)\s/g)]
         .map(([, name]) => name)
         // `none` and the CSS-wide keywords are not keyframe references.
         .filter((name) => !['none', 'inherit', 'initial', 'unset'].includes(name));
