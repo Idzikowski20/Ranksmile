@@ -6,8 +6,6 @@ import { runWieEvalSuite } from '../../../lib/wie/eval/runEvalSuite';
 import { writeTrendsFile, readHistory } from '../../../lib/wie/eval/history';
 import { getErrorMessage } from '../../../lib/errors';
 
-export const config = { maxDuration: 300 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET' && req.query.trends === '1') {
     const keyword = typeof req.query.keyword === 'string' ? req.query.keyword : undefined;

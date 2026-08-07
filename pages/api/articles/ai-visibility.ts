@@ -29,9 +29,6 @@ function plainArticleText(article: ArticleRow): string {
    return `${article.meta_title || ''}\n${article.meta_description || ''}\n${plain}`.trim();
 }
 
-// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();

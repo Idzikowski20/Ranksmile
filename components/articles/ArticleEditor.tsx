@@ -46,6 +46,7 @@ import IconSmily from './IconSmily';
 import ProgressiveBlur from '../common/ProgressiveBlur';
 import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 import OutlineGenerateBar from './OutlineGenerateBar';
+import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
 import { revealHtmlInEditor, editorCanCommand } from '../../lib/editor/revealHtmlProgressive';
 import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
 import { clearWizardState } from '../../lib/wizardState';
@@ -1139,7 +1140,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [importBusy, setImportBusy] = useState(false);
     const [outlineBusy, setOutlineBusy] = useState(false);
     const [generateBusy, setGenerateBusy] = useState(false);
-    const [generateMsg, setGenerateMsg] = useState('Generating article…');
+    // Empty while idle. This doubles as the outline bar's status line, and seeding it
+    // with "Generating article…" meant a bar that was waiting for the reviewer claimed a
+    // generation was already under way — the reviewer never saw the heading count.
+    const [generateMsg, setGenerateMsg] = useState('');
     const [generatePct, setGeneratePct] = useState<number | null>(null);
     const generationRunRef = useRef(0);
     const generationJobIdRef = useRef<{ runId: number; jobId: string } | null>(null);
@@ -1707,8 +1711,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     useEffect(() => {
       if (!editor) return;
-      editor.setEditable(!readOnly);
-    }, [editor, readOnly]);
+      // Locked for the whole run, not just while the document is empty. Both runs end in
+      // a `setContent` that replaces everything: typing behind the loading skeleton was
+      // discarded, and so were edits made to a reviewed outline while the article was
+      // being written on top of it.
+      editor.setEditable(!readOnly && !outlineBusy && !generateBusy);
+    }, [editor, readOnly, outlineBusy, generateBusy]);
 
     const toolbarLocked = !!formattingSuspended || !!readOnly;
 
@@ -1977,10 +1985,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             planValidation?: { issues?: Array<{ message?: string }> };
           };
           if (!genRes.ok || !genData.jobId) {
+            // Up to two reasons, not just the first: the planner reports one issue per
+            // failed gate and the leading one is often the least specific ("Outline
+            // skipped — blueprint gate failed" without saying what the blueprint lacked).
             const detail = [
               ...(genData.blueprintValidation?.issues || []),
               ...(genData.planValidation?.issues || []),
-            ].map((i) => i.message).find(Boolean);
+            ]
+              .map((i) => i.message)
+              .filter((m): m is string => Boolean(m))
+              .filter((m, i, all) => all.indexOf(m) === i)
+              .slice(0, 2)
+              .join(' · ');
             throw new Error(detail || genData.message || genData.error || 'Generation failed to start');
           }
           jobId = genData.jobId;
@@ -2010,13 +2026,16 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           });
           source.addEventListener('done', () => { clearTimeout(timeout); finish(); });
           source.addEventListener('error', (event) => {
-            clearTimeout(timeout);
-            // A server-sent `error` event carries a message; a transport drop does not.
+            // A server-sent `error` event carries a message and is terminal. A bare
+            // error is a transport drop — the route hitting its duration cap, a dev
+            // recompile, a proxy closing an idle connection — and the generation is
+            // still running behind it. EventSource reconnects on its own as long as we
+            // do not close it, so failing here reported a healthy run as broken and the
+            // finished article turned up by itself minutes later.
             const raw = (event as MessageEvent).data;
-            const message = typeof raw === 'string' && raw
-              ? (JSON.parse(raw) as { message?: string }).message
-              : null;
-            finish(new Error(message || 'Generation failed'));
+            if (typeof raw !== 'string' || !raw) return;
+            clearTimeout(timeout);
+            finish(new Error((JSON.parse(raw) as { message?: string }).message || 'Generation failed'));
           });
         });
 
@@ -2053,6 +2072,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           if (generationRevealHtmlRef.current?.runId === runId) generationRevealHtmlRef.current = null;
           setGenerateBusy(false);
           setGeneratePct(null);
+          // Back to idle, or the last progress line would linger under "Review outline"
+          // as though the run were still going.
+          setGenerateMsg('');
         }
       }
     };
@@ -2139,7 +2161,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       await handleInsertOutline();
     };
 
+    // `readOnly` is the deep-analysis lock. Planning an outline before the analysis has
+    // finished asks the planner to work from competitors that have not been crawled yet:
+    // it returns nothing, and the editor reported "no competitor analysis yet — run the
+    // article analysis first" about an analysis that was running at that very moment.
+    // The effect re-fires when the lock lifts, so nothing is lost by waiting.
     useEffect(() => {
+      if (readOnly) return undefined;
       if (!outlineReviewMode || !editor || outlineAutoStarted.current || outlineBusy || generateBusy) return undefined;
       const t = setTimeout(() => {
         if (outlineAutoStarted.current || !editor) return;
@@ -2151,7 +2179,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       return () => clearTimeout(t);
       // ponytail: one-shot when review mode + editor ready (omit handleInsertOutline)
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [outlineReviewMode, editor, outlineBusy, generateBusy]);
+    }, [outlineReviewMode, editor, outlineBusy, generateBusy, readOnly]);
 
     const handleOutlineGenerate = () => {
       if (!editor) return;
@@ -2208,6 +2236,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => {
       if (editor && highlightTerms) editor.view.dispatch(editor.state.tr);
     }, [scoreData?.terms, highlightTerms, editor]);
+
+    // Outline planning / article writing into a still-empty document. `docEmpty` is recomputed
+    // from the editor on every content change, and every reveal in a run commits with
+    // emitUpdate:true — so the skeleton is gone the moment setContent lands, before the
+    // block-by-block fade starts touching inline styles on view.dom.children.
+    const generating = (outlineBusy || generateBusy) && docEmpty;
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', background: 'var(--koala-bg-primary)', position: 'relative' }}>
@@ -2280,6 +2314,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll[data-empty="true"] .ProseMirror { min-height: 0; padding-bottom: 8px; }
           /* Hide the paragraph placeholder while importing so only "Importing your content…" shows. */
           .art-editor-scroll[data-importing="true"] .ProseMirror p.is-empty::before { content: none; }
+          /* While a run is writing into the document, drop BOTH placeholders instead of swapping in
+             busy copy: "Untitled" + "Start writing…" invite the user to type into a doc that is about
+             to be overwritten, and any replacement label would just repeat the progress pill. The
+             skeleton is the state; idle keeps the invitation, which is correct when nothing is running. */
+          .art-editor-scroll[data-generating="true"] .ProseMirror h1.is-empty::before,
+          .art-editor-scroll[data-generating="true"] .ProseMirror p.is-empty::before { content: none; }
           .art-editor-scroll .ProseMirror a { color: var(--koala-text-link); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
           .art-editor-scroll .ProseMirror a:hover { color: var(--koala-text-link); }
           .art-editor-scroll[data-review="true"] .ProseMirror a { background: var(--koala-text-brand); color: var(--koala-text-on-brand) !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
@@ -2324,7 +2364,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         {/* Scrollable editor — Featured image sits above the body; Title/Description
             live in Publish or Export. Relative wrapper pins blur fades to scroll edges. */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'} data-readonly={readOnly ? 'true' : 'false'} data-empty={docEmpty && !readOnly ? 'true' : 'false'} data-importing={importBusy ? 'true' : 'false'}>
+        <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'} data-readonly={readOnly ? 'true' : 'false'} data-empty={docEmpty && !readOnly ? 'true' : 'false'} data-importing={importBusy ? 'true' : 'false'} data-generating={generating ? 'true' : 'false'}>
           <div
             ref={editorWrapRef}
             className={ranksmileSelection ? 'ranksmile-selection-highlight' : ''}
@@ -2363,7 +2403,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 />
               </div>
             ) : null}
-            <EditorContent editor={editor} style={{ background: 'var(--koala-bg-primary)' }} />
+            {/* Relative so the skeleton overlays the document box only — never the featured image above it. */}
+            <div style={{ position: 'relative' }}>
+              <EditorContent editor={editor} style={{ background: 'var(--koala-bg-primary)' }} />
+              <ArticleGenerationSkeleton busy={outlineBusy || generateBusy} empty={docEmpty} />
+            </div>
             {editor && docEmpty && !readOnly && !generateBusy && !outlineReviewMode && (
               <div style={{ maxWidth: 860, margin: '0 auto', padding: '4px 64px 80px', fontFamily: CTA_FONT }}>
                 {importBusy ? (
@@ -2468,11 +2512,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         {generateBusy && !outlineReviewMode && (
           <GenerateWritingOverlay message={generateMsg} pct={generatePct} />
         )}
-        {outlineReviewMode && (
+        {/* Not while the analysis is still running: there is no outline to review yet, and
+            the bar overlapped the progress panel claiming a generation was under way. */}
+        {outlineReviewMode && !readOnly && (
           <OutlineGenerateBar
             planning={outlineBusy}
             busy={generateBusy}
-            status={generateMsg}
             progressPct={generatePct}
             headingCount={outlineHeadingCount}
             onGenerate={handleOutlineGenerate}

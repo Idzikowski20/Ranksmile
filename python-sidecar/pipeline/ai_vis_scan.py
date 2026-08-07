@@ -25,7 +25,7 @@ async def run_scan_loop(scan_id: int, nextjs_url: str) -> None:
     }
     errors = 0
     try:
-        # Client timeout > Node maxDuration (300s) so we wait out a full chunk.
+        # Generous per-chunk timeout: one run-chunk call can take minutes on the Node side.
         async with httpx.AsyncClient(timeout=310) as client:
             for _ in range(MAX_CHUNKS):
                 try:

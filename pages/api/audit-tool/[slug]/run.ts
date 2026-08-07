@@ -8,8 +8,6 @@ import { processQueuedForDomain } from '../../../../lib/auditRunner';
 import { getErrorMessage } from '../../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAuditTables();

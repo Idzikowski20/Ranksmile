@@ -7,8 +7,6 @@ import { processQueuedForDomain } from '../../../../lib/keywordResearchRunner';
 import { getErrorMessage } from '../../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await ensureKeywordResearchTables();
    const authorized = await verifyUser(req, res);

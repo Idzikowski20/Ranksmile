@@ -13,6 +13,7 @@
    --koala-bg-tertiary: #fafafa;
    --koala-bg-brand: #f84416;
    --koala-bg-inverse: #1a1a1a;
+   --koala-text-on-inverse: #fafafa;
    --koala-text-primary: #1a1a1a;
    --koala-text-secondary: #575757;
    --koala-text-tertiary: #767676;
@@ -138,6 +139,7 @@
    --koala-bg-tertiary: #0a0a0a;
    --koala-bg-brand: #f84416;
    --koala-bg-inverse: #fafafa;
+   --koala-text-on-inverse: #1a1a1a;
    --koala-text-primary: #fafafa;
    --koala-text-secondary: #a5a5a5;
    --koala-text-tertiary: #767676;
@@ -186,6 +188,7 @@
    --koala-bg-tertiary: #faf9f7;
    --koala-bg-brand: #f84416;
    --koala-bg-inverse: #1b1a18;
+   --koala-text-on-inverse: #f1f0ee;
    --koala-text-primary: #1b1a18;
    --koala-text-secondary: #6a6762;
    --koala-text-tertiary: #85817a;
@@ -234,6 +237,7 @@
    --koala-bg-tertiary: #07070c;
    --koala-bg-brand: #f84416;
    --koala-bg-inverse: #f7f7f8;
+   --koala-text-on-inverse: #09090b;
    --koala-text-primary: #f7f7f8;
    --koala-text-secondary: #9b9cb0;
    --koala-text-tertiary: #676a83;
@@ -3166,6 +3170,16 @@ html.editor-route .app-content {
 .koala-search-bar { position: relative; }
 .koala-search-bar-icon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #6A6772; pointer-events: none; display: flex; z-index: 1; }
 .koala-skeleton-block { background: var(--koala-bg-secondary); animation: skeletonPulse 1.6s ease-in-out infinite; }
+/* Article canvas skeleton (components/articles/ArticleGenerationSkeleton) — sits over the
+   empty document for the length of a generate run. Opaque, so the empty ProseMirror lines
+   behind it don't show through; pointer-events:none so it never eats a click. Same
+   max-width/padding as `.art-editor-scroll .ProseMirror`, so the bars land on the text column. */
+.art-gen-skeleton {
+   position: absolute; top: 0; left: 0; right: 0; z-index: 2; pointer-events: none;
+   background: var(--koala-bg-primary);
+   max-width: 860px; margin: 0 auto; padding: 32px 64px 80px; box-sizing: border-box;
+}
+.art-gen-skeleton[data-static='true'] .koala-skeleton-block { animation: none; }
 .koala-secret-field-wrap { position: relative; display: inline-block; }
 .koala-secret-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: #6A6772; cursor: pointer; padding: 4px; }
 .koala-toggle-field-row { display: flex; justify-content: flex-end; }

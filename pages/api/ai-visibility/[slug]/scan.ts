@@ -12,8 +12,6 @@ import { manualRefreshCooldownDays, refreshIntervalDays } from '../../../../lib/
 import { nextjsUrl } from '../../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAiVisibilityTables();
@@ -61,9 +59,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
    // Durable path: hand the scan to the always-on python-sidecar, which loops
    // runScanChunk via /api/ai-visibility/internal/run-chunk until done — surviving
-   // this function's return AND the serverless time limit. Fall back to an inline
-   // run for local dev where the sidecar isn't up (a long-lived `next dev` process
-   // keeps the async work alive; on Vercel an inline run would not survive).
+   // this handler's return, so a scan is not tied to one request's lifetime. Fall back
+   // to an inline run for local dev where the sidecar isn't up (a long-lived `next dev`
+   // process keeps the async work alive).
    try {
       await callSidecar('/ai-visibility/run-scan', { scanId, nextjsUrl: nextjsUrl() }, 15000);
    } catch (e) {

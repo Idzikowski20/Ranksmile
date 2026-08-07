@@ -21,6 +21,7 @@ export const semantic: ThemeSemantic = {
     disabled: 'var(--koala-text-disabled)',
     onBrand: 'var(--koala-text-on-brand)',
     onBrandSecondary: 'var(--koala-text-on-brand-secondary)',
+    onInverse: 'var(--koala-text-on-inverse)',
     brand: 'var(--koala-text-brand)',
     link: 'var(--koala-text-link)',
   },

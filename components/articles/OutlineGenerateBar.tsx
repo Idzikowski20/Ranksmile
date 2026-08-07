@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../koala/core';
+import styled from '@emotion/styled';
 import { Icon } from '../koala/icons';
 import { useEntrance } from '../../lib/motion/useEntrance';
 
@@ -8,13 +8,24 @@ export type OutlineGenerateBarProps = {
   planning?: boolean;
   /** Article is being written from the approved outline. */
   busy: boolean;
-  status?: string;
   progressPct?: number | null;
   headingCount: number;
   onGenerate: () => void;
   rightReserve?: number;
 };
 
+/** Shared geometry: the three states are one control that changes label, not three bars. */
+const PILL: React.CSSProperties = {
+  height: 44,
+  gap: 10,
+  padding: '0 20px',
+  borderRadius: 999,
+  fontSize: 14,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+};
+
+/** Placement only. Inline because `left` is computed from a runtime prop. */
 const SHELL: React.CSSProperties = {
   position: 'fixed',
   bottom: 32,
@@ -22,10 +33,50 @@ const SHELL: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   fontFamily: 'var(--font-family-primary)',
-  background: 'var(--koala-bg-inverse, #1a1a1a)',
-  boxShadow: '0 8px 40px rgba(0,0,0,0.45)',
-  color: 'var(--koala-text-on-inverse, #fff)',
 };
+
+// No literal fallbacks: both vars are defined on every `[data-theme]` block, and the
+// `#fff` this used to fall back to was wrong in dark and moonlight, where the inverse
+// surface is near-white. A missing token should look broken, not silently unreadable.
+const INVERSE_BG = 'var(--koala-bg-inverse)';
+const INVERSE_FG = 'var(--koala-text-on-inverse)';
+const LIFT = '0 8px 40px rgba(0,0,0,0.45)';
+
+/** The black surface, shared by all three states. */
+const SURFACE: React.CSSProperties = {
+  background: INVERSE_BG,
+  boxShadow: LIFT,
+  color: INVERSE_FG,
+};
+
+/**
+ * Same surface as the two progress states, but interactive. Emotion rather than `style`
+ * because hover / active / focus-visible are pseudo-classes, and an inline `background`
+ * would win over any rule that tried to change it. Mirrors the Koala `Button` contract:
+ * 120ms background transition, `--shadow-focus` ring, dimmed + not-allowed when disabled.
+ */
+const PillButton = styled.button({
+  ...SURFACE,
+  border: 'none',
+  cursor: 'pointer',
+  transition: 'background 120ms ease, box-shadow 120ms ease, opacity 120ms ease',
+  // Nudges the surface toward its own text colour, so it lightens on the dark pill and
+  // darkens on the light one without needing a second token per theme.
+  '&:hover:not(:disabled)': {
+    background: `color-mix(in srgb, ${INVERSE_BG} 86%, ${INVERSE_FG})`,
+  },
+  '&:active:not(:disabled)': {
+    background: `color-mix(in srgb, ${INVERSE_BG} 74%, ${INVERSE_FG})`,
+  },
+  '&:focus-visible': {
+    outline: 'none',
+    boxShadow: `var(--shadow-focus), ${LIFT}`,
+  },
+  '&:disabled': {
+    cursor: 'not-allowed',
+    opacity: 0.6,
+  },
+});
 
 const Spinner: React.FC = () => (
   <span
@@ -44,15 +95,10 @@ const ProgressPill: React.FC<{ label: string; rightReserve: number }> = ({ label
       ref={ref}
       style={{
         ...SHELL,
+        ...PILL,
+        ...SURFACE,
         left: `calc((100vw - ${rightReserve}px) / 2)`,
         transform: 'translateX(-50%)',
-        height: 44,
-        gap: 10,
-        padding: '0 20px',
-        borderRadius: 999,
-        fontSize: 14,
-        fontWeight: 600,
-        whiteSpace: 'nowrap',
       }}
       aria-live="polite"
     >
@@ -66,13 +112,12 @@ const ProgressPill: React.FC<{ label: string; rightReserve: number }> = ({ label
 const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
   planning = false,
   busy,
-  status,
   progressPct,
   headingCount,
   onGenerate,
   rightReserve = 0,
 }) => {
-  const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
+  const barEntranceRef = useEntrance<HTMLButtonElement>({ y: 0 });
 
   if (planning) {
     return <ProgressPill label="Generating outline" rightReserve={rightReserve} />;
@@ -82,48 +127,29 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
     return <ProgressPill label={`Generating content${pct}`} rightReserve={rightReserve} />;
   }
 
+  const empty = headingCount < 1;
+
+  // The same pill the two running states use, now clickable. It used to be a wide bar
+  // restating "Outline / Review outline / N headings ready" — none of which the reviewer
+  // needs, since the outline they are reading is the thing being described, and the bar
+  // then changed shape on every state change.
   return (
-    <div
+    <PillButton
       ref={barEntranceRef}
+      type="button"
+      onClick={onGenerate}
+      disabled={empty}
+      title={empty ? 'Add at least one heading to the outline first' : undefined}
       style={{
         ...SHELL,
+        ...PILL,
         left: `calc((100vw - ${rightReserve}px) / 2)`,
         transform: 'translateX(-50%)',
-        width: `min(calc((100vw - ${rightReserve}px) * 0.833), 1000px)`,
-        height: 52,
-        justifyContent: 'space-between',
-        gap: 12,
-        padding: '0 16px',
-        borderRadius: 12,
       }}
     >
-      <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>Outline</span>
-
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0, flex: 1 }}>
-        <span style={{ fontSize: 14 }}>Review outline</span>
-        <span
-          style={{ fontSize: 12, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}
-          aria-live="polite"
-        >
-          {status?.trim()
-            || `${headingCount} heading${headingCount === 1 ? '' : 's'} ready — edit freely, then generate`}
-        </span>
-      </div>
-
-      {/* One action only, by request. Cancel sat next to the button being aimed at;
-          it is gone rather than hidden behind a shortcut, because a global Escape that
-          discards the review is a worse trade than no discard control at all. */}
-      <Button
-        type="button"
-        variant="primary"
-        size="sm"
-        onClick={onGenerate}
-        disabled={headingCount < 1}
-        icon={<Icon name="Sparkle" size={16} weight="fill" />}
-      >
-        Generate content
-      </Button>
-    </div>
+      <Icon name="Sparkle" size={16} weight="fill" />
+      Generate content
+    </PillButton>
   );
 };
 

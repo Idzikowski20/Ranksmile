@@ -17,7 +17,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { chatLlm } from '../../../lib/ai/deepseek';
 
-export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
+export const config = { api: { responseLimit: '10mb' } };
 
 type ScoredRankingSignal = RankingSignal & { verdict?: string };
 

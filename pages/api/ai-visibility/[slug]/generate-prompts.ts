@@ -11,8 +11,6 @@ import {
 } from '../../../../lib/domainLanguage';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 60 };
-
 /** Provenance tag from where Google surfaced the question. */
 const provenanceFor = (domain: string): string[] => {
    if (/reddit\.com$/i.test(domain)) return ['reddit'];

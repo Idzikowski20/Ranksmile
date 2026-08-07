@@ -9,6 +9,13 @@ export type ArticleType =
   | 'checklist'
   | 'comparison'
   | 'guide'
+  /**
+   * Hiring intent — "prywatny detektyw warszawa", "adwokat rozwodowy kraków". The reader
+   * is choosing a provider, not learning a subject, and the pages that rank are service
+   * pages. Planning these as a guide produced a how-to for a query nobody asks how-to
+   * about.
+   */
+  | 'service'
   | 'faq-first'
   | 'case-study';
 

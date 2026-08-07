@@ -7,9 +7,6 @@ import { ensureCompetitorsTables } from '../../../../lib/ensureCompetitorsTables
 import { scanCompetitors } from '../../../../lib/competitorScan';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-// Vercel: sidecar SERP scrape + DataForSEO can take up to ~a minute; raise from the ~10s default.
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureCompetitorsTables();

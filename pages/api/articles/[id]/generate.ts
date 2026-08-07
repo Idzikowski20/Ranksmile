@@ -13,7 +13,7 @@ import { readContentSettings } from '../../../../lib/contentSettings';
 import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
-import { resolveOrgId, orgBudgetBlocked } from '../../../../lib/aiBudget';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
 import { resolveContentLocale } from '../../../../lib/domainLanguage';
 import { getErrorMessage } from '../../../../lib/errors';
 import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
@@ -23,6 +23,7 @@ import { pipelineVersionTag } from '../../../../lib/pipelineVersion';
 import {
   aiIntelFromScoreData,
   competitorsFromScoreData,
+  enrichWithCorpusClaims,
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
   competitorHeadingTitles,
@@ -47,9 +48,13 @@ import {
 } from '../../../../lib/knowledgeEngine';
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
 import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchmarkIntelligence';
+import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
+import { readArticleTerms } from '../../../../lib/articleTerms';
+import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 
-// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
-export const config = { maxDuration: 60 };
+/** Bounds the brief LLM call: nothing else force-kills this request, so an unbounded
+ *  completion would hang it forever and starve the compile and the sidecar kickoff. */
+const BRIEF_TIMEOUT_MS = 25_000;
 
 /** A claimed job with no update this long is presumed dead (killed function, timeout) and reclaimable. */
 const GENERATE_STALE_MINUTES = 10;
@@ -79,12 +84,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'article id required' });
   }
 
+  // Kept in scope past the gate: the brief call further down spends tokens against the
+  // same pool, and a gate that never sees what it authorised stops metering anything.
+  let orgId: number | null = null;
   if (!isCron) {
     const userId = await getCurrentUserId(req, res);
     if (!(await assertArticleAccess(userId, articleIdNum))) {
       return res.status(403).json({ error: 'Access denied.' });
     }
-    const orgId = await resolveOrgId(req, res);
+    orgId = await resolveOrgId(req, res);
     const over = await orgBudgetBlocked(orgId);
     if (over) return res.status(429).json(over);
   }
@@ -120,14 +128,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!claimed[0]) {
       jobId = null;
       // Self-heal: a claim survives a thrown error via the catch blocks below, but not a
-      // Vercel timeout or hard kill between the claim and the sidecar kickoff — that
+      // process crash or a deploy restart between the claim and the sidecar kickoff — that
       // leaves a 'queued' row with no reaper, permanently blocking this article under the
       // partial unique index. Reclaim it here if it's gone stale instead of requiring an
       // operator to clear it by hand.
       //
-      // Only 'queued' is eligible: this route's maxDuration is 60s, so a claim that never
-      // reached the sidecar kickoff is stuck for at most ~60s, making GENERATE_STALE_MINUTES
-      // a generous margin. 'running'/'finalizing' rows are a live sidecar generation with
+      // Only 'queued' is eligible: the window between the claim and the sidecar kickoff is
+      // seconds of local work, so GENERATE_STALE_MINUTES is a generous margin for a row that
+      // never got there. 'running'/'finalizing' rows are a live sidecar generation with
       // its own heartbeat (job-progress bumps updated_at on every status/stream event) —
       // reclaiming those on a flat timeout would start a duplicate LLM run racing the one
       // still in flight.
@@ -230,6 +238,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!competitors.length) {
       competitors = parseCompetitorCacheJson(article.competitor_outlines_cache);
     }
+    competitors = enrichWithCorpusClaims(competitors, scoreData.competitor_claims ?? null);
     competitors = enrichWithWieSynthesis(
       competitors,
       scoreData.competitor_synthesis ?? null,
@@ -250,9 +259,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let cieWarning: string | null = null;
 
     try {
+      // Prefer the benchmark deep-analysis stored, exactly as /content-plan does. Deriving
+      // it only from `competitors` here meant the two endpoints planned against different
+      // structural targets whenever the competitor rows had lost the fields
+      // benchmarkDocsFromCompetitors needs: the outline passed its gate in /content-plan
+      // and the same article then failed the write gate, with no way to tell why.
+      const storedBenchmark = scoreData.structural_benchmark && typeof scoreData.structural_benchmark === 'object'
+        ? (scoreData.structural_benchmark as StructuralBenchmark)
+        : null;
       const benchDocs = benchmarkDocsFromCompetitors(competitors);
-      if (benchDocs.length) {
-        structuralBenchmark = buildStructuralBenchmark(benchDocs);
+      structuralBenchmark = storedBenchmark
+        ?? (benchDocs.length ? buildStructuralBenchmark(benchDocs) : null);
+      if (structuralBenchmark) {
         plannerTargets = toPlannerTargets(structuralBenchmark);
       }
       if (useKnowledgeEngine) {
@@ -355,7 +373,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       { replacements: [JSON.stringify(nextScore), articleId] },
     );
 
-    const approvedHeadings = parseApprovedOutline(approvedOutline);
+    const reviewed = parseApprovedOutline(approvedOutline);
 
     let writePlan = finalized.bundle.executionPlan;
     if (!finalized.canWrite || !writePlan) {
@@ -370,6 +388,38 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         knowledgeCoverage: finalized.bundle.knowledgeCoverage,
       });
     }
+
+    // Straight to Generate, no outline review: the plan's own section objectives carry
+    // nothing about our company, so the writer would produce a service page that never
+    // names the business it is selling. Write the brief here too, from the same brand
+    // document /content-plan uses, and feed it in exactly as a reviewed outline would be.
+    //
+    // After the plan gate on purpose — a rejected plan must not cost an LLM call.
+    //
+    // Bounded: this handler has ~60s before the platform kills it, and being killed here
+    // strands the 'queued' job claim made at step 0. If the brief is slow we write from
+    // the plan's own objectives instead — worse copy, but an article rather than a failed
+    // request and an article that can no longer be generated.
+    // article_terms holds terms activated after the analysis ran; score_data alone is the
+    // stale half of the list the editor grades against. Loaded before the brief so the
+    // brief and the compiled plan cannot be written against different vocabularies.
+    const tableTerms = await readArticleTerms(articleIdNum).catch(() => []);
+
+    const approvedHeadings = reviewed.length > 0
+      ? reviewed
+      : parseApprovedOutline(await writeOutlineBrief({
+        keyword,
+        bundle: finalized.bundle,
+        brandKnowledge,
+        brandName: cs.brandName,
+        importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
+        language: lang,
+        competitorHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
+        // Cron runs resolve no org and skip the budget gate entirely, so there is nothing
+        // to charge — same shape deep-analysis uses for its coverage spend.
+        onTokens: orgId == null ? undefined : (tokens) => recordAiTokens(orgId, tokens),
+        signal: AbortSignal.timeout(BRIEF_TIMEOUT_MS),
+      }));
 
     // Reviewer owns the structure: added / removed / reordered H2 is applied as-is,
     // benchmark shortfalls come back as warnings instead of blocking the write.
@@ -387,7 +437,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const compiledResult = compileAndValidateWritePlan(writePlan, {
-      importantTerms: [],
+      importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
       allowBrandNiche,
     });
     if (!compiledResult.ok) {
@@ -434,7 +484,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     await db.query(
       `UPDATE articles SET status = 'generating', pipeline_version = ?, updated_at = CURRENT_TIMESTAMP
        WHERE ${articleIdSql} = ?`,
-      { replacements: [pipelineVersionTag({ manualOutline: approvedHeadings.length > 0 }), articleId] },
+      // `reviewed`, not `approvedHeadings`: the tag records that a human approved the
+      // structure, and an auto-written brief is not that however it is applied.
+      { replacements: [pipelineVersionTag({ manualOutline: reviewed.length > 0 }), articleId] },
     );
 
     const base = sidecarUrl();

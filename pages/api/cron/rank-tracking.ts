@@ -8,8 +8,6 @@ import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!isRankTrackingRunnerEnabled()) {
     return res.status(200).json({ ok: true, skipped: true });

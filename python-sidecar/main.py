@@ -82,11 +82,7 @@ _generate_slots = asyncio.Semaphore(
 
 
 def _is_deployed_host() -> bool:
-    return bool(
-        os.getenv("RAILWAY_ENVIRONMENT")
-        or os.getenv("RENDER")
-        or os.getenv("VERCEL")
-    )
+    return bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER"))
 
 
 @app.on_event("startup")
@@ -564,7 +560,7 @@ async def pipeline_domain_setup(req: DomainSetupRequest):
 async def pipeline_generate(req: DomainSetupRequest):
     """Async single-article generation: runs /generate in the background and POSTs a
     terminal done/failed callback to /api/articles/job-progress with the article result.
-    Returns immediately so the caller (a Vercel function) isn't bound by the LLM duration."""
+    Returns immediately so the calling API route isn't bound by the LLM duration."""
     import asyncio
     nextjs_url = req.nextjsUrl or resolved_nextjs_url()
     asyncio.create_task(run_generate(req.jobId, req.payload, nextjs_url))
