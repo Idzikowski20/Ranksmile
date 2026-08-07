@@ -68,6 +68,10 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/domain/:slug*', destination: '/sites/:slug*', permanent: true },
+      // Legacy auth entry points. Server-side so they land before any JS runs
+      // (they used to be pages that redirected from useEffect).
+      { source: '/login', destination: '/auth/sign-in', permanent: false },
+      { source: '/register', destination: '/auth/sign-up', permanent: false },
       { source: '/workspace/:wsId', destination: '/workspace/:wsId/dashboard', permanent: false },
       // The WordPress plugin opens the editor at /drafts/<id> (draft id == article id).
       { source: '/drafts/:id', destination: '/articles/:id', permanent: false },
