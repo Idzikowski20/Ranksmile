@@ -14,6 +14,7 @@ import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
 import { safeJsonParse } from '../../../lib/safeJson';
 import { MAX_STREAM_CHARS } from '../../../lib/streamText';
 import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
+import { staleFinalizationSql } from '../../../lib/staleFinalization';
 
 import {
   mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
@@ -26,9 +27,6 @@ function sanitizedResult(result: unknown): unknown {
   if (typeof row.article_html !== 'string') return result;
   return { ...row, article_html: sanitizeArticleHtml(row.article_html) };
 }
-
-const FINALIZING_STALE_SECS = 5 * 60;
-const isPg = Boolean(process.env.DATABASE_URL);
 
 type JobAccessRow = {
   id: string;
@@ -49,9 +47,7 @@ async function canReadJob(userId: string | null, job: JobAccessRow): Promise<boo
 }
 
 async function failStaleFinalization(job: JobAccessRow): Promise<boolean> {
-  const stalePredicate = isPg
-    ? `updated_at < NOW() - INTERVAL '${FINALIZING_STALE_SECS} seconds'`
-    : `updated_at < datetime('now', '-${FINALIZING_STALE_SECS} seconds')`;
+  const stalePredicate = staleFinalizationSql();
   const recovered = await db.transaction(async (transaction) => {
     const claim = await db.query(
       `UPDATE analysis_jobs
