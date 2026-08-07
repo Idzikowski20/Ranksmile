@@ -1,0 +1,66 @@
+components/articles/OutlineGenerateBar.tsx
+  s_668ab4f91e9d5a::t_5c72dd4f6aa71e 79-89
+  s_668ab4f91e9d5a::t_a10c3e42307f57 126-137
+components/billing/OrderConfirmationBody.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1,160,163,203,210
+components/setup/setupUi.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1,75,118,228
+components/wordpress/WpConnectWizard.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1
+components/onboarding/tourScenes.tsx
+  s_668ab4f91e9d5a::t_9c8a9561380428 182-184,271-273
+components/articles/EditorLoading.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1,6
+pages/wordpress/connect.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1,259,365,375
+components/onboarding/PageTour.tsx
+  s_668ab4f91e9d5a::t_9c8a9561380428 1,199
+__tests__/lib/editor/revealHtmlProgressive.test.ts
+  s_668ab4f91e9d5a::t_3a5fa857f66585 37-73
+pages/api/onboarding/page-tour.ts
+  s_668ab4f91e9d5a::t_9c8a9561380428 19-20,25-27
+components/settings/ApiSettings.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1,97
+components/auth/AuthSplitLayout.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1,6,32,44,57
+lib/onboardingState.ts
+  s_668ab4f91e9d5a::t_42e16ab779bba3 24-35
+  s_668ab4f91e9d5a::t_8fe8b1e349c21d 49-54,57-59
+components/koala/product/GuidedTour.tsx
+  s_668ab4f91e9d5a::t_1585dc1bda5ae8 111-112,114
+  s_668ab4f91e9d5a::t_7917a06507e7c4 228-230,232-240,244,249
+  s_668ab4f91e9d5a::t_7d5d26ffce06a0 194-195
+components/articles/IconSmily.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1
+lib/editor/revealHtmlProgressive.ts
+  s_668ab4f91e9d5a::t_5485b875bbda5b 98-106
+components/auth/AuthBrandMark.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1
+__tests__/components/OutlineGenerateBar.test.tsx
+  s_668ab4f91e9d5a::t_30e2fefa0da3a4 8,11-30
+  s_668ab4f91e9d5a::t_b5d153009a9346 1
+components/onboarding/OnboardingShell.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1,7,10,36,65
+components/common/Loader.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1
+__tests__/components/guidedTourCentered.test.tsx
+  s_668ab4f91e9d5a::t_8eeaf2a3f979ca 19-32
+__tests__/components/bounceSmileyAnimation.test.tsx
+  s_668ab4f91e9d5a::t_bd92771a95046f 1,23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "dff8f7ab64a5c523312e7f1de3ea29a08ec29ecf",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
