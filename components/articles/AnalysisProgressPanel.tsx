@@ -25,19 +25,23 @@ const HIDDEN: React.CSSProperties = {
   position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap',
 };
 
-/** One sentence describing where the pipeline is, for the live region below. */
+/**
+ * One sentence describing where the pipeline is, for the live region below. Failures are
+ * announced deliberately — a silent error is worse than a verbose one.
+ */
 function activeSummary(groups: ReturnType<typeof analysisPhaseGroups>): string {
-  for (const group of groups) {
-    const row = group.rows.find((r) => r.state === 'active' || r.state === 'error');
-    if (row) return [STATE_LABEL[row.state], row.label, row.detail].filter(Boolean).join(': ');
-  }
-  const finished = groups.every((g) => g.rows.every((r) => r.state === 'done'));
-  return finished ? 'Analysis complete' : 'Waiting to start';
+  const rows = groups.flatMap((group) => group.rows);
+  const row = rows.find((r) => r.state === 'error') ?? rows.find((r) => r.state === 'active');
+  if (row) return [STATE_LABEL[row.state], row.label, row.detail].filter(Boolean).join(': ');
+  if (rows.every((r) => r.state === 'done')) return 'Analysis complete';
+  // Stages like fetch_page and term extraction have no row of their own, so a run can be
+  // well underway with nothing active — that is not the same as not having started.
+  return rows.some((r) => r.state === 'done') ? 'Analysis in progress' : 'Waiting to start';
 }
 
 const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 28, padding: '8px 4px' }}>
-    {/* One focused live region: announcing the whole tree re-read every row on each tick,
+    {/* One focused live region: announcing the whole tree re-read every row on each tick;
         announcing nothing left completions and failures silent. */}
     <div aria-live="polite" style={HIDDEN}>{activeSummary(analysisPhaseGroups(phases))}</div>
     {analysisPhaseGroups(phases).map((group) => (

@@ -52,6 +52,16 @@ describe('scoreIntroduction', () => {
     expect(factors.find((f) => f.name === 'INTRODUCTION_TOPIC_RELEVANCE')?.found).toBe(false);
   });
 
+  it('does not match a short query inside an underscored identifier', () => {
+    const factors = scoreIntroduction({
+      html: '<p>Zmienna AI_email trafia do logu.</p>',
+      keyword: 'AI',
+      coveredTopics: [],
+      audienceTerms: [],
+    });
+    expect(factors.find((f) => f.name === 'INTRODUCTION_TOPIC_RELEVANCE')?.found).toBe(false);
+  });
+
   it('matches a two-letter query when it stands on its own', () => {
     const factors = scoreIntroduction({
       html: '<p>AI zmienia sposób, w jaki szukamy informacji.</p>',
