@@ -48,29 +48,13 @@ import {
 } from '../../../../lib/knowledgeEngine';
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
 import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchmarkIntelligence';
-import { mergeArticleTermSources } from '../../../../lib/mergeArticleTerms';
-import type { NlpTerm } from '../../../../lib/contentScore';
+import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
 /** A claimed job with no update this long is presumed dead (killed function, timeout) and reclaimable. */
 const GENERATE_STALE_MINUTES = 10;
-
-/**
- * NLP terms the Write Engine must weave in, strongest first.
- *
- * `allocateTerms` hands these out round-robin across paragraph plans, and they are the
- * only keyword signal a paragraph prompt carries — passing an empty list (as this route
- * used to) left every paragraph with nothing but its goal and word budget.
- */
-function importantTermsFromScoreData(scoreData: Record<string, unknown>): string[] {
-  const terms = Array.isArray(scoreData.terms) ? (scoreData.terms as NlpTerm[]) : [];
-  return mergeArticleTermSources({ scoreDataTerms: terms })
-    .slice(0, 24)
-    .map((t) => t.term)
-    .filter(Boolean);
-}
 
 type ArticleGenerateRow = {
   target_keyword: string;
