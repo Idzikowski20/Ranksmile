@@ -13,7 +13,7 @@ import { readContentSettings } from '../../../../lib/contentSettings';
 import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
-import { resolveOrgId, orgBudgetBlocked } from '../../../../lib/aiBudget';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
 import { resolveContentLocale } from '../../../../lib/domainLanguage';
 import { getErrorMessage } from '../../../../lib/errors';
 import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
@@ -84,12 +84,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'article id required' });
   }
 
+  // Kept in scope past the gate: the brief call further down spends tokens against the
+  // same pool, and a gate that never sees what it authorised stops metering anything.
+  let orgId: number | null = null;
   if (!isCron) {
     const userId = await getCurrentUserId(req, res);
     if (!(await assertArticleAccess(userId, articleIdNum))) {
       return res.status(403).json({ error: 'Access denied.' });
     }
-    const orgId = await resolveOrgId(req, res);
+    orgId = await resolveOrgId(req, res);
     const over = await orgBudgetBlocked(orgId);
     if (over) return res.status(429).json(over);
   }
@@ -412,6 +415,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
         language: lang,
         competitorHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
+        onTokens: (tokens) => { recordAiTokens(orgId, tokens).catch(() => {}); },
         signal: AbortSignal.timeout(BRIEF_TIMEOUT_MS),
       }));
 

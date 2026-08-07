@@ -32,6 +32,8 @@ export type BriefWriterInput = {
   /** H2/H3 titles of the pages that rank — what the topic requires, in their words. */
   competitorHeadings?: string[];
   language?: string;
+  /** Charged to the org's shared pool: the gate that blocks the call also has to see it. */
+  onTokens?: (tokens: number) => void;
   signal?: AbortSignal;
   llmEdit?: (userPrompt: string, systemPrompt: string) => Promise<{ html: string; tokens: number }>;
 };
@@ -206,6 +208,7 @@ export async function writeOutlineBrief(input: BriefWriterInput): Promise<Approv
       llmEdit: input.llmEdit,
     });
     raw = res.html;
+    input.onTokens?.(res.tokens);
   } catch (err) {
     console.warn('[briefWriter] LLM brief failed:', err instanceof Error ? err.message : err);
     return null;

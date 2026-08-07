@@ -35,7 +35,7 @@ describe('isPublicRoute', () => {
   });
 
   /** Server and client disagree on asPath for statically optimized pages. */
-  it('agrees with itself when only asPath is populated', () => {
+  it('agrees whether asPath arrives populated or empty', () => {
     expect(isPublicRoute('', '/404')).toBe(true);
     expect(isPublicRoute('/404', '/404')).toBe(true);
   });
