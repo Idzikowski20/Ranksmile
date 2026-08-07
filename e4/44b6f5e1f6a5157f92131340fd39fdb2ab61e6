@@ -1,0 +1,47 @@
+components/articles/AnalysisProgressPanel.tsx
+  s_668ab4f91e9d5a::t_2f8424a3e971d4 46-47,54-56
+lib/contentPlanner/briefWriter.ts
+  s_668ab4f91e9d5a::t_1ed20aee57e813 248-258
+  s_668ab4f91e9d5a::t_afe0e31df72995 75,77,84-97
+  s_668ab4f91e9d5a::t_c1d1b10e96bb6e 220-223,225-234,237
+  s_668ab4f91e9d5a::t_d209bc0e5ba785 22
+  s_668ab4f91e9d5a::t_2aad3731c8e6e9 32-33
+  s_668ab4f91e9d5a::t_b32f579c12dbbb 39
+  s_668ab4f91e9d5a::t_c03037775bac56 134-138
+  s_668ab4f91e9d5a::t_b4fcbcdbdb7834 115-116,122-123
+  s_668ab4f91e9d5a::t_05b2468015cebe 162-168
+  s_668ab4f91e9d5a::t_63f0898a95d1be 204
+lib/contentPlanner/competitorBenchmark.ts
+  s_668ab4f91e9d5a::t_1d50720d1b4fd9 108-115
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_7589207492b725 414
+lib/wie/writer.ts
+  s_668ab4f91e9d5a::t_1e04a8d06151c8 136-139
+  s_668ab4f91e9d5a::t_059f08ffbc7d27 110-111
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_668ab4f91e9d5a::t_718b58650455db 249-300
+__tests__/lib/benchmarkIntelligence/benchmark.test.ts
+  s_668ab4f91e9d5a::t_2449ea6d6ba9bc 41-49,63,68-72
+  s_668ab4f91e9d5a::t_81740e47a96932 50-62,64-67
+pages/api/articles/[id]/content-plan.ts
+  s_668ab4f91e9d5a::t_db9ce40f32a33e 230
+lib/benchmarkIntelligence/toPlannerTargets.ts
+  s_668ab4f91e9d5a::t_01450bd4947c53 2,8-14
+  s_668ab4f91e9d5a::t_74e0f4ed568983 25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e444b6f5e1f6a5157f92131340fd39fdb2ab61e6",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
