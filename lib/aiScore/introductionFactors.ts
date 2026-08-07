@@ -27,7 +27,7 @@ function escapeRegExp(value: string): string {
  * short-token support below makes that failure mode common rather than rare.
  */
 function matches(haystack: string, term: string): boolean {
-  return new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRegExp(term)}([^\\p{L}\\p{N}]|$)`, 'u').test(haystack);
+  return new RegExp(`(^|[^\\p{L}\\p{N}_])${escapeRegExp(term)}([^\\p{L}\\p{N}_]|$)`, 'u').test(haystack);
 }
 
 /** First sentence containing the most terms; the span is returned verbatim. */

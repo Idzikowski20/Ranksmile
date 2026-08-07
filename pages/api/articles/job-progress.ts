@@ -14,9 +14,18 @@ import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
 import { safeJsonParse } from '../../../lib/safeJson';
 import { MAX_STREAM_CHARS } from '../../../lib/streamText';
 import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
+
 import {
   mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
 } from '../../../lib/analysisPhases';
+
+/** Same boundary as articles.content: no raw article HTML survives in the job row. */
+function sanitizedResult(result: unknown): unknown {
+  if (!result || typeof result !== 'object') return result;
+  const row = result as Record<string, unknown>;
+  if (typeof row.article_html !== 'string') return result;
+  return { ...row, article_html: sanitizeArticleHtml(row.article_html) };
+}
 
 const FINALIZING_STALE_SECS = 5 * 60;
 const isPg = Boolean(process.env.DATABASE_URL);
@@ -304,7 +313,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          WHERE id = ? AND status = 'finalizing'`,
         { replacements: [
           status,
-          result ? JSON.stringify(result) : null,
+          // The article body was sanitized above; the job row must not keep a raw copy
+          // for debug tooling or a later reader to render.
+          result ? JSON.stringify(sanitizedResult(result)) : null,
           status === 'failed' ? (message || 'failed') : null,
           status === 'done' ? 100 : null,
           jobId,

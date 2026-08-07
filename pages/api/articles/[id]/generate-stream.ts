@@ -108,6 +108,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => { setTimeout(resolve, TICK_MS); });
   }
+  } catch (err) {
+    // Headers are already flushed, so this can never surface as a 500 — the client would
+    // otherwise sit on an open, silent connection until its own timeout.
+    console.error('[generate-stream] tail failed:', err);
+    send(res, 'error', { message: 'Generation stream failed' });
   } finally {
     clearInterval(heartbeat);
   }

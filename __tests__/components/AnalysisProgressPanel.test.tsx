@@ -44,6 +44,21 @@ describe('AnalysisProgressPanel', () => {
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe('Analysis complete');
   });
 
+  it('does not claim the run has not started once a step has finished', () => {
+    const midRun = mergePhases(emptyPhases(), { fetchingSerp: { status: 'DONE' } });
+    const { container } = render(<AnalysisProgressPanel phases={midRun} />);
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe('Analysis in progress');
+  });
+
+  it('announces a failure over a step that is still running', () => {
+    const failed = mergePhases(emptyPhases(), {
+      crawlingSerp: { status: 'RUNNING', finished: 2, total: 10 },
+      aiSearch: { status: 'ERROR', error: 'timeout' },
+    });
+    const { container } = render(<AnalysisProgressPanel phases={failed} />);
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain('Error');
+  });
+
   it('marks finished rows for assistive tech', () => {
     const phases = mergePhases(emptyPhases(), { fetchingSerp: { status: 'DONE' } });
     render(<AnalysisProgressPanel phases={phases} />);
