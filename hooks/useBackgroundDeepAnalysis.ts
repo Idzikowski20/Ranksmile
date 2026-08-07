@@ -70,6 +70,7 @@ async function pollJob(jobId: string): Promise<PollOutcome> {
       status: data.status,
       currentStage: data.currentStage,
       stageProgress: data.stageProgress,
+      phases: data.phases ?? null,
       progressMessage: data.progressMessage,
       updatedAt: data.updatedAt ?? null,
     },
@@ -88,6 +89,9 @@ export function useBackgroundDeepAnalysis({
   const [ui, setUi] = useState<DeepAnalysisUiState | null>(null);
   // Served from this poll so the editor does not run a second interval for it.
   const [phases, setPhases] = useState<AnalysisPhases | null>(null);
+  // Phases belong to one article's run; carrying them across would show the previous
+  // article's progress until the first poll answers.
+  useEffect(() => { setPhases(null); }, [articleId]);
   const [isActive, setIsActive] = useState(false);
   const runGenRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
