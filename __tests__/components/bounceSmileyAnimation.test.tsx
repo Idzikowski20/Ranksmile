@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { render } from '@testing-library/react';
 import { BounceSmileyAnimation } from '../../components/common/BounceSmileyAnimation';
 
@@ -20,7 +20,7 @@ describe('BounceSmileyAnimation', () => {
   });
 
   it('smily-wobble CSS uses alternate so the loop does not jump angle', () => {
-    // Root cause regression: non-closed keyframes (0Â° â†’ 100Â°) + infinite
+    // Root cause regression: non-closed keyframes (0° → 100°) + infinite
     // snapped every cycle. alternate (or 0%===100%) keeps motion continuous.
     const fs = require('fs') as typeof import('fs');
     const path = require('path') as typeof import('path');

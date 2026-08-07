@@ -108,9 +108,10 @@ export type GuidedTourProps = {
 export function GuidedTour({ steps, open, onClose, storageKey }: GuidedTourProps) {
   const [idx, setIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
-  /** Measured so the bottom clamp uses the real card, not a guess that lets a long
-   *  tour walk the card off the bottom of the screen. 380 ≈ an illustrated card. */
+  /** Measured so the clamps use the real card, not a guess that lets a long tour walk
+   *  it off the screen. Defaults ≈ an illustrated card until the first measurement. */
   const [cardH, setCardH] = useState(380);
+  const [cardW, setCardW] = useState(380);
   const cardRef = useRef<HTMLDivElement>(null);
 
   /** The single exit: marks the tour seen so it doesn't reappear. Skip, Done and
@@ -190,6 +191,8 @@ export function GuidedTour({ steps, open, onClose, storageKey }: GuidedTourProps
       if (el) setRect(el.getBoundingClientRect());
       const h = cardRef.current?.offsetHeight;
       if (h) setCardH(h);
+      const w = cardRef.current?.offsetWidth;
+      if (w) setCardW(w);
     });
 
     const remeasure = () => { if (el) setRect(el.getBoundingClientRect()); };
@@ -222,17 +225,28 @@ export function GuidedTour({ steps, open, onClose, storageKey }: GuidedTourProps
   const CARD_W = 348;
   const MARGIN = 16;
   const maxTop = Math.max(MARGIN, window.innerHeight - cardH - MARGIN);
+  // Upper bound never below the lower one: on a narrow phone `innerWidth - cardW` goes
+  // negative and would push the card off the left edge.
+  const maxLeft = Math.max(MARGIN, window.innerWidth - cardW - MARGIN);
   const position: React.CSSProperties = (() => {
-    if (centered) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
+    if (centered) {
+      // Centred in pixels, never `translate(-50%, -50%)`: popoverMotion animates
+      // `transform` with fill-mode `both`, so its final `translateY(0)` outranks an
+      // inline transform and dumped the card's top-left corner at the viewport centre.
+      return {
+        top: Math.max(MARGIN, Math.round((window.innerHeight - cardH) / 2)),
+        left: Math.max(MARGIN, Math.round((window.innerWidth - cardW) / 2)),
+      };
+    }
     if (window.innerWidth - rect.right >= CARD_W + 24) {
       return {
         top: Math.max(MARGIN, Math.min(rect.top - 8, maxTop)),
-        left: rect.right + MARGIN,
+        left: Math.min(rect.right + MARGIN, maxLeft),
       };
     }
     return {
       top: Math.max(MARGIN, Math.min(rect.bottom + 12, maxTop)),
-      left: Math.min(Math.max(12, rect.left), window.innerWidth - 340),
+      left: Math.min(Math.max(MARGIN, rect.left), maxLeft),
     };
   })();
 

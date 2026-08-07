@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 /** Animated Ranksmile / Smily mark for auth card headers. */

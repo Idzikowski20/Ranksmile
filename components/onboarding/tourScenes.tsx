@@ -179,6 +179,9 @@ function useSceneIntro<T extends HTMLElement>() {
     if (refill.length) {
       gsap.fromTo(refill, { scaleX: 0 }, {
         scaleX: 1,
+        // Without this the bar snaps to scaleX:0 on creation and sits invisible for
+        // the whole LOOP_DELAY before the first refill starts.
+        immediateRender: false,
         duration: 1.6,
         ease: EASE.inOut,
         repeat: -1,
@@ -265,7 +268,9 @@ export type TourSceneProps = { accent: string };
 function Scene({ accent, children, gap }: TourSceneProps & { children: React.ReactNode; gap?: number }) {
   const ref = useSceneIntro<HTMLDivElement>();
   return (
-    <Panel $accent={accent}>
+    // Decorative: the dialog already carries the title and body, so screen readers
+    // must not also read the scene's internal labels and numbers.
+    <Panel $accent={accent} aria-hidden="true">
       <Window ref={ref} style={gap != null ? { gap } : undefined}>{children}</Window>
     </Panel>
   );

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 /** Smily mark (Ranksmile assistant). Compact rotating face for toolbars / chat chrome. */

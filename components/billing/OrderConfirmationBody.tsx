@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import Button from '../koala/primitives/Button';
 import { Textarea } from '../koala/core';
@@ -157,10 +157,10 @@ export default function OrderConfirmationBody({
                   : <span style={{ color: MUTED }}>On file with Stripe</span>}
               </MetaBlock>
               <MetaBlock icon="CalendarBlank" label={data.isTrialing ? 'Trial ends' : 'Next billing'}>
-                <span>{data.nextBillingLabel || 'â€”'}</span>
+                <span>{data.nextBillingLabel || '—'}</span>
               </MetaBlock>
               <MetaBlock icon="CreditCard" label="Payment method">
-                <span>{data.paymentMethodLabel || (data.isTrialing ? 'Card on file' : 'â€”')}</span>
+                <span>{data.paymentMethodLabel || (data.isTrialing ? 'Card on file' : '—')}</span>
               </MetaBlock>
             </div>
           </section>
@@ -200,14 +200,14 @@ export default function OrderConfirmationBody({
             </div>
             <Textarea
               label="Help us improve"
-              placeholder="Tell us what went well or what we can improveâ€¦"
+              placeholder="Tell us what went well or what we can improve…"
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               rows={4}
             />
             <div>
               <Button type="button" variant="primary" size="md" onClick={submitFeedback} disabled={submitting}>
-                {submitting ? 'Submittingâ€¦' : 'Submit feedback'}
+                {submitting ? 'Submitting…' : 'Submit feedback'}
               </Button>
             </div>
           </section>

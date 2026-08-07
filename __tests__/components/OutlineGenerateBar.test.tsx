@@ -1,14 +1,33 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import OutlineGenerateBar from '../../components/articles/OutlineGenerateBar';
 
 jest.mock('../../lib/motion/useEntrance', () => ({ useEntrance: () => null }));
 
 const noop = () => undefined;
 
-it('offers Cancel and Generate content while the outline is under review', () => {
+it('offers Generate content as the only button while the outline is under review', () => {
   render(<OutlineGenerateBar busy={false} headingCount={3} onGenerate={noop} onCancel={noop} />);
-  expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
   expect(screen.getByRole('button', { name: /Generate content/ })).toBeEnabled();
+  expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+});
+
+/**
+ * Discarding the review aborts the in-flight request and restores the article the
+ * reviewer started from — nothing else undoes that, so losing the Cancel button must
+ * not lose the capability.
+ */
+it('still discards the review on Escape', () => {
+  const onCancel = jest.fn();
+  render(<OutlineGenerateBar busy={false} headingCount={3} onGenerate={noop} onCancel={onCancel} />);
+  fireEvent.keyDown(window, { key: 'Escape' });
+  expect(onCancel).toHaveBeenCalledTimes(1);
+});
+
+it('does not discard on Escape while a generation is already running', () => {
+  const onCancel = jest.fn();
+  render(<OutlineGenerateBar busy headingCount={3} onGenerate={noop} onCancel={onCancel} />);
+  fireEvent.keyDown(window, { key: 'Escape' });
+  expect(onCancel).not.toHaveBeenCalled();
 });
 
 it('disables Generate content until the outline has a heading', () => {

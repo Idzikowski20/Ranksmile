@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import { GuidedTour, type GuidedTourStep } from '../koala/product/GuidedTour';
 import {
@@ -170,7 +170,6 @@ const STEPS: GuidedTourStep[] = [
  */
 const PageTour = () => {
   const [open, setOpen] = useState(false);
-  const steps = useMemo(() => STEPS, []);
   const queryClient = useQueryClient();
 
   const { data } = useQuery(
@@ -197,7 +196,7 @@ const PageTour = () => {
     });
   };
 
-  return <GuidedTour open={open} steps={steps} onClose={dismiss} />;
+  return <GuidedTour open={open} steps={STEPS} onClose={dismiss} />;
 };
 
 export default PageTour;

@@ -1,9 +1,9 @@
-﻿import React from 'react';
+import React from 'react';
 import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 const F = 'var(--font-family-primary)';
 
-/** Brand mark â€” Smily logo + Ranksmile wordmark. */
+/** Brand mark — Smily logo + Ranksmile wordmark. */
 const Brand = () => (
   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
     <span style={{ width: 36, height: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -29,7 +29,7 @@ const AuthSplitLayout = ({ children, title, subtitle }: { children: React.ReactN
       @keyframes authIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
     `}</style>
 
-    {/* Left â€” form */}
+    {/* Left — form */}
     <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', minHeight: '100dvh' }}>
       <div style={{ width: '100%', maxWidth: 392, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22, animation: 'authIn 0.5s cubic-bezier(0.16,1,0.3,1)' }}>
         <Brand />
@@ -41,7 +41,7 @@ const AuthSplitLayout = ({ children, title, subtitle }: { children: React.ReactN
       </div>
     </main>
 
-    {/* Right â€” brand panel */}
+    {/* Right — brand panel */}
     <aside className="auth-aside" aria-hidden="true" style={{ position: 'relative', overflow: 'hidden', flexDirection: 'column', justifyContent: 'space-between', padding: 48, background: 'radial-gradient(120% 110% at 0% 0%, #0c2a44 0%, #0a1624 44%, #0a0a0c 100%)' }}>
       {/* faint grid texture */}
       <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)', backgroundSize: '46px 46px', maskImage: 'radial-gradient(80% 80% at 30% 20%, #000, transparent 75%)', WebkitMaskImage: 'radial-gradient(80% 80% at 30% 20%, #000, transparent 75%)', pointerEvents: 'none' }} />
@@ -54,7 +54,7 @@ const AuthSplitLayout = ({ children, title, subtitle }: { children: React.ReactN
           Optimize content while you write, not after.
         </h2>
         <p style={{ margin: '14px 0 0', fontSize: 15, lineHeight: 1.6, color: '#9ec9e8', maxWidth: '52ch' }}>
-          Live content scoring, AI-search readiness, and reviewer comments in one editor â€” with Smily.
+          Live content scoring, AI-search readiness, and reviewer comments in one editor — with Smily.
         </p>
       </div>
 

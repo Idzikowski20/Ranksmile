@@ -95,7 +95,15 @@ export async function revealHtmlInEditor(
       if (opts?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       assertEditorLive(editor);
       // Append without remounting prior blocks (keeps fade on the newest node only).
-      editor.commands.insertContent(blocks[i]);
+      //
+      // Explicitly at the end of the doc, never `insertContent`: that inserts at the
+      // current selection, and after a <ul> the selection sits INSIDE the last <li>.
+      // Every following block then landed inside that list item — headings and lists
+      // nesting one level deeper per section, which is what turned a reviewed outline
+      // into a single runaway bullet list.
+      const end = editor.state?.doc?.content?.size;
+      if (typeof end === 'number') editor.commands.insertContentAt(end, blocks[i]);
+      else editor.commands.insertContent(blocks[i]);
       animateLastBlock(editor);
       const last = editor.view?.dom?.lastElementChild;
       last?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });

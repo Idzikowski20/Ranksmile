@@ -1,4 +1,4 @@
-﻿import Head from 'next/head';
+import Head from 'next/head';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
@@ -72,7 +72,7 @@ type SetupDropdownMenuProps = {
   id?: string;
 };
 
-/** Portal dropdown â€” avoids clipping by KoalaPanel overflow and scroll parents. */
+/** Portal dropdown — avoids clipping by KoalaPanel overflow and scroll parents. */
 export function SetupDropdownMenu({ open, anchorRef, onClose, children, id }: SetupDropdownMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -115,7 +115,7 @@ export function SetupDropdownMenu({ open, anchorRef, onClose, children, id }: Se
 
   if (!open || !mounted) return null;
 
-  // Pure positioning box â€” no border/background/shadow of its own. MenuList (the
+  // Pure positioning box — no border/background/shadow of its own. MenuList (the
   // actual Koala dropdown panel) supplies the single visual chrome; giving this
   // wrapper its own card styling nested a square inside a square.
   return createPortal(
@@ -225,7 +225,7 @@ export const Spinner = ({ size = 14 }: { size?: number }) => (
   <span aria-hidden="true" className="koala-setup-spinner" style={{ width: size, height: size }} />
 );
 
-/** Inline "working on it" line â€” spinner + label, used while brand data loads. */
+/** Inline "working on it" line — spinner + label, used while brand data loads. */
 export function SetupLoadingLine({ children }: { children: ReactNode }) {
   return (
     <span className="koala-setup-loading-line">
