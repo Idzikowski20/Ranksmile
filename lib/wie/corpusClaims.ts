@@ -44,6 +44,51 @@ const SELF_PROMOTION = new RegExp(
 const MARKETING_MARKS = /[!®™]|\bzobacz wiecej\b|\bskontaktuj sie\b|\bzadzwon\b/i;
 
 /**
+ * Polish first-person past tense. A factual statement about the topic is never written
+ * this way — a customer testimonial always is ("Już drugi raz skorzystałem z usług tego
+ * biura", "Powierzyłam agencji śledzenie męża"), and so is consent copy ("Zapoznałem się
+ * z polityką prywatności"). Both reached the outline as things to cover.
+ */
+const FIRST_PERSON_PAST = /\b\w{3,}(lem|lam|lismy|lysmy)\b/i;
+
+/**
+ * A navigation strip that the scraper flattened into one "sentence" —
+ * "Referencje News Kariera Zespol Kontakt Detektyw Warszawa…". Prose capitalises the
+ * first word; four or more capitals after it means a menu, not a claim.
+ */
+const NAV_CAPITALS = 4;
+
+function looksLikeNavigation(sentence: string): boolean {
+  const tokens = sentence.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  const capitalised = tokens
+    .slice(1)
+    .filter((t) => t[0] === t[0].toUpperCase() && t[0] !== t[0].toLowerCase());
+  return capitalised.length >= NAV_CAPITALS;
+}
+
+/**
+ * Brand tokens taken from the page's own URL, so a competitor's self-references drop out
+ * precisely — without a blanket "no proper nouns" rule that would also lose the
+ * institutions a real claim needs (MSWiA, PZU, RODO).
+ */
+function ownBrandTokens(url: string): string[] {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return host
+      .split('.')[0]
+      .split('-')
+      .map(foldPolishLetters)
+      .filter((t) => t.length >= 5 && !['grupa', 'agencja', 'biuro', 'firma'].includes(t));
+  } catch {
+    return [];
+  }
+}
+
+function mentionsOwnBrand(folded: string, brandTokens: string[]): boolean {
+  return brandTokens.some((token) => folded.includes(token));
+}
+
+/**
  * Verbs that make a sentence a statement about the subject rather than narration.
  * Polish first (the writer's primary language), English for mixed SERPs.
  */
@@ -82,14 +127,21 @@ export function extractCorpusClaims(
   bodyText: string,
   keyword: string,
   max: number = MAX_CLAIMS_PER_DOC,
+  /** The page these sentences came from — used to drop its own brand mentions. */
+  sourceUrl = '',
 ): string[] {
   const seeds = seedTokens(keyword || '');
+  const brandTokens = ownBrandTokens(sourceUrl);
   const saysSomething = (s: string) => (
     mentionsSeed(s, seeds) || HAS_FIGURE.test(s) || ASSERTIVE.test(s)
   );
   const isAboutTheTopic = (s: string) => {
     const folded = foldPolishLetters(s);
-    return !SELF_PROMOTION.test(folded) && !MARKETING_MARKS.test(folded);
+    return !SELF_PROMOTION.test(folded)
+      && !MARKETING_MARKS.test(folded)
+      && !FIRST_PERSON_PAST.test(folded)
+      && !mentionsOwnBrand(folded, brandTokens)
+      && !looksLikeNavigation(s);
   };
 
   const seen = new Set<string>();
@@ -115,7 +167,7 @@ export function extractCorpusClaimsByUrl(
 ): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const [url, text] of Object.entries(corpus)) {
-    const claims = extractCorpusClaims(text, keyword);
+    const claims = extractCorpusClaims(text, keyword, MAX_CLAIMS_PER_DOC, url);
     if (claims.length) out[url] = claims;
   }
   return out;
