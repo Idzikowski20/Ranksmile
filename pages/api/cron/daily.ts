@@ -14,6 +14,8 @@ import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
 import { cronSecrets } from '../../../lib/cronAuth';
+import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '../../../lib/autopilot';
+import { nextjsUrl } from '../../../lib/serviceUrls';
 
 export const config = { maxDuration: 60 };
 
@@ -139,19 +141,43 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
          const nextTopic = topics.find((t: string) => !usedTopics.includes(t)) || topics[0];
 
-         const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXTJS_URL || 'http://localhost:3000';
+         const baseUrl = nextjsUrl();
+         let articleId: number | null = null;
          try {
-            await fetch(`${baseUrl}/api/articles/generate`, {
-               method: 'POST',
-               headers: {
-                  'Content-Type': 'application/json',
-                  'x-cron-secret': cronHeader,
-               },
-               body: JSON.stringify({ domainId: domain.ID, keyword: nextTopic }),
-            });
-            triggered.push(`${domain.domain}: ${nextTopic}`);
+            // Seed only: draft row + deep-analysis. /api/cron/autopilot writes the article
+            // once the analysis lands, so no cron request waits on the LLM pipeline.
+            // (The old /api/articles/generate had no cron auth and blocked on a 300s
+            // sidecar call inside a 60s function.)
+            articleId = await createAutopilotDraft(domain.ID, nextTopic);
+            const started = await triggerAutopilotAnalysis(
+               { baseUrl, cronSecret: cronHeader },
+               { articleId, domainId: domain.ID, keyword: nextTopic },
+            );
+            if (started) {
+               triggered.push(`${domain.domain}: ${nextTopic}`);
+            } else {
+               // No job row was created, so the sweep would never see this article —
+               // drop the empty skeleton and leave the topic free for the next tick.
+               await discardAutopilotDraft(articleId);
+            }
          } catch (fetchErr) {
             console.error(`Failed to trigger for ${domain.domain}:`, fetchErr);
+            // A thrown error (network failure, timeout waiting for confirmation) doesn't
+            // mean the deep-analysis request itself was lost — /api/articles/deep-analysis
+            // may still create its job row after our client gave up. Deleting the draft
+            // unconditionally here would leave that job writing into an article that no
+            // longer exists, so only discard when no job actually landed.
+            if (articleId) {
+               const job = await queryRows<{ id: string }>(
+                  `SELECT id FROM analysis_jobs WHERE article_id = ? AND job_type = 'deep_analysis' LIMIT 1`,
+                  [articleId],
+               ).catch(() => []);
+               if (!job.length) {
+                  await discardAutopilotDraft(articleId).catch((cleanupErr) => {
+                     console.error(`Failed to discard orphaned draft ${articleId} for ${domain.domain}:`, cleanupErr);
+                  });
+               }
+            }
          }
       }
 

@@ -52,15 +52,3 @@ export type DeepAnalysisPipelineResult = {
 };
 
 export type RankingSourceEntry = { rank: number; domain: string; url: string; title: string };
-
-/** Python sidecar `/generate` response shape (partial — fields vary by pipeline). */
-export type GenerateSidecarResponse = {
-   article_html?: string;
-   meta_title?: string;
-   meta_description?: string;
-   meta_url?: string;
-   schema_json?: Record<string, unknown>;
-   article_schema?: Record<string, unknown>;
-   score_data?: Record<string, unknown>;
-   internal_links?: unknown[];
-};
