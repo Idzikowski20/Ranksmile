@@ -1,0 +1,25 @@
+__tests__/lib/isPublicPath.test.ts
+  s_668ab4f91e9d5a::t_6d6d8dd2df2a2e 1-42
+lib/isPublicPath.ts
+  s_668ab4f91e9d5a::t_adf6264495073d 16-29
+lib/appAccess/ApplicationShell.tsx
+  s_668ab4f91e9d5a::t_1a1067187bd3a9 9
+  s_668ab4f91e9d5a::t_97610c312f8d5c 30
+  s_668ab4f91e9d5a::t_b22e55b184d396 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "20fccc26c1600499043001a87254c6d658a5461c",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
