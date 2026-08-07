@@ -1,0 +1,109 @@
+__tests__/lib/editor/revealHtmlProgressive.test.ts
+  s_668ab4f91e9d5a::t_4bc89c5cb932a3 149-151,154-155,157
+  s_668ab4f91e9d5a::t_4768b3a832a788 111-148,152-153,156,158-162
+pages/api/articles/[id]/generate-stream.ts
+  s_668ab4f91e9d5a::t_c249e6056b67e4 15-23
+pages/articles/[id]/index.tsx
+  s_668ab4f91e9d5a::t_c3ac3aedea1732 518-522
+__tests__/lib/articleWorkspaceLinks.test.ts
+  s_668ab4f91e9d5a::t_46bfe282060164 28-39,48-51,53,55,64-65
+pages/api/articles/[id]/content-plan.ts
+  s_668ab4f91e9d5a::t_d882898f722eb3 29,39-43,214-218
+lib/contentPlanner/fromArticleInputs.ts
+  s_668ab4f91e9d5a::t_c0a67cd6b1d087 96-101,103
+components/aiVisibility/modelIcons.tsx
+  s_668ab4f91e9d5a::t_e86f911ac62fea 22
+  s_668ab4f91e9d5a::t_b8f61e4e2ddc70 17-21,23-28,30,32-34
+  s_668ab4f91e9d5a::t_4b46df93636660 29
+lib/contentPlanner/intentBlueprint.ts
+  s_668ab4f91e9d5a::t_7dba1807469043 54
+  s_668ab4f91e9d5a::t_82e054d7cba023 34,36,39-41,48-53,99,103-107,109-110,112-114,117,119-121
+__tests__/components/AnalysisProgressPanel.test.tsx
+  s_668ab4f91e9d5a::t_beb70a79c0e27b 74-78,80-90
+python-sidecar/pipeline/section_writer.py
+  s_668ab4f91e9d5a::t_7661a9a3191f89 92-100
+  s_668ab4f91e9d5a::t_d347144b015e4e 117-126,129,138-141,147-149,155
+python-sidecar/pipeline/article_pipeline.py
+  s_668ab4f91e9d5a::t_968b6a62eaebf8 68-72,74-79
+  s_668ab4f91e9d5a::t_19f044d4a3ab17 52-56
+__tests__/components/CompetitorOutlinesPanel.test.tsx
+  s_668ab4f91e9d5a::t_274c4cb4aae96b 43,45,52,56-67
+__tests__/lib/contentPlanner/executionPlan.test.ts
+  s_668ab4f91e9d5a::t_7b126cf08395e2 397-433
+components/articles/OutlineGenerateBar.tsx
+  s_668ab4f91e9d5a::t_810c52d71841a1 134,149
+  s_668ab4f91e9d5a::t_1dc968fad387b5 28,38-76
+  s_668ab4f91e9d5a::t_74fd5a0aca59c1 96
+  s_668ab4f91e9d5a::t_2ef693fa72678b 2
+__tests__/lib/contentPlanner/sectionLabels.test.ts
+  s_668ab4f91e9d5a::t_9b7eee0d1a1df6 191-198
+  s_668ab4f91e9d5a::t_82291cce401ae0 132-144
+  s_668ab4f91e9d5a::t_351eb3af5ab5c9 55-64
+python-sidecar/tests/test_section_writer.py
+  s_668ab4f91e9d5a::t_c71f977b868606 114-119
+  s_668ab4f91e9d5a::t_6da3e7e3154cef 95-113,120-130
+lib/contentPlanner/runContentPlanner.ts
+  s_668ab4f91e9d5a::t_fdfbf0fafc6372 368,380-382,384-395
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_2dfadbec8b198a 52,429-431
+  s_668ab4f91e9d5a::t_fc6555d828e12f 58-60,397-401,411
+python-sidecar/tests/test_article_pipeline_reasoning.py
+  s_668ab4f91e9d5a::t_19f044d4a3ab17 26-42
+components/articles/EngineIcons.tsx
+  s_668ab4f91e9d5a::t_744c669f43f693 3
+  s_668ab4f91e9d5a::t_200e17f512d886 32-40,42
+components/articles/CompetitorOutlinesPanel.tsx
+  s_668ab4f91e9d5a::t_59c09d6990be33 27
+lib/isPublicPath.ts
+  s_668ab4f91e9d5a::t_a8998da00c4dcf 27
+lib/topicRelevance.ts
+  s_668ab4f91e9d5a::t_f995454a95b359 110-112,167
+vercel.json
+  s_668ab4f91e9d5a::t_ac5d307dda5192 1-13
+__tests__/components/OutlineGenerateBar.test.tsx
+  s_668ab4f91e9d5a::t_6f18814c3972c4 41,48-52
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_668ab4f91e9d5a::t_bf9a4bfb573aa0 93,155-162,165-173,178,182-190
+  s_668ab4f91e9d5a::t_69ba5ddb4ab546 163-164
+  s_668ab4f91e9d5a::t_06641f5c422763 174
+  s_668ab4f91e9d5a::t_e0110e4cfc1c3d 175-177
+  s_668ab4f91e9d5a::t_fb81c41bf308ed 179-181
+python-sidecar/analyzers/semantic_terms.py
+  s_668ab4f91e9d5a::t_b7b61dbe3b3861 144-147
+  s_668ab4f91e9d5a::t_04d0ca612d31b2 157,170-172
+  s_668ab4f91e9d5a::t_87df01cbd83584 181,186
+lib/contentPlanner/sectionLabels.ts
+  s_668ab4f91e9d5a::t_82e054d7cba023 5,13-15,197,200-201
+__tests__/lib/wie/corpusClaims.test.ts
+  s_668ab4f91e9d5a::t_70846adae38ee8 119-179
+__tests__/lib/topicRelevance.test.ts
+  s_668ab4f91e9d5a::t_0bc22339d52f68 148-152,155,159
+lib/wie/corpusClaims.ts
+  s_668ab4f91e9d5a::t_2375e46c526790 18-25,58-68,70,91-94,96,103-105,111-115,117-119,125-129,133-137,151-156,158,178-179,181,183-185,188-191,196
+lib/corpusNoiseFilter.ts
+  s_668ab4f91e9d5a::t_1ef8b1ed49304f 67-71
+__tests__/lib/corpusNoiseFilter.test.ts
+  s_668ab4f91e9d5a::t_712e7eca55bbf1 61-76
+lib/editor/revealHtmlProgressive.ts
+  s_668ab4f91e9d5a::t_3d22aede80fb2b 75-81,128-133,152-153
+python-sidecar/tests/test_semantic_terms_doc_freq.py
+  s_668ab4f91e9d5a::t_6595f58af0a85c 1-42
+lib/mergeArticleTerms.ts
+  s_668ab4f91e9d5a::t_2dfadbec8b198a 43-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ff1c173d78e32407452e71cc4ba6bee297ca93cd",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
