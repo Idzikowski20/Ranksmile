@@ -1,0 +1,53 @@
+lib/contentPlanner/briefWriter.ts
+  s_668ab4f91e9d5a::t_cab3669a9fa3eb 106-112
+components/articles/ArticleGenerationSkeleton.tsx
+  s_668ab4f91e9d5a::t_60e9c704c3d855 1-58
+__tests__/lib/wie/corpusClaims.test.ts
+  s_668ab4f91e9d5a::t_cc8fc65bb24074 191-198,202-215,219-220
+  s_668ab4f91e9d5a::t_579971b4ee1aca 199-201,216-218
+styles/globals.css
+  s_668ab4f91e9d5a::t_7736aeba8eaa7e 3173-3182
+__tests__/lib/editor/revealHtmlProgressive.test.ts
+  s_668ab4f91e9d5a::t_023d17c479aa08 174-178,180-185,187,189-193
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_668ab4f91e9d5a::t_ac2c4c5dfb94a6 224-248
+__tests__/lib/cssKeyframes.test.ts
+  s_668ab4f91e9d5a::t_579971b4ee1aca 36-40
+  s_668ab4f91e9d5a::t_e710c0e4ebff6f 1-12,15-22,32-33,35,41-47
+  s_668ab4f91e9d5a::t_07c2702232ad69 25,30
+  s_668ab4f91e9d5a::t_4311488e188e58 13-14,23-24,26-29,31,34
+__tests__/components/ArticleGenerationSkeleton.test.tsx
+  s_668ab4f91e9d5a::t_7d482cb91ed0e0 1-59
+components/articles/ArticleEditor.tsx
+  s_668ab4f91e9d5a::t_1f4a8fe5ff4edf 2236-2241
+  s_668ab4f91e9d5a::t_de2989452844cf 49
+  s_668ab4f91e9d5a::t_b6c4f221f714e2 2313-2318
+  s_668ab4f91e9d5a::t_c80e5d45a7b2c8 2402-2406
+  s_668ab4f91e9d5a::t_fd8c22841d4382 2363
+lib/wie/corpusClaims.ts
+  s_668ab4f91e9d5a::t_8f6eb62b9891b3 73-79,102
+components/articles/CompetitorOutlinesPanel.tsx
+  s_668ab4f91e9d5a::t_c7551068d04b53 256,258-259
+__tests__/lib/mergeArticleTerms.test.ts
+  s_668ab4f91e9d5a::t_a82129217b365a 1,43-76
+lib/mergeArticleTerms.ts
+  s_668ab4f91e9d5a::t_36711843f74e9e 53-56,58-65
+components/articles/ContentScorePanel.tsx
+  s_668ab4f91e9d5a::t_c7551068d04b53 740,742-743
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c96f95079acbd009077da2a118b3b57cf6dd988f",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
