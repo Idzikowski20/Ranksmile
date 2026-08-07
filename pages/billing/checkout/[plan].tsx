@@ -440,20 +440,23 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
   return (
     <AppShell domains={[]} showAddModal={() => {}} showSettings={() => {}} showSidebar={false} hideMobileNav>
       <Head><title>{isUpgrade ? `Upgrade to ${plan.name}` : isUpfront ? 'Complete your purchase' : 'Start your trial'} - Ranksmile</title></Head>
-      <div className="relative flex-1 overflow-auto rounded-xl bg-white-base [color-scheme:light] styled-scrollbar">
-        <div style={{ color: '#1a1a1a', fontFamily: F, padding: '40px 24px 64px', boxSizing: 'border-box' }}>
+      {/* No bg/color-scheme of its own: `html.koala-shell .app-content` already paints
+          the themed surface, and re-declaring a light one here (bg-white-base is a fixed
+          #ffffff with no per-theme value) left dark-theme text on a white page. */}
+      <div className="relative flex-1 overflow-auto rounded-xl styled-scrollbar">
+        <div style={{ color: 'var(--koala-text-primary)', fontFamily: F, padding: '40px 24px 64px', boxSizing: 'border-box' }}>
           {checkoutFlow === 'loading' ? (
             <CheckoutPageSkeleton />
           ) : checkoutFlow === 'blocked' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480, margin: '0 auto' }}>
-              <p style={{ margin: 0, fontSize: 14, color: '#FF6F77', fontFamily: F }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--koala-status-danger)', fontFamily: F }}>
                 {lockedSlug === plan.slug && currentBilling === billing
                   ? 'You are already on this plan.'
                   : lockedSlug
                     ? `You're currently on ${lockedSlug}${currentBilling ? ` (${currentBilling})` : ''}. Downgrades to a lower plan are not available here — pick a higher plan or manage billing from settings.`
                     : 'Downgrades are not available on this page. Choose a higher plan or manage billing from settings.'}
               </p>
-              <a href="/plans" style={{ fontSize: 14, color: '#1a1a1a', fontFamily: F, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <a href="/plans" style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Icon name="ArrowLeft" size={16} />
                 Back to plans
               </a>

@@ -66,8 +66,10 @@ const CheckoutSuccessPage: NextPage = () => {
         <title>Order confirmation — Ranksmile</title>
         <meta name="robots" content="noindex" />
       </Head>
-      <div className="relative flex-1 overflow-auto rounded-xl bg-white-base [color-scheme:light] styled-scrollbar">
-        <div style={{ color: '#1a1a1a', fontFamily: F, padding: '64px 24px 96px', boxSizing: 'border-box' }}>
+      {/* No bg/color-scheme of its own — `html.koala-shell .app-content` already paints
+          the themed surface (see the same note on the checkout page). */}
+      <div className="relative flex-1 overflow-auto rounded-xl styled-scrollbar">
+        <div style={{ color: 'var(--koala-text-primary)', fontFamily: F, padding: '64px 24px 96px', boxSizing: 'border-box' }}>
           {missingToken || confirmationQ.isError ? (
             <div style={{
               maxWidth: 480,
@@ -79,7 +81,7 @@ const CheckoutSuccessPage: NextPage = () => {
               alignItems: 'center',
             }}
             >
-              <p style={{ margin: 0, color: '#575757', fontSize: 15, lineHeight: '22px' }}>
+              <p style={{ margin: 0, color: 'var(--koala-text-secondary)', fontSize: 15, lineHeight: '22px' }}>
                 {missingToken
                   ? 'This confirmation page can only be opened from a successful checkout link.'
                   : confirmationQ.error instanceof Error
@@ -91,7 +93,7 @@ const CheckoutSuccessPage: NextPage = () => {
               </Button>
             </div>
           ) : confirmationQ.isLoading || !confirmationQ.data ? (
-            <div style={{ maxWidth: 480, margin: '80px auto', textAlign: 'center', color: '#575757', fontSize: 15 }}>
+            <div style={{ maxWidth: 480, margin: '80px auto', textAlign: 'center', color: 'var(--koala-text-secondary)', fontSize: 15 }}>
               Confirming your payment…
             </div>
           ) : (
