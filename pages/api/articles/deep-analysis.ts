@@ -191,7 +191,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { url: rawUrl, keywords = [], country: bodyCountry, language: bodyLanguage, articleId: existingArticleId, domainId: reqDomainId } = req.body;
+  const {
+    url: rawUrl, keywords = [], country: bodyCountry, language: bodyLanguage,
+    articleId: existingArticleId, domainId: reqDomainId, autopilot: requestedAutopilot = false,
+  } = req.body;
+  // The autopilot sweep only follows up jobs marked this way — a logged-in user hitting
+  // this endpoint directly must not be able to self-enroll a job into that cron flow.
+  const isAutopilot = isCron && Boolean(requestedAutopilot);
   const url: string = (rawUrl as string) || '';
   const primaryKeyword = (keywords as string[])[0] || '';
   const isKeywordMode = !url && !!primaryKeyword && (!!reqDomainId || !!existingArticleId);
@@ -382,6 +388,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     keywords: pipelineKeywords,
     language: finalArticleLanguage,
     tone: 'professional',
+    // Marks the job row so the autopilot cron can follow it up with generation.
+    // The sidecar ignores unknown payload keys.
+    ...(isAutopilot ? { autopilot: true } : {}),
   };
 
   try {
