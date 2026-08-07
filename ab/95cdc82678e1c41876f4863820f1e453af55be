@@ -1,0 +1,34 @@
+lib/editor/clearEditorHistory.ts
+  s_668ab4f91e9d5a::t_054217d0170a31 1-25
+components/articles/ArticleEditor.tsx
+  s_668ab4f91e9d5a::t_054217d0170a31 51
+  s_668ab4f91e9d5a::t_db902db03bb2b8 1815-1826,1836,1852,1969,2065
+  s_668ab4f91e9d5a::t_3ea973d0a156c5 2188-2194
+  s_668ab4f91e9d5a::t_8a6a25ec99a773 2205,2207,2210-2212
+lib/contentPlanner/types.ts
+  s_668ab4f91e9d5a::t_dd6b53ea8f5bdc 376-384
+__tests__/lib/editor/clearEditorHistory.test.ts
+  s_668ab4f91e9d5a::t_054217d0170a31 1-57
+lib/contentPlanner/briefWriter.ts
+  s_668ab4f91e9d5a::t_2233699fe09f87 153-154,157-160
+  s_668ab4f91e9d5a::t_6984ff47437718 155-156
+  s_668ab4f91e9d5a::t_4dfac02691ece8 123-131
+__tests__/lib/benchmarkIntelligence/benchmark.test.ts
+  s_668ab4f91e9d5a::t_9490675651b134 73-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ab95cdc82678e1c41876f4863820f1e453af55be",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
