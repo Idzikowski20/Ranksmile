@@ -14,9 +14,6 @@ import { getErrorMessage } from '../../../lib/errors';
 import { queryOne } from '../../../lib/db/query';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-// Vercel: the LLM rewrite can take ~minutes; raise from the ~10s default.
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();

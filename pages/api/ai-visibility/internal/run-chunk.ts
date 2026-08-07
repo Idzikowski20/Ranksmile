@@ -11,8 +11,6 @@ import { queryOne } from '../../../../lib/db/query';
 import { getErrorMessage } from '../../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 300 };
-
 // Cap a caller-supplied chunk size so it can never blow the serverless timeout.
 const AI_VIS_HARD_LIMIT = 60;
 

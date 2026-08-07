@@ -73,11 +73,16 @@ function clearInlineMotion(elements: HTMLElement[]): void {
 }
 
 /**
- * Which reveal currently owns the rendered blocks. A superseded reveal aborts, and its
- * cleanup would otherwise strip the inline styles off elements the new reveal is already
- * animating — ProseMirror reuses the DOM nodes, so the new article popped in at once.
+ * Which reveal currently owns each editor's rendered blocks. A superseded reveal aborts,
+ * and its cleanup would otherwise strip the inline styles off elements the new reveal is
+ * already animating — ProseMirror reuses the DOM nodes, so the new article popped in at
+ * once.
+ *
+ * Per editor, not global: two editors revealing at the same time share no DOM, so a
+ * counter shared between them made every cleanup but the newest reveal's a no-op and left
+ * the other editor's blocks parked at `opacity: 0` for good.
  */
-let revealGeneration = 0;
+const revealGenerations = new WeakMap<Editor, number>();
 
 export type RevealHtmlOptions = {
   signal?: AbortSignal;
@@ -131,8 +136,8 @@ export async function revealHtmlInEditor(
   // eslint-disable-next-line no-void
   void elements[elements.length - 1].offsetHeight;
 
-  revealGeneration += 1;
-  const generation = revealGeneration;
+  const generation = (revealGenerations.get(editor) ?? 0) + 1;
+  revealGenerations.set(editor, generation);
 
   try {
     for (let i = 0; i < elements.length; i += 1) {
@@ -149,7 +154,7 @@ export async function revealHtmlInEditor(
     // Unmount / supersede: the content is already committed, so there is nothing to
     // restore — just make sure no block is left parked at opacity 0.
   } finally {
-    // Only the reveal that still owns the blocks may unstyle them.
-    if (generation === revealGeneration) clearInlineMotion(elements);
+    // Only the reveal that still owns this editor's blocks may unstyle them.
+    if (generation === revealGenerations.get(editor)) clearInlineMotion(elements);
   }
 }

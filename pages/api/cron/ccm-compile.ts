@@ -5,8 +5,6 @@ import { withCronWatchdog } from '../../../lib/cronWatchdog';
 import { getErrorMessage } from '../../../lib/errors';
 import { runCcmCompileCron } from '../../../lib/intelligence/ccmStaleCron';
 
-export const config = { maxDuration: 120 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

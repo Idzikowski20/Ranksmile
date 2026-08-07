@@ -17,9 +17,6 @@ import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRu
 import { safeJsonParse } from '../../../lib/safeJson';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();

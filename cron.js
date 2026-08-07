@@ -147,7 +147,7 @@ const runAppCronJobs = () => {
       return;
    }
 
-   // ── Platform jobs (SSOT — was split with vercel.json) ──────────────────
+   // ── Platform jobs (SSOT) ───────────────────────────────────────────────
    scheduleHttpJob('0 0 8 * * *', 'daily', '/api/cron/daily');
    // Autopilot follow-up: daily seeds topic + deep-analysis, this tick writes the
    // article once the analysis lands (and restarts stalled/failed analyses).

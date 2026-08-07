@@ -60,8 +60,11 @@ it('keeps the back button when opened on top of another panel', async () => {
  * generator (`/api/articles/generate-outline`), competing with the editor's bottom bar
  * over the same outline. It is gone in both modes — not merely hidden in one.
  */
-it('never offers a second outline generator', async () => {
-  render(<CompetitorOutlinesPanel {...props} onClose={() => undefined} />);
+it.each([
+  ['on top of another panel', { onClose: () => undefined }],
+  ['as the whole column', {}],
+])('never offers a second outline generator %s', async (_mode, extra) => {
+  render(<CompetitorOutlinesPanel {...props} {...extra} />);
 
   await screen.findByText('Detektyw Warszawa');
   expect(screen.queryByRole('button', { name: /Generate brief/ })).toBeNull();

@@ -8,8 +8,6 @@ import { findConfigsNeedingBrands, runBrandChunk } from '../../../../lib/aiVisib
 import { getErrorMessage } from '../../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const token = req.headers['x-internal-token'];
    if (!process.env.INTERNAL_PIPELINE_TOKEN || token !== process.env.INTERNAL_PIPELINE_TOKEN) {

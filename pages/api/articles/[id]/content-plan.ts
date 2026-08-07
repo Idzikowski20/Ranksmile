@@ -37,11 +37,6 @@ import {
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine/types';
 import type { PlannerTargets, StructuralBenchmark } from '../../../../lib/benchmarkIntelligence/types';
 
-// The outline brief is a 6000-token completion, so this route now runs for tens of
-// seconds. Route config alone is inert on Next 12 — the value that applies lives in the
-// `functions` block of vercel.json; this export documents the intent next to the code.
-export const config = { maxDuration: 120 };
-
 type ArticlePlanRow = {
   id: number;
   target_keyword: string | null;

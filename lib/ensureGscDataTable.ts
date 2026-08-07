@@ -9,8 +9,8 @@ function ignoreExisting(label: string, e: unknown): void {
 
 /**
  * Per-domain Google Search Console data blob. Replaces the local file
- * `data/SC_<domain>.json` so the app works on a serverless host (Vercel) whose
- * filesystem is ephemeral/read-only. One row per domain; `data` holds the same
+ * `data/SC_<domain>.json` so the app works on a host whose filesystem is
+ * ephemeral/read-only. One row per domain; `data` holds the same
  * `SCDomainDataType` JSON that used to live in the file. Idempotent.
  */
 export async function ensureGscDataTable(): Promise<void> {

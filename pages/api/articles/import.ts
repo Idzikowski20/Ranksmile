@@ -350,7 +350,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          .replace(/\s+/g, '-')
          .substring(0, 80);
 
-      // Upload featured image to Vercel Blob (now that we have the slug for a nice filename)
+      // Upload featured image to R2 (now that we have the slug for a nice filename)
       const featuredImageUrl = featuredImage
          ? await uploadImageFromUrl(featuredImage, slug || 'article')
          : null;

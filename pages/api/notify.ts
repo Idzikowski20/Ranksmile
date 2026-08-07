@@ -15,8 +15,6 @@ import { assertCronSecret } from '../../lib/cronAuth';
 
 type NotifyResponse = EnqueueNotifyResult | { success?: boolean; error?: string | null };
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(401).json({ success: false, error: 'Invalid Method' });
   await db.sync();

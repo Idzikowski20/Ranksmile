@@ -52,7 +52,7 @@ export async function claimScan(scanId: number, exec: Exec = defaultExec): Promi
 
 export async function enqueueAiVisScan(configId: number): Promise<number> {
    // Reclaim a dead scan first: without this, a `running` scan killed mid-run
-   // (Vercel 60s timeout, crash, deploy) would match the active-check below and
+   // (crash, deploy restart) would match the active-check below and
    // block every future scan for this config forever. staleSecs is derived from a
    // constant (not user input) → safe to interpolate. Dialect-specific age math.
    const isPg = !!process.env.DATABASE_URL;

@@ -6,8 +6,6 @@ import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
 
-export const config = { maxDuration: 60 };
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const result = await reconcileStripeBilling();
