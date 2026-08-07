@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '../koala/core';
 import { KoalaPanel, KoalaPanelHeader, KoalaPanelBody } from '../koala/layout';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 const font = 'var(--font-family-primary)';
 

@@ -129,7 +129,7 @@ export function wrapEmail(rowsHtml: string, opts?: WrapEmailOpts): string {
       <tr>
         <td style="direction:ltr;font-size:0px;padding:32px 16px;text-align:center">
           <div style="margin:0 auto;max-width:720px">
-            <table border="0" cellpadding="0" cellspacing="0" role="presentation" align="center" width="100%" style="width:100%;background-color:${EMAIL_BG_CONTENT};border:1px solid ${EMAIL_BORDER};border-radius:${EMAIL_RADIUS_CARD}">
+            <table border="0" cellpadding="0" cellspacing="0" role="presentation" align="center" width="100%" style="width:100%;border-radius:${EMAIL_RADIUS_CARD}">
               <tbody>
                 <tr>
                   <td style="direction:ltr;font-size:0px;padding:32px;text-align:left">

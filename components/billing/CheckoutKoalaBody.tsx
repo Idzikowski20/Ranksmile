@@ -22,6 +22,7 @@ import {
   getPlanPeriodPrice,
 } from '../../lib/billingPlans';
 import { typeface } from '../koala/tokens/typography';
+import { shadow } from '../koala/tokens/effects';
 
 function formatPriceDelta(delta: number): string | null {
   if (delta === 0) return null;
@@ -30,10 +31,14 @@ function formatPriceDelta(delta: number): string | null {
 }
 
 const F = typeface.body;
-const BRAND = '#F84416';
-const BORDER = '#e5e5e5';
-const TEXT = '#1a1a1a';
-const MUTED = '#575757';
+const BRAND = 'var(--koala-brand)';
+const BORDER = 'var(--koala-border-primary)';
+const TEXT = 'var(--koala-text-primary)';
+const MUTED = 'var(--koala-text-secondary)';
+const SURFACE = 'var(--koala-bg-primary)';
+const SURFACE_MUTED = 'var(--koala-bg-secondary)';
+const DANGER = 'var(--koala-status-danger)';
+const SUCCESS = 'var(--koala-status-success)';
 
 const formatEuro2 = (amount: number): string =>
   `€${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -64,7 +69,7 @@ const RadioDot = ({ checked }: { checked: boolean }) => (
       height: 16,
       borderRadius: 9999,
       border: checked ? `5px solid ${BRAND}` : `1.5px solid ${BORDER}`,
-      background: '#fff',
+      background: SURFACE,
       boxSizing: 'border-box',
       flexShrink: 0,
     }}
@@ -102,8 +107,8 @@ const SelectCard = ({
       padding: 16,
       borderRadius: 16,
       border: selected ? `1.5px solid ${BRAND}` : `1px solid ${BORDER}`,
-      boxShadow: selected ? '0 0 0 3px rgba(248, 68, 22, 0.1)' : 'none',
-      background: '#fff',
+      boxShadow: selected ? `0 0 0 3px color-mix(in srgb, ${BRAND} 10%, transparent)` : 'none',
+      background: SURFACE,
       cursor: disabled ? 'not-allowed' : 'pointer',
       opacity: disabled ? 0.45 : 1,
       textAlign: 'left',
@@ -123,6 +128,8 @@ const VisaMark = () => (
       height: 24,
       borderRadius: 3,
       border: `0.5px solid ${BORDER}`,
+      // Card-brand plate keeps its own white, like the printed mark — the navy
+      // wordmark below is unreadable once this follows a dark surface.
       background: '#fff',
       display: 'inline-flex',
       alignItems: 'center',
@@ -360,7 +367,7 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                 <FieldLabel required>Billing address</FieldLabel>
                 <CheckoutStripeAddress />
                 {fieldErrors.address ? (
-                  <span style={{ fontSize: 13, color: '#FF6F77', lineHeight: '18px' }} role="alert">
+                  <span style={{ fontSize: 13, color: DANGER, lineHeight: '18px' }} role="alert">
                     {fieldErrors.address}
                   </span>
                 ) : null}
@@ -417,9 +424,9 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                     style={{
                       width: '100%',
                       height: 40,
-                      border: `1px solid ${mockErrors.country ? '#FF6F77' : BORDER}`,
+                      border: `1px solid ${mockErrors.country ? DANGER : BORDER}`,
                       borderRadius: 12,
-                      background: '#fff',
+                      background: SURFACE,
                       padding: '0 10px',
                       display: 'flex',
                       alignItems: 'center',
@@ -435,13 +442,13 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                   </button>
                 </Field>
                 {countryOpen && (
-                  <div style={{ position: 'absolute', zIndex: 150, top: 'calc(100% + 6px)', left: 0, right: 0, maxHeight: 260, overflowY: 'auto', borderRadius: 12, background: '#fff', border: `1px solid ${BORDER}`, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: 6 }}>
+                  <div style={{ position: 'absolute', zIndex: 150, top: 'calc(100% + 6px)', left: 0, right: 0, maxHeight: 260, overflowY: 'auto', borderRadius: 12, background: SURFACE, border: `1px solid ${BORDER}`, boxShadow: shadow.md, padding: 6 }}>
                     {countries.map((item) => (
                       <button
                         key={item}
                         type="button"
                         onClick={() => { onCountry(item); onCountryOpen(false); }}
-                        style={{ width: '100%', textAlign: 'left', border: 'none', background: item === country ? '#f5f5f5' : 'transparent', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: MUTED, fontFamily: F, cursor: 'pointer' }}
+                        style={{ width: '100%', textAlign: 'left', border: 'none', background: item === country ? SURFACE_MUTED : 'transparent', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: MUTED, fontFamily: F, cursor: 'pointer' }}
                       >
                         {item}
                       </button>
@@ -510,7 +517,7 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                     height: 32,
                     padding: '0 10px',
                     borderRadius: 10,
-                    background: '#f5f5f5',
+                    background: SURFACE_MUTED,
                     color: MUTED,
                     fontSize: 14,
                     fontWeight: 500,
@@ -576,7 +583,7 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
                     <span style={{ color: MUTED }}>Credit from {upgradePreview.currentPlanName}</span>
-                    <span style={{ color: '#008900' }}>−{formatEuroCents(upgradePreview.creditCents)}</span>
+                    <span style={{ color: SUCCESS }}>−{formatEuroCents(upgradePreview.creditCents)}</span>
                   </div>
                   <div style={{ height: 1, background: BORDER }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -584,7 +591,7 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                     <span style={{ fontSize: 18, fontWeight: 700 }}>{formatEuroCents(upgradePreview.amountDueCents)}</span>
                   </div>
                   {previewError ? (
-                    <p style={{ margin: 0, fontSize: 13, color: '#FF6F77' }}>{previewError.message}</p>
+                    <p style={{ margin: 0, fontSize: 13, color: DANGER }}>{previewError.message}</p>
                   ) : null}
                 </>
               )}
@@ -606,8 +613,8 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                           width: 14,
                           height: 14,
                           borderRadius: '50%',
-                          border: '2px solid #e5e5e5',
-                          borderTopColor: '#F84416',
+                          border: `2px solid ${BORDER}`,
+                          borderTopColor: BRAND,
                           animation: 'rs-tax-spin 0.7s linear infinite',
                           display: 'inline-block',
                           flexShrink: 0,

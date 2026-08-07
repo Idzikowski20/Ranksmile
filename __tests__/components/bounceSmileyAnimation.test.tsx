@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import { BounceSmileyAnimation } from '../../components/pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from '../../components/common/BounceSmileyAnimation';
 
 describe('BounceSmileyAnimation', () => {
   it('wires CSS loop classes for compact animated mark (Surfy-style)', () => {

@@ -91,7 +91,7 @@ Rules:
 - Use always /frontend-design
 - Read `DESIGN.md` before any UI (Koala UI v11; accent `#F84416`, DM Sans; Ranksmile naming/logo)
 - Stick `DESIGN.md` + `components/koala/REGISTRY.md` (ponytail)
-- New UI outside editor → `components/koala`; editor KEEP TipTap/scoring layout; `components/core` is migration shim
+- New UI outside editor → `components/koala`; editor KEEP TipTap/scoring layout; former `components/core` shim now lives in `components/koala/core`
 
 ## 7. TypeScript — no `any`
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { useFetchDomains } from '../../services/domains';
+import { useWorkspaces } from '../../services/workspaces';
+import { deriveActiveId, resolveActiveDomain } from '../../lib/activeWorkspace';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Button, CompactSelect } from '../../components/koala/core';
@@ -28,17 +30,26 @@ const NewContentPage: NextPage = () => {
   const { data: domainsData } = useFetchDomains(router);
   const domains: DomainType[] = domainsData?.domains || [];
 
-  const [domainId, setDomainId] = useState<number>(0);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [language, setLanguage] = useState('pl');
   const [trackedKeywords, setTrackedKeywords] = useState<TrackedKeyword[]>([]);
   const [isLoadingTracked, setIsLoadingTracked] = useState(false);
 
-  useEffect(() => {
-    if (!domainId && domains[0]?.ID) setDomainId(domains[0].ID);
-  }, [domains, domainId]);
+  // SSR-safe active workspace id, same derivation the dashboard and sidebar use.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const { data: wsData } = useWorkspaces();
+  const activeWsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
+  const activeWorkspace = wsData?.workspaces.find((w) => w.id === activeWsId) ?? null;
 
-  const selectedDomain = domains.find((d) => d.ID === domainId);
+  /**
+   * The domain is the workspace you are in, so there is nothing to pick. Resolved
+   * through `resolveActiveDomain` rather than `domains[0]`: that shortcut is the exact
+   * bug the helper was written for — with the picker gone, taking the first domain
+   * would silently generate the article against the wrong site after a workspace switch.
+   */
+  const selectedDomain = resolveActiveDomain(domains, activeWsId, activeWorkspace?.domain) ?? null;
+  const domainId = selectedDomain?.ID ?? 0;
   const selectedDomainStr = selectedDomain?.domain || '';
 
   useEffect(() => {
@@ -76,7 +87,6 @@ const NewContentPage: NextPage = () => {
     router.push(`/articles/deep-analysis?${q.toString()}`);
   };
 
-  const domainOptions: SelectOption[] = domains.map((d) => ({ value: String(d.ID), label: d.domain }));
   const languageOptions: SelectOption[] = LANGUAGES.map((l) => ({
     value: l.value,
     label: l.label,
@@ -102,24 +112,8 @@ const NewContentPage: NextPage = () => {
         </p>
       </div>
 
-      <div>
-        <label className="koala-wizard-label">Domain</label>
-        <div style={{ width: '100%', display: 'grid' }}>
-          <CompactSelect
-            size="md"
-            value={String(domainId || '')}
-            options={domainOptions}
-            onChange={(opt) => { setDomainId(Number(opt.value)); setKeywords([]); }}
-            menuWidth="100%"
-            menuMinWidth="100%"
-            triggerLabel={
-              domainOptions.find((o) => o.value === String(domainId))?.label
-              || <span style={{ color: 'var(--koala-text-tertiary)' }}>Select domain...</span>
-            }
-          />
-        </div>
-      </div>
-
+      {/* No domain picker: the article belongs to the workspace you are already in,
+          so choosing it again is a question with one right answer. */}
       <div>
         <label className="koala-wizard-label">
           Target Keywords

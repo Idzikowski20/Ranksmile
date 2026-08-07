@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
+import { BounceSmileyAnimation } from './BounceSmileyAnimation';
 
 type LoaderSize = 'sm' | 'md' | 'lg';
 

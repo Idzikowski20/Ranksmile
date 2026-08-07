@@ -98,7 +98,7 @@ Rules:
 ### Architektura UI
 
 - **Shell / app:** Koala Light — page `#f5f5f5`, karty białe, border `#e5e5e5`, radius card `16px` / button `12px`
-- **Styling poza edytorem:** `components/koala` (+ legacy `components/core` shim) + Emotion / CSS vars
+- **Styling poza edytorem:** `components/koala` + Emotion / CSS vars
 - **Editor zone:** KEEP TipTap/scoring; primitives z koala/core
 - **Font:** DM Sans — `var(--font-family-primary)`
 - **Ikony:** `components/koala/icons` (Phosphor Bold = Koala Icon_Bold)
@@ -109,10 +109,9 @@ Rules:
 ### Struktura
 
 ```
-components/koala/ — tokens, icons, primitives, product, layout
-components/core/ — shim / legacy during migration (theme → koala)
-components/sentry-pages/ — page layout wrappers (Koala tokens)
+components/koala/ — tokens, icons, primitives, core, product, layout, shell, charts
 components/ranksmile/ — Gauge, SelectionBar (KEEP)
+components/common/ — cross-feature UI (Loader, BounceSmileyAnimation, …)
 DESIGN.md — Koala-first
 ```
 

@@ -22,6 +22,8 @@ import {
 import { Field } from '../koala/forms';
 import { Icon } from '../koala/icons';
 import Input from '../koala/primitives/Input';
+import { useKoalaTheme } from '../koala/theme/KoalaThemeProvider';
+import type { ThemeSemantic } from '../koala/tokens/themes';
 import { typeface } from '../koala/tokens/typography';
 
 const F = typeface.body;
@@ -65,62 +67,79 @@ function useStripeCheckout(): StripeCheckoutContextValue {
   return ctx;
 }
 
-/** Match Koala Input md: 40px / 12px radius / #e5e5e5 border. DM Sans must be a
- *  concrete family name + fonts.cssSrc — Stripe iframes cannot resolve CSS vars. */
-const stripeAppearance: StripeElementsOptions['appearance'] = {
-  theme: 'stripe',
-  variables: {
-    colorPrimary: '#F84416',
-    colorBackground: '#ffffff',
-    colorText: '#1a1a1a',
-    colorTextSecondary: '#575757',
-    colorTextPlaceholder: '#a3a3a3',
-    colorDanger: '#FF6F77',
-    fontFamily: typeface.body,
-    fontSizeBase: '14px',
-    borderRadius: '12px',
-    spacingUnit: '4px',
-    spacingGridRow: '16px',
-    spacingGridColumn: '16px',
-  },
-  rules: {
-    '.Input': {
-      border: '1px solid #e5e5e5',
-      boxShadow: 'none',
-      padding: '8px 12px',
-      minHeight: '40px',
-      lineHeight: '20px',
+/** Rec. 601 luma — picks Stripe's light vs `night` base for all four Koala themes
+ *  without a name lookup, so a new theme needs no change here. */
+function isDarkSurface(hex: string): boolean {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  if (!match) return false;
+  const [r, g, b] = match.slice(1).map((c) => parseInt(c, 16));
+  return 0.299 * r + 0.587 * g + 0.114 * b < 128;
+}
+
+/** Match Koala Input md: 40px / 12px radius / themed border. DM Sans must be a
+ *  concrete family name + fonts.cssSrc — Stripe iframes cannot resolve CSS vars.
+ *  Same reason the colors are passed as literal hex off the active theme rather
+ *  than `var(--koala-*)`: the Elements iframe is a separate document, so it never
+ *  inherits the page's custom properties and would stay light in a dark theme. */
+export function buildStripeAppearance(s: ThemeSemantic): StripeElementsOptions['appearance'] {
+  return {
+    theme: isDarkSurface(s.background.primary) ? 'night' : 'stripe',
+    variables: {
+      colorPrimary: s.text.brand,
+      colorBackground: s.background.primary,
+      colorText: s.text.primary,
+      colorTextSecondary: s.text.secondary,
+      colorTextPlaceholder: s.text.disabled,
+      colorDanger: s.status.danger,
       fontFamily: typeface.body,
+      fontSizeBase: '14px',
+      borderRadius: '12px',
+      spacingUnit: '4px',
+      spacingGridRow: '16px',
+      spacingGridColumn: '16px',
     },
-    '.Input:hover': {
-      border: '1px solid #d4d4d4',
-      boxShadow: 'none',
+    rules: {
+      '.Input': {
+        backgroundColor: s.background.primary,
+        border: `1px solid ${s.border.primary}`,
+        boxShadow: 'none',
+        padding: '8px 12px',
+        minHeight: '40px',
+        lineHeight: '20px',
+        fontFamily: typeface.body,
+      },
+      '.Input:hover': {
+        border: `1px solid ${s.border.secondary}`,
+        boxShadow: 'none',
+      },
+      '.Input:focus': {
+        border: `1px solid ${s.border.focus}`,
+        // Inner ring is the surface, not white — a white ring rims every focused
+        // field on a dark card.
+        boxShadow: `0 0 0 2px ${s.background.primary}, 0 0 0 4px rgba(248,68,22,0.2)`,
+      },
+      '.Label': {
+        fontWeight: '500',
+        fontSize: '14px',
+        lineHeight: '20px',
+        marginBottom: '6px',
+        color: s.text.primary,
+        fontFamily: typeface.body,
+      },
+      '.Error': {
+        fontSize: '13px',
+        marginTop: '6px',
+        fontFamily: typeface.body,
+      },
+      '.Tab': {
+        fontFamily: typeface.body,
+      },
+      '.TabLabel': {
+        fontFamily: typeface.body,
+      },
     },
-    '.Input:focus': {
-      border: '1px solid #F84416',
-      boxShadow: '0 0 0 2px #ffffff, 0 0 0 4px rgba(248,68,22,0.2)',
-    },
-    '.Label': {
-      fontWeight: '500',
-      fontSize: '14px',
-      lineHeight: '20px',
-      marginBottom: '6px',
-      color: '#1a1a1a',
-      fontFamily: typeface.body,
-    },
-    '.Error': {
-      fontSize: '13px',
-      marginTop: '6px',
-      fontFamily: typeface.body,
-    },
-    '.Tab': {
-      fontFamily: typeface.body,
-    },
-    '.TabLabel': {
-      fontFamily: typeface.body,
-    },
-  },
-};
+  };
+}
 
 export type CheckoutStripeHandle = {
   submit: () => Promise<void>;
@@ -152,8 +171,8 @@ export function CheckoutStripePayment() {
         style={{
           minHeight: 120,
           borderRadius: 12,
-          border: '1px solid #e5e5e5',
-          background: '#f5f5f5',
+          border: '1px solid var(--koala-border-primary)',
+          background: 'var(--koala-bg-secondary)',
         }}
       />
     );
@@ -171,8 +190,8 @@ export function CheckoutStripeAddress() {
         style={{
           minHeight: 160,
           borderRadius: 12,
-          border: '1px solid #e5e5e5',
-          background: '#f5f5f5',
+          border: '1px solid var(--koala-border-primary)',
+          background: 'var(--koala-bg-secondary)',
         }}
       />
     );
@@ -224,7 +243,7 @@ export function CheckoutCompanyFields({
           width: '100%',
           padding: '12px 0',
           border: 'none',
-          borderTop: '1px solid #e5e5e5',
+          borderTop: '1px solid var(--koala-border-primary)',
           background: 'transparent',
           cursor: 'pointer',
           fontFamily: F,
@@ -232,15 +251,15 @@ export function CheckoutCompanyFields({
         }}
       >
         <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '24px', color: '#1a1a1a' }}>
+          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '24px', color: 'var(--koala-text-primary)' }}>
             Billing details
           </span>
-          <span style={{ fontSize: 13, fontWeight: 400, color: '#575757' }}>Optional</span>
+          <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--koala-text-secondary)' }}>Optional</span>
         </span>
         <Icon
           name={open ? 'CaretUp' : 'CaretDown'}
           size={16}
-          color="#575757"
+          color="var(--koala-text-secondary)"
         />
       </button>
 
@@ -421,6 +440,8 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
   }, ref) {
     const [intent, setIntent] = React.useState<IntentPayload | null>(null);
     const [loadError, setLoadError] = React.useState<string | null>(null);
+    const { semantic } = useKoalaTheme();
+    const appearance = React.useMemo(() => buildStripeAppearance(semantic), [semantic]);
 
     React.useEffect(() => {
       let cancelled = false;
@@ -483,8 +504,8 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
       <>
         {loadError ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480, marginBottom: 16 }}>
-            <p style={{ margin: 0, fontSize: 14, color: '#FF6F77', fontFamily: F }}>{loadError}</p>
-            <a href="/plans" style={{ fontSize: 14, color: '#18181B', fontFamily: F, fontWeight: 500 }}>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--koala-status-danger)', fontFamily: F }}>{loadError}</p>
+            <a href="/plans" style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500 }}>
               ← Back to plans
             </a>
           </div>
@@ -501,7 +522,7 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
             stripe={stripePromise}
             options={{
               clientSecret: intent.clientSecret,
-              appearance: stripeAppearance,
+              appearance,
               locale: 'en',
               fonts: [{ cssSrc: DM_SANS_CSS }],
             }}

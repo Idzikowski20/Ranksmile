@@ -35,6 +35,10 @@ export function SidebarItem({
     level === 1 ? 'koala-sidebar-item--nested' : '',
   ].filter(Boolean).join(' ');
 
+  // Stable hook for the page tour (`[data-tour="nav-site-audit"]`) — derived from the
+  // label so every item is targetable without threading a prop through each call site.
+  const tourId = `nav-${label.toLowerCase().replace(/\s+/g, '-')}`;
+
   const body = (
     <>
       {icon ? (
@@ -55,6 +59,7 @@ export function SidebarItem({
           className={className}
           aria-current={active ? 'page' : undefined}
           onClick={onClick}
+          data-tour={tourId}
         >
           {body}
         </a>
@@ -63,7 +68,7 @@ export function SidebarItem({
   }
 
   return (
-    <button type="button" className={className} onClick={onClick}>
+    <button type="button" className={className} onClick={onClick} data-tour={tourId}>
       {body}
     </button>
   );

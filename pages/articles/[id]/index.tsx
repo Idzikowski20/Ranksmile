@@ -1977,7 +1977,6 @@ const ArticleEditorPage: NextPage = () => {
               minWidth: 0,
               background: 'var(--koala-bg-primary)',
               borderRadius: 12,
-              border: '1px solid var(--koala-border-primary)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
