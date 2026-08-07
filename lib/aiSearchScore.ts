@@ -53,6 +53,7 @@ function intentFromIntroFactors(factors: ScoreFactor[]): number {
       Object.entries(DEFAULT_WEIGHTS).filter(([name]) => name.startsWith('INTRODUCTION_')),
    ) as Record<string, number>;
    const total = Object.values(weights).reduce((sum, w) => sum + w, 0);
+   if (!total) return 0;
    const earned = factors.reduce(
       (sum, factor) => sum + factor.score * (weights[factor.name] ?? 0),
       0,

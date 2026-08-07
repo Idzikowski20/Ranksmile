@@ -52,13 +52,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   res.write(':ok\n\n');
 
   // Quiet phases can outlast a proxy's idle timeout; a comment frame keeps it open.
-  const heartbeat = setInterval(() => { res.write(':hb\n\n'); flushSse(res); }, 20_000);
+  const heartbeat = setInterval(() => {
+    try { res.write(':hb\n\n'); flushSse(res); } catch { clearInterval(heartbeat); }
+  }, 20_000);
   let sentLength = 0;
   let lastStatus = '';
   let closed = false;
-  req.on('close', () => { closed = true; });
+  req.on('close', () => { closed = true; clearInterval(heartbeat); });
 
-  for (let tick = 0; tick < MAX_TICKS && !closed; tick += 1) {
+  try {
+    for (let tick = 0; tick < MAX_TICKS && !closed; tick += 1) {
     // eslint-disable-next-line no-await-in-loop
     const rows = await db.query<JobRow>(
       `SELECT status, status_text, stream_text, error FROM analysis_jobs
@@ -91,7 +94,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => { setTimeout(resolve, TICK_MS); });
   }
-  clearInterval(heartbeat);
+  } finally {
+    clearInterval(heartbeat);
+  }
   return res.end();
 }
 
