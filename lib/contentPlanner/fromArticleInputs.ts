@@ -89,6 +89,44 @@ export function competitorsFromScoreData(scoreData: unknown): CompetitorRawInput
   return out;
 }
 
+/** Host + path, no scheme/www/trailing slash — the corpus and the outlines cache disagree on all three. */
+function urlKey(raw: string): string {
+  try {
+    const u = new URL(raw);
+    return `${u.hostname.replace(/^www\./, '')}${u.pathname.replace(/\/+$/, '')}`.toLowerCase();
+  } catch {
+    return raw.trim().toLowerCase();
+  }
+}
+
+/**
+ * Attach the claims deep-analysis extracted from each competitor's body.
+ *
+ * Runs before `enrichWithWieSynthesis` so the synthesis stays what it was meant to be —
+ * a fallback for competitors we could not read — instead of the sole source. Matching is
+ * by URL: the corpus skips competitors whose fetch came back empty, so pairing by index
+ * would file one competitor's claims under another and corrupt the gain frequency this
+ * whole function exists to feed.
+ */
+export function enrichWithCorpusClaims(
+  competitors: CompetitorRawInput[],
+  rawClaims: unknown,
+): CompetitorRawInput[] {
+  if (!rawClaims || typeof rawClaims !== 'object' || Array.isArray(rawClaims)) return competitors;
+  const byKey = new Map<string, string[]>();
+  for (const [url, claims] of Object.entries(rawClaims as Record<string, unknown>)) {
+    const list = asStringList(claims);
+    if (list.length) byKey.set(urlKey(url), list);
+  }
+  if (!byKey.size) return competitors;
+
+  return competitors.map((c) => {
+    if (c.claims?.length) return c;
+    const claims = byKey.get(urlKey(c.url));
+    return claims ? { ...c, claims } : c;
+  });
+}
+
 /** Enrich raw competitors with WIE expert_claims / faq / examples when structural claims empty. */
 export function enrichWithWieSynthesis(
   competitors: CompetitorRawInput[],
@@ -130,6 +168,61 @@ export function enrichWithWieSynthesis(
       examples: c.examples || (i === 0 ? examples.length : 0),
     };
   });
+}
+
+export type PlannerInputGap = {
+  code: 'analysis_running' | 'no_analysis' | 'competitors_unreadable' | 'thin_topic';
+  message: string;
+};
+
+/**
+ * Why the planner had too little to work with.
+ *
+ * These three failures need three different actions and used to share one message
+ * ("re-run the article analysis"), which is actively wrong for the first case — there is
+ * nothing to re-run — and unhelpful for the second, where re-running repeats the same
+ * blocked fetches. The distinguishing evidence is which artifacts deep-analysis managed
+ * to persist: competitors at all, then anything read from their bodies.
+ */
+export function diagnosePlannerInputs(opts: {
+  scoreData: Record<string, unknown> | null | undefined;
+  competitorCount: number;
+  claimCount: number;
+  /** A deep analysis for this article is queued or running right now. */
+  analysisRunning?: boolean;
+}): PlannerInputGap {
+  const {
+    scoreData, competitorCount, claimCount, analysisRunning,
+  } = opts;
+  // Checked first: mid-run the article legitimately has no competitors yet, and telling
+  // the reader to start an analysis that is already running sends them to a button that
+  // refuses to fire.
+  if (analysisRunning) {
+    return {
+      code: 'analysis_running',
+      message: 'The competitor analysis for this article is still running. The outline will be ready once it finishes.',
+    };
+  }
+  if (!scoreData || competitorCount === 0) {
+    return {
+      code: 'no_analysis',
+      message: 'This article has no competitor analysis yet. Run the article analysis first, then generate the outline.',
+    };
+  }
+  const readCompetitorBodies = Boolean(scoreData.competitor_claims) || Boolean(scoreData.competitor_synthesis);
+  if (!readCompetitorBodies) {
+    return {
+      code: 'competitors_unreadable',
+      message: `The analysis found ${competitorCount} competitors but could not read any of their pages, `
+        + 'so there is nothing to plan from. Re-run the analysis — if it keeps failing, those sites are '
+        + 'blocking our crawler and you will need to write the outline by hand.',
+    };
+  }
+  return {
+    code: 'thin_topic',
+    message: `Competitor pages were read but yielded only ${claimCount} usable claims, and the planner needs 5. `
+      + 'This keyword may be too narrow, or the pages that rank for it are too thin to model.',
+  };
 }
 
 export function aiIntelFromScoreData(scoreData: unknown): AiSearchIntelInput {
