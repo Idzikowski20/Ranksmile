@@ -45,43 +45,55 @@ function assertEditorLive(editor: Editor): void {
   }
 }
 
-/**
- * Where the next block goes: the end of the document, unless the document is still just
- * the placeholder paragraph ProseMirror's schema requires — then the range covering
- * that paragraph, so the first block replaces it instead of landing underneath it.
- */
-function trailingEmptyRange(editor: Editor): number | { from: number; to: number } {
-  const { doc } = editor.state;
-  const end = doc.content.size;
-  const last = doc.lastChild;
-  if (doc.childCount === 1 && last && last.type.name === 'paragraph' && last.content.size === 0) {
-    return { from: 0, to: end };
-  }
-  return end;
+const TRANSITION_MS = 350;
+const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+const TRANSITION = `opacity ${TRANSITION_MS}ms ${EASE}, transform ${TRANSITION_MS}ms ${EASE}`;
+
+/** Park a rendered block off-screen so it can be faded in on its turn. */
+function hide(elements: HTMLElement[], index: number): void {
+  const { style } = elements[index];
+  style.opacity = '0';
+  style.transform = 'translateY(8px)';
 }
 
-function animateLastBlock(editor: Editor): void {
-  if (prefersReducedMotion() || !editorCanCommand(editor)) return;
-  const last = editor.view?.dom?.lastElementChild as HTMLElement | null;
-  if (!last) return;
-  last.style.opacity = '0';
-  last.style.transform = 'translateY(8px)';
-  void last.offsetHeight;
-  last.style.transition =
-    'opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
-  last.style.opacity = '1';
-  last.style.transform = 'translateY(0)';
+function show(elements: HTMLElement[], index: number): void {
+  const { style } = elements[index];
+  style.transition = TRANSITION;
+  style.opacity = '1';
+  style.transform = 'translateY(0)';
+}
+
+/** Drop the inline styles again so the document is left exactly as ProseMirror rendered it. */
+function clearInlineMotion(elements: HTMLElement[]): void {
+  for (const { style } of elements) {
+    style.removeProperty('opacity');
+    style.removeProperty('transform');
+    style.removeProperty('transition');
+  }
 }
 
 export type RevealHtmlOptions = {
   signal?: AbortSignal;
-  /** `preserve` keeps partial content for an explicit user cancellation. */
+  /**
+   * Retained for callers; both values now leave the full document in place. The reveal
+   * is presentation-only, so aborting it can no longer truncate content.
+   */
   abortBehavior?: 'complete' | 'preserve';
-  /** Final emitUpdate (default true). Intermediate inserts use emitUpdate false when possible. */
+  /** Whether the single setContent emits an update (default true). */
   emitUpdate?: boolean;
 };
 
-/** Append top-level HTML blocks one-by-one with a soft entrance. */
+/**
+ * Fade the article in block by block (Ask Smily feel).
+ *
+ * The document is written ONCE with `setContent` and the animation only touches inline
+ * styles on the already-rendered elements. Building it up with repeated inserts is what
+ * produced both structural bugs we shipped: `insertContent` inserts at the selection —
+ * which sits inside the last <li> after a list — so each section nested one level
+ * deeper, and `insertContentAt` with an HTML string appends a trailing empty paragraph
+ * per call, leaving a blank line after every heading and every list. `setContent`
+ * parses the whole fragment in one pass and has neither problem.
+ */
 export async function revealHtmlInEditor(
   editor: Editor,
   html: string,
@@ -97,44 +109,31 @@ export async function revealHtmlInEditor(
     return;
   }
 
-  if (prefersReducedMotion() || blocks.length === 1) {
-    editor.commands.setContent(html, { emitUpdate: emit });
-    return;
-  }
+  editor.commands.setContent(html, { emitUpdate: emit });
 
-  const delayMs = Math.max(55, Math.min(180, Math.floor(2800 / blocks.length)));
-  editor.commands.setContent('', { emitUpdate: false });
+  if (prefersReducedMotion() || blocks.length === 1) return;
+
+  const elements = Array.from(editor.view?.dom?.children ?? []) as HTMLElement[];
+  if (elements.length < 2) return;
+
+  const delayMs = Math.max(55, Math.min(180, Math.floor(2800 / elements.length)));
+  elements.forEach((_, i) => hide(elements, i));
 
   try {
-    for (let i = 0; i < blocks.length; i++) {
+    for (let i = 0; i < elements.length; i += 1) {
       if (opts?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       assertEditorLive(editor);
-      // Append without remounting prior blocks (keeps fade on the newest node only).
-      //
-      // Explicitly at the end of the doc, never `insertContent`: that inserts at the
-      // current selection, and after a <ul> the selection sits INSIDE the last <li>.
-      // Every following block then landed inside that list item — headings and lists
-      // nesting one level deeper per section, which is what turned a reviewed outline
-      // into a single runaway bullet list.
-      //
-      // `setContent('')` leaves the schema's required empty paragraph behind, so the
-      // first block replaces it rather than appending after it — otherwise every reveal
-      // opened with a blank line above the H1.
-      editor.commands.insertContentAt(trailingEmptyRange(editor), blocks[i]);
-      animateLastBlock(editor);
-      const last = editor.view?.dom?.lastElementChild;
-      last?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-      if (i < blocks.length - 1) await sleep(delayMs, opts?.signal);
+      show(elements, i);
+      elements[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      // The last block gets the full transition instead of the stagger gap, so the
+      // cleanup below cannot cut its fade short.
+      await sleep(i < elements.length - 1 ? delayMs : TRANSITION_MS, opts?.signal);
     }
-    // insertContent already emits updates; no final setContent (would remount and kill fades).
   } catch (e) {
-    if (e instanceof DOMException && e.name === 'AbortError') {
-      // Unmount / supersede: never touch destroyed editor (root cause of null.commands).
-      if (opts?.abortBehavior !== 'preserve' && editorCanCommand(editor)) {
-        editor.commands.setContent(html, { emitUpdate: emit });
-      }
-      return;
-    }
-    throw e;
+    if (!(e instanceof DOMException) || e.name !== 'AbortError') throw e;
+    // Unmount / supersede: the content is already committed, so there is nothing to
+    // restore — just make sure no block is left parked at opacity 0.
+  } finally {
+    clearInlineMotion(elements);
   }
 }

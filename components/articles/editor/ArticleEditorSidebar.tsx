@@ -7,7 +7,6 @@ import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../../lib/aiCoverage';
 import type { PlagiarismResult } from '../PlagiarismPanel';
 import type { AiReadabilityResult } from '../PrePublishPanel';
-import type { DeepAnalysisUiState } from '../../../lib/deepAnalysisProgress';
 import type { Article } from '../../../hooks/articles/useArticleEditorState';
 import type { LiveRescoreState } from '../../../hooks/articles/useArticleOptimize';
 import { VersionHistoryPanel } from './ArticleEditorModals';
@@ -29,8 +28,6 @@ export interface ArticleEditorSidebarProps {
   internalLinksCount: number;
   editorHtml: string;
   liveContentScore: number;
-  isDeepAnalyzing: boolean;
-  deepAnalysisUi: DeepAnalysisUiState | null;
   domainBaseUrl: string;
   onInsertLinks: (links: Array<{ anchorText: string; url: string }>) => Array<{ url: string; anchorText: string; success: boolean }>;
   onLinksAiActivity: (active: boolean) => void;
@@ -89,8 +86,6 @@ export function ArticleEditorSidebar({
   internalLinksCount,
   editorHtml,
   liveContentScore,
-  isDeepAnalyzing,
-  deepAnalysisUi,
   domainBaseUrl,
   onInsertLinks,
   onLinksAiActivity,
@@ -150,8 +145,6 @@ export function ArticleEditorSidebar({
             title={article.title || ''}
             metaTitle={article.meta_title || ''}
             metaDescription={article.meta_description || ''}
-            isDeepAnalyzing={isDeepAnalyzing}
-            deepAnalysisUi={deepAnalysisUi}
           />
         </div>
       ) : ranksmileDockOpen ? (
@@ -239,8 +232,6 @@ export function ArticleEditorSidebar({
             onApplyReadability={onApplyReadability}
             onPlagiarismHighlight={onPlagiarismHighlight}
             readabilityAccepted={readabilityAccepted}
-            isDeepAnalyzing={isDeepAnalyzing}
-            deepAnalysisUi={deepAnalysisUi}
           />
         </div>
       )}

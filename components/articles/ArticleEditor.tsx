@@ -1139,7 +1139,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [importBusy, setImportBusy] = useState(false);
     const [outlineBusy, setOutlineBusy] = useState(false);
     const [generateBusy, setGenerateBusy] = useState(false);
-    const [generateMsg, setGenerateMsg] = useState('Generating article…');
+    // Empty while idle. This doubles as the outline bar's status line, and seeding it
+    // with "Generating article…" meant a bar that was waiting for the reviewer claimed a
+    // generation was already under way — the reviewer never saw the heading count.
+    const [generateMsg, setGenerateMsg] = useState('');
     const [generatePct, setGeneratePct] = useState<number | null>(null);
     const generationRunRef = useRef(0);
     const generationJobIdRef = useRef<{ runId: number; jobId: string } | null>(null);
@@ -1977,10 +1980,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             planValidation?: { issues?: Array<{ message?: string }> };
           };
           if (!genRes.ok || !genData.jobId) {
+            // Up to two reasons, not just the first: the planner reports one issue per
+            // failed gate and the leading one is often the least specific ("Outline
+            // skipped — blueprint gate failed" without saying what the blueprint lacked).
             const detail = [
               ...(genData.blueprintValidation?.issues || []),
               ...(genData.planValidation?.issues || []),
-            ].map((i) => i.message).find(Boolean);
+            ]
+              .map((i) => i.message)
+              .filter((m): m is string => Boolean(m))
+              .filter((m, i, all) => all.indexOf(m) === i)
+              .slice(0, 2)
+              .join(' · ');
             throw new Error(detail || genData.message || genData.error || 'Generation failed to start');
           }
           jobId = genData.jobId;
@@ -2010,13 +2021,16 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           });
           source.addEventListener('done', () => { clearTimeout(timeout); finish(); });
           source.addEventListener('error', (event) => {
-            clearTimeout(timeout);
-            // A server-sent `error` event carries a message; a transport drop does not.
+            // A server-sent `error` event carries a message and is terminal. A bare
+            // error is a transport drop — the route hitting its duration cap, a dev
+            // recompile, a proxy closing an idle connection — and the generation is
+            // still running behind it. EventSource reconnects on its own as long as we
+            // do not close it, so failing here reported a healthy run as broken and the
+            // finished article turned up by itself minutes later.
             const raw = (event as MessageEvent).data;
-            const message = typeof raw === 'string' && raw
-              ? (JSON.parse(raw) as { message?: string }).message
-              : null;
-            finish(new Error(message || 'Generation failed'));
+            if (typeof raw !== 'string' || !raw) return;
+            clearTimeout(timeout);
+            finish(new Error((JSON.parse(raw) as { message?: string }).message || 'Generation failed'));
           });
         });
 
@@ -2053,6 +2067,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           if (generationRevealHtmlRef.current?.runId === runId) generationRevealHtmlRef.current = null;
           setGenerateBusy(false);
           setGeneratePct(null);
+          // Back to idle, or the last progress line would linger under "Review outline"
+          // as though the run were still going.
+          setGenerateMsg('');
         }
       }
     };
@@ -2139,7 +2156,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       await handleInsertOutline();
     };
 
+    // `readOnly` is the deep-analysis lock. Planning an outline before the analysis has
+    // finished asks the planner to work from competitors that have not been crawled yet:
+    // it returns nothing, and the editor reported "no competitor analysis yet — run the
+    // article analysis first" about an analysis that was running at that very moment.
+    // The effect re-fires when the lock lifts, so nothing is lost by waiting.
     useEffect(() => {
+      if (readOnly) return undefined;
       if (!outlineReviewMode || !editor || outlineAutoStarted.current || outlineBusy || generateBusy) return undefined;
       const t = setTimeout(() => {
         if (outlineAutoStarted.current || !editor) return;
@@ -2151,7 +2174,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       return () => clearTimeout(t);
       // ponytail: one-shot when review mode + editor ready (omit handleInsertOutline)
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [outlineReviewMode, editor, outlineBusy, generateBusy]);
+    }, [outlineReviewMode, editor, outlineBusy, generateBusy, readOnly]);
 
     const handleOutlineGenerate = () => {
       if (!editor) return;
@@ -2468,7 +2491,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         {generateBusy && !outlineReviewMode && (
           <GenerateWritingOverlay message={generateMsg} pct={generatePct} />
         )}
-        {outlineReviewMode && (
+        {/* Not while the analysis is still running: there is no outline to review yet, and
+            the bar overlapped the progress panel claiming a generation was under way. */}
+        {outlineReviewMode && !readOnly && (
           <OutlineGenerateBar
             planning={outlineBusy}
             busy={generateBusy}
