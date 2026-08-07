@@ -48,6 +48,7 @@ import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 import OutlineGenerateBar from './OutlineGenerateBar';
 import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
 import { revealHtmlInEditor, editorCanCommand } from '../../lib/editor/revealHtmlProgressive';
+import clearEditorHistory from '../../lib/editor/clearEditorHistory';
 import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
 import { clearWizardState } from '../../lib/wizardState';
 import {
@@ -1811,7 +1812,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       revealAbortRef.current?.abort();
     }, []);
 
-    const playReveal = async (html: string, emitUpdate = true, abortBehavior: 'complete' | 'preserve' = 'complete') => {
+    /**
+     * `sealed` is for a finished article: the write replaces the reviewed outline in one
+     * `setContent`, so a single Ctrl+Z used to put the outline back and drop the article,
+     * which autosave then persisted. There is nothing to undo back to — the generation is
+     * not a document edit — so the history starts fresh at the article.
+     */
+    const playReveal = async (
+      html: string,
+      emitUpdate = true,
+      abortBehavior: 'complete' | 'preserve' = 'complete',
+      sealed = false,
+    ) => {
       if (!editorCanCommand(editor)) return;
       revealAbortRef.current?.abort();
       const ac = new AbortController();
@@ -1821,6 +1833,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const cleaned = normalizeListHtml(html);
       try {
         await revealHtmlInEditor(ed, cleaned, { signal: ac.signal, emitUpdate, abortBehavior });
+        if (sealed) clearEditorHistory(ed);
       } finally {
         if (revealAbortRef.current === ac) {
           revealPlayingRef.current = false;
@@ -1836,7 +1849,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       if (!html || !isUsableArticleHtml(html)) return;
       mountRevealDone.current = true;
       void (async () => {
-        await playReveal(html, false);
+        await playReveal(html, false, 'complete', true);
         const q = { ...router.query };
         delete q.reveal;
         void router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
@@ -1953,7 +1966,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             if (!isCurrentRun()) return;
             const html = artData.article?.content || '';
             if (isUsableArticleHtml(html)) {
-              await playReveal(html, true);
+              await playReveal(html, true, 'complete', true);
               if (!isCurrentRun()) return;
               toast.success('Article loaded');
               return;
@@ -2049,7 +2062,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           throw new Error('Generation finished but no content was returned.');
         }
         generationRevealHtmlRef.current = { runId, html: editor.getHTML() };
-        await playReveal(html, true, 'preserve');
+        await playReveal(html, true, 'preserve', true);
         if (!isCurrentRun()) return;
         generationRevealHtmlRef.current = null;
         outlineOriginalHtmlRef.current = null;
@@ -2172,6 +2185,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           }
         } catch { /* no usable stored plan — fall through to a fresh one */ }
       }
+      // Only the planner run is one-shot. Restoring the saved outline above is free and
+      // must stay repeatable: a hot reload rebuilds the editor from the `content` prop —
+      // empty, because the outline lives in the saved plan and never in articles.content —
+      // and a guard around the whole routine left the reviewer staring at a blank document
+      // that only a full page reload could bring back.
+      if (outlineAutoStarted.current) return;
+      outlineAutoStarted.current = true;
       await handleInsertOutline();
     };
 
@@ -2182,12 +2202,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // The effect re-fires when the lock lifts, so nothing is lost by waiting.
     useEffect(() => {
       if (readOnly) return undefined;
-      if (!outlineReviewMode || !editor || outlineAutoStarted.current || outlineBusy || generateBusy) return undefined;
+      if (!outlineReviewMode || !editor || outlineBusy || generateBusy) return undefined;
       const t = setTimeout(() => {
-        if (outlineAutoStarted.current || !editor) return;
+        if (!editor) return;
         const existing = collectOutlineHeadings(editor);
-        outlineAutoStarted.current = true;
         setOutlineHeadingCount(existing.length);
+        // Re-runs whenever review mode has an empty document, which is what a hot reload
+        // leaves behind. `restoreOrGenerateOutline` reads the saved plan first and only
+        // pays for a planner run once.
         if (existing.length === 0) void restoreOrGenerateOutline();
       }, 450);
       return () => clearTimeout(t);

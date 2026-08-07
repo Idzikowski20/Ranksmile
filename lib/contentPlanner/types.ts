@@ -373,6 +373,13 @@ export const MAX_BRIEF_IMPROVE_ITERS = 3;
 export const PLANNER_VERSION = '2.0.0';
 /** Plan Validator: Knowledge Coverage must be ≥ this percent. */
 export const KNOWLEDGE_COVERAGE_MIN_PCT = 95;
-/** Floor when competitor scrape is empty / thin. */
-export const BENCHMARK_WORDS_FLOOR = 2200;
+/**
+ * Floor when competitor scrape is empty / thin — a floor, not a target.
+ *
+ * At 2200 it stopped being either: the SERP for "prywatny detektyw warszawa" runs
+ * 447-1440 words (median 920) and the reference tool recommends 1110-1277, but the floor
+ * overrode all of it and asked for 2200. Section count is derived from the word budget,
+ * so that also bought four sections nobody had material for, and they overlapped.
+ */
+export const BENCHMARK_WORDS_FLOOR = 1200;
 export const BENCHMARK_H2_FLOOR = 7;
