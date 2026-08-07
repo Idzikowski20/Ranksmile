@@ -1711,11 +1711,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     useEffect(() => {
       if (!editor) return;
-      // Locked while a run is preparing content: the document behind the loading skeleton
-      // stayed editable, and anything typed into it was thrown away by the `setContent`
-      // that lands when the run finishes.
-      editor.setEditable(!readOnly && !((outlineBusy || generateBusy) && docEmpty));
-    }, [editor, readOnly, outlineBusy, generateBusy, docEmpty]);
+      // Locked for the whole run, not just while the document is empty. Both runs end in
+      // a `setContent` that replaces everything: typing behind the loading skeleton was
+      // discarded, and so were edits made to a reviewed outline while the article was
+      // being written on top of it.
+      editor.setEditable(!readOnly && !outlineBusy && !generateBusy);
+    }, [editor, readOnly, outlineBusy, generateBusy]);
 
     const toolbarLocked = !!formattingSuspended || !!readOnly;
 
