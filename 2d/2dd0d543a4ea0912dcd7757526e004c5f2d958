@@ -1,0 +1,26 @@
+styles/globals.css
+  s_8d6cce368af4fd::t_3d1f78b3a719e1 8281,8289,8297-8298,8301,8316-8317,8322
+  s_8d6cce368af4fd::t_41bf8309142e39 8318-8319
+  s_8d6cce368af4fd::t_89568a7d044846 8275,8282-8285,8290-8296,8302-8315,8320-8321,8323-8324
+__tests__/components/sidebarUserFooter.test.tsx
+  s_8d6cce368af4fd::t_954af7468471bd 1-56
+components/koala/shell/SidebarUserFooter.tsx
+  s_8d6cce368af4fd::t_2186b1c79a07a6 104-113
+  s_8d6cce368af4fd::t_07cb0ba226ec72 114-125,127,130-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2d2dd0d543a4ea0912dcd7757526e004c5f2d958",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
