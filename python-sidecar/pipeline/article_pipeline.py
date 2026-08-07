@@ -49,6 +49,26 @@ które rankują na pierwszej stronie Google. Artykuły muszą być:
 Zwracaj TYLKO HTML artykułu (bez DOCTYPE, body, head — czysty HTML artykułu)."""
 
 
+def _reasoning_effort() -> str:
+    """
+    Off by default, and deliberately so.
+
+    A hardcoded `reasoning: {effort: medium}` made every single writer call come back
+    with empty content: reasoning tokens count against max_tokens, and at the 1200 the
+    paragraph writer asks for, the model spent the whole budget thinking and emitted
+    nothing. Eleven consecutive empty responses produced an article of headings and
+    images with no prose — which then passed as a successful generation.
+
+    Set OPENROUTER_REASONING_EFFORT to turn it back on; raise the paragraph budget with it.
+    """
+    return (os.getenv("OPENROUTER_REASONING_EFFORT") or "").strip().lower()
+
+
+def _reasoning_body() -> dict:
+    effort = _reasoning_effort()
+    return {"extra_body": {"reasoning": {"effort": effort}}} if effort else {}
+
+
 async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYSTEM_PROMPT) -> str:
     if not get_openrouter_api_key():
         print("[generate] OPENROUTER_API_KEY missing — skipping chat")
@@ -63,7 +83,7 @@ async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYS
             model=MODEL,
             max_tokens=max_tokens,
             messages=messages,
-            extra_body={"reasoning": {"effort": "medium"}},
+            **_reasoning_body(),
         )
     except Exception as exc:
         print(f"[generate] OpenRouter chat failed: {type(exc).__name__}: {exc}")
@@ -72,7 +92,17 @@ async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYS
     choice = response.choices[0] if response.choices else None
     content = ((choice.message.content if choice and choice.message else None) or "").strip()
     if not content:
-        print("[generate] _chat returned empty content")
+        # "empty content" alone is not a diagnosis — it looks identical whether the model
+        # refused, returned nothing, or spent the whole budget before emitting a token.
+        # finish_reason plus the usage split tells them apart at a glance.
+        usage = getattr(response, "usage", None)
+        print(
+            "[generate] _chat returned empty content"
+            f" (finish_reason={getattr(choice, 'finish_reason', None)},"
+            f" max_tokens={max_tokens},"
+            f" completion_tokens={getattr(usage, 'completion_tokens', None)},"
+            f" reasoning={_reasoning_effort() or 'off'})"
+        )
     return content
 
 

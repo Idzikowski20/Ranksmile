@@ -77,3 +77,37 @@ def test_runtime_hands_each_paragraph_its_section_and_graph_text():
 def test_runtime_fails_closed_for_invalid_compiled_plan():
     with pytest.raises(ValueError, match="knowledge_packs"):
         asyncio.run(run_compiled_write_plan({"title": "SEO guide"}, _write, _rewrite))
+
+
+def test_runtime_refuses_an_article_whose_every_write_came_back_empty():
+    """
+    The real failure: eleven consecutive empty completions rendered as a page of headings
+    (which come from the plan, not the model) plus stock images, and the pipeline reported
+    it as done. An empty writer has to fail, not produce a skeleton.
+    """
+    async def _empty(_: str) -> str:
+        return ""
+
+    with pytest.raises(RuntimeError, match="no prose"):
+        asyncio.run(run_compiled_write_plan(PLAN, _empty, _rewrite))
+
+
+def test_runtime_keeps_going_when_only_some_paragraphs_are_empty():
+    """One flaky call must not throw away the paragraphs that did come back."""
+    plan = {
+        **PLAN,
+        "knowledge_packs": [{"id": "s1", "heading": "Start", "paragraph_plan_ids": ["p1", "p2"]}],
+        "paragraph_plans": [
+            PLAN["paragraph_plans"][0],
+            {**PLAN["paragraph_plans"][0], "id": "p2"},
+        ],
+    }
+    seen: list[int] = []
+
+    async def _flaky(_: str) -> str:
+        seen.append(1)
+        return "" if len(seen) == 1 else "Audyt wskazuje priorytety."
+
+    result = asyncio.run(run_compiled_write_plan(plan, _flaky, _rewrite))
+
+    assert "Audyt wskazuje priorytety." in result.html
