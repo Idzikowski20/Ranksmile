@@ -504,7 +504,7 @@ const ArticleEditorPage: NextPage = () => {
     setArticle((prev) => (prev ? { ...prev, status: 'draft' } : prev));
   }, []);
 
-  const { ui: deepAnalysisUi, isAnalyzing: isDeepAnalyzing } = useBackgroundDeepAnalysis({
+  const { ui: deepAnalysisUi, phases: analysisPhases, isAnalyzing: isDeepAnalyzing } = useBackgroundDeepAnalysis({
     articleId: article?.id ?? null,
     articleStatus: article?.status,
     metaUrl: article?.meta_url,
@@ -516,24 +516,6 @@ const ArticleEditorPage: NextPage = () => {
 
   const editorLocked = isDeepAnalyzing;
 
-  // Typed analysis phases for the side panel. The job row already carries them (the
-  // sidecar's stage events are mapped in job-progress), so this only reads.
-  const [analysisPhases, setAnalysisPhases] = useState<AnalysisPhases | null>(null);
-  useEffect(() => {
-    if (!id || Array.isArray(id) || !isDeepAnalyzing) return undefined;
-    let cancelled = false;
-    const tick = async () => {
-      try {
-        const res = await fetch(`/api/articles/job-progress?articleId=${id}&jobType=deep_analysis`);
-        if (!res.ok || cancelled) return;
-        const data = await res.json() as { phases?: AnalysisPhases | null };
-        if (data.phases && !cancelled) setAnalysisPhases(data.phases);
-      } catch { /* the panel just keeps its last known phases */ }
-    };
-    tick().catch(() => {});
-    const timer = setInterval(() => { tick().catch(() => {}); }, 2000);
-    return () => { cancelled = true; clearInterval(timer); };
-  }, [id, isDeepAnalyzing]);
 
   useEffect(() => {
     if (!isDeepAnalyzing) return;

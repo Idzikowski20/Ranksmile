@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '../koala/icons';
+import { Spinner } from '../koala/primitives/Spinner';
 import { analysisPhaseGroups, type PhaseRow } from '../../lib/analysisPhaseRows';
 import type { AnalysisPhases } from '../../lib/analysisPhases';
 
@@ -13,16 +14,9 @@ const STATE_LABEL: Record<PhaseRow['state'], string> = {
 const Marker: React.FC<{ state: PhaseRow['state'] }> = ({ state }) => {
   if (state === 'done') return <Icon name="Check" size={16} weight="bold" />;
   if (state === 'error') return <Icon name="WarningCircle" size={16} weight="bold" />;
-  if (state === 'active') {
-    return (
-      <span
-        className="inline-block aspect-square animate-spin rounded-full"
-        style={{
-          width: 14, height: 14, border: '1.5px solid currentColor', borderBottomColor: 'transparent',
-        }}
-      />
-    );
-  }
+  // Hidden from assistive tech: the panel's own live region announces the running step,
+  // and Spinner carries role="status" which would announce a second time.
+  if (state === 'active') return <Spinner size={14} color="currentColor" />;
   return <span style={{ width: 14, height: 14, display: 'inline-block' }} />;
 };
 

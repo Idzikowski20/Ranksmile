@@ -1,3 +1,5 @@
+import type { AnalysisPhases } from './analysisPhases';
+
 export type StepVisualStatus = 'pending' | 'running' | 'done';
 
 export interface DeepAnalysisUiStep {
@@ -16,6 +18,8 @@ export interface DeepAnalysisUiState {
 }
 
 export interface JobProgressSnapshot {
+  /** Typed pipeline phases (lib/analysisPhases) when the job reports them. */
+  phases?: AnalysisPhases | null;
   status: string;
   currentStage?: string | null;
   stageProgress?: number | null;
