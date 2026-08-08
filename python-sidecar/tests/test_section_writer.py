@@ -183,3 +183,8 @@ def test_authority_sources_resolve_and_gate_the_link_rule():
     assert "AT MOST one" in prompt
     # No sources on the plan -> no link permission in the prompt.
     assert "AT MOST one" not in _prompt(PARAGRAPH, CONTEXT)
+
+
+def test_writer_is_told_to_keep_facts_exact():
+    """Reference articles carry guideline facts near-verbatim; ours blurred them."""
+    assert "figures, statutes, names" in _prompt(PARAGRAPH, CONTEXT)

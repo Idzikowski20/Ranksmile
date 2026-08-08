@@ -22,6 +22,7 @@ const QUESTIONS_PER_SECTION = 5;
 const BRAND_CHARS = 2000;
 const TERMS = 24;
 const COMPETITOR_HEADINGS = 40;
+const FACT_SHEET_MAX = 30;
 
 export type BriefWriterInput = {
   keyword: string;
@@ -172,6 +173,25 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
     .filter(Boolean)
     .slice(0, COMPETITOR_HEADINGS);
 
+  // Topic → its facts, capped: stats and high-priority claims first, since those are the
+  // sentences the reference articles inject verbatim ("Kara ... od 3 miesięcy do 5 lat").
+  const factsByTopic = new Map<string, string[]>();
+  const factCandidates = [...bundle.targetKg.claims]
+    .sort((a, b) => Number(b.type === 'stat') - Number(a.type === 'stat'))
+    .slice(0, FACT_SHEET_MAX);
+  for (const claim of factCandidates) {
+    const topic = asEvidence(claim.topic || '') || 'inne';
+    const fact = asEvidence(claim.statement);
+    if (fact) {
+      const group = factsByTopic.get(topic) ?? [];
+      group.push(fact);
+      factsByTopic.set(topic, group);
+    }
+  }
+  const factSheet = [...factsByTopic.entries()]
+    .map(([topic, facts]) => `${topic}: ${facts.join(' | ')}`)
+    .join('\n');
+
   const sections = bundle.briefs.map((brief, i) => {
     const questions = [...(brief.mustAnswer || [])].slice(0, QUESTIONS_PER_SECTION);
     const evidence = claimTexts(brief, claims);
@@ -200,6 +220,15 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
     // how specific a heading has to be — and it was the one thing the model never saw.
     competitorHeadings.length
       ? `RANKING PAGES — section titles of the pages that rank:\n<evidence>${competitorHeadings.join(' | ')}</evidence>`
+      : '',
+    '',
+    // The reference brief ships a fact sheet grouped by topic and its article carries
+    // those facts near-verbatim. Grouping needs real topics — which claims only have now
+    // that clustering assigns block titles instead of "Unassigned".
+    factSheet
+      ? `FACTS — grouped by topic, scraped reference data:\n<evidence>${factSheet}</evidence>\n`
+        + 'Route each fact into the section it belongs to as material the writer states'
+        + ' near-verbatim — figures, statutes and names kept exactly. Never invent figures.'
       : '',
     '',
     `Working H1: ${bundle.outline?.h1 || input.keyword}`,
