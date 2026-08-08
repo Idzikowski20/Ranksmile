@@ -42,10 +42,22 @@ def _graph_index(plan: Mapping[str, object]) -> dict[str, dict[str, str]]:
     graph = plan.get("graph")
     if not isinstance(graph, Mapping):
         return {}
+    sources: dict[str, str] = {}
+    raw_sources = graph.get("sources")
+    if isinstance(raw_sources, list):
+        for item in raw_sources:
+            if not isinstance(item, Mapping):
+                continue
+            item_id, url = item.get("id"), item.get("url")
+            title = item.get("title")
+            if isinstance(item_id, str) and isinstance(url, str) and url.strip():
+                label = title.strip() if isinstance(title, str) and title.strip() else url.strip()
+                sources[item_id] = f"{label} -> {url.strip()}"
     return {
         "claims": _text_index(graph, "claims", "text"),
         "questions": _text_index(graph, "questions", "text"),
         "entities": _text_index(graph, "entities", "name"),
+        "sources": sources,
     }
 
 

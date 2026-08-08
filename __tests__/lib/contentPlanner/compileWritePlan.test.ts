@@ -227,6 +227,34 @@ describe('compileWritePlan', () => {
     expect(paragraphs[1].style.table).toBe(true);
   });
 
+  /**
+   * The reference article links statutes and public institutions with descriptive
+   * anchors; ours shipped zero links. Claim sources are mostly competitor pages, and a
+   * competitor URL must never become a live link in our article.
+   */
+  it('carries authority sources into the graph and the paragraph, never competitors', () => {
+    const plan = sampleExecutionPlan({
+      sections: [sampleSection({
+        claims: [{
+          id: 'c1',
+          statement: 'Szantaż podlega karze do 3 lat.',
+          sources: [
+            { url: 'https://isap.sejm.gov.pl/kk.pdf', label: 'art. 191 kk', confidence: 1 },
+            { url: 'https://expertus.pl/uslugi/', label: 'konkurent', confidence: 0.5 },
+          ],
+        }],
+      })],
+    });
+
+    const compiled = compileWritePlan(plan);
+
+    expect(compiled.graph.sources).toHaveLength(1);
+    expect(compiled.graph.sources[0].url).toContain('isap.sejm.gov.pl');
+    const paragraph = compiled.paragraphPlans.find((p) => p.sectionId === 'sec-intro');
+    expect(paragraph?.sources).toEqual([{ sourceId: compiled.graph.sources[0].id }]);
+    expect(compiled.graph.claims[0].sourceId).toBe(compiled.graph.sources[0].id);
+  });
+
   it('splits ordinary sections into intro/definition/summary by expectedWords', () => {
     const plan = sampleExecutionPlan({
       sections: [sampleSection({ blocks: ['definition'], expectedWords: 300 })],
