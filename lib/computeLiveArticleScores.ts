@@ -101,7 +101,7 @@ export function computeLiveArticleScores(input: LiveArticleScoresInput): LiveArt
 
   const updatedTerms = input.scoreData.terms?.map((t) => ({
     ...t,
-    current_count: countOccurrences(scoringText, t.term),
+    current_count: countOccurrences(scoringText, t.term, t.term_words_regexps),
   }));
 
   const liveItems = input.coverageSnapshot?.items?.length

@@ -448,6 +448,8 @@ async def extract_terms_from_urls(body: dict):
                 terms.append(t)
                 seen.add(t["term"])
 
+    from analyzers.term_lemmas import attach_lemma_regexps
+    terms = attach_lemma_regexps(terms, texts, body.get("language", "pl"))
     print(f"[extract-terms-from-urls] Extracted {len(terms)} terms")
     return {"terms": terms[:80]}
 
