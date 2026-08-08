@@ -3,6 +3,7 @@ import type { EmbeddingProvider } from './embeddingProvider';
 import { getEmbeddingProvider } from './embeddingProvider';
 import { semanticMatchScore } from './semanticMatch';
 import { CANONICALIZE_SIM_MIN } from './constants';
+import { tokensShareStem } from '../topicRelevance';
 import type { CanonicalClaim, KnowledgeGap, TopicBlock, TopicBlockRole } from './types';
 
 function blockId(title: string): string {
@@ -53,11 +54,17 @@ export async function buildTopicBlocks(opts: {
       ? c.urls.size / opts.competitorCount
       : 0;
     const role = inferTopicRole(c.title);
+    // Stem overlap, not a 12-character prefix of the title: block titles are competitor
+    // headings ("Sprawy cywilne – jak pomaga detektyw") and claims almost never contain
+    // the heading's literal prefix, so every claim stayed "Unassigned" and the fact
+    // sheet had no topics to group by.
+    const titleTokens = c.title.toLowerCase().split(/[^\p{L}\p{N}]+/u)
+      .filter((t) => t.length >= 4);
     const claimIds = opts.claims
       .filter((cl) => {
-        const blob = `${cl.statement} ${cl.cluster}`.toLowerCase();
-        const key = c.title.toLowerCase().split(/\s+/).slice(0, 3).join(' ');
-        return key.length > 3 && blob.includes(key.slice(0, Math.min(12, key.length)));
+        const claimTokens = cl.statement.toLowerCase().split(/[^\p{L}\p{N}]+/u)
+          .filter((t) => t.length >= 4);
+        return titleTokens.some((tt) => claimTokens.some((ct) => tokensShareStem(tt, ct)));
       })
       .map((cl) => cl.id);
     return {

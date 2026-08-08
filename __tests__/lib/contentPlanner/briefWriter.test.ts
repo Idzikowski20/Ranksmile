@@ -298,6 +298,27 @@ describe('writeOutlineBrief', () => {
     expect(seen[0]).not.toContain('P6?');
   });
 
+  /**
+   * The reference brief ships a topic-grouped fact sheet and its article states those
+   * facts near-verbatim ("Kara ... od 3 miesięcy do 5 lat"). Ours never rendered one.
+   */
+  it('ships a topic-grouped fact sheet, fenced, with the verbatim rule', async () => {
+    const b = bundle();
+    (b.targetKg.claims[0] as { topic?: string }).topic = 'Konsekwencje prawne';
+    (b.targetKg.claims[1] as { topic?: string }).topic = 'Konsekwencje prawne';
+    const seen: string[] = [];
+    await writeOutlineBrief({
+      keyword: 'k',
+      bundle: b,
+      brandKnowledge: BRAND,
+      llmEdit: async (user) => { seen.push(user); return { html: GOOD, tokens: 1 }; },
+    });
+
+    expect(seen[0]).toMatch(/FACTS — grouped by topic/);
+    expect(seen[0]).toContain('Konsekwencje prawne:');
+    expect(seen[0]).toMatch(/near-verbatim/);
+  });
+
   it('tells the model to source detail from the brand document, not a competitor', async () => {
     const c = call(GOOD);
     await c.run();
