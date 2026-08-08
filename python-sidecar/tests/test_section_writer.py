@@ -149,3 +149,25 @@ def test_lead_paragraph_is_told_to_answer_first():
 
     assert "FIRST sentence answers" in lead
     assert "FIRST sentence answers" not in body
+
+
+def test_list_style_paragraph_asks_for_a_labelled_bullet_list():
+    """The plan budgeted lists and the writer was forbidden to produce one."""
+    plan = {**PARAGRAPH, "style": {"list": True}}
+    prompt = _prompt(plan, CONTEXT)
+
+    assert "bullet list" in prompt
+    assert "bold label" in prompt
+    assert "Write ONE paragraph" not in prompt
+
+
+def test_table_style_paragraph_asks_for_a_markdown_table():
+    plan = {**PARAGRAPH, "style": {"table": True}}
+    prompt = _prompt(plan, CONTEXT)
+
+    assert "comparison table" in prompt
+    assert "Write ONE paragraph" not in prompt
+
+
+def test_plain_paragraph_prompt_is_unchanged():
+    assert "Write ONE paragraph" in _prompt(PARAGRAPH, CONTEXT)
