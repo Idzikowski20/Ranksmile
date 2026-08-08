@@ -45,17 +45,37 @@ export function classifyGain(
   return 'opportunity';
 }
 
+/**
+ * A claim survives extraction only if it says something about the topic, so every class
+ * is required — including `core`, which used to be `nice_to_have`: what most of the SERP
+ * states is the last thing an article can skip. Gain separates claims by priority below,
+ * not by whether they are needed at all.
+ */
 export function importanceFromGain(g: GainClass): ClaimImportance {
-  if (g === 'opportunity') return 'required';
-  if (g === 'expected') return 'required';
-  return 'nice_to_have';
+  return g === 'core' || g === 'expected' || g === 'opportunity' ? 'required' : 'nice_to_have';
 }
 
+/**
+ * `critical` is the hard gate: the planner refuses to write when one is left unassigned.
+ * It therefore has to mean something, and `opportunity` does not.
+ *
+ * `classifyGain` counts how many competitors state a claim, matched as normalised whole
+ * sentences — and two sites never phrase a sentence identically. Measured on a real SERP
+ * (5 competitors, 58 claims) the split was `opportunity` 58, `core` 0, `expected` 0. So
+ * "appears on few pages" was not a differentiator, it was the absence of a signal, and it
+ * promoted every single claim to critical. The outline holds 7 sections × 8 claims = 56,
+ * and generation then failed on the two that did not fit — an arithmetic overflow reported
+ * as a knowledge gap.
+ *
+ * Consensus still earns `critical` when it is actually observed. Everything else stays
+ * `required`, so the claim budget and the 95% knowledge-coverage gate are unchanged — that
+ * gate measures a ratio and is the check with data behind it.
+ */
 export function priorityFromGainAndImportance(
   g: GainClass,
   imp: ClaimImportance,
 ): PriorityClass {
-  if (imp === 'required' && g === 'opportunity') return 'critical';
+  if (imp === 'required' && g === 'core') return 'critical';
   if (imp === 'required') return 'high';
   if (imp === 'nice_to_have') return 'medium';
   return 'low';

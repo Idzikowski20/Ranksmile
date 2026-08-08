@@ -42,7 +42,12 @@ const SELF_PROMOTION = new RegExp(
   // First-person plural — the page talking about itself.
   + 'nasz\\w*|nam|nas|my|zapewniamy|oferujemy|dzialamy|swiadczymy|posiadamy|zatrudniamy|'
   + 'dbamy|stawiamy|realizujemy|prowadzimy|witamy|gwarantujemy|pomagamy|wspieramy|'
-  + 'we |our|us|welcome to'
+  + 'ustalamy|obiecujemy|dysponujemy|specjalizujemy|wykonujemy|podejmujemy|'
+  // First-person singular present — the customer talking, i.e. a testimonial. "Polecam"
+  // is the single most common word in a Polish review, and it walked straight through a
+  // filter that only knew about past tense and about the page's own "we".
+  + 'polecam|polecamy|dziekuje|potwierdzam|korzystam|wspolpracuje|zglosilem|'
+  + 'we |our|us|welcome to|i recommend|highly recommend'
   + ')(\\W|$)',
   'i',
 );

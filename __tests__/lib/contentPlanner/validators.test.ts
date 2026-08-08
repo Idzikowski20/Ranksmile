@@ -1,4 +1,8 @@
-import { classifyGain } from '../../../lib/contentPlanner/knowledgeIntelligence';
+import {
+  classifyGain,
+  importanceFromGain,
+  priorityFromGainAndImportance,
+} from '../../../lib/contentPlanner/knowledgeIntelligence';
 import {
   validateBlueprint,
   validateBrief,
@@ -22,6 +26,26 @@ describe('Information Gain classifyGain', () => {
     expect(classifyGain('ssl required', 10, counts)).toBe('core');
     expect(classifyGain('search console', 10, counts)).toBe('expected');
     expect(classifyGain('site command', 10, counts)).toBe('opportunity');
+  });
+
+  /**
+   * `critical` is a hard gate — the planner refuses to write when one is unassigned — so
+   * it has to mean consensus, not the absence of a signal. Claims are matched as whole
+   * normalised sentences, and two sites never phrase one identically: on a real SERP all
+   * 58 claims came back `opportunity`, every one of them was promoted to critical, and
+   * generation failed on the two that did not fit 7 sections × 8 claims.
+   */
+  it('reserves critical for claims the SERP agrees on', () => {
+    expect(priorityFromGainAndImportance('core', importanceFromGain('core'))).toBe('critical');
+    expect(priorityFromGainAndImportance('expected', importanceFromGain('expected'))).toBe('high');
+    expect(priorityFromGainAndImportance('opportunity', importanceFromGain('opportunity'))).toBe('high');
+  });
+
+  /** Every observed claim still counts toward the claim budget and the coverage ratio. */
+  it('keeps every observed class required', () => {
+    expect(importanceFromGain('core')).toBe('required');
+    expect(importanceFromGain('expected')).toBe('required');
+    expect(importanceFromGain('opportunity')).toBe('required');
   });
 });
 
