@@ -1,0 +1,38 @@
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_af542fe8c532c0 17,69,201,249-256
+__tests__/lib/coverageStore.test.ts
+  s_668ab4f91e9d5a::t_fe365b5566e3f2 2-4,120-154
+pages/api/articles/[id]/content-plan.ts
+  s_668ab4f91e9d5a::t_47adc0bee87af4 31,47,68,117-125
+python-sidecar/pipeline/compiled_runtime.py
+  s_668ab4f91e9d5a::t_91f44fbc91290a 72,87-97
+python-sidecar/pipeline/section_writer.py
+  s_668ab4f91e9d5a::t_e9b9ee2a221050 129-136
+python-sidecar/tests/test_compiled_runtime.py
+  s_668ab4f91e9d5a::t_6526f517e03b5f 114-139
+lib/coverageStore.ts
+  s_668ab4f91e9d5a::t_b8ffaad6814867 105-128
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_668ab4f91e9d5a::t_10a0226ba4c912 266-300
+python-sidecar/tests/test_section_writer.py
+  s_668ab4f91e9d5a::t_80032cf01e176d 143-151
+lib/contentPlanner/briefWriter.ts
+  s_668ab4f91e9d5a::t_885c0aa969781b 19-21
+  s_668ab4f91e9d5a::t_60d48a106757d5 151-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "373b951bc8a61b4d3e13222cad251359d60af887",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
