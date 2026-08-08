@@ -1,0 +1,28 @@
+__tests__/lib/contentPlanner/compileWritePlan.test.ts
+  s_668ab4f91e9d5a::t_f45510fba8626d 198-229
+lib/contentPlanner/knowledgePack/paragraphPlanner.ts
+  s_668ab4f91e9d5a::t_b00f0058fcd3bb 33-44,50-57,60
+  s_668ab4f91e9d5a::t_f99bd28cb3e4f1 74,77-78
+python-sidecar/pipeline/section_writer.py
+  s_668ab4f91e9d5a::t_250edcdf4ab5d1 122-123,128-150
+python-sidecar/pipeline/article_pipeline.py
+  s_668ab4f91e9d5a::t_a64437820f1090 275-278
+python-sidecar/tests/test_section_writer.py
+  s_668ab4f91e9d5a::t_de5cf4bb9021bf 152-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2360c102c204782b6d326fc5dfd962b200d5bbed",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
