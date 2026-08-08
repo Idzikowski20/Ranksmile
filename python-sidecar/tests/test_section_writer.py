@@ -171,3 +171,15 @@ def test_table_style_paragraph_asks_for_a_markdown_table():
 
 def test_plain_paragraph_prompt_is_unchanged():
     assert "Write ONE paragraph" in _prompt(PARAGRAPH, CONTEXT)
+
+
+def test_authority_sources_resolve_and_gate_the_link_rule():
+    """Competitor URLs are filtered at compile time; only listed authorities may be linked."""
+    plan = {**PARAGRAPH, "sources": [{"source_id": "src-1"}]}
+    ctx = {**CONTEXT, "index": {**CONTEXT["index"], "sources": {"src-1": "art. 191 kk -> https://isap.sejm.gov.pl/kk.pdf"}}}
+    prompt = _prompt(plan, ctx)
+
+    assert "Authority sources: art. 191 kk -> https://isap.sejm.gov.pl/kk.pdf" in prompt
+    assert "AT MOST one" in prompt
+    # No sources on the plan -> no link permission in the prompt.
+    assert "AT MOST one" not in _prompt(PARAGRAPH, CONTEXT)

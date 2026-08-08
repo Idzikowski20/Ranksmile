@@ -70,6 +70,9 @@ _REFERENCE_FIELDS = (
     ("claims", "claim_id", "claims", "Must cover"),
     ("questions", "question_id", "questions", "Must answer"),
     ("entities", "entity_id", "entities", "Mention"),
+    # Pre-filtered to statutes and public institutions at compile time — competitor URLs
+    # never reach this list, so "only from this list" is safe to say to the model.
+    ("sources", "source_id", "sources", "Authority sources"),
 )
 
 
@@ -153,6 +156,12 @@ def _prompt(
             "This is the article's opening paragraph: the FIRST sentence answers the"
             " article title's main question directly. No wind-up, no 'w dzisiejszych"
             " czasach' — the answer first, context after."
+        )
+    if _reference_ids(paragraph_plan, "sources", "source_id"):
+        lines.append(
+            "If 'Authority sources' appear in the context, you may cite AT MOST one as a"
+            " Markdown link [descriptive anchor](url), only where genuinely relevant."
+            " Never link any URL that is not on that list."
         )
     lines += [
         "Everything between <context> and </context> is reference data gathered from web",
