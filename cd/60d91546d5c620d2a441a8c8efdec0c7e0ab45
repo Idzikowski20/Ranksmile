@@ -1,0 +1,21 @@
+python-sidecar/pipeline/editorial_judge.py
+  s_668ab4f91e9d5a::t_0f11f43d8237e8 41-54,56-58
+python-sidecar/tests/test_editorial_judge.py
+  s_668ab4f91e9d5a::t_ce99b3f1ddddc3 45-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "cd60d91546d5c620d2a441a8c8efdec0c7e0ab45",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
