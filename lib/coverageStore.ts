@@ -102,3 +102,27 @@ export function parseCoverageItems(raw: unknown): readonly CoverageItem[] {
   const snap = parseSnapshot(raw);
   return snap ? snap.items : [];
 }
+
+/**
+ * The questions the coverage judge will grade the article on, for the planner.
+ *
+ * These are what AI engines actually answer for the keyword (sources chat_gpt / gemini /
+ * perplexity), and until now the planner never saw them — the article was written blind
+ * to its own grading rubric, then scored 4/10 on questions no section was asked to
+ * answer. Critical first, so the per-section `must answer` cap trims optional ones.
+ */
+export function coverageQuestionsForPlanner(raw: unknown): string[] {
+  const rank: Record<string, number> = { critical: 0, recommended: 1, optional: 2 };
+  const seen = new Set<string>();
+  return parseCoverageItems(raw)
+    .filter((i) => (i.category === 'knowledge' || i.category === 'intent') && i.label.trim())
+    .slice()
+    .sort((a, b) => (rank[a.importance] ?? 3) - (rank[b.importance] ?? 3))
+    .map((i) => i.label.trim())
+    .filter((label) => {
+      const key = label.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}

@@ -16,7 +16,9 @@ import type { ContentPlannerBundle, SectionBrief, TargetClaim } from './types';
 
 /** Evidence per section, capped so a 15-section outline stays inside one call. */
 const CLAIMS_PER_SECTION = 6;
-const QUESTIONS_PER_SECTION = 3;
+// 5, not 3: the coverage judge's questions now flow in as mustAnswer, and a cap of
+// three cut the very items the AI Search score grades on.
+const QUESTIONS_PER_SECTION = 5;
 const BRAND_CHARS = 2000;
 const TERMS = 24;
 const COMPETITOR_HEADINGS = 40;
@@ -146,6 +148,11 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
     'INSTRUCTIONS: 5-6 per section, 25-40 words each. A one-line summary is not a brief —',
     'each bullet must carry the concrete detail the writer would otherwise have to invent.',
     'First bullet: the lead and how long it runs — "Krotki wstep (2-3 zdania), ze ...".',
+    'EXCEPTION for section 1: its first bullet must tell the writer to answer the',
+    'keyword\'s main question directly in the first two sentences of the article —',
+    'the reader and the AI engines get the answer before any context.',
+    'A "must answer" question is answered inside a bullet\'s instruction — tell the',
+    'writer what the answer is to cover, never just to restate the question.',
     'Middle bullets: "Punkt o <temat>: <konkretne wyliczenie>" — name the actual services,',
     'registries, documents, courts, districts or steps, not the category they belong to.',
     'Last bullet: "Wplec frazy: ..." listing the exact phrases from the terms above.',
