@@ -38,7 +38,24 @@ async def review_paragraph(
             rewritten=False,
         )
 
+    # An empty paragraph has nothing to rewrite — and asking anyway is how chat replies
+    # became article prose: the rewriter got a prompt with no paragraph attached and
+    # answered "Wklej proszę akapit Markdown, który mam przeredagować", which shipped
+    # verbatim as the article's text. The runtime's empty-article guard owns this case.
+    if not result.markdown.strip():
+        return ReviewedParagraphResult(
+            base=result,
+            markdown=result.markdown,
+            summary=result.summary,
+            confidence=result.confidence,
+            judge_notes=notes + ("empty_not_rewritten",),
+            rewritten=False,
+        )
+
     markdown = (await rewrite_markdown(result.markdown)).strip()
+    # A rewrite may only replace prose with prose. Empty output keeps the original.
+    if not markdown:
+        markdown = result.markdown
     return ReviewedParagraphResult(
         base=result,
         markdown=markdown,
