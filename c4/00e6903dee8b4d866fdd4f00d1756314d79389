@@ -1,0 +1,29 @@
+__tests__/lib/contentPlanner/compileWritePlan.test.ts
+  s_668ab4f91e9d5a::t_cee269e1d7d007 230-257
+lib/contentPlanner/knowledgePack/compileWritePlan.ts
+  s_668ab4f91e9d5a::t_bf87881054ccf4 53-63,74-75,79-83,85-107,111,153,167-168
+  s_668ab4f91e9d5a::t_04dba3a5277ea7 64-68,84,166,169-170,186
+python-sidecar/pipeline/compiled_runtime.py
+  s_668ab4f91e9d5a::t_715a058d6b3f17 45-55,60
+python-sidecar/pipeline/section_writer.py
+  s_668ab4f91e9d5a::t_cb42ddac505da1 160-165
+  s_668ab4f91e9d5a::t_7b2e87a11e000c 73-75
+python-sidecar/tests/test_section_writer.py
+  s_668ab4f91e9d5a::t_952ee914fca93f 174-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c400e6903dee8b4d866fdd4f00d1756314d79389",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
