@@ -1,0 +1,27 @@
+__tests__/lib/contentPlanner/validators.test.ts
+  s_668ab4f91e9d5a::t_32d455a7bce94c 1-5
+  s_668ab4f91e9d5a::t_41a65cb085a383 30-49
+lib/wie/corpusClaims.ts
+  s_668ab4f91e9d5a::t_dc1c09d12a1b09 45-50
+lib/contentPlanner/knowledgeIntelligence.ts
+  s_668ab4f91e9d5a::t_b417578e11cd0b 58-73,78
+  s_668ab4f91e9d5a::t_9edcce5bb68e4e 48-53,55
+__tests__/lib/wie/corpusClaims.test.ts
+  s_668ab4f91e9d5a::t_9610de16e4c725 96-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "86ab277e8e9b4278e6d8e889b1e197ee6c888e7c",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
