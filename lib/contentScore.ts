@@ -35,6 +35,11 @@ export interface NlpTerm {
    doc_freq?: number;
    /** 0–100 prominence from competitor H2/bold/font-weight zones (Ranksmile NLP salience v2). */
    salience?: number;
+   /** Per-word inflection alternations from the sidecar (term_lemmas.py) — Surfer-style
+    *  lemma matching. Absent on pre-existing analyses; countOccurrences falls back. */
+   term_words_regexps?: string[];
+   /** Stem-sequence identity: equal keys are the same term in different inflections. */
+   lemma_key?: string;
 }
 
 export interface ScoreData {
@@ -353,7 +358,7 @@ export function collectScoreSlots(
         0,
       );
       const termsRatio = scoreData.terms.reduce((s, t) => {
-         const actual = countOccurrences(plainText, t.term);
+         const actual = countOccurrences(plainText, t.term, t.term_words_regexps);
          const w = Math.max(t.target_count, 1) * termWeight({ ...t, corpusSize });
          return s + Math.min(actual / Math.max(t.target_count, 1), 1) * w;
       }, 0) / Math.max(totalWeight, 1);
@@ -541,6 +546,6 @@ export function scoreToColor(score: number): string {
 export function updateTermsCoverage(plainText: string, terms: NlpTerm[]): NlpTerm[] {
    return terms.map((t) => ({
       ...t,
-      current_count: countOccurrences(plainText, t.term),
+      current_count: countOccurrences(plainText, t.term, t.term_words_regexps),
    }));
 }

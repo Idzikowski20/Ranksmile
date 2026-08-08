@@ -10,7 +10,7 @@ export function calibrateTermRangesFromCorpus(terms: NlpTerm[], corpusTexts: str
   if (!corpusTexts.length || !terms.length) return terms;
 
   return terms.map((t) => {
-    const counts = corpusTexts.map((text) => countOccurrences(text, t.term));
+    const counts = corpusTexts.map((text) => countOccurrences(text, t.term, t.term_words_regexps));
     const nonzero = counts.filter((c) => c > 0);
     if (!nonzero.length) return t;
 
@@ -45,7 +45,10 @@ export function filterUsefulNlpTerms(terms: NlpTerm[]): NlpTerm[] {
     });
 
   for (const t of scored) {
-    const key = normalizeTerm(t.term);
+    // lemma_key folds inflection variants into one entry — "licencjonowany detektyw"
+    // and "licencjonowani detektywi" are the same term, and listing both meant two
+    // targets for one phrase family. Exact-string key only for pre-lemma analyses.
+    const key = t.lemma_key || normalizeTerm(t.term);
     const prev = best.get(key);
     if (!prev) {
       best.set(key, t);

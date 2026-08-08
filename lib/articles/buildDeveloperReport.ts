@@ -71,7 +71,7 @@ export function buildDeveloperReport(input: DeveloperReportInput): Record<string
   });
 
   const termsLive = (input.scoreData.terms || []).map((t) => {
-    const current_count = countOccurrences(input.plainText, t.term);
+    const current_count = countOccurrences(input.plainText, t.term, t.term_words_regexps);
     const coverage = termCoverage({ ...t, current_count });
     return {
       term: t.term,

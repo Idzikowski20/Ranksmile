@@ -137,6 +137,9 @@ async def analyze_serp(
     if len(nlp_terms) < 3:
         existing = {t["term"] for t in nlp_terms}
         nlp_terms = nlp_terms + [t for t in _keyword_seed_terms(keyword) if t["term"] not in existing]
+    # After the fallback merge, so seed terms get their inflections too.
+    from analyzers.term_lemmas import attach_lemma_regexps
+    nlp_terms = attach_lemma_regexps(nlp_terms, serp_texts, language)
     targets = _compute_targets(serp_texts, soups if soups else None)
 
     result = {
