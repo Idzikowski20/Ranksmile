@@ -69,6 +69,7 @@ async def run_compiled_write_plan(
 
     markdown = [f"# {title.strip()}"]
     reviewed: list[ReviewedParagraphResult] = []
+    first_paragraph = True
     for pack in packs:
         if not isinstance(pack, Mapping):
             raise ValueError("compiled_write_plan.knowledge_packs contains invalid pack")
@@ -79,16 +80,21 @@ async def run_compiled_write_plan(
         markdown.append(f"## {heading}")
         # The writer is called once per paragraph and keeps no history between calls, so
         # everything it needs about where the paragraph sits has to travel with it.
-        context = {
-            "title": title.strip(),
-            "heading": heading,
-            "objective": pack.get("objective"),
-            "index": index,
-        }
         for paragraph_id in paragraph_ids:
             paragraph = registry.get(paragraph_id)
             if not isinstance(paragraph, Mapping):
                 raise ValueError(f"compiled_write_plan missing paragraph {paragraph_id}")
+            context = {
+                "title": title.strip(),
+                "heading": heading,
+                "objective": pack.get("objective"),
+                "index": index,
+                # The article's opening paragraph answers the main question outright —
+                # the coverage judge awards a flat bonus for it, and readers and AI
+                # engines both quote the lead, not the third section.
+                "is_lead": first_paragraph,
+            }
+            first_paragraph = False
             result = await write_paragraph(paragraph, generate_markdown, context)
             judged = await review_paragraph(result, rewrite_markdown)
             reviewed.append(judged)

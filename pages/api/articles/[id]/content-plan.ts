@@ -28,6 +28,7 @@ import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readContentSettings } from '../../../../lib/contentSettings';
 import { readArticleTerms } from '../../../../lib/articleTerms';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
+import { coverageQuestionsForPlanner } from '../../../../lib/coverageStore';
 import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
 import {
   benchmarkDocsFromCompetitors,
@@ -43,6 +44,7 @@ type ArticlePlanRow = {
   score_data: string | null;
   competitor_outlines_cache: string | null;
   language: string | null;
+  ai_info_to_cover: string | null;
 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -63,7 +65,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const rows = await db.query<ArticlePlanRow>(
-      `SELECT id, target_keyword, score_data, competitor_outlines_cache, language
+      `SELECT id, target_keyword, score_data, competitor_outlines_cache, language, ai_info_to_cover
          FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
       { replacements: [articleId], type: QueryTypes.SELECT },
     );
@@ -112,9 +114,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     );
 
     const ai = aiIntelFromScoreData(scoreData);
-    const paa = Array.isArray(scoreData?.paa_questions)
-      ? (scoreData!.paa_questions as unknown[]).filter((q): q is string => typeof q === 'string')
-      : [];
+    // The coverage judge's own questions lead: the AI Search score is graded against
+    // them, and planning without them wrote articles blind to their rubric — 4/10
+    // covered on questions no section was ever asked to answer.
+    const paa = [...new Set([
+      ...coverageQuestionsForPlanner(row.ai_info_to_cover),
+      ...(Array.isArray(scoreData?.paa_questions)
+        ? (scoreData!.paa_questions as unknown[]).filter((q): q is string => typeof q === 'string')
+        : []),
+    ])];
 
     const keyword = (row.target_keyword || '').trim();
     if (!keyword) {

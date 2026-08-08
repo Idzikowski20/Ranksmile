@@ -14,6 +14,7 @@ import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
+import { coverageQuestionsForPlanner } from '../../../../lib/coverageStore';
 import { resolveContentLocale } from '../../../../lib/domainLanguage';
 import { getErrorMessage } from '../../../../lib/errors';
 import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
@@ -65,6 +66,7 @@ type ArticleGenerateRow = {
   language: string;
   score_data: string | null;
   competitor_outlines_cache: string | null;
+  ai_info_to_cover: string | null;
 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -196,7 +198,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // 1. Load the existing article (keyword + domain + analysed language + score_data)
     const articleRows = await db.query<ArticleGenerateRow>(
-      `SELECT target_keyword, domain_id, language, score_data, competitor_outlines_cache
+      `SELECT target_keyword, domain_id, language, score_data, competitor_outlines_cache, ai_info_to_cover
          FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
       { replacements: [articleId], type: QueryTypes.SELECT },
     );
@@ -244,9 +246,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       scoreData.competitor_synthesis ?? null,
     );
     const ai = aiIntelFromScoreData(scoreData);
-    const paa = Array.isArray(scoreData.paa_questions)
-      ? (scoreData.paa_questions as unknown[]).filter((q): q is string => typeof q === 'string')
-      : [];
+    // Coverage-judge questions lead — the AI Search score grades against exactly these.
+    // Same merge as /content-plan, so review and straight-generate plan identically.
+    const paa = [...new Set([
+      ...coverageQuestionsForPlanner(article.ai_info_to_cover),
+      ...(Array.isArray(scoreData.paa_questions)
+        ? (scoreData.paa_questions as unknown[]).filter((q): q is string => typeof q === 'string')
+        : []),
+    ])];
 
     // 5a. CIE — Benchmark + Knowledge Engine (never blocks generate on failure).
     const useKnowledgeEngine =

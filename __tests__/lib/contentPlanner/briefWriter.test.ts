@@ -263,6 +263,41 @@ describe('writeOutlineBrief', () => {
     expect(user).toContain('wykrywanie podsluchow');
   });
 
+  /**
+   * The coverage judge pays a flat +15 for a lead that answers the main question, and
+   * quotes-by-AI-engines come from the lead — yet our briefs always opened with context.
+   */
+  it('asks section 1 to open with the direct answer to the main question', async () => {
+    const c = call(GOOD);
+    await c.run();
+
+    expect(c.seen[0].system).toMatch(/section 1: its first bullet must tell the writer to answer/);
+    expect(c.seen[0].system).toMatch(/first two sentences/);
+  });
+
+  it('asks for answers in prose, not restated questions', async () => {
+    const c = call(GOOD);
+    await c.run();
+
+    expect(c.seen[0].system).toMatch(/never just to restate the question/);
+  });
+
+  /** Coverage questions flow in as mustAnswer now; a cap of three cut the graded ones. */
+  it('carries up to five must-answer questions per section', async () => {
+    const b = bundle();
+    b.briefs[0].mustAnswer = ['P1?', 'P2?', 'P3?', 'P4?', 'P5?', 'P6?'];
+    const seen: string[] = [];
+    await writeOutlineBrief({
+      keyword: 'k',
+      bundle: b,
+      brandKnowledge: BRAND,
+      llmEdit: async (user) => { seen.push(user); return { html: GOOD, tokens: 1 }; },
+    });
+
+    expect(seen[0]).toContain('P5?');
+    expect(seen[0]).not.toContain('P6?');
+  });
+
   it('tells the model to source detail from the brand document, not a competitor', async () => {
     const c = call(GOOD);
     await c.run();

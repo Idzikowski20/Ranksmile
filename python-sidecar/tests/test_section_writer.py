@@ -140,3 +140,12 @@ def test_prompt_does_not_claim_a_reviewer_approved_the_outline():
 
     assert "Section brief:" in prompt
     assert "approved outline" not in prompt
+
+
+def test_lead_paragraph_is_told_to_answer_first():
+    """The coverage judge pays a flat bonus for a lead that answers the main question."""
+    lead = _prompt(PARAGRAPH, {**CONTEXT, "is_lead": True})
+    body = _prompt(PARAGRAPH, CONTEXT)
+
+    assert "FIRST sentence answers" in lead
+    assert "FIRST sentence answers" not in body

@@ -1,5 +1,7 @@
 // __tests__/lib/coverageStore.test.ts
-import { mergeCoverageItems, buildSnapshot, parseSnapshot } from '../../lib/coverageStore';
+import {
+  mergeCoverageItems, buildSnapshot, parseSnapshot, coverageQuestionsForPlanner,
+} from '../../lib/coverageStore';
 import { CoverageItem, CoverageResult } from '../../lib/aiCoverage';
 
 const item = (id: string, type: CoverageItem['type'] = 'paa', category: CoverageItem['category'] = 'knowledge'): CoverageItem =>
@@ -113,5 +115,40 @@ describe('parseSnapshot', () => {
     expect(parseSnapshot(JSON.stringify([{ schemaVersion: 1 }]))).toBeNull(); // parses to array
     expect(parseSnapshot(JSON.stringify({ schemaVersion: 2, items: [], buckets: [] }))).toBeNull(); // wrong version
     expect(parseSnapshot(JSON.stringify({ schemaVersion: 1, items: 'not-array' }))).toBeNull(); // items not array
+  });
+});
+
+describe('coverageQuestionsForPlanner', () => {
+  const snap = (items: CoverageItem[]) => JSON.stringify(buildSnapshot(
+    items,
+    { items: [], answersMainQuestionEarly: false },
+    META,
+  ));
+
+  /**
+   * The AI Search score is graded against exactly these items, and the planner never saw
+   * them — article 13 covered 4/10, with all six misses being questions no section was
+   * ever asked to answer.
+   */
+  it('returns knowledge and intent questions, critical first, deduped', () => {
+    const raw = snap([
+      { ...item('a'), label: 'Ile kosztuje porada u detektywa?', importance: 'recommended' },
+      { ...item('b'), label: 'Jakie są rodzaje szantażu?', importance: 'critical' },
+      { ...item('c', 'intent', 'intent'), label: 'Czym jest szantaż?', importance: 'critical' },
+      { ...item('d', 'readability', 'quality'), label: 'Zdania są za długie' },
+      { ...item('e'), label: 'jakie są rodzaje szantażu?', importance: 'optional' },
+    ]);
+
+    expect(coverageQuestionsForPlanner(raw)).toEqual([
+      'Jakie są rodzaje szantażu?',
+      'Czym jest szantaż?',
+      'Ile kosztuje porada u detektywa?',
+    ]);
+  });
+
+  it('returns [] for null, garbage, and snapshot-less articles', () => {
+    expect(coverageQuestionsForPlanner(null)).toEqual([]);
+    expect(coverageQuestionsForPlanner('{not json')).toEqual([]);
+    expect(coverageQuestionsForPlanner(JSON.stringify({ schemaVersion: 2 }))).toEqual([]);
   });
 });
