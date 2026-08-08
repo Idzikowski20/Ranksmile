@@ -93,6 +93,9 @@ describe('page furniture and competitor identity', () => {
     ['own brand name', 'https://expertus.pl/', 'Agencja Detektywistyczna Expertus dba o najwyższy standard usług dla klientów.'],
     ['staff trivia', 'https://agencjatemida.pl/x', 'Marcin Miklaszewski posiada również Stopień G5 w Krav Maga.'],
     ['testimonial', 'https://www.detektywipl.pl/', 'Już drugi raz skorzystałem z usług tego biura detektywistycznego.'],
+    // Both reached a real outline as claims the planner then demanded a section for.
+    ['present-tense testimonial', 'https://www.detektywipl.pl/', 'Teraz z pełną odpowiedzialnością polecam agencję detektywistyczną Detektywi PL.'],
+    ['first-person promise', 'https://expertus.pl/', 'Ustalamy co jest możliwe w sprawie, nie obiecujemy żadnych cudów klientom.'],
     ['street address', 'https://agencjatemida.pl/x', 'Siedziba znajduje się przy ulicy Złotej 7/18 w Śródmieściu Warszawy.'],
   ])('drops %s', (_label, url, sentence) => {
     expect(extractCorpusClaims(sentence, KW, 24, url)).toEqual([]);
