@@ -119,14 +119,35 @@ def _prompt(
     """
     ctx = context or {}
     terms = [term for term, _ in _terms(paragraph_plan, "")]
+    style = paragraph_plan.get("style")
+    style = style if isinstance(style, Mapping) else {}
 
     # Headings, briefs and claims all originate in scraped competitor pages, so any of
     # them may contain text shaped like an instruction. Rules stay above the fence; the
     # model is told everything inside it is reference data.
-    lines = [
-        "Write ONE paragraph of the article as Markdown only; never emit HTML.",
-        "Write only this paragraph: no heading, no other sections, no preamble.",
-    ]
+    #
+    # Block-aware: the reference article's recurring section shape is intro paragraph →
+    # bold-labelled bullet list → closing paragraph. "Write ONE paragraph" as the only
+    # mode is why whole articles rendered as walls of <p> — the plan budgeted lists and
+    # the writer was forbidden to produce one.
+    if style.get("table"):
+        lines = [
+            "Write ONE small Markdown comparison table (3-5 rows, 2-3 columns) with a",
+            "one-line bold label above it, like `**Kryterium:**`. Markdown only; never",
+            "emit HTML. No heading, no other sections, no prose before or after.",
+        ]
+    elif style.get("list"):
+        lines = [
+            "Write ONE Markdown block: a short bold label line ending with a colon,",
+            "like `**Co zrobić natychmiast:**`, then a bullet list of 3-6 items.",
+            "Each item is one sentence of at most 20 words. Markdown only; never emit",
+            "HTML. No heading, no prose before the label or after the list.",
+        ]
+    else:
+        lines = [
+            "Write ONE paragraph of the article as Markdown only; never emit HTML.",
+            "Write only this paragraph: no heading, no other sections, no preamble.",
+        ]
     if ctx.get("is_lead"):
         lines.append(
             "This is the article's opening paragraph: the FIRST sentence answers the"

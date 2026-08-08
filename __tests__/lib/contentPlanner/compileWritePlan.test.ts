@@ -195,6 +195,38 @@ describe('compileWritePlan', () => {
     expect(paragraph?.goal).toBe('faq');
   });
 
+  /**
+   * The planner assigns `example, checklist, steps, pro_tip` to nearly every section,
+   * and the special-blocks branch fired only for sections carrying NOTHING BUT special
+   * blocks — so every mixed section collapsed to three plain paragraphs and whole
+   * articles rendered without a single list. The reference article's recurring shape
+   * is intro → bold-labelled list → closing paragraph.
+   */
+  it('gives a mixed-block section its list blocks between intro and summary', () => {
+    const plan = sampleExecutionPlan({
+      sections: [sampleSection({ blocks: ['example', 'checklist', 'steps', 'pro_tip'] })],
+    });
+
+    const compiled = compileWritePlan(plan);
+    const paragraphs = compiled.paragraphPlans.filter((p) => p.sectionId === 'sec-intro');
+
+    expect(paragraphs.map((p) => p.goal)).toEqual(['intro', 'checklist', 'steps', 'summary']);
+    expect(paragraphs[1].style.list).toBe(true);
+    expect(paragraphs[2].style.list).toBe(true);
+  });
+
+  it('marks a comparison block as a table', () => {
+    const plan = sampleExecutionPlan({
+      sections: [sampleSection({ blocks: ['example', 'comparison'] })],
+    });
+
+    const compiled = compileWritePlan(plan);
+    const paragraphs = compiled.paragraphPlans.filter((p) => p.sectionId === 'sec-intro');
+
+    expect(paragraphs.map((p) => p.goal)).toEqual(['intro', 'comparison', 'summary']);
+    expect(paragraphs[1].style.table).toBe(true);
+  });
+
   it('splits ordinary sections into intro/definition/summary by expectedWords', () => {
     const plan = sampleExecutionPlan({
       sections: [sampleSection({ blocks: ['definition'], expectedWords: 300 })],
