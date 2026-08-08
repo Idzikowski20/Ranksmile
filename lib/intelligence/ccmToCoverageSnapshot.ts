@@ -95,6 +95,10 @@ export function projectCcmToCoverageSnapshot(
     items.push(item);
   }
 
+  // Keys of items carried over from the previous snapshot's harvested rubric — the
+  // questions AI engines actually answer for the keyword. They are the grading standard,
+  // so the cap below must never trade them for CCM's own facts.
+  const rubricKeys = new Set<string>();
   for (const prev of opts.previous?.items ?? []) {
     const key = normalizeFactKey(prev.label);
     const idx = labelIndex.get(key);
@@ -112,19 +116,29 @@ export function projectCcmToCoverageSnapshot(
       prev.source === 'competitors';
     if (keepExtra) {
       labelIndex.set(key, items.length);
+      rubricKeys.add(key);
       items.push(prev);
     }
   }
 
+  // `true` from an earlier LLM grade survives; a stale `false` does not veto the
+  // heuristic. The projection previously inherited `false` graded against an article
+  // that no longer exists, and froze it across every regeneration.
   const answersMainQuestionEarly =
-    opts.previous?.answersMainQuestionEarly ??
+    opts.previous?.answersMainQuestionEarly === true ||
     intents.some((i) => i.primary && isCovered(i.status));
 
   // Cap CCM dump — UI checklist must stay near AI_COVERAGE_MAX (not 100+ facts).
+  // CCM facts appended first meant the cap sliced off exactly the rubric carried over
+  // above: article 13 kept 2 of its 10 harvested questions and self-graded 33/33 on its
+  // own facts. Rubric first, CCM facts fill what remains.
   const query = model.metadata.primaryQuery ?? model.metadata.title;
   const compacted = query ? compactCoverageSnapshotItems(items, query) : items;
   const capped = compacted.length > AI_COVERAGE_MAX
-    ? compacted.slice(0, AI_COVERAGE_MAX)
+    ? [
+      ...compacted.filter((i) => rubricKeys.has(normalizeFactKey(i.label))),
+      ...compacted.filter((i) => !rubricKeys.has(normalizeFactKey(i.label))),
+    ].slice(0, AI_COVERAGE_MAX)
     : compacted;
 
   const { overall, buckets } = computeCoverageScores(capped, answersMainQuestionEarly);

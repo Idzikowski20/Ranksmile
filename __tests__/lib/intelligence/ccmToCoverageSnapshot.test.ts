@@ -76,3 +76,58 @@ describe('projectCcmToCoverageSnapshot', () => {
     expect(snap.items.some((item) => item.category === 'knowledge')).toBe(true);
   });
 });
+
+describe('projection preserves the grading rubric', () => {
+  const rubricItem = (n: number) => ({
+    id: `paa-${n}`,
+    label: `Pytanie harvestowane numer ${n}?`,
+    type: 'paa' as const,
+    category: 'knowledge' as const,
+    importance: 'critical' as const,
+    source: 'paa' as const,
+    covered: false,
+    quality: 0,
+    llmSources: ['chat_gpt' as const],
+  });
+
+  const factLines = Array.from({ length: 45 }, (_, i) => (
+    `Fakt numer ${i} dotyczy roku ${1980 + i} i ma znaczenie dla całości tematu artykułu.`
+  )).join('\n\n');
+
+  const bigModel = () => compile({
+    articleId: 'proj-cap',
+    compiledAt: FIXED_AT,
+    source: { kind: 'plain', text: `# Temat\n\n## Sekcja\n\n${factLines}\n` },
+  }).model;
+
+  const previous = (): CoverageSnapshot => ({
+    schemaVersion: 1,
+    judgeVersion: 'v1|deepseek-chat|0',
+    promptVersion: 'v1',
+    model: 'deepseek-chat',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    items: Array.from({ length: 10 }, (_, i) => rubricItem(i)),
+    buckets: [],
+    answersMainQuestionEarly: false,
+    overall: 0,
+  });
+
+  /**
+   * Article 13: the cap sliced the carried-over rubric off the tail, leaving 2 of 10
+   * harvested questions — the article then self-graded 33/33 against its own facts.
+   */
+  it('never trades harvested questions for its own facts under the cap', () => {
+    const snap = projectCcmToCoverageSnapshot(bigModel(), { createdAt: FIXED_AT, previous: previous() });
+
+    const kept = snap.items.filter((i) => i.id.startsWith('paa-'));
+    expect(kept).toHaveLength(10);
+  });
+
+  it('keeps a true early-answer grade sticky across projections', () => {
+    const graded = { ...previous(), answersMainQuestionEarly: true };
+
+    const snap = projectCcmToCoverageSnapshot(bigModel(), { createdAt: FIXED_AT, previous: graded });
+
+    expect(snap.answersMainQuestionEarly).toBe(true);
+  });
+});
