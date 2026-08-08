@@ -1,0 +1,40 @@
+python-sidecar/analyzers/term_lemmas.py
+  s_668ab4f91e9d5a::t_0c3bee621bcaed 1-9,19-22,37-38,54-55,57,61-63,66-77,82,85-86,88-92,99
+  s_668ab4f91e9d5a::t_db0b8a916f2a07 10-18,23-36,39-53,56,58-60,64-65,78-81,83-84,87,93-98
+lib/termMatch.ts
+  s_668ab4f91e9d5a::t_db16509f48605c 20-65
+lib/computeLiveArticleScores.ts
+  s_668ab4f91e9d5a::t_5caff80b99ea09 104
+lib/competitorTermCalibration.ts
+  s_668ab4f91e9d5a::t_32c2f1237b1329 48-51
+  s_668ab4f91e9d5a::t_5caff80b99ea09 13
+python-sidecar/main.py
+  s_668ab4f91e9d5a::t_902ca805856aeb 451-452
+python-sidecar/analyzers/serp_analyzer.py
+  s_668ab4f91e9d5a::t_90a5427d4c250c 140-142
+python-sidecar/tests/test_term_lemmas.py
+  s_668ab4f91e9d5a::t_2231188ef9dc5b 3,26,36,38-42,44
+  s_668ab4f91e9d5a::t_f5619bbc9d6c7f 1-2,4-25,27-35,37,43,45-48
+__tests__/lib/termMatch.test.ts
+  s_668ab4f91e9d5a::t_2309f7694eb02f 1-56
+lib/articles/buildDeveloperReport.ts
+  s_668ab4f91e9d5a::t_0d0d16513dc1d3 74
+lib/contentScore.ts
+  s_668ab4f91e9d5a::t_5caff80b99ea09 38-42,361,549
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f072567d517698a137cd5a8499f4a322a5110966",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
