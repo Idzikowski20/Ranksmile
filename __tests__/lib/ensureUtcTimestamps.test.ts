@@ -1,14 +1,18 @@
 /** @jest-environment node */
 import { naiveTimestampAlterSql } from '../../lib/ensureUtcTimestamps';
 
+type QueryOpts = { transaction?: unknown };
+
 const query = jest.fn();
 const getDialect = jest.fn(() => 'postgres');
+const transaction = jest.fn(async (cb: (t: unknown) => Promise<unknown>) => cb('TX'));
 
 jest.mock('../../database/database', () => ({
   __esModule: true,
   default: {
     query: (...args: unknown[]) => query(...args),
     getDialect: () => getDialect(),
+    transaction: (cb: (t: unknown) => Promise<unknown>) => transaction(cb),
   },
 }));
 
@@ -18,17 +22,22 @@ async function loadEnsure() {
   await jest.isolateModulesAsync(async () => {
     mod = await import('../../lib/ensureUtcTimestamps');
   });
-  return mod.ensureUtcTimestamps;
+  return mod;
 }
 
-/** Only the schema changes — ignores the lookup and the lock_timeout bookends. */
+/** Only the schema changes — ignores the lookup and the lock_timeout statements. */
 function alterStatements(): string[] {
   return query.mock.calls.map((c) => String(c[0])).filter((s) => s.includes('ALTER TABLE'));
+}
+
+function lookupCount(): number {
+  return query.mock.calls.filter((c) => String(c[0]).includes('information_schema')).length;
 }
 
 beforeEach(() => {
   query.mockReset();
   getDialect.mockReset().mockReturnValue('postgres');
+  transaction.mockClear();
 });
 
 describe('naiveTimestampAlterSql', () => {
@@ -52,8 +61,8 @@ describe('ensureUtcTimestamps', () => {
       { table_name: 'articles', column_name: 'published_at' },
     ]).mockResolvedValue([]);
 
-    const ensure = await loadEnsure();
-    await expect(ensure()).resolves.toBe(2);
+    const { ensureUtcTimestamps } = await loadEnsure();
+    await expect(ensureUtcTimestamps()).resolves.toBe(2);
 
     expect(alterStatements()).toEqual([
       expect.stringContaining('"organizations" ALTER COLUMN "trial_ends_at" TYPE TIMESTAMPTZ'),
@@ -61,32 +70,42 @@ describe('ensureUtcTimestamps', () => {
     ]);
   });
 
-  it('caps how long an ALTER may wait for its lock, then restores the session', async () => {
-    query.mockResolvedValueOnce([{ table_name: 'articles', column_name: 'published_at' }])
-      .mockResolvedValue([]);
+  // SET LOCAL only binds to the connection running the transaction. Issued as a
+  // bare pooled query it could cap nothing and leak onto an unrelated request.
+  it('caps the lock wait inside the same transaction as its ALTER', async () => {
+    query.mockResolvedValueOnce([
+      { table_name: 'articles', column_name: 'published_at' },
+      { table_name: 'domains', column_name: 'created_at' },
+    ]).mockResolvedValue([]);
 
-    const ensure = await loadEnsure();
-    await ensure();
+    const { ensureUtcTimestamps } = await loadEnsure();
+    await ensureUtcTimestamps();
 
-    const sql = query.mock.calls.map((c) => String(c[0]));
-    expect(sql).toContain("SET lock_timeout = '3s'");
-    expect(sql).toContain('SET lock_timeout = DEFAULT');
-    // The cap has to be in place before the first ALTER, not after it.
-    expect(sql.indexOf("SET lock_timeout = '3s'")).toBeLessThan(sql.findIndex((s) => s.includes('ALTER TABLE')));
+    // One transaction per column, so a lock is never held across two rewrites.
+    expect(transaction).toHaveBeenCalledTimes(2);
+
+    const scoped = query.mock.calls
+      .filter((c) => String(c[0]).includes('lock_timeout') || String(c[0]).includes('ALTER TABLE'));
+    expect(scoped).toHaveLength(4);
+    for (const [sql, opts] of scoped) {
+      expect((opts as QueryOpts)?.transaction).toBe('TX');
+      expect(String(sql)).not.toMatch(/^SET lock_timeout/); // must be SET LOCAL
+    }
+    expect(String(scoped[0][0])).toBe("SET LOCAL lock_timeout = '3s'");
   });
 
   it('is a no-op once nothing is naive any more', async () => {
     query.mockResolvedValue([]);
-    const ensure = await loadEnsure();
-    await expect(ensure()).resolves.toBe(0);
-    expect(query).toHaveBeenCalledTimes(1); // the lookup, no ALTERs
+    const { ensureUtcTimestamps } = await loadEnsure();
+    await expect(ensureUtcTimestamps()).resolves.toBe(0);
     expect(alterStatements()).toEqual([]);
+    expect(transaction).not.toHaveBeenCalled();
   });
 
   it('skips sqlite, which has no TIMESTAMPTZ', async () => {
     getDialect.mockReturnValue('sqlite');
-    const ensure = await loadEnsure();
-    await expect(ensure()).resolves.toBe(0);
+    const { ensureUtcTimestamps } = await loadEnsure();
+    await expect(ensureUtcTimestamps()).resolves.toBe(0);
     expect(query).not.toHaveBeenCalled();
   });
 
@@ -106,8 +125,33 @@ describe('ensureUtcTimestamps', () => {
       return Promise.resolve([]);
     });
 
-    const ensure = await loadEnsure();
-    await expect(ensure()).resolves.toBe(1);
+    const { ensureUtcTimestamps } = await loadEnsure();
+    await expect(ensureUtcTimestamps()).resolves.toBe(1);
     expect(alterStatements()).toHaveLength(2); // both attempted
+  });
+
+  it('runs once per process — a second call reuses the first result', async () => {
+    query.mockResolvedValueOnce([{ table_name: 'articles', column_name: 'published_at' }])
+      .mockResolvedValue([]);
+
+    const { ensureUtcTimestamps } = await loadEnsure();
+    const [a, b] = await Promise.all([ensureUtcTimestamps(), ensureUtcTimestamps()]);
+
+    expect([a, b]).toEqual([1, 1]);
+    expect(lookupCount()).toBe(1);
+    expect(alterStatements()).toHaveLength(1);
+  });
+
+  it('retries on the next call when the run threw', async () => {
+    query.mockRejectedValueOnce(new Error('connection reset'))
+      .mockResolvedValueOnce([{ table_name: 'articles', column_name: 'published_at' }])
+      .mockResolvedValue([]);
+
+    const { ensureUtcTimestamps } = await loadEnsure();
+    await expect(ensureUtcTimestamps()).rejects.toThrow('connection reset');
+
+    // A failed run must not be memoised, or the repair never happens again.
+    await expect(ensureUtcTimestamps()).resolves.toBe(1);
+    expect(lookupCount()).toBe(2);
   });
 });

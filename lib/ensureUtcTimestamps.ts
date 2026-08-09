@@ -17,9 +17,11 @@ import db from '../database/database';
  * Idempotent: once converted the columns no longer match the lookup, so repeat
  * runs do nothing.
  *
- * ponytail: ALTER COLUMN TYPE rewrites the table under an ACCESS EXCLUSIVE
- * lock. Fine at current table sizes; if any table grows past a few million rows,
- * move that one to an add-column/backfill/swap migration instead.
+ * Deliberately NOT wired into any request path. ALTER COLUMN TYPE rewrites each
+ * table under an ACCESS EXCLUSIVE lock, and lock_timeout caps how long we wait
+ * for the lock, not how long the rewrite takes — hanging that off the first
+ * authenticated request after a deploy would stall traffic for as long as the
+ * largest table takes. Run it as a deployment step: `npm run db:utc-timestamps`.
  */
 
 let ready: Promise<number> | null = null;
@@ -55,32 +57,26 @@ async function run(): Promise<number> {
   const columns = await findNaiveTimestampColumns();
   if (columns.length === 0) return 0;
 
-  // ALTER COLUMN TYPE takes ACCESS EXCLUSIVE. Without a cap, one long-running
-  // reader would make this queue up and stall every request behind it. Fail fast
-  // instead — whatever is skipped gets retried by the next process.
-  try {
-    await db.query("SET lock_timeout = '3s'");
-  } catch {
-    // Not fatal: worst case the ALTERs wait as they would have anyway.
-  }
-
   let converted = 0;
   for (const { table_name: table, column_name: column } of columns) {
     try {
-      await db.query(naiveTimestampAlterSql(table, column));
+      // One transaction per column. SET LOCAL only binds to the connection
+      // running the transaction — issued as a bare pooled query it could land on
+      // a different session than the ALTER, capping nothing and leaving a 3s
+      // lock_timeout behind on a connection serving unrelated requests. Scoping
+      // it to a transaction also reverts it on commit. Per column rather than
+      // per batch so each ACCESS EXCLUSIVE lock is held only for that rewrite.
+      await db.transaction(async (transaction) => {
+        await db.query("SET LOCAL lock_timeout = '3s'", { transaction });
+        await db.query(naiveTimestampAlterSql(table, column), { transaction });
+      });
       converted += 1;
     } catch (e) {
-      // One bad column must not block the rest — a view depending on the column,
-      // or a permission gap, should be visible but not fatal.
+      // One bad column must not block the rest — a partition-key column, a view
+      // depending on it, or a permission gap should be visible but not fatal.
       const message = String((e as { message?: string } | undefined)?.message ?? e ?? '');
       console.warn(`[utc-timestamps] ${table}.${column} failed:`, message);
     }
-  }
-  // The connection is pooled — leave the session as we found it.
-  try {
-    await db.query('SET lock_timeout = DEFAULT');
-  } catch {
-    // Nothing actionable; the setting dies with the connection.
   }
 
   if (converted > 0) console.log(`[utc-timestamps] converted ${converted} column(s) to TIMESTAMPTZ`);

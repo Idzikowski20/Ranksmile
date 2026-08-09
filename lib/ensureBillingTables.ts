@@ -1,5 +1,4 @@
 import db from '../database/database';
-import { ensureUtcTimestamps } from './ensureUtcTimestamps';
 
 let ready: Promise<void> | null = null;
 
@@ -55,16 +54,6 @@ async function runEnsureBillingTables(): Promise<void> {
     await db.query('CREATE INDEX IF NOT EXISTS idx_org_stripe_customer ON organizations(stripe_customer_id)');
   } catch (e) {
     ignoreExisting('idx_org_stripe_customer', e);
-  }
-
-  // Columns above are declared TIMESTAMP for SQLite's benefit; on Postgres they
-  // must end up TIMESTAMPTZ or every read is shifted by the runtime's offset.
-  // Converts the whole schema, not just billing — billing is simply the path hit
-  // on every authenticated page, so it is where the repair lands first.
-  try {
-    await ensureUtcTimestamps();
-  } catch (e) {
-    ignoreExisting('utc_timestamps', e);
   }
 
   try {
