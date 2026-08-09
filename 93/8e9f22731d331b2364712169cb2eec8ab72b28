@@ -1,0 +1,32 @@
+lib/contentPlanner/outlineBuilder.ts
+  s_668ab4f91e9d5a::t_4a7d64e4d16bc5 22,263-278
+lib/contentPlanner/knowledgePack/paragraphPlanner.ts
+  s_668ab4f91e9d5a::t_19027a124fd5c9 80,84-87
+python-sidecar/pipeline/section_writer.py
+  s_668ab4f91e9d5a::t_85b7d27cf56d11 143-145,148
+python-sidecar/tests/test_section_writer.py
+  s_668ab4f91e9d5a::t_765672eef6b966 191-205
+__tests__/lib/contentPlanner/paragraphPlanner.blocks.test.ts
+  s_668ab4f91e9d5a::t_a35e9e9e6f26a0 1-35
+__tests__/lib/contentPlanner/outlineTables.test.ts
+  s_668ab4f91e9d5a::t_e7a4c97fc59dd4 1-22,33-47,59-92
+  s_668ab4f91e9d5a::t_45781f0a6a9678 23-32,48-58
+lib/contentPlanner/knowledgePack/types.ts
+  s_668ab4f91e9d5a::t_75cb9cde39caae 124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "938e9f22731d331b2364712169cb2eec8ab72b28",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
