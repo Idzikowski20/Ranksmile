@@ -1,0 +1,30 @@
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_668ab4f91e9d5a::t_65b91a619d80d9 451-550
+lib/contentPlanner/briefWriter.ts
+  s_668ab4f91e9d5a::t_68b865695aefcf 198-205
+  s_668ab4f91e9d5a::t_d4bc139e12ee92 408-430
+  s_668ab4f91e9d5a::t_aead821a6fc543 243-246
+  s_668ab4f91e9d5a::t_e4a4e6e4e7f999 325-334,341
+  s_668ab4f91e9d5a::t_5fc0cc2d51ec62 390-394
+  s_668ab4f91e9d5a::t_eb0bd7ea5ecdd2 439-442,444-446,448-449,451-456,459-460,464
+  s_668ab4f91e9d5a::t_e8f65834747bba 450
+  s_668ab4f91e9d5a::t_871ad2cd6ee842 296-302
+  s_668ab4f91e9d5a::t_90545e8bb9ad1b 173,175,447
+  s_668ab4f91e9d5a::t_ffb6fad196fe78 469,475
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e1ed5a87db04277614b23e46f40a2ab1911910b1",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
