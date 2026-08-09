@@ -1,0 +1,50 @@
+lib/knowledgeEngine/types.ts
+  s_668ab4f91e9d5a::t_4fffcc38f9384a 113-114
+__tests__/lib/knowledgeEngine/normalizeClaims.test.ts
+  s_668ab4f91e9d5a::t_8fd7863097a5bd 1-125
+lib/knowledgeEngine/extract.ts
+  s_668ab4f91e9d5a::t_b382da7ceebd61 75-86
+  s_668ab4f91e9d5a::t_20dfe45ceee54e 2
+  s_668ab4f91e9d5a::t_dab2f46abccfd6 96,102-128,130-132,136-138
+  s_668ab4f91e9d5a::t_e5cde62790e985 97-101
+__tests__/lib/knowledgeEngine/canonicalize.test.ts
+  s_668ab4f91e9d5a::t_ece256dc566523 3-5
+  s_668ab4f91e9d5a::t_730fc4b6d47288 1-2,6,13-14,22-24,27-29
+  s_668ab4f91e9d5a::t_2d88f8628344a4 7-12,15-21
+  s_668ab4f91e9d5a::t_0c983396df9ea7 25-26
+lib/knowledgeEngine/runKnowledgeEngine.ts
+  s_668ab4f91e9d5a::t_ef7c0250d2c035 4,82
+  s_668ab4f91e9d5a::t_37e526fb5f330a 83-85
+  s_668ab4f91e9d5a::t_98f8168378bbc4 47
+  s_668ab4f91e9d5a::t_9a29b0256973e4 18-23
+lib/knowledgeEngine/canonicalize.ts
+  s_668ab4f91e9d5a::t_12da84b01634ec 36,50,59,71,79,101-126,148
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_6bcd4766890b74 23
+  s_668ab4f91e9d5a::t_9df85cda0017a6 315-326
+lib/knowledgeEngine/normalizeClaims.ts
+  s_668ab4f91e9d5a::t_6877813e849d51 53-54,57-62
+  s_668ab4f91e9d5a::t_55a3464f494ac1 144-160
+  s_668ab4f91e9d5a::t_de1d62a755da6e 1-52,55-56,63-78,80-143,161-172
+  s_668ab4f91e9d5a::t_53d598c84ba87b 79
+python-sidecar/pipeline/section_writer.py
+  s_668ab4f91e9d5a::t_7ce027cffd4144 178-183
+__tests__/lib/knowledgeEngine/extract.test.ts
+  s_668ab4f91e9d5a::t_a1afdf60019120 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d16bf52a9929592ffbef8f05fffd78ed2de7e0d4",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
