@@ -2,7 +2,7 @@
  * Strict topic matching for keyword/term enrichment — prevents DFS/GSC noise
  * (e.g. "test z lektury…" matching seed "warszawa" via substring "a").
  */
-import { isDictionaryQueryNoise, isUsefulTerm, normalizeTerm } from './termUtils';
+import { foldPolishLetters, isDictionaryQueryNoise, isUsefulTerm, normalizeTerm } from './termUtils';
 
 const SEED_NOISE_TOKENS = new Set([
   'znaczy', 'znaczenie', 'definicja', 'slownik', 'tlumacz', 'tlumaczenie', 'oznacza',
@@ -113,9 +113,41 @@ export function filterOnTopicTerms<T extends { term: string }>(terms: T[], seedK
  */
 const CORPUS_EVIDENCE_MIN_DOCS = 2;
 
-function isKnownNoiseTerm(term: string): boolean {
+/**
+ * Longest phrase a content term ever is. Beyond this it is a search suggestion, not
+ * vocabulary: the reference tool's longest entry is four words ("agencja detektywistyczna
+ * w warszawie"), while article 17 was graded against "philip prywatny detektyw z książek
+ * raymonda chandlera" and "agencja detektywistyczna kob group prywatny detektyw warszawa
+ * śródmieście" — 92 of its 151 terms were uncoverable by construction.
+ */
+const MAX_TERM_WORDS = 5;
+
+/** Polish cities, so a suggestion for another one cannot pose as this article's topic. */
+const CITIES = [
+  'warszawa', 'krakow', 'wroclaw', 'poznan', 'gdansk', 'lodz', 'katowice', 'szczecin',
+  'lublin', 'bialystok', 'gdynia', 'rzeszow', 'czestochowa', 'radom', 'torun', 'kielce',
+  'olsztyn', 'opole', 'zabrze', 'gliwice', 'bytom', 'sosnowiec', 'bielsko',
+  'jelenia gora', 'zielona gora',
+];
+const CITY_RE = new RegExp(`(^|\\s)(${CITIES.join('|')})(\\s|$)`, 'i');
+
+/**
+ * A phrase naming a city the article is not about.
+ *
+ * "prywatny detektyw jelenia gora cennik" reached a Warsaw article's term list because it
+ * contains "detektyw" — every seed check passed it. The keyword's own city is exempt.
+ */
+function namesAnotherCity(term: string, seedKeyword: string): boolean {
+  const match = CITY_RE.exec(foldPolishLetters(term));
+  if (!match) return false;
+  return !foldPolishLetters(seedKeyword).includes(match[2]);
+}
+
+function isKnownNoiseTerm(term: string, seedKeyword = ''): boolean {
   if (!term || !isUsefulTerm(term)) return true;
   if (isDictionaryQueryNoise(term)) return true;
+  if (term.split(/\s+/).filter(Boolean).length > MAX_TERM_WORDS) return true;
+  if (seedKeyword && namesAnotherCity(term, seedKeyword)) return true;
   return OFF_TOPIC_PATTERNS.some((re) => re.test(term));
 }
 
@@ -138,7 +170,11 @@ export function filterNlpTermsForAnalysis<
   T extends { term: string; doc_freq?: number },
 >(terms: T[], seedKeyword: string): T[] {
   if (!terms.length) return [];
-  const strict = filterOnTopicTerms(terms, seedKeyword);
+  // Noise has to be cut from the strict set too: a search suggestion like
+  // "prywatny detektyw jelenia gora cennik" repeats the keyword, so every seed check
+  // waves it through and it was never reaching the soft branch's filter at all.
+  const strict = filterOnTopicTerms(terms, seedKeyword)
+    .filter((t) => !isKnownNoiseTerm(normalizeTerm(t.term), seedKeyword));
   const strictTerms = new Set(strict.map((t) => t.term));
 
   const seeds = seedTokens(seedKeyword);
@@ -153,7 +189,7 @@ export function filterNlpTermsForAnalysis<
   const soft = terms.filter((t) => {
     if (strictTerms.has(t.term)) return false;
     const term = normalizeTerm(t.term);
-    if (isKnownNoiseTerm(term)) return false;
+    if (isKnownNoiseTerm(term, seedKeyword)) return false;
     const words = term.split(/\s+/).filter((w) => w.length >= 3);
     if (!words.length) return false;
     // Several competitors used it — that is the corpus establishing the topic, not us.

@@ -167,6 +167,13 @@ function mapSerpTerms(rawTerms: RawSerpTerm[]): NlpTerm[] {
     relevance: t.relevance,
     doc_freq: t.doc_freq,
     salience: t.salience,
+    // The sidecar stems every term (attach_lemma_regexps) precisely so the two sides
+    // agree on what counts as the same phrase. Dropping the annotations here undid all
+    // of it: filterUsefulNlpTerms fell back to the raw string, so "detektyw",
+    // "detektywa", "detektywi" and "detektywow" shipped as four separate rows with
+    // identical counts, and calibrateTermRangesFromCorpus counted only the exact form.
+    lemma_key: t.lemma_key,
+    term_words_regexps: t.term_words_regexps,
   })).filter((t) => t.term);
 }
 
