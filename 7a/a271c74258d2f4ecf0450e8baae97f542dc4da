@@ -1,0 +1,26 @@
+lib/sitemapLinkTargets.ts
+  s_668ab4f91e9d5a::t_174fe615702c7f 45-47,49-55,57-59,64-65,71-75,89-92,95
+python-sidecar/pipeline/internal_links.py
+  s_668ab4f91e9d5a::t_5f48194786bdca 142-145,164-172,174
+python-sidecar/tests/test_internal_links.py
+  s_668ab4f91e9d5a::t_dabf6a8aad7a03 200,202-204,211
+  s_668ab4f91e9d5a::t_93c12de3b85f55 192-199,201,205-210,212-235
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_bc2efebd4be8c0 425-442
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7aa271c74258d2f4ecf0450e8baae97f542dc4da",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
