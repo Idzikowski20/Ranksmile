@@ -137,6 +137,9 @@ async def analyze_serp(
     if len(nlp_terms) < 3:
         existing = {t["term"] for t in nlp_terms}
         nlp_terms = nlp_terms + [t for t in _keyword_seed_terms(keyword) if t["term"] not in existing]
+    # After the fallback merge, so seed terms get their inflections too.
+    from analyzers.term_lemmas import attach_lemma_regexps
+    nlp_terms = attach_lemma_regexps(nlp_terms, serp_texts, language)
     targets = _compute_targets(serp_texts, soups if soups else None)
 
     result = {
@@ -194,7 +197,11 @@ async def _scrape_pages(
             if words < 50:
                 print(f"[serp_analyzer] skipping thin page ({words} words): {url}")
                 return ("", None)
-            return (text[:15000], soup)
+            # 40k chars, not 15k: the reference tool's own structure guideline for a SERP
+            # measured competitor pages at 17 957-52 190 characters, so a 15k cap read
+            # every long article as ~2 100 words and the word target came out at a
+            # fraction of what actually ranks.
+            return (text[:40000], soup)
         except Exception as exc:
             msg = str(exc)
             if verify and ("CERTIFICATE_VERIFY_FAILED" in msg or "SSL" in msg):
@@ -352,7 +359,15 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
             "paragraphs_target": 20,
         }
 
-    word_counts = [len(text.split()) for text in texts]
+    # A page that would not scrape falls back to title+snippet (~30 words) — that is
+    # missing data, not evidence of a short article, and averaging it in dragged
+    # words_target for "szantaż" down to 675 against the reference tool's 2353-2706.
+    # Snippet-length texts only count when there is nothing better to measure.
+    # ponytail: 200 words as the "real article vs snippet fallback" line — a genuine
+    # 50-199-word page is misread as a snippet when 2+ longer pages exist. Upgrade path:
+    # pass scrape-vs-snippet provenance from analyze_serp instead of inferring by length.
+    full_counts = [n for n in (len(text.split()) for text in texts) if n >= 200]
+    word_counts = full_counts if len(full_counts) >= 2 else [len(text.split()) for text in texts]
     if soups:
         heading_counts = [max(1, len(soup.select("h1,h2,h3,h4"))) for soup in soups]
         paragraph_counts = [
@@ -414,8 +429,12 @@ def _keyword_seed_terms(keyword: str) -> list[dict]:
 
 
 def _placeholder_score_data(keyword: str = "") -> dict:
+    from analyzers.term_lemmas import attach_lemma_regexps
+    # Seed terms carry their inflection regexps too, so the no-Serper / no-results
+    # fallback matches and dedupes the same way a full analysis does (empty corpus →
+    # base form + stem, which is enough for the scorer to count declensions).
     return {
-        "terms": _keyword_seed_terms(keyword),
+        "terms": attach_lemma_regexps(_keyword_seed_terms(keyword), [], "pl"),
         "competitors": [],
         "paa_questions": [],
         "words_min": 1500,

@@ -26,7 +26,10 @@ function claimToTarget(c: CanonicalClaim): TargetClaim {
   return {
     id: c.id,
     statement: c.statement,
-    topic: c.cluster || c.statement.split(/\s+/).slice(0, 3).join(' '),
+    // 'Unassigned' is the canonicalizer's placeholder, not a topic — it is truthy, so
+    // `||` kept it and the fact sheet grouped everything under one meaningless label.
+    topic: (c.cluster && c.cluster !== 'Unassigned' ? c.cluster : '')
+      || c.statement.split(/\s+/).slice(0, 3).join(' '),
     type: /%|\d/.test(c.statement) ? 'stat' : 'fact',
     importance: importanceFromClaim(c),
     gainClass: gainFromConsensus(c.consensus),

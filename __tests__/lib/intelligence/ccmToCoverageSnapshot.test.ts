@@ -76,3 +76,60 @@ describe('projectCcmToCoverageSnapshot', () => {
     expect(snap.items.some((item) => item.category === 'knowledge')).toBe(true);
   });
 });
+
+describe('projection preserves the grading rubric', () => {
+  const rubricItem = (n: number) => ({
+    id: `paa-${n}`,
+    label: `Pytanie harvestowane numer ${n}?`,
+    type: 'paa' as const,
+    category: 'knowledge' as const,
+    importance: 'critical' as const,
+    source: 'paa' as const,
+    covered: false,
+    quality: 0,
+    llmSources: ['chat_gpt' as const],
+  });
+
+  const factLines = Array.from({ length: 45 }, (_, i) => (
+    `Fakt numer ${i} dotyczy roku ${1980 + i} i ma znaczenie dla całości tematu artykułu.`
+  )).join('\n\n');
+
+  const bigModel = () => compile({
+    articleId: 'proj-cap',
+    compiledAt: FIXED_AT,
+    source: { kind: 'plain', text: `# Temat\n\n## Sekcja\n\n${factLines}\n` },
+  }).model;
+
+  // Rubric of 40 — larger than AI_COVERAGE_MAX (35). Article 13 fed the whole set
+  // (rubric + CCM facts) through compaction, whose own cap + type/score filter dropped
+  // most of the rubric off the tail; the article then self-graded against its own facts.
+  const RUBRIC_SIZE = 40;
+  const previous = (): CoverageSnapshot => ({
+    schemaVersion: 1,
+    judgeVersion: 'v1|deepseek-chat|0',
+    promptVersion: 'v1',
+    model: 'deepseek-chat',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    items: Array.from({ length: RUBRIC_SIZE }, (_, i) => rubricItem(i)),
+    buckets: [],
+    answersMainQuestionEarly: false,
+    overall: 0,
+  });
+
+  it('keeps the whole harvested rubric even when it alone exceeds the cap', () => {
+    const snap = projectCcmToCoverageSnapshot(bigModel(), { createdAt: FIXED_AT, previous: previous() });
+
+    const keptIds = new Set(snap.items.map((i) => i.id));
+    for (let i = 0; i < RUBRIC_SIZE; i += 1) {
+      expect(keptIds.has(`paa-${i}`)).toBe(true);
+    }
+  });
+
+  it('keeps a true early-answer grade sticky across projections', () => {
+    const graded = { ...previous(), answersMainQuestionEarly: true };
+
+    const snap = projectCcmToCoverageSnapshot(bigModel(), { createdAt: FIXED_AT, previous: graded });
+
+    expect(snap.answersMainQuestionEarly).toBe(true);
+  });
+});

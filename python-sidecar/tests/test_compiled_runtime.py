@@ -111,3 +111,29 @@ def test_runtime_keeps_going_when_only_some_paragraphs_are_empty():
     result = asyncio.run(run_compiled_write_plan(plan, _flaky, _rewrite))
 
     assert "Audyt wskazuje priorytety." in result.html
+
+
+def test_only_the_first_paragraph_is_the_lead():
+    """One lead per article — the answer-first rule must not repeat in every section."""
+    plan = {
+        **PLAN,
+        "knowledge_packs": [
+            {"id": "s1", "heading": "Start", "paragraph_plan_ids": ["p1"]},
+            {"id": "s2", "heading": "Dalej", "paragraph_plan_ids": ["p2"]},
+        ],
+        "paragraph_plans": [
+            PLAN["paragraph_plans"][0],
+            {**PLAN["paragraph_plans"][0], "id": "p2", "section_id": "s2"},
+        ],
+    }
+    prompts: list[str] = []
+
+    async def spy(prompt: str) -> str:
+        prompts.append(prompt)
+        return "SEO gives clear priorities."
+
+    asyncio.run(run_compiled_write_plan(plan, spy, _rewrite))
+
+    assert len(prompts) == 2
+    assert "FIRST sentence answers" in prompts[0]
+    assert "FIRST sentence answers" not in prompts[1]
