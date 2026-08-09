@@ -74,6 +74,52 @@ def test_runtime_hands_each_paragraph_its_section_and_graph_text():
     assert "Ile kosztuje audyt?" in seen[0]
 
 
+def test_runtime_formats_sources_with_and_without_titles():
+    """
+    Authority sources are the one thing the article may link, so the writer has to see
+    them. `_graph_index` composes "label -> url" and falls back to the URL when a source
+    carries no usable title; nothing asserted that either form reached the prompt.
+    """
+    plan = {
+        **PLAN,
+        "graph": {
+            "facts": [], "entities": [], "claims": [], "questions": [],
+            "sources": [
+                {"id": "src1", "url": "https://isap.sejm.gov.pl/kk.pdf", "title": "art. 191 kk"},
+                {"id": "src2", "url": "https://uodo.gov.pl/decyzja"},
+                {"id": "src3", "url": "https://cert.pl/raport", "title": "   "},
+                # No url at all, and a non-mapping entry — neither may reach the prompt.
+                {"id": "src4", "title": "brak adresu"},
+                "not a mapping",
+            ],
+        },
+        "paragraph_plans": [{
+            **PLAN["paragraph_plans"][0],
+            "sources": [
+                {"source_id": "src1"}, {"source_id": "src2"},
+                {"source_id": "src3"}, {"source_id": "src4"},
+            ],
+        }],
+    }
+    seen: list[str] = []
+
+    async def _capture(prompt: str) -> str:
+        seen.append(prompt)
+        return "SEO gives clear priorities."
+
+    asyncio.run(run_compiled_write_plan(plan, _capture, _rewrite))
+
+    assert len(seen) == 1
+    prompt = seen[0]
+    # Titled source keeps its label.
+    assert "art. 191 kk -> https://isap.sejm.gov.pl/kk.pdf" in prompt
+    # Missing and whitespace-only titles both fall back to the URL on both sides.
+    assert "https://uodo.gov.pl/decyzja -> https://uodo.gov.pl/decyzja" in prompt
+    assert "https://cert.pl/raport -> https://cert.pl/raport" in prompt
+    # A source without a url is not linkable, so it must not be offered.
+    assert "brak adresu" not in prompt
+
+
 def test_runtime_fails_closed_for_invalid_compiled_plan():
     with pytest.raises(ValueError, match="knowledge_packs"):
         asyncio.run(run_compiled_write_plan({"title": "SEO guide"}, _write, _rewrite))

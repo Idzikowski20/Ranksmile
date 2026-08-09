@@ -59,6 +59,62 @@ function asEvidence(text: string): string {
     .slice(0, 220);
 }
 
+const FACT_PRIORITY: Record<string, number> = {
+  critical: 0, high: 1, medium: 2, low: 3,
+};
+
+/**
+ * A group label is a real topic only if it names something several facts share. On the
+ * legacy knowledge path `claim.topic` is a prefix of the claim's own statement, so every
+ * claim became its own one-fact "topic" and the sheet read as a list of headings each
+ * repeating the first words of the line below it. Those collapse into one bucket.
+ */
+function isStatementPrefix(topic: string, facts: string[]): boolean {
+  if (facts.length !== 1) return false;
+  const fact = facts[0].toLowerCase();
+  const label = topic.toLowerCase();
+  return label.length > 0 && fact.startsWith(label.slice(0, Math.min(label.length, 40)));
+}
+
+/**
+ * Topic → its facts, capped. Stats and high-priority claims first: those are the
+ * sentences the reference articles inject verbatim ("Kara ... od 3 miesięcy do 5 lat").
+ *
+ * Exported for the sort/cap regression test — the ordering is what keeps the same claims
+ * in a different upstream order from producing a different fact sheet.
+ */
+export function buildFactSheet(claims: readonly TargetClaim[]): string {
+  const factCandidates = [...claims]
+    // stats first, then priority, then id — without the last two, upstream profile
+    // iteration order decides which claims survive the FACT_SHEET_MAX cut, so the same
+    // claims in a different order produced different fact sheets.
+    .sort((a, b) => (Number(b.type === 'stat') - Number(a.type === 'stat'))
+      || ((FACT_PRIORITY[a.priority] ?? 4) - (FACT_PRIORITY[b.priority] ?? 4))
+      || a.id.localeCompare(b.id))
+    .slice(0, FACT_SHEET_MAX);
+
+  const factsByTopic = new Map<string, string[]>();
+  for (const claim of factCandidates) {
+    const topic = asEvidence(claim.topic || '') || 'inne';
+    const fact = asEvidence(claim.statement);
+    if (fact) {
+      const group = factsByTopic.get(topic) ?? [];
+      group.push(fact);
+      factsByTopic.set(topic, group);
+    }
+  }
+
+  const grouped: Array<[string, string[]]> = [];
+  const ungrouped: string[] = [];
+  for (const [topic, facts] of factsByTopic) {
+    if (topic === 'inne' || isStatementPrefix(topic, facts)) ungrouped.push(...facts);
+    else grouped.push([topic, facts]);
+  }
+  if (ungrouped.length) grouped.push(['inne', ungrouped]);
+
+  return grouped.map(([topic, facts]) => `${topic}: ${facts.join(' | ')}`).join('\n');
+}
+
 function claimTexts(brief: SectionBrief, claims: Map<string, TargetClaim>): string[] {
   return brief.claimIds
     .map((id) => claims.get(id)?.statement)
@@ -173,30 +229,7 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
     .filter(Boolean)
     .slice(0, COMPETITOR_HEADINGS);
 
-  // Topic → its facts, capped: stats and high-priority claims first, since those are the
-  // sentences the reference articles inject verbatim ("Kara ... od 3 miesięcy do 5 lat").
-  const factsByTopic = new Map<string, string[]>();
-  const factPriority: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-  const factCandidates = [...bundle.targetKg.claims]
-    // stats first, then priority, then id — without the last two, upstream profile
-    // iteration order decides which claims survive the FACT_SHEET_MAX cut, so the same
-    // claims in a different order produced different fact sheets.
-    .sort((a, b) => (Number(b.type === 'stat') - Number(a.type === 'stat'))
-      || ((factPriority[a.priority] ?? 4) - (factPriority[b.priority] ?? 4))
-      || a.id.localeCompare(b.id))
-    .slice(0, FACT_SHEET_MAX);
-  for (const claim of factCandidates) {
-    const topic = asEvidence(claim.topic || '') || 'inne';
-    const fact = asEvidence(claim.statement);
-    if (fact) {
-      const group = factsByTopic.get(topic) ?? [];
-      group.push(fact);
-      factsByTopic.set(topic, group);
-    }
-  }
-  const factSheet = [...factsByTopic.entries()]
-    .map(([topic, facts]) => `${topic}: ${facts.join(' | ')}`)
-    .join('\n');
+  const factSheet = buildFactSheet(bundle.targetKg.claims);
 
   const sections = bundle.briefs.map((brief, i) => {
     const questions = [...(brief.mustAnswer || [])].slice(0, QUESTIONS_PER_SECTION);
