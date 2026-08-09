@@ -1,0 +1,27 @@
+__tests__/lib/contentPlanner/sectionLabels.test.ts
+  s_668ab4f91e9d5a::t_afc5e94265a811 5
+  s_668ab4f91e9d5a::t_fdbd8226543a4b 165-190
+lib/contentPlanner/briefWriter.ts
+  s_668ab4f91e9d5a::t_9a4e9fca99d73b 293-299,301-302,304-305,307-313,367,370-373
+  s_668ab4f91e9d5a::t_325517b3d72326 384-396,400-408,410
+lib/contentPlanner/sectionLabels.ts
+  s_668ab4f91e9d5a::t_776f9be7641dda 15-20
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_668ab4f91e9d5a::t_52ae58fdd938cf 393-449
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "05c6d139082eb03edda87c8edc28706eb3b56edc",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
