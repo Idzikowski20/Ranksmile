@@ -2193,13 +2193,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           }
         } catch { /* no usable stored plan — fall through to a fresh one */ }
       }
-      // Only the planner run is one-shot. Restoring the saved outline above is free and
-      // must stay repeatable: a hot reload rebuilds the editor from the `content` prop —
-      // empty, because the outline lives in the saved plan and never in articles.content —
-      // and a guard around the whole routine left the reviewer staring at a blank document
-      // that only a full page reload could bring back.
-      if (outlineAutoStarted.current) return;
-      outlineAutoStarted.current = true;
+      // The effect owns the one-shot guard (outlineAutoStarted set before this runs), so
+      // no re-entry check here — adding one would block handleInsertOutline entirely.
       await handleInsertOutline();
     };
 
@@ -2209,21 +2204,24 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // article analysis first" about an analysis that was running at that very moment.
     // The effect re-fires when the lock lifts, so nothing is lost by waiting.
     useEffect(() => {
-      if (readOnly) return undefined;
-      if (!outlineReviewMode || !editor || outlineBusy || generateBusy) return undefined;
+      if (readOnly || !outlineReviewMode || !editor) return undefined;
+      // One-shot per review-mode entry. outlineBusy/generateBusy are NOT dependencies:
+      // the routine below flips them, and if the effect re-fired on that flip it would
+      // relaunch on its own side effect — an infinite outline↔generate loop that hammered
+      // the planner. `outlineAutoStarted` resets only when review mode turns off (below).
+      if (outlineAutoStarted.current) return undefined;
       const t = setTimeout(() => {
-        if (!editor) return;
+        if (!editor || outlineAutoStarted.current) return;
         const existing = collectOutlineHeadings(editor);
         setOutlineHeadingCount(existing.length);
-        // Re-runs whenever review mode has an empty document, which is what a hot reload
-        // leaves behind. `restoreOrGenerateOutline` reads the saved plan first and only
-        // pays for a planner run once.
-        if (existing.length === 0) void restoreOrGenerateOutline();
+        if (existing.length === 0) {
+          outlineAutoStarted.current = true;
+          void restoreOrGenerateOutline();
+        }
       }, 450);
       return () => clearTimeout(t);
-      // ponytail: one-shot when review mode + editor ready (omit handleInsertOutline)
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [outlineReviewMode, editor, outlineBusy, generateBusy, readOnly]);
+    }, [outlineReviewMode, editor, readOnly]);
 
     const handleOutlineGenerate = () => {
       if (!editor) return;
