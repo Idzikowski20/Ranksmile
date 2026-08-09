@@ -58,12 +58,12 @@ export function PlanExpired() {
   return (
     <div className="plan-expired">
       <div className="plan-expired__head">
-        <h1 className="plan-expired__title">
-          Your plan has expired
-          <span className="plan-expired__mark" aria-hidden="true">
-            <BounceSmileyAnimation mood="sad" compact size={28} animateRotate={false} />
-          </span>
-        </h1>
+        {/* Its own line, not an inline glyph: the mark carries the tone of the whole
+            screen, and at title height it read as punctuation. */}
+        <span className="plan-expired__mark" aria-hidden="true">
+          <BounceSmileyAnimation mood="sad" compact size={96} animateRotate={false} />
+        </span>
+        <h1 className="plan-expired__title">Your plan has expired</h1>
         <p className="plan-expired__lead">
           But all your hard work is still right here, waiting for you.
           <br />
