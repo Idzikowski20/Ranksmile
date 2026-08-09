@@ -1,0 +1,22 @@
+python-sidecar/tests/test_internal_links.py
+  s_668ab4f91e9d5a::t_a484f8a2f3d58e 148-191
+python-sidecar/pipeline/internal_links.py
+  s_668ab4f91e9d5a::t_f54568721d9b17 167-170
+  s_668ab4f91e9d5a::t_690d603d85a2e8 171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ce5c302a3dcd7f3a9261b45d3783b2505b38cc10",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
