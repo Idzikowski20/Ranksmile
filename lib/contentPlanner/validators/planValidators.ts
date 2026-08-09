@@ -298,7 +298,7 @@ export function validateRequiredAssignments(opts: {
   for (const c of opts.kg.claims) {
     if (c.priority === 'critical' && !assignedClaims.has(c.id)) {
       issues.push({
-        code: 'required_claim_unassigned',
+        code: 'critical_claim_unassigned',
         message: `Critical claim unassigned: ${c.id}`,
       });
     }
@@ -306,7 +306,7 @@ export function validateRequiredAssignments(opts: {
   for (const q of opts.kg.questions) {
     if (q.priority === 'critical' && !assignedQuestions.has(q.id)) {
       issues.push({
-        code: 'required_question_unassigned',
+        code: 'critical_question_unassigned',
         message: `Critical question unassigned: ${q.id}`,
       });
     }
