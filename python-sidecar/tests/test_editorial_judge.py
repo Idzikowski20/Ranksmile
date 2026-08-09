@@ -69,4 +69,8 @@ def test_judge_keeps_the_original_when_the_rewrite_comes_back_blank():
     reviewed = asyncio.run(review_paragraph(BASE, blank_rewrite))
 
     assert reviewed.markdown == "First markdown."
-    assert reviewed.rewritten is True
+    # Nothing was rewritten — the original was kept — so the flag says so, matching the
+    # empty-paragraph case above. It read True here, which made an untouched paragraph
+    # look like reviewed prose to anything counting rewrites.
+    assert reviewed.rewritten is False
+    assert "rewrite_empty_kept_original" in reviewed.judge_notes
