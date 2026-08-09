@@ -85,8 +85,14 @@ def attach_lemma_regexps(
                  different inflection, which the TS side dedupes on.
     Returns the same list.
     """
-    del language  # same suffix table serves pl and (harmlessly) en corpora
-    if not terms:
+    # _SUFFIXES is a Polish inflection table. Applied to English it is not merely
+    # useless, it is worse than nothing: "services" does not stem to "service", so
+    # the term gets an exact `(?:service)` regexp and the TS scorer honours it
+    # instead of falling back to countOccurrences' fuzzy match — which did count
+    # the plural. Leave non-Polish terms unannotated so that fallback survives.
+    # ponytail: ceiling = only pl gets lemma matching; upgrade = a per-language
+    # suffix table (or a real stemmer) keyed off `language`.
+    if language != "pl" or not terms:
         return terms
 
     corpus_forms = _forms_by_stem(texts)

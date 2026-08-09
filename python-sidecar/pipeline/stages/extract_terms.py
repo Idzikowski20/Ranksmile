@@ -20,6 +20,14 @@ class ExtractTermsStage(AnalysisStage):
         existing = serp.get("terms") or []
         if len(terms) < len(existing):
             terms = existing
+
+        # scrape_serp annotated its terms with term_words_regexps/lemma_key, but the
+        # freshly extracted set above carries none — and it wins whenever it is at
+        # least as large, which is the usual case. Re-attach here so deep-analysis
+        # articles keep lemma-aware matching regardless of which set survived.
+        from analyzers.term_lemmas import attach_lemma_regexps
+        terms = attach_lemma_regexps(terms, competitor_texts, ctx.payload.get("language", "pl"))
+
         await ctx.emit_progress(self, 90, f"Extracted {len(terms)} terms")
 
         return {"terms": terms}

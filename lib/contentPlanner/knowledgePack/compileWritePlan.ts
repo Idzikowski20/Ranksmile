@@ -59,7 +59,10 @@ function buildManifest(builtAt: string): PipelineManifest {
  * ponytail: a hand-kept allowlist; an authority outside it simply is not linked.
  * Upgrade path is a domain-authority score on the source records.
  */
-const AUTHORITY_HOST = /(^|\.)(gov\.pl|gov|sejm\.gov\.pl|isap\.sejm\.gov\.pl|policja\.gov\.pl|prokuratura\.gov\.pl|lexlege\.pl|europa\.eu|cert\.pl|uodo\.gov\.pl)$|\.edu(\.[a-z]{2,})?$/i;
+// The academic branch is spelled out rather than `\.edu(\.[a-z]{2,})?$`: that form
+// also matched `evil.edu.com` and `evil.edu.io`, which are ordinary commercial
+// registrations, not universities — anyone could buy one and be cited as an authority.
+const AUTHORITY_HOST = /(^|\.)(gov\.pl|gov|sejm\.gov\.pl|isap\.sejm\.gov\.pl|policja\.gov\.pl|prokuratura\.gov\.pl|lexlege\.pl|europa\.eu|cert\.pl|uodo\.gov\.pl|edu\.pl)$|\.edu$/i;
 
 /**
  * Matched against the parsed hostname, never the raw URL: `https://evil.com/lexlege.pl`
