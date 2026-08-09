@@ -764,8 +764,16 @@ const ArticleEditorPage: NextPage = () => {
    * read from state the page has already loaded — no extra request.
    */
   const outlineAwaitingReview = useMemo(
-    () => isOutlineAwaitingReview({ content: article?.content, scoreData: scoreData as unknown as Record<string, unknown> }),
-    [article, scoreData],
+    () => isOutlineAwaitingReview({
+      // The LIVE document, not `article.content`. That field is only refreshed on load
+      // and on save, so after a generation it still held the outline: the flag stayed
+      // true, the editor was pushed back into review over the article it had just
+      // revealed, and autosave — suspended for review — would have dropped any edit to
+      // it. The generated article was in the database the whole time.
+      content: editorHtml || article?.content,
+      scoreData: scoreData as unknown as Record<string, unknown>,
+    }),
+    [editorHtml, article, scoreData],
   );
 
   /**

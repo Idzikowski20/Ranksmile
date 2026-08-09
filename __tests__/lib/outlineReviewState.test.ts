@@ -67,3 +67,28 @@ describe('the wizard-resume guard agrees with it', () => {
     }).kind).toBe('editor');
   });
 });
+
+/**
+ * The page feeds this the LIVE editor document, not `article.content`. That field is only
+ * refreshed on load and on save, so straight after a generation it still holds the
+ * outline while the editor already shows the article. Deriving the flag from the stale
+ * copy pushed the editor back into review over the article it had just revealed — and
+ * autosave, suspended during review, would have dropped every later edit to it.
+ */
+describe('the flag follows the live document', () => {
+  const STALE_OUTLINE = OUTLINE;
+
+  it('clears as soon as the editor holds a written article', () => {
+    // What the page passes: `editorHtml || article?.content`.
+    expect(isOutlineAwaitingReview({ content: ARTICLE || STALE_OUTLINE, scoreData: WITH_PLAN })).toBe(false);
+  });
+
+  it('would have stayed true on the stale field, which is the bug', () => {
+    expect(isOutlineAwaitingReview({ content: STALE_OUTLINE, scoreData: WITH_PLAN })).toBe(true);
+  });
+
+  it('falls back to the stored content before the editor has emitted', () => {
+    const notYetEmitted = '';
+    expect(isOutlineAwaitingReview({ content: notYetEmitted || STALE_OUTLINE, scoreData: WITH_PLAN })).toBe(true);
+  });
+});
