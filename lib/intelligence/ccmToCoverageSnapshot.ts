@@ -124,6 +124,11 @@ export function projectCcmToCoverageSnapshot(
   // `true` from an earlier LLM grade survives; a stale `false` does not veto the
   // heuristic. The projection previously inherited `false` graded against an article
   // that no longer exists, and froze it across every regeneration.
+  //
+  // ponytail: ceiling = the asymmetry runs the other way too — once `true`, no rewrite
+  // can take it back, so coverage stays inflated even after the article stops answering
+  // the main question early. Upgrade = invalidate the carried grade when the article's
+  // content hash changes and re-grade instead of inheriting.
   const answersMainQuestionEarly =
     opts.previous?.answersMainQuestionEarly === true ||
     intents.some((i) => i.primary && isCovered(i.status));
@@ -134,6 +139,11 @@ export function projectCcmToCoverageSnapshot(
   // by type/score, which is exactly how article 13 lost 8 of its 10 harvested questions
   // and self-graded 33/33 on its own facts. Rubric kept whole, CCM facts compacted into
   // whatever budget remains.
+  //
+  // ponytail: ceiling = when the rubric alone reaches AI_COVERAGE_MAX the CCM budget hits
+  // zero and every CCM-native fact is evicted, and the snapshot can still exceed the max
+  // because the rubric is never trimmed. Upgrade = dedupe/compact the rubric against the
+  // query once it exceeds the max, rather than letting it consume the whole budget.
   const query = model.metadata.primaryQuery ?? model.metadata.title;
   const rubric = items.filter((i) => rubricKeys.has(normalizeFactKey(i.label)));
   const ccmOnly = items.filter((i) => !rubricKeys.has(normalizeFactKey(i.label)));

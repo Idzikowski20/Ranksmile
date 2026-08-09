@@ -34,10 +34,16 @@ _MIN_STEM = 4
 
 #: Corpus budget per attach call — this runs inside deep-analysis; 8 pages x 40k chars
 #: covers a SERP without stalling the pipeline.
+#: ponytail: ceiling = inflected forms living past page 8 or char 40k are never observed,
+#: so their term keeps only the forms found inside the budget; upgrade = stream the whole
+#: corpus through _forms_by_stem once per analysis and cache it on the stage context.
 MAX_TEXTS = 8
 MAX_CHARS = 40_000
 
-_TOKEN = re.compile(r"[^\W_]{2,}", re.UNICODE)
+# Same quantifier as _TERM_WORD below on purpose: with {2,} the corpus dropped
+# single-character tokens, so the two sides no longer split on the rule the TS
+# scorer's rawTokenize uses and the symmetry this module exists to keep was broken.
+_TOKEN = re.compile(r"[^\W_]+", re.UNICODE)
 # One word of a term = one alternation. Split on the same rule the TS scorer's
 # rawTokenize uses ([letters/digits]+), so a hyphenated term like "wykrywanie-podsluchow"
 # becomes two words and two regexps that line up with the two tokens it produces —

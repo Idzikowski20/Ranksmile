@@ -3,6 +3,44 @@ import type { NlpTerm } from '../../lib/contentScore';
 import { computeAiSearchScore } from '../../lib/aiSearchScore';
 
 describe('competitorTermCalibration', () => {
+  /**
+   * The whole point of shipping term_words_regexps from the sidecar is that calibration
+   * counts inflected corpus forms, not just the base form. Nothing asserted that the
+   * regexps actually reach countOccurrences, so the ranges could silently fall back to
+   * exact matching and every suggested_min/max would quietly halve.
+   */
+  it('counts inflected corpus forms when term_words_regexps are present', () => {
+    const corpus = [
+      'Usługi detektywistyczne w Krakowie. Usług detektywistycznych szukają firmy.',
+      'Oferujemy usługa detektywistyczna oraz usługi detektywistyczne dla klientów.',
+    ];
+    const withRegexps: NlpTerm[] = [{
+      term: 'usługi detektywistyczne',
+      target_count: 1,
+      term_words_regexps: [
+        '(?:usługi|usług|usługa)',
+        '(?:detektywistyczne|detektywistycznych|detektywistyczna)',
+      ],
+    }];
+    // Same term, regexps that only admit the base form. Comparing against this rather
+    // than against the no-regexp case isolates the annotated path: countOccurrences has
+    // its own fuzzy fallback, so a bare term already counts some inflections and the two
+    // would tie without proving the regexps were read at all.
+    const baseFormOnly: NlpTerm[] = [{
+      term: 'usługi detektywistyczne',
+      target_count: 1,
+      term_words_regexps: ['(?:usługi)', '(?:detektywistyczne)'],
+    }];
+
+    const [lemma] = calibrateTermRangesFromCorpus(withRegexps, corpus);
+    const [base] = calibrateTermRangesFromCorpus(baseFormOnly, corpus);
+
+    expect(lemma.doc_freq).toBe(2);
+    expect(lemma.target_count).toBeGreaterThan(base.target_count ?? 0);
+    expect(lemma.suggested_max).toBeGreaterThanOrEqual(lemma.target_count ?? 0);
+    expect(lemma.suggested_min).toBeGreaterThan(0);
+  });
+
   it('filters Polish stopwords from term lists', () => {
     const raw: NlpTerm[] = [
       { term: 'oraz', target_count: 2 },

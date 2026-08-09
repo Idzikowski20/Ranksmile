@@ -54,13 +54,21 @@ async def review_paragraph(
 
     markdown = (await rewrite_markdown(result.markdown)).strip()
     # A rewrite may only replace prose with prose. Empty output keeps the original.
-    if not markdown:
+    #
+    # ponytail: ceiling = the paragraph that triggered the rewrite keeps whatever was
+    # wrong with it — a critical gap or low-confidence prose survives untouched, and only
+    # the judge_notes record that anything was attempted. Upgrade = retry once against a
+    # different model/prompt, then flag the paragraph for review instead of passing it.
+    rewrite_failed = not markdown
+    if rewrite_failed:
         markdown = result.markdown
     return ReviewedParagraphResult(
         base=result,
         markdown=markdown,
         summary=markdown.split(".", 1)[0].strip(),
         confidence=max(result.confidence, confidence_threshold),
-        judge_notes=notes,
-        rewritten=True,
+        judge_notes=notes + (("rewrite_empty_kept_original",) if rewrite_failed else ()),
+        # Nothing was rewritten when the model returned nothing; saying otherwise made
+        # downstream counters treat an untouched paragraph as reviewed prose.
+        rewritten=not rewrite_failed,
     )

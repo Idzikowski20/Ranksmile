@@ -1832,8 +1832,16 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const ed = editor;
       const cleaned = normalizeListHtml(html);
       try {
-        await revealHtmlInEditor(ed, cleaned, { signal: ac.signal, emitUpdate, abortBehavior });
-        if (sealed) clearEditorHistory(ed);
+        // History is cleared as soon as the document lands, not after the fade: the
+        // reveal runs for seconds and the user can type during it, and clearing
+        // afterwards threw those edits away with it — post-generation typing was
+        // silently non-undoable.
+        await revealHtmlInEditor(ed, cleaned, {
+          signal: ac.signal,
+          emitUpdate,
+          abortBehavior,
+          onContentSet: sealed ? () => clearEditorHistory(ed) : undefined,
+        });
       } finally {
         if (revealAbortRef.current === ac) {
           revealPlayingRef.current = false;

@@ -92,7 +92,9 @@ block types — 0 lists, 0 tables, 0 H3 is structural, not stylistic.
   now has a block to satisfy it.
 
 **Verify.** pytest: block kinds produce list/table/h3 markdown. Live: article has
-`li > 0`, `table ≥ 1`, headings ≥ 15, paragraphs ≥ 40. cssKeyframes-style guard
+`li > 0`, `table ≥ 1`, headings ≥ 23, paragraphs ≥ 55 — the bottom of the target
+band (23–28 headings, 55–66 paragraphs), not the old 15/40, which an article could
+clear while still missing the Surfer-parity goal this plan exists for. cssKeyframes-style guard
 not needed; postWrite validator already counts h2/lists — extend it to fail a
 plan that budgeted lists and delivered none.
 
@@ -108,9 +110,13 @@ seed token, and single-word/branded variants fall out.
 1. Run one fresh deep analysis, read both log lines — identify which stage eats
    the most.
 2. Loosen that stage: `doc_freq >= 2` already bypasses; likely additions —
-   accept `salience ≥ 30` singles, stop dropping inflection variants
-   (`licencjonowany detektyw` vs `licencjonowani detektywi` both kept ✅ — but
-   check what died), keep branded/generic pairs Surfer keeps
+   accept `salience ≥ 30` singles, and let inflection variants **survive extraction**
+   so nothing is lost before scoring — then fold them into one lemma group at the
+   term-list stage, which is what the Appendix means and what Surfer shows the user.
+   `licencjonowany detektyw` and `licencjonowani detektywi` reach the scorer, and the
+   list presents one entry counting both. (Earlier drafts said "keep both as separate
+   terms" here and "lemma-dedupe" in the Appendix; the second is the behaviour.)
+   Keep branded/generic pairs Surfer keeps
    ("detektyw", "podsłuchów", "sprawy" — high-volume unigrams with ranges).
 3. Regression test with a realistic 80-term fixture asserting ≥ 60 survive.
 
@@ -152,7 +158,9 @@ least the statute, registry, and one figure per business section.
 Detektywistyczna Ochrony Biznesu ds. zapewnia…" — a truncated brand heading from
 expertus.pl that survived claim extraction (seed token "detektywistyczna" was
 enough) and became the intro's subject.
-- `corpusClaims.ts`: a sentence fragment that is brand-shaped (≥2 capitalised
+- `lib/contentPlanner/sectionLabels.ts` (that is where `namesAnotherBrand` lives —
+  `corpusClaims.ts` is `lib/wie/corpusClaims.ts` and holds the self-promotion filter):
+  a sentence fragment that is brand-shaped (≥2 capitalised
   tokens beyond position 0, no assertive verb, or ends mid-abbreviation "ds.")
   is not a claim — extend the guard next to `namesAnotherBrand`'s logic.
 - `section_writer.py` rules: competitor names in context are references, never

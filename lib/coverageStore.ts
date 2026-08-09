@@ -124,7 +124,10 @@ export function coverageQuestionsForPlanner(raw: unknown): string[] {
       || a.label.localeCompare(b.label))
     .map((i) => i.label.trim())
     .filter((label) => {
-      const key = label.toLowerCase();
+      // normalizeTerm, not toLowerCase — the same key mergeCoverageItems dedupes on.
+      // Lowercasing alone missed diacritic folding, NFD normalisation, whitespace
+      // collapse and punctuation, so near-duplicate labels reached the planner.
+      const key = normalizeTerm(label);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

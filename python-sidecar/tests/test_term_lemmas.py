@@ -23,8 +23,11 @@ def test_regexps_cover_corpus_inflections():
     assert _matches(rx, "usługi detektywistyczne")
     assert _matches(rx, "usług detektywistycznych")
     assert _matches(rx, "usługa detektywistyczna")
-    # A different word does not ride along on a shared prefix.
-    assert not re.fullmatch(rx[0], "usterka")
+    # A different lemma does not ride along on a shared prefix. "usterka" shared no
+    # prefix with usług-/usługi/usługa, so it could never have matched and the assertion
+    # proved nothing; "usługodawca" starts with the whole stem and is the real hazard.
+    assert not re.fullmatch(rx[0], "usługodawca")
+    assert not re.fullmatch(rx[0], "usługodawcy")
 
 
 def test_same_lemma_key_for_inflection_variants():
