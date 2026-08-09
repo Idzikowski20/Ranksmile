@@ -46,8 +46,13 @@ const SELF_PROMOTION = new RegExp(
   // First-person singular present — the customer talking, i.e. a testimonial. "Polecam"
   // is the single most common word in a Polish review, and it walked straight through a
   // filter that only knew about past tense and about the page's own "we".
-  + 'polecam|polecamy|dziekuje|potwierdzam|korzystam|wspolpracuje|zglosilem|'
-  + 'we |our|us|welcome to|i recommend|highly recommend'
+  // "dziekuje" and "wspolpracuje" are deliberately absent: diacritic folding makes the
+  // first-person "dziękuję/współpracuję" identical to the third-person
+  // "dziękuje/współpracuje", so they also swallowed factual sentences like
+  // "Firma wspolpracuje z policja i MSWiA". After folding they are not a person signal.
+  + 'polecam|polecamy|potwierdzam|korzystam|zglosilem|'
+  // recommend(ed) — "a highly recommended agency" is the commoner testimonial form.
+  + 'we |our|us|welcome to|i recommend(?:ed)?|highly recommend(?:ed)?'
   + ')(\\W|$)',
   'i',
 );

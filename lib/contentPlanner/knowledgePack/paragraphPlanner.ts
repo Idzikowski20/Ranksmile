@@ -54,10 +54,14 @@ export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
   // branch fired only when a section carried nothing BUT special blocks, and the planner
   // assigns `example, checklist, steps, pro_tip` to nearly every section — so
   // `style.list` never lit and whole articles rendered as walls of <p>.
-  const structured = section.blocks
-    .filter((b) => STRUCTURED_BLOCKS.includes(b))
-    .slice(0, MAX_STRUCTURED_BLOCKS)
-    .map(mapBlockToGoal);
+  // Deduped after mapping: outlineBuilder gives cost/koszt sections both `table` and
+  // `comparison`, and mapBlockToGoal sends both to the same goal — the writer then
+  // emitted two parallel tables for one section.
+  const structured = [...new Set(
+    section.blocks
+      .filter((b) => STRUCTURED_BLOCKS.includes(b))
+      .map(mapBlockToGoal),
+  )].slice(0, MAX_STRUCTURED_BLOCKS);
   const goals: ParagraphGoal[] = hasOnlySpecialBlocks(section.blocks)
     ? section.blocks.map(mapBlockToGoal)
     : ['intro', ...(structured.length ? structured : ['definition' as ParagraphGoal]), 'summary'];

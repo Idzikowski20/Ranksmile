@@ -101,10 +101,12 @@ export function buildCompetitorBenchmark(
   synth: CompetitorSynthesisMetrics,
 ): CompetitorBenchmark {
   const bestWords = Math.max(synth.averageWords, synth.recommendedWords);
-  // Floor prevents empty/thin SERP from authorizing a short Execution Plan.
-  const targetWords = Math.round(
-    Math.max(BENCHMARK_WORDS_FLOOR, synth.recommendedWords, synth.averageWords * 1.02),
-  );
+  // Floor prevents an empty/thin SERP from authorizing a short Execution Plan — and only
+  // that. Folded into the Math.max it also overrode SERPs that were measured perfectly
+  // well but simply run short (median 920 on the keyword this was tuned against), which
+  // is the SERP telling us what ranks, not a gap to paper over.
+  const measured = Math.max(synth.recommendedWords, synth.averageWords * 1.02);
+  const targetWords = Math.round(measured > 0 ? measured : BENCHMARK_WORDS_FLOOR);
   // A ceiling as well as a floor. `averageH2` counts every heading a competitor renders —
   // H3s, nav, footer — so a SERP of long pages asked for 22 top-level sections, and the
   // outline builder padded to match at ~100 words each. The reference tool reports the

@@ -4,12 +4,18 @@ import type { PlannerTargets, StructuralBenchmark } from './types';
 
 /** Median-first targets; p75 as soft ceiling. */
 export function toPlannerTargets(b: StructuralBenchmark): PlannerTargets {
-  const words = Math.max(BENCHMARK_WORDS_FLOOR, b.words.median || b.words.mean || BENCHMARK_WORDS_FLOOR);
+  // The floor applies only when the scrape measured nothing. As `Math.max(floor, median)`
+  // it overrode real data instead: this SERP's median is 920 words, so every run asked for
+  // the floor regardless of what the competitors actually publish — and since section
+  // count derives from the word budget, it also bought sections nobody had material for.
+  const measuredWords = b.words.median || b.words.mean || 0;
+  const words = measuredWords > 0 ? measuredWords : BENCHMARK_WORDS_FLOOR;
   // `b.h2` is a count of all headings on the page, not of top-level sections — median 22
   // for this SERP. Taken as the section target it produced 22 H2 of ~100 words each, and
   // a brief long enough to be cut off by the model's output cap. Capped by word budget.
+  const measuredH2 = b.h2.median || b.h2.mean || 0;
   const h2 = Math.min(
-    Math.max(BENCHMARK_H2_FLOOR, b.h2.median || b.h2.mean || BENCHMARK_H2_FLOOR),
+    measuredH2 > 0 ? measuredH2 : BENCHMARK_H2_FLOOR,
     h2FromWords(words),
   );
   return {

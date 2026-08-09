@@ -339,7 +339,12 @@ const DeepAnalysisPage: NextPage = () => {
         // the page polling a dead job forever: no step ever moved, no error was shown, and
         // the session pointer kept every reload resuming the same missing run.
         if (res.status === 404 || res.status === 403) {
-          setOverallError('This analysis run is no longer available — its article may have been deleted.');
+          const message = 'This analysis run is no longer available — its article may have been deleted.';
+          // Mark the in-flight step too, exactly as the `failed` branch below does.
+          // Stopping the poll alone left the step list spinning behind the banner, so the
+          // page said both "gone" and "still working" at once.
+          setSteps((prev) => markFailedStep(prev, undefined, undefined, message));
+          setOverallError(message);
           clearPageRun(runSessionKey);
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
           return;

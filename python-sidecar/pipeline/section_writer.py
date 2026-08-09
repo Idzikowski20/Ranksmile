@@ -151,7 +151,11 @@ def _prompt(
             "Write ONE paragraph of the article as Markdown only; never emit HTML.",
             "Write only this paragraph: no heading, no other sections, no preamble.",
         ]
-    if ctx.get("is_lead"):
+    # Only prose can carry the lead. A table or list block has just been told to emit no
+    # prose at all, so adding "the FIRST sentence answers the main question" handed the
+    # model two instructions it cannot both satisfy — which is what a special-only opening
+    # section produced.
+    if ctx.get("is_lead") and not style.get("table") and not style.get("list"):
         lines.append(
             "This is the article's opening paragraph: the FIRST sentence answers the"
             " article title's main question directly. No wind-up, no 'w dzisiejszych"

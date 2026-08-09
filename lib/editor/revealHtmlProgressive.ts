@@ -93,6 +93,13 @@ export type RevealHtmlOptions = {
   abortBehavior?: 'complete' | 'preserve';
   /** Whether the single setContent emits an update (default true). */
   emitUpdate?: boolean;
+  /**
+   * Fired the moment the document exists, before the fade runs. The animation is
+   * presentation-only and takes seconds, during which the user can already type —
+   * so anything that must act on the finished document (clearing undo history, for
+   * one) has to happen here rather than after the await.
+   */
+  onContentSet?: () => void;
 };
 
 /**
@@ -118,10 +125,12 @@ export async function revealHtmlInEditor(
 
   if (!blocks.length) {
     editor.commands.setContent('', { emitUpdate: emit });
+    opts?.onContentSet?.();
     return;
   }
 
   editor.commands.setContent(html, { emitUpdate: emit });
+  opts?.onContentSet?.();
 
   if (prefersReducedMotion() || blocks.length === 1) return;
 

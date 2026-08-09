@@ -55,8 +55,23 @@ export async function buildTopicBlocks(opts: {
   // How many of a title's tokens the claim shares (by stem). Stem overlap replaces the
   // old 12-char-prefix match, which never fired because competitor headings ("Sprawy
   // cywilne – jak pomaga detektyw") do not appear verbatim inside a claim.
-  const sharedTokenCount = (titleTokens: string[], claimTokens: string[]): number =>
-    titleTokens.filter((tt) => claimTokens.some((ct) => tokensShareStem(tt, ct))).length;
+  //
+  // Pairing is one-to-one: a claim token is consumed once. Counting title tokens that
+  // match *any* claim token let a heading repeating an inflection ("detektyw",
+  // "detektywi") clear the two-token floor against a single claim word, which is exactly
+  // the generic-word case the floor exists to reject.
+  const sharedTokenCount = (titleTokens: string[], claimTokens: string[]): number => {
+    const unused = [...claimTokens];
+    let shared = 0;
+    for (const tt of titleTokens) {
+      const at = unused.findIndex((ct) => tokensShareStem(tt, ct));
+      if (at >= 0) {
+        unused.splice(at, 1);
+        shared += 1;
+      }
+    }
+    return shared;
+  };
 
   const blockMeta = clusters.map((c) => ({
     cluster: c,
@@ -68,6 +83,11 @@ export async function buildTopicBlocks(opts: {
   // A claim goes to its SINGLE best-matching block, not every block that shares one
   // word. Two shared tokens is the confidence floor — one shared token is usually a
   // location ("Warszawa") or a generic ("detektyw") that appears in half the headings.
+  //
+  // ponytail: ceiling = a claim sharing exactly one stem with every heading is dropped
+  // rather than placed, and the scan is O(blocks x claims x tokens) held in memory.
+  // Upgrade = embed headings and claims once and assign by cosine similarity, which also
+  // gives the single-token cases a real score instead of a floor.
   for (const claim of opts.claims) {
     const claimTokens = tokensOf(claim.statement);
     let bestIdx = -1;

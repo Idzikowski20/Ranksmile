@@ -65,6 +65,10 @@ describe('filterUsefulNlpTerms lemma dedupe', () => {
 
     expect(out).toHaveLength(2);
     expect(out.map((t) => t.lemma_key).sort()).toEqual(['licencjonowan detektyw', 'wykrywani podsluch']);
+    // Which variant survives matters and cardinality alone cannot see it: the tiebreak
+    // prefers the diacritics-bearing form, then the longer one, so 'licencjonowani
+    // detektywi' must win. Asserting only the count let a survivor regression through.
+    expect(out.map((t) => t.term).sort()).toEqual(['licencjonowani detektywi', 'wykrywanie podsłuchów']);
   });
 
   it('keeps distinct terms distinct without lemma keys', () => {

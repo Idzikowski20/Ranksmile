@@ -100,13 +100,13 @@ async def analyze_serp(
 
     if not serper_key:
         print("[serp_analyzer] No SERPER_API_KEY - using keyword seed data")
-        return {**_placeholder_score_data(keyword), "competitors": [], "paa_questions": []}
+        return {**_placeholder_score_data(keyword, language), "competitors": [], "paa_questions": []}
 
     serp_results, paa_questions = await _fetch_serp_results(keyword, language, num_results, serper_key)
     competitors = _competitors_from_results(serp_results)
     if not serp_results:
         print(f"[serp_analyzer] No SERP results for {keyword!r}")
-        return {**_placeholder_score_data(keyword), "competitors": [], "paa_questions": paa_questions}
+        return {**_placeholder_score_data(keyword, language), "competitors": [], "paa_questions": paa_questions}
 
     scrapeable = [r["link"] for r in serp_results if r.get("link") and _is_html_url(r["link"])]
     skipped = len(serp_results) - len(scrapeable)
@@ -428,13 +428,16 @@ def _keyword_seed_terms(keyword: str) -> list[dict]:
     return out[:6]
 
 
-def _placeholder_score_data(keyword: str = "") -> dict:
+def _placeholder_score_data(keyword: str = "", language: str = "pl") -> dict:
     from analyzers.term_lemmas import attach_lemma_regexps
     # Seed terms carry their inflection regexps too, so the no-Serper / no-results
     # fallback matches and dedupes the same way a full analysis does (empty corpus →
     # base form + stem, which is enough for the scorer to count declensions).
+    # `language` is threaded through rather than pinned to "pl": attach_lemma_regexps
+    # only annotates Polish, and hardcoding it here made the fallback path disagree
+    # with the full path for every other language.
     return {
-        "terms": attach_lemma_regexps(_keyword_seed_terms(keyword), [], "pl"),
+        "terms": attach_lemma_regexps(_keyword_seed_terms(keyword), [], language),
         "competitors": [],
         "paa_questions": [],
         "words_min": 1500,

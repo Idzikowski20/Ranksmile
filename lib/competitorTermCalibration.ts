@@ -52,6 +52,11 @@ export function filterUsefulNlpTerms(terms: NlpTerm[]): NlpTerm[] {
     // lemma_key folds inflection variants into one entry — "licencjonowany detektyw"
     // and "licencjonowani detektywi" are the same term, and listing both meant two
     // targets for one phrase family. Exact-string key only for pre-lemma analyses.
+    //
+    // ponytail: ceiling = the survivor keeps its own counts, so occurrences and doc_freq
+    // of the collapsed variants are dropped rather than summed, and two unrelated phrase
+    // families that happen to stem alike merge silently. Upgrade = aggregate counts
+    // across the group and keep the variants as aliases instead of discarding them.
     const key = t.lemma_key || normalizeTerm(t.term);
     const prev = best.get(key);
     if (!prev) {
