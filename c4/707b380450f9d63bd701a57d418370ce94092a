@@ -1,0 +1,63 @@
+lib/editor/revealHtmlProgressive.ts
+  s_8d6cce368af4fd::t_12438f5f7b99f4 96-102
+  s_8d6cce368af4fd::t_6f9d238452f16f 128,133
+components/articles/ArticleEditor.tsx
+  s_8d6cce368af4fd::t_cfe5d753174e3c 1835-1844
+lib/benchmarkIntelligence/toPlannerTargets.ts
+  s_8d6cce368af4fd::t_53c18ccaa73bd8 7-12,16,18
+lib/contentPlanner/competitorBenchmark.ts
+  s_8d6cce368af4fd::t_2d0341c89ce92a 104-109
+lib/intelligence/ccmToCoverageSnapshot.ts
+  s_8d6cce368af4fd::t_a9ae39a2a9cd50 127-131
+  s_8d6cce368af4fd::t_b2f830670b998d 142-146
+python-sidecar/analyzers/term_lemmas.py
+  s_8d6cce368af4fd::t_f74d552630cc61 37-39,43-46
+lib/competitorTermCalibration.ts
+  s_8d6cce368af4fd::t_ed6d335b6453da 55-59
+__tests__/lib/termMatch.test.ts
+  s_8d6cce368af4fd::t_ee79d285ca29bb 68-71
+__tests__/lib/competitorTermCalibration.test.ts
+  s_8d6cce368af4fd::t_722e72ab2378dc 6-24,34-35,37-38,40-43
+  s_8d6cce368af4fd::t_73b46d51a88e3a 25-33,36,39
+lib/contentPlanner/knowledgePack/paragraphPlanner.ts
+  s_8d6cce368af4fd::t_0bbbe7f45c5517 57-64
+lib/wie/corpusClaims.ts
+  s_8d6cce368af4fd::t_952bc33f834600 49-55
+lib/coverageStore.ts
+  s_8d6cce368af4fd::t_40e341e9fc1fd5 127-130
+pages/articles/deep-analysis.tsx
+  s_8d6cce368af4fd::t_aed2d1d0fe97f7 342-347
+python-sidecar/pipeline/section_writer.py
+  s_8d6cce368af4fd::t_1eaa3a51b7fa38 154-158
+docs/superpowers/plans/2026-08-08-ai-search-parity.md
+  s_8d6cce368af4fd::t_24d83f345f7f6e 161-163
+  s_8d6cce368af4fd::t_c6d47faa4ecc3d 95-97
+  s_8d6cce368af4fd::t_c3ccdc091fbddd 113-119
+python-sidecar/analyzers/serp_analyzer.py
+  s_8d6cce368af4fd::t_af48de6f3236e6 431,436-438,440
+  s_8d6cce368af4fd::t_ff4141bf340456 103
+  s_8d6cce368af4fd::t_00ac6000db32c8 109
+python-sidecar/pipeline/editorial_judge.py
+  s_8d6cce368af4fd::t_8c08caeafb54bd 57-63,70-73
+lib/knowledgeEngine/cluster.ts
+  s_8d6cce368af4fd::t_e8494458662139 58-74
+  s_8d6cce368af4fd::t_8417e41f51d322 86-90
+python-sidecar/tests/test_term_lemmas.py
+  s_8d6cce368af4fd::t_986a41b105bc0d 26-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c4707b380450f9d63bd701a57d418370ce94092a",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
