@@ -1,0 +1,19 @@
+package.json
+  s_668ab4f91e9d5a::t_65272739569e85 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e48779e692348213fe554e7ecdb935b7e521d59c",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
