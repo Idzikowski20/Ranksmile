@@ -79,6 +79,11 @@ def _word_regexp(word: str, observed: set[str]) -> str:
     return f"(?:{alternation})"
 
 
+def _base_language(language: str) -> str:
+    """"pl-PL" / "PL" / "pl_PL" -> "pl". Matches how the TS side reads language codes."""
+    return re.split(r"[-_]", str(language or "").strip().lower(), maxsplit=1)[0]
+
+
 def attach_lemma_regexps(
     terms: list[dict],
     texts: list[str],
@@ -98,7 +103,11 @@ def attach_lemma_regexps(
     # the plural. Leave non-Polish terms unannotated so that fallback survives.
     # ponytail: ceiling = only pl gets lemma matching; upgrade = a per-language
     # suffix table (or a real stemmer) keyed off `language`.
-    if language != "pl" or not terms:
+    #
+    # Normalised first: callers pass the request's language through verbatim, so "pl-PL"
+    # or "PL" would otherwise fail an exact match and silently disable annotation for a
+    # Polish corpus — a worse regression than the English case this guard exists for.
+    if _base_language(language) != "pl" or not terms:
         return terms
 
     corpus_forms = _forms_by_stem(texts)
