@@ -54,10 +54,15 @@ export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
   // branch fired only when a section carried nothing BUT special blocks, and the planner
   // assigns `example, checklist, steps, pro_tip` to nearly every section — so
   // `style.list` never lit and whole articles rendered as walls of <p>.
+  // Distinct goals, and never two of the same in a row: `comparison` + `table` both map
+  // to the comparison goal, and a section carrying both (or two of one) would emit
+  // adjacent identical goals, which the compiled-plan validator rejects as
+  // `duplicate_consecutive_goal`.
   const structured = section.blocks
     .filter((b) => STRUCTURED_BLOCKS.includes(b))
-    .slice(0, MAX_STRUCTURED_BLOCKS)
-    .map(mapBlockToGoal);
+    .map(mapBlockToGoal)
+    .filter((goal, i, arr) => goal !== arr[i - 1])
+    .slice(0, MAX_STRUCTURED_BLOCKS);
   const goals: ParagraphGoal[] = hasOnlySpecialBlocks(section.blocks)
     ? section.blocks.map(mapBlockToGoal)
     : ['intro', ...(structured.length ? structured : ['definition' as ParagraphGoal]), 'summary'];

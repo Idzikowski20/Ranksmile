@@ -215,6 +215,25 @@ describe('compileWritePlan', () => {
     expect(paragraphs[2].style.list).toBe(true);
   });
 
+  /**
+   * `comparison` + `table` both map to the comparison goal. Without collapsing them the
+   * section emitted two adjacent comparison paragraphs, and compileAndValidateWritePlan
+   * rejected the whole plan with `duplicate_consecutive_goal` — the article-14 failure.
+   */
+  it('never plans two adjacent paragraphs with the same structured goal', () => {
+    const plan = sampleExecutionPlan({
+      sections: [sampleSection({ blocks: ['comparison', 'table', 'example'] })],
+    });
+
+    const compiled = compileWritePlan(plan);
+    const goals = compiled.paragraphPlans
+      .filter((p) => p.sectionId === 'sec-intro')
+      .map((p) => p.goal);
+
+    expect(goals.filter((g, i) => g === goals[i - 1])).toHaveLength(0);
+    expect(goals.filter((g) => g === 'comparison')).toHaveLength(1);
+  });
+
   it('marks a comparison block as a table', () => {
     const plan = sampleExecutionPlan({
       sections: [sampleSection({ blocks: ['example', 'comparison'] })],
