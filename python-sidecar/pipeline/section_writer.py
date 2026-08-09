@@ -98,6 +98,21 @@ def _resolved(
 _FENCE_TAG = re.compile(r"<\s*/?\s*context\b[^>]*>", re.IGNORECASE)
 
 
+#: Slack over the target before a paragraph counts as overrunning its budget.
+_WORD_CEILING_RATIO = 1.3
+
+
+def _word_ceiling(expected_words: object) -> str:
+    """The number the writer is actually held to.
+
+    "Target words: 20" alone was advisory and read as such: article 18 was planned at 920
+    words and shipped 3812. A stated ceiling gives the model something to stop at.
+    """
+    if not isinstance(expected_words, int) or expected_words <= 0:
+        return ""
+    return f"{round(expected_words * _WORD_CEILING_RATIO)} words — do not exceed it"
+
+
 def _inline(value: object) -> str:
     """
     One line, no fence. A newline would let scraped text start what reads as a new
@@ -220,6 +235,7 @@ def _prompt(
 
     add("Paragraph role", paragraph_plan.get("goal"))
     add("Target words", paragraph_plan.get("expected_words"))
+    add("Hard limit", _word_ceiling(paragraph_plan.get("expected_words")))
 
     for field, key, index_name, label in _REFERENCE_FIELDS:
         kept = [t for t in (_inline(i) for i in _resolved(paragraph_plan, ctx, field, key, index_name)) if t]

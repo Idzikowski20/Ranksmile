@@ -11,8 +11,12 @@ const REST_Y = 109.888;
 const ENTER_X = 20.182;
 const ENTER_Y = 671.07;
 
+export type SmileyMood = 'happy' | 'sad';
+
 export type BounceSmileyAnimationProps = {
   className?: string;
+  /** Frown instead of smile — for expired/locked states. Default 'happy'. */
+  mood?: SmileyMood;
   /** Face-only mark for toolbars / nav (no bounce stage). */
   compact?: boolean;
   /** Bounce-in on first mount only. Ignored when `compact`. Default true. */
@@ -27,10 +31,12 @@ function SmileyFace({
   filterId,
   paintId,
   animateRotate = true,
+  mood = 'happy',
 }: {
   filterId: string;
   paintId: string;
   animateRotate?: boolean;
+  mood?: SmileyMood;
 }) {
   // CSS keyframes (globals.css) — same approach as legacy Surfy blink.
   // Motion SVG rotate/path loops were not reliably painting in production.
@@ -62,8 +68,15 @@ function SmileyFace({
           fill="#00558E"
         />
       </g>
+      {/*
+        Same arc mirrored about y=130: the smile's control points sit below its
+        endpoints, the frown's above. Keeping one path shape means the two moods
+        share stroke weight and cap, so only the curve reads as different.
+      */}
       <path
-        d="M90 127C97.2727 139 112.727 139 120 127"
+        d={mood === 'sad'
+          ? 'M90 133C97.2727 121 112.727 121 120 133'
+          : 'M90 127C97.2727 139 112.727 139 120 127'}
         stroke="#057BC9"
         strokeWidth="8"
         strokeLinecap="round"
@@ -135,7 +148,7 @@ export function BounceSmileyAnimation({
         style={{ display: "inline-block", flexShrink: 0, verticalAlign: "middle" }}
         aria-hidden="true"
       >
-        <SmileyFace filterId={filterId} paintId={paintId} animateRotate={animateRotate} />
+        <SmileyFace filterId={filterId} paintId={paintId} animateRotate={animateRotate} mood={mood} />
       </svg>
     );
   }
@@ -163,7 +176,7 @@ export function BounceSmileyAnimation({
         }
       >
         <svg x={0} y={0} width={226} height={226} viewBox="0 0 226 226" overflow="visible">
-          <SmileyFace filterId={filterId} paintId={paintId} animateRotate={animateRotate} />
+          <SmileyFace filterId={filterId} paintId={paintId} animateRotate={animateRotate} mood={mood} />
         </svg>
       </motion.g>
     </svg>

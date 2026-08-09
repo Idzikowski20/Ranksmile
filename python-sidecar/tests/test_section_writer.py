@@ -203,3 +203,17 @@ def test_checklist_paragraph_still_asks_for_bullets():
 
     assert "bullet list" in prompt
     assert "NUMBERED" not in prompt
+
+
+def test_prompt_states_a_hard_word_ceiling():
+    """"Target words" alone was advisory: a plan of 920 words shipped 3812."""
+    prompt = _prompt({"id": "p1", "goal": "intro", "expected_words": 100, "style": {}})
+
+    assert "Target words: 100" in prompt
+    assert "Hard limit: 130 words — do not exceed it" in prompt
+
+
+def test_no_ceiling_without_a_budget():
+    prompt = _prompt({"id": "p1", "goal": "intro", "style": {}})
+
+    assert "Hard limit" not in prompt

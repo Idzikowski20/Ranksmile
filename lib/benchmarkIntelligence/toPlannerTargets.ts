@@ -16,7 +16,12 @@ export function toPlannerTargets(b: StructuralBenchmark): PlannerTargets {
   // it overrode real data instead: this SERP's median is 920 words, so every run asked for
   // the floor regardless of what the competitors actually publish — and since section
   // count derives from the word budget, it also bought sections nobody had material for.
-  const measuredWords = b.words.median || b.words.mean || 0;
+  // p75, not the median. The median is "as long as the middle result", which is not a
+  // target that outranks anything — and the reference tool aims higher still: for this
+  // SERP (median 920, p75 1080, max 1440) it asked for 1400-1610, i.e. the top of the
+  // field. p75 is the outlier-resistant step in that direction; `max` would let one
+  // 15,000-word competitor define the brief.
+  const measuredWords = b.words.p75 || b.words.median || b.words.mean || 0;
   const words = measuredWords > 0 ? measuredWords : BENCHMARK_WORDS_FLOOR;
   // `b.h2` counts all headings on the page (H2-H6), so the benchmark median already
   // approximates the reference tool's H2 section count for this SERP (median 13 here).

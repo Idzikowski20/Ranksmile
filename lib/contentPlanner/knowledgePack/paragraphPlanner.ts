@@ -45,6 +45,34 @@ const MAX_STRUCTURED_BLOCKS = 2;
  */
 const STRUCTURED_BLOCKS: ContentBlockType[] = ['checklist', 'steps', 'comparison', 'table', 'faq'];
 
+/**
+ * Words below which a paragraph instruction stops being writable.
+ *
+ * A section budgeted 80 words and split across intro + checklist + steps + summary asks
+ * for 20 words per paragraph. No model writes a 20-word bulleted block with a bold label,
+ * so it ignores the number entirely — article 18 was planned at 920 words and shipped
+ * 3812, 3.6x its own budget. Fewer, writable paragraphs beat four unwritable ones.
+ */
+const MIN_PARAGRAPH_WORDS = 55;
+
+/**
+ * Drop structured blocks until every remaining paragraph can hold MIN_PARAGRAPH_WORDS.
+ * The opening always survives; the closing summary is the first thing sacrificed, and
+ * only once the section cannot afford two paragraphs at all.
+ */
+export function fitToWordBudget(goals: ParagraphGoal[], expectedWords: number): ParagraphGoal[] {
+  if (expectedWords <= 0 || goals.length <= 1) return goals;
+  const affordable = Math.max(1, Math.floor(expectedWords / MIN_PARAGRAPH_WORDS));
+  if (goals.length <= affordable) return goals;
+
+  const head = goals[0];
+  const tail = goals[goals.length - 1];
+  const middle = goals.slice(1, -1);
+  if (affordable === 1) return [head];
+  // `affordable - 2` middles, plus the opening and the closing.
+  return [head, ...middle.slice(0, Math.max(0, affordable - 2)), tail];
+}
+
 export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
   if (section.blocks.length === 0 && section.expectedWords === 0) {
     return [];
@@ -62,9 +90,10 @@ export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
       .filter((b) => STRUCTURED_BLOCKS.includes(b))
       .map(mapBlockToGoal),
   )].slice(0, MAX_STRUCTURED_BLOCKS);
-  const goals: ParagraphGoal[] = hasOnlySpecialBlocks(section.blocks)
+  const planned: ParagraphGoal[] = hasOnlySpecialBlocks(section.blocks)
     ? section.blocks.map(mapBlockToGoal)
     : ['intro', ...(structured.length ? structured : ['definition' as ParagraphGoal]), 'summary'];
+  const goals = fitToWordBudget(planned, section.expectedWords);
 
   const totalWords = section.expectedWords;
   const baseWords = Math.floor(totalWords / goals.length);

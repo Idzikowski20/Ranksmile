@@ -33,3 +33,46 @@ describe('planParagraphs block styles', () => {
     expect(comparison?.style.list).toBeUndefined();
   });
 });
+
+/**
+ * Article 18 was planned at 920 words and shipped 3812 — 3.6x its own budget. Its
+ * sections were budgeted 80 words and split across intro + checklist + steps + summary,
+ * asking for 20 words a paragraph. Nothing writes a 20-word bulleted block with a bold
+ * label, so the number was ignored outright.
+ */
+describe('planParagraphs word budget', () => {
+  function budgeted(words: number): ExecutionPlanSection {
+    return {
+      id: 'sec-1',
+      heading: 'Zakres uslug',
+      expectedWords: words,
+      blocks: ['example', 'checklist', 'steps', 'pro_tip'],
+    } as unknown as ExecutionPlanSection;
+  }
+
+  it('does not split an 80-word section into four unwritable paragraphs', () => {
+    const paragraphs = planParagraphs(budgeted(80));
+
+    expect(paragraphs.length).toBeLessThanOrEqual(2);
+    for (const p of paragraphs) expect(p.expectedWords).toBeGreaterThanOrEqual(35);
+  });
+
+  it('keeps the full shape once the section can afford it', () => {
+    const paragraphs = planParagraphs(budgeted(400));
+
+    expect(paragraphs.length).toBeGreaterThan(2);
+    expect(paragraphs[0].goal).toBe('intro');
+    expect(paragraphs[paragraphs.length - 1].goal).toBe('summary');
+  });
+
+  it('always keeps the opening, and the closing whenever two fit', () => {
+    const paragraphs = planParagraphs(budgeted(120));
+
+    expect(paragraphs[0].goal).toBe('intro');
+    expect(paragraphs[paragraphs.length - 1].goal).toBe('summary');
+  });
+
+  it('never returns nothing for a tiny section', () => {
+    expect(planParagraphs(budgeted(30)).length).toBe(1);
+  });
+});

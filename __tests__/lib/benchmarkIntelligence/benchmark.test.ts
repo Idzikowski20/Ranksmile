@@ -4,16 +4,43 @@ describe('Benchmark Intelligence', () => {
   it('uses median not mean when outlier present', () => {
     const b = buildStructuralBenchmark([
       {
-        wordCount: 3000, h2: 14, faq: 6, tables: 1, lists: 10, images: 3, examples: 4, citations: 10,
-        sectionLens: [200], introLen: 80, paragraphLens: [40, 45],
+        wordCount: 3000,
+h2: 14,
+faq: 6,
+tables: 1,
+lists: 10,
+images: 3,
+examples: 4,
+citations: 10,
+        sectionLens: [200],
+introLen: 80,
+paragraphLens: [40, 45],
       },
       {
-        wordCount: 3200, h2: 15, faq: 7, tables: 2, lists: 11, images: 3, examples: 5, citations: 12,
-        sectionLens: [220], introLen: 90, paragraphLens: [42],
+        wordCount: 3200,
+h2: 15,
+faq: 7,
+tables: 2,
+lists: 11,
+images: 3,
+examples: 5,
+citations: 12,
+        sectionLens: [220],
+introLen: 90,
+paragraphLens: [42],
       },
       {
-        wordCount: 9000, h2: 40, faq: 20, tables: 8, lists: 40, images: 20, examples: 30, citations: 50,
-        sectionLens: [800], introLen: 200, paragraphLens: [100],
+        wordCount: 9000,
+h2: 40,
+faq: 20,
+tables: 8,
+lists: 40,
+images: 20,
+examples: 30,
+citations: 50,
+        sectionLens: [800],
+introLen: 200,
+paragraphLens: [100],
       },
     ]);
     expect(b.words.median).toBeLessThan(4000);
@@ -25,12 +52,30 @@ describe('Benchmark Intelligence', () => {
   it('toPlannerTargets prefers median floors', () => {
     const b = buildStructuralBenchmark([
       {
-        wordCount: 3600, h2: 16, faq: 8, tables: 2, lists: 12, images: 4, examples: 6, citations: 14,
-        sectionLens: [250], introLen: 100, paragraphLens: [50],
+        wordCount: 3600,
+h2: 16,
+faq: 8,
+tables: 2,
+lists: 12,
+images: 4,
+examples: 6,
+citations: 14,
+        sectionLens: [250],
+introLen: 100,
+paragraphLens: [50],
       },
       {
-        wordCount: 3700, h2: 17, faq: 9, tables: 2, lists: 13, images: 4, examples: 6, citations: 15,
-        sectionLens: [260], introLen: 110, paragraphLens: [52],
+        wordCount: 3700,
+h2: 17,
+faq: 9,
+tables: 2,
+lists: 13,
+images: 4,
+examples: 6,
+citations: 15,
+        sectionLens: [260],
+introLen: 110,
+paragraphLens: [52],
       },
     ]);
     const t = toPlannerTargets(b);
@@ -98,5 +143,32 @@ describe('Benchmark Intelligence', () => {
     expect(t.words).toBeLessThan(1400);
     // Benchmark median H2 (10) trusted, not crushed to 7 by a word-only cap.
     expect(t.h2).toBe(10);
+  });
+});
+
+/**
+ * Article 18's SERP measured median 920, p75 1080, max 1440 — and the reference tool
+ * asked for 1400-1610 on the same set. Targeting the median plans an article exactly as
+ * long as the middle result, which outranks nothing.
+ */
+describe('toPlannerTargets word target', () => {
+  const benchmark = {
+    words: { median: 920, p25: 628, p75: 1080, min: 447, max: 1440, mean: 903, n: 5 },
+    h2: { median: 13, p25: 11, p75: 14, min: 8, max: 22, mean: 14, n: 5 },
+    faq: { median: 5 },
+tables: { median: 1 },
+lists: { median: 8 },
+    images: { median: 2 },
+examples: { median: 4 },
+citations: { median: 6 },
+  } as unknown as Parameters<typeof toPlannerTargets>[0];
+
+  it('aims at p75, not the middle of the field', () => {
+    expect(toPlannerTargets(benchmark).words).toBe(1080);
+  });
+
+  it('falls back to the median when p75 was not measured', () => {
+    const noP75 = { ...benchmark, words: { ...benchmark.words, p75: 0 } } as typeof benchmark;
+    expect(toPlannerTargets(noP75).words).toBe(920);
   });
 });
