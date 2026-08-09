@@ -1,0 +1,20 @@
+components/articles/ArticleList.tsx
+  s_8d6cce368af4fd::t_14377b175dc230 146-148
+  s_8d6cce368af4fd::t_f365cd87b6ad37 307,313-332
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "15497c4b97142f64c31a5fb473c6a0e254cacad7",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
