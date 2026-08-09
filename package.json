@@ -31,6 +31,7 @@
     "budget": "node scripts/check-bundle-budget.mjs",
     "test:cv": "jest --coverage --coverageDirectory='coverage'",
     "db:migrate": "sequelize-cli db:migrate --env production",
+    "db:utc-timestamps": "tsx scripts/migrate-utc-timestamps.ts",
     "db:revert": "sequelize-cli db:migrate:undo --env production",
     "release": "standard-version",
     "stripe:seed": "tsx scripts/seed-stripe-products.ts",
