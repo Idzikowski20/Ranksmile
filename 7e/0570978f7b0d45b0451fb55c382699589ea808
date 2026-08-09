@@ -1,0 +1,22 @@
+__tests__/lib/contentPlanner/budgetEngine.test.ts
+  s_668ab4f91e9d5a::t_6a462d472fe57d 1-62
+lib/contentPlanner/budgetEngine.ts
+  s_668ab4f91e9d5a::t_214f9d465db675 5
+  s_668ab4f91e9d5a::t_c06c1acf60b33a 28-33,36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7e0570978f7b0d45b0451fb55c382699589ea808",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
