@@ -289,19 +289,25 @@ export function validateRequiredAssignments(opts: {
   }
   const assignedClaims = new Set(opts.outline.sections.flatMap((s) => s.assignedClaimIds));
   const assignedQuestions = new Set(opts.outline.sections.flatMap((s) => s.assignedQuestionIds));
+  // `critical` alone, not `required`. importanceFromGain marks every surviving claim
+  // `required`, so gating on it here demanded a slot for all of them: the measured SERP
+  // produced 58 claims against an outline holding 7 x 8 = 56, and generation failed on
+  // the arithmetic rather than on any knowledge gap. Nothing is abandoned — the 95%
+  // coverage gate in knowledgeCoverage.ts still counts `required` claims, it just does
+  // so in aggregate instead of demanding each one individually.
   for (const c of opts.kg.claims) {
-    if ((c.importance === 'required' || c.priority === 'critical') && !assignedClaims.has(c.id)) {
+    if (c.priority === 'critical' && !assignedClaims.has(c.id)) {
       issues.push({
         code: 'required_claim_unassigned',
-        message: `Required/critical claim unassigned: ${c.id}`,
+        message: `Critical claim unassigned: ${c.id}`,
       });
     }
   }
   for (const q of opts.kg.questions) {
-    if ((q.importance === 'required' || q.priority === 'critical') && !assignedQuestions.has(q.id)) {
+    if (q.priority === 'critical' && !assignedQuestions.has(q.id)) {
       issues.push({
         code: 'required_question_unassigned',
-        message: `Required/critical question unassigned: ${q.id}`,
+        message: `Critical question unassigned: ${q.id}`,
       });
     }
   }

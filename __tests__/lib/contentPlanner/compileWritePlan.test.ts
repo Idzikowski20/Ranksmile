@@ -255,6 +255,30 @@ describe('compileWritePlan', () => {
     expect(compiled.graph.claims[0].sourceId).toBe(compiled.graph.sources[0].id);
   });
 
+  /**
+   * `\.edu(\.[a-z]{2,})?$` also matched `evil.edu.com` and `evil.edu.io` — ordinary
+   * commercial registrations, not universities. Anyone could buy one and have our
+   * articles cite it as an authority.
+   */
+  it('does not treat a commercial .edu.<tld> registration as an academic authority', () => {
+    const plan = sampleExecutionPlan({
+      sections: [sampleSection({
+        claims: [{
+          id: 'c1',
+          statement: 'Licencja wymaga egzaminu.',
+          sources: [
+            { url: 'https://evil.edu.com/whitepaper', label: 'fake', confidence: 1 },
+            { url: 'https://evil.edu.io/whitepaper', label: 'fake', confidence: 1 },
+            { url: 'https://uj.edu.pl/kierunki', label: 'uczelnia', confidence: 1 },
+          ],
+        }],
+      })],
+    });
+
+    const urls = compileWritePlan(plan).graph.sources.map((s) => s.url);
+    expect(urls).toEqual(['https://uj.edu.pl/kierunki']);
+  });
+
   it('splits ordinary sections into intro/definition/summary by expectedWords', () => {
     const plan = sampleExecutionPlan({
       sections: [sampleSection({ blocks: ['definition'], expectedWords: 300 })],
