@@ -1,0 +1,25 @@
+pages/articles/[id]/index.tsx
+  s_668ab4f91e9d5a::t_8b3f382e50b0b8 9,603-606,766-769
+  s_668ab4f91e9d5a::t_469a63a5153657 771-779,1018,1024
+  s_668ab4f91e9d5a::t_e1916ee481b3a5 607-611
+lib/outlineReviewState.ts
+  s_668ab4f91e9d5a::t_f14a00d83d35b5 1-41
+__tests__/lib/outlineReviewState.test.ts
+  s_668ab4f91e9d5a::t_aae6256d5e6770 1-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "77238a8b3da8645557b0fd9cc300f10708a83117",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
