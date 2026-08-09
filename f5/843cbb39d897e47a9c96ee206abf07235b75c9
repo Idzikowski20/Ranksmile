@@ -1,0 +1,25 @@
+pages/api/articles/deep-analysis.ts
+  s_668ab4f91e9d5a::t_8a7adc68e8758e 170-176
+__tests__/lib/topicRelevance.noise.test.ts
+  s_668ab4f91e9d5a::t_f4618f09e8cea3 41
+  s_668ab4f91e9d5a::t_0ad22969a742b1 1-40,42-52
+lib/topicRelevance.ts
+  s_668ab4f91e9d5a::t_520d0630829939 126-132
+  s_668ab4f91e9d5a::t_397a9f2f2a9e01 5,116-125,133-146,149-150,173-177,192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f5843cbb39d897e47a9c96ee206abf07235b75c9",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
