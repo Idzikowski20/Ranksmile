@@ -42,3 +42,31 @@ def test_judge_rewrites_critical_gap_even_when_confident():
 
     assert reviewed.rewritten is True
     assert "critical_gap:missing_fact" in reviewed.judge_notes
+
+
+def test_judge_never_rewrites_an_empty_paragraph():
+    """
+    Article 13 shipped "Wklej prosze akapit Markdown, ktory mam przeredagowac." as prose:
+    an empty paragraph was sent to the rewriter, whose prompt then carried no paragraph,
+    and the model's request for input became the article's text.
+    """
+    empty = ParagraphResult(**{**BASE.__dict__, "markdown": "", "confidence": 0.1})
+
+    async def exploding_rewrite(markdown: str) -> str:
+        raise AssertionError("rewrite must not be called for an empty paragraph")
+
+    reviewed = asyncio.run(review_paragraph(empty, exploding_rewrite))
+
+    assert reviewed.markdown == ""
+    assert reviewed.rewritten is False
+    assert "empty_not_rewritten" in reviewed.judge_notes
+
+
+def test_judge_keeps_the_original_when_the_rewrite_comes_back_blank():
+    async def blank_rewrite(markdown: str) -> str:
+        return "   "
+
+    reviewed = asyncio.run(review_paragraph(BASE, blank_rewrite))
+
+    assert reviewed.markdown == "First markdown."
+    assert reviewed.rewritten is True

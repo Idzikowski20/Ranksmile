@@ -42,10 +42,22 @@ def _graph_index(plan: Mapping[str, object]) -> dict[str, dict[str, str]]:
     graph = plan.get("graph")
     if not isinstance(graph, Mapping):
         return {}
+    sources: dict[str, str] = {}
+    raw_sources = graph.get("sources")
+    if isinstance(raw_sources, list):
+        for item in raw_sources:
+            if not isinstance(item, Mapping):
+                continue
+            item_id, url = item.get("id"), item.get("url")
+            title = item.get("title")
+            if isinstance(item_id, str) and isinstance(url, str) and url.strip():
+                label = title.strip() if isinstance(title, str) and title.strip() else url.strip()
+                sources[item_id] = f"{label} -> {url.strip()}"
     return {
         "claims": _text_index(graph, "claims", "text"),
         "questions": _text_index(graph, "questions", "text"),
         "entities": _text_index(graph, "entities", "name"),
+        "sources": sources,
     }
 
 
@@ -69,6 +81,7 @@ async def run_compiled_write_plan(
 
     markdown = [f"# {title.strip()}"]
     reviewed: list[ReviewedParagraphResult] = []
+    first_paragraph = True
     for pack in packs:
         if not isinstance(pack, Mapping):
             raise ValueError("compiled_write_plan.knowledge_packs contains invalid pack")
@@ -79,16 +92,21 @@ async def run_compiled_write_plan(
         markdown.append(f"## {heading}")
         # The writer is called once per paragraph and keeps no history between calls, so
         # everything it needs about where the paragraph sits has to travel with it.
-        context = {
-            "title": title.strip(),
-            "heading": heading,
-            "objective": pack.get("objective"),
-            "index": index,
-        }
         for paragraph_id in paragraph_ids:
             paragraph = registry.get(paragraph_id)
             if not isinstance(paragraph, Mapping):
                 raise ValueError(f"compiled_write_plan missing paragraph {paragraph_id}")
+            context = {
+                "title": title.strip(),
+                "heading": heading,
+                "objective": pack.get("objective"),
+                "index": index,
+                # The article's opening paragraph answers the main question outright —
+                # the coverage judge awards a flat bonus for it, and readers and AI
+                # engines both quote the lead, not the third section.
+                "is_lead": first_paragraph,
+            }
+            first_paragraph = False
             result = await write_paragraph(paragraph, generate_markdown, context)
             judged = await review_paragraph(result, rewrite_markdown)
             reviewed.append(judged)

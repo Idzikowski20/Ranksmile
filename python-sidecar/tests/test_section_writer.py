@@ -140,3 +140,51 @@ def test_prompt_does_not_claim_a_reviewer_approved_the_outline():
 
     assert "Section brief:" in prompt
     assert "approved outline" not in prompt
+
+
+def test_lead_paragraph_is_told_to_answer_first():
+    """The coverage judge pays a flat bonus for a lead that answers the main question."""
+    lead = _prompt(PARAGRAPH, {**CONTEXT, "is_lead": True})
+    body = _prompt(PARAGRAPH, CONTEXT)
+
+    assert "FIRST sentence answers" in lead
+    assert "FIRST sentence answers" not in body
+
+
+def test_list_style_paragraph_asks_for_a_labelled_bullet_list():
+    """The plan budgeted lists and the writer was forbidden to produce one."""
+    plan = {**PARAGRAPH, "style": {"list": True}}
+    prompt = _prompt(plan, CONTEXT)
+
+    assert "bullet list" in prompt
+    assert "bold label" in prompt
+    assert "Write ONE paragraph" not in prompt
+
+
+def test_table_style_paragraph_asks_for_a_markdown_table():
+    plan = {**PARAGRAPH, "style": {"table": True}}
+    prompt = _prompt(plan, CONTEXT)
+
+    assert "comparison table" in prompt
+    assert "Write ONE paragraph" not in prompt
+
+
+def test_plain_paragraph_prompt_is_unchanged():
+    assert "Write ONE paragraph" in _prompt(PARAGRAPH, CONTEXT)
+
+
+def test_authority_sources_resolve_and_gate_the_link_rule():
+    """Competitor URLs are filtered at compile time; only listed authorities may be linked."""
+    plan = {**PARAGRAPH, "sources": [{"source_id": "src-1"}]}
+    ctx = {**CONTEXT, "index": {**CONTEXT["index"], "sources": {"src-1": "art. 191 kk -> https://isap.sejm.gov.pl/kk.pdf"}}}
+    prompt = _prompt(plan, ctx)
+
+    assert "Authority sources: art. 191 kk -> https://isap.sejm.gov.pl/kk.pdf" in prompt
+    assert "AT MOST one" in prompt
+    # No sources on the plan -> no link permission in the prompt.
+    assert "AT MOST one" not in _prompt(PARAGRAPH, CONTEXT)
+
+
+def test_writer_is_told_to_keep_facts_exact():
+    """Reference articles carry guideline facts near-verbatim; ours blurred them."""
+    assert "figures, statutes, names" in _prompt(PARAGRAPH, CONTEXT)

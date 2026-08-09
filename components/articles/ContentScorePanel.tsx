@@ -368,7 +368,7 @@ const ContentScorePanel = ({
     if (!scoreData?.terms) return;
     const updated = scoreData.terms.map((t) => ({
       ...t,
-      current_count: countOccurrences(plainText, t.term),
+      current_count: countOccurrences(plainText, t.term, t.term_words_regexps),
     }));
     setTerms(updated);
   }, [plainText, scoreData]);

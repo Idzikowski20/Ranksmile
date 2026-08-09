@@ -272,8 +272,10 @@ async def run_pipeline(
 
         async def rewrite_markdown(markdown: str) -> str:
             return await _chat(
-                f"Rewrite this Markdown paragraph for clarity and factual precision. "
-                f"Markdown only.{link_note}\n\n{markdown}",
+                f"Rewrite this Markdown block for clarity and factual precision. "
+                f"Preserve its Markdown structure exactly — a bullet list stays a bullet "
+                f"list with its bold label, a table stays a table, a paragraph stays a "
+                f"paragraph. Markdown only.{link_note}\n\n{markdown}",
                 max_tokens=1200,
                 system="You are an editorial judge. Return only rewritten Markdown.",
             )

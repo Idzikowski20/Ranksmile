@@ -50,18 +50,80 @@ function buildManifest(builtAt: string): PipelineManifest {
   };
 }
 
+/**
+ * The only domains a generated article may cite with a live link. Claim sources are
+ * mostly competitor pages, and linking a competitor from our article is the one thing
+ * strictly worse than no link — the reference article links statutes and public
+ * institutions, never rivals.
+ *
+ * ponytail: a hand-kept allowlist; an authority outside it simply is not linked.
+ * Upgrade path is a domain-authority score on the source records.
+ */
+const AUTHORITY_HOST = /(^|\.)(gov\.pl|gov|sejm\.gov\.pl|isap\.sejm\.gov\.pl|policja\.gov\.pl|prokuratura\.gov\.pl|lexlege\.pl|europa\.eu|cert\.pl|uodo\.gov\.pl)$|\.edu(\.[a-z]{2,})?$/i;
+
+/**
+ * Matched against the parsed hostname, never the raw URL: `https://evil.com/lexlege.pl`
+ * and `https://evil.com?x=.gov.pl` both contain an allowlisted string but resolve to a
+ * hostile host. Only https URLs qualify — a claim source we would put in front of a
+ * reader must be one we would send them to.
+ */
+function isAuthorityUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && AUTHORITY_HOST.test(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** Deterministic per-URL id, so paragraph refs and the graph agree without ordering. */
+function sourceIdFor(url: string): string {
+  return `src-${createHash('sha1').update(url).digest('hex').slice(0, 8)}`;
+}
+
 function buildGraph(plan: ArticleExecutionPlan, builtAt: string): KnowledgeGraphSnapshot {
   const claims: Claim[] = [];
   const facts: Fact[] = [];
   const entities: Entity[] = [];
   const questions: Question[] = [];
+  const sources: KnowledgeGraphSnapshot['sources'] = [];
+  const sourceIdByUrl = new Map<string, string>();
 
   for (const section of plan.sections) {
     for (const c of section.claims) {
+      let sourceId: string | null = null;
+      for (const src of c.sources ?? []) {
+        if (!src.url || !isAuthorityUrl(src.url)) continue;
+        let id = sourceIdByUrl.get(src.url);
+        if (!id) {
+          id = sourceIdFor(src.url);
+          sourceIdByUrl.set(src.url, id);
+          let domain = '';
+          try {
+            domain = new URL(src.url).hostname;
+          } catch { /* keep empty — the URL is still linkable text */ }
+          sources.push({
+            id,
+            url: src.url,
+            domain,
+            authority: src.confidence ?? 0.5,
+            language: '',
+            title: src.label || domain || src.url,
+            summary: '',
+            claimIds: [c.id],
+            entityIds: [],
+            quotes: [],
+          });
+        } else {
+          const existing = sources.find((s) => s.id === id);
+          if (existing && !existing.claimIds.includes(c.id)) existing.claimIds.push(c.id);
+        }
+        sourceId = sourceId ?? id;
+      }
       claims.push({
         id: c.id,
         text: c.statement,
-        sourceId: null,
+        sourceId,
         confidence: 1,
         status: 'verified',
       });
@@ -103,7 +165,7 @@ function buildGraph(plan: ArticleExecutionPlan, builtAt: string): KnowledgeGraph
     createdAt: builtAt,
     plannerVersion: plan.plannerVersion,
     researchVersion: 'none',
-    sources: [],
+    sources,
     entities,
     claims,
     facts,
@@ -116,6 +178,11 @@ function enrichFirstParagraph(
   section: ExecutionPlanSection,
 ): ParagraphPlan {
   const claimRefs: ClaimRef[] = section.claims.map((c) => ({ claimId: c.id }));
+  const sourceRefs = [...new Set(section.claims
+    .flatMap((c) => c.sources ?? [])
+    .filter((src) => src.url && isAuthorityUrl(src.url))
+    .map((src) => sourceIdFor(src.url)))]
+    .map((sourceId) => ({ sourceId }));
   const factRefs: FactRef[] = section.claims.map((c) => ({ factId: `fact-${c.id}` }));
   const entityRefs: EntityRef[] = section.entities.map((_, i) => ({
     entityId: `entity-${section.id}-${i}`,
@@ -131,6 +198,7 @@ function enrichFirstParagraph(
     facts: [...paragraph.facts, ...factRefs],
     entities: [...paragraph.entities, ...entityRefs],
     questions: [...paragraph.questions, ...questionRefs],
+    sources: [...paragraph.sources, ...sourceRefs],
   };
 }
 

@@ -231,3 +231,48 @@ with symbol names intact), exports `score(content, guidelines, version)` and
 - Structure ranges as soft+hard intervals with overhead margins is a better
   scoring shape than our single target number — worth adopting in
   `contentScore.ts` when touching term scoring.
+
+---
+
+# Appendix 2 — Surfer's finished-article pattern (szantaż, 2026-08-08)
+
+Reference: user-provided Surfer article + `surfer-guidelines-szantaż-*.txt`.
+Measured against our regenerated article 13:
+
+```
+                       Surfer        us
+words                  ~2500         1755   (their guideline 2353–2706; OUR benchmark said 675!)
+H2                     14            7
+<ul> blocks            ~10           0
+<strong> group labels  ~10           3
+<a> links              ~13           0     (10 internal prodetektyw.pl + 3 authority)
+images                 3 (rich alt)  4
+facts injected         ~20 verbatim  partial
+```
+
+**Section micro-pattern** (repeats in almost every Surfer section):
+intro paragraph (2–3 sentences) → `<p><strong>Label:</strong></p>` → `<ul>` of short
+`<li><p>` items → closing paragraph with brand/example. This is why their guideline
+counts "Paragraphs: 93–∞" — every list item is a paragraph. Task 3 should generate
+exactly this block shape, not free-form lists.
+
+**Facts are injected near-verbatim.** Guideline FACTS strings appear as article
+sentences with minimal glue ("Nie płać pod presją szantażysty.", "Rodzaje szantażu
+obejmują…", "Kara za wymuszenie zwrotu wierzytelności wynosi od 3 miesięcy do
+5 lat"). Task 5's fact sheet should instruct the writer to weave facts near-verbatim,
+one per bullet/sentence, never paraphrased into vagueness.
+
+**Links are part of the copy.** Internal links deep-link their own related articles
+(anchor = topic phrase); 2–3 external authority links (policja.gov.pl PDF of the
+statute, CBZC news item as a fresh 2025 stat with source). We generated 0 links
+despite having the internal-links block in the sidecar — investigate why
+`paragraph_links_block` produced nothing (task 3.5).
+
+**New task 7 — benchmark under-measurement.** Our words_target for "szantaż" was 675;
+Surfer's range is 2353–2706 (~4×). Investigate `_compute_targets`/scrape quality on
+this SERP: partial bodies → low medians → short plans. The words floor (1200) masked
+it this time; the real fix is measuring the corpus correctly.
+
+**Lead style.** Surfer's lead is problem-first second person, 3 sentences, then a
+promise of what the article covers. Compatible with our answer-first rule — the
+answer can be the second sentence; keep empathy-first opening for distress topics.
