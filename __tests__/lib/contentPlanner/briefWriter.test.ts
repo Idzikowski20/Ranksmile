@@ -390,3 +390,60 @@ describe('writeOutlineBrief', () => {
     expect(headings?.[2].instructions).toEqual(['b']);
   });
 });
+
+/**
+ * A reply that briefs one section out of thirteen is a truncated one, not the model
+ * judging the other twelve unworthy — each was handed to it with its own claims. Real
+ * outlines shipped exactly that: one real brief and twelve "Pokryj <heading> z
+ * przypisanymi claims" stubs, with nothing in the logs to say it had happened.
+ */
+describe('writeOutlineBrief partial replies', () => {
+  const PARTIAL = JSON.stringify({
+    title: 'T',
+    sections: [{ n: 2, heading: 'Zakres usług', instructions: ['Wypunktuj usługi.'] }],
+  });
+
+  it('retries when the reply briefs only part of the outline', async () => {
+    const replies = [PARTIAL, GOOD];
+
+    const headings = await writeOutlineBrief({
+      keyword: 'k',
+      bundle: bundle(),
+      brandKnowledge: BRAND,
+      llmEdit: async () => ({ html: replies.shift() ?? GOOD, tokens: 1 }),
+    });
+
+    expect(replies).toHaveLength(0);
+    expect(headings?.[1].instructions).toEqual([
+      'Krótki lead o ProDetektyw.',
+      'Wspomnij licencję RD-58/2020.',
+    ]);
+  });
+
+  it('keeps the fuller of the two attempts rather than the last one', async () => {
+    const replies = [GOOD, PARTIAL];
+
+    const headings = await writeOutlineBrief({
+      keyword: 'k',
+      bundle: bundle(),
+      brandKnowledge: BRAND,
+      llmEdit: async () => ({ html: replies.shift() ?? PARTIAL, tokens: 1 }),
+    });
+
+    // GOOD already covers both sections, so it must not spend a second call at all.
+    expect(replies).toEqual([PARTIAL]);
+    expect(headings?.[1].instructions).toHaveLength(2);
+  });
+
+  it('falls back to the planner objective only for sections still missing after retries', async () => {
+    const headings = await writeOutlineBrief({
+      keyword: 'k',
+      bundle: bundle(),
+      brandKnowledge: BRAND,
+      llmEdit: async () => ({ html: PARTIAL, tokens: 1 }),
+    });
+
+    expect(headings?.[1].instructions).toEqual(['Przedstaw agencję']);
+    expect(headings?.[2].instructions).toEqual(['Wypunktuj usługi.']);
+  });
+});

@@ -290,15 +290,27 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
   return { system, user };
 }
 
-/**
- * Returns `null` rather than throwing: a brief is an improvement on the extracted outline,
- * never a precondition for it. The caller falls back to `reviewOutlineFromBundle`.
- */
-export async function writeOutlineBrief(input: BriefWriterInput): Promise<ApprovedOutlineHeading[] | null> {
-  const { bundle } = input;
-  if (!bundle.outline || !bundle.briefs.length) return null;
+type BriefAttempt = {
+  parsed: LlmBrief;
+  written: Map<number, { heading: string; instructions: string[] }>;
+  /** Sections that came back with real instructions, not the planner's stub objective. */
+  covered: number;
+};
 
-  const { system, user } = buildPrompt(input);
+/**
+ * A reply covering less of the outline than this is a truncated or garbled one, not the
+ * model judging the rest unworthy — every section was handed to it with its own claims.
+ */
+const MIN_SECTION_COVERAGE = 0.8;
+const BRIEF_ATTEMPTS = 2;
+
+/** One call: complete, charge, parse, pair. `null` when the call or the parse failed. */
+async function runBriefAttempt(
+  input: BriefWriterInput,
+  system: string,
+  user: string,
+): Promise<BriefAttempt | null> {
+  const { bundle } = input;
   let raw = '';
   let spent = 0;
   try {
@@ -352,13 +364,50 @@ export async function writeOutlineBrief(input: BriefWriterInput): Promise<Approv
       instructions: asStringList(section?.instructions, 8),
     });
   });
+
   // Instructions are what a brief is for; a missing heading just falls back to the
   // planner's label. Requiring both would throw away a usable brief over a blank title.
-  if (![...written.values()].some((w) => w.instructions.length)) {
+  const covered = [...written.values()].filter((w) => w.instructions.length).length;
+  return { parsed, written, covered };
+}
+
+/**
+ * Returns `null` rather than throwing: a brief is an improvement on the extracted outline,
+ * never a precondition for it. The caller falls back to `reviewOutlineFromBundle`.
+ */
+export async function writeOutlineBrief(input: BriefWriterInput): Promise<ApprovedOutlineHeading[] | null> {
+  const { bundle } = input;
+  if (!bundle.outline || !bundle.briefs.length) return null;
+
+  const { system, user } = buildPrompt(input);
+
+  let best: BriefAttempt | null = null;
+  for (let tries = 0; tries < BRIEF_ATTEMPTS; tries += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const attempt = await runBriefAttempt(input, system, user);
+    if (!attempt) break;
+    if (!best || attempt.covered > best.covered) best = attempt;
+    if (best.covered >= bundle.briefs.length * MIN_SECTION_COVERAGE) break;
+    console.warn(
+      `[briefWriter] brief covered ${attempt.covered}/${bundle.briefs.length} sections — retrying`,
+    );
+  }
+
+  if (!best || best.covered === 0) {
     console.warn('[briefWriter] brief produced no usable section');
     return null;
   }
+  if (best.covered < bundle.briefs.length) {
+    // Loud on purpose: a section that keeps the planner's objective ships to the reviewer
+    // as "Pokryj <heading> z przypisanymi claims", which is the stub this module exists
+    // to replace. Silence is how twelve of thirteen went out unnoticed.
+    console.warn(
+      `[briefWriter] ${bundle.briefs.length - best.covered}/${bundle.briefs.length} sections `
+      + 'kept the planner objective after every attempt',
+    );
+  }
 
+  const { parsed, written } = best;
   const title = typeof parsed.title === 'string' && parsed.title.trim()
     ? parsed.title.trim()
     : bundle.outline.h1;
