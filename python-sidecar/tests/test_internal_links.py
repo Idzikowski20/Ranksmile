@@ -189,3 +189,47 @@ def test_allowlisted_link_survives_alongside_an_unwrapped_one():
     assert removed == 1
     assert 'href="https://example.pl/licencja"' in out
     assert POLISH_PROSE in out
+
+
+def test_repeated_internal_link_keeps_only_the_first():
+    """The Writer sees one paragraph at a time and cannot know a page is already linked.
+
+    A real article linked the same URL five times; the reference article links nine
+    different pages once each.
+    """
+    # Anchor text deliberately unlike the slug, so counting it cannot also match the href.
+    html = (
+        '<p>A <a href="https://example.pl/licencja">uprawnienia</a></p>'
+        '<p>B <a href="https://example.pl/licencja">uprawnienia</a></p>'
+        '<p>C <a href="https://example.pl/licencja">uprawnienia</a></p>'
+    )
+
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+
+    assert out.count("<a") == 1, out
+    assert removed == 2
+    assert out.count("uprawnienia") == 3, "anchor text survives on every repeat"
+
+
+def test_different_allowlisted_pages_all_keep_their_links():
+    html = (
+        '<p><a href="https://example.pl/licencja">licencja</a></p>'
+        '<p><a href="https://example.pl/kurs/">kurs</a></p>'
+    )
+
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+
+    assert removed == 0
+    assert out.count("<a") == 2
+
+
+def test_repeat_dedup_ignores_trailing_slash_variants():
+    html = (
+        '<p><a href="https://example.pl/kurs/">kurs</a></p>'
+        '<p><a href="https://example.pl/kurs">kurs</a></p>'
+    )
+
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+
+    assert out.count("<a") == 1, out
+    assert removed == 1

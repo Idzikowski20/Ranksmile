@@ -66,3 +66,49 @@ describe('pickLinkTargets', () => {
     expect(pickLinkTargets({ urls: SITEMAP, keyword: '' })).toEqual([]);
   });
 });
+
+/**
+ * Ranking on keyword tokens alone found exactly one page on the client's site for
+ * "prywatny detektyw", so a real article linked that page five times where the reference
+ * article linked nine different ones. None of those nine share a token with the keyword.
+ */
+describe('pickLinkTargets topical ranking', () => {
+  const SITE = [
+    'https://prodetektyw.pl/',
+    'https://prodetektyw.pl/prywatny-detektyw/',
+    'https://prodetektyw.pl/zdrada-malzenska-objawy-dowody-zdrady/',
+    'https://prodetektyw.pl/osint-bialy-wywiad/',
+    'https://prodetektyw.pl/windykacja-naleznosci-terenowa/',
+    'https://prodetektyw.pl/polityka-prywatnosci/',
+  ];
+  const TERMS = ['wykrywanie zdrad', 'osint bialy wywiad', 'windykacja naleznosci'];
+
+  it('finds the topical pages the keyword alone could never match', () => {
+    const urls = pickLinkTargets({ urls: SITE, keyword: 'prywatny detektyw', terms: TERMS })
+      .map((t) => t.url);
+
+    expect(urls).toContain('https://prodetektyw.pl/osint-bialy-wywiad/');
+    expect(urls).toContain('https://prodetektyw.pl/windykacja-naleznosci-terenowa/');
+    expect(urls.length).toBeGreaterThan(1);
+  });
+
+  it('still ranks the page named after the keyword first', () => {
+    const picked = pickLinkTargets({ urls: SITE, keyword: 'prywatny detektyw', terms: TERMS });
+    expect(picked[0].url).toBe('https://prodetektyw.pl/prywatny-detektyw/');
+  });
+
+  it('never offers a legal or navigational page', () => {
+    const urls = pickLinkTargets({
+      urls: SITE,
+      keyword: 'prywatny detektyw',
+      terms: [...TERMS, 'polityka prywatnosci', 'kontakt'],
+    }).map((t) => t.url);
+
+    expect(urls).not.toContain('https://prodetektyw.pl/polityka-prywatnosci/');
+  });
+
+  it('works from terms alone when the keyword shares nothing', () => {
+    const urls = pickLinkTargets({ urls: SITE, keyword: 'xyz', terms: TERMS }).map((t) => t.url);
+    expect(urls).toContain('https://prodetektyw.pl/osint-bialy-wywiad/');
+  });
+});

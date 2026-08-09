@@ -229,20 +229,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const domainArticles = existing.map((a) => ({
       id: a.id, title: a.title, url: `https://${domainName}/${(a.meta_url || '').replace(/^\//, '')}`,
     }));
-    // A domain that has not published through Ranksmile yet has nothing here, so the
-    // Writer's allowlist was empty and the article shipped without a single internal
-    // link. The client's own pages are in the sitemap the audit already reads.
-    if (domainArticles.length < 3 && domainName) {
-      try {
-        const sitemapUrls = await gatherBlogUrls(article.domain_id, domainName);
-        const known = new Set(domainArticles.map((a) => a.url.replace(/\/+$/, '')));
-        for (const target of pickLinkTargets({ urls: sitemapUrls, keyword })) {
-          if (!known.has(target.url.replace(/\/+$/, ''))) domainArticles.push(target);
-        }
-      } catch (err) {
-        console.warn('[articles/[id]/generate] sitemap link targets skipped:', getErrorMessage(err));
-      }
-    }
 
     // 4. Resolve content settings — Brand Knowledge (global) + per-domain voice tone.
     const cs = await readContentSettings();
@@ -435,6 +421,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // stale half of the list the editor grades against. Loaded before the brief so the
     // brief and the compiled plan cannot be written against different vocabularies.
     const tableTerms = await readArticleTerms(articleIdNum).catch(() => []);
+
+    // A domain that has not published through Ranksmile yet has nothing here, so the
+    // Writer's allowlist was empty and the article shipped without a single internal
+    // link. The client's own pages are in the sitemap the audit already reads.
+    if (domainArticles.length < 3 && domainName) {
+      try {
+        const sitemapUrls = await gatherBlogUrls(article.domain_id, domainName);
+        const known = new Set(domainArticles.map((a) => a.url.replace(/\/+$/, '')));
+        // Terms, not just the keyword: the client's topical pages rarely repeat the query
+        // in their slug, and ranking on the keyword alone found exactly one page.
+        const linkTerms = importantTermsFromScoreData(scoreData, { tableTerms });
+        for (const target of pickLinkTargets({ urls: sitemapUrls, keyword, terms: linkTerms })) {
+          if (!known.has(target.url.replace(/\/+$/, ''))) domainArticles.push(target);
+        }
+      } catch (err) {
+        console.warn('[articles/[id]/generate] sitemap link targets skipped:', getErrorMessage(err));
+      }
+    }
 
     const approvedHeadings = reviewed.length > 0
       ? reviewed

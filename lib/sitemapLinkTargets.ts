@@ -42,23 +42,37 @@ function isHomepage(url: string): boolean {
   }
 }
 
+/** Legal and navigational pages: never a topical link, whatever their slug shares. */
+const BOILERPLATE_SLUG = /\b(polityka|prywatnosci|regulamin|cookies?|rodo|mapa|sitemap|logowanie|koszyk|kontakt)\b/;
+
 /**
- * The pages most worth linking for this keyword, strongest first.
+ * The pages most worth linking for this article, strongest first.
  *
- * The prompt block only shows the first handful, so handing it whatever order the
- * sitemap happened to return would spend those slots on the privacy policy. Ranked by
- * how much of the keyword the slug actually carries; pages sharing nothing are dropped
- * rather than padded in, because an irrelevant link is worse than one fewer link.
+ * Ranking on keyword-token overlap alone was far too narrow. For "prywatny detektyw" the
+ * only slug on the client's site containing either token was /prywatny-detektyw/, so a
+ * real run linked that one page five times while the reference article linked nine
+ * different ones — /zdrada-malzenska-objawy/, /osint-bialy-wywiad/,
+ * /windykacja-naleznosci-terenowa/ and the rest share no token with the keyword at all.
+ *
+ * The article's NLP terms are the vocabulary of the whole topic, so they are what finds
+ * those pages. Keyword tokens still outrank them: the page named after the query is the
+ * strongest link, it just is no longer the only candidate.
  */
 export function pickLinkTargets(opts: {
   urls: string[];
   keyword: string;
+  /** NLP terms the article is graded on — the topic's vocabulary beyond the keyword. */
+  terms?: string[];
   /** The article's own future URL — linking a page to itself is not a link. */
   selfUrl?: string;
   limit?: number;
 }): LinkTarget[] {
   const seeds = new Set(tokens(opts.keyword));
-  if (seeds.size === 0) return [];
+  const topic = new Set<string>();
+  for (const term of opts.terms || []) {
+    for (const word of tokens(term)) if (!seeds.has(word)) topic.add(word);
+  }
+  if (seeds.size === 0 && topic.size === 0) return [];
   const self = (opts.selfUrl || '').replace(/\/+$/, '');
   const seen = new Set<string>();
 
@@ -72,10 +86,13 @@ export function pickLinkTargets(opts: {
     })
     .map((url) => {
       const title = titleFromSlug(url);
-      const overlap = tokens(title).filter((w) => seeds.has(w)).length;
+      const words = tokens(title);
+      // Keyword tokens weigh double so the page named after the query still leads.
+      const overlap = words.filter((w) => seeds.has(w)).length * 2
+        + words.filter((w) => topic.has(w)).length;
       return { url, title, overlap };
     })
-    .filter((row) => row.title.length >= 3 && row.overlap > 0)
+    .filter((row) => row.title.length >= 3 && row.overlap > 0 && !BOILERPLATE_SLUG.test(normalizeTerm(row.title)))
     .sort((a, b) => b.overlap - a.overlap || a.url.localeCompare(b.url));
 
   return scored
