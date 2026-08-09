@@ -164,4 +164,8 @@ def enforce_internal_links(html: str, allowed: set[str], site_url: str) -> tuple
 
     if not removed and not mutated:
         return html, 0
-    return soup.encode(formatter="html").decode("utf-8"), removed
+    # "minimal" escapes only <, > and &. The "html" formatter also turns every accented
+    # character into a named entity, so unwrapping one anchor rewrote the surrounding
+    # Polish prose as "ofert&eogon;" — and because the untouched path returns `html`
+    # verbatim, it only ever corrupted articles that actually had a link removed.
+    return soup.decode(formatter="minimal"), removed
