@@ -6,8 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
-import { isUsableArticleHtml } from '../../../lib/articleHtmlUsable';
-import { isReviewOutlineHtml } from '../../../lib/contentPlanner/reviewOutline';
+import { isOutlineAwaitingReview } from '../../../lib/outlineReviewState';
 import AppShell from '../../../components/common/AppShell';
 import { Button } from '../../../components/koala/core';
 import { Icon } from '../../../components/koala/icons';
@@ -524,7 +523,6 @@ const ArticleEditorPage: NextPage = () => {
    */
   const editorLocked = isDeepAnalyzing;
   /** Same flag the editor reads for its bottom bar — the side panel has to agree with it. */
-  const outlineReviewMode = router.query.reviewOutline === '1';
 
 
   useEffect(() => {
@@ -602,7 +600,15 @@ const ArticleEditorPage: NextPage = () => {
         // Outline review is the exception: the wizard sends the user here with an empty
         // draft on purpose, so resuming would bounce them back to writing-mode forever.
         const entry = resolveArticleEntry(data.article || {}, {
-          outlineReview: router.query.reviewOutline === '1',
+          // Also when the param is gone: autosave no longer persists the outline, so a
+          // returning reviewer's draft is empty with wizard_state still set — exactly the
+          // shape this guard bounces back to the writing-mode step.
+          outlineReview: router.query.reviewOutline === '1'
+            || isOutlineAwaitingReview({
+              content: data.article?.content,
+              // The API payload names it score_data; the helper reads one shape only.
+              scoreData: data.article?.score_data,
+            }),
         });
         const resumeHref = articleEntryHref(String(id), entry);
         if (entry.kind === 'wizard' && resumeHref) {
@@ -757,20 +763,20 @@ const ArticleEditorPage: NextPage = () => {
    * page already resumes on (`shouldSkipFreshGenerate` → 'review' without usable HTML),
    * read from state the page has already loaded — no extra request.
    */
-  const outlineAwaitingReview = useMemo(() => {
-    if (!article) return false;
-    const html = article.content || '';
-    // An outline already persisted into content by an older build reads as a finished
-    // article by length alone, so recognise the document itself first.
-    if (isReviewOutlineHtml(html)) return true;
-    if (isUsableArticleHtml(html)) return false;
-    return Boolean((scoreData as unknown as Record<string, unknown>).content_planner_v2);
-  }, [article, scoreData]);
+  const outlineAwaitingReview = useMemo(
+    () => isOutlineAwaitingReview({ content: article?.content, scoreData: scoreData as unknown as Record<string, unknown> }),
+    [article, scoreData],
+  );
 
-  // Autosave must not run in review: the outline document is a planning artefact, and
-  // persisting it into articles.content is what made a returning user's outline read as
-  // the finished article. Mirrors how Auto-Optimize suspends the same effect.
-  const inOutlineReview = router.query.reviewOutline === '1' || outlineAwaitingReview;
+  /**
+   * Single source of truth for "this article is an outline awaiting review".
+   *
+   * The page used to derive it from `?reviewOutline=1` alone, in its own copy separate
+   * from the editor's — so on re-entry the right column graded the outline as an article
+   * (69/82/54 over 1533 "words" of instructions) instead of showing the competitor
+   * structures, and autosave persisted the planning document as the article body.
+   */
+  const outlineReviewMode = router.query.reviewOutline === '1' || outlineAwaitingReview;
 
   const handleMetaTitleChange = useCallback((v: string) => {
     setArticle((prev) => prev ? { ...prev, meta_title: v } : prev);
@@ -1009,13 +1015,13 @@ const ArticleEditorPage: NextPage = () => {
     });
     // Record the loaded state as the baseline without saving it.
     if (lastSavedSig.current === null) { lastSavedSig.current = sig; return undefined; }
-    if (sig === lastSavedSig.current || isAutoOptimizing || inOutlineReview) return undefined;
+    if (sig === lastSavedSig.current || isAutoOptimizing || outlineReviewMode) return undefined;
     setAutoSaveState('unsaved');
     if (autoTimer.current) clearTimeout(autoTimer.current);
     autoTimer.current = setTimeout(() => { void autoSave(sig); }, 800);
     return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing, inOutlineReview]);
+  }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing, outlineReviewMode]);
 
   // Always-fresh "save the latest state if it's dirty" — used by the flush triggers below.
   // unload=true → the page is going away, so the PUT must outlive it (keepalive).
