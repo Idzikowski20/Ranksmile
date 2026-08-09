@@ -1,6 +1,14 @@
 import { BENCHMARK_H2_FLOOR, BENCHMARK_WORDS_FLOOR } from '../contentPlanner/types';
-import { h2FromWords } from '../contentPlanner/competitorBenchmark';
 import type { PlannerTargets, StructuralBenchmark } from './types';
+
+// The reference tool ships ~14 H2 for a ~1100-word SERP and up to the high-20s of total
+// headings (H2+H3). Two knobs bound the section target between the benchmark and sanity:
+//   MIN_WORDS_PER_H2 — a section shorter than this reads as fragmentation, so the word
+//     budget caps the count (1080 words → at most ~14 sections).
+//   H2_HARD_MAX — the upper heading band the reference stays under; also the point past
+//     which one brief call would not fit the model's output cap.
+const MIN_WORDS_PER_H2 = 75;
+const H2_HARD_MAX = 16;
 
 /** Median-first targets; p75 as soft ceiling. */
 export function toPlannerTargets(b: StructuralBenchmark): PlannerTargets {
@@ -10,13 +18,16 @@ export function toPlannerTargets(b: StructuralBenchmark): PlannerTargets {
   // count derives from the word budget, it also bought sections nobody had material for.
   const measuredWords = b.words.median || b.words.mean || 0;
   const words = measuredWords > 0 ? measuredWords : BENCHMARK_WORDS_FLOOR;
-  // `b.h2` is a count of all headings on the page, not of top-level sections — median 22
-  // for this SERP. Taken as the section target it produced 22 H2 of ~100 words each, and
-  // a brief long enough to be cut off by the model's output cap. Capped by word budget.
+  // `b.h2` counts all headings on the page (H2-H6), so the benchmark median already
+  // approximates the reference tool's H2 section count for this SERP (median 13 here).
+  // Trust it, bounded by the word budget and the hard max — an earlier `h2FromWords` cap
+  // crushed 13 to 7 and shipped half the sections a competitive outline needs.
   const measuredH2 = b.h2.median || b.h2.mean || 0;
+  const wordBudgetH2 = Math.max(BENCHMARK_H2_FLOOR, Math.floor(words / MIN_WORDS_PER_H2));
   const h2 = Math.min(
-    measuredH2 > 0 ? measuredH2 : BENCHMARK_H2_FLOOR,
-    h2FromWords(words),
+    H2_HARD_MAX,
+    Math.max(BENCHMARK_H2_FLOOR, Math.round(measuredH2 > 0 ? measuredH2 : BENCHMARK_H2_FLOOR)),
+    wordBudgetH2,
   );
   return {
     words,

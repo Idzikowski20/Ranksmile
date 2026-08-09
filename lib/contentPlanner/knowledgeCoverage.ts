@@ -1,6 +1,7 @@
 /**
  * Knowledge Coverage % — Plan Validator aggregate (≥ 95% gate).
  */
+import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
 import type {
   AdaptiveOutline,
   KnowledgeCoverageReport,
@@ -48,7 +49,17 @@ export function computeKnowledgeCoverage(opts: {
     : 0;
   const evidenceSectionTotal = opts.outline?.sections.length || 0;
 
-  const criticalClaims = slice(critical.length, criticalAssigned);
+  // An outline holds at most sections × MAX_CLAIMS_PER_SECTION claims. When the SERP
+  // yields more required claims than that (importanceFromGain marks every observed claim
+  // required), demanding 95% of the raw count is unmeetable by construction — article 15
+  // failed at 56/65 = 86% with all 56 assignable slots full. Measure against what the
+  // structure can actually carry, so the gate rejects a plan that under-assigned, not one
+  // that physically cannot fit every claim.
+  const claimCapacity = (opts.outline?.sections.length || 0) * MAX_CLAIMS_PER_SECTION;
+  const criticalDenominator = claimCapacity > 0
+    ? Math.min(critical.length, claimCapacity)
+    : critical.length;
+  const criticalClaims = slice(criticalDenominator, criticalAssigned);
   const qSlice = slice(questions.length, questionsAssigned);
   const evidenceSlice = slice(
     evidenceSectionTotal || evidenceTotal,

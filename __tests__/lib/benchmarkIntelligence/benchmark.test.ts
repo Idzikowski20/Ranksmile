@@ -40,13 +40,11 @@ describe('Benchmark Intelligence', () => {
   });
 
   /**
-   * `h2` here is every heading a competitor renders — H3s, nav, footer — not its count of
-   * top-level sections. Taken literally it asked for 22 H2 on a 2200-word budget: ~100
-   * words each, and a section brief too long for the model's output cap, which silently
-   * dropped the whole brief. The reference tool reports the same wide heading range for
-   * this keyword and still briefs six H2; the rest are H3 inside a section.
+   * A very heading-dense SERP (median 23, all headings incl. H3) is bounded by the hard
+   * max, not taken literally — 23 H2 would over-fragment and overflow one brief call.
+   * H2_HARD_MAX caps it at 16, and the word budget (2150/75 ≈ 28) leaves that untouched.
    */
-  it('caps the section target at what the word budget supports', () => {
+  it('caps the section target at the hard max on a heading-dense SERP', () => {
     const shortSectioned = (wordCount: number, h2: number) => ({
       wordCount,
       h2,
@@ -66,9 +64,10 @@ describe('Benchmark Intelligence', () => {
       shortSectioned(2200, 24),
     ]));
 
-    expect(t.h2).toBe(11);
+    expect(t.h2).toBe(16);
     expect(t.h2SoftCeiling).toBe(t.h2);
-    expect(Math.round(t.words / t.h2)).toBeGreaterThan(150);
+    // Still well clear of the ~50-word fragmentation the cap exists to prevent.
+    expect(Math.round(t.words / t.h2)).toBeGreaterThan(100);
   });
 
   /**
@@ -97,6 +96,7 @@ describe('Benchmark Intelligence', () => {
     ]));
 
     expect(t.words).toBeLessThan(1400);
-    expect(t.h2).toBe(7);
+    // Benchmark median H2 (10) trusted, not crushed to 7 by a word-only cap.
+    expect(t.h2).toBe(10);
   });
 });
