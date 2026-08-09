@@ -1,0 +1,27 @@
+__tests__/lib/benchmarkIntelligence/benchmark.test.ts
+  s_668ab4f91e9d5a::t_742242594076d6 43-45,47,67,69-70,99-100
+lib/benchmarkIntelligence/toPlannerTargets.ts
+  s_668ab4f91e9d5a::t_2c870c2420d80a 21-24,26,28-30
+  s_668ab4f91e9d5a::t_37a017b8ba6167 4-11
+__tests__/lib/contentPlanner/executionPlan.test.ts
+  s_668ab4f91e9d5a::t_2492155b154bd6 267-308
+lib/contentPlanner/knowledgeCoverage.ts
+  s_668ab4f91e9d5a::t_3d006cda9e5edc 52-62
+  s_668ab4f91e9d5a::t_fc568c1b788ab9 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3f09fd66f63b6c01124b5cb09d575b4a15969714",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
