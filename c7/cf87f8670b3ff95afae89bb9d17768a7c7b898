@@ -1,0 +1,65 @@
+__tests__/lib/coverageStore.test.ts
+  s_668ab4f91e9d5a::t_56fc4d8e31c633 142-143,146
+python-sidecar/analyzers/term_lemmas.py
+  s_668ab4f91e9d5a::t_01be335abea96d 40-45
+  s_668ab4f91e9d5a::t_95a1cf5c0a979f 95
+lib/intelligence/ccmToCoverageSnapshot.ts
+  s_668ab4f91e9d5a::t_2c8464bfe3fbde 132-136,138-142
+components/articles/ContentScorePanel.tsx
+  s_668ab4f91e9d5a::t_0a238fa9221269 371
+__tests__/lib/intelligence/ccmToCoverageSnapshot.test.ts
+  s_668ab4f91e9d5a::t_69501ea32aa703 103-106,113,119,122-125
+lib/contentPlanner/knowledgePack/compileWritePlan.ts
+  s_668ab4f91e9d5a::t_579d0fc69117ff 62-77,96,183
+lib/knowledgeEngine/cluster.ts
+  s_668ab4f91e9d5a::t_97aa4e6ae42610 52-53,55-65,67-79
+  s_668ab4f91e9d5a::t_1ea6cdaa794e95 66,80-81,85-92
+lib/contentPlanner/briefWriter.ts
+  s_668ab4f91e9d5a::t_f51f5691058878 179,181-186
+  s_668ab4f91e9d5a::t_a86129cf41a9c6 236-240
+lib/competitorTermCalibration.ts
+  s_668ab4f91e9d5a::t_4d5c33be866acb 44-48
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_668ab4f91e9d5a::t_f5b92f83627de4 319-321
+lib/scoreArticleHtml.ts
+  s_668ab4f91e9d5a::t_0a238fa9221269 57
+lib/coverageStore.ts
+  s_668ab4f91e9d5a::t_327989e301b2c9 120-124,133-143
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_ab102b7798b612 17,250-251
+python-sidecar/analyzers/serp_analyzer.py
+  s_668ab4f91e9d5a::t_50b0a35ae25717 432-435,437
+  s_668ab4f91e9d5a::t_427b99534bc8b6 366-368
+lib/termMatch.ts
+  s_668ab4f91e9d5a::t_e6e7e59c6b2597 34-38
+lib/contentPlanner/knowledgePack/paragraphPlanner.ts
+  s_668ab4f91e9d5a::t_c1a315dc1dd173 46
+  s_668ab4f91e9d5a::t_d3952391e8c30c 21
+  s_668ab4f91e9d5a::t_80f84a403ef37a 34-36
+pages/api/articles/[id]/content-plan.ts
+  s_668ab4f91e9d5a::t_ab102b7798b612 31,120
+__tests__/lib/knowledgeEngine/cluster.test.ts
+  s_668ab4f91e9d5a::t_65b80726870df3 35
+  s_668ab4f91e9d5a::t_aba546e1d6bef0 30-32,34
+__tests__/lib/competitorTermCalibration.test.ts
+  s_668ab4f91e9d5a::t_5d224164b5684c 14-15
+__tests__/lib/termMatch.test.ts
+  s_668ab4f91e9d5a::t_116112099b2015 27,32,35-37,47-48
+  s_668ab4f91e9d5a::t_ada02efdb8c096 28-31,33-34,38-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c7cf87f8670b3ff95afae89bb9d17768a7c7b898",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
