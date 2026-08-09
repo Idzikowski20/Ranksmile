@@ -167,6 +167,22 @@ def _prompt(
             " Markdown link [descriptive anchor](url), only where genuinely relevant."
             " Never link any URL that is not on that list."
         )
+    elif ctx.get("allow_authority_links"):
+        # Compiled plans almost never carry sources: they are minted from claim evidence,
+        # and claim evidence is competitor pages. A scan of the four competitors ranking
+        # for article 15's keyword found 519 outbound links and zero on an authority host,
+        # so nothing scraped will ever fill that list — while the reference tool's article
+        # cites the governing act and a city report. The model is the only source for
+        # those, and `verify_external_links` unwraps whatever it gets wrong.
+        lines.append(
+            "If this paragraph states a legal rule, an official requirement or a public"
+            " statistic, you MAY cite the primary source as one Markdown link"
+            " [descriptive anchor](url) — the act, the regulator or the public register"
+            " itself, on an official government or EU domain, https only. Name the source"
+            " in the sentence too. At most one link, and only when you are certain the"
+            " address is real: no link is better than a guessed one. Never link a"
+            " commercial page, a competitor or a blog."
+        )
     if _reference_ids(paragraph_plan, "claims", "claim_id"):
         lines.append(
             "Cover every 'Must cover' statement keeping its figures, statutes, names and"

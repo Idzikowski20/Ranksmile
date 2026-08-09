@@ -21,6 +21,8 @@ import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 import { safeJsonParse } from '../../../../lib/safeJson';
 import { llmGateway } from '../../../../lib/llmGateway';
+import { gatherBlogUrls } from '../../../../lib/gatherBlogUrls';
+import { pickLinkTargets } from '../../../../lib/sitemapLinkTargets';
 import { pipelineVersionTag } from '../../../../lib/pipelineVersion';
 import {
   aiIntelFromScoreData,
@@ -227,6 +229,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const domainArticles = existing.map((a) => ({
       id: a.id, title: a.title, url: `https://${domainName}/${(a.meta_url || '').replace(/^\//, '')}`,
     }));
+    // A domain that has not published through Ranksmile yet has nothing here, so the
+    // Writer's allowlist was empty and the article shipped without a single internal
+    // link. The client's own pages are in the sitemap the audit already reads.
+    if (domainArticles.length < 3 && domainName) {
+      try {
+        const sitemapUrls = await gatherBlogUrls(article.domain_id, domainName);
+        const known = new Set(domainArticles.map((a) => a.url.replace(/\/+$/, '')));
+        for (const target of pickLinkTargets({ urls: sitemapUrls, keyword })) {
+          if (!known.has(target.url.replace(/\/+$/, ''))) domainArticles.push(target);
+        }
+      } catch (err) {
+        console.warn('[articles/[id]/generate] sitemap link targets skipped:', getErrorMessage(err));
+      }
+    }
 
     // 4. Resolve content settings — Brand Knowledge (global) + per-domain voice tone.
     const cs = await readContentSettings();
