@@ -143,6 +143,9 @@ const EmptyCardArrow = () => (
   </svg>
 );
 
+/** Scene is laid out at 1/this and scaled back, so more of it fits the card slot. */
+const SCENE_SCALE = 0.72;
+
 type EmptyStartOptionKey = 'recommendations' | 'keyword' | 'contentAudit';
 
 const EMPTY_START_OPTIONS: Array<{
@@ -301,13 +304,32 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                 <div
                   style={{
                     position: 'relative',
-                    height: 82,
+                    height: 96,
                     borderRadius: 12,
                     overflow: 'hidden',
                     background: 'var(--koala-bg-secondary)',
                   }}
                 >
-                  {option.icon}
+                  {/*
+                    Scenes are drawn for the tour dialog, where Window's -36/-28 offsets
+                    crop a much taller panel. Dropped into a card slot at 1:1 they cut
+                    through the middle of the first row, so the scene is laid out in a
+                    box 1/SCENE_SCALE larger and scaled back down: same slot height,
+                    proportionally more of the illustration inside it.
+                  */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: `${100 / SCENE_SCALE}%`,
+                      height: `${100 / SCENE_SCALE}%`,
+                      transform: `scale(${SCENE_SCALE})`,
+                      transformOrigin: 'top left',
+                    }}
+                  >
+                    {option.icon}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 16, color: 'var(--koala-text-primary)' }}>
                   <span style={{ fontSize: 14, lineHeight: '20px', fontWeight: 600 }}>
