@@ -5,11 +5,7 @@ import { Button, Toggle } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 import fetchJson from '../../lib/fetchJson';
-import { getCheckoutPlan } from '../../lib/billingPlans';
-import { countActionableRecommendations, type RecFilterable } from '../../lib/recommendations';
-
-type DomainRow = { domain: string; slug?: string };
-type PlanSummary = { planSlug: string; planName: string };
+import type { ExpiredSummary } from '../../pages/api/billing/expired-summary';
 
 /**
  * Shown in place of the app once the plan or trial has run out — see
@@ -20,40 +16,23 @@ type PlanSummary = { planSlug: string; planName: string };
 export function PlanExpired() {
   const [annual, setAnnual] = useState(false);
 
-  const { data: domains } = useQuery(
-    ['plan-expired-domains'],
-    () => fetchJson<{ domains: DomainRow[] }>('/api/domains', { domains: [] }),
-    { staleTime: 60_000, retry: false },
-  );
-  const { data: summary } = useQuery(
+  // One unguarded endpoint, not four gated ones: /api/domains, /api/articles and
+  // /api/billing/plan-summary all sit behind withOrgPaymentAccess, so they 402 for
+  // precisely the lapsed account this screen serves — the cards read "No sites yet"
+  // and two zeros.
+  const { data } = useQuery(
     ['plan-expired-summary'],
-    () => fetchJson<{ summary: PlanSummary }>('/api/billing/plan-summary', {
-      summary: { planSlug: 'growth', planName: 'Growth' },
+    () => fetchJson<ExpiredSummary>('/api/billing/expired-summary', {
+      sites: [], articles: 0, recommendations: 0, plan: null,
     }),
     { staleTime: 60_000, retry: false },
   );
-  const { data: articles } = useQuery(
-    ['plan-expired-articles'],
-    () => fetchJson<{ articles: unknown[] }>('/api/articles?limit=200', { articles: [] }),
-    { staleTime: 60_000, retry: false },
-  );
 
-  const sites = domains?.domains ?? [];
-  const firstSlug = sites[0]?.slug;
-  const { data: recs } = useQuery(
-    ['plan-expired-recs', firstSlug],
-    () => fetchJson<{ recommendations: RecFilterable[] }>(
-      `/api/domains/${firstSlug}/recommendations`,
-      { recommendations: [] },
-    ),
-    { enabled: Boolean(firstSlug), staleTime: 60_000, retry: false },
-  );
-
-  const plan = getCheckoutPlan(summary?.summary.planSlug ?? 'growth');
+  const sites = data?.sites ?? [];
+  const plan = data?.plan ?? null;
   const price = annual ? plan?.priceYearly : plan?.priceMonthly;
-  // Same predicate the sidebar badge uses, so the two never disagree again.
-  const recCount = countActionableRecommendations(recs?.recommendations ?? []);
-  const articleCount = articles?.articles?.length ?? 0;
+  const recCount = data?.recommendations ?? 0;
+  const articleCount = data?.articles ?? 0;
 
   return (
     <div className="plan-expired">
@@ -78,10 +57,10 @@ export function PlanExpired() {
             <p className="plan-expired__muted">No sites yet.</p>
           ) : (
             <ul className="plan-expired__sites">
-              {sites.map((s) => (
-                <li key={s.domain} className="plan-expired__site">
+              {sites.map((site) => (
+                <li key={site} className="plan-expired__site">
                   <Icon name="Globe" size={20} weight="bold" />
-                  <span className="plan-expired__site-name">{s.domain}</span>
+                  <span className="plan-expired__site-name">{site}</span>
                 </li>
               ))}
             </ul>
@@ -125,6 +104,20 @@ export function PlanExpired() {
           </a>
         </Link>
       </div>
+
+      <p className="plan-expired__news">
+        We&apos;ve been hard at work adding new features while you were gone.
+        <br />
+        <a
+          className="plan-expired__news-link"
+          href="https://ranksmile.com/updates"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          See what&apos;s new
+          <Icon name="ArrowUpRight" size={16} weight="bold" />
+        </a>
+      </p>
     </div>
   );
 }

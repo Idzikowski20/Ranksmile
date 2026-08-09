@@ -9528,3 +9528,15 @@ html.koala-shell[data-theme="cream"] .app-content {
 
 .plan-expired__mark { display: inline-flex; margin-bottom: 4px; }
 .plan-expired__title { display: block; }
+
+.plan-expired__news { margin: 0; font-size: 16px; line-height: 24px; color: var(--koala-text-secondary); }
+.plan-expired__news-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-weight: 600;
+  color: var(--koala-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
