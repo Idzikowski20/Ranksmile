@@ -1,0 +1,28 @@
+lib/contentPlanner/knowledgePack/paragraphPlanner.ts
+  s_668ab4f91e9d5a::t_a0fb5f1dadaa1c 88-91,96-98
+__tests__/lib/contentPlanner/outlineTables.test.ts
+  s_668ab4f91e9d5a::t_624e5971fc3672 107,131
+  s_668ab4f91e9d5a::t_8204d6f4b9a109 27-30,32-35,52-54,56-58,60-61,135-136,142-143
+  s_668ab4f91e9d5a::t_31dccfc5e44df9 1-4,96-106,108-130,132-134,137-138,147-148
+  s_668ab4f91e9d5a::t_7957b7eca4a02a 139-141,144-146
+lib/contentPlanner/outlineBuilder.ts
+  s_668ab4f91e9d5a::t_43bfd291810faf 122-147,240-241,291
+__tests__/lib/contentPlanner/paragraphPlanner.blocks.test.ts
+  s_668ab4f91e9d5a::t_43bfd291810faf 79-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "fdd449b8e628c00d38ef04ca997c212a446a1e0c",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
