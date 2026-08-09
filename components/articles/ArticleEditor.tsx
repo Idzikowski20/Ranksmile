@@ -97,6 +97,12 @@ interface Props {
   formattingSuspended?: boolean;
   /** Deep analysis / import — lock the document and toolbar. */
   readOnly?: boolean;
+  /**
+   * An outline was planned for this article and no article was ever written from it.
+   * Re-enters review on mount, so leaving the page and coming back resumes the review
+   * instead of presenting the outline document as a finished article.
+   */
+  resumeOutlineReview?: boolean;
   /** Highlight NLP entity terms inline (Write & Optimize). */
   highlightTerms?: boolean;
   /** Fired with true when Ranksmile is processing, false when done */
@@ -1096,7 +1102,7 @@ const ImportBar = ({ url, onChange, onImport, onClose, busy }: { url: string; on
   </form>
 );
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl, bottomBarRightReserve = 0 }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, resumeOutlineReview, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl, bottomBarRightReserve = 0 }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -2128,10 +2134,15 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     }, [outlineReviewMode, editor, commentArticleId, outlineBusy, generateBusy]);
 
     // ?reviewOutline=1 → review mode; false when param absent (not only Cancel).
+    //
+    // `resumeOutlineReview` is the second way in, and it is what makes the review survive
+    // leaving the page: the query param is lost on a fresh navigation, so an article whose
+    // outline had been planned but never written came back as an ordinary document and the
+    // outline read as the finished article.
     useEffect(() => {
       if (!router.isReady) return;
-      setOutlineReviewMode(router.query.reviewOutline === '1');
-    }, [router.isReady, router.query.reviewOutline]);
+      setOutlineReviewMode(router.query.reviewOutline === '1' || Boolean(resumeOutlineReview));
+    }, [router.isReady, router.query.reviewOutline, resumeOutlineReview]);
 
     useEffect(() => {
       if (!outlineReviewMode) outlineAutoStarted.current = false;

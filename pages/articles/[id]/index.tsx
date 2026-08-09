@@ -6,6 +6,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { isUsableArticleHtml } from '../../../lib/articleHtmlUsable';
+import { isReviewOutlineHtml } from '../../../lib/contentPlanner/reviewOutline';
 import AppShell from '../../../components/common/AppShell';
 import { Button } from '../../../components/koala/core';
 import { Icon } from '../../../components/koala/icons';
@@ -747,6 +749,29 @@ const ArticleEditorPage: NextPage = () => {
     [],
   );
 
+  /**
+   * An outline was planned and no article was ever written from it.
+   *
+   * The review lived only in `?reviewOutline=1`, so leaving the page dropped it and the
+   * outline document came back looking like a finished article. Same rule the generating
+   * page already resumes on (`shouldSkipFreshGenerate` → 'review' without usable HTML),
+   * read from state the page has already loaded — no extra request.
+   */
+  const outlineAwaitingReview = useMemo(() => {
+    if (!article) return false;
+    const html = article.content || '';
+    // An outline already persisted into content by an older build reads as a finished
+    // article by length alone, so recognise the document itself first.
+    if (isReviewOutlineHtml(html)) return true;
+    if (isUsableArticleHtml(html)) return false;
+    return Boolean((scoreData as unknown as Record<string, unknown>).content_planner_v2);
+  }, [article, scoreData]);
+
+  // Autosave must not run in review: the outline document is a planning artefact, and
+  // persisting it into articles.content is what made a returning user's outline read as
+  // the finished article. Mirrors how Auto-Optimize suspends the same effect.
+  const inOutlineReview = router.query.reviewOutline === '1' || outlineAwaitingReview;
+
   const handleMetaTitleChange = useCallback((v: string) => {
     setArticle((prev) => prev ? { ...prev, meta_title: v } : prev);
   }, []);
@@ -984,13 +1009,13 @@ const ArticleEditorPage: NextPage = () => {
     });
     // Record the loaded state as the baseline without saving it.
     if (lastSavedSig.current === null) { lastSavedSig.current = sig; return undefined; }
-    if (sig === lastSavedSig.current || isAutoOptimizing) return undefined;
+    if (sig === lastSavedSig.current || isAutoOptimizing || inOutlineReview) return undefined;
     setAutoSaveState('unsaved');
     if (autoTimer.current) clearTimeout(autoTimer.current);
     autoTimer.current = setTimeout(() => { void autoSave(sig); }, 800);
     return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing]);
+  }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing, inOutlineReview]);
 
   // Always-fresh "save the latest state if it's dirty" — used by the flush triggers below.
   // unload=true → the page is going away, so the PUT must outlive it (keepalive).
@@ -2012,6 +2037,7 @@ const ArticleEditorPage: NextPage = () => {
               plagiarismSentences={plagSentences}
               plagiarismFocused={plagFocused}
               onChange={handleEditorChange}
+              resumeOutlineReview={outlineAwaitingReview}
               onMetaTitleChange={handleMetaTitleChange}
               onMetaDescriptionChange={handleMetaDescriptionChange}
               initialFeaturedImage={featuredImage}

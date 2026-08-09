@@ -76,6 +76,22 @@ export function reviewOutlineToHtml(outline: ApprovedOutlineHeading[]): string {
   }).join('');
 }
 
+/**
+ * `Target length: ~N words` is emitted once per section by `reviewOutlineToHtml` and
+ * appears in no written article, which makes it the marker for "this document is an
+ * outline awaiting review, not prose".
+ *
+ * Needed because the outline is long enough to pass `isUsableArticleHtml` — every
+ * heading carries five or six instruction sentences — so length alone cannot tell the
+ * two apart, and articles saved before autosave was suspended during review still hold
+ * an outline in `articles.content`.
+ */
+const TARGET_LENGTH_LINE = /Target length:\s*~\s*\d+\s*words/i;
+
+export function isReviewOutlineHtml(html: string): boolean {
+  return TARGET_LENGTH_LINE.test(html || '');
+}
+
 function nodeText(node: JSONContent): string {
   if (typeof node.text === 'string') return node.text;
   return (node.content || []).map(nodeText).join(' ').replace(/\s+/g, ' ').trim();
