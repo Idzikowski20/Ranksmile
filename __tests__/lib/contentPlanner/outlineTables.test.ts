@@ -1,4 +1,7 @@
-import { improveOutline } from '../../../lib/contentPlanner/outlineBuilder';
+import { buildAdaptiveOutline, improveOutline } from '../../../lib/contentPlanner/outlineBuilder';
+import { buildIntentBlueprint } from '../../../lib/contentPlanner/intentBlueprint';
+import { buildReaderModel } from '../../../lib/contentPlanner/readerModel';
+import { buildArticleBlueprint } from '../../../lib/contentPlanner/budgetEngine';
 import type {
   AdaptiveOutline,
   ArticleBlueprint,
@@ -21,15 +24,15 @@ function outline(): AdaptiveOutline {
     freshnessNotes: [],
     sectionBudget: {
       words,
-claims: 2,
-entities: 2,
-questions: 1,
-examples: 1,
+      claims: 2,
+      entities: 2,
+      questions: 1,
+      examples: 1,
       lists: 1,
-tables: 0,
-images: 1,
-faq: 0,
-citations: 1,
+      tables: 0,
+      images: 1,
+      faq: 0,
+      citations: 1,
     },
   });
   return {
@@ -46,16 +49,16 @@ citations: 1,
 
 const blueprint = (targetTables: number) => ({
   targetWords: 1400,
-targetH2: 4,
-targetClaims: 8,
-targetQuestions: 4,
+  targetH2: 4,
+  targetClaims: 8,
+  targetQuestions: 4,
   targetExamples: 2,
-targetChecklists: 2,
-targetLists: 4,
-targetTables,
+  targetChecklists: 2,
+  targetLists: 4,
+  targetTables,
   targetFaqs: 4,
-freshness: 'low',
-requiredSections: [],
+  freshness: 'low',
+  requiredSections: [],
 } as unknown as ArticleBlueprint);
 
 const kg = { claims: [], questions: [] } as unknown as TargetKnowledgeGraph;
@@ -88,5 +91,58 @@ describe('improveOutline table back-fill', () => {
     const improved = improveOutline(base, blueprint(1), kg);
 
     expect(improved.sections.filter((s) => s.requiredBlocks.includes('table'))).toHaveLength(1);
+  });
+});
+
+/**
+ * improveOutline runs only on the repair path — an outline that passes validation first
+ * time never reaches it, which article 18's did. The guarantee has to hold where every
+ * outline goes through.
+ */
+describe('buildAdaptiveOutline plans the table itself', () => {
+  function outlineFor(averageTables: number) {
+    const intent = buildIntentBlueprint({ keyword: 'prywatny detektyw warszawa', language: 'pl', year: 2026 });
+    const reader = buildReaderModel({ intent, language: 'pl' });
+    const emptyKg = { claims: [], questions: [], entities: [] } as unknown as TargetKnowledgeGraph;
+    const bp = buildArticleBlueprint({
+      benchmark: {
+        competitorCount: 5,
+        averageWords: 1080,
+        medianWords: 1080,
+        targetWords: 1080,
+        averageH2: 12,
+        targetH2: 12,
+        averageParagraphs: 24,
+        averageLists: 14,
+        averageTables,
+        averageImages: 2,
+        averageFaq: 5,
+        averageExamples: 4,
+        averageClaims: 10,
+        averageQuestions: 5,
+        commonHeadings: [],
+        commonClaims: [],
+        commonQuestions: [],
+      },
+      kg: emptyKg,
+      intent,
+      reader,
+    });
+    return buildAdaptiveOutline({ blueprint: bp, kg: emptyKg, reader, intent, commonHeadings: [] });
+  }
+
+  it('gives a table to an outline the benchmark measured one for', () => {
+    const planned = outlineFor(1);
+    expect(planned.sections.filter((s) => s.requiredBlocks.includes('table'))).toHaveLength(1);
+  });
+
+  it('never plans a second table when a cost section already brings one', () => {
+    // A hiring query gets "Cennik i wycena", and blocksForRole gives /cost|koszt/ its own
+    // table — the back-fill must recognise that rather than add a competing one.
+    const planned = outlineFor(1);
+    const hosts = planned.sections.filter((s) => s.requiredBlocks.includes('table'));
+
+    expect(hosts).toHaveLength(1);
+    expect(hosts[0].sectionBudget.tables).toBeGreaterThan(0);
   });
 });

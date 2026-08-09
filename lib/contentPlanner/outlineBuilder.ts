@@ -119,6 +119,32 @@ function freshnessNotes(tier: FreshnessTier, year: number): string[] {
   return [];
 }
 
+/**
+ * Give the outline the comparison table the benchmark measured.
+ *
+ * `blocksForRole` only ever asks for a table on a /cost|koszt/ section, and that section
+ * exists only when the reader model flags cost fear — so the usual outline requested none
+ * however many the SERP had. Article 18 planned targetTables: 1 and shipped zero.
+ *
+ * Called from `buildAdaptiveOutline`, not only from `improveOutline`: that one runs on the
+ * repair path alone, so an outline that passes validation first time — which article 18's
+ * did — never reached it.
+ *
+ * The reference article's table is a comparison ("Kryterium | ProDetektyw") in its "why
+ * us" section rather than a price list, so any substantial body section can host it.
+ */
+function ensureTableSection(sections: OutlineSection[], blueprint: ArticleBlueprint): void {
+  if (blueprint.targetTables <= 0) return;
+  if (sections.some((s) => s.requiredBlocks.includes('table'))) return;
+  const host = [...sections]
+    .filter((s) => !isTailSectionRole(s.role, s.heading) && !/quick.?answer/i.test(s.role))
+    .sort((a, b) => b.sectionBudget.words - a.sectionBudget.words)[0];
+  if (!host) return;
+  host.requiredBlocks.push('table');
+  host.sectionBudget.tables = Math.max(1, host.sectionBudget.tables);
+  host.evidenceNeeds = [...new Set([...host.evidenceNeeds, 'statistic' as const])];
+}
+
 export function buildAdaptiveOutline(opts: {
   blueprint: ArticleBlueprint;
   kg: TargetKnowledgeGraph;
@@ -211,6 +237,8 @@ export function buildAdaptiveOutline(opts: {
     if (!progressed) break;
   }
 
+  ensureTableSection(sections, opts.blueprint);
+
   const ordered = orderSectionsFaqLast(sections);
   const lang: OutlineLang = opts.reader.language === 'en' ? 'en' : 'pl';
   return {
@@ -260,21 +288,7 @@ export function improveOutline(
     }
   }
 
-  // `blocksForRole` only ever asks for a table on a cost section, so an outline without
-  // one — the usual case, since "Koszty i opcje" appears only when the reader model
-  // flags cost fear — shipped zero tables however many the benchmark measured. The
-  // reference article's table is a comparison ("Kryterium | ProDetektyw") in its "why
-  // us" section, not a price list, so any substantial body section can carry it.
-  if (blueprint.targetTables > 0 && !next.sections.some((s) => s.requiredBlocks.includes('table'))) {
-    const host = [...next.sections]
-      .filter((s) => !isTailSectionRole(s.role, s.heading) && !/quick.?answer/i.test(s.role))
-      .sort((a, b) => b.sectionBudget.words - a.sectionBudget.words)[0];
-    if (host) {
-      host.requiredBlocks.push('table');
-      host.sectionBudget.tables = Math.max(1, host.sectionBudget.tables);
-      host.evidenceNeeds = [...new Set([...host.evidenceNeeds, 'statistic' as const])];
-    }
-  }
+  ensureTableSection(next.sections, blueprint);
 
   const assigned = new Set(next.sections.flatMap((s) => s.assignedClaimIds));
   const missingClaims = kg.claims.filter((c) => !assigned.has(c.id));

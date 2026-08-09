@@ -76,3 +76,24 @@ describe('planParagraphs word budget', () => {
     expect(planParagraphs(budgeted(30)).length).toBe(1);
   });
 });
+
+/**
+ * The outline appends its guaranteed table last, so a first-two-in-order cut kept
+ * checklist+steps and dropped the very block the benchmark asked for. Article 18 planned
+ * targetTables: 1 and rendered none.
+ */
+describe('planParagraphs keeps the comparison block', () => {
+  it('does not let checklist and steps crowd out the table', () => {
+    const section = {
+      id: 'sec-1',
+      heading: 'Dlaczego warto',
+      expectedWords: 400,
+      blocks: ['example', 'checklist', 'steps', 'pro_tip', 'table'],
+    } as unknown as ExecutionPlanSection;
+
+    const goals = planParagraphs(section).map((p) => p.goal);
+
+    expect(goals).toContain('comparison');
+    expect(planParagraphs(section).find((p) => p.goal === 'comparison')?.style.table).toBe(true);
+  });
+});

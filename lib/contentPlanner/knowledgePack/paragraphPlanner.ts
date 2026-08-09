@@ -85,11 +85,17 @@ export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
   // Deduped after mapping: outlineBuilder gives cost/koszt sections both `table` and
   // `comparison`, and mapBlockToGoal sends both to the same goal — the writer then
   // emitted two parallel tables for one section.
+  // Sorted before the cut, not after. The outline appends its guaranteed table last, so
+  // taking the first two in document order kept checklist+steps and dropped the very
+  // block the benchmark asked for — article 18 planned a table and rendered none. A
+  // comparison is also the rarest and least substitutable of the three.
   const structured = [...new Set(
     section.blocks
       .filter((b) => STRUCTURED_BLOCKS.includes(b))
       .map(mapBlockToGoal),
-  )].slice(0, MAX_STRUCTURED_BLOCKS);
+  )]
+    .sort((a, b) => Number(b === 'comparison') - Number(a === 'comparison'))
+    .slice(0, MAX_STRUCTURED_BLOCKS);
   const planned: ParagraphGoal[] = hasOnlySpecialBlocks(section.blocks)
     ? section.blocks.map(mapBlockToGoal)
     : ['intro', ...(structured.length ? structured : ['definition' as ParagraphGoal]), 'summary'];
