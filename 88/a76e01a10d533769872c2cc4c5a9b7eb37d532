@@ -1,0 +1,45 @@
+python-sidecar/pipeline/section_writer.py
+  s_668ab4f91e9d5a::t_93945b0f9ceffd 238
+  s_668ab4f91e9d5a::t_b5693418714ae2 101-115
+__tests__/lib/contentPlanner/paragraphPlanner.blocks.test.ts
+  s_668ab4f91e9d5a::t_3d1366d480cc46 36-78
+components/common/BounceSmileyAnimation.tsx
+  s_8d6cce368af4fd::t_b84fadf0ae05dd 34,39
+  s_8d6cce368af4fd::t_e6ce12d36835b3 71-75,77-79
+  s_668ab4f91e9d5a::t_ca00a174651259 151,179
+  s_8d6cce368af4fd::t_6aa881e7c0d971 14-15,18-19
+lib/contentPlanner/knowledgePack/paragraphPlanner.ts
+  s_668ab4f91e9d5a::t_8ace24d0687b70 48-75
+  s_668ab4f91e9d5a::t_dfd6683b3f8e82 93,96
+python-sidecar/tests/test_section_writer.py
+  s_668ab4f91e9d5a::t_cf899c103ac0c2 206-219
+__tests__/lib/benchmarkIntelligence/benchmark.test.ts
+  s_668ab4f91e9d5a::t_40cac27ec32092 7-17,20-30,33-43,55-65,68-78,158-163
+  s_668ab4f91e9d5a::t_b56ebc1252c5d5 148-157,164-174
+lib/benchmarkIntelligence/toPlannerTargets.ts
+  s_668ab4f91e9d5a::t_acdf7066ab8d47 19-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "88a76e01a10d533769872c2cc4c5a9b7eb37d532",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    },
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
