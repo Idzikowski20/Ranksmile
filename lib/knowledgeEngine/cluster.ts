@@ -49,41 +49,47 @@ export async function buildTopicBlocks(opts: {
     }
   }
 
-  const blocks: TopicBlock[] = clusters.map((c) => {
-    const consensus = opts.competitorCount
-      ? c.urls.size / opts.competitorCount
-      : 0;
-    const role = inferTopicRole(c.title);
-    // Stem overlap, not a 12-character prefix of the title: block titles are competitor
-    // headings ("Sprawy cywilne – jak pomaga detektyw") and claims almost never contain
-    // the heading's literal prefix, so every claim stayed "Unassigned" and the fact
-    // sheet had no topics to group by.
-    const titleTokens = c.title.toLowerCase().split(/[^\p{L}\p{N}]+/u)
-      .filter((t) => t.length >= 4);
-    const claimIds = opts.claims
-      .filter((cl) => {
-        const claimTokens = cl.statement.toLowerCase().split(/[^\p{L}\p{N}]+/u)
-          .filter((t) => t.length >= 4);
-        return titleTokens.some((tt) => claimTokens.some((ct) => tokensShareStem(tt, ct)));
-      })
-      .map((cl) => cl.id);
-    return {
-      id: blockId(c.title),
-      title: c.title,
-      role,
-      consensus: Math.round(consensus * 1000) / 1000,
-      memberHeadings: [...new Set(c.members)].slice(0, 20),
-      claimIds,
-    };
-  });
+  const tokensOf = (text: string): string[] => text.toLowerCase().split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t.length >= 4);
 
-  // Assign cluster label onto claims when matched
-  for (const b of blocks) {
-    for (const id of b.claimIds) {
-      const claim = opts.claims.find((c) => c.id === id);
-      if (claim && claim.cluster === 'Unassigned') claim.cluster = b.title;
+  // How many of a title's tokens the claim shares (by stem). Stem overlap replaces the
+  // old 12-char-prefix match, which never fired because competitor headings ("Sprawy
+  // cywilne – jak pomaga detektyw") do not appear verbatim inside a claim.
+  const sharedTokenCount = (titleTokens: string[], claimTokens: string[]): number =>
+    titleTokens.filter((tt) => claimTokens.some((ct) => tokensShareStem(tt, ct))).length;
+
+  const blockMeta = clusters.map((c) => ({
+    cluster: c,
+    titleTokens: tokensOf(c.title),
+  }));
+
+  const claimIdsByBlock: string[][] = blockMeta.map(() => []);
+
+  // A claim goes to its SINGLE best-matching block, not every block that shares one
+  // word. Two shared tokens is the confidence floor — one shared token is usually a
+  // location ("Warszawa") or a generic ("detektyw") that appears in half the headings.
+  for (const claim of opts.claims) {
+    const claimTokens = tokensOf(claim.statement);
+    let bestIdx = -1;
+    let bestScore = 1;
+    for (let i = 0; i < blockMeta.length; i += 1) {
+      const score = sharedTokenCount(blockMeta[i].titleTokens, claimTokens);
+      if (score > bestScore) { bestScore = score; bestIdx = i; }
+    }
+    if (bestIdx >= 0) {
+      claimIdsByBlock[bestIdx].push(claim.id);
+      if (claim.cluster === 'Unassigned') claim.cluster = blockMeta[bestIdx].cluster.title;
     }
   }
+
+  const blocks: TopicBlock[] = blockMeta.map(({ cluster: c }, i) => ({
+    id: blockId(c.title),
+    title: c.title,
+    role: inferTopicRole(c.title),
+    consensus: Math.round((opts.competitorCount ? c.urls.size / opts.competitorCount : 0) * 1000) / 1000,
+    memberHeadings: [...new Set(c.members)].slice(0, 20),
+    claimIds: claimIdsByBlock[i],
+  }));
 
   return blocks.sort((a, b) => b.consensus - a.consensus);
 }

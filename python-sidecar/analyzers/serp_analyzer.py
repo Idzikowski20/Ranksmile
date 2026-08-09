@@ -363,6 +363,9 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
     # missing data, not evidence of a short article, and averaging it in dragged
     # words_target for "szantaż" down to 675 against the reference tool's 2353-2706.
     # Snippet-length texts only count when there is nothing better to measure.
+    # ponytail: 200 words as the "real article vs snippet fallback" line — a genuine
+    # 50-199-word page is misread as a snippet when 2+ longer pages exist. Upgrade path:
+    # pass scrape-vs-snippet provenance from analyze_serp instead of inferring by length.
     full_counts = [n for n in (len(text.split()) for text in texts) if n >= 200]
     word_counts = full_counts if len(full_counts) >= 2 else [len(text.split()) for text in texts]
     if soups:
@@ -426,8 +429,12 @@ def _keyword_seed_terms(keyword: str) -> list[dict]:
 
 
 def _placeholder_score_data(keyword: str = "") -> dict:
+    from analyzers.term_lemmas import attach_lemma_regexps
+    # Seed terms carry their inflection regexps too, so the no-Serper / no-results
+    # fallback matches and dedupes the same way a full analysis does (empty corpus →
+    # base form + stem, which is enough for the scorer to count declensions).
     return {
-        "terms": _keyword_seed_terms(keyword),
+        "terms": attach_lemma_regexps(_keyword_seed_terms(keyword), [], "pl"),
         "competitors": [],
         "paa_questions": [],
         "words_min": 1500,

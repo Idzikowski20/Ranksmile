@@ -28,7 +28,7 @@ import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readContentSettings } from '../../../../lib/contentSettings';
 import { readArticleTerms } from '../../../../lib/articleTerms';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
-import { coverageQuestionsForPlanner } from '../../../../lib/coverageStore';
+import { mergedPlannerQuestions } from '../../../../lib/coverageStore';
 import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
 import {
   benchmarkDocsFromCompetitors,
@@ -117,12 +117,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // The coverage judge's own questions lead: the AI Search score is graded against
     // them, and planning without them wrote articles blind to their rubric — 4/10
     // covered on questions no section was ever asked to answer.
-    const paa = [...new Set([
-      ...coverageQuestionsForPlanner(row.ai_info_to_cover),
-      ...(Array.isArray(scoreData?.paa_questions)
-        ? (scoreData!.paa_questions as unknown[]).filter((q): q is string => typeof q === 'string')
-        : []),
-    ])];
+    const paa = mergedPlannerQuestions(row.ai_info_to_cover, scoreData?.paa_questions);
 
     const keyword = (row.target_keyword || '').trim();
     if (!keyword) {

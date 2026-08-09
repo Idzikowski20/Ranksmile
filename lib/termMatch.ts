@@ -31,7 +31,11 @@ function compileRegexps(regexps: readonly string[]): RegExp[] | null {
   if (hit !== undefined) return hit;
   let compiled: RegExp[] | null;
   try {
-    compiled = regexps.map((r) => new RegExp(`^(?:${r})$`, 'iu'));
+    // No `u` flag: the sidecar builds these with Python's re.escape, which emits `\-`
+    // for a hyphen — legal in Python and in a non-unicode JS regexp, but a syntax error
+    // under `u`, which would drop every hyphenated term to the fuzzy path. The patterns
+    // are literal alternations of real characters, so `u` buys nothing here anyway.
+    compiled = regexps.map((r) => new RegExp(`^(?:${r})$`, 'i'));
   } catch {
     compiled = null;
   }

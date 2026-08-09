@@ -176,8 +176,14 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
   // Topic → its facts, capped: stats and high-priority claims first, since those are the
   // sentences the reference articles inject verbatim ("Kara ... od 3 miesięcy do 5 lat").
   const factsByTopic = new Map<string, string[]>();
+  const factPriority: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
   const factCandidates = [...bundle.targetKg.claims]
-    .sort((a, b) => Number(b.type === 'stat') - Number(a.type === 'stat'))
+    // stats first, then priority, then id — without the last two, upstream profile
+    // iteration order decides which claims survive the FACT_SHEET_MAX cut, so the same
+    // claims in a different order produced different fact sheets.
+    .sort((a, b) => (Number(b.type === 'stat') - Number(a.type === 'stat'))
+      || ((factPriority[a.priority] ?? 4) - (factPriority[b.priority] ?? 4))
+      || a.id.localeCompare(b.id))
     .slice(0, FACT_SHEET_MAX);
   for (const claim of factCandidates) {
     const topic = asEvidence(claim.topic || '') || 'inne';
@@ -227,8 +233,11 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
     // that clustering assigns block titles instead of "Unassigned".
     factSheet
       ? `FACTS — grouped by topic, scraped reference data:\n<evidence>${factSheet}</evidence>\n`
-        + 'Route each fact into the section it belongs to as material the writer states'
-        + ' near-verbatim — figures, statutes and names kept exactly. Never invent figures.'
+        + 'Route each PUBLIC fact into the section it belongs to, kept exactly — a statute,'
+        + ' a figure, a court, a registry, a procedure. A fact that names a specific'
+        + ' company or carries its address, licence number, phone or testimonial is that'
+        + " competitor's, not ours: cover the topic it points at, never restate the company"
+        + ' fact. Never invent a figure.'
       : '',
     '',
     `Working H1: ${bundle.outline?.h1 || input.keyword}`,

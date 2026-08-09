@@ -129,17 +129,17 @@ export function projectCcmToCoverageSnapshot(
     intents.some((i) => i.primary && isCovered(i.status));
 
   // Cap CCM dump — UI checklist must stay near AI_COVERAGE_MAX (not 100+ facts).
-  // CCM facts appended first meant the cap sliced off exactly the rubric carried over
-  // above: article 13 kept 2 of its 10 harvested questions and self-graded 33/33 on its
-  // own facts. Rubric first, CCM facts fill what remains.
+  // The rubric carried over above is the grading standard, so it is held out of
+  // compaction entirely: `compactCoverageSnapshotItems` applies its OWN cap and drops
+  // by type/score, which is exactly how article 13 lost 8 of its 10 harvested questions
+  // and self-graded 33/33 on its own facts. Rubric kept whole, CCM facts compacted into
+  // whatever budget remains.
   const query = model.metadata.primaryQuery ?? model.metadata.title;
-  const compacted = query ? compactCoverageSnapshotItems(items, query) : items;
-  const capped = compacted.length > AI_COVERAGE_MAX
-    ? [
-      ...compacted.filter((i) => rubricKeys.has(normalizeFactKey(i.label))),
-      ...compacted.filter((i) => !rubricKeys.has(normalizeFactKey(i.label))),
-    ].slice(0, AI_COVERAGE_MAX)
-    : compacted;
+  const rubric = items.filter((i) => rubricKeys.has(normalizeFactKey(i.label)));
+  const ccmOnly = items.filter((i) => !rubricKeys.has(normalizeFactKey(i.label)));
+  const ccmBudget = Math.max(0, AI_COVERAGE_MAX - rubric.length);
+  const compactedCcm = query ? compactCoverageSnapshotItems(ccmOnly, query) : ccmOnly;
+  const capped = [...rubric, ...compactedCcm.slice(0, ccmBudget)];
 
   const { overall, buckets } = computeCoverageScores(capped, answersMainQuestionEarly);
 
