@@ -65,11 +65,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          body,
       });
 
+      // Set-Cookie is the one header that legitimately repeats, and `res.setHeader`
+      // OVERWRITES rather than appends — so relaying it inside this loop kept only
+      // whichever cookie the upstream happened to emit last. Sign-in sends the session
+      // token alongside `session_data` and `dont_remember`, so the token was the one
+      // being dropped: the browser stored a partial cookie set and the session appeared
+      // to reset at random. Collected first, then set once as an array (Node emits one
+      // header per element).
+      // `getSetCookie` needs undici (Node 18.14+). Guarded rather than called outright:
+      // if it is ever missing, throwing here would 502 every single auth request.
+      const setCookies = typeof response.headers.getSetCookie === 'function'
+         ? response.headers.getSetCookie()
+         : [response.headers.get('set-cookie')].filter((c): c is string => Boolean(c));
       response.headers.forEach((value, key) => {
-         if (!STRIP_FROM_UPSTREAM.has(key.toLowerCase())) {
-            res.setHeader(key, value);
-         }
+         const name = key.toLowerCase();
+         if (name === 'set-cookie' || STRIP_FROM_UPSTREAM.has(name)) return;
+         res.setHeader(key, value);
       });
+      if (setCookies.length > 0) {
+         res.setHeader('Set-Cookie', setCookies);
+      }
 
       const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
       if (origin && allowedAuthOrigins(req).has(origin)) {
