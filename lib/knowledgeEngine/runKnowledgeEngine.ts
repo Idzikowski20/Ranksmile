@@ -2,6 +2,7 @@ import { buildCompetitorDocuments } from './competitorDocument';
 import { extractRawKnowledge, normalizeCandidates } from './extract';
 import { canonicalizeClaims, sentencesToCanonicalizeInputs } from './canonicalize';
 import { normalizeClaims, type ClaimCompletion } from './normalizeClaims';
+import { dropCompetitorBrandClaims } from './competitorBrands';
 import { voteClaims } from './vote';
 import { buildTopicBlocks, discoverGaps } from './cluster';
 import { buildKnowledgeGraph, voteEntities } from './buildGraph';
@@ -81,6 +82,9 @@ export async function runKnowledgeEngine(
 
   t0 = now();
   claims = await normalizeClaims(claims, input.normalizeCompletion);
+  // After normalization, not before: the rewrite is where a brand most often survives —
+  // the prompt asks for no company names and two Temida claims still reached article 18.
+  claims = dropCompetitorBrandClaims(claims, input.keyword);
   timings.normalizeClaims = now() - t0;
 
   t0 = now();
