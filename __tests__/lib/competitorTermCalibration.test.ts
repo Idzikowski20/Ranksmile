@@ -120,3 +120,28 @@ describe('computeAiSearchScore', () => {
     expect(score).toBeGreaterThan(40);
   });
 });
+
+describe('calibrateTermRangesFromCorpus floors', () => {
+  const term: NlpTerm[] = [{ term: 'agencja detektywistyczna', target_count: 1 }];
+
+  it('floors at the average usage, not the single lowest page on the SERP', () => {
+    // One page uses it once; the rest lean on it heavily. Taking the minimum published
+    // "1-29" and gave the writer no reason to weave the head term in more than once.
+    const corpus = [
+      'agencja detektywistyczna',
+      Array(12).fill('agencja detektywistyczna').join(' i '),
+      Array(16).fill('agencja detektywistyczna').join(' oraz '),
+    ];
+
+    const [calibrated] = calibrateTermRangesFromCorpus(term, corpus);
+
+    expect(calibrated.suggested_min).toBeGreaterThan(1);
+    expect(calibrated.suggested_min).toBe(calibrated.target_count);
+    expect(calibrated.suggested_max).toBeGreaterThanOrEqual(calibrated.suggested_min ?? 0);
+  });
+
+  it('never lets the floor cross the ceiling', () => {
+    const [calibrated] = calibrateTermRangesFromCorpus(term, ['agencja detektywistyczna']);
+    expect(calibrated.suggested_min).toBeLessThanOrEqual(calibrated.suggested_max ?? 0);
+  });
+});
