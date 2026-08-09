@@ -29,8 +29,16 @@ import type { CanonicalClaim, ClaimEvidence } from './types';
 /** Returns raw model text; the caller owns provider choice, retries and telemetry. */
 export type ClaimCompletion = (prompt: string) => Promise<string>;
 
-/** Beyond this the prompt stops paying for itself and risks a truncated reply. */
-const MAX_INPUT_CLAIMS = 80;
+/**
+ * Claims per call.
+ *
+ * The whole set used to go in one request against a 3000-token reply budget. Article 18's
+ * 61 claims overran it, the truncated reply covered under half the input, and the
+ * coverage guard below then discarded EVERY rewrite — the graph shipped raw competitor
+ * prose ("Biuro ulokowane jest w centrum Polski"), page titles as topics, and not one
+ * claim with a second source, after paying for 23 seconds of model time.
+ */
+const NORMALIZE_BATCH_SIZE = 30;
 /**
  * A reply that accounts for less of the input than this is treated as truncated rather
  * than as the model judging the rest worthless — dropping claims on a `finish_reason:
@@ -115,25 +123,23 @@ function toClaim(statement: string, topic: string, members: CanonicalClaim[]): C
 }
 
 /**
- * Fail-soft by construction: no completion, too few claims, an unparseable reply or a
- * short one all return the input untouched. A degraded knowledge graph beats none, and
- * this stage runs inside article generation where an exception costs the user a run.
+ * One batch: rewrite these claims, or hand them back untouched.
+ *
+ * Returning the batch's OWN input on failure is the point — the whole stage used to fall
+ * back to every claim it was given, so one truncated reply discarded the lot.
  */
-export async function normalizeClaims(
-  claims: CanonicalClaim[],
-  complete?: ClaimCompletion | null,
+async function normalizeBatch(
+  input: CanonicalClaim[],
+  complete: ClaimCompletion,
 ): Promise<CanonicalClaim[]> {
-  if (!complete || claims.length < 3) return claims;
-
-  const input = claims.slice(0, MAX_INPUT_CLAIMS);
   let facts: ModelFact[];
   try {
     facts = parseFacts(await complete(buildNormalizePrompt(input.map((c) => c.statement))));
   } catch (err: unknown) {
     console.warn('[knowledgeEngine] claim normalization failed:', err);
-    return claims;
+    return input;
   }
-  if (!facts.length) return claims;
+  if (!facts.length) return input;
 
   const used = new Set<number>();
   const out: CanonicalClaim[] = [];
@@ -162,11 +168,29 @@ export async function normalizeClaims(
 
   if (!out.length || used.size < input.length * MIN_INPUT_COVERAGE) {
     console.warn(
-      `[knowledgeEngine] claim normalization covered ${used.size}/${input.length} inputs — keeping raw claims`,
+      `[knowledgeEngine] normalization covered ${used.size}/${input.length} claims — keeping this batch raw`,
     );
-    return claims;
+    return input;
   }
-  // Anything past MAX_INPUT_CLAIMS was never offered to the model; keep it rather than
-  // silently shrinking the graph to the slice that happened to fit.
-  return [...out, ...claims.slice(MAX_INPUT_CLAIMS)];
+  return out;
+}
+
+/**
+ * Fail-soft by construction: no completion, too few claims, an unparseable reply or a
+ * short one all return the input untouched. A degraded knowledge graph beats none, and
+ * this stage runs inside article generation where an exception costs the user a run.
+ */
+export async function normalizeClaims(
+  claims: CanonicalClaim[],
+  complete?: ClaimCompletion | null,
+): Promise<CanonicalClaim[]> {
+  if (!complete || claims.length < 3) return claims;
+
+  const batches: CanonicalClaim[][] = [];
+  for (let i = 0; i < claims.length; i += NORMALIZE_BATCH_SIZE) {
+    batches.push(claims.slice(i, i + NORMALIZE_BATCH_SIZE));
+  }
+
+  const results = await Promise.all(batches.map((batch) => normalizeBatch(batch, complete)));
+  return results.flat();
 }

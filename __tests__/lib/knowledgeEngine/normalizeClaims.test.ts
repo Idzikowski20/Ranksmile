@@ -1,3 +1,5 @@
+// Batched now, so the fall-back path rebuilds the array from its slices: the contract is
+// that every claim comes back unchanged, not that it is the very same array object.
 import { normalizeClaims } from '../../../lib/knowledgeEngine/normalizeClaims';
 import type { CanonicalClaim, ClaimEvidence } from '../../../lib/knowledgeEngine/types';
 
@@ -90,7 +92,7 @@ describe('normalizeClaims', () => {
     ['the reply is not JSON', async () => 'I cannot help with that.'],
     ['the reply is empty', async () => ''],
   ] as const)('keeps the raw claims when %s', async (_label, complete) => {
-    expect(await normalizeClaims(INPUT, complete)).toBe(INPUT);
+    expect(await normalizeClaims(INPUT, complete)).toEqual(INPUT);
   });
 
   it('keeps the raw claims when the reply covers too little of the input', async () => {
@@ -99,7 +101,7 @@ describe('normalizeClaims', () => {
     const thin = JSON.stringify({
       facts: [{ statement: 'Obserwacja osób jest skuteczną metodą detektywistyczną.', topic: 'Obserwacja', from: [0] }],
     });
-    expect(await normalizeClaims(INPUT, async () => thin)).toBe(INPUT);
+    expect(await normalizeClaims(INPUT, async () => thin)).toEqual(INPUT);
   });
 
   it('drops facts that point at no input claim', async () => {
@@ -120,6 +122,61 @@ describe('normalizeClaims', () => {
     const out = await normalizeClaims(INPUT, async () => {
       throw new Error('provider down');
     });
-    expect(out).toBe(INPUT);
+    expect(out).toEqual(INPUT);
+  });
+});
+
+/**
+ * Article 18's 61 claims went into one request against a 3000-token reply budget. The
+ * truncated reply covered under half the input, the coverage guard discarded EVERY
+ * rewrite, and the graph shipped raw competitor prose with page titles as topics — after
+ * paying for 23 seconds of model time.
+ */
+describe('normalizeClaims batching', () => {
+  const BATCH = 30;
+
+  function manyClaims(n: number): CanonicalClaim[] {
+    return Array.from({ length: n }, (_, i) => claim(
+      `c${i}`,
+      `Detektyw wykonuje czynnosc numer ${i} zgodnie z obowiazujacymi przepisami prawa.`,
+      `https://s${i % 4}.pl/x`,
+    ));
+  }
+
+  /** Rewrites every claim the prompt listed, echoing its index back in `from`. */
+  function replyFor(prompt: string): string {
+    const asked = [...prompt.matchAll(/^(\d+)\. /gm)].map((m) => Number(m[1]));
+    return JSON.stringify({
+      facts: asked.map((n) => ({
+        statement: `Znormalizowany fakt numer ${n} o pracy detektywa w Warszawie.`,
+        topic: 'Zakres uslug',
+        from: [n],
+      })),
+    });
+  }
+
+  it('splits a large graph across several calls instead of one oversized reply', async () => {
+    const prompts: string[] = [];
+    const out = await normalizeClaims(manyClaims(61), async (p) => { prompts.push(p); return replyFor(p); });
+
+    expect(prompts).toHaveLength(Math.ceil(61 / BATCH));
+    expect(out).toHaveLength(61);
+    expect(out.every((c) => c.statement.startsWith('Znormalizowany'))).toBe(true);
+  });
+
+  it('loses only the failing batch, not every rewrite', async () => {
+    const input = manyClaims(61);
+    // The first batch comes back truncated; the rest are fine.
+    let seen = 0;
+    const out = await normalizeClaims(input, async (p) => {
+      seen += 1;
+      return seen === 1 ? JSON.stringify({ facts: [] }) : replyFor(p);
+    });
+
+    const raw = out.filter((c) => c.statement.startsWith('Detektyw wykonuje'));
+    const rewritten = out.filter((c) => c.statement.startsWith('Znormalizowany'));
+
+    expect(raw).toHaveLength(BATCH);
+    expect(rewritten).toHaveLength(61 - BATCH);
   });
 });
