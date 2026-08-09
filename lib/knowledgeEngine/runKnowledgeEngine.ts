@@ -1,6 +1,7 @@
 import { buildCompetitorDocuments } from './competitorDocument';
 import { extractRawKnowledge, normalizeCandidates } from './extract';
 import { canonicalizeClaims, sentencesToCanonicalizeInputs } from './canonicalize';
+import { normalizeClaims, type ClaimCompletion } from './normalizeClaims';
 import { voteClaims } from './vote';
 import { buildTopicBlocks, discoverGaps } from './cluster';
 import { buildKnowledgeGraph, voteEntities } from './buildGraph';
@@ -14,6 +15,12 @@ export type RunKnowledgeEngineInput = {
   scoreData?: Record<string, unknown> | null;
   paaQuestions?: string[];
   extraTexts?: Array<{ text: string; url: string; kind?: string }>;
+  /**
+   * Rewrites scraped sentences into atomic facts and merges the duplicates. Optional:
+   * without it the graph keeps competitor prose verbatim and every claim carries one
+   * source, which is the behaviour every run had before this stage existed.
+   */
+  normalizeCompletion?: ClaimCompletion | null;
 };
 
 export type RunKnowledgeEngineResult = {
@@ -37,6 +44,7 @@ export async function runKnowledgeEngine(
     extract: 0,
     normalize: 0,
     canonicalize: 0,
+    normalizeClaims: 0,
     vote: 0,
     cluster: 0,
     build: 0,
@@ -70,6 +78,10 @@ export async function runKnowledgeEngine(
   const inputs = fromSentences.length >= 5 ? fromSentences : [...fromSentences, ...fromHeadings];
   let claims = await canonicalizeClaims(inputs, { provider });
   timings.canonicalize = now() - t0;
+
+  t0 = now();
+  claims = await normalizeClaims(claims, input.normalizeCompletion);
+  timings.normalizeClaims = now() - t0;
 
   t0 = now();
   claims = voteClaims(claims, docs);

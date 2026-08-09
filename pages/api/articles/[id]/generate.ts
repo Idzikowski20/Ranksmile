@@ -20,6 +20,7 @@ import { getErrorMessage } from '../../../../lib/errors';
 import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 import { safeJsonParse } from '../../../../lib/safeJson';
+import { llmGateway } from '../../../../lib/llmGateway';
 import { pipelineVersionTag } from '../../../../lib/pipelineVersion';
 import {
   aiIntelFromScoreData,
@@ -311,6 +312,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           scoreData,
           paaQuestions: paa,
           extraTexts,
+          // Rewrites scraped competitor prose into atomic facts and merges duplicates so
+          // claims carry real source counts. The gateway is injected rather than imported
+          // by the engine, which must stay free of the database for its unit tests.
+          normalizeCompletion: async (prompt) => (await llmGateway({
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0,
+            maxTokens: 3000,
+            responseFormat: 'json_object',
+            jobType: 'knowledge_normalize_claims',
+            keyword,
+            workspaceId: orgId == null ? undefined : String(orgId),
+          })).text,
         });
         knowledgeGraph = ke.graph;
         cieGate = shouldUseKnowledgePlanner(knowledgeGraph, true);
