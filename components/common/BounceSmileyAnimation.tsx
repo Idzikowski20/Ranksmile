@@ -132,6 +132,7 @@ export function BounceSmileyAnimation({
   entrance = true,
   size = 20,
   animateRotate = true,
+  mood = 'happy',
 }: BounceSmileyAnimationProps) {
   const uid = useId().replace(/:/g, "");
   const filterId = `filter0_i_bounce_smiley_${uid}`;

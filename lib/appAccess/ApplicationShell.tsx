@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
 import { fetchBootstrapOrNull } from '../fetchBootstrap';
 import { isPublicRoute } from '../isPublicPath';
+import { PlanExpired } from '../../components/billing/PlanExpired';
 import {
   allowsFrontend,
   emitAccessTimeline,
@@ -143,6 +144,8 @@ export function ApplicationShell({ children }: Props) {
   // Single policy gate
   React.useEffect(() => {
     if (!hasSession || !effectiveAccess || isPublic) return;
+    // LOCKED renders the block in place; redirecting would fight that render.
+    if (effectiveAccess.appState === 'LOCKED') return;
     if (allowsFrontend(effectiveAccess.appState, path)) return;
 
     const to = effectiveAccess.redirect.redirect;
@@ -199,6 +202,14 @@ export function ApplicationShell({ children }: Props) {
   }
   if (hasSession && bootstrapLoading && !bootstrap && !everHadBootstrap.current) {
     return <AppLoading />;
+  }
+  // LOCKED means the plan or trial ran out on an account that had access — so the
+  // block replaces the page rather than sending the user to a route of its own, and
+  // it does so on every route. BILLING_REQUIRED is deliberately not included: that
+  // also covers accounts that never subscribed, and "your plan has expired" would be
+  // a lie to them. They keep the existing /plans redirect.
+  if (hasSession && !isPublic && effectiveAccess?.appState === 'LOCKED') {
+    return <PlanExpired />;
   }
   if (hasSession && !isPublic && effectiveAccess && !allowsFrontend(effectiveAccess.appState, path)) {
     return <AppLoading />;
