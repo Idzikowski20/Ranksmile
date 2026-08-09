@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { RecommendationsScene, ContentScene, ContentAuditScene } from '../onboarding/tourScenes';
+import { brandMain } from '../koala/tokens/colors';
 import { Badge, Checkbox, Gauge, HoverTooltip, TableLoadMore } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import GeneratingStage from './GeneratingStage';
@@ -141,29 +143,6 @@ const EmptyCardArrow = () => (
   </svg>
 );
 
-const RecommendationsIcon = () => (
-  <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
-    <path d="M22.2 4.4c.5 5.1 5.8 6.5 7.6 11.2 1.8 4.5.5 10.4-4.6 13.4 1.1-3.5-.4-5.8-2.6-8.2.1 4.9-2.8 7.5-6.5 8.5-4.6-2.3-6.7-6.3-5.8-11.2.8-4.6 5.8-7.5 6.5-12.9 2.1 1.4 3.9 3.3 5.4 5.6.6-1.9.5-3.8 0-6.4Z" fill="#FF5B49" />
-    <path d="M20.5 30.2c-2.4-.8-4.1-2.8-4-5.4 0-2.2 1.6-3.8 3.2-5.4.3 2.7 2.7 3.4 3.4 5.8.6 2-.2 3.9-2.6 5Z" fill="#FFB199" />
-  </svg>
-);
-
-const KeywordIcon = () => (
-  <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
-    <rect x="7" y="9" width="28" height="24" rx="5" fill="var(--koala-bg-secondary)" stroke="var(--koala-border-secondary)" strokeWidth="1.5" />
-    <path d="M14 17h14M14 22h10M14 27h14" stroke="var(--koala-text-primary)" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
-
-const ContentAuditIcon = () => (
-  <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
-    <rect x="9" y="7" width="19" height="26" rx="4" fill="var(--koala-status-success-bg)" stroke="var(--koala-status-success)" strokeWidth="1.5" />
-    <path d="M14 15h9M14 20h7M14 25h5" stroke="var(--koala-status-success)" strokeWidth="2" strokeLinecap="round" />
-    <circle cx="29" cy="28" r="5" fill="var(--koala-bg-primary)" stroke="var(--koala-status-success)" strokeWidth="2" />
-    <path d="m32.8 31.8 3.2 3.2" stroke="var(--koala-status-success)" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
-
 type EmptyStartOptionKey = 'recommendations' | 'keyword' | 'contentAudit';
 
 const EMPTY_START_OPTIONS: Array<{
@@ -178,21 +157,21 @@ const EMPTY_START_OPTIONS: Array<{
     title: 'Recommendations',
     description: 'Start with one of the suggested actions',
     href: '/dashboard',
-    icon: <RecommendationsIcon />,
+    icon: <RecommendationsScene accent={brandMain} />,
   },
   {
     key: 'keyword',
     title: 'Your keyword',
     description: 'Create content based on the keyword you provide',
     href: '/articles/new',
-    icon: <KeywordIcon />,
+    icon: <ContentScene accent={brandMain} />,
   },
   {
     key: 'contentAudit',
     title: 'Content Audit',
     description: 'Optimize your existing content',
     href: '/articles/import',
-    icon: <ContentAuditIcon />,
+    icon: <ContentAuditScene accent={brandMain} />,
   },
 ];
 
@@ -312,14 +291,20 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
+                {/*
+                  The onboarding tour's scenes, not flat icons â€” same illustration the
+                  user meets on the dashboard, so the empty state previews the surface
+                  each card leads to. A scene fills its container (Panel is 100%x100%
+                  and Window crops on the right/bottom), so it needs a clipped box
+                  rather than a centred glyph.
+                */}
                 <div
                   style={{
+                    position: 'relative',
                     height: 82,
                     borderRadius: 12,
+                    overflow: 'hidden',
                     background: 'var(--koala-bg-secondary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                   }}
                 >
                   {option.icon}
@@ -348,7 +333,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
         // Content score from dedicated column (synced with editor via PUT /api/articles/[id])
         const score = typeof article.content_score === 'number' ? article.content_score : null;
 
-        // Analyzing state — nc-gen mini stage (same language as /generating)
+        // Analyzing state â€” nc-gen mini stage (same language as /generating)
         if (article.status === 'analyzing') {
           return (
             <Link href={`/articles/${article.id}`} key={article.id} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -408,7 +393,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                     fontFamily: 'var(--font-family-primary)',
                   }}
                 >
-                  Analyzing content…
+                  Analyzing contentâ€¦
                 </span>
                 <div className="nc-gen-progress" style={{ maxWidth: 180, height: 4, marginTop: 4 }} aria-hidden>
                   <div className="nc-gen-progress-fill nc-gen-progress-fill--indeterminate" />
@@ -456,7 +441,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
         }
 
         const statusBadge = articleStatusBadge(article.status);
-        const wordsLabel = article.word_count != null ? `${article.word_count.toLocaleString()} words` : '—';
+        const wordsLabel = article.word_count != null ? `${article.word_count.toLocaleString()} words` : 'â€”';
 
         return (
           <div
@@ -485,7 +470,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
               </div>
             </div>
 
-            {/* Main content — Figma article card (10218:665879) */}
+            {/* Main content â€” Figma article card (10218:665879) */}
             <div className="article-list-card-main">
               <Link href={`/articles/${article.id}`}>
                 <a style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
@@ -535,7 +520,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
         />
       ) : null}
 
-      {/* ── Bulk selection bar ── */}
+      {/* â”€â”€ Bulk selection bar â”€â”€ */}
       {selectedIds.size > 0 && (
         <div
           className="article-bulk-bar"
@@ -620,7 +605,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
               <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-1.935l-1.342-9.523m16.498 0a48.108 48.108 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.166m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
             <span>
-              {isDeleting ? 'Deleting…' : (
+              {isDeleting ? 'Deletingâ€¦' : (
                 <>
                   <span className="article-bulk-bar-trash-full">Put in trash</span>
                   <span className="article-bulk-bar-trash-short">Trash</span>

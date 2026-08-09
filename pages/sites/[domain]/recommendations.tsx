@@ -360,13 +360,25 @@ const RecommendationsPage: NextPage = () => {
       return [...rows, ...fromScan].filter((r) => r.content_score < 70);
    }, [rows, auditRows]);
 
-   // ── Content gap rows (ideas tab) — GSC keywords not covered by any article ──
+   // ── Content gap rows (ideas tab) — scan-suggested topics, then GSC keywords ──
+   // `type='create'` recommendations used to reach no surface at all: the Optimize tab
+   // requires type==='optimize', and this tab was built purely from GSC. They were still
+   // counted by the sidebar badge, so it promised work the page could not show — the
+   // measured case was 5 create rows behind a badge of 5 against an empty Optimize list.
+   // They lead here because creating an article is what they ask for.
    const gapRows = useMemo(() => {
       const coveredKws = new Set(rows.map((r) => r.keyword.toLowerCase()).filter(Boolean));
-      return allGscKeywords
+      const suggested = (recsData?.recommendations || [])
+         .filter((r) => r.type === 'create' && !!r.title?.trim())
+         .filter((r) => !coveredKws.has(r.title.toLowerCase()))
+         // No GSC history by definition — these are topics nobody has ranked for yet.
+         .map((r) => ({ keyword: r.title, impressions: 0, position: 0, clicks: 0 }));
+      const seen = new Set(suggested.map((s) => s.keyword.toLowerCase()));
+      const fromGsc = allGscKeywords
          .filter((kw) => kw.impressions > 20 && !coveredKws.has(kw.keyword.toLowerCase()))
-         .slice(0, 150);
-   }, [allGscKeywords, rows]);
+         .filter((kw) => !seen.has(kw.keyword.toLowerCase()));
+      return [...suggested, ...fromGsc].slice(0, 150);
+   }, [allGscKeywords, rows, recsData]);
 
 
    const filtered = useMemo(() => {
