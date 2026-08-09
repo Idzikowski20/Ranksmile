@@ -188,3 +188,18 @@ def test_authority_sources_resolve_and_gate_the_link_rule():
 def test_writer_is_told_to_keep_facts_exact():
     """Reference articles carry guideline facts near-verbatim; ours blurred them."""
     assert "figures, statutes, names" in _prompt(PARAGRAPH, CONTEXT)
+
+
+def test_steps_paragraph_asks_for_a_numbered_list():
+    """A process is an ordered list; bullets are why articles carried no <ol> at all."""
+    prompt = _prompt({"id": "p1", "goal": "steps", "style": {"list": True, "ordered": True}})
+
+    assert "NUMBERED list (1. 2. 3.)" in prompt
+    assert "bullet list" not in prompt
+
+
+def test_checklist_paragraph_still_asks_for_bullets():
+    prompt = _prompt({"id": "p1", "goal": "checklist", "style": {"list": True}})
+
+    assert "bullet list" in prompt
+    assert "NUMBERED" not in prompt

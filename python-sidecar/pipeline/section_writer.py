@@ -140,9 +140,12 @@ def _prompt(
             "emit HTML. No heading, no other sections, no prose before or after.",
         ]
     elif style.get("list"):
+        # A process is an ordered list. Emitting bullets for it is why articles carried
+        # no <ol> at all, while the reference article numbers its engagement flow.
+        marker = "a NUMBERED list (1. 2. 3.)" if style.get("ordered") else "a bullet list"
         lines = [
             "Write ONE Markdown block: a short bold label line ending with a colon,",
-            "like `**Co zrobić natychmiast:**`, then a bullet list of 3-6 items.",
+            f"like `**Co zrobić natychmiast:**`, then {marker} of 3-6 items.",
             "Each item is one sentence of at most 20 words. Markdown only; never emit",
             "HTML. No heading, no prose before the label or after the list.",
         ]

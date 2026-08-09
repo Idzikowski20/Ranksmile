@@ -19,6 +19,7 @@ import type { NarrativeSeed } from './narrativeOptimizer';
 import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
 import {
   headingFillersFromCompetitors,
+  isTailSectionRole,
   orderSectionsFaqLast,
   titleizeH1,
   type OutlineLang,
@@ -256,6 +257,22 @@ export function improveOutline(
       s.requiredBlocks.push('checklist');
       s.sectionBudget.lists = Math.max(1, s.sectionBudget.lists);
       checklists++;
+    }
+  }
+
+  // `blocksForRole` only ever asks for a table on a cost section, so an outline without
+  // one — the usual case, since "Koszty i opcje" appears only when the reader model
+  // flags cost fear — shipped zero tables however many the benchmark measured. The
+  // reference article's table is a comparison ("Kryterium | ProDetektyw") in its "why
+  // us" section, not a price list, so any substantial body section can carry it.
+  if (blueprint.targetTables > 0 && !next.sections.some((s) => s.requiredBlocks.includes('table'))) {
+    const host = [...next.sections]
+      .filter((s) => !isTailSectionRole(s.role, s.heading) && !/quick.?answer/i.test(s.role))
+      .sort((a, b) => b.sectionBudget.words - a.sectionBudget.words)[0];
+    if (host) {
+      host.requiredBlocks.push('table');
+      host.sectionBudget.tables = Math.max(1, host.sectionBudget.tables);
+      host.evidenceNeeds = [...new Set([...host.evidenceNeeds, 'statistic' as const])];
     }
   }
 

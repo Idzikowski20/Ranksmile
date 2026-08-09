@@ -77,9 +77,14 @@ export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
     const expectedWords = baseWords + (i < remainder ? 1 : 0);
     const dependsOnParagraphs = i === 0 ? [] : [paragraphs[0].id];
 
-    const style: { list?: boolean; table?: boolean; boldTerms?: boolean } = {};
+    const style: { list?: boolean; ordered?: boolean; table?: boolean; boldTerms?: boolean } = {};
     if (goal === 'checklist' || goal === 'steps' || goal === 'faq') {
       style.list = true;
+    }
+    // A process is an ordered list. Rendering it as bullets is why articles carried no
+    // <ol> at all while the reference article numbers its six-step engagement flow.
+    if (goal === 'steps') {
+      style.ordered = true;
     }
     if (goal === 'comparison') {
       style.table = true;
