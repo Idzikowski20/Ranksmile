@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { RecommendationsScene, ContentScene, ContentAuditScene } from '../onboarding/tourScenes';
-import { brandMain } from '../koala/tokens/colors';
+// Each scene keeps the accent it wears in the tour (PageTour.tsx), so a card and its
+// tour step read as the same illustration rather than three orange variants.
+import { green, pink, yellow } from '../koala/tokens/colors';
 import { Badge, Checkbox, Gauge, HoverTooltip, TableLoadMore } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import GeneratingStage from './GeneratingStage';
@@ -160,21 +162,21 @@ const EMPTY_START_OPTIONS: Array<{
     title: 'Recommendations',
     description: 'Start with one of the suggested actions',
     href: '/dashboard',
-    icon: <RecommendationsScene accent={brandMain} />,
+    icon: <RecommendationsScene accent={yellow[400]} />,
   },
   {
     key: 'keyword',
     title: 'Your keyword',
     description: 'Create content based on the keyword you provide',
     href: '/articles/new',
-    icon: <ContentScene accent={brandMain} />,
+    icon: <ContentScene accent={green[400]} />,
   },
   {
     key: 'contentAudit',
     title: 'Content Audit',
     description: 'Optimize your existing content',
     href: '/articles/import',
-    icon: <ContentAuditScene accent={brandMain} />,
+    icon: <ContentAuditScene accent={pink[400]} />,
   },
 ];
 
