@@ -59,7 +59,22 @@ function buildManifest(builtAt: string): PipelineManifest {
  * ponytail: a hand-kept allowlist; an authority outside it simply is not linked.
  * Upgrade path is a domain-authority score on the source records.
  */
-const AUTHORITY_SOURCE = /\.gov\.pl(\/|$)|\.gov(\/|$)|sejm\.gov|isap\.sejm|policja\.gov|prokuratura|lexlege\.pl|europa\.eu(\/|$)|\.edu(\.|\/|$)|cert\.pl|uodo\.gov/i;
+const AUTHORITY_HOST = /(^|\.)(gov\.pl|gov|sejm\.gov\.pl|isap\.sejm\.gov\.pl|policja\.gov\.pl|prokuratura\.gov\.pl|lexlege\.pl|europa\.eu|cert\.pl|uodo\.gov\.pl)$|\.edu(\.[a-z]{2,})?$/i;
+
+/**
+ * Matched against the parsed hostname, never the raw URL: `https://evil.com/lexlege.pl`
+ * and `https://evil.com?x=.gov.pl` both contain an allowlisted string but resolve to a
+ * hostile host. Only https URLs qualify — a claim source we would put in front of a
+ * reader must be one we would send them to.
+ */
+function isAuthorityUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && AUTHORITY_HOST.test(u.hostname);
+  } catch {
+    return false;
+  }
+}
 
 /** Deterministic per-URL id, so paragraph refs and the graph agree without ordering. */
 function sourceIdFor(url: string): string {
@@ -78,7 +93,7 @@ function buildGraph(plan: ArticleExecutionPlan, builtAt: string): KnowledgeGraph
     for (const c of section.claims) {
       let sourceId: string | null = null;
       for (const src of c.sources ?? []) {
-        if (!src.url || !AUTHORITY_SOURCE.test(src.url)) continue;
+        if (!src.url || !isAuthorityUrl(src.url)) continue;
         let id = sourceIdByUrl.get(src.url);
         if (!id) {
           id = sourceIdFor(src.url);
@@ -165,7 +180,7 @@ function enrichFirstParagraph(
   const claimRefs: ClaimRef[] = section.claims.map((c) => ({ claimId: c.id }));
   const sourceRefs = [...new Set(section.claims
     .flatMap((c) => c.sources ?? [])
-    .filter((src) => src.url && AUTHORITY_SOURCE.test(src.url))
+    .filter((src) => src.url && isAuthorityUrl(src.url))
     .map((src) => sourceIdFor(src.url)))]
     .map((sourceId) => ({ sourceId }));
   const factRefs: FactRef[] = section.claims.map((c) => ({ factId: `fact-${c.id}` }));

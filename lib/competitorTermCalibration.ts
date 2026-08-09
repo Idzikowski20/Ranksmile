@@ -41,7 +41,11 @@ export function filterUsefulNlpTerms(terms: NlpTerm[]): NlpTerm[] {
       const aw = a.term.split(/\s+/).length;
       const bw = b.term.split(/\s+/).length;
       if (bw !== aw) return bw - aw;
-      return (b.doc_freq ?? 0) - (a.doc_freq ?? 0);
+      const dfDiff = (b.doc_freq ?? 0) - (a.doc_freq ?? 0);
+      if (dfDiff !== 0) return dfDiff;
+      // Deterministic tiebreak: inflection variants sharing a lemma_key tie on every
+      // score above, and the stable sort would then let input row order pick the winner.
+      return a.term.localeCompare(b.term);
     });
 
   for (const t of scored) {

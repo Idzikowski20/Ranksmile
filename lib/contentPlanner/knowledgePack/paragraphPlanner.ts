@@ -18,6 +18,7 @@ function mapBlockToGoal(block: ContentBlockType): ParagraphGoal {
     case 'warning':
       return 'warning';
     case 'comparison':
+    case 'table':
       return 'comparison';
     case 'summary':
       return 'summary';
@@ -30,7 +31,9 @@ function hasOnlySpecialBlocks(blocks: ContentBlockType[]): boolean {
   return blocks.length > 0 && blocks.every((b) => SPECIAL_BLOCKS.includes(b));
 }
 
-/** How many list/steps/comparison blocks a section may carry between intro and summary. */
+// ponytail: cap of 2 structured blocks per mixed section — a section that requested
+// more (say checklist + steps + comparison) loses the overflow. Upgrade path: scale the
+// cap by expectedWords so a long section may carry more blocks.
 const MAX_STRUCTURED_BLOCKS = 2;
 
 /**
@@ -40,7 +43,7 @@ const MAX_STRUCTURED_BLOCKS = 2;
  * item as a paragraph, which is why its "paragraphs" range starts at 93 while a
  * paragraphs-only article of the same length has 21.
  */
-const STRUCTURED_BLOCKS: ContentBlockType[] = ['checklist', 'steps', 'comparison', 'faq'];
+const STRUCTURED_BLOCKS: ContentBlockType[] = ['checklist', 'steps', 'comparison', 'table', 'faq'];
 
 export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
   if (section.blocks.length === 0 && section.expectedWords === 0) {

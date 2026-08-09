@@ -100,27 +100,29 @@ describe('projection preserves the grading rubric', () => {
     source: { kind: 'plain', text: `# Temat\n\n## Sekcja\n\n${factLines}\n` },
   }).model;
 
+  // Rubric of 40 — larger than AI_COVERAGE_MAX (35). Article 13 fed the whole set
+  // (rubric + CCM facts) through compaction, whose own cap + type/score filter dropped
+  // most of the rubric off the tail; the article then self-graded against its own facts.
+  const RUBRIC_SIZE = 40;
   const previous = (): CoverageSnapshot => ({
     schemaVersion: 1,
     judgeVersion: 'v1|deepseek-chat|0',
     promptVersion: 'v1',
     model: 'deepseek-chat',
     createdAt: '2026-01-01T00:00:00.000Z',
-    items: Array.from({ length: 10 }, (_, i) => rubricItem(i)),
+    items: Array.from({ length: RUBRIC_SIZE }, (_, i) => rubricItem(i)),
     buckets: [],
     answersMainQuestionEarly: false,
     overall: 0,
   });
 
-  /**
-   * Article 13: the cap sliced the carried-over rubric off the tail, leaving 2 of 10
-   * harvested questions — the article then self-graded 33/33 against its own facts.
-   */
-  it('never trades harvested questions for its own facts under the cap', () => {
+  it('keeps the whole harvested rubric even when it alone exceeds the cap', () => {
     const snap = projectCcmToCoverageSnapshot(bigModel(), { createdAt: FIXED_AT, previous: previous() });
 
-    const kept = snap.items.filter((i) => i.id.startsWith('paa-'));
-    expect(kept).toHaveLength(10);
+    const keptIds = new Set(snap.items.map((i) => i.id));
+    for (let i = 0; i < RUBRIC_SIZE; i += 1) {
+      expect(keptIds.has(`paa-${i}`)).toBe(true);
+    }
   });
 
   it('keeps a true early-answer grade sticky across projections', () => {

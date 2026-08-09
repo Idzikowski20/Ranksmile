@@ -14,7 +14,7 @@ import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
-import { coverageQuestionsForPlanner } from '../../../../lib/coverageStore';
+import { mergedPlannerQuestions } from '../../../../lib/coverageStore';
 import { resolveContentLocale } from '../../../../lib/domainLanguage';
 import { getErrorMessage } from '../../../../lib/errors';
 import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
@@ -247,13 +247,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     );
     const ai = aiIntelFromScoreData(scoreData);
     // Coverage-judge questions lead — the AI Search score grades against exactly these.
-    // Same merge as /content-plan, so review and straight-generate plan identically.
-    const paa = [...new Set([
-      ...coverageQuestionsForPlanner(article.ai_info_to_cover),
-      ...(Array.isArray(scoreData.paa_questions)
-        ? (scoreData.paa_questions as unknown[]).filter((q): q is string => typeof q === 'string')
-        : []),
-    ])];
+    // Shared helper so review and straight-generate plan from an identical question set.
+    const paa = mergedPlannerQuestions(article.ai_info_to_cover, scoreData.paa_questions);
 
     // 5a. CIE — Benchmark + Knowledge Engine (never blocks generate on failure).
     const useKnowledgeEngine =

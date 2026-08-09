@@ -316,7 +316,9 @@ describe('writeOutlineBrief', () => {
 
     expect(seen[0]).toMatch(/FACTS — grouped by topic/);
     expect(seen[0]).toContain('Konsekwencje prawne:');
-    expect(seen[0]).toMatch(/near-verbatim/);
+    expect(seen[0]).toMatch(/kept exactly/);
+    // Competitor-owned facts (address/licence) must not carry a verbatim instruction.
+    expect(seen[0]).toMatch(/is that competitor.s, not ours/);
   });
 
   it('tells the model to source detail from the brand document, not a competitor', async () => {

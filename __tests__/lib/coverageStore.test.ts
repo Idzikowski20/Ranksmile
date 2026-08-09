@@ -139,9 +139,11 @@ describe('coverageQuestionsForPlanner', () => {
       { ...item('e'), label: 'jakie są rodzaje szantażu?', importance: 'optional' },
     ]);
 
+    // Two criticals now break the tie by localeCompare (deterministic), so 'Czym…'
+    // sorts before 'Jakie…'.
     expect(coverageQuestionsForPlanner(raw)).toEqual([
-      'Jakie są rodzaje szantażu?',
       'Czym jest szantaż?',
+      'Jakie są rodzaje szantażu?',
       'Ile kosztuje porada u detektywa?',
     ]);
   });

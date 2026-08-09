@@ -24,6 +24,28 @@ describe('countOccurrences with lemma regexps', () => {
     expect(countOccurrences(text, 'detektyw')).toBe(2);
   });
 
+  /**
+   * A hyphenated term arrives as one alternation per word — the sidecar splits it the
+   * same way the scorer tokenizes ("e-mail" → two words), so the two regexps line up
+   * with the two tokens "e-maila" produces. The previous whitespace split left one
+   * regexp facing two tokens and never matched.
+   */
+  it('matches a hyphenated term across the tokens it splits into', () => {
+    const rx = ['(?:e)', '(?:mail|maila)'];
+    const text = 'Zabezpiecz e-maila przed usunięciem.';
+
+    expect(countOccurrences(text, 'e-mail', rx)).toBe(1);
+  });
+
+  /** A pattern carrying a Python-escaped hyphen compiles (no `u` flag), not silently dropped. */
+  it('compiles a regexp containing a re.escape hyphen instead of failing to fuzzy', () => {
+    const rx = ['(?:pod\\-sluch|pod\\-sluchu)'];
+    const text = 'Wykryto pod-sluch w aucie.';
+
+    expect(countOccurrences(text, 'pod-sluch', rx)).toBe(0); // hyphen splits the token → no single-token match
+    expect(() => countOccurrences(text, 'pod-sluch', rx)).not.toThrow();
+  });
+
   it('falls back to fuzzy matching when a regexp is malformed', () => {
     const text = 'Prywatny detektyw prowadzi obserwację.';
 

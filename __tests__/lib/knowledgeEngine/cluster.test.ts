@@ -27,9 +27,12 @@ describe('buildTopicBlocks claim assignment', () => {
    * fact sheet had nothing to group by.
    */
   it('assigns claims to blocks on shared word stems, not literal prefixes', async () => {
+    // Inflected forms, not the title's literal words: "wykrywania"≠"wykrywanie",
+    // "podsłuchem"≠"podsłuchów", "obserwacji"≠"obserwacja", "osoby"≠"osób" — so the
+    // match rides the stem branch, and each claim shares two title tokens (the ≥2 floor).
     const claims = [
-      claim('c1', 'Wykrywanie podsłuchów wymaga specjalistycznego sprzętu i wiedzy technicznej.'),
-      claim('c2', 'Obserwacja osób dostarcza materiału dowodowego w sprawach rozwodowych.'),
+      claim('c1', 'Wykrywania podsłuchem nie wolno prowadzić bez profesjonalnego sprzętu.'),
+      claim('c2', 'Obserwacji zlecenia dotyczą także Warszawy oraz najbliższych okolic.'),
     ];
 
     const blocks = await buildTopicBlocks({

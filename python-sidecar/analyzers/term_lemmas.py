@@ -37,7 +37,12 @@ _MIN_STEM = 4
 MAX_TEXTS = 8
 MAX_CHARS = 40_000
 
-_TOKEN = re.compile(r"[^\W\d_]{2,}", re.UNICODE)
+_TOKEN = re.compile(r"[^\W_]{2,}", re.UNICODE)
+# One word of a term = one alternation. Split on the same rule the TS scorer's
+# rawTokenize uses ([letters/digits]+), so a hyphenated term like "wykrywanie-podsluchow"
+# becomes two words and two regexps that line up with the two tokens it produces —
+# splitting on whitespace alone left one regexp facing two tokens and never matched.
+_TERM_WORD = re.compile(r"[^\W_]+", re.UNICODE)
 
 
 def stem(word: str) -> str:
@@ -87,7 +92,7 @@ def attach_lemma_regexps(
     corpus_forms = _forms_by_stem(texts)
 
     for term in terms:
-        words = [w for w in str(term.get("term", "")).lower().split() if w]
+        words = _TERM_WORD.findall(str(term.get("term", "")).lower())
         if not words:
             continue
         stems = [stem(w) for w in words]

@@ -11,7 +11,8 @@ describe('competitorTermCalibration', () => {
       { term: 'biuro detektywistyczne', target_count: 4 },
     ];
     const filtered = filterUsefulNlpTerms(raw);
-    expect(filtered.map((t) => t.term)).toEqual(['prywatny detektyw', 'biuro detektywistyczne']);
+    // Equal salience/words/doc_freq: localeCompare now orders them deterministically.
+    expect(filtered.map((t) => t.term)).toEqual(['biuro detektywistyczne', 'prywatny detektyw']);
   });
 
   it('detects weak term lists dominated by stopwords', () => {

@@ -117,7 +117,11 @@ export function coverageQuestionsForPlanner(raw: unknown): string[] {
   return parseCoverageItems(raw)
     .filter((i) => (i.category === 'knowledge' || i.category === 'intent') && i.label.trim())
     .slice()
-    .sort((a, b) => (rank[a.importance] ?? 3) - (rank[b.importance] ?? 3))
+    // localeCompare after importance so two snapshots with the same items in a different
+    // stored order yield the same order — the planner's per-section cap is otherwise
+    // fed a row-order-dependent list.
+    .sort((a, b) => (rank[a.importance] ?? 3) - (rank[b.importance] ?? 3)
+      || a.label.localeCompare(b.label))
     .map((i) => i.label.trim())
     .filter((label) => {
       const key = label.toLowerCase();
@@ -125,4 +129,16 @@ export function coverageQuestionsForPlanner(raw: unknown): string[] {
       seen.add(key);
       return true;
     });
+}
+
+/**
+ * The questions both planning routes feed the planner: the coverage judge's rubric
+ * first, then any leftover PAA from score_data, deduped. One helper so `/content-plan`
+ * and `/generate` cannot drift — they were maintaining the identical merge inline.
+ */
+export function mergedPlannerQuestions(aiInfoToCover: unknown, paaQuestions: unknown): string[] {
+  const paa = Array.isArray(paaQuestions)
+    ? paaQuestions.filter((q): q is string => typeof q === 'string')
+    : [];
+  return [...new Set([...coverageQuestionsForPlanner(aiInfoToCover), ...paa])];
 }
