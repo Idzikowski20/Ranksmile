@@ -1,0 +1,24 @@
+__tests__/lib/outlineReviewState.test.ts
+  s_668ab4f91e9d5a::t_4b9e3d78237a7f 95-114
+lib/outlineReviewState.ts
+  s_668ab4f91e9d5a::t_b1ab02c9e9675a 11
+  s_668ab4f91e9d5a::t_652dfc9d4b3c92 37-41
+pages/api/articles/[id]/generate.ts
+  s_668ab4f91e9d5a::t_97890594a83689 320-339
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1acb61d62a90fcf1868882b7cbd0e7fed612bcfe",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
