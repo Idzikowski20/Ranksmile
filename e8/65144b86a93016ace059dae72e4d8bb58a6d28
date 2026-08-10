@@ -1,0 +1,26 @@
+pages/sites/[domain]/ai-visibility/setup.tsx
+  s_8d6cce368af4fd::t_08b7794d7e2678 125-129,135-136,138-139
+  s_8d6cce368af4fd::t_c9ebdbed4aeac8 169
+  s_8d6cce368af4fd::t_9d8ce3ca2db234 130-134
+  s_8d6cce368af4fd::t_4027450618e4a4 137
+styles/globals.css
+  s_8d6cce368af4fd::t_d94a60c1c168d8 386-390,394-403
+  s_8d6cce368af4fd::t_50bd134b78e6ba 391-393
+  s_8d6cce368af4fd::t_59b0691d81d584 3518,3521-3531
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e865144b86a93016ace059dae72e4d8bb58a6d28",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
