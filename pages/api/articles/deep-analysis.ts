@@ -837,6 +837,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // the synthesis below, which is one bounded call over 1200-char excerpts and used to
     // be the planner's ONLY claim source — when it fell back to its heuristic the Target
     // KG capped at four claims and the Plan Validator's five-claim floor could never pass.
+    // Brand DNA learns here rather than from a form in settings: the site's own
+    // top-ranking pages answer "your best articles" better than a text area, and the
+    // pass rate-limits itself to once a fortnight. Deliberately not awaited — voice
+    // learning must never delay or fail an analysis.
+    if (resolvedDomainId) {
+      void import('../../../lib/wie/autoLearnBrandDna')
+        .then(({ autoLearnBrandDna }) => autoLearnBrandDna({
+          domainId: resolvedDomainId as number,
+          keyword: resolvedKeyword || pipelineKeyword || keyword || undefined,
+        }))
+        .then((r) => console.log(`[brand-dna] auto-learn: ${r.reason} (${r.urls} url(s))`))
+        .catch(() => { /* autoLearnBrandDna already swallows; this guards the import */ });
+    }
+
     if (corpusTexts.length && (resolvedKeyword || pipelineKeyword || keyword)) {
       try {
         const { extractCorpusClaimsByUrl } = await import('../../../lib/wie/corpusClaims');
