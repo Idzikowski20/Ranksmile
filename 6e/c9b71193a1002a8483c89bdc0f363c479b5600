@@ -1,0 +1,22 @@
+pages/api/auth/[...auth0].ts
+  s_668ab4f91e9d5a::t_704c324372c3f3 88-91,94
+  s_668ab4f91e9d5a::t_6a1b64c14e60f1 36-47
+__tests__/pages/api/authProxy.test.ts
+  s_668ab4f91e9d5a::t_117560a39403e7 104-110,117-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6ec9b71193a1002a8483c89bdc0f363c479b5600",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
