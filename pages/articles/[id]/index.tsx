@@ -786,6 +786,15 @@ const ArticleEditorPage: NextPage = () => {
    */
   const outlineReviewMode = router.query.reviewOutline === '1' || outlineAwaitingReview;
 
+  /**
+   * Saving is off while a planning document, not the article, is in the editor.
+   *
+   * One expression for both writers: the debounced effect and `flushRef`. They had
+   * diverged — only the debounce checked review mode, so Cmd/Ctrl+S, hiding the tab,
+   * closing it and in-app navigation each still wrote the outline into articles.content.
+   */
+  const saveSuspended = isAutoOptimizing || outlineReviewMode;
+
   const handleMetaTitleChange = useCallback((v: string) => {
     setArticle((prev) => prev ? { ...prev, meta_title: v } : prev);
   }, []);
@@ -1023,18 +1032,22 @@ const ArticleEditorPage: NextPage = () => {
     });
     // Record the loaded state as the baseline without saving it.
     if (lastSavedSig.current === null) { lastSavedSig.current = sig; return undefined; }
-    if (sig === lastSavedSig.current || isAutoOptimizing || outlineReviewMode) return undefined;
+    if (sig === lastSavedSig.current || saveSuspended) return undefined;
     setAutoSaveState('unsaved');
     if (autoTimer.current) clearTimeout(autoTimer.current);
     autoTimer.current = setTimeout(() => { void autoSave(sig); }, 800);
     return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing, outlineReviewMode]);
+  }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, saveSuspended]);
 
   // Always-fresh "save the latest state if it's dirty" — used by the flush triggers below.
   // unload=true → the page is going away, so the PUT must outlive it (keepalive).
   flushRef.current = (unload?: boolean) => {
-    if (isLoading || !article || isAutoOptimizing) return;
+    // Same guard as the debounced effect. Suppressing only that one left every other way
+    // of saving open: Cmd/Ctrl+S, hiding the tab, closing it and in-app navigation all
+    // reach the article through here, so leaving an outline review still wrote the
+    // planning document into articles.content — the exact thing review mode prevents.
+    if (isLoading || !article || saveSuspended) return;
     const sig = JSON.stringify({
       h: editorHtml,
       t: article.meta_title ?? '',
