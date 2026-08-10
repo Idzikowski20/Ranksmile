@@ -1159,9 +1159,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [outlineReviewMode, setOutlineReviewMode] = useState(false);
     const outlineAutoStarted = useRef(false);
     const [outlineHeadingCount, setOutlineHeadingCount] = useState(0);
-    // Re-plans already spent on this article. Read back from the stored plan on every
-    // entry, so the greyed-out state survives leaving the editor and returning.
-    const [outlineRegenerations, setOutlineRegenerations] = useState(0);
     const outlineRequestRef = useRef<AbortController | null>(null);
     const outlineOriginalHtmlRef = useRef<string | null>(null);
     const revealAbortRef = useRef<AbortController | null>(null);
@@ -1900,15 +1897,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     };
 
-    const handleInsertOutline = async (opts?: { regenerate?: boolean }) => {
+    const handleInsertOutline = async () => {
       const kw = (keyword || articleKeyword || '').trim();
       const articleId = commentArticleId ? Number(commentArticleId) : undefined;
       if (!kw && !articleId) { toast.error('No keyword available to build an outline.'); return; }
-      // Not `!editor`: the caller reaches here after two awaits, and a destroyed TipTap
-      // instance is still a truthy object with `schema` nulled — `getHTML()` below then
-      // threw "Cannot read properties of null (reading 'cached')" out of DOMSerializer.
-      // Same guard playReveal already uses.
-      if (!editorCanCommand(editor)) return;
+      if (!editor) return;
       outlineRequestRef.current?.abort();
       const request = new AbortController();
       outlineRequestRef.current = request;
@@ -1917,9 +1910,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       try {
         const res = await fetch(articleId ? `/api/articles/${articleId}/content-plan` : '/api/articles/generate-outline', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(
-            articleId ? { persist: true, regenerate: opts?.regenerate === true } : { keyword: kw },
-          ),
+          body: JSON.stringify(articleId ? { persist: true } : { keyword: kw }),
           signal: request.signal,
         });
         const data = await res.json() as { headings?: ApprovedOutlineHeading[]; error?: string };
@@ -1930,9 +1921,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         await playReveal(html, true, 'preserve');
         if (outlineRequestRef.current !== request || request.signal.aborted) return;
         setOutlineHeadingCount(headings.length);
-        // The server owns the count; this only keeps the button from looking available
-        // between the click and the next time the plan is read back.
-        if (opts?.regenerate) setOutlineRegenerations((n) => n + 1);
       } catch (e) {
         if (!request.signal.aborted) toast.error(getErrorMessage(e) || 'Could not generate an outline.');
       } finally {
@@ -2087,10 +2075,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         if (!html.replace(/<[^>]+>/g, ' ').trim()) {
           throw new Error('Generation finished but no content was returned.');
         }
-        // `isCurrentRun` tracks the generation, not the editor: leaving the page mid-run
-        // destroys the instance this closure holds while the fetches above are still in
-        // flight, and `getHTML()` on a destroyed editor throws out of DOMSerializer.
-        if (!editorCanCommand(editor)) return;
         generationRevealHtmlRef.current = { runId, html: editor.getHTML() };
         await playReveal(html, true, 'preserve', true);
         if (!isCurrentRun()) return;
@@ -2206,19 +2190,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             content_planner_v2?: {
               bundle?: ContentPlannerBundle;
               approvedOutline?: unknown;
-              regenerations?: number;
             } | null;
           };
-          const spent = data.content_planner_v2?.regenerations;
-          if (typeof spent === 'number') setOutlineRegenerations(spent);
           const stored = outlineForReview({
             approvedOutline: data.content_planner_v2?.approvedOutline,
             bundle: data.content_planner_v2?.bundle,
           });
           if (stored.length) {
-            // The GET above is an await, so the editor this closure holds may have been
-            // destroyed while it was in flight — same crash as in handleInsertOutline.
-            if (!editorCanCommand(editor)) return;
             outlineOriginalHtmlRef.current ??= editor.getHTML();
             await playReveal(reviewOutlineToHtml(stored), true, 'preserve');
             setOutlineHeadingCount(stored.filter((h) => h.level >= 2).length);
@@ -2596,8 +2574,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             progressPct={generatePct}
             headingCount={outlineHeadingCount}
             onGenerate={handleOutlineGenerate}
-            onRegenerate={() => { handleInsertOutline({ regenerate: true }).catch(() => {}); }}
-            regenerateUsed={outlineRegenerations >= 1}
             rightReserve={bottomBarRightReserve}
           />
         )}

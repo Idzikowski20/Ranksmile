@@ -11,31 +11,14 @@ export type OutlineGenerateBarProps = {
   progressPct?: number | null;
   headingCount: number;
   onGenerate: () => void;
-  /** Plan the outline again from scratch. Omitted where re-planning is not offered. */
-  onRegenerate?: () => void;
-  /** The one allowed regeneration has been spent — the control stays visible but dead. */
-  regenerateUsed?: boolean;
   rightReserve?: number;
 };
 
-/**
- * Shared geometry: the three states are one control that changes label, not three bars.
- *
- * `display` belongs here, not only on SHELL. The review state now sits inside a row with
- * the regenerate button, so the pill no longer spreads SHELL — and without a flex context
- * its `gap` did nothing and the icon wrapped onto its own line above the label.
- */
+/** Shared geometry: the three states are one control that changes label, not three bars. */
 const PILL: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  // A flex item shrinks by default; the label is one line and must never be the thing
-  // that gives way when the row is measured. Longhand, not `flex: none` — jsdom's
-  // cssstyle drops the shorthand, so the guard on this could not be asserted.
-  flexShrink: 0,
   height: 44,
   gap: 10,
-  padding: '0 28px',
+  padding: '0 20px',
   borderRadius: 999,
   fontSize: 14,
   fontWeight: 600,
@@ -95,22 +78,6 @@ const PillButton = styled.button({
   },
 });
 
-/**
- * Icon-only twin of the pill: same surface, same states, a 44px circle. Label-less on
- * purpose — the pill next to it already names the primary action, and a second worded
- * button competes with it for the reviewer's eye.
- */
-const RoundButton = styled(PillButton)({
-  width: 44,
-  height: 44,
-  padding: 0,
-  borderRadius: 999,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flex: 'none',
-});
-
 const Spinner: React.FC = () => (
   <span
     role="status"
@@ -148,8 +115,6 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
   progressPct,
   headingCount,
   onGenerate,
-  onRegenerate,
-  regenerateUsed = false,
   rightReserve = 0,
 }) => {
   const barEntranceRef = useEntrance<HTMLButtonElement>({ y: 0 });
@@ -169,39 +134,22 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
   // needs, since the outline they are reading is the thing being described, and the bar
   // then changed shape on every state change.
   return (
-    <div
+    <PillButton
+      ref={barEntranceRef}
+      type="button"
+      onClick={onGenerate}
+      disabled={empty}
+      title={empty ? 'Add at least one heading to the outline first' : undefined}
       style={{
         ...SHELL,
-        gap: 12,
+        ...PILL,
         left: `calc((100vw - ${rightReserve}px) / 2)`,
         transform: 'translateX(-50%)',
       }}
     >
-      <PillButton
-        ref={barEntranceRef}
-        type="button"
-        onClick={onGenerate}
-        disabled={empty}
-        title={empty ? 'Add at least one heading to the outline first' : undefined}
-        style={PILL}
-      >
-        <Icon name="Sparkle" size={16} weight="fill" />
-        Generate content
-      </PillButton>
-      {onRegenerate && (
-        <RoundButton
-          type="button"
-          onClick={onRegenerate}
-          disabled={regenerateUsed}
-          aria-label="Regenerate outline"
-          title={regenerateUsed
-            ? 'An outline can be regenerated once — this one already has been'
-            : 'Regenerate outline'}
-        >
-          <Icon name="ArrowsClockwise" size={18} />
-        </RoundButton>
-      )}
-    </div>
+      <Icon name="Sparkle" size={16} weight="fill" />
+      Generate content
+    </PillButton>
   );
 };
 
