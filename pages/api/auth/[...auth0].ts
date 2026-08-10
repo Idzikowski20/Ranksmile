@@ -33,6 +33,18 @@ function allowedAuthOrigins(req: NextApiRequest): Set<string> {
   return origins;
 }
 
+/**
+ * Undo the spec's comma-joining of repeated Set-Cookie headers.
+ *
+ * A plain `split(',')` is wrong: an `Expires=Sat, 16 Aug 2026 …` date carries its own
+ * comma. A boundary between two cookies is a comma followed by the next cookie's
+ * `name=`, which a date's remainder (` 16 Aug …`) never is.
+ */
+function splitSetCookie(combined: string | null): string[] {
+   if (!combined) return [];
+   return combined.split(/,\s*(?=[^;,\s]+=)/).map((c) => c.trim()).filter(Boolean);
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (!BASE_URL) {
       res.status(503).json({ error: 'NEON_AUTH_BASE_URL not configured' });
@@ -73,10 +85,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // to reset at random. Collected first, then set once as an array (Node emits one
       // header per element).
       // `getSetCookie` needs undici (Node 18.14+). Guarded rather than called outright:
-      // if it is ever missing, throwing here would 502 every single auth request.
+      // if it is ever missing, throwing here would 502 every single auth request — but
+      // the fallback has to SPLIT what `.get` returns, because per spec it comma-joins
+      // repeated headers into one malformed value. Relaying that verbatim would put the
+      // cookies back into a single broken header, which is the bug this whole block fixes.
       const setCookies = typeof response.headers.getSetCookie === 'function'
          ? response.headers.getSetCookie()
-         : [response.headers.get('set-cookie')].filter((c): c is string => Boolean(c));
+         : splitSetCookie(response.headers.get('set-cookie'));
       response.headers.forEach((value, key) => {
          const name = key.toLowerCase();
          if (name === 'set-cookie' || STRIP_FROM_UPSTREAM.has(name)) return;

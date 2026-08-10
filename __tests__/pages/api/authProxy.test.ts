@@ -101,14 +101,30 @@ describe('auth proxy Set-Cookie relay', () => {
     expect(headers.has('set-cookie')).toBe(false);
   });
 
-  it('falls back to the combined header when getSetCookie is unavailable', async () => {
-    // Missing on Node < 18.14 and in jsdom; calling it blindly would 502 every auth request.
+  /**
+   * Missing on Node < 18.14 and in jsdom; calling it blindly would 502 every auth request.
+   * The fallback must SPLIT what `.get` returns — per spec it comma-joins repeated headers,
+   * so relaying that verbatim would put the cookies back into one malformed header, which
+   * is the very bug this block exists to fix.
+   */
+  it('splits the combined header when getSetCookie is unavailable', async () => {
     jest.spyOn(global, 'fetch')
       .mockResolvedValue(upstreamReply(SIGN_IN_COOKIES, { withGetSetCookie: false }));
     const { res, headers } = mockRes();
 
     await handler(mockReq(), res);
 
-    expect(headers.get('set-cookie')).toEqual([SIGN_IN_COOKIES.join(', ')]);
+    expect(headers.get('set-cookie')).toEqual(SIGN_IN_COOKIES);
+  });
+
+  it('does not split on the comma inside an Expires date', async () => {
+    // SIGN_IN_COOKIES[1] carries `Expires=Sat, 16 Aug 2026 12:00:00 GMT`.
+    jest.spyOn(global, 'fetch')
+      .mockResolvedValue(upstreamReply([SIGN_IN_COOKIES[1]], { withGetSetCookie: false }));
+    const { res, headers } = mockRes();
+
+    await handler(mockReq(), res);
+
+    expect(headers.get('set-cookie')).toEqual([SIGN_IN_COOKIES[1]]);
   });
 });
