@@ -133,28 +133,43 @@ const PeopleSettings = () => {
             label="Email invitation"
             description="Send an email invitation to add new members to your organization."
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 400 }}>
-              <Input
-                id="invite-email"
-                type="email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendInvite(); } }}
-                placeholder="name@company.com"
-                style={{ width: '100%' }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: font }}>Role</span>
+            {/* Same shape as the onboarding invite step (Figma 1:261): a banner, then
+                address + role + action on one line. The two surfaces do the same job and
+                used to look unrelated — this one stacked four full-width controls. */}
+            <div className="invite-step">
+              <div className="invite-step__banner">
+                <p className="invite-step__banner-title">
+                  <strong>Invite others</strong>
+                  {' to collaborate in this organization'}
+                </p>
+                <p className="invite-step__banner-sub">
+                  They receive an email invitation and pick their own password.
+                </p>
+              </div>
+
+              <div className="invite-step__row">
+                <div className="invite-step__emails">
+                  <Input
+                    id="invite-email"
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendInvite(); } }}
+                    placeholder="name@company.com"
+                    style={{ width: '100%' }}
+                  />
+                </div>
                 <RoleSelect value={inviteRole} options={['member', 'admin']} onChange={(v) => setInviteRole(v as 'member' | 'admin')} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: font }}>Workspaces</span>
-                <WorkspacePicker workspaces={workspaces} selected={inviteWs} onChange={setInviteWs} disabled={inviteRole !== 'member'} />
-              </div>
-              <div className="koala-account-actions">
                 <Button type="button" variant="primary" onClick={sendInvite} disabled={invite.isLoading}>
                   {invite.isLoading ? 'Sending…' : 'Send invite'}
                 </Button>
+              </div>
+
+              {/* Kept below the row, not dropped: unlike the Figma's link controls this
+                  one is real — a member's access is scoped to the workspaces picked here. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: font }}>Workspaces</span>
+                <WorkspacePicker workspaces={workspaces} selected={inviteWs} onChange={setInviteWs} disabled={inviteRole !== 'member'} />
               </div>
             </div>
           </KoalaSettingsRow>
