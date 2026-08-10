@@ -14,10 +14,15 @@ export function calibrateTermRangesFromCorpus(terms: NlpTerm[], corpusTexts: str
     const nonzero = counts.filter((c) => c > 0);
     if (!nonzero.length) return t;
 
-    const sMin = Math.min(...nonzero);
     const sMax = Math.ceil(Math.max(...nonzero) * 1.12);
     const target = Math.max(1, Math.round(nonzero.reduce((a, b) => a + b, 0) / nonzero.length));
     const docFreq = nonzero.length;
+    // The floor is the average usage among pages that use the term, not the single
+    // lowest count on the SERP. One page mentioning a head term once dragged every
+    // floor to 1 — article 15 shipped "agencja detektywistyczna: 1-29" where the
+    // reference tool asks for 10-24, so the writer had no reason to weave anything in
+    // more than once and the whole band carried no signal. Never exceed the ceiling.
+    const sMin = Math.min(target, sMax);
 
     return {
       ...t,

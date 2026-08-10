@@ -6,6 +6,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { isOutlineAwaitingReview } from '../../../lib/outlineReviewState';
 import AppShell from '../../../components/common/AppShell';
 import { Button } from '../../../components/koala/core';
 import { Icon } from '../../../components/koala/icons';
@@ -522,7 +523,6 @@ const ArticleEditorPage: NextPage = () => {
    */
   const editorLocked = isDeepAnalyzing;
   /** Same flag the editor reads for its bottom bar — the side panel has to agree with it. */
-  const outlineReviewMode = router.query.reviewOutline === '1';
 
 
   useEffect(() => {
@@ -600,7 +600,15 @@ const ArticleEditorPage: NextPage = () => {
         // Outline review is the exception: the wizard sends the user here with an empty
         // draft on purpose, so resuming would bounce them back to writing-mode forever.
         const entry = resolveArticleEntry(data.article || {}, {
-          outlineReview: router.query.reviewOutline === '1',
+          // Also when the param is gone: autosave no longer persists the outline, so a
+          // returning reviewer's draft is empty with wizard_state still set — exactly the
+          // shape this guard bounces back to the writing-mode step.
+          outlineReview: router.query.reviewOutline === '1'
+            || isOutlineAwaitingReview({
+              content: data.article?.content,
+              // The API payload names it score_data; the helper reads one shape only.
+              scoreData: data.article?.score_data,
+            }),
         });
         const resumeHref = articleEntryHref(String(id), entry);
         if (entry.kind === 'wizard' && resumeHref) {
@@ -746,6 +754,50 @@ const ArticleEditorPage: NextPage = () => {
     },
     [],
   );
+
+  /**
+   * An outline was planned and no article was ever written from it.
+   *
+   * The review lived only in `?reviewOutline=1`, so leaving the page dropped it and the
+   * outline document came back looking like a finished article. Same rule the generating
+   * page already resumes on (`shouldSkipFreshGenerate` → 'review' without usable HTML),
+   * read from state the page has already loaded — no extra request.
+   */
+  const outlineAwaitingReview = useMemo(
+    () => isOutlineAwaitingReview({
+      // The LIVE document, not `article.content`. That field is only refreshed on load
+      // and on save, so after a generation it still held the outline: the flag stayed
+      // true, the editor was pushed back into review over the article it had just
+      // revealed, and autosave — suspended for review — would have dropped any edit to
+      // it. The generated article was in the database the whole time.
+      content: editorHtml || article?.content,
+      scoreData: scoreData as unknown as Record<string, unknown>,
+    }),
+    [editorHtml, article, scoreData],
+  );
+
+  /**
+   * Single source of truth for "this article is an outline awaiting review".
+   *
+   * The page used to derive it from `?reviewOutline=1` alone, in its own copy separate
+   * from the editor's — so on re-entry the right column graded the outline as an article
+   * (69/82/54 over 1533 "words" of instructions) instead of showing the competitor
+   * structures, and autosave persisted the planning document as the article body.
+   */
+  const outlineReviewMode = router.query.reviewOutline === '1' || outlineAwaitingReview;
+
+  /**
+   * Saving is off while a planning document, not the article, is in the editor.
+   *
+   * One expression for both writers: the debounced effect and `flushRef`. They had
+   * diverged — only the debounce checked review mode, so Cmd/Ctrl+S, hiding the tab,
+   * closing it and in-app navigation each still wrote the outline into articles.content.
+   */
+  const saveSuspended = isAutoOptimizing || outlineReviewMode;
+  // Read inside `autoSave`, which the 3s failure retry re-enters from a closure captured
+  // before review started — the value it closed over would be stale.
+  const saveSuspendedRef = useRef(saveSuspended);
+  saveSuspendedRef.current = saveSuspended;
 
   const handleMetaTitleChange = useCallback((v: string) => {
     setArticle((prev) => prev ? { ...prev, meta_title: v } : prev);
@@ -945,6 +997,11 @@ const ArticleEditorPage: NextPage = () => {
   // created at most once every 2 min of editing so Version History stays useful
   // without flooding it on every keystroke. ──
   const autoSave = async (sig: string, opts?: { unload?: boolean }) => {
+    // The choke point, not just the two callers. Guarding only the debounced effect and
+    // `flushRef` left the failure retry below: it calls `autoSave` again three seconds
+    // later, by which time an outline review may have started, and wrote the planning
+    // document as the article.
+    if (saveSuspendedRef.current) return;
     // Never run two saves at once. If one is already in flight, skip — the finally-block below
     // re-checks for newer edits (flushRef) once it finishes, so nothing typed mid-save is lost.
     if (savingRef.current) return;
@@ -984,18 +1041,22 @@ const ArticleEditorPage: NextPage = () => {
     });
     // Record the loaded state as the baseline without saving it.
     if (lastSavedSig.current === null) { lastSavedSig.current = sig; return undefined; }
-    if (sig === lastSavedSig.current || isAutoOptimizing) return undefined;
+    if (sig === lastSavedSig.current || saveSuspended) return undefined;
     setAutoSaveState('unsaved');
     if (autoTimer.current) clearTimeout(autoTimer.current);
     autoTimer.current = setTimeout(() => { void autoSave(sig); }, 800);
     return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing]);
+  }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, saveSuspended]);
 
   // Always-fresh "save the latest state if it's dirty" — used by the flush triggers below.
   // unload=true → the page is going away, so the PUT must outlive it (keepalive).
   flushRef.current = (unload?: boolean) => {
-    if (isLoading || !article || isAutoOptimizing) return;
+    // Same guard as the debounced effect. Suppressing only that one left every other way
+    // of saving open: Cmd/Ctrl+S, hiding the tab, closing it and in-app navigation all
+    // reach the article through here, so leaving an outline review still wrote the
+    // planning document into articles.content — the exact thing review mode prevents.
+    if (isLoading || !article || saveSuspended) return;
     const sig = JSON.stringify({
       h: editorHtml,
       t: article.meta_title ?? '',
@@ -2012,6 +2073,7 @@ const ArticleEditorPage: NextPage = () => {
               plagiarismSentences={plagSentences}
               plagiarismFocused={plagFocused}
               onChange={handleEditorChange}
+              resumeOutlineReview={outlineAwaitingReview}
               onMetaTitleChange={handleMetaTitleChange}
               onMetaDescriptionChange={handleMetaDescriptionChange}
               initialFeaturedImage={featuredImage}

@@ -286,7 +286,9 @@ async def run_pipeline(
             except Exception as exc:
                 print(f"[generate] status callback failed: {exc}")
 
-        compiled = await run_compiled_write_plan(compiled_write_plan, write_markdown, rewrite_markdown)
+        compiled = await run_compiled_write_plan(
+            compiled_write_plan, write_markdown, rewrite_markdown, external_links,
+        )
         if not compiled.html:
             raise RuntimeError("compiled_write_plan produced empty HTML")
         return compiled.html

@@ -7,6 +7,8 @@ import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
 import { fetchBootstrapOrNull } from '../fetchBootstrap';
 import { isPublicRoute } from '../isPublicPath';
+import { PlanExpired } from '../../components/billing/PlanExpired';
+import { showsPlanExpired } from './isPlanExpired';
 import {
   allowsFrontend,
   emitAccessTimeline,
@@ -143,6 +145,9 @@ export function ApplicationShell({ children }: Props) {
   // Single policy gate
   React.useEffect(() => {
     if (!hasSession || !effectiveAccess || isPublic) return;
+    // The expired block renders in place; redirecting would fight that render. Same
+    // predicate as the render below, so the two can never disagree about a route.
+    if (showsPlanExpired(effectiveAccess, path)) return;
     if (allowsFrontend(effectiveAccess.appState, path)) return;
 
     const to = effectiveAccess.redirect.redirect;
@@ -199,6 +204,9 @@ export function ApplicationShell({ children }: Props) {
   }
   if (hasSession && bootstrapLoading && !bootstrap && !everHadBootstrap.current) {
     return <AppLoading />;
+  }
+  if (hasSession && !isPublic && effectiveAccess && showsPlanExpired(effectiveAccess, path)) {
+    return <PlanExpired />;
   }
   if (hasSession && !isPublic && effectiveAccess && !allowsFrontend(effectiveAccess.appState, path)) {
     return <AppLoading />;

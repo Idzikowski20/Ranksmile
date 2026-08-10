@@ -121,7 +121,7 @@ export type ParagraphPlan = {
   sources: SourceRef[];
   transitionFrom?: string;
   transitionTo?: string;
-  style: { list?: boolean; table?: boolean; boldTerms?: boolean };
+  style: { list?: boolean; ordered?: boolean; table?: boolean; boldTerms?: boolean };
   constraints: WriterConstraint[];
 };
 

@@ -59,6 +59,12 @@ export type AccessSnapshot = {
   billing: {
     state: BillingState;
     since?: string | null;
+    /**
+     * The account has held paid or trial access at some point. BILLING_REQUIRED
+     * covers both the lapsed and the never-subscribed, and only the first may be
+     * told their plan expired.
+     */
+    everSubscribed?: boolean;
   };
   workspace: {
     state: WorkspaceState;

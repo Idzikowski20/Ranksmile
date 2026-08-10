@@ -2,6 +2,7 @@
  * Budget Engine + Article Blueprint from Competitor Benchmark + Target KG.
  */
 import { h2FromWords } from './competitorBenchmark';
+import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
 import { localizedRequiredSections, type OutlineLang } from './sectionLabels';
 import type {
   ArticleBlueprint,
@@ -24,8 +25,15 @@ export function buildArticleBudget(
   // Empty KG → zero assignable targets (gates still reject unwritable plans).
   const kgClaimCap = kg.claims.length === 0 ? 0 : Math.max(kg.claims.length, requiredClaims);
   const kgQuestionCap = kg.questions.length === 0 ? 0 : Math.max(kg.questions.length, requiredQuestions);
+  // The outline can assign at most h2 × MAX_CLAIMS_PER_SECTION claims, so targetClaims must
+  // not exceed that — otherwise the 90% assignment floor is mathematically unreachable and
+  // every claim-rich SERP fails `claims_underassigned`. This bites now that gain classes all
+  // map to `required` (importanceFromGain): requiredClaims equals the full count, which used
+  // to be a small subset, and it was forcing targetClaims to the whole graph.
+  const outlineClaimCapacity = h2 * MAX_CLAIMS_PER_SECTION;
   const claims = kgClaimCap === 0 ? 0 : Math.min(
     kgClaimCap,
+    outlineClaimCapacity,
     Math.max(requiredClaims, Math.round(benchmark.averageClaims || kgClaimCap), Math.min(kgClaimCap, h2)),
   );
   const questions = kgQuestionCap === 0 ? 0 : Math.min(

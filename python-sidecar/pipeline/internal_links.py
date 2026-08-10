@@ -139,6 +139,10 @@ def enforce_internal_links(html: str, allowed: set[str], site_url: str) -> tuple
     soup = BeautifulSoup(html, "html.parser")
     removed = 0
     mutated = _strip_dangerous_markup(soup)
+    # The Writer sees one paragraph at a time and is handed the same allowlist for each,
+    # so it has no way to know a page is already linked. A real article linked the same
+    # URL five times; the reference article links nine different pages once each.
+    linked: set[str] = set()
 
     for anchor in soup.find_all("a"):
         href = (anchor.get("href") or "").strip()
@@ -157,11 +161,22 @@ def enforce_internal_links(html: str, allowed: set[str], site_url: str) -> tuple
         # Resolve relative hrefs against the real site URL rather than string-pasting a
         # host in front of the path, which mangles anything not already root-relative.
         candidate = href if parsed.netloc else urljoin(site_url, href)
-        if _normalize(candidate) in allowed:
+        key = _normalize(candidate)
+        if key not in allowed:
+            anchor.unwrap()
+            removed += 1
             continue
-        anchor.unwrap()
-        removed += 1
+        # First occurrence keeps the link; the repeats keep their text and lose the anchor.
+        if key in linked:
+            anchor.unwrap()
+            removed += 1
+            continue
+        linked.add(key)
 
     if not removed and not mutated:
         return html, 0
-    return soup.encode(formatter="html").decode("utf-8"), removed
+    # "minimal" escapes only <, > and &. The "html" formatter also turns every accented
+    # character into a named entity, so unwrapping one anchor rewrote the surrounding
+    # Polish prose as "ofert&eogon;" — and because the untouched path returns `html`
+    # verbatim, it only ever corrupted articles that actually had a link removed.
+    return soup.decode(formatter="minimal"), removed

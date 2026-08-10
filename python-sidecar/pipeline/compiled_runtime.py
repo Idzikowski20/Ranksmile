@@ -65,6 +65,7 @@ async def run_compiled_write_plan(
     plan: Mapping[str, object],
     generate_markdown: MarkdownGenerator,
     rewrite_markdown: Callable[[str], Awaitable[str]],
+    allow_authority_links: bool = False,
 ) -> CompiledRunResult:
     title = plan.get("title")
     if not isinstance(title, str) or not title.strip():
@@ -105,6 +106,9 @@ async def run_compiled_write_plan(
                 # the coverage judge awards a flat bonus for it, and readers and AI
                 # engines both quote the lead, not the third section.
                 "is_lead": first_paragraph,
+                # Only unlocks the prompt rule; every link it produces is still verified
+                # against the authority allowlist and a live fetch before it ships.
+                "allow_authority_links": allow_authority_links,
             }
             first_paragraph = False
             result = await write_paragraph(paragraph, generate_markdown, context)

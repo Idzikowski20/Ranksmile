@@ -1,6 +1,8 @@
 import { buildCompetitorDocuments } from './competitorDocument';
-import { extractRawKnowledge, normalizeCandidates } from './extract';
+import { extractRawKnowledge, isNonClaimSentence, normalizeCandidates } from './extract';
 import { canonicalizeClaims, sentencesToCanonicalizeInputs } from './canonicalize';
+import { normalizeClaims, type ClaimCompletion } from './normalizeClaims';
+import { dropCompetitorBrandClaims } from './competitorBrands';
 import { voteClaims } from './vote';
 import { buildTopicBlocks, discoverGaps } from './cluster';
 import { buildKnowledgeGraph, voteEntities } from './buildGraph';
@@ -14,6 +16,12 @@ export type RunKnowledgeEngineInput = {
   scoreData?: Record<string, unknown> | null;
   paaQuestions?: string[];
   extraTexts?: Array<{ text: string; url: string; kind?: string }>;
+  /**
+   * Rewrites scraped sentences into atomic facts and merges the duplicates. Optional:
+   * without it the graph keeps competitor prose verbatim and every claim carries one
+   * source, which is the behaviour every run had before this stage existed.
+   */
+  normalizeCompletion?: ClaimCompletion | null;
 };
 
 export type RunKnowledgeEngineResult = {
@@ -37,6 +45,7 @@ export async function runKnowledgeEngine(
     extract: 0,
     normalize: 0,
     canonicalize: 0,
+    normalizeClaims: 0,
     vote: 0,
     cluster: 0,
     build: 0,
@@ -59,6 +68,10 @@ export async function runKnowledgeEngine(
   const fromSentences = sentencesToCanonicalizeInputs(normalized.sentences);
   // Soft claims from long headings only (no SEO boilerplate padding)
   const fromHeadings = normalized.headings
+    // `normalizeCandidates` runs isNonClaimSentence over sentences only — headings reach
+    // this fallback untouched, so on a thin corpus a competitor's FAQ heading ("Ile
+    // kosztuje godzina pracy detektywa?") still became a claim by the back door.
+    .filter((h) => !isNonClaimSentence(h.text))
     .filter((h) => h.text.trim().length >= 20)
     .slice(0, 40)
     .map((h) => ({
@@ -70,6 +83,13 @@ export async function runKnowledgeEngine(
   const inputs = fromSentences.length >= 5 ? fromSentences : [...fromSentences, ...fromHeadings];
   let claims = await canonicalizeClaims(inputs, { provider });
   timings.canonicalize = now() - t0;
+
+  t0 = now();
+  claims = await normalizeClaims(claims, input.normalizeCompletion);
+  // After normalization, not before: the rewrite is where a brand most often survives —
+  // the prompt asks for no company names and two Temida claims still reached article 18.
+  claims = dropCompetitorBrandClaims(claims, input.keyword);
+  timings.normalizeClaims = now() - t0;
 
   t0 = now();
   claims = voteClaims(claims, docs);

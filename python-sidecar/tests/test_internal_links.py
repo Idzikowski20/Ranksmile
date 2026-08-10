@@ -145,3 +145,91 @@ def test_strips_javascript_src_on_img():
     out, _ = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
     assert "javascript:" not in out
     assert "onerror" not in out
+
+
+POLISH_PROSE = "Zobacz naszą ofertę usług detektywistycznych — pełna dyskrecja i skuteczność."
+
+
+def test_unwrapping_a_link_leaves_polish_prose_intact():
+    """The "html" formatter rewrote every accented character as a named entity.
+
+    Only the removal path re-serializes the soup, so this corrupted exactly the articles
+    that had a hallucinated link stripped — "ofertę" shipped as "ofert&eogon;".
+    """
+    html = f'<p>{POLISH_PROSE} <a href="https://example.pl/nie-ma">zobacz</a></p>'
+
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+
+    assert removed == 1, "the off-allowlist anchor must be unwrapped"
+    assert "<a" not in out
+    assert "zobacz" in out, "the anchor text stays after the link is unwrapped"
+    assert POLISH_PROSE in out, f"diacritics were re-encoded: {out}"
+    assert "&" not in out, f"no HTML entities may survive: {out}"
+
+
+def test_stripping_dangerous_markup_leaves_polish_prose_intact():
+    """The same re-serialization runs when only dangerous markup was removed."""
+    html = f"<p>{POLISH_PROSE}</p><script>alert(1)</script>"
+
+    out, _ = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+
+    assert "<script" not in out
+    assert POLISH_PROSE in out, f"diacritics were re-encoded: {out}"
+
+
+def test_allowlisted_link_survives_alongside_an_unwrapped_one():
+    """The kept anchor's href must not be entity-mangled either."""
+    html = (
+        f'<p>{POLISH_PROSE} <a href="https://example.pl/licencja">licencja</a> '
+        '<a href="https://example.pl/nie-ma">zobacz</a></p>'
+    )
+
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+
+    assert removed == 1
+    assert 'href="https://example.pl/licencja"' in out
+    assert POLISH_PROSE in out
+
+
+def test_repeated_internal_link_keeps_only_the_first():
+    """The Writer sees one paragraph at a time and cannot know a page is already linked.
+
+    A real article linked the same URL five times; the reference article links nine
+    different pages once each.
+    """
+    # Anchor text deliberately unlike the slug, so counting it cannot also match the href.
+    html = (
+        '<p>A <a href="https://example.pl/licencja">uprawnienia</a></p>'
+        '<p>B <a href="https://example.pl/licencja">uprawnienia</a></p>'
+        '<p>C <a href="https://example.pl/licencja">uprawnienia</a></p>'
+    )
+
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+
+    assert out.count("<a") == 1, out
+    assert removed == 2
+    assert out.count("uprawnienia") == 3, "anchor text survives on every repeat"
+
+
+def test_different_allowlisted_pages_all_keep_their_links():
+    html = (
+        '<p><a href="https://example.pl/licencja">licencja</a></p>'
+        '<p><a href="https://example.pl/kurs/">kurs</a></p>'
+    )
+
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+
+    assert removed == 0
+    assert out.count("<a") == 2
+
+
+def test_repeat_dedup_ignores_trailing_slash_variants():
+    html = (
+        '<p><a href="https://example.pl/kurs/">kurs</a></p>'
+        '<p><a href="https://example.pl/kurs">kurs</a></p>'
+    )
+
+    out, removed = enforce_internal_links(html, allowed_link_urls(ARTICLES), "https://example.pl")
+
+    assert out.count("<a") == 1, out
+    assert removed == 1
