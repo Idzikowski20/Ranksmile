@@ -367,7 +367,15 @@ const RecommendationsPage: NextPage = () => {
    // measured case was 5 create rows behind a badge of 5 against an empty Optimize list.
    // They lead here because creating an article is what they ask for.
    const gapRows = useMemo(() => {
-      const coveredKws = new Set(rows.map((r) => r.keyword.toLowerCase()).filter(Boolean));
+      // Titles as well as keywords. An article that never got a target keyword and has no
+      // GSC match carries an empty `keyword`, so it fell out of this set entirely and a
+      // create recommendation for the very topic it already covers still offered
+      // "+ Create" — a second draft against the same document quota.
+      const coveredKws = new Set(
+        rows.flatMap((r) => [r.keyword, r.title])
+          .map((v) => (v || '').trim().toLowerCase())
+          .filter(Boolean),
+      );
       const suggested = (recsData?.recommendations || [])
          .filter((r) => r.type === 'create' && !!r.title?.trim())
          .filter((r) => !coveredKws.has(r.title.toLowerCase()))
