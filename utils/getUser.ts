@@ -7,15 +7,39 @@ export type SessionUser = { id: string; email: string | null };
 const sessionCache = new WeakMap<NextApiRequest, Promise<SessionUser | null>>();
 
 /**
+ * The route, with every dynamic segment masked.
+ *
+ * Logging the raw path leaked credentials: `/api/invitations/<token>/accept` carries the
+ * invitation token as a path segment, so a failed unauthenticated call wrote a working
+ * invitation link into the server log. Stripping the query string is not enough.
+ *
+ * `req.query` holds exactly the dynamic segments Next matched (plus query params, which
+ * the path no longer contains), so masking any segment that appears there redacts the
+ * secret without a guess about which routes are sensitive. Ordinary ids are masked too —
+ * the value of this line is which route failed, not which record.
+ */
+function safeRoute(req: NextApiRequest): string {
+   const path = (req.url || '').split('?')[0] || '?';
+   const dynamic = new Set<string>();
+   for (const value of Object.values(req.query || {})) {
+      for (const part of Array.isArray(value) ? value : [value]) {
+         if (typeof part === 'string' && part) dynamic.add(part);
+      }
+   }
+   if (dynamic.size === 0) return path;
+   return path.split('/').map((segment) => (dynamic.has(segment) ? ':x' : segment)).join('/');
+}
+
+/**
  * Every path that fails to resolve a session used to `return null` in silence, so a
  * missing cookie, a rejected token, a 500 from the auth server and an unreachable auth
  * server were indistinguishable — all four reached the browser as a flat 401
  * "Not authorized" with nothing in the server log to tell them apart.
  *
- * The session token itself is never logged: only the reason and the route.
+ * No credential is logged: not the session token, and not the route's own segments.
  */
 function deny(req: NextApiRequest, reason: string): null {
-   console.warn(`[auth] no session for ${req.method} ${req.url?.split('?')[0] ?? '?'}: ${reason}`);
+   console.warn(`[auth] no session for ${req.method} ${safeRoute(req)}: ${reason}`);
    return null;
 }
 
