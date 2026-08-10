@@ -33,6 +33,15 @@ function hostLabels(domain: string): string[] {
  * `agencjatemida` never appears in prose, but `temida` sits inside it. The keyword guard
  * is what keeps this from eating the topic itself — `detektyw` is inside `topdetektyw.pl`
  * and `sprawdzonydetektyw.pl`, so without it every real claim would be discarded.
+ *
+ * The match is anchored at the END of the label, not anywhere in it. A plain `includes`
+ * also fired on `agencjatemida`.includes(`agencja`), so the ordinary topic word "agencja"
+ * was treated as a brand and "Agencja detektywistyczna działa na terenie całej Polski" —
+ * a fact on the reference tool's own list — was thrown away. In a concatenated host the
+ * brand is the distinctive tail (agencja+temida), while the head is the generic word.
+ *
+ * ponytail: a brand at the HEAD of such a host ("temidaagencja.pl") is missed. Upgrade =
+ * match against brand names extracted from the pages themselves rather than the hostname.
  */
 export function namesCompetitorBrand(statement: string, domains: string[], keyword: string): boolean {
   const labels = domains.flatMap(hostLabels);
@@ -43,7 +52,7 @@ export function namesCompetitorBrand(statement: string, domains: string[], keywo
     .split(/[^a-z0-9]+/)
     .filter((word) => word.length >= MIN_BRAND_TOKEN)
     .filter((word) => !seeds.some((seed) => tokensShareStem(word, seed)))
-    .some((word) => labels.some((label) => label.includes(word)));
+    .some((word) => labels.some((label) => label === word || label.endsWith(word)));
 }
 
 /** Drops claims naming any competitor in the graph — not only their own source. */
@@ -51,7 +60,14 @@ export function dropCompetitorBrandClaims(
   claims: CanonicalClaim[],
   keyword: string,
 ): CanonicalClaim[] {
-  const domains = [...new Set(claims.flatMap((c) => c.evidence.map((e) => e.domain)))];
+  // Competitor evidence only. Every kind went in before, so a claim citing
+  // prokuratura.gov.pl turned "prokuratura" into a brand and the next claim naming that
+  // institution was discarded — the authority sources are the opposite of what this drops.
+  const domains = [...new Set(
+    claims.flatMap((c) => c.evidence
+      .filter((e) => e.kind === 'competitor' || e.kind === 'industry')
+      .map((e) => e.domain)),
+  )];
   if (!domains.length) return claims;
 
   const kept = claims.filter((c) => !namesCompetitorBrand(c.statement, domains, keyword));

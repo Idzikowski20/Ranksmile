@@ -4,6 +4,7 @@ import db from '../../../database/database';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
 import { getOrgBillingState } from '../../../lib/orgBilling';
 import { countActionableRecommendations, type RecFilterable } from '../../../lib/recommendations';
+import { ensurePipelineTables } from '../../../lib/ensurePipelineTables';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getUserDomainIds } from '../articles/index';
@@ -45,8 +46,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ExpiredSummary 
   if (domainIds.length > 0) {
     const placeholders = domainIds.map(() => '?').join(',');
 
+    // Quoted: the column is `"ID"`, and unquoted Postgres folds it to `id`, which does
+    // not exist — the whole summary request failed for any expired account with a site.
+    // Every other query in the codebase quotes it (lib/domainLanguage, lib/domainPipeline).
     const domainRows = await db.query(
-      `SELECT domain FROM domain WHERE ID IN (${placeholders}) ORDER BY domain`,
+      `SELECT domain FROM domain WHERE "ID" IN (${placeholders}) ORDER BY domain`,
       { replacements: domainIds, type: QueryTypes.SELECT },
     ) as Array<{ domain: string }>;
     sites = domainRows.map((r) => r.domain).filter(Boolean);
@@ -59,6 +63,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ExpiredSummary 
     ) as Array<{ total: number | string }>;
     articles = Number(articleRows[0]?.total ?? 0);
 
+    // domain_recommendations is created by ensurePipelineTables, which nothing on this
+    // path calls: an account that added a site but never ran the pipeline hit a missing
+    // relation and lost the entire summary, sites and article count included.
+    await ensurePipelineTables();
     const recRows = await db.query(
       `SELECT type, score FROM domain_recommendations WHERE domain_id IN (${placeholders})`,
       { replacements: domainIds, type: QueryTypes.SELECT },

@@ -94,3 +94,31 @@ describe('dropCompetitorBrandClaims', () => {
     expect(dropCompetitorBrandClaims(bare, KEYWORD)).toHaveLength(1);
   });
 });
+
+/**
+ * A plain `includes` fired on `agencjatemida`.includes(`agencja`), so the ordinary topic
+ * word was treated as a brand — "Agencja detektywistyczna działa na terenie całej Polski",
+ * a fact on the reference tool's own list, was thrown away. In a concatenated host the
+ * brand is the distinctive tail; the head is the generic word.
+ */
+describe('the brand match is anchored at the end of the hostname', () => {
+  const HOSTS = ['agencjatemida.pl', 'topdetektyw.pl'];
+
+  it('keeps a generic topic word that merely prefixes a competitor host', () => {
+    expect(namesCompetitorBrand(
+      'Agencja detektywistyczna dziala na terenie calej Polski.', HOSTS, KEYWORD,
+    )).toBe(false);
+  });
+
+  it('still drops the brand itself', () => {
+    expect(namesCompetitorBrand(
+      'Klienci Agencji Temida powierzaja detektywom sekretne sprawy.', HOSTS, KEYWORD,
+    )).toBe(true);
+  });
+
+  it('leaves an unrelated fact alone', () => {
+    expect(namesCompetitorBrand(
+      'Uslugi detektywistyczne wymagaja licencji wydanej przez MSWiA.', HOSTS, KEYWORD,
+    )).toBe(false);
+  });
+});
