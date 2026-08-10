@@ -1,0 +1,74 @@
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_668ab4f91e9d5a::t_931d043b9d3ec6 266,596-626
+  s_668ab4f91e9d5a::t_7ce172f216b37f 267-308
+components/articles/OutlineGenerateBar.tsx
+  s_668ab4f91e9d5a::t_1733aa6cf03c77 29-32
+  s_668ab4f91e9d5a::t_766945bbc5504a 98-113
+  s_668ab4f91e9d5a::t_182d907d14cd68 14-17
+  s_668ab4f91e9d5a::t_0aa3709afb7588 151-152
+  s_668ab4f91e9d5a::t_f2208324cfbb33 21-27,38
+  s_668ab4f91e9d5a::t_6b39474f5f6d69 33-35
+  s_668ab4f91e9d5a::t_810b95ce45ebdf 172,175,180-204
+components/articles/ArticleList.tsx
+  s_668ab4f91e9d5a::t_863d22f07c11f4 146-151
+  s_668ab4f91e9d5a::t_dd9746b818a821 322,325-327,330
+  s_668ab4f91e9d5a::t_40cd725a6cd291 193
+  s_668ab4f91e9d5a::t_727322d09b9cf3 200
+  s_668ab4f91e9d5a::t_cbcd8a22f50a57 144-145,152-170
+  s_668ab4f91e9d5a::t_7625a881016819 186
+__tests__/components/inviteTeamStep.test.tsx
+  s_8d6cce368af4fd::t_a9bd26e738aa83 22-29
+  s_8d6cce368af4fd::t_3a49b3f340802f 1-21,30-62
+components/articles/ArticleEditor.tsx
+  s_668ab4f91e9d5a::t_d080c99e0380d5 1903
+  s_668ab4f91e9d5a::t_4cad2c808d83c6 2600
+  s_668ab4f91e9d5a::t_87ce8c04a143ee 1162-1164
+  s_668ab4f91e9d5a::t_84f0a82e96be8e 2599
+  s_668ab4f91e9d5a::t_a14d188f7ee4cd 2090-2093
+  s_668ab4f91e9d5a::t_d0a396b17f9336 2209,2212-2213
+  s_668ab4f91e9d5a::t_0f466cd60225ee 2219-2221
+  s_668ab4f91e9d5a::t_1600387cd5d911 1907-1911
+  s_668ab4f91e9d5a::t_929f04c65b2b1f 1920-1922,1933-1935
+components/onboarding/OnboardingSurvey.tsx
+  s_8d6cce368af4fd::t_9675cea6bbd978 121-123
+  s_8d6cce368af4fd::t_476d05fc5820a2 175
+  s_8d6cce368af4fd::t_2f498521477e68 8
+  s_8d6cce368af4fd::t_41f5a589e00b27 243-247
+  s_8d6cce368af4fd::t_4140037740992b 158-159,163-164,166
+__tests__/components/OutlineGenerateBar.test.tsx
+  s_668ab4f91e9d5a::t_34a2720a228142 65-96
+  s_668ab4f91e9d5a::t_43bd5547c063bf 97-109,111-112
+  s_668ab4f91e9d5a::t_0065c3c8712bd0 48-50
+  s_668ab4f91e9d5a::t_f2fbeea2eb9ae0 110
+components/onboarding/InviteTeamStep.tsx
+  s_8d6cce368af4fd::t_00453179b6e61f 41-43,45-50
+  s_8d6cce368af4fd::t_517d799b39cd36 73
+  s_8d6cce368af4fd::t_5aaa3dfb2309e9 99-102
+  s_8d6cce368af4fd::t_29a2f53f477c3b 1-3,5-40,44,51-72,74-79,81-98,103-104,106-110,112-132
+styles/globals.css
+  s_668ab4f91e9d5a::t_f9a46c0393de70 343
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "220205c48236fabe52d0bb4ebf52502b630d70f3",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    },
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
