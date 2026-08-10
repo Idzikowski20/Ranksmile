@@ -8889,15 +8889,18 @@ html.koala-shell[data-theme="cream"] .app-content {
   }
 }
 
-.koala-account-section {
+/* Doubled selector on purpose. FormSection renders a styled-component whose rules are
+   injected into <head> after this stylesheet, so a single `.koala-account-section`
+   loses on source order at equal specificity — the padding and the divider silently
+   did nothing and every section ran into the next one. */
+.koala-form-section.koala-account-section {
   padding: 40px 0;
   border-bottom: 1px solid var(--koala-border-primary);
-}
-.koala-account-section:last-child { border-bottom: none; }
-/* Tighter in-section rhythm: CTAs sit near their fields, sections stay airy. */
-.koala-form-section.koala-account-section {
+  /* Tighter in-section rhythm: CTAs sit near their fields, sections stay airy. */
   gap: 16px;
 }
+.koala-form-section.koala-account-section:first-child { padding-top: 8px; }
+.koala-form-section.koala-account-section:last-child { border-bottom: none; }
 .koala-account-section .koala-form-actions,
 .koala-account-actions {
   display: flex;
