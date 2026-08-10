@@ -1,0 +1,23 @@
+__tests__/lib/knowledgeEngine/competitorBrands.test.ts
+  s_668ab4f91e9d5a::t_97b7bfbe9e1778 97-124
+lib/knowledgeEngine/competitorBrands.ts
+  s_668ab4f91e9d5a::t_55c0c95f0f609a 36-44,55,63-70
+pages/api/billing/expired-summary.ts
+  s_668ab4f91e9d5a::t_749bcaec0ffd5f 7,49-51,53,66-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "75bd308aa1c985d91f76db6ef9e6bd0d9b376ea2",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
