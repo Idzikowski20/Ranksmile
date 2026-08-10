@@ -1,0 +1,22 @@
+__tests__/lib/contentPlanner/sectionLabels.test.ts
+  s_668ab4f91e9d5a::t_77551e1a1ffaae 186-188
+lib/contentPlanner/sectionLabels.ts
+  s_668ab4f91e9d5a::t_77551e1a1ffaae 21
+  s_668ab4f91e9d5a::t_c2388c124db5c0 16-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2f1c3e04acd9713c02ac2762034478a47a4e4132",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
