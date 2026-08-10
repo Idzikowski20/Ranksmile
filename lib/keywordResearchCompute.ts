@@ -1,6 +1,6 @@
 /**
  * Topic Research runner — mirrors lib/auditRunner.ts.
- * enqueueTopicResearch → upsert queued row; processQueuedForDomain drains the queue.
+ * enqueueKeywordResearch → upsert queued row; processQueuedForDomain drains the queue.
  */
 import db from '../database/database';
 import { queryOne } from './db/query';
@@ -21,7 +21,7 @@ import {
    clusterKeywords,
    type EnrichedKeyword,
 } from './topicClustering';
-import type { TopicResearchResult, TopicResearchStats } from './topicResearchTypes';
+import type { KeywordResearchResult, KeywordResearchStats } from './keywordResearchTypes';
 
 const isPg = !!process.env.DATABASE_URL;
 const STALE_SECS = 5 * 60;
@@ -37,12 +37,12 @@ const TOPIC_QUEUE: QueueRunnerConfig = {
   onConflict: ON_CONFLICT,
   staleSecs: STALE_SECS,
   runJob: async (row, domainHost) => {
-    const { result, stats } = await computeTopicResearch(row.seed, row.country, domainHost);
+    const { result, stats } = await computeKeywordResearch(row.seed, row.country, domainHost);
     return { resultJson: JSON.stringify(result), statsJson: JSON.stringify(stats) };
   },
 };
 
-export async function enqueueTopicResearch(domainId: number, seed: string, country: string): Promise<number> {
+export async function enqueueKeywordResearch(domainId: number, seed: string, country: string): Promise<number> {
    if (isQueueRunnerEnabled()) {
       return enqueueQueueRun(TOPIC_QUEUE, domainId, seed, country);
    }
@@ -130,11 +130,11 @@ async function attachPositions(keywords: EnrichedKeyword[], domainHost: string, 
    }
 }
 
-export async function computeTopicResearch(
+export async function computeKeywordResearch(
    seed: string,
    country: string,
    domainHost: string,
-): Promise<{ result: TopicResearchResult; stats: TopicResearchStats }> {
+): Promise<{ result: KeywordResearchResult; stats: KeywordResearchStats }> {
    const keywords = await expandKeywords(seed, country);
    if (keywords.length < 3) {
       throw new Error('Not enough keyword ideas returned for this seed. Try a broader topic.');
@@ -200,7 +200,7 @@ export async function processQueuedForDomain(domainId: number, budgetMs = 45000)
       }
 
       try {
-         const { result, stats } = await computeTopicResearch(candidate.seed, candidate.country, domainHost);
+         const { result, stats } = await computeKeywordResearch(candidate.seed, candidate.country, domainHost);
          await db.query(
             "UPDATE topic_research_runs SET status = 'completed', result_json = ?, stats_json = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'",
             { replacements: [JSON.stringify(result), JSON.stringify(stats), candidate.id] },

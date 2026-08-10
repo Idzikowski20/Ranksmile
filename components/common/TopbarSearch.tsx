@@ -66,7 +66,7 @@ function useCommandSections(): PaletteSection[] {
           if (id === 'ai-prompts') return <IconDocs size={ICO} />;
           return <IconCompass size={ICO} />;
         }
-        if (id === 'keyword-research' || id === 'topic-research') return <IconTools size={ICO} />;
+        if (id === 'keyword-research') return <IconTools size={ICO} />;
         return <IconCompass size={ICO} />;
       };
 

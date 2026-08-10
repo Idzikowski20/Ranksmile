@@ -5,8 +5,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import EmptyEyes from '../../../components/common/EmptyEyes';
-import CreateTopicResearchModal from '../../../components/topicResearch/CreateTopicResearchModal';
-import TopicResearchCard from '../../../components/topicResearch/TopicResearchCard';
+import CreateKeywordResearchModal from '../../../components/keywordResearch/CreateKeywordResearchModal';
+import KeywordResearchCard from '../../../components/keywordResearch/KeywordResearchCard';
 import { Button } from '../../../components/koala/core';
 import {
    useKeywordResearchList, useKeywordResearchStatus, useCreateKeywordResearch, useRunKeywordResearch, useDeleteKeywordResearch,
@@ -82,7 +82,7 @@ const KeywordResearchPage: NextPage = () => {
                   )}
 
                   {!loading && items.map((it) => (
-                     <TopicResearchCard key={it.id} item={it} onOpen={openDetail} onDelete={(id) => deleteM.mutate({ id })} />
+                     <KeywordResearchCard key={it.id} item={it} onOpen={openDetail} onDelete={(id) => deleteM.mutate({ id })} />
                   ))}
 
                   {!loading && items.length > 0 && (
@@ -93,7 +93,7 @@ const KeywordResearchPage: NextPage = () => {
          </DomainSubLayout>
 
          {modalOpen && (
-            <CreateTopicResearchModal
+            <CreateKeywordResearchModal
                title="New Keyword Research"
                intro="Enter a seed keyword — we'll expand keywords, group them into clusters, and surface metrics."
                seedLabel="Keyword seed"

@@ -8,7 +8,7 @@
  * head keyword ("main") plus the long-tail KEYWORDS grouped under it.
  */
 
-export type TopicResearchStatus = 'queued' | 'running' | 'completed' | 'failed';
+export type KeywordResearchStatus = 'queued' | 'running' | 'completed' | 'failed';
 
 /** A single keyword with its metrics (DataForSEO volume/KD + own-domain SERP position). */
 export interface TopicKeyword {
@@ -42,7 +42,7 @@ export interface TopicCluster {
    ideas: TopicIdea[];
 }
 
-export interface TopicResearchStats {
+export interface KeywordResearchStats {
    topicalAuthority: number;
    coveredIdeas: number;
    totalIdeas: number;
@@ -58,19 +58,19 @@ export interface TopicResearchStats {
    siteRadius?: number;
 }
 
-export interface TopicResearchResult {
+export interface KeywordResearchResult {
    seed: string;
    country: string;
    clusters: TopicCluster[];
-   stats: TopicResearchStats;
+   stats: KeywordResearchStats;
 }
 
 /** Row shown on the list page — mirrors AuditCardDTO. */
-export interface TopicResearchCardDTO {
+export interface KeywordResearchCardDTO {
    id: number;
    seed: string;
    country: string | null;
-   status: TopicResearchStatus;
+   status: KeywordResearchStatus;
    totalIdeas: number | null;
    searchVolume: number | null;
    createdAt: string | null;

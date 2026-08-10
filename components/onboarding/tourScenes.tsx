@@ -1139,39 +1139,3 @@ export function KeywordResearchScene({ accent }: TourSceneProps) {
   );
 }
 
-/** Topic Research — a pillar with the cluster of supporting articles around it. */
-export function TopicResearchScene({ accent }: TourSceneProps) {
-  const satellites = [
-    { cx: 26, cy: 20, r: 10 },
-    { cx: 122, cy: 16, r: 8 },
-    { cx: 22, cy: 72, r: 8 },
-    { cx: 126, cy: 74, r: 11 },
-    { cx: 74, cy: 88, r: 7 },
-  ];
-  return (
-    <Scene accent={accent} gap={6}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} data-anim="rise">
-        <Glyph d={ICON.branch} color={ink(40)} size={11} />
-        <Num>Pillar · 5 supporting</Num>
-      </div>
-      <svg viewBox="0 0 156 104" style={{ width: '82%', flex: 1, minHeight: 0 }} aria-hidden>
-        {satellites.map((s) => (
-          <line
-            key={`l${s.cx}`}
-            x1={74}
-            y1={48}
-            x2={s.cx}
-            y2={s.cy}
-            stroke={ink(12)}
-            strokeWidth={1.5}
-            data-loop="trace"
-          />
-        ))}
-        {satellites.map((s) => (
-          <circle key={`c${s.cx}`} cx={s.cx} cy={s.cy} r={s.r} fill={ink(14)} data-anim="pop" data-loop="drift" />
-        ))}
-        <circle cx={74} cy={48} r={19} fill={accent} data-anim="pop" data-loop="pulse" />
-      </svg>
-    </Scene>
-  );
-}
