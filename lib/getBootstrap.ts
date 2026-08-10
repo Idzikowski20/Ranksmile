@@ -9,6 +9,7 @@ import {
   type Workspace,
 } from './workspaces';
 import { getOrgBillingState } from './orgBilling';
+import { grantedAccessAtSomePoint } from './billingEverSubscribed';
 import { ensureUserTenancy } from './tenancy';
 import { isPaymentFailedLocked } from './paymentFailedLock';
 import {
@@ -123,15 +124,11 @@ export async function getBootstrap(
       ?? billing?.trialEndsAt
       ?? billing?.currentPeriodEnd
       ?? null,
-    // Any of these means Stripe once granted this org access. An account that
-    // never subscribed carries none of them, which is what separates "your plan
-    // expired" from "you have not picked one yet" — both land in BILLING_REQUIRED.
-    everSubscribed: Boolean(
-      billing?.stripeSubscriptionId
-      || billing?.trialEndsAt
-      || billing?.currentPeriodEnd
-      || billing?.trialConsumedAt,
-    ),
+    // What separates "your plan expired" from "you have not picked one yet" — both land
+    // in BILLING_REQUIRED. The subscription id alone was counted, and checkout writes one
+    // with status `incomplete` before any money moves, so abandoning a first checkout told
+    // a user who never paid that their plan had expired.
+    everSubscribed: grantedAccessAtSomePoint(billing),
     workspaceState,
     setupWorkspaceId: setupId,
     activeWorkspaceId: activeId,
