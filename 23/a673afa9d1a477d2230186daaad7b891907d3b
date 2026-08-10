@@ -1,0 +1,24 @@
+lib/appAccess/isPlanExpired.ts
+  s_668ab4f91e9d5a::t_c23be5778cbfd4 1,25-36
+lib/appAccess/ApplicationShell.tsx
+  s_668ab4f91e9d5a::t_9f61a46049d09c 148-150
+  s_668ab4f91e9d5a::t_c23be5778cbfd4 11,208
+__tests__/lib/appAccess/showsPlanExpired.test.ts
+  s_668ab4f91e9d5a::t_28c2eea47d2831 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "23a673afa9d1a477d2230186daaad7b891907d3b",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
