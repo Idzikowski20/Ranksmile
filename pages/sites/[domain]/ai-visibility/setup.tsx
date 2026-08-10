@@ -122,8 +122,21 @@ const AiVisibilitySetup: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`AI Visibility Setup — ${domain}`}</title></Head>
          <style>{'@keyframes aivPulse{0%,100%{opacity:1}50%{opacity:.5}}.aiv-pulse{animation:aivPulse 1.5s ease-in-out infinite}@keyframes aivSpin{to{transform:rotate(360deg)}}'}</style>
-         <DomainSubLayout domain={domain} slug={slug || ''} section="AI Visibility" contentMaxWidth="100%">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 800, width: '100%', margin: '0 auto' }}>
+         {/* fillHeight closes the page to the shell's height so the document stops
+             growing past it — without it both the body and the shell's inner
+             container scrolled, giving the window two scrollbars. The column below
+             then owns the only scroller. */}
+         <DomainSubLayout domain={domain} slug={slug || ''} section="AI Visibility" contentMaxWidth="100%" fillHeight>
+            {/* Same shape as .rs-data-table on every other fill-height page: a
+                full-width element owns the scroll so the bar sits at the edge of main,
+                and the reading width is constrained by its child. Scrolling the 800px
+                column itself put the scrollbar in the middle of the page. */}
+            <div className="koala-page-scroller styled-scrollbar">
+            <div
+               style={{
+                  display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 800, width: '100%', margin: '0 auto',
+               }}
+            >
                {/* Heading + usage */}
                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -152,6 +165,7 @@ const AiVisibilitySetup: NextPage = () => {
                      {finishing ? 'Starting…' : 'Finish'}
                   </Button>
                </div>
+            </div>
             </div>
 
             {bulkOpen && (

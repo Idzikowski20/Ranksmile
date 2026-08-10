@@ -383,17 +383,24 @@ body {
 .app-content {
    position: relative;
    z-index: 2;
-   background-color: #f5f5f5;
-   color: #302e36;
-   /* Light content surface: force light UA form controls (inputs, selects,
-      scrollbars) regardless of the global/system theme. Without this, a native
-      control with no explicit background renders dark under color-scheme: dark. */
-   color-scheme: light;
-   /* Shell :root sets --color-text-primary to #fff; override in light zones. */
-   --color-text-primary: #18181B;
-   --color-text-secondary: #52525C;
-   --color-surface-primary: #ffffff;
-   --color-border-strong: #bebebe;
+   /* Follows the Koala theme instead of pinning the content surface to light.
+      It used to hardcode #f5f5f5 / #302e36 plus `color-scheme: light`, so a page
+      rendered on a dark theme kept a light slab under it and any component that
+      did honour the tokens — a white card, dark text — came out unreadable. The
+      tokens already carry both themes; the content zone just has to read them. */
+   /* --koala-bg-secondary is #f5f5f5 on light, so the light theme is byte-identical
+      to the hardcoded value this replaces; only dark and cream actually change. */
+   background-color: var(--koala-bg-secondary);
+   color: var(--koala-text-primary);
+   /* Native controls (selects, scrollbars) follow the same theme rather than
+      being forced light under a dark surface. */
+   color-scheme: light dark;
+   /* Shell :root pins these for its own dark chrome; inside the content zone they
+      track the theme so legacy --color-* consumers match the Koala tokens. */
+   --color-text-primary: var(--koala-text-primary);
+   --color-text-secondary: var(--koala-text-secondary);
+   --color-surface-primary: var(--koala-bg-primary);
+   --color-border-strong: var(--koala-border-primary);
    flex: 1;
    display: flex;
    flex-direction: column;
@@ -3508,8 +3515,20 @@ html.editor-route .app-content {
   gap: 12px;
   overflow: hidden;
 }
-.koala-page--fill .koala-page-content > *:not(.rs-data-table):not(.tm-split) {
+.koala-page--fill .koala-page-content > *:not(.rs-data-table):not(.tm-split):not(.koala-page-scroller) {
   flex-shrink: 0;
+}
+/**
+ * The scrolling child of a fill-height page, for content that is not a data table.
+ * fillHeight closes the page to the shell's height and hides its own overflow, which
+ * assumes something inside scrolls; .rs-data-table was the only thing that qualified,
+ * so a plain column of cards had nowhere to go and pushed the document taller than the
+ * shell — the window ended up with a second scrollbar.
+ */
+.koala-page-scroller {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .koala-page--fill .rs-data-table {
   flex: 1;
