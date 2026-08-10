@@ -85,11 +85,12 @@ paragraphLens: [52],
   });
 
   /**
-   * A very heading-dense SERP (median 23, all headings incl. H3) is bounded by the hard
-   * max, not taken literally — 23 H2 would over-fragment and overflow one brief call.
-   * H2_HARD_MAX caps it at 16, and the word budget (2150/75 ≈ 28) leaves that untouched.
+   * `b.h2` counts every heading level, so a heading-dense SERP (median 23, H3 included)
+   * says nothing about how many TOP-LEVEL sections an article needs. The word budget is
+   * the honest constraint: 2200/200 = 11 sections of 200 words each. Taking the measured
+   * number literally, or capping it at H2_HARD_MAX, asked for sixteen.
    */
-  it('caps the section target at the hard max on a heading-dense SERP', () => {
+  it('sizes sections from the word budget on a heading-dense SERP', () => {
     const shortSectioned = (wordCount: number, h2: number) => ({
       wordCount,
       h2,
@@ -109,19 +110,18 @@ paragraphLens: [52],
       shortSectioned(2200, 24),
     ]));
 
-    expect(t.h2).toBe(16);
+    expect(t.h2).toBe(11);
     expect(t.h2SoftCeiling).toBe(t.h2);
-    // Still well clear of the ~50-word fragmentation the cap exists to prevent.
-    expect(Math.round(t.words / t.h2)).toBeGreaterThan(100);
+    // Every section long enough to be worth writing — the reference article runs ~207.
+    expect(Math.round(t.words / t.h2)).toBe(200);
   });
 
   /**
-   * The real SERP for "prywatny detektyw warszawa": 447-1440 words, median 920, and the
-   * reference tool recommends 1110-1277 across seven H2. The old 2200 floor overrode the
-   * measurement and asked for twice the article, which the section count is derived from —
-   * eleven sections of ~200 words, several covering the same ground.
+   * The real SERP for "prywatny detektyw warszawa": 447-1440 words, median 920, max 1440.
+   * The reference tool asks for 1400-1610 across the seven H2 its own article ships — the
+   * top of the field, not the middle. Its low bound IS our max.
    */
-  it('follows a short SERP instead of doubling it', () => {
+  it('matches the reference tool on the real SERP', () => {
     const page = (wordCount: number, h2: number) => ({
       wordCount,
       h2,
@@ -140,16 +140,17 @@ paragraphLens: [52],
       page(628, 8), page(1440, 14), page(1080, 12), page(447, 6), page(920, 10),
     ]));
 
-    expect(t.words).toBeLessThan(1400);
-    // Benchmark median H2 (10) trusted, not crushed to 7 by a word-only cap.
-    expect(t.h2).toBe(10);
+    // 1440 against the reference tool's 1400 — within 3%.
+    expect(t.words).toBe(1440);
+    // Seven, exactly what the reference article ships, straight out of 1440/200.
+    expect(t.h2).toBe(7);
   });
 });
 
 /**
  * Article 18's SERP measured median 920, p75 1080, max 1440 — and the reference tool
- * asked for 1400-1610 on the same set. Targeting the median plans an article exactly as
- * long as the middle result, which outranks nothing.
+ * asked for 1400-1610 on the same set. Median and p75 both plan an article shorter than
+ * the longest page already ranking, which outranks nothing.
  */
 describe('toPlannerTargets word target', () => {
   const benchmark = {
@@ -163,12 +164,30 @@ examples: { median: 4 },
 citations: { median: 6 },
   } as unknown as Parameters<typeof toPlannerTargets>[0];
 
-  it('aims at p75, not the middle of the field', () => {
-    expect(toPlannerTargets(benchmark).words).toBe(1080);
+  it('aims at the top of the field, where the reference tool aims', () => {
+    const t = toPlannerTargets(benchmark);
+    expect(t.words).toBe(1440); // reference tool: 1400
+    expect(t.wordsSoftCeiling).toBe(1613); // reference tool: 1610
   });
 
-  it('falls back to the median when p75 was not measured', () => {
-    const noP75 = { ...benchmark, words: { ...benchmark.words, p75: 0 } } as typeof benchmark;
-    expect(toPlannerTargets(noP75).words).toBe(920);
+  it("plans the reference article's own section length", () => {
+    const t = toPlannerTargets(benchmark);
+    expect(t.h2).toBe(7);
+    expect(Math.round(t.words / t.h2)).toBe(206); // the reference article runs 207
+  });
+
+  /**
+   * `max` alone would let a single outlier define the brief — one competitor on the
+   * "prywatny detektyw" SERP publishes 15,727 words, and the reference tool had it
+   * deselected. Twice the median is the ceiling on how far one page may pull the target.
+   */
+  it('clamps a runaway competitor to twice the median', () => {
+    const outlier = { ...benchmark, words: { ...benchmark.words, max: 15727 } } as typeof benchmark;
+    expect(toPlannerTargets(outlier).words).toBe(1840);
+  });
+
+  it('falls back to the median when nothing longer was measured', () => {
+    const noMax = { ...benchmark, words: { ...benchmark.words, max: 0 } } as typeof benchmark;
+    expect(toPlannerTargets(noMax).words).toBe(920);
   });
 });
