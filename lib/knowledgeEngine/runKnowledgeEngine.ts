@@ -1,5 +1,5 @@
 import { buildCompetitorDocuments } from './competitorDocument';
-import { extractRawKnowledge, normalizeCandidates } from './extract';
+import { extractRawKnowledge, isNonClaimSentence, normalizeCandidates } from './extract';
 import { canonicalizeClaims, sentencesToCanonicalizeInputs } from './canonicalize';
 import { normalizeClaims, type ClaimCompletion } from './normalizeClaims';
 import { dropCompetitorBrandClaims } from './competitorBrands';
@@ -68,6 +68,10 @@ export async function runKnowledgeEngine(
   const fromSentences = sentencesToCanonicalizeInputs(normalized.sentences);
   // Soft claims from long headings only (no SEO boilerplate padding)
   const fromHeadings = normalized.headings
+    // `normalizeCandidates` runs isNonClaimSentence over sentences only — headings reach
+    // this fallback untouched, so on a thin corpus a competitor's FAQ heading ("Ile
+    // kosztuje godzina pracy detektywa?") still became a claim by the back door.
+    .filter((h) => !isNonClaimSentence(h.text))
     .filter((h) => h.text.trim().length >= 20)
     .slice(0, 40)
     .map((h) => ({

@@ -112,3 +112,31 @@ describe('pickLinkTargets topical ranking', () => {
     expect(urls).toContain('https://prodetektyw.pl/osint-bialy-wywiad/');
   });
 });
+
+
+/**
+ * titleFromSlug turns `-` into a space, but keyword/term tokenization kept it — so a
+ * hyphenated keyword could never match the identically hyphenated slug named after it,
+ * and exactly the most relevant page dropped out of the candidates.
+ */
+describe('pickLinkTargets hyphenated keywords', () => {
+  const SITE = [
+    'https://prodetektyw.pl/prywatny-detektyw-warszawa/',
+    'https://prodetektyw.pl/e-mail-marketing/',
+  ];
+
+  it('matches a hyphenated keyword against the slug it names', () => {
+    const urls = pickLinkTargets({ urls: SITE, keyword: 'prywatny-detektyw-warszawa' }).map((t) => t.url);
+    expect(urls).toContain('https://prodetektyw.pl/prywatny-detektyw-warszawa/');
+  });
+
+  it('matches a hyphenated term the same way', () => {
+    const urls = pickLinkTargets({ urls: SITE, keyword: 'xyz', terms: ['e-mail marketing'] }).map((t) => t.url);
+    expect(urls).toContain('https://prodetektyw.pl/e-mail-marketing/');
+  });
+
+  it('still matches when only the slug carries the hyphen', () => {
+    const urls = pickLinkTargets({ urls: SITE, keyword: 'prywatny detektyw warszawa' }).map((t) => t.url);
+    expect(urls).toContain('https://prodetektyw.pl/prywatny-detektyw-warszawa/');
+  });
+});

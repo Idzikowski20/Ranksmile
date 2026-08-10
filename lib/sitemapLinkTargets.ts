@@ -30,8 +30,15 @@ export function titleFromSlug(url: string): string {
     .trim();
 }
 
+/**
+ * Hyphens are token boundaries on BOTH sides.
+ *
+ * `titleFromSlug` already turns `-` into a space, but keyword and term tokenization kept
+ * it, so a hyphenated keyword could never match the identically hyphenated slug it was
+ * named after and those pages dropped out of the link candidates entirely.
+ */
 function tokens(text: string): string[] {
-  return normalizeTerm(text).split(/\s+/).filter((w) => w.length >= 3);
+  return normalizeTerm(text).split(/[\s-]+/).filter((w) => w.length >= 3);
 }
 
 function isHomepage(url: string): boolean {
