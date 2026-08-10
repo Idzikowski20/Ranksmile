@@ -5,7 +5,7 @@ import { WizardLayout } from '../koala/layout';
 import { OnboardingHeaderCenter } from './OnboardingShell';
 import Button from '../koala/primitives/Button';
 import { Chip } from '../koala/core/chip/chip';
-import { InviteTeamStep, type PendingInvite } from './InviteTeamStep';
+import { EmailTagInput } from '../koala/core/emailTagInput/emailTagInput';
 import { ProgressBar } from '../koala/core/progressBar/progressBar';
 import OrganizationProfileStep, { OrganizationProfileValue } from './OrganizationProfileStep';
 import { useInviteMember } from '../../services/people';
@@ -118,9 +118,7 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
    const [step, setStep] = useState(0);
    const [dir, setDir] = useState(1);
    const [answers, setAnswers] = useState<Record<string, string[]>>({});
-   // Address + role, not just the address: the role used to be hardcoded to 'member'
-   // at send time, so the step could not honour what the user picked.
-   const [invites, setInvites] = useState<PendingInvite[]>([]);
+   const [invites, setInvites] = useState<string[]>([]);
    const [org, setOrg] = useState<OrganizationProfileValue>({ name: '', logoDataUrl: null });
    const [sending, setSending] = useState(false);
    const invite = useInviteMember();
@@ -155,15 +153,15 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
       if (!invites.length) return;
       setSending(true);
       const sent: string[] = [];
-      const failed: PendingInvite[] = [];
-      for (const pending of invites) {
+      const failed: string[] = [];
+      for (const email of invites) {
          try {
             // Sequential on purpose — the invite endpoint writes one membership row per call.
             // eslint-disable-next-line no-await-in-loop
-            await invite.mutateAsync({ email: pending.email, role: pending.role, workspaceIds: null });
-            sent.push(pending.email);
+            await invite.mutateAsync({ email, role: 'member', workspaceIds: null });
+            sent.push(email);
          } catch {
-            failed.push(pending);
+            failed.push(email);
          }
       }
       // Drop what actually went out. If the onboarding-completion call after this fails,
@@ -172,7 +170,7 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
       setInvites(failed);
       setSending(false);
       if (failed.length) {
-         toast.error(`Couldn't invite ${failed.map((f) => f.email).join(', ')}. You can retry from Settings › People.`);
+         toast.error(`Couldn't invite ${failed.join(', ')}. You can retry from Settings › People.`);
       } else {
          toast.success(sent.length === 1 ? 'Invitation sent' : `${sent.length} invitations sent`);
       }
@@ -240,11 +238,14 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
       }
       if (isInvite) {
          return (
-            <InviteTeamStep
-               invites={invites}
-               onChange={setInvites}
-               disabled={sending}
-            />
+            <div style={{ width: '100%', maxWidth: 400 }}>
+               <EmailTagInput
+                  label="Teammate email address"
+                  value={invites}
+                  onChange={setInvites}
+                  disabled={sending}
+               />
+            </div>
          );
       }
       // Radio questions take exactly one answer, so the set is a radiogroup and each

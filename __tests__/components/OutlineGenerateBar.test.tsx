@@ -45,9 +45,7 @@ it('is the same pill in every state, not a wider bar while reviewing', () => {
     const { height, borderRadius, width } = el.style;
     return { height, borderRadius, width };
   };
-  // The review state wraps its two controls in a row, so the pill is the button, not the
-  // outer element — the other two states have no second control and stay unwrapped.
-  const idleShape = shapeOf(idle.querySelector('button') as HTMLElement);
+  const idleShape = shapeOf(idle.firstElementChild as HTMLElement);
 
   expect(idleShape).toEqual({ height: '44px', borderRadius: '999px', width: '' });
   expect(shapeOf(planning.firstElementChild as HTMLElement)).toEqual(idleShape);
@@ -60,54 +58,6 @@ it('says nothing but its own action while reviewing', () => {
   expect(screen.queryByText('Review outline')).toBeNull();
   expect(screen.queryByText(/headings ready/)).toBeNull();
   expect(screen.getByRole('button')).toHaveTextContent('Generate content');
-});
-
-/**
- * One re-plan per article: a second one is a second LLM bill, and the reviewer can edit
- * the outline in place instead. The spent state is greyed rather than removed so the
- * limit is visible, not mysterious.
- */
-describe('regenerate', () => {
-  it('offers regeneration as an icon-only control beside the pill', () => {
-    render(<OutlineGenerateBar busy={false} headingCount={3} onGenerate={noop} onRegenerate={noop} />);
-
-    const regenerate = screen.getByRole('button', { name: 'Regenerate outline' });
-    expect(regenerate).toBeEnabled();
-    expect(regenerate).toHaveTextContent('');
-  });
-
-  it('has no regenerate control where the caller offers none', () => {
-    render(<OutlineGenerateBar busy={false} headingCount={3} onGenerate={noop} />);
-    expect(screen.queryByRole('button', { name: 'Regenerate outline' })).toBeNull();
-  });
-
-  it('greys out regeneration once it has been used, and says why', () => {
-    render(
-      <OutlineGenerateBar busy={false} headingCount={3} onGenerate={noop} onRegenerate={noop} regenerateUsed />,
-    );
-
-    const regenerate = screen.getByRole('button', { name: 'Regenerate outline' });
-    expect(regenerate).toBeDisabled();
-    expect(regenerate).toHaveAttribute('title', 'An outline can be regenerated once — this one already has been');
-    // The primary action stays available: a spent regeneration is not a blocked article.
-    expect(screen.getByRole('button', { name: /Generate content/ })).toBeEnabled();
-  });
-});
-
-/**
- * The pill's `gap` needs a flex context, which used to come from the shell it spread.
- * Once the review state moved into a row with the regenerate button it stopped spreading
- * that shell, the button fell back to inline-block, and the icon wrapped onto its own
- * line above the label.
- */
-it('lays the icon and its label out on one line', () => {
-  render(<OutlineGenerateBar busy={false} headingCount={3} onGenerate={noop} onRegenerate={noop} />);
-
-  const pill = screen.getByRole('button', { name: /Generate content/ });
-  expect(pill.style.display).toBe('inline-flex');
-  expect(pill.style.whiteSpace).toBe('nowrap');
-  // Shrinking is the other way the label breaks: as a flex item it would give way first.
-  expect(pill.style.flexShrink).toBe('0');
 });
 
 it('explains why it is disabled instead of just going dead', () => {
