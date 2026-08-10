@@ -48,6 +48,7 @@ const ProfileSettings = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
   const [passwordBusy, setPasswordBusy] = useState(false);
 
   useEffect(() => { if (profile?.name != null) setName(profile.name); }, [profile?.name]);
@@ -108,6 +109,8 @@ const ProfileSettings = () => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      // Done — fold the section away rather than leaving three empty fields open.
+      setChangingPassword(false);
       toast.success('Password updated');
     } finally {
       setPasswordBusy(false);
@@ -161,6 +164,20 @@ const ProfileSettings = () => {
       <FormSection title="Password" className="koala-account-section">
         <p className="koala-account-section__desc">Set a password that is unique.</p>
 
+        {/* Three password fields sat open on a page most people arrive at to edit their
+            name. They are behind a button now — the same folding the logo upload got. */}
+        {!changingPassword ? (
+          <div className="koala-account-actions">
+            <Button
+              type="button"
+              size="md"
+              variant="secondary"
+              onClick={() => setChangingPassword(true)}
+            >
+              Change password
+            </Button>
+          </div>
+        ) : (
         <div className="koala-password-stack">
           <div className="koala-password-field">
             <Field label="Current password" required>
@@ -218,8 +235,24 @@ const ProfileSettings = () => {
             >
               Update password
             </Button>
+            <Button
+              type="button"
+              size="md"
+              variant="secondary"
+              disabled={passwordBusy}
+              onClick={() => {
+                // Leaving the section must not leave typed secrets in state behind it.
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+                setChangingPassword(false);
+              }}
+            >
+              Cancel
+            </Button>
           </div>
         </div>
+        )}
       </FormSection>
 
       <FormSection title="Two-Factor Authentication" className="koala-account-section">

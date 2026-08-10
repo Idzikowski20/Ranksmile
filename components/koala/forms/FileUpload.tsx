@@ -103,7 +103,12 @@ export function FileUpload({
   const [localUrl, setLocalUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [changing, setChanging] = useState(false);
+
   const previewUrl = localUrl || valueUrl || null;
+  // The zone stands down only while an image is on screen and the user has not asked
+  // to swap it. Removing the image clears `changing` below, so the zone comes back.
+  const zoneHidden = Boolean(preview && previewUrl && !changing);
 
   const applyFiles = useCallback(
     async (list: FileList | File[]) => {
@@ -128,6 +133,8 @@ export function FileUpload({
       }
       setError(null);
       setFiles(next);
+      // The swap is done, so the zone folds away again and the new image takes over.
+      setChanging(false);
       if (preview && next[0]?.type.startsWith('image/')) {
         const url = URL.createObjectURL(next[0]);
         setLocalUrl((prev) => {
@@ -148,6 +155,9 @@ export function FileUpload({
       setLocalUrl(null);
     }
     onRemove?.(removed);
+    // Back to the empty state: with nothing to preview the zone is what should show,
+    // and a stale `changing` would leave both it and a Change button rendered.
+    setChanging(false);
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -165,6 +175,11 @@ export function FileUpload({
           if (e.target.files) void applyFiles(e.target.files);
         }}
       />
+      {/* With an image already set the dropzone is dead weight — it asks for an upload
+          the user has made, and the preview sits under a full-height empty box. Show
+          the picture with Change / Remove instead, and bring the zone back only when
+          Change is pressed. */}
+      {zoneHidden ? null : (
       <Zone
         $drag={drag}
         $disabled={disabled}
@@ -208,9 +223,15 @@ export function FileUpload({
           Browse
         </Button>
       </Zone>
+      )}
       {preview && previewUrl ? (
         <PreviewRow>
           <PreviewImg src={previewUrl} alt="" />
+          {zoneHidden && (
+            <Button type="button" size="sm" variant="secondary" onClick={() => setChanging(true)} disabled={disabled}>
+              Change
+            </Button>
+          )}
           <Button type="button" size="sm" variant="secondary" onClick={handleRemove} disabled={disabled}>
             Remove
           </Button>
