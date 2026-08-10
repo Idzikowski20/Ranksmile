@@ -1,0 +1,24 @@
+lib/getBootstrap.ts
+  s_668ab4f91e9d5a::t_8435d04f6af227 127-131
+  s_668ab4f91e9d5a::t_c9a5123cbd7425 12
+lib/billingEverSubscribed.ts
+  s_668ab4f91e9d5a::t_c9a5123cbd7425 1-36
+__tests__/lib/grantedAccessAtSomePoint.test.ts
+  s_668ab4f91e9d5a::t_c9a5123cbd7425 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "911ededdaa6224ed577da41a2648a5ba4a1bd381",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
