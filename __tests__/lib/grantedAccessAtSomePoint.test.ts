@@ -45,15 +45,41 @@ describe('grantedAccessAtSomePoint', () => {
   );
 
   it.each(['trialEndsAt', 'currentPeriodEnd', 'trialConsumedAt'] as const)(
-    'says yes on %s alone, whatever a later attempt is doing',
+    'says yes on %s alone once the attempt is past pre-payment',
     (field) => {
       expect(grantedAccessAtSomePoint(row({
         [field]: '2026-01-01T00:00:00.000Z',
-        stripeSubscriptionId: 'sub_new',
-        subscriptionStatus: 'incomplete',
+        stripeSubscriptionId: 'sub_x',
+        subscriptionStatus: 'active',
       }))).toBe(true);
     },
   );
+
+  /**
+   * stripeBillingSync writes currentPeriodEnd and trialEndsAt straight from Stripe with no
+   * status check, and an `incomplete` subscription already carries a period on its
+   * SubscriptionItem — so checking those dates before the status returned true for exactly
+   * the abandoned checkout this excludes.
+   */
+  it.each(['trialEndsAt', 'currentPeriodEnd'] as const)(
+    'ignores %s that the webhook wrote for an incomplete subscription',
+    (field) => {
+      expect(grantedAccessAtSomePoint(row({
+        [field]: '2026-01-01T00:00:00.000Z',
+        stripeSubscriptionId: 'sub_123',
+        subscriptionStatus: 'incomplete',
+      }))).toBe(false);
+    },
+  );
+
+  /** A new checkout never overwrites it, so it still proves an earlier grant. */
+  it('honours a consumed trial even while a new checkout is incomplete', () => {
+    expect(grantedAccessAtSomePoint(row({
+      trialConsumedAt: '2025-11-01T00:00:00.000Z',
+      stripeSubscriptionId: 'sub_new',
+      subscriptionStatus: 'incomplete',
+    }))).toBe(true);
+  });
 
   it.each([[null], [undefined]])('says no for %p', (billing) => {
     expect(grantedAccessAtSomePoint(billing)).toBe(false);

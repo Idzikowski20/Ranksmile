@@ -794,6 +794,10 @@ const ArticleEditorPage: NextPage = () => {
    * closing it and in-app navigation each still wrote the outline into articles.content.
    */
   const saveSuspended = isAutoOptimizing || outlineReviewMode;
+  // Read inside `autoSave`, which the 3s failure retry re-enters from a closure captured
+  // before review started — the value it closed over would be stale.
+  const saveSuspendedRef = useRef(saveSuspended);
+  saveSuspendedRef.current = saveSuspended;
 
   const handleMetaTitleChange = useCallback((v: string) => {
     setArticle((prev) => prev ? { ...prev, meta_title: v } : prev);
@@ -993,6 +997,11 @@ const ArticleEditorPage: NextPage = () => {
   // created at most once every 2 min of editing so Version History stays useful
   // without flooding it on every keystroke. ──
   const autoSave = async (sig: string, opts?: { unload?: boolean }) => {
+    // The choke point, not just the two callers. Guarding only the debounced effect and
+    // `flushRef` left the failure retry below: it calls `autoSave` again three seconds
+    // later, by which time an outline review may have started, and wrote the planning
+    // document as the article.
+    if (saveSuspendedRef.current) return;
     // Never run two saves at once. If one is already in flight, skip — the finally-block below
     // re-checks for newer edits (flushRef) once it finishes, so nothing typed mid-save is lost.
     if (savingRef.current) return;

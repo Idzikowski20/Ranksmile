@@ -67,6 +67,19 @@ describe('auth denial logging', () => {
     expect(line).toContain('/api/session/bootstrap');
   });
 
+  /**
+   * `req.query` merges route params with the query string, and an unauthenticated caller
+   * controls the latter — so masking every value let anyone make the log name a route
+   * that was never called.
+   */
+  it('cannot be tricked into renaming the route from the query string', async () => {
+    const line = await logLineFor('/api/articles/18/generate?x=articles&y=generate', {
+      id: '18', x: 'articles', y: 'generate',
+    });
+
+    expect(line).toContain('/api/articles/:x/generate');
+  });
+
   it('drops the query string, tokens included', async () => {
     const line = await logLineFor(`/api/invitations/accept?token=${INVITE_TOKEN}`, { token: INVITE_TOKEN });
     expect(line).not.toContain(INVITE_TOKEN);

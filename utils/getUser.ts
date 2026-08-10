@@ -13,15 +13,22 @@ const sessionCache = new WeakMap<NextApiRequest, Promise<SessionUser | null>>();
  * invitation token as a path segment, so a failed unauthenticated call wrote a working
  * invitation link into the server log. Stripping the query string is not enough.
  *
- * `req.query` holds exactly the dynamic segments Next matched (plus query params, which
- * the path no longer contains), so masking any segment that appears there redacts the
- * secret without a guess about which routes are sensitive. Ordinary ids are masked too —
- * the value of this line is which route failed, not which record.
+ * Masking every value Next matched as a route param redacts the secret without a guess
+ * about which routes are sensitive. Ordinary ids are masked too — the value of this line
+ * is which route failed, not which record.
  */
 function safeRoute(req: NextApiRequest): string {
-   const path = (req.url || '').split('?')[0] || '?';
+   const [path = '?', search = ''] = (req.url || '').split('?');
+   // `req.query` merges the matched route params with the query string, and an
+   // unauthenticated caller controls the latter: `?x=articles` would mask the literal
+   // `/api/articles` and make the log name a route that was never called. Keys present in
+   // the query string are therefore excluded — what remains came from the path.
+   const fromQueryString = new Set(
+      [...new URLSearchParams(search).keys()],
+   );
    const dynamic = new Set<string>();
-   for (const value of Object.values(req.query || {})) {
+   for (const [key, value] of Object.entries(req.query || {})) {
+      if (fromQueryString.has(key)) continue;
       for (const part of Array.isArray(value) ? value : [value]) {
          if (typeof part === 'string' && part) dynamic.add(part);
       }

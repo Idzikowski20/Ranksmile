@@ -42,7 +42,9 @@ export function toPlannerTargets(b: StructuralBenchmark): PlannerTargets {
   // long enough to say something, and the reference article's seven H2 fall straight out
   // of 1440/200. The measured count only pulls the number DOWN, never up.
   const measuredH2 = b.h2.median || b.h2.mean || 0;
-  const wordBudgetH2 = Math.max(BENCHMARK_H2_FLOOR, Math.round(words / MIN_WORDS_PER_H2));
+  // floor, not round: rounding up puts the average section under MIN_WORDS_PER_H2 and
+  // contradicts the invariant this constant exists to state (1500/200 -> 8 sections of 187).
+  const wordBudgetH2 = Math.max(BENCHMARK_H2_FLOOR, Math.floor(words / MIN_WORDS_PER_H2));
   const h2 = Math.min(
     H2_HARD_MAX,
     wordBudgetH2,
@@ -58,7 +60,8 @@ export function toPlannerTargets(b: StructuralBenchmark): PlannerTargets {
     images: Math.max(2, b.images.median || 2),
     examples: Math.max(4, b.examples.median || 4),
     citations: Math.max(6, b.citations.median || 6),
-    // The reference tool's upper bound sits a tenth above its target (1400 → 1610).
+    // Calibrated on the reference tool's own upper bound: 1440 * 1.12 = 1613 against its
+    // 1610. (Its own 1400->1610 is a wider 1.15, measured from a lower target.)
     wordsSoftCeiling: Math.round(words * SOFT_CEILING_RATIO),
     // p75 of the same all-headings count would undo the cap above.
     h2SoftCeiling: h2,

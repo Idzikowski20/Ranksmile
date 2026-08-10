@@ -26,11 +26,22 @@ export function grantedAccessAtSomePoint(
   billing: EverSubscribedInput | null | undefined,
 ): boolean {
   if (!billing) return false;
+
+  // The status gate comes FIRST. `stripeBillingSync` writes `currentPeriodEnd` and
+  // `trialEndsAt` straight from the Stripe object with no status check, and an
+  // `incomplete` subscription already carries a period on its SubscriptionItem — so a
+  // date check placed ahead of this returned true for the abandoned checkout it was
+  // written to exclude.
+  if (PRE_PAYMENT_STATUSES.has(billing.subscriptionStatus as SubscriptionStatus)) {
+    // Nothing THIS attempt wrote counts. `trialConsumedAt` is the one signal a new
+    // checkout never overwrites, so it is what still proves an earlier grant.
+    return Boolean(billing.trialConsumedAt);
+  }
+
   // A trial that ran, a billing period that started, a trial already consumed: each is
-  // proof on its own, whatever a later checkout attempt happens to be doing now.
+  // proof on its own.
   if (billing.trialEndsAt || billing.currentPeriodEnd || billing.trialConsumedAt) return true;
-  if (!billing.stripeSubscriptionId) return false;
-  return !PRE_PAYMENT_STATUSES.has(billing.subscriptionStatus as SubscriptionStatus);
+  return Boolean(billing.stripeSubscriptionId);
 }
 
 export default grantedAccessAtSomePoint;
