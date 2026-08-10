@@ -1,3 +1,4 @@
+import { allowsFrontend } from './accessPolicy';
 import type { AccessSnapshot } from './types';
 
 /**
@@ -21,3 +22,15 @@ export function isPlanExpired(access: AccessSnapshot): boolean {
 }
 
 export default isPlanExpired;
+
+/**
+ * Should THIS route be replaced by the expiry block?
+ *
+ * Replacing every non-public route left an expired customer no way to pay: the block's own
+ * "Choose Growth" link goes to /plans, which rendered the block again. The billing policy
+ * already grants BILLING_REQUIRED the whole renewal path — /plans, /billing/checkout/:plan,
+ * /billing/confirmation/success — so the block only has to stop overriding it.
+ */
+export function showsPlanExpired(access: AccessSnapshot, path: string): boolean {
+  return isPlanExpired(access) && !allowsFrontend(access.appState, path);
+}
