@@ -9593,3 +9593,45 @@ html.koala-shell[data-theme="cream"] .app-content {
   color: var(--koala-text-primary);
 }
 .invite-step__note { margin: 0; font-size: 13px; line-height: 18px; color: var(--koala-text-secondary); }
+
+/* Row proportions: the address is the field that matters, the role is a chooser.
+   Without these the role select stretched to half the row and the email shrank. */
+.invite-step__row > * { flex: 0 0 auto; }
+.invite-step__row .invite-step__emails { flex: 1 1 auto; min-width: 0; }
+.invite-step__role { width: 148px; flex-shrink: 0; }
+.invite-step__role > * { width: 100%; }
+
+/* One control, not three boxes: the Figma row is a single bordered field holding
+   the address, the role and the action, with the focus ring on the whole thing. */
+.invite-step__row {
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--koala-border-primary);
+  border-radius: 12px;
+  background: var(--koala-bg-primary);
+}
+.invite-step__row:focus-within {
+  border-color: var(--koala-border-focus, #87a2f5);
+  box-shadow: 0 0 0 3px rgba(248, 68, 22, 0.12);
+}
+/* Children lose their own chrome so the row reads as one field. */
+.invite-step__row .invite-step__emails input,
+.invite-step__row .invite-step__emails > * {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+.invite-step__row .invite-step__emails input:focus { outline: none; box-shadow: none; }
+
+/* Person rows carry a second line: in settings, "who can see what" is the answer
+   the old table's Joined/Workspaces columns used to give. */
+.invite-step__who { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.invite-step__meta {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--koala-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
