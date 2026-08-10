@@ -183,6 +183,9 @@ describe('service-page skeleton for hiring intent', () => {
     ['Dane kontaktowe', true],
     ['Podsumowanie', true],
     ['Szerokie kontakty z wielu branż', false],
+    ['Dzięki kontaktom w branży detektywistycznej', false],
+    ['Sieć kontaktów w wielu branżach', false],
+    ['Praca z kontaktami z rynku', false],
     ['Nasze kontakty w branży detektywistycznej', false],
     ['Zakres usług', false],
   ])('classifies %s as sign-off: %s', (heading, expected) => {

@@ -13,11 +13,12 @@ const CLOSING = /faq/i;
 // Polish stems ("podsumowanie", "dane kontaktowe") but whole-word English, so
 // "Contactless payments" stays in the body instead of being filed as a sign-off.
 //
-// The plural noun is excluded deliberately: "kontakty"/"kontaktów"/"kontaktami" means
-// connections in an industry, not the contact section. Matching the stem anywhere sent
-// the body section "Szerokie kontakty z wielu branż" to the very end of a real outline,
-// after both the FAQ and Kontakt.
-const SIGN_OFF = /(?:^|[^\p{L}])(?:podsum\p{L}*|kontakt(?!y|ów|ami|ach)\p{L}*|summary|contact)(?!\p{L})/iu;
+// The plural noun means connections in an industry, not the contact section, so every
+// case of it is excluded: "kontakty", "kontaktów", "kontaktom", "kontaktami",
+// "kontaktach". Matching the stem anywhere sent the body section "Szerokie kontakty z
+// wielu branż" to the very end of a real outline, after both the FAQ and Kontakt; the
+// dative was still slipping through after the first pass at this.
+const SIGN_OFF = /(?:^|[^\p{L}])(?:podsum\p{L}*|kontakt(?!y|ów|om|ami|ach)\p{L}*|summary|contact)(?!\p{L})/iu;
 
 /** Guide / help skeleton — action path, no SEO meta sections. */
 export function localizedRequiredSections(
