@@ -24,6 +24,8 @@ import {
 import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
 import { computeOverallContentScore, resolveAiScore } from '../../../lib/aiSearchScore';
 import type { ArticleFact } from '../../../lib/articleFacts';
+import { safeJsonParse } from '../../../lib/safeJson';
+import { carriedScoreData } from '../../../lib/carriedScoreData';
 
 type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: number };
 import {
@@ -139,6 +141,23 @@ function buildScoreData(
   };
 }
 
+async function plannerStateToCarry(
+  articleId: string | number,
+  articleIdSql: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const rows = await db.query<{ score_data: string | null }>(
+      `SELECT score_data FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+      { replacements: [articleId], type: QueryTypes.SELECT },
+    );
+    return carriedScoreData(safeJsonParse<Record<string, unknown>>(rows[0]?.score_data ?? '', {}));
+  } catch (err) {
+    // Losing the carry-over degrades the next outline; failing the analysis over it is worse.
+    console.warn('[deep-analysis] could not carry planner state:', getErrorMessage(err));
+    return {};
+  }
+}
+
 function mapSerpTerms(rawTerms: RawSerpTerm[]): NlpTerm[] {
   return rawTerms.map((t) => ({
     term: String(t.term || t.text || '').toLowerCase().trim(),
@@ -148,6 +167,13 @@ function mapSerpTerms(rawTerms: RawSerpTerm[]): NlpTerm[] {
     relevance: t.relevance,
     doc_freq: t.doc_freq,
     salience: t.salience,
+    // The sidecar stems every term (attach_lemma_regexps) precisely so the two sides
+    // agree on what counts as the same phrase. Dropping the annotations here undid all
+    // of it: filterUsefulNlpTerms fell back to the raw string, so "detektyw",
+    // "detektywa", "detektywi" and "detektywow" shipped as four separate rows with
+    // identical counts, and calibrateTermRangesFromCorpus counted only the exact form.
+    lemma_key: t.lemma_key,
+    term_words_regexps: t.term_words_regexps,
   })).filter((t) => t.term);
 }
 
@@ -729,6 +755,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       seoScore: seoScoreFromAudit,
       competitorWordSpread,
     });
+    // Written as `score_data = ?`, so everything this route does not rebuild is destroyed
+    // unless it is carried over explicitly.
+    const carried = await plannerStateToCarry(articleId, articleIdSql);
 
     const rankingScore = score.ranking_score ?? null;
     const rankingSignals = score.ranking_signals ? JSON.stringify(score.ranking_signals) : null;
@@ -915,7 +944,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       pageContent,
       featuredImage,
       wordCount || classify.word_count_estimate || 0,
-      JSON.stringify(scoreData),
+      JSON.stringify({ ...carried, ...scoreData }),
       isKeywordMode ? null : (seoScore || ruleBase),
     ];
 
@@ -1191,7 +1220,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           if (await abortIfSuperseded(res, articleId, jobId)) return;
           await db.query(
             `UPDATE articles SET score_data = ?, content_score = ? WHERE ${articleIdSql} = ?`,
-            { replacements: [JSON.stringify(scoreData), contentScore, articleId] },
+            { replacements: [JSON.stringify({ ...carried, ...scoreData }), contentScore, articleId] },
           );
         }
       }
@@ -1210,7 +1239,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         if (await abortIfSuperseded(res, articleId, jobId)) return;
         await db.query(
           `UPDATE articles SET score_data = ?, content_score = ? WHERE ${articleIdSql} = ?`,
-          { replacements: [JSON.stringify(scoreData), contentScore, articleId] },
+          { replacements: [JSON.stringify({ ...carried, ...scoreData }), contentScore, articleId] },
         ).catch(() => {});
         await persistAiVisibilityRun(
           articleId,

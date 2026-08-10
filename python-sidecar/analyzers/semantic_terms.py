@@ -185,7 +185,7 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
 
     aggregated.sort(key=lambda t: (t["chunk_hits"] * t["relevance"]), reverse=True)
 
-    return [
+    semantic = [
         {
             "term": t["term"], "target_count": t["target_count"], "type": t["type"],
             "relevance": t["relevance"], "doc_freq": t["doc_freq"],
@@ -193,6 +193,27 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
         }
         for t in aggregated[:120]
     ]
+    return _merge_nlp_terms(semantic, texts, keyword)
+
+
+# The reference tool ships two term sets side by side — a curated ~80 it asks you to
+# include, and a ~290-strong NLP set — and grades against the union.
+MAX_TERMS = 150
+
+
+def _merge_nlp_terms(semantic: list[dict], texts: list[str], keyword: str) -> list[dict]:
+    """Union the LLM's terms with the TF-IDF n-grams instead of choosing between them.
+
+    TF-IDF used to run only when DeepSeek returned nothing, so on every healthy run the
+    whole n-gram set was thrown away. What survived was the LLM list after the chunk-hit
+    filter — 15 terms for a 9-competitor SERP where the reference tool listed 81. A term
+    the model never named is still a term the article is graded on, so the two sets
+    belong together; the model's entry wins on conflict because it carries a type and a
+    relevance the n-gram path cannot produce.
+    """
+    seen = {t["term"] for t in semantic}
+    extra = [t for t in _fallback_terms(texts, keyword) if t["term"] not in seen]
+    return (semantic + extra)[:MAX_TERMS]
 
 
 async def _extract_chunk(keyword: str, chunk_text: str, chunk_hash: str, api_key: str) -> list[dict]:

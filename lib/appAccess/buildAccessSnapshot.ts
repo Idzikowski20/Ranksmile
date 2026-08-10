@@ -13,6 +13,7 @@ export type BuildAccessSnapshotInput = {
   onboardingCompleted: boolean;
   billingState: BillingState;
   billingSince?: string | null;
+  everSubscribed?: boolean;
   workspaceState: WorkspaceState;
   setupWorkspaceId?: number | null;
   activeWorkspaceId?: number | null;
@@ -46,6 +47,7 @@ export function buildAccessSnapshot(input: BuildAccessSnapshotInput): AccessSnap
     billing: {
       state: input.billingState,
       since: input.billingSince ?? null,
+      everSubscribed: input.everSubscribed ?? false,
     },
     workspace: {
       state: input.workspaceState,

@@ -390,3 +390,163 @@ describe('writeOutlineBrief', () => {
     expect(headings?.[2].instructions).toEqual(['b']);
   });
 });
+
+/**
+ * A reply that briefs one section out of thirteen is a truncated one, not the model
+ * judging the other twelve unworthy — each was handed to it with its own claims. Real
+ * outlines shipped exactly that: one real brief and twelve "Pokryj <heading> z
+ * przypisanymi claims" stubs, with nothing in the logs to say it had happened.
+ */
+describe('writeOutlineBrief partial replies', () => {
+  const PARTIAL = JSON.stringify({
+    title: 'T',
+    sections: [{ n: 2, heading: 'Zakres usług', instructions: ['Wypunktuj usługi.'] }],
+  });
+
+  it('retries when the reply briefs only part of the outline', async () => {
+    const replies = [PARTIAL, GOOD];
+
+    const headings = await writeOutlineBrief({
+      keyword: 'k',
+      bundle: bundle(),
+      brandKnowledge: BRAND,
+      llmEdit: async () => ({ html: replies.shift() ?? GOOD, tokens: 1 }),
+    });
+
+    expect(replies).toHaveLength(0);
+    expect(headings?.[1].instructions).toEqual([
+      'Krótki lead o ProDetektyw.',
+      'Wspomnij licencję RD-58/2020.',
+    ]);
+  });
+
+  it('keeps the fuller of the two attempts rather than the last one', async () => {
+    const replies = [GOOD, PARTIAL];
+
+    const headings = await writeOutlineBrief({
+      keyword: 'k',
+      bundle: bundle(),
+      brandKnowledge: BRAND,
+      llmEdit: async () => ({ html: replies.shift() ?? PARTIAL, tokens: 1 }),
+    });
+
+    // GOOD already covers both sections, so it must not spend a second call at all.
+    expect(replies).toEqual([PARTIAL]);
+    expect(headings?.[1].instructions).toHaveLength(2);
+  });
+
+  it('falls back to the planner objective only for sections still missing after retries', async () => {
+    const headings = await writeOutlineBrief({
+      keyword: 'k',
+      bundle: bundle(),
+      brandKnowledge: BRAND,
+      llmEdit: async () => ({ html: PARTIAL, tokens: 1 }),
+    });
+
+    expect(headings?.[1].instructions).toEqual(['Przedstaw agencję']);
+    expect(headings?.[2].instructions).toEqual(['Wypunktuj usługi.']);
+  });
+});
+
+/**
+ * A 13-section outline used to be briefed in one call, so a single reply had to carry
+ * ~80 instructions — and one truncated reply cost every section but one. Sections are
+ * batched now: bounded replies, and a bad batch can only lose its own sections.
+ */
+describe('writeOutlineBrief batching', () => {
+  const SECTION_COUNT = 13;
+  const BATCH_SIZE = 5;
+
+  function wideBundle(): ContentPlannerBundle {
+    const base = bundle();
+    return {
+      ...base,
+      briefs: Array.from({ length: SECTION_COUNT }, (_, i) => ({
+        sectionId: `s${i + 1}`,
+        heading: `Sekcja ${i + 1}`,
+        objective: `Cel ${i + 1}`,
+        claimIds: ['c1'],
+        mustAnswer: [],
+        budget: { words: 100 },
+      })),
+    } as unknown as ContentPlannerBundle;
+  }
+
+  /** Brief every section the prompt actually asked for, echoing the global "n". */
+  function replyFor(user: string): string {
+    const asked = [...user.matchAll(/^(\d+)\. role: /gm)].map((m) => Number(m[1]));
+    return JSON.stringify({
+      title: 'T',
+      sections: asked.map((n) => ({
+        n,
+        heading: `Napisany nagłówek ${n}`,
+        instructions: [`Instrukcja dla sekcji ${n}.`],
+      })),
+    });
+  }
+
+  function runWide(reply: (user: string) => string) {
+    const seen: string[] = [];
+    return {
+      seen,
+      run: () => writeOutlineBrief({
+        keyword: 'prywatny detektyw warszawa',
+        bundle: wideBundle(),
+        brandKnowledge: BRAND,
+        llmEdit: async (user: string) => { seen.push(user); return { html: reply(user), tokens: 1 }; },
+      }),
+    };
+  }
+
+  it('splits the outline across several calls instead of one oversized reply', async () => {
+    const c = runWide(replyFor);
+    const headings = await c.run();
+
+    expect(c.seen).toHaveLength(Math.ceil(SECTION_COUNT / BATCH_SIZE));
+    // Every section briefed, each under the heading the model wrote for its own number.
+    expect(headings).toHaveLength(SECTION_COUNT + 1);
+    for (let i = 0; i < SECTION_COUNT; i += 1) {
+      expect(headings?.[i + 1].text).toBe(`Napisany nagłówek ${i + 1}`);
+      expect(headings?.[i + 1].instructions).toEqual([`Instrukcja dla sekcji ${i + 1}.`]);
+    }
+  });
+
+  it('gives each call only its own sections, numbered globally', async () => {
+    const c = runWide(replyFor);
+    await c.run();
+
+    const asked = c.seen.map((user) => [...user.matchAll(/^(\d+)\. role: /gm)].map((m) => Number(m[1])));
+    expect(asked).toEqual([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13]]);
+    // Batch-local numbering would file section 6 as section 1.
+    expect(c.seen[1]).toContain('6. role: Sekcja 6');
+    expect(c.seen[1]).not.toContain('1. role: Sekcja 1');
+  });
+
+  it('shows every call the full outline so batches do not cover the same ground', async () => {
+    const c = runWide(replyFor);
+    await c.run();
+
+    for (const user of c.seen) {
+      expect(user).toContain('FULL OUTLINE');
+      expect(user).toContain('13. Sekcja 13');
+    }
+  });
+
+  it('loses only the failing batch when one call comes back unusable', async () => {
+    const c = runWide((user) => (user.includes('6. role: ') ? 'nonsense, not json' : replyFor(user)));
+    const headings = await c.run();
+
+    // Sections 6-10 keep the planner objective; the other two batches are unaffected.
+    expect(headings?.[1].instructions).toEqual(['Instrukcja dla sekcji 1.']);
+    expect(headings?.[6].instructions).toEqual(['Cel 6']);
+    expect(headings?.[11].instructions).toEqual(['Instrukcja dla sekcji 11.']);
+  });
+
+  it('keeps a single call, and no outline context, for a short outline', async () => {
+    const c = call(GOOD);
+    await c.run();
+
+    expect(c.seen).toHaveLength(1);
+    expect(c.seen[0].user).not.toContain('FULL OUTLINE');
+  });
+});

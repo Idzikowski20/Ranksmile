@@ -20,6 +20,9 @@ import { getErrorMessage } from '../../../../lib/errors';
 import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 import { safeJsonParse } from '../../../../lib/safeJson';
+import { llmGateway } from '../../../../lib/llmGateway';
+import { gatherBlogUrls } from '../../../../lib/gatherBlogUrls';
+import { pickLinkTargets } from '../../../../lib/sitemapLinkTargets';
 import { pipelineVersionTag } from '../../../../lib/pipelineVersion';
 import {
   aiIntelFromScoreData,
@@ -311,6 +314,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           scoreData,
           paaQuestions: paa,
           extraTexts,
+          // Rewrites scraped competitor prose into atomic facts and merges duplicates so
+          // claims carry real source counts. The gateway is injected rather than imported
+          // by the engine, which must stay free of the database for its unit tests.
+          normalizeCompletion: async (prompt) => {
+            const { text } = await llmGateway({
+              messages: [{ role: 'user', content: prompt }],
+              temperature: 0,
+              maxTokens: 3000,
+              responseFormat: 'json_object',
+              jobType: 'knowledge_normalize_claims',
+              keyword,
+              workspaceId: orgId == null ? undefined : String(orgId),
+            });
+            // Charged to the org's shared pool like every other completion here. Without
+            // this the stage spent up to 3000 completion tokens per batch that the 5-hour
+            // budget never saw, so repeated generates walked straight past the gate.
+            // Four chars per token is the same estimate the gateway bills its telemetry on
+            // — the providers in the chain do not all return usage counts.
+            if (orgId != null) {
+              await recordAiTokens(orgId, Math.ceil((prompt.length + text.length) / 4));
+            }
+            return text;
+          },
         });
         knowledgeGraph = ke.graph;
         cieGate = shouldUseKnowledgePlanner(knowledgeGraph, true);
@@ -406,6 +432,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // stale half of the list the editor grades against. Loaded before the brief so the
     // brief and the compiled plan cannot be written against different vocabularies.
     const tableTerms = await readArticleTerms(articleIdNum).catch(() => []);
+
+    // A domain that has not published through Ranksmile yet has nothing here, so the
+    // Writer's allowlist was empty and the article shipped without a single internal
+    // link. The client's own pages are in the sitemap the audit already reads.
+    if (domainArticles.length < 3 && domainName) {
+      try {
+        const sitemapUrls = await gatherBlogUrls(article.domain_id, domainName);
+        const known = new Set(domainArticles.map((a) => a.url.replace(/\/+$/, '')));
+        // Terms, not just the keyword: the client's topical pages rarely repeat the query
+        // in their slug, and ranking on the keyword alone found exactly one page.
+        const linkTerms = importantTermsFromScoreData(scoreData, { tableTerms });
+        for (const target of pickLinkTargets({ urls: sitemapUrls, keyword, terms: linkTerms })) {
+          if (!known.has(target.url.replace(/\/+$/, ''))) domainArticles.push(target);
+        }
+      } catch (err) {
+        console.warn('[articles/[id]/generate] sitemap link targets skipped:', getErrorMessage(err));
+      }
+    }
 
     const approvedHeadings = reviewed.length > 0
       ? reviewed

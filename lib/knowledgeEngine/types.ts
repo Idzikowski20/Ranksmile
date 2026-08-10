@@ -110,6 +110,8 @@ export type StageTimingsMs = {
   extract: number;
   normalize: number;
   canonicalize: number;
+  /** 0 when no completion was injected — the stage is skipped, not merely fast. */
+  normalizeClaims: number;
   vote: number;
   cluster: number;
   build: number;

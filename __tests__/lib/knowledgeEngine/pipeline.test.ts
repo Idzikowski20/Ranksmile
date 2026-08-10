@@ -357,3 +357,36 @@ describe('runKnowledgeEngine smoke', () => {
     expect(total).toBeLessThan(2000);
   });
 });
+
+/**
+ * `normalizeCandidates` runs isNonClaimSentence over sentences only. When the corpus is
+ * thin (under five usable sentences) the engine falls back to competitor HEADINGS, which
+ * reached canonicalization untouched — so a competitor FAQ heading became a claim by the
+ * back door, the exact shape the filter exists to reject.
+ */
+describe('thin-corpus heading fallback', () => {
+  const FAQ_HEADING = 'Ile kosztuje godzina pracy prywatnego detektywa w Warszawie?';
+  const REAL_HEADING = 'Zakres uslug detektywistycznych obejmuje obserwacje '
+    + 'i wywiad gospodarczy';
+
+  it('does not turn a competitor FAQ heading into a claim', async () => {
+    const { graph } = await runKnowledgeEngine({
+      keyword: 'prywatny detektyw warszawa',
+      // headingTextsFromOutline keeps level-2 objects only — a bare string array yields
+      // no documents at all, which would make this assertion pass vacuously.
+      outlinesCache: JSON.stringify({
+        competitors: [{
+          url: 'https://a.pl',
+          headings: [
+            { level: 2, text: FAQ_HEADING },
+            { level: 2, text: REAL_HEADING },
+          ],
+        }],
+      }),
+    });
+
+    const statements = graph.claims.map((c) => c.statement);
+    expect(statements).toContain(REAL_HEADING);
+    expect(statements).not.toContain(FAQ_HEADING);
+  });
+});

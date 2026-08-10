@@ -264,6 +264,48 @@ describe('Knowledge Coverage gate', () => {
     expect(report.questions.pct).toBe(50);
     expect(report.knowledgeCoveragePct).toBe(50);
   });
+
+  /**
+   * When the SERP yields more required claims than an outline can hold (importanceFromGain
+   * marks every observed claim required), the 95% gate must measure against structural
+   * capacity, not the raw count — article 15 stalled at 56/65 = 86% with every slot full.
+   */
+  it('measures critical-claim coverage against outline capacity, not the raw count', () => {
+    // One section holds MAX_CLAIMS_PER_SECTION (8) claims; give the KG 12 required claims.
+    const claims = Array.from({ length: 12 }, (_, i) => ({
+      id: `c${i}`,
+      statement: `Fakt ${i}`,
+      topic: 't',
+      type: 'fact' as const,
+      importance: 'required' as const,
+      gainClass: 'opportunity' as const,
+      priority: 'high' as const,
+      sources: [],
+    }));
+    const kg: TargetKnowledgeGraph = { claims, questions: [], entities: [] };
+    const outline: AdaptiveOutline = {
+      h1: 'x',
+      narrativeOrder: ['s0'],
+      sections: [{
+        id: 's0',
+        heading: 'Start',
+        role: 'quick_answer',
+        importance: 10,
+        assignedClaimIds: claims.slice(0, 8).map((c) => c.id), // the 8 that fit
+        assignedQuestionIds: [],
+        requiredBlocks: [],
+        expectedWords: 200,
+        evidenceNeeds: [],
+        freshnessNotes: [],
+        sectionBudget: sampleBrief().budget,
+      }],
+    };
+
+    const report = computeKnowledgeCoverage({ kg, outline, briefs: [] });
+
+    // 8 assigned of 8-capacity, not 8 of 12 (66.7%) — the plan filled every slot.
+    expect(report.criticalClaims.pct).toBe(100);
+  });
 });
 
 describe('Article Execution Plan', () => {

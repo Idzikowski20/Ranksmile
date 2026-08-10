@@ -170,8 +170,9 @@ function parseBrief(raw: string): LlmBrief | null {
   return parseObject(raw.slice(start, end + 1)) ?? parseObject(`${raw.slice(start, end + 1)}]}`);
 }
 
-function buildPrompt(input: BriefWriterInput): { system: string; user: string } {
+function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string; user: string } {
   const { bundle } = input;
+  const partial = batch.length < bundle.briefs.length;
   const lang = (input.language || bundle.reader.language || 'pl').startsWith('en') ? 'en' : 'pl';
   const claims = new Map(bundle.targetKg.claims.map((c) => [c.id, c]));
   const brand = input.brandKnowledge.trim().slice(0, BRAND_CHARS);
@@ -194,6 +195,14 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
     lang === 'pl' ? 'Write in Polish.' : 'Write in English.',
     'Reply with JSON only: {"title": string, "sections": [{"n": number, "heading": string, "instructions": string[]}]}',
     '"n" is the number the section was given below — copy it, so a section is never briefed under another role.',
+    // One call for a 13-section outline had to fit ~80 instructions in one reply, and a
+    // truncated or garbled reply cost every section but one. Sections are batched now, so
+    // each call writes a handful; FULL OUTLINE keeps the batches from covering the same
+    // ground under different headings.
+    ...(partial ? [
+      'Brief ONLY the sections listed under SECTIONS. FULL OUTLINE lists the whole article',
+      'for context — other calls write those, and your headings must not repeat their angle.',
+    ] : []),
     '',
     'HEADINGS: each section arrives with a ROLE, not a title. Write the real H2 for it.',
     'A heading names what the section covers and carries the keyword or a close variant —',
@@ -231,7 +240,10 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
 
   const factSheet = buildFactSheet(bundle.targetKg.claims);
 
-  const sections = bundle.briefs.map((brief, i) => {
+  // Numbered globally, never by position in the batch — "n" is how a brief is paired back
+  // to its section, and a batch-local number would file section 6 as section 1.
+  const sections = batch.map((i) => {
+    const brief = bundle.briefs[i];
     const questions = [...(brief.mustAnswer || [])].slice(0, QUESTIONS_PER_SECTION);
     const evidence = claimTexts(brief, claims);
     return [
@@ -281,6 +293,13 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
       ? 'Rewrite it as a real page title: what we are, who we serve, why us. Keep the keyword in it.'
       : 'Rewrite it as a descriptive page title for the topic. Claim nothing about any company.',
     '',
+    // Headings only: the evidence is what makes this block expensive, and repeating every
+    // section's evidence in every batch would cost more than the single call it replaced.
+    partial
+      ? `FULL OUTLINE (context only — other calls brief these):\n${
+        bundle.briefs.map((b, i) => `${i + 1}. ${b.heading}`).join('\n')}`
+      : '',
+    '',
     'SECTIONS:',
     sections,
     '',
@@ -290,15 +309,38 @@ function buildPrompt(input: BriefWriterInput): { system: string; user: string } 
   return { system, user };
 }
 
-/**
- * Returns `null` rather than throwing: a brief is an improvement on the extracted outline,
- * never a precondition for it. The caller falls back to `reviewOutlineFromBundle`.
- */
-export async function writeOutlineBrief(input: BriefWriterInput): Promise<ApprovedOutlineHeading[] | null> {
-  const { bundle } = input;
-  if (!bundle.outline || !bundle.briefs.length) return null;
+type BriefAttempt = {
+  parsed: LlmBrief;
+  written: Map<number, { heading: string; instructions: string[] }>;
+  /** Sections that came back with real instructions, not the planner's stub objective. */
+  covered: number;
+};
 
-  const { system, user } = buildPrompt(input);
+/**
+ * A reply covering less of the outline than this is a truncated or garbled one, not the
+ * model judging the rest unworthy — every section was handed to it with its own claims.
+ */
+const MIN_SECTION_COVERAGE = 0.8;
+const BRIEF_ATTEMPTS = 2;
+/**
+ * Sections per call.
+ *
+ * One call for the whole outline had to fit ~6 instructions × 13 sections in a single
+ * reply — the failure that shipped twelve stub sections. Batching bounds every reply to
+ * something a model comfortably completes. Not one call per section: the brand document,
+ * the terms, the ranking-page titles and the fact sheet are repeated in every prompt, so
+ * thirteen calls would pay that preamble thirteen times to save nothing.
+ */
+const BRIEF_BATCH_SIZE = 5;
+
+/** One call: complete, charge, parse, pair. `null` when the call or the parse failed. */
+async function runBriefAttempt(
+  input: BriefWriterInput,
+  system: string,
+  user: string,
+  batch: number[],
+): Promise<BriefAttempt | null> {
+  const { bundle } = input;
   let raw = '';
   let spent = 0;
   try {
@@ -345,26 +387,92 @@ export async function writeOutlineBrief(input: BriefWriterInput): Promise<Approv
   const written = new Map<number, { heading: string; instructions: string[] }>();
   sections.forEach((section, i) => {
     const n = typeof section?.n === 'number' && Number.isInteger(section.n) ? section.n - 1 : i;
-    const index = n >= 0 && n < bundle.briefs.length ? n : i;
+    // Positional fallback resolves within this batch, not the whole outline: reply #1 of
+    // the batch covering sections 6-10 is section 6, and treating it as section 1 would
+    // overwrite another batch's brief.
+    const index = n >= 0 && n < bundle.briefs.length ? n : (batch[i] ?? i);
+    if (!batch.includes(index)) return;
     if (written.has(index)) return;
     written.set(index, {
       heading: typeof section?.heading === 'string' ? section.heading.trim() : '',
       instructions: asStringList(section?.instructions, 8),
     });
   });
+
   // Instructions are what a brief is for; a missing heading just falls back to the
   // planner's label. Requiring both would throw away a usable brief over a blank title.
-  if (![...written.values()].some((w) => w.instructions.length)) {
+  const covered = [...written.values()].filter((w) => w.instructions.length).length;
+  return { parsed, written, covered };
+}
+
+/** One batch of sections, retried while it comes back covering less than it was given. */
+async function runBriefBatch(
+  input: BriefWriterInput,
+  batch: number[],
+): Promise<BriefAttempt | null> {
+  const { system, user } = buildPrompt(input, batch);
+  let best: BriefAttempt | null = null;
+
+  for (let tries = 0; tries < BRIEF_ATTEMPTS; tries += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const attempt = await runBriefAttempt(input, system, user, batch);
+    if (!attempt) break;
+    if (!best || attempt.covered > best.covered) best = attempt;
+    if (best.covered >= batch.length * MIN_SECTION_COVERAGE) break;
+    console.warn(
+      `[briefWriter] batch ${batch[0] + 1}-${batch[batch.length - 1] + 1} covered `
+      + `${attempt.covered}/${batch.length} sections — retrying`,
+    );
+  }
+
+  return best;
+}
+
+/**
+ * Returns `null` rather than throwing: a brief is an improvement on the extracted outline,
+ * never a precondition for it. The caller falls back to `reviewOutlineFromBundle`.
+ */
+export async function writeOutlineBrief(input: BriefWriterInput): Promise<ApprovedOutlineHeading[] | null> {
+  const { bundle } = input;
+  if (!bundle.outline || !bundle.briefs.length) return null;
+
+  const batches: number[][] = [];
+  for (let i = 0; i < bundle.briefs.length; i += BRIEF_BATCH_SIZE) {
+    batches.push(bundle.briefs.map((_, n) => n).slice(i, i + BRIEF_BATCH_SIZE));
+  }
+
+  // In parallel: the batches share no state, and the reviewer waits on the slowest one
+  // rather than on their sum.
+  const results = await Promise.all(batches.map((batch) => runBriefBatch(input, batch)));
+
+  const written = new Map<number, { heading: string; instructions: string[] }>();
+  let title = '';
+  for (const result of results.filter((r): r is BriefAttempt => r !== null)) {
+    if (!title && typeof result.parsed.title === 'string' && result.parsed.title.trim()) {
+      title = result.parsed.title.trim();
+    }
+    for (const [index, section] of result.written) {
+      if (section.instructions.length) written.set(index, section);
+    }
+  }
+
+  const covered = written.size;
+  if (covered === 0) {
     console.warn('[briefWriter] brief produced no usable section');
     return null;
   }
-
-  const title = typeof parsed.title === 'string' && parsed.title.trim()
-    ? parsed.title.trim()
-    : bundle.outline.h1;
+  if (covered < bundle.briefs.length) {
+    // Loud on purpose: a section that keeps the planner's objective ships to the reviewer
+    // as "Pokryj <heading> z przypisanymi claims", which is the stub this module exists
+    // to replace. Silence is how twelve of thirteen went out unnoticed.
+    console.warn(
+      `[briefWriter] ${bundle.briefs.length - covered}/${bundle.briefs.length} sections `
+      + 'kept the planner objective after every attempt',
+    );
+  }
 
   return [
-    { level: 1, text: title },
+    { level: 1, text: title || bundle.outline.h1 },
     ...bundle.briefs.map((brief, i) => {
       const section = written.get(i);
       return {

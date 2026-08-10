@@ -2,6 +2,7 @@ import {
   titleizeH1,
   localizedRequiredSections,
   orderSectionsFaqLast,
+  isTailSectionRole,
   isSeoMetaHeading,
   namesAnotherBrand,
 } from '../../../lib/contentPlanner/sectionLabels';
@@ -160,6 +161,35 @@ describe('service-page skeleton for hiring intent', () => {
     ]);
 
     expect(ordered.sections.map((s) => s.id)).toEqual(['b', 'f', 'c']);
+  });
+
+  /**
+   * "kontakty" is the plural noun — connections, contacts in an industry — not the
+   * contact section. A real outline shipped "Szerokie kontakty z wielu branż" AFTER both
+   * the FAQ and Kontakt, because the sign-off pattern matched the word anywhere.
+   */
+  it('does not file a body section as the sign-off just for containing "kontakty"', () => {
+    const ordered = orderSectionsFaqLast([
+      { id: 'b', role: 'competitor_0', heading: 'Szerokie kontakty z wielu branż' },
+      { id: 'f', role: 'faq', heading: 'FAQ' },
+      { id: 'c', role: 'kontakt', heading: 'Kontakt' },
+    ]);
+
+    expect(ordered.sections.map((s) => s.id)).toEqual(['b', 'f', 'c']);
+  });
+
+  it.each([
+    ['Kontakt', true],
+    ['Dane kontaktowe', true],
+    ['Podsumowanie', true],
+    ['Szerokie kontakty z wielu branż', false],
+    ['Dzięki kontaktom w branży detektywistycznej', false],
+    ['Sieć kontaktów w wielu branżach', false],
+    ['Praca z kontaktami z rynku', false],
+    ['Nasze kontakty w branży detektywistycznej', false],
+    ['Zakres usług', false],
+  ])('classifies %s as sign-off: %s', (heading, expected) => {
+    expect(isTailSectionRole('body', heading)).toBe(expected);
   });
 });
 

@@ -148,6 +148,29 @@ describe('coverageQuestionsForPlanner', () => {
     ]);
   });
 
+  /**
+   * compileAfterArticleChange reads articles.content, extracts its facts and writes each
+   * one back as a knowledge item with source 'manual'. Grading the article against its own
+   * sentences is what that snapshot is for; feeding them to the PLANNER is a loop —
+   * /generate pushes every question in as a claim, so each run was partly sourced from the
+   * previous run's output. Article 18 took four "Wpleć frazy: ..." brief bullets in as
+   * facts that way, because at the time the article body was the outline review document.
+   */
+  it('never feeds the article its own sentences back as questions', () => {
+    const raw = snap([
+      { ...item('own-1'), source: 'manual', label: 'Wpleć frazy: kontakt, działania, dowodow.', importance: 'critical' },
+      { ...item('own-2'), source: 'manual', label: 'Agencja detektywistyczna ProDetektyw prowadzi obserwacje.' },
+      { ...item('ext'), source: 'llm', label: 'Ile kosztuje detektyw w Warszawie?' },
+    ]);
+
+    expect(coverageQuestionsForPlanner(raw)).toEqual(['Ile kosztuje detektyw w Warszawie?']);
+  });
+
+  it.each(['llm', 'paa', 'serp', 'competitors'] as const)('keeps external demand from %s', (source) => {
+    const raw = snap([{ ...item('q'), source, label: 'Czy śledzenie przez detektywa jest legalne?' }]);
+    expect(coverageQuestionsForPlanner(raw)).toEqual(['Czy śledzenie przez detektywa jest legalne?']);
+  });
+
   it('returns [] for null, garbage, and snapshot-less articles', () => {
     expect(coverageQuestionsForPlanner(null)).toEqual([]);
     expect(coverageQuestionsForPlanner('{not json')).toEqual([]);

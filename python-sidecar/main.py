@@ -236,6 +236,14 @@ async def _generate_article(req: GenerateRequest, on_status=None):
     if dropped:
         print(f"[generate] Removed {dropped} hallucinated internal link(s)")
 
+    # The Writer may cite a statute or regulator it knows; nothing has checked that URL
+    # yet. Unwrap every external anchor that is not https, on an authority host, and
+    # actually reachable — a link is worth having only if it survives being followed.
+    from pipeline.external_links import verify_external_links
+    article_html, bad_external = await verify_external_links(article_html, req.url)
+    if bad_external:
+        print(f"[generate] Removed {bad_external} unverified external link(s)")
+
     # Surfer-style mid-article images (Pollinations) — fail-soft
     try:
         from pipeline.article_images import inject_inline_images

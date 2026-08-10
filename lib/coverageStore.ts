@@ -116,6 +116,17 @@ export function coverageQuestionsForPlanner(raw: unknown): string[] {
   const seen = new Set<string>();
   return parseCoverageItems(raw)
     .filter((i) => (i.category === 'knowledge' || i.category === 'intent') && i.label.trim())
+    // `manual` is the CCM projection: compileAfterArticleChange reads articles.content,
+    // extracts its facts and writes each one back as a knowledge item. Grading the
+    // article against its own sentences is the point of that snapshot — feeding them to
+    // the PLANNER is a loop. /generate pushes every one of these in as a claim, so each
+    // run was partly sourced from the previous run's output; article 18 took four
+    // "Wpleć frazy: ..." brief bullets in as facts that way, because at the time the
+    // article body was the outline review document.
+    //
+    // What survives is external demand — llm / paa / serp / competitors — which is what
+    // this list was added for.
+    .filter((i) => i.source !== 'manual')
     .slice()
     // localeCompare after importance so two snapshots with the same items in a different
     // stored order yield the same order — the planner's per-section cap is otherwise
