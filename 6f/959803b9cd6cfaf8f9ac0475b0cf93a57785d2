@@ -1,0 +1,21 @@
+utils/getUser.ts
+  s_668ab4f91e9d5a::t_a4833482102f24 10-32,39,42
+__tests__/utils/getUserRouteLog.test.ts
+  s_668ab4f91e9d5a::t_2ac418224239e3 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6f959803b9cd6cfaf8f9ac0475b0cf93a57785d2",
+  "prompts": {},
+  "sessions": {
+    "s_668ab4f91e9d5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ee15196f-594f-46a0-a969-764b8eb908b4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
