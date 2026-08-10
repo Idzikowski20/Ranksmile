@@ -92,3 +92,23 @@ describe('the flag follows the live document', () => {
     expect(isOutlineAwaitingReview({ content: notYetEmitted || STALE_OUTLINE, scoreData: WITH_PLAN })).toBe(true);
   });
 });
+
+
+/**
+ * `isUsableArticleHtml` demands 80 plain characters. Using it as an emptiness check
+ * reopened a short but deliberately authored draft in outline review and suspended its
+ * autosave, so the author's own words stopped being saved.
+ */
+describe('short authored drafts are not outlines', () => {
+  it('treats a few written words as written, even with planner metadata present', () => {
+    expect(isOutlineAwaitingReview({ content: '<h1>Detektyw</h1><p>Krotki wstep.</p>', scoreData: WITH_PLAN }))
+      .toBe(false);
+  });
+
+  it.each(['', '<p></p>', '<p>   </p>', '<h1></h1><p>&nbsp;</p>'])(
+    'still reopens review for genuinely empty content %p',
+    (content) => {
+      expect(isOutlineAwaitingReview({ content, scoreData: WITH_PLAN })).toBe(true);
+    },
+  );
+});

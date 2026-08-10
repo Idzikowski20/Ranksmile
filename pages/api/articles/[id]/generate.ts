@@ -317,15 +317,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           // Rewrites scraped competitor prose into atomic facts and merges duplicates so
           // claims carry real source counts. The gateway is injected rather than imported
           // by the engine, which must stay free of the database for its unit tests.
-          normalizeCompletion: async (prompt) => (await llmGateway({
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0,
-            maxTokens: 3000,
-            responseFormat: 'json_object',
-            jobType: 'knowledge_normalize_claims',
-            keyword,
-            workspaceId: orgId == null ? undefined : String(orgId),
-          })).text,
+          normalizeCompletion: async (prompt) => {
+            const { text } = await llmGateway({
+              messages: [{ role: 'user', content: prompt }],
+              temperature: 0,
+              maxTokens: 3000,
+              responseFormat: 'json_object',
+              jobType: 'knowledge_normalize_claims',
+              keyword,
+              workspaceId: orgId == null ? undefined : String(orgId),
+            });
+            // Charged to the org's shared pool like every other completion here. Without
+            // this the stage spent up to 3000 completion tokens per batch that the 5-hour
+            // budget never saw, so repeated generates walked straight past the gate.
+            // Four chars per token is the same estimate the gateway bills its telemetry on
+            // — the providers in the chain do not all return usage counts.
+            if (orgId != null) {
+              await recordAiTokens(orgId, Math.ceil((prompt.length + text.length) / 4));
+            }
+            return text;
+          },
         });
         knowledgeGraph = ke.graph;
         cieGate = shouldUseKnowledgePlanner(knowledgeGraph, true);

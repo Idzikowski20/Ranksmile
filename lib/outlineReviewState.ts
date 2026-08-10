@@ -8,7 +8,7 @@
  *
  * One implementation so those three cannot disagree.
  */
-import { isUsableArticleHtml } from './articleHtmlUsable';
+import { stripHtmlToPlain } from './articleHtmlUsable';
 import { isReviewOutlineHtml } from './contentPlanner/reviewOutline';
 
 export type OutlineReviewInput = {
@@ -34,7 +34,11 @@ export function isOutlineAwaitingReview(article: OutlineReviewInput | null | und
   // itself first — that also rescues articles whose outline was persisted into content
   // by an earlier build, before autosave was suspended during review.
   if (isReviewOutlineHtml(html)) return true;
-  if (isUsableArticleHtml(html)) return false;
+  // Emptiness, not usability. `isUsableArticleHtml` demands 80 plain characters, so a
+  // short but deliberately authored draft on an article that also has planner metadata
+  // was reopened in outline review and its autosave suspended. Anything the author has
+  // actually written counts as written.
+  if (stripHtmlToPlain(html).length > 0) return false;
   // Nothing written yet. A planner bundle means an outline was produced for this article
   // and never turned into an article; without one there is simply nothing to review.
   return hasPlannerBundle(article.scoreData);
