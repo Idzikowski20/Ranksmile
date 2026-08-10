@@ -264,6 +264,49 @@ describe('writeOutlineBrief', () => {
   });
 
   /**
+   * Everything upstream of the brief is a pure function of a frozen knowledge graph, so a
+   * second outline for the same article can differ in one place only: the wording. That
+   * wording was itself dictated — "Krotki wstep (2-3 zdania)", "Punkt o <temat>", a
+   * closing "Wplec frazy" — so two regenerations came back as the same brief twice.
+   */
+  describe('loosenTemplate', () => {
+    it('drops the fixed bullet moulds on a second pass', async () => {
+      const c = call(GOOD, { loosenTemplate: true });
+      await c.run();
+
+      const { system } = c.seen[0];
+      expect(system).not.toMatch(/First bullet: the lead/);
+      expect(system).not.toMatch(/Middle bullets:/);
+      expect(system).not.toMatch(/Last bullet:/);
+      expect(system).toMatch(/do not prefix bullets with a fixed label/);
+    });
+
+    it('keeps the requirements the moulds were carrying', async () => {
+      const c = call(GOOD, { loosenTemplate: true, importantTerms: ['wywiad gospodarczy'] });
+      await c.run();
+
+      const { system, user } = c.seen[0];
+      // The lead answering the keyword's question is worth a flat +15 from the coverage
+      // judge — it survives the freedom, it is only no longer a prescribed sentence.
+      expect(system).toMatch(/answering the\s+keyword's main question before any context/);
+      // Terms are graded, so a looser brief may move them, never drop them.
+      expect(system).toMatch(/phrases from the terms above are still named/);
+      expect(user).toContain('wywiad gospodarczy');
+      // Everything outside the mould block is one contract for both passes.
+      expect(system).toContain('BRAND section is MATERIAL');
+      expect(system).toMatch(/A bullet says what to cover, not what to avoid/);
+    });
+
+    it('is the strict shape unless a caller asks otherwise', async () => {
+      const c = call(GOOD);
+      await c.run();
+
+      expect(c.seen[0].system).toMatch(/Krotki wstep \(2-3 zdania\)/);
+      expect(c.seen[0].system).not.toMatch(/do not prefix bullets with a fixed label/);
+    });
+  });
+
+  /**
    * The coverage judge pays a flat +15 for a lead that answers the main question, and
    * quotes-by-AI-engines come from the lead — yet our briefs always opened with context.
    */
@@ -548,5 +591,36 @@ describe('writeOutlineBrief batching', () => {
 
     expect(c.seen).toHaveLength(1);
     expect(c.seen[0].user).not.toContain('FULL OUTLINE');
+  });
+});
+
+/**
+ * The brand document was reaching the model in full and still produced a brief about
+ * detective work in general, with the company nowhere in it. Every BRAND rule was a
+ * restriction ("comes from the BRAND section or is not written at all", "never mention
+ * the BRAND section") while the FIELD rule was an imperative ("you are expected to name
+ * it") — so the model satisfied the imperative and treated the brand as a fence.
+ *
+ * Measured on the live model with the real 727-character brand document: the company name
+ * appeared 2x without this rule and 12x with it, and only with it did the H1 name the
+ * company at all.
+ */
+describe('the brief is told to USE the brand, not only to respect it', () => {
+  it('states the brand as material and demands the company be named', async () => {
+    const c = call(GOOD);
+    await c.run();
+    const { system } = c.seen[0];
+
+    expect(system).toContain('BRAND section is MATERIAL');
+    expect(system).toContain('name the company');
+    expect(system).toMatch(/could have been written for any\s+competitor has failed/);
+  });
+
+  it('still forbids inventing a company fact that the brand does not carry', async () => {
+    const c = call(GOOD);
+    await c.run();
+
+    expect(c.seen[0].system).toContain('not licence to invent');
+    expect(c.seen[0].system).toContain('or is not written at all');
   });
 });

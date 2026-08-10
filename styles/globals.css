@@ -340,7 +340,7 @@ label {
 }
 
 body {
-   background-color: var(--color-surface-strong);
+   background: var(--koala-bg-secondary);
    font-family: var(--font-family-primary);
    font-size: var(--font-size-base);
    font-weight: var(--font-weight-base);
@@ -356,7 +356,6 @@ body {
    }
 
    body {
-      padding: 8px;
       box-sizing: border-box;
    }
 
@@ -9540,3 +9539,57 @@ html.koala-shell[data-theme="cream"] .app-content {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Onboarding invite step — Figma 1:261, Koala tokens. */
+.invite-step { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 560px; }
+.invite-step__banner {
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: linear-gradient(102deg, #eff4f9 0%, #f8fafe 99%);
+}
+.invite-step__banner-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--koala-text-primary);
+}
+.invite-step__banner-title strong { font-weight: 700; }
+.invite-step__banner-sub {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--koala-text-secondary);
+}
+.invite-step__row { display: flex; align-items: flex-end; gap: 8px; }
+.invite-step__emails { flex: 1 1 auto; min-width: 0; }
+.invite-step__divider { height: 1px; background: var(--koala-border-primary); }
+.invite-step__count {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--koala-text-secondary);
+}
+.invite-step__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.invite-step__person { display: flex; align-items: center; gap: 12px; }
+.invite-step__avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--koala-bg-secondary);
+  color: var(--koala-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.invite-step__email {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--koala-text-primary);
+}
+.invite-step__note { margin: 0; font-size: 13px; line-height: 18px; color: var(--koala-text-secondary); }
