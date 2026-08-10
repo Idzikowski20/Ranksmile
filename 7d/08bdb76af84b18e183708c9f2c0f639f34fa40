@@ -1,0 +1,30 @@
+components/koala/forms/FileUpload.tsx
+  s_8d6cce368af4fd::t_9aa30bc693b62d 158-160
+  s_8d6cce368af4fd::t_32b16d14d220dd 106-107,109-111
+  s_8d6cce368af4fd::t_2d1b908b6f69da 226,230-234
+  s_8d6cce368af4fd::t_464943638e5a8b 136-137
+  s_8d6cce368af4fd::t_87c805dd313e19 178-182
+components/settings/ProfileSettings.tsx
+  s_8d6cce368af4fd::t_58c428fd7fe93b 112-113
+  s_8d6cce368af4fd::t_f25cc7521664c3 167-180
+  s_8d6cce368af4fd::t_3fa551fdf536c5 51
+  s_8d6cce368af4fd::t_f0dbcfc4090fb6 238-252,255
+__tests__/components/fileUploadChange.test.tsx
+  s_8d6cce368af4fd::t_7ed85b2451ade6 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7d08bdb76af84b18e183708c9f2c0f639f34fa40",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
