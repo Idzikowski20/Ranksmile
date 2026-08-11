@@ -1,0 +1,38 @@
+components/common/AppShell.tsx
+  s_0ec3366eee148d::t_ade432b8d74971 5
+  s_0ec3366eee148d::t_8db08a75e91721 47
+pages/sites/[domain]/automations.tsx
+  s_0ec3366eee148d::t_34d0c8fb0a54b2 106-113
+  s_0ec3366eee148d::t_f9d1f7c4244ba3 11
+pages/_app.tsx
+  s_0ec3366eee148d::t_0ff64bcdef735a 57-61
+  s_0ec3366eee148d::t_8759893926283b 16
+__tests__/components/AppBanner.test.tsx
+  s_0ec3366eee148d::t_39ea21e9c4e225 1-46
+components/koala/shell/index.ts
+  s_0ec3366eee148d::t_372137d851de99 5-6
+components/koala/shell/AppBanner.tsx
+  s_0ec3366eee148d::t_13fa3d947dbaf5 76-77,80
+  s_0ec3366eee148d::t_f68286d6c422d7 78-79
+  s_0ec3366eee148d::t_7f9ff9cf7893ab 1-73,75,81-99
+  s_0ec3366eee148d::t_5836261a5a8e2a 74
+styles/globals.css
+  s_0ec3366eee148d::t_3b8d23ccd10f70 7554-7556
+  s_0ec3366eee148d::t_91a6f030c89e53 7513-7553,7557-7580
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0c1399b7a57a1840639e51bd15deab4752aa3ed5",
+  "prompts": {},
+  "sessions": {
+    "s_0ec3366eee148d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a470c70e-1155-4d45-a740-a8517fa0e004",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
