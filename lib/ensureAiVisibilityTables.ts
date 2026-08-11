@@ -1,37 +1,41 @@
 import db from '../database/database';
 
-let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;
 const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
 const JSON_T = isPostgres ? 'JSONB' : 'TEXT';
 const NOW = 'CURRENT_TIMESTAMP';
 
 /**
- * Mirrors lib/ensurePipelineTables.ts: log non-"already exists" failures.
+ * The only two DDL failures this file may ignore.
  *
- * Records whether anything failed for a reason other than the object already being
- * there. Every statement here is IF NOT EXISTS, so a re-run is free — but `checked`
- * used to latch to true regardless, which pinned a transient DDL failure for the rest
- * of the process and left callers querying a table that was never created.
+ * The CREATEs are all IF NOT EXISTS and so never raise on a re-run; the ALTER TABLE
+ * ADD COLUMN migrations at the bottom have no such guard and raise every time after
+ * the first, which is what these patterns are actually for.
+ *
+ * Matched narrowly on purpose. The old test was /exist|duplicate|already/, and
+ * "duplicate" alone swallows `duplicate key value violates unique constraint` — the
+ * error a CREATE UNIQUE INDEX raises when the table already holds conflicting rows.
+ * That is a migration that genuinely did not happen, reported as routine.
  */
-let sawRealFailure = false;
-
-function ignoreExisting(label: string, e: unknown): void {
-   const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-   if (!/exist|duplicate|already/i.test(m)) {
-      sawRealFailure = true;
-      console.warn(`[ai-vis] ${label} failed:`, m);
-   }
-}
+const BENIGN_DDL = /already exists|duplicate column name/i;
 
 /**
  * Workspace-level AI Visibility tracking tables. Distinct from the
  * article-level ai_visibility_runs/citations pair (lib/aiVisibilityStore.ts):
  * these are keyed on domain_id and hold the wizard config + scan results.
  */
-export async function ensureAiVisibilityTables(): Promise<void> {
-   if (checked) return;
-   sawRealFailure = false;
+async function createAll(): Promise<boolean> {
+   // Run-scoped, not module-scoped: a shared flag let one call's reset clear another
+   // call's recorded failure, so a concurrent pair could latch success after a failed run.
+   let sawRealFailure = false;
+
+   const ignoreExisting = (label: string, e: unknown): void => {
+      const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
+      if (!BENIGN_DDL.test(m)) {
+         sawRealFailure = true;
+         console.warn(`[ai-vis] ${label} failed:`, m);
+      }
+   };
 
    // One config per domain. No row ⇒ the wizard has not been completed
    // and the route guard sends the user to /ai-visibility/setup.
@@ -117,6 +121,25 @@ export async function ensureAiVisibilityTables(): Promise<void> {
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_vis_prompts_config ON ai_vis_prompts (config_id)'); } catch (e) { ignoreExisting('idx prompts', e); }
    try { await db.query("ALTER TABLE ai_vis_configs ADD COLUMN priority TEXT DEFAULT 'long_tail'"); } catch (e) { ignoreExisting('ai_vis_configs.priority', e); }
 
-   // Only latch when everything really is in place; otherwise the next call retries.
-   checked = !sawRealFailure;
+   return !sawRealFailure;
+}
+
+/**
+ * Memoised on the in-flight promise, not on a boolean set at the end: concurrent first
+ * requests otherwise all ran the DDL, and whichever finished last decided the latch.
+ * A run that hit a real failure drops the memo so the next caller retries; a good run
+ * keeps it and every later call is free.
+ */
+let ready: Promise<boolean> | null = null;
+
+export async function ensureAiVisibilityTables(): Promise<void> {
+   if (!ready) ready = createAll();
+   let ok: boolean;
+   try {
+      ok = await ready;
+   } catch (e) {
+      ready = null;
+      throw e;
+   }
+   if (!ok) ready = null;
 }
