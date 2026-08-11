@@ -7510,6 +7510,74 @@ html.koala-shell[data-theme="cream"] .app-content {
   background: var(--koala-bg-primary);
 }
 
+/* Global banner — Figma 3950:55902. Full-bleed bar above sidebar + header, 40px tall,
+   inner container capped at 1280 so the text lines up with marketing-width content. */
+.koala-app-banner {
+  flex-shrink: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  color: #ffffff;
+  font-family: var(--font-family-primary);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
+  font-weight: 500;
+}
+
+.koala-app-banner__container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 10px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.koala-app-banner__message {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.koala-app-banner__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.koala-app-banner__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.koala-app-banner__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 0;
+  cursor: var(--koala-cursor-pointing);
+}
+
+.koala-app-banner__close:hover { color: #ffffff; }
+
+@media (max-width: 640px) {
+  .koala-app-banner__container { padding: 10px 16px; align-items: flex-start; }
+  .koala-app-banner__message { align-items: flex-start; }
+}
+
 /* Product Sidebar Variant=2 ? Figma 4903:6905 */
 .koala-sidebar {
   --koala-sidebar-w: 228px;
