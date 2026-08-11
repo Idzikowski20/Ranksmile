@@ -1,0 +1,34 @@
+components/koala/theme/KoalaThemeProvider.tsx
+  s_0ec3366eee148d::t_4844e5129cd018 5,7,11,17,21,24,34-37,49-63,75,79,81-82,85-109,116
+  s_0ec3366eee148d::t_4a54019969f8cd 144,147
+  s_0ec3366eee148d::t_20394646885433 128-129
+components/koala/theme/ThemeSwitcher.tsx
+  s_0ec3366eee148d::t_04d07dda0ab581 78-129
+  s_0ec3366eee148d::t_618eb3a6877722 2-10
+components/koala/tokens/themes.ts
+  s_0ec3366eee148d::t_240a01cb782cfd 1
+  s_0ec3366eee148d::t_2ca37059170c75 351-408
+__tests__/components/themes.accent.test.ts
+  s_0ec3366eee148d::t_3c3be8eb7bf858 1-48
+components/settings/ProfileSettings.tsx
+  s_0ec3366eee148d::t_bb81613ea0080d 162-165
+  s_0ec3366eee148d::t_90262de4393a1f 22
+components/koala/theme/index.ts
+  s_0ec3366eee148d::t_d9199d83c79f27 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7ee169345011ca9ddd6b92c3b72c59e83937f576",
+  "prompts": {},
+  "sessions": {
+    "s_0ec3366eee148d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a470c70e-1155-4d45-a740-a8517fa0e004",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
