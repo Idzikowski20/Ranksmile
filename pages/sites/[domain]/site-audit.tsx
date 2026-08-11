@@ -12,6 +12,7 @@ import SiteAuditIssues from '../../../components/siteAudit/SiteAuditIssues';
 import SiteAuditIssueDetail from '../../../components/siteAudit/SiteAuditIssueDetail';
 import SiteAuditCrawledPages from '../../../components/siteAudit/SiteAuditCrawledPages';
 import SiteAuditCompareCrawls from '../../../components/siteAudit/SiteAuditCompareCrawls';
+import { SiteAuditIssueDetailSkeleton, SiteAuditOverviewSkeleton, SiteAuditTableSkeleton } from '../../../components/siteAudit/SiteAuditSkeleton';
 import { CrawlLimitIndicator } from '../../../components/siteAudit/CrawlLimitPopover';
 import CrawlLimitUpgradeBanner from '../../../components/siteAudit/CrawlLimitUpgradeBanner';
 import { Button, Tabs } from '../../../components/koala/core';
@@ -221,9 +222,7 @@ const SiteAuditPage: NextPage = () => {
           style={auditing ? { opacity: 0.55, pointerEvents: 'none', userSelect: 'none' } : undefined}
           aria-busy={auditing || undefined}
         >
-        {auditQ.isLoading && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#52525C', fontFamily: FONT }}>Loading site audit…</div>
-        )}
+        {auditQ.isLoading && <SiteAuditOverviewSkeleton />}
         {auditQ.isError && (
           <div style={{ padding: 40, textAlign: 'center', color: '#FF6F77', fontFamily: FONT }}>
             {auditQ.error instanceof Error ? auditQ.error.message : 'Failed to load site audit'}
@@ -280,11 +279,7 @@ const SiteAuditPage: NextPage = () => {
         )}
         {data && data.hasData && tab === 'issues' && selectedIssueId && (
           <>
-            {issueDetailQ.isLoading && (
-              <div style={{ padding: 40, textAlign: 'center', color: '#52525C', fontFamily: FONT }}>
-                Loading issue details…
-              </div>
-            )}
+            {issueDetailQ.isLoading && <SiteAuditIssueDetailSkeleton />}
             {issueDetailQ.isError && (
               <div style={{ padding: 40, textAlign: 'center', color: '#FF6F77', fontFamily: FONT }}>
                 {issueDetailQ.error instanceof Error ? issueDetailQ.error.message : 'Failed to load issue'}
@@ -300,11 +295,7 @@ const SiteAuditPage: NextPage = () => {
         )}
         {data && data.hasData && tab === 'pagereport' && (
           <>
-            {crawledPagesQ.isLoading && (
-              <div style={{ padding: 40, textAlign: 'center', color: '#52525C', fontFamily: FONT }}>
-                Loading crawled pages…
-              </div>
-            )}
+            {crawledPagesQ.isLoading && <SiteAuditTableSkeleton rows={10} />}
             {crawledPagesQ.isError && (
               <div style={{ padding: 40, textAlign: 'center', color: '#FF6F77', fontFamily: FONT }}>
                 {crawledPagesQ.error instanceof Error ? crawledPagesQ.error.message : 'Failed to load crawled pages'}
@@ -315,11 +306,7 @@ const SiteAuditPage: NextPage = () => {
         )}
         {data && data.hasData && tab === 'compare' && (
           <>
-            {compareQ.isLoading && (
-              <div style={{ padding: 40, textAlign: 'center', color: '#52525C', fontFamily: FONT }}>
-                Loading compare crawls…
-              </div>
-            )}
+            {compareQ.isLoading && <SiteAuditTableSkeleton />}
             {compareQ.isError && (
               <div style={{ padding: 40, textAlign: 'center', color: '#FF6F77', fontFamily: FONT }}>
                 {compareQ.error instanceof Error ? compareQ.error.message : 'Failed to load compare crawls'}
