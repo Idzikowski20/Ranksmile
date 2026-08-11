@@ -1,12 +1,25 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '../icons/Icon';
+import { Spinner } from '../primitives/Spinner';
 
 /** Full-width bar above the shell (Figma `3950:55902`). Single line of text + optional link. */
 export type AppBannerState = {
   message: string;
   variant?: 'error' | 'warning' | 'brand';
   action?: { label: string; href: string };
+  /**
+   * Identity for the dismiss button, when `message` changes on its own — a countdown
+   * rewrites it every second, and keying dismissal on the message meant the banner came
+   * straight back on the next tick. Defaults to the message.
+   */
+  dismissKey?: string;
+  /**
+   * Work is running — a spinner takes the action slot. The countdown itself lives in
+   * `message`, because the owner of the retry owns the timer: `useAppBanner` round-trips
+   * this object through JSON, so a callback or a live counter cannot travel in it.
+   */
+  busy?: boolean;
   /** Close button; omit for banners the user must resolve. */
   dismissible?: boolean;
 };
@@ -98,8 +111,10 @@ export function AppBanner() {
   const banner = ctx?.banner ?? null;
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
   const key = banner ? JSON.stringify(banner) : '';
+  // Dismissal is keyed on the stable identity, not the rendered text.
+  const closeKey = banner?.dismissKey ?? banner?.message ?? '';
 
-  if (!banner || (banner.dismissible && dismissedKey === key)) return null;
+  if (!banner || (banner.dismissible && dismissedKey === closeKey)) return null;
 
   const variant = banner.variant ?? 'error';
 
@@ -115,6 +130,7 @@ export function AppBanner() {
           {banner.message}
         </span>
         <span className="koala-app-banner__actions">
+          {banner.busy && <Spinner size={16} color="currentColor" />}
           {/* Next.js 12 Link: single child, and it must be a real `<a>` (see SidebarItem). */}
           {banner.action && (
             <Link href={banner.action.href} passHref>
@@ -129,7 +145,7 @@ export function AppBanner() {
               type="button"
               className="koala-app-banner__close"
               aria-label="Dismiss"
-              onClick={() => setDismissedKey(key)}
+              onClick={() => setDismissedKey(closeKey)}
             >
               <Icon name="X" size={20} weight="regular" />
             </button>

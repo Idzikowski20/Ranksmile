@@ -79,7 +79,8 @@ describe('AnalysisProgressPanel', () => {
     render(<AnalysisProgressPanel phases={emptyPhases()} />);
 
     for (const label of [
-      'Generated prompts',
+      // Present tense while pending — emptyPhases() means nothing has run yet.
+      'Generating prompts',
       'Scraping answers from ChatGPT, AI Overviews, Gemini, AI Mode, Perplexity',
       'Calculating AI Search guidelines',
       'Getting search results',

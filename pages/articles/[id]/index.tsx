@@ -384,6 +384,14 @@ const ArticleEditorPage: NextPage = () => {
   const [article, setArticle] = useState<Article | null>(null);
   const [highlightTerms, setHighlightTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  /**
+   * Which article is currently on screen, or null before the first one lands. The loader
+   * below is a first-paint screen: it replaces the whole editor, so re-entering it
+   * unmounts TipTap and throws away everything in flight. A refetch of the SAME article
+   * must not do that — but a different article must, or the previous one stays editable
+   * and a save in that window PUTs its content to the new id.
+   */
+  const renderedArticleIdRef = useRef<string | null>(null);
   const [autoSaveState, setAutoSaveState] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [showPixabay, setShowPixabay] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -591,7 +599,14 @@ const ArticleEditorPage: NextPage = () => {
   useEffect(() => {
     if (!id || Array.isArray(id)) return undefined;
     let cancelled = false;
-    setIsLoading(true);
+    // Skipped only when this is the same article again. The effect re-runs on
+    // analysisReloadKey, which onAnalysisComplete bumps to pull the fresh scores, and
+    // flipping isLoading there swapped the editor for the full-screen loader, destroying
+    // the TipTap instance — a running outline request then called getHTML() on it
+    // ("Cannot read properties of null (reading 'cached')"). Navigating to a DIFFERENT
+    // article still shows the loader, so the previous document cannot be edited or saved
+    // against the new id while it loads.
+    if (renderedArticleIdRef.current !== String(id)) setIsLoading(true);
     fetch(`/api/articles/${id}`)
       .then((r) => r.json())
       .then(async (data) => {
@@ -630,6 +645,7 @@ const ArticleEditorPage: NextPage = () => {
             }
           }
           setArticle(art);
+          renderedArticleIdRef.current = String(id);
           // Rewrite image URLs so broken hotlinked images load via our server-side proxy.
           // Root-relative paths like /banner.png can't be fixed (domain unknown) — strip them.
           const content = (art.content || '').replace(
@@ -2108,7 +2124,11 @@ const ArticleEditorPage: NextPage = () => {
                   background: 'var(--koala-bg-primary)', borderRadius: 12,
                 }}
               >
-                <EditorLoading message="Analyzing imported content…" />
+                {/* Names what is actually running. The old copy said "imported content",
+                    which is only true when the article arrived via import — this overlay
+                    covers every deep analysis, and the side panel beside it lists the
+                    pipeline's steps, so the two should agree on what the wait is for. */}
+                <EditorLoading message="Running deep analysis — the editor unlocks when it completes" />
               </div>
             )}
           </div>

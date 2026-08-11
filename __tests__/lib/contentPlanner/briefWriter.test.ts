@@ -256,9 +256,12 @@ describe('writeOutlineBrief', () => {
 
     const { system, user } = c.seen[0];
     expect(system).toMatch(/25-40 words each/);
-    expect(system).toMatch(/Krotki wstep \(2-3 zdania\)/);
+    // The fixed opening sentence is gone on purpose: it made all fourteen sections start
+    // identically. The prompt now offers several shapes and forbids repeating one.
+    expect(system).toMatch(/Vary the wording across the article/);
+    expect(system).toMatch(/Never open every section with the same/);
     expect(system).toMatch(/Punkt o <temat>/);
-    expect(system).toMatch(/Wplec frazy/);
+    expect(system).toMatch(/Wpleć frazy/);
     // The phrases the closing bullet is meant to name have to be in the prompt.
     expect(user).toContain('wykrywanie podsluchow');
   });
