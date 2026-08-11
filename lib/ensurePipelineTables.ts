@@ -102,10 +102,15 @@ export async function ensurePipelineTables(): Promise<void> {
    //
    // New name, and the superseded one is dropped rather than re-declared: CREATE INDEX
    // IF NOT EXISTS matches on the name alone, so every database that already ran the
-   // first definition would have silently kept it. The drop is a no-op afterwards.
+   // first definition would have silently kept it.
+   //
+   // Create first, drop second — never the other way. If the create fails, dropping the
+   // old index first would leave the query with no index at all until the next boot that
+   // happens to succeed; this order keeps the old one covering the query until the new
+   // one is in place. The drop is a no-op once nobody is on the first definition.
    const scoreKey = isPostgres ? 'score DESC NULLS LAST' : 'score DESC';
-   try { await db.query('DROP INDEX IF EXISTS idx_page_audits_best'); } catch (e) { ignoreExisting('drop idx_page_audits_best', e); }
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_page_audits_top ON page_audits(domain_id, fetch_status, ${scoreKey}, word_count DESC, url ASC)`); } catch (e) { ignoreExisting('idx_page_audits_top', e); }
+   try { await db.query('DROP INDEX IF EXISTS idx_page_audits_best'); } catch (e) { ignoreExisting('drop idx_page_audits_best', e); }
 
    checked = true;
 }
