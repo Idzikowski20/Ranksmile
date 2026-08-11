@@ -43,9 +43,17 @@ export function reviewOutlineToHtml(outline: ApprovedOutlineHeading[]): string {
  */
 const TARGET_LENGTH_LINE = /Target length:\s*~\s*\d+\s*words/i;
 
-/** Anything reviewOutlineToHtml can emit: a heading of any level, a list, or `<p></p>`. */
-const OUTLINE_BLOCK = /<h[1-4][^>]*>[\s\S]*?<\/h[1-4]>|<ul[^>]*>[\s\S]*?<\/ul>|<p[^>]*>\s*<\/p>|<br\s*\/?>/gi;
-const ANY_HEADING = /<h[1-4][^>]*>/i;
+/** The blocks reviewOutlineToHtml emits, matched in document order. */
+const OUTLINE_BLOCK = /<(h[1-4])[^>]*>[\s\S]*?<\/\1>|<ul[^>]*>[\s\S]*?<\/ul>|<p[^>]*>\s*<\/p>|<br\s*\/?>/gi;
+
+type OutlineToken = 'title' | 'heading' | 'body' | 'skip';
+
+function tokenOf(block: string): OutlineToken {
+  if (/^<h1/i.test(block)) return 'title';
+  if (/^<h[2-4]/i.test(block)) return 'heading';
+  if (/^<(ul|p)/i.test(block)) return 'body';
+  return 'skip';
+}
 
 /**
  * Two ways in, because the format changed and old drafts did not.
@@ -53,23 +61,36 @@ const ANY_HEADING = /<h[1-4][^>]*>/i;
  * Legacy: the `Target length: ~N words` line every section used to carry. Articles saved
  * before autosave was suspended during review still hold it inside `articles.content`.
  *
- * Current: the document contains a heading and NOTHING that reviewOutlineToHtml cannot
- * emit — headings, instruction lists, and the empty `<p></p>` a section with no bullets
- * renders. Whatever is left after removing those is prose, and prose means an article.
+ * Current: the document matches the shape reviewOutlineToHtml produces, in order — an
+ * optional H1 title, then one or more sections, each a heading immediately followed by
+ * its instruction list (or the empty `<p></p>` a section with no bullets renders) — and
+ * nothing outside those blocks.
  *
- * Stated as "nothing else is present" rather than as a count of heading/list pairs. That
- * pairing was wrong three ways at once: a list belonging to a later section satisfied an
- * earlier heading, a section whose bullets were all deleted renders `<p></p>` and was
- * rejected, and only H2 was counted so an outline of H3s read as an article. Being
- * misread either way is costly — it suspends autosave over a finished article, or resumes
- * it over an outline the reviewer is still editing.
+ * The order is the point. Two weaker versions failed in opposite directions: counting
+ * heading/list PAIRS let a later section's list satisfy an earlier heading, and merely
+ * checking that nothing ELSE is present accepted any arrangement of headings and lists,
+ * so a genuine heading-and-list article with no prose was read as an outline — which
+ * suspends autosave over a finished article and loses the edits made after it.
  */
 export function isReviewOutlineHtml(html: string): boolean {
   const doc = html || '';
   if (TARGET_LENGTH_LINE.test(doc)) return true;
-  if (!ANY_HEADING.test(doc)) return false;
-  const leftover = doc.replace(OUTLINE_BLOCK, '').replace(/&nbsp;/gi, ' ').trim();
-  return leftover.length === 0;
+
+  const blocks = doc.match(OUTLINE_BLOCK) || [];
+  // Anything the renderer could not have produced — a paragraph with text, a table, an
+  // image — means this is an article, whatever the rest looks like.
+  if (doc.replace(OUTLINE_BLOCK, '').replace(/&nbsp;/gi, ' ').trim()) return false;
+
+  const tokens = blocks.map(tokenOf).filter((t) => t !== 'skip');
+  let i = 0;
+  if (tokens[i] === 'title') i += 1;
+  let sections = 0;
+  while (i < tokens.length) {
+    if (tokens[i] !== 'heading' || tokens[i + 1] !== 'body') return false;
+    sections += 1;
+    i += 2;
+  }
+  return sections > 0;
 }
 
 function nodeText(node: JSONContent): string {

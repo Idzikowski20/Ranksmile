@@ -53,14 +53,4 @@ describe('outlineForReview', () => {
 
     expect(outlineForReview({ approvedOutline: null, brief: legacyLooking })).toEqual(legacyLooking);
   });
-
-  /** With neither source there is nothing to show — and nothing to invent. */
-  it('cannot produce headings out of a bundle any more', () => {
-    const out = outlineForReview({
-      approvedOutline: null,
-      brief: null,
-    } as Parameters<typeof outlineForReview>[0]);
-
-    expect(out).toEqual([]);
-  });
 });

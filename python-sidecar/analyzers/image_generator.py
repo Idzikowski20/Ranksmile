@@ -39,9 +39,18 @@ def _safe_alt(text: str) -> str:
     the characters that could close an attribute or open a tag are removed here rather
     than trusted to every consumer. Not html.escape: BeautifulSoup escapes the attribute
     on the injection path, and escaping twice renders `&quot;` to the reader.
+
+    BOTH quote characters go, not just the double one. `alt='...'` is as valid as
+    `alt="..."`, so leaving `'` intact left the same break-out open — an earlier version
+    even swapped `"` for `'`, which produced the dangerous character from the safe one.
+    `&` goes too: it starts an entity, and a consumer that escapes once more would render
+    the mangled result to the reader. Quotes become typographic so the sentence still
+    reads as Polish prose.
     """
     cleaned = " ".join(str(text or "").split())
-    return cleaned.replace("<", "").replace(">", "").replace('"', "'")[:300]
+    for bad, good in (("<", ""), (">", ""), ("&", " i "), ('"', "”"), ("'", "’")):
+        cleaned = cleaned.replace(bad, good)
+    return " ".join(cleaned.split())[:300]
 
 
 LANGUAGE_NAMES = {

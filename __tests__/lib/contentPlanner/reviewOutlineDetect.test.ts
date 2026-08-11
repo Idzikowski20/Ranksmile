@@ -93,4 +93,22 @@ describe('isReviewOutlineHtml', () => {
       + '<h2>Co dalej</h2><p>Skontaktuj się ze specjalistą i zabezpiecz wiadomości.</p>';
     expect(isReviewOutlineHtml(article)).toBe(false);
   });
+
+  /**
+   * A checklist article: nothing but headings and lists, no prose at all. Accepting any
+   * arrangement of allowed blocks called this an outline, which suspends autosave over a
+   * finished article. The order is what separates them — the renderer pairs each heading
+   * with its own body, and this document does not.
+   */
+  it('does not fire on an article of headings and lists in the wrong order', () => {
+    const checklist = '<h2>Zanim zaczniesz</h2><h2>Kroki</h2>'
+      + '<ul><li>Zabezpiecz wiadomości</li><li>Zapisz daty</li></ul>';
+    expect(isReviewOutlineHtml(checklist)).toBe(false);
+  });
+
+  /** Two lists under one heading is also not the renderer's shape. */
+  it('does not fire when a section carries more than its own list', () => {
+    const doc = '<h2>Objawy</h2><ul><li>Lęk</li></ul><ul><li>Bezsenność</li></ul>';
+    expect(isReviewOutlineHtml(doc)).toBe(false);
+  });
 });

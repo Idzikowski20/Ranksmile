@@ -30,11 +30,11 @@ def test_inert_caps_length_and_survives_none():
     assert _inert(None) == ""
 
 
-def test_safe_alt_strips_markup_characters():
-    out = _safe_alt('Osoba przy oknie" onerror=alert(1) <img src=x>')
-    assert "<" not in out
-    assert ">" not in out
-    assert '"' not in out
+def test_safe_alt_strips_every_attribute_breaking_character():
+    """Single quotes count: `alt='...'` is as valid as `alt="..."`."""
+    out = _safe_alt("Osoba przy oknie\" onerror=alert(1) <img src=x> ' & more")
+    for bad in ("<", ">", '"', "'", "&"):
+        assert bad not in out, bad
 
 
 def test_safe_alt_keeps_ordinary_polish_text():
