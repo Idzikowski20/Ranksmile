@@ -59,14 +59,29 @@ type GeneratedPrompt = { text: string, provenance: string[] };
  * Degraded results are never stored: they are the template fallback for a
  * missing/failed paid call, and caching them would freeze the topic on
  * templates forever.
+ *
+ * ponytail: ceiling = read-then-generate is not single-flight, so two requests for the
+ * same (domain, topic) that arrive before either writes will both pay DataForSEO and
+ * one write loses to the unique index. The wizard's seed guard makes this a
+ * two-tabs/two-devices case, not the common path, and the cost is one duplicate call
+ * rather than a wrong result. Upgrade = claim the row first (INSERT an empty pool, and
+ * treat the losing INSERT as "someone else is fetching, poll or fall through") so only
+ * the claim holder buys.
  */
 async function readCached(domainId: number, topic: string): Promise<GeneratedPrompt[] | null> {
-   const row = await queryOne<{ prompts: unknown }>(
-      'SELECT prompts FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ? LIMIT 1',
-      [domainId, topic],
-   );
-   const prompts = row ? parseJsonish<GeneratedPrompt[]>(row.prompts) : null;
-   return Array.isArray(prompts) && prompts.length > 0 ? prompts : null;
+   try {
+      const row = await queryOne<{ prompts: unknown }>(
+         'SELECT prompts FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ? LIMIT 1',
+         [domainId, topic],
+      );
+      const prompts = row ? parseJsonish<GeneratedPrompt[]>(row.prompts) : null;
+      return Array.isArray(prompts) && prompts.length > 0 ? prompts : null;
+   } catch (e) {
+      // Best-effort, exactly like the write: a cache lookup that fails must degrade to
+      // generating, not 500 past the paid-call and template fallbacks below.
+      console.warn('[generate-prompts] cache read failed:', getErrorMessage(e));
+      return null;
+   }
 }
 
 async function writeCached(domainId: number, topic: string, prompts: GeneratedPrompt[]): Promise<void> {

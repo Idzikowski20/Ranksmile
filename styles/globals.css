@@ -9655,7 +9655,9 @@ html.koala-shell[data-theme="cream"] .app-content {
 /* Once the row wraps, the controls sit on their own line and share it evenly rather
    than each keeping a fixed width that re-triggers the overflow. */
 @media (max-width: 640px) {
-  .invite-step__who { flex-basis: 100%; }
+  /* Leaves room for the 32px avatar and the 12px gap, so identity stays on one line
+     and only the controls wrap below. A flat 100% pushed the name under its avatar. */
+  .invite-step__who { flex-basis: calc(100% - 44px); }
   .invite-step__person > .invite-step__role { width: auto; flex: 1 1 auto; }
 }
 .invite-step__meta {

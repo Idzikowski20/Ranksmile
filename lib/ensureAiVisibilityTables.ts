@@ -6,10 +6,22 @@ const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMEN
 const JSON_T = isPostgres ? 'JSONB' : 'TEXT';
 const NOW = 'CURRENT_TIMESTAMP';
 
-/** Mirrors lib/ensurePipelineTables.ts: log non-"already exists" failures. */
+/**
+ * Mirrors lib/ensurePipelineTables.ts: log non-"already exists" failures.
+ *
+ * Records whether anything failed for a reason other than the object already being
+ * there. Every statement here is IF NOT EXISTS, so a re-run is free — but `checked`
+ * used to latch to true regardless, which pinned a transient DDL failure for the rest
+ * of the process and left callers querying a table that was never created.
+ */
+let sawRealFailure = false;
+
 function ignoreExisting(label: string, e: unknown): void {
    const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-   if (!/exist|duplicate|already/i.test(m)) console.warn(`[ai-vis] ${label} failed:`, m);
+   if (!/exist|duplicate|already/i.test(m)) {
+      sawRealFailure = true;
+      console.warn(`[ai-vis] ${label} failed:`, m);
+   }
 }
 
 /**
@@ -19,6 +31,7 @@ function ignoreExisting(label: string, e: unknown): void {
  */
 export async function ensureAiVisibilityTables(): Promise<void> {
    if (checked) return;
+   sawRealFailure = false;
 
    // One config per domain. No row ⇒ the wizard has not been completed
    // and the route guard sends the user to /ai-visibility/setup.
@@ -104,5 +117,6 @@ export async function ensureAiVisibilityTables(): Promise<void> {
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_vis_prompts_config ON ai_vis_prompts (config_id)'); } catch (e) { ignoreExisting('idx prompts', e); }
    try { await db.query("ALTER TABLE ai_vis_configs ADD COLUMN priority TEXT DEFAULT 'long_tail'"); } catch (e) { ignoreExisting('ai_vis_configs.priority', e); }
 
-   checked = true;
+   // Only latch when everything really is in place; otherwise the next call retries.
+   checked = !sawRealFailure;
 }

@@ -51,10 +51,13 @@ export async function autoLearnBrandDna(opts: {
       return { learned: false, reason: `dna is ${Math.round(ageDays)}d old`, urls: 0 };
     }
 
+    // url ASC is the tie-break, not decoration: score and word_count collide often
+    // enough on a real blog that the LIMIT would otherwise cut an arbitrary eight of
+    // the tied pages, and the voice learned from identical data would differ per run.
     const rows = await db.query(
       `SELECT url FROM page_audits
         WHERE domain_id = ? AND fetch_status = 'OK' AND word_count >= ?
-        ORDER BY COALESCE(score, 0) DESC, word_count DESC
+        ORDER BY COALESCE(score, 0) DESC, word_count DESC, url ASC
         LIMIT ${MAX_URLS}`,
       { replacements: [opts.domainId, MIN_WORDS], type: QueryTypes.SELECT },
     ) as Array<{ url: string }>;

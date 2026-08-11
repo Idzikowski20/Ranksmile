@@ -54,6 +54,18 @@ describe('autoLearnBrandDna', () => {
     expect(sql).not.toMatch(/domain_gsc_pages/);
   });
 
+  // Which eight pages get learned from is the whole behaviour, so the ranking is
+  // pinned: best score first, and url ASC last so tied pages cannot be cut in a
+  // different order on two runs over the same data.
+  it('ranks by score and breaks ties deterministically', async () => {
+    getBrandDnaSummary.mockResolvedValue(null);
+    query.mockResolvedValue([{ url: 'https://site.pl/a' }, { url: 'https://site.pl/b' }]);
+
+    await autoLearnBrandDna({ domainId: 2 });
+
+    expect(String(query.mock.calls[0][0])).toMatch(/ORDER BY COALESCE\(score, 0\) DESC.*url ASC/s);
+  });
+
   // Re-learning on every analysis would hammer the ingest for no gain.
   it('does nothing while the DNA is recent', async () => {
     getBrandDnaSummary.mockResolvedValue({ updated_at: daysAgo(3) });

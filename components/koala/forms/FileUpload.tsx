@@ -187,6 +187,10 @@ export function FileUpload({
         tabIndex={disabled ? -1 : 0}
         aria-controls={inputId}
         onKeyDown={(e) => {
+          // Only when the Zone itself has focus. Enter/Space on a nested button (Browse,
+          // Cancel) bubbles here, and preventDefault would suppress that button's own
+          // click — Cancel could never fire, so keyboard users had no way out of Change.
+          if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             inputRef.current?.click();
