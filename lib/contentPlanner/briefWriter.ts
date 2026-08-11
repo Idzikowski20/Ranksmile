@@ -243,7 +243,12 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
   const lang = (input.language || bundle.reader.language || 'pl').startsWith('en') ? 'en' : 'pl';
   const claims = new Map(bundle.targetKg.claims.map((c) => [c.id, c]));
   const brand = input.brandKnowledge.trim().slice(0, BRAND_CHARS);
-  const phraseTerms = briefPhraseTerms(input.importantTerms || [], TERMS);
+  // asEvidence, like every other scraped value in this prompt: terms come from stored NLP
+  // output, and a newline or a `<` in one would let it close the evidence wrapper and read
+  // as a fresh instruction to the model.
+  const phraseTerms = briefPhraseTerms(input.importantTerms || [], TERMS)
+    .map(asEvidence)
+    .filter(Boolean);
 
   const system = [
     'You write the section brief for an SEO article — instructions for a writer, never the article itself.',

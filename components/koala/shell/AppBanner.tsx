@@ -9,6 +9,12 @@ export type AppBannerState = {
   variant?: 'error' | 'warning' | 'brand';
   action?: { label: string; href: string };
   /**
+   * Identity for the dismiss button, when `message` changes on its own — a countdown
+   * rewrites it every second, and keying dismissal on the message meant the banner came
+   * straight back on the next tick. Defaults to the message.
+   */
+  dismissKey?: string;
+  /**
    * Work is running — a spinner takes the action slot. The countdown itself lives in
    * `message`, because the owner of the retry owns the timer: `useAppBanner` round-trips
    * this object through JSON, so a callback or a live counter cannot travel in it.
@@ -65,8 +71,10 @@ export function AppBanner() {
   const banner = ctx?.banner ?? null;
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
   const key = banner ? JSON.stringify(banner) : '';
+  // Dismissal is keyed on the stable identity, not the rendered text.
+  const closeKey = banner?.dismissKey ?? banner?.message ?? '';
 
-  if (!banner || (banner.dismissible && dismissedKey === key)) return null;
+  if (!banner || (banner.dismissible && dismissedKey === closeKey)) return null;
 
   const variant = banner.variant ?? 'error';
 
@@ -93,7 +101,7 @@ export function AppBanner() {
               type="button"
               className="koala-app-banner__close"
               aria-label="Dismiss"
-              onClick={() => setDismissedKey(key)}
+              onClick={() => setDismissedKey(closeKey)}
             >
               <Icon name="X" size={20} weight="regular" />
             </button>

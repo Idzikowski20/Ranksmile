@@ -31,7 +31,23 @@ const REAL_CLAIMS = [
   'Warto wiedzieć, że jest to forma przemocy psychicznej, używana w celu zapewnienia sobie kontroli i władzy w relacji.',
 ];
 
+/**
+ * The first cut of the chrome rules took these with it: "any two clock times" removed
+ * facts about working hours, and "lowercase run then two capitals" removed every
+ * technical term written that way.
+ */
+const REAL_BUT_LOOKS_LIKE_CHROME = [
+  'Interwencja trwa od 8:00 do 20:00, a raport dowodowy powstaje tego samego dnia.',
+  'Badanie mRNA wykazało obecność markera w każdej z pobranych próbek.',
+  'Aplikacja działa na iOS i wymaga potwierdzenia tożsamości przy pierwszym logowaniu.',
+  'Wynik eGFR poniżej 60 wymaga konsultacji ze specjalistą w ciągu miesiąca.',
+];
+
 describe('corpus noise filter — page chrome', () => {
+  it.each(REAL_BUT_LOOKS_LIKE_CHROME)('keeps %s', (text) => {
+    expect(isCorpusNoiseSentence(text)).toBe(false);
+  });
+
   it.each(PAGE_CHROME)('rejects %s', (text) => {
     expect(isCorpusNoiseSentence(text)).toBe(true);
   });

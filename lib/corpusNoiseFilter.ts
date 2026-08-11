@@ -83,18 +83,22 @@ const CORPUS_NOISE_RAW: RegExp[] = [
   // Any leaked HTML comment marker, not just the "o nas" one. `-->` cannot occur in
   // prose, and it arrived in a brief as "--> Data: 30.03.2025 Czas czytania: 8 min.".
   /-->/,
-  // Two clock times in one sentence — opening hours, never a claim:
-  // "od 9:00 do 21:00 ul.", "od 9:00 do 21:00 Sobota od 9:00 do 13:00 ul.".
-  /\d{1,2}:\d{2}\D+\d{1,2}:\d{2}/,
+  // Opening hours: a clock range that also names a day or an address. The pattern used
+  // to be "any two clock times in one sentence", which also threw away real claims —
+  // "Interwencja trwa od 8:00 do 20:00, a raport powstaje tego samego dnia" is a fact
+  // about the work, not a footer.
+  /\d{1,2}:\d{2}\D{0,40}\d{1,2}:\d{2}[\s\S]{0,40}?\b(ul\.|pon|wt|śr|czw|pt|sob|niedz)/iu,
+  /\b(pon|wt|śr|czw|pt|sob|niedz)\p{L}*[\s\S]{0,40}?\d{1,2}:\d{2}\D{0,40}\d{1,2}:\d{2}/iu,
   /**
    * A word that starts lowercase and then shouts — "MAM eMOCje", a book cover rendered as
    * text in a sidebar list. Case-sensitive, so it stays out of the folded list above.
    *
-   * Two or more capitals are required after the lowercase run so ordinary camelCase brand
-   * names survive: `mBank`, `iPhone` and `eBay` all carry a single capital and are things
-   * a real claim may legitimately name.
+   * The shout has to END in lowercase again — `eMOCje`, a cover rendered as text. That
+   * trailing letter is what separates it from a technical term, which keeps its capitals
+   * to the end: `mRNA`, `iOS`, `eGFR` and `mBank` all survive, and each is something a
+   * real claim may legitimately name.
    */
-  /\p{Ll}+\p{Lu}{2,}/u,
+  /\p{Ll}+\p{Lu}{2,}\p{Ll}/u,
 ];
 
 /** Folded once here rather than per sentence — this runs over whole competitor bodies. */
@@ -107,16 +111,37 @@ const BOILERPLATE_STARTS = [
   'mimo że dokładamy starań',
 ].map(foldPolishLetters);
 
-export function isCorpusNoiseSentence(text: string): boolean {
-  const t = text.replace(/\s+/g, ' ').trim();
-  if (t.length < 20 || t.length > 200) return true;
+/** The pattern half: does this text look like page chrome, whatever its length? */
+function matchesChromePattern(t: string): boolean {
   if (CORPUS_NOISE_RAW.some((re) => re.test(t))) return true;
   const low = foldPolishLetters(t);
   if (CORPUS_NOISE.some((re) => re.test(low))) return true;
-  if (BOILERPLATE_STARTS.some((p) => low.startsWith(p))) return true;
-  const words = low.split(/\s+/);
+  return BOILERPLATE_STARTS.some((p) => low.startsWith(p));
+}
+
+export function isCorpusNoiseSentence(text: string): boolean {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (t.length < 20 || t.length > 200) return true;
+  if (matchesChromePattern(t)) return true;
+  const words = foldPolishLetters(t).split(/\s+/);
   if (words.length < 4) return true;
   const upperRatio = (t.match(/[A-ZĄĆĘŁŃÓŚŹŻ]/g) || []).length / t.length;
   if (upperRatio > 0.35) return true;
   return false;
+}
+
+/**
+ * The same chrome patterns, without the sentence-shape guards.
+ *
+ * A knowledge-graph claim is a fragment by nature — "Kara do 2 lat.", "Termin 14 dni." —
+ * so the under-20-characters and under-4-words rules that make sense for a scraped
+ * sentence would drop exactly the short, factual claims the outline is built from, and
+ * shrink the coverage the planner gates on. Only the "this is page furniture" half
+ * applies here.
+ */
+export function isCorpusNoiseClaim(text: string): boolean {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (!t) return true;
+  if (t.length > 300) return true;
+  return matchesChromePattern(t);
 }

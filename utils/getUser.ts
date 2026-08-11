@@ -74,6 +74,11 @@ export const getCurrentUser = async (req: NextApiRequest, _res: NextApiResponse)
                method: 'GET', headers: { cookie: `${SESSION_COOKIE}=${sessionToken}` },
             });
             if (response.status >= 500 && attempt === 0) {
+               // The discarded body would otherwise hold the connection open for as long
+               // as the failing auth server keeps writing, and every request that retries
+               // leaks one more.
+               // eslint-disable-next-line no-await-in-loop
+               await response.body?.cancel().catch(() => undefined);
                // eslint-disable-next-line no-await-in-loop
                await new Promise((r) => { setTimeout(r, 250); });
                continue;

@@ -2203,6 +2203,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         setOutlineRestoring(true);
         try {
           const res = await fetch(`/api/articles/${articleId}/content-plan`);
+          // A non-2xx is a failed lookup, not "nothing saved". Reading the body anyway
+          // yielded an empty outline and fell through to a fresh planner run, which can
+          // overwrite a saved outline and bills for planning twice.
+          if (!res.ok) throw new Error(`content-plan lookup failed: HTTP ${res.status}`);
           const data = await res.json() as {
             content_planner_v2?: {
               bundle?: ContentPlannerBundle;
@@ -2217,6 +2221,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         } catch {
           lookupFailed = true;
         }
+        // Cleared here, not only on the fallthrough: the success branch returns early, so
+        // the flag stayed true for the rest of the mount and every later planning run
+        // was labelled "Loading saved outline".
+        setOutlineRestoring(false);
         if (stored.length) {
           if (editor.isDestroyed) return;
           outlineOriginalHtmlRef.current ??= editor.getHTML();
@@ -2228,7 +2236,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setOutlineHeadingCount(stored.filter((h) => h.level >= 2).length);
           return;
         }
-        setOutlineRestoring(false);
         if (lookupFailed) {
           // Re-planning here would charge for work whose result may already exist.
           toast.error('Could not load the saved outline. Refresh to try again.');

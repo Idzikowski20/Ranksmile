@@ -7,8 +7,12 @@
  * Opening hours, bylines, breadcrumbs and stock-photo credits therefore reached reviewed
  * outlines as "Cover: …" instructions. Every route funnels through the loop below, so
  * the guard belongs here rather than in each caller.
+ *
+ * The claim variant, not the sentence one: a claim is a fragment ("Kara do 2 lat."), and
+ * the sentence guards drop anything under 20 characters or 4 words — which would have
+ * quietly emptied the knowledge graph of its shortest facts.
  */
-import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
+import { isCorpusNoiseClaim } from '../corpusNoiseFilter';
 import type {
   ClaimImportance,
   GainClass,
@@ -111,13 +115,13 @@ export function buildTargetKnowledgeGraph(opts: {
   const claimHasAi = new Set<string>();
   for (const p of profiles) {
     for (const c of p.claims) {
-      if (isCorpusNoiseSentence(c)) continue;
+      if (isCorpusNoiseClaim(c)) continue;
       const k = c.trim().toLowerCase();
       if (k && !statements.has(k)) statements.set(k, c.trim());
     }
   }
   for (const c of ai?.claims ?? []) {
-    if (isCorpusNoiseSentence(c)) continue;
+    if (isCorpusNoiseClaim(c)) continue;
     const k = c.trim().toLowerCase();
     if (!k) continue;
     claimHasAi.add(k);

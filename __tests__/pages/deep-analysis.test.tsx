@@ -217,7 +217,7 @@ describe('DeepAnalysisPage', () => {
       firstStream.finish();
     });
 
-    await waitFor(() => expect(screen.getAllByText(/Initial pipeline failed/)[0]).toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole('alert')).getByText(/Initial pipeline failed/)).toBeInTheDocument());
     expect(next).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(next).toBeDisabled();
@@ -277,10 +277,10 @@ describe('DeepAnalysisPage', () => {
       firstStream.finish();
     });
 
-    await waitFor(() => expect(screen.getAllByText(/Initial pipeline failed/)[0]).toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole('alert')).getByText(/Initial pipeline failed/)).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
-    await waitFor(() => expect(screen.getAllByText(/Retry request failed/)[0]).toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole('alert')).getByText(/Retry request failed/)).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Open article' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Content type' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Open article' }));

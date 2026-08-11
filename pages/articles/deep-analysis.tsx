@@ -473,6 +473,9 @@ const DeepAnalysisPage: NextPage = () => {
         ? `${overallError} — ponawiam za ${retryIn} s (próba ${autoAttempts + 1} z ${AUTO_RETRY_MAX})`
         : `${overallError} — nie udało się po ${AUTO_RETRY_MAX} próbach.`,
       busy: retryIn !== null && retriesLeft > 0,
+      // Keyed on the error, not the message: the countdown rewrites the message every
+      // second, so a dismissal keyed on it lasted until the next tick.
+      dismissKey: `deep-analysis:${overallError}`,
       dismissible: true,
     }
     : null);

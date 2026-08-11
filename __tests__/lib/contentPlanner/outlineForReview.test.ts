@@ -39,4 +39,16 @@ describe('outlineForReview', () => {
   it('returns nothing when there is neither a saved outline nor a brief', () => {
     expect(outlineForReview({ approvedOutline: null, brief: null })).toEqual([]);
   });
+
+  /**
+   * The regression this whole change exists for: the brief lived only in the POST reply,
+   * so every re-entry rebuilt the mechanical version from the bundle and the reviewer got
+   * "Pokryj <heading> z przypisanymi claims" back instead of the brief already paid for.
+   */
+  it('never reproduces the mechanical "Pokryj" outline', () => {
+    const out = outlineForReview({ approvedOutline: null, brief });
+
+    expect(JSON.stringify(out)).not.toContain('Pokryj');
+    expect(JSON.stringify(out)).not.toContain('Cover:');
+  });
 });

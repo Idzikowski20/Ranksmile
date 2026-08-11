@@ -242,12 +242,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (written?.length && persisted) {
       const planner = (persisted.content_planner_v2 ?? {}) as Record<string, unknown>;
       const withBrief = { ...persisted, content_planner_v2: { ...planner, brief: written } };
-      // Non-fatal: the reviewer already has the brief in this reply. A failed write only
-      // means the next read falls back, which is what used to happen every time.
-      await db.query(
-        `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-        { replacements: [JSON.stringify(withBrief), articleId] },
-      ).catch((e) => console.warn('[content-plan] brief persist failed:', getErrorMessage(e)));
+      try {
+        await db.query(
+          `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+          { replacements: [JSON.stringify(withBrief), articleId] },
+        );
+      } catch (e) {
+        // Not swallowed. Persisting the brief IS the fix this route exists for now — a
+        // 200 with headings that were never stored puts the reviewer straight back into
+        // the bug, losing the brief on the next refresh with nothing to explain it.
+        console.warn('[content-plan] brief persist failed:', getErrorMessage(e));
+        return res.status(503).json({
+          error: 'Konspekt powstał, ale nie udało się go zapisać. Spróbuj ponownie.',
+          cause: 'brief_persist_failed',
+          headings: [],
+          canWrite: result.canWrite,
+        });
+      }
     }
     // No mechanical fallback. reviewOutlineFromBundle used to catch a failed brief and
     // hand the reviewer "Pokryj <heading> z przypisanymi claims" plus raw scraped

@@ -43,15 +43,11 @@ export function reviewOutlineToHtml(outline: ApprovedOutlineHeading[]): string {
  */
 const TARGET_LENGTH_LINE = /Target length:\s*~\s*\d+\s*words/i;
 
-/** An H2 whose next element is a list — the outline's shape, section after section. */
+/** Every H2, and every H2 whose next element is its instruction list. */
+const HEADING = /<h2[^>]*>/gi;
 const HEADING_THEN_LIST = /<h2[^>]*>.*?<\/h2>\s*<ul[^>]*>/gis;
-// One is enough: the no-prose test below carries the weight. An article that reached a
-// second section always has a paragraph somewhere, and a one-section outline is still an
-// outline — requiring two only made short ones unrecognisable.
-const OUTLINE_SECTIONS = 1;
-
-/** Prose. An outline is headings and instruction lists; an article has paragraphs. */
-const LONG_PARAGRAPH = /<p[^>]*>([\s\S]{160,}?)<\/p>/i;
+/** A paragraph carrying any text at all. reviewOutlineToHtml only ever emits `<p></p>`. */
+const PARAGRAPH_WITH_TEXT = /<p[^>]*>(?!\s*<\/p>)[\s\S]*?\S[\s\S]*?<\/p>/i;
 
 /**
  * Two ways in, because the format changed and old drafts did not.
@@ -59,16 +55,23 @@ const LONG_PARAGRAPH = /<p[^>]*>([\s\S]{160,}?)<\/p>/i;
  * Legacy: the `Target length: ~N words` line every section used to carry. Articles saved
  * before autosave was suspended during review still hold it inside `articles.content`.
  *
- * Current: the shape. Sections are an H2 immediately followed by a <ul> of instructions,
- * and there is no long prose paragraph anywhere — which is precisely what separates a
- * brief from the article written from it. Length alone never could: an outline carries
- * five or six instruction sentences per heading and clears any word-count bar.
+ * Current: the exact shape `reviewOutlineToHtml` produces — every H2 followed by its
+ * instruction list, and not one paragraph with text in it, because that renderer emits
+ * only headings, lists and empty `<p></p>`.
+ *
+ * Both conditions are required. A "no paragraph longer than 160 characters" test was too
+ * loose: a short, list-heavy article passed it, and being misread as an outline suspends
+ * autosave and presents the finished article as planning instructions. Demanding that
+ * EVERY heading has a list, and that no paragraph has any text, is a property of our own
+ * generated document rather than a guess about how long prose tends to be.
  */
 export function isReviewOutlineHtml(html: string): boolean {
   const doc = html || '';
   if (TARGET_LENGTH_LINE.test(doc)) return true;
-  if (LONG_PARAGRAPH.test(doc)) return false;
-  return (doc.match(HEADING_THEN_LIST) || []).length >= OUTLINE_SECTIONS;
+  if (PARAGRAPH_WITH_TEXT.test(doc)) return false;
+  const headings = (doc.match(HEADING) || []).length;
+  if (headings === 0) return false;
+  return (doc.match(HEADING_THEN_LIST) || []).length === headings;
 }
 
 function nodeText(node: JSONContent): string {
