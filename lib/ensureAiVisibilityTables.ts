@@ -1,4 +1,5 @@
 import db from '../database/database';
+import { isDuplicateColumn } from './onboardingState';
 
 const isPostgres = !!process.env.DATABASE_URL;
 const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
@@ -6,18 +7,19 @@ const JSON_T = isPostgres ? 'JSONB' : 'TEXT';
 const NOW = 'CURRENT_TIMESTAMP';
 
 /**
- * The only two DDL failures this file may ignore.
+ * The only DDL failure this file may ignore: a column that is already there.
  *
- * The CREATEs are all IF NOT EXISTS and so never raise on a re-run; the ALTER TABLE
+ * Every CREATE here is IF NOT EXISTS and so never raises on a re-run; the ALTER TABLE
  * ADD COLUMN migrations at the bottom have no such guard and raise every time after
- * the first, which is what these patterns are actually for.
+ * the first, which is what the guard is actually for.
  *
- * Matched narrowly on purpose. The old test was /exist|duplicate|already/, and
- * "duplicate" alone swallows `duplicate key value violates unique constraint` — the
- * error a CREATE UNIQUE INDEX raises when the table already holds conflicting rows.
- * That is a migration that genuinely did not happen, reported as routine.
+ * `isDuplicateColumn` rather than a phrase test, and it is the one from onboardingState
+ * so both migration paths agree on what "already there" means: Postgres SQLSTATE 42701,
+ * or SQLite's "duplicate column name". A bare /already exists/ also matched `relation
+ * … already exists` and `index … already exists`, so a CREATE that genuinely failed was
+ * logged as routine and the schema latched ready over it. Now it counts as a real
+ * failure, the memo drops, and the next caller re-runs the pass.
  */
-const BENIGN_DDL = /already exists|duplicate column name/i;
 
 /**
  * Workspace-level AI Visibility tracking tables. Distinct from the
@@ -30,10 +32,9 @@ async function createAll(): Promise<boolean> {
    let sawRealFailure = false;
 
    const ignoreExisting = (label: string, e: unknown): void => {
-      const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-      if (!BENIGN_DDL.test(m)) {
+      if (!isDuplicateColumn(e)) {
          sawRealFailure = true;
-         console.warn(`[ai-vis] ${label} failed:`, m);
+         console.warn(`[ai-vis] ${label} failed:`, String((e as { message?: string } | undefined)?.message ?? e ?? ''));
       }
    };
 

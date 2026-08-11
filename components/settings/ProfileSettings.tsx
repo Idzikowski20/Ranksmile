@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { changePassword } from '../../lib/auth/fetchAuth';
 import { authClient } from '../../lib/auth/client';
@@ -52,6 +52,24 @@ const ProfileSettings = () => {
   const [passwordBusy, setPasswordBusy] = useState(false);
 
   useEffect(() => { if (profile?.name != null) setName(profile.name); }, [profile?.name]);
+
+  const currentPasswordRef = useRef<HTMLInputElement>(null);
+  const changePasswordRef = useRef<HTMLButtonElement>(null);
+  const passwordToggled = useRef(false);
+  /**
+   * Opening or closing the password section replaces the control that was focused, and
+   * a removed element takes focus back to <body> — a keyboard or screen-reader user is
+   * left with nothing to read and has to tab in from the top of the page. Follow the
+   * swap: into the first field on open, back to the button that opened it on close.
+   *
+   * The first run is skipped deliberately. Nothing was toggled yet, and focusing the
+   * collapsed button on mount would steal focus from wherever the page put it.
+   */
+  useEffect(() => {
+    if (!passwordToggled.current) { passwordToggled.current = true; return; }
+    if (changingPassword) currentPasswordRef.current?.focus();
+    else changePasswordRef.current?.focus();
+  }, [changingPassword]);
 
   const avatarSrc = preview || profile?.avatarUrl || googlePicture || '';
 
@@ -173,6 +191,7 @@ const ProfileSettings = () => {
         {!changingPassword ? (
           <div className="koala-account-actions">
             <Button
+              ref={changePasswordRef}
               type="button"
               size="md"
               variant="secondary"
@@ -186,6 +205,7 @@ const ProfileSettings = () => {
           <div className="koala-password-field">
             <Field label="Current password" required>
               <Input
+                ref={currentPasswordRef}
                 type="password"
                 revealable
                 autoComplete="current-password"

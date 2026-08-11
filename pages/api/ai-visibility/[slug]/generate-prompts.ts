@@ -60,13 +60,9 @@ type GeneratedPrompt = { text: string, provenance: string[] };
  * missing/failed paid call, and caching them would freeze the topic on
  * templates forever.
  *
- * ponytail: ceiling = read-then-generate is not single-flight, so two requests for the
- * same (domain, topic) that arrive before either writes will both pay DataForSEO and
- * one write loses to the unique index. The wizard's seed guard makes this a
- * two-tabs/two-devices case, not the common path, and the cost is one duplicate call
- * rather than a wrong result. Upgrade = claim the row first (INSERT an empty pool, and
- * treat the losing INSERT as "someone else is fetching, poll or fall through") so only
- * the claim holder buys.
+ * Read-then-generate alone was not single-flight — two requests for the same
+ * (domain, topic) arriving before either wrote both paid, and one write lost to the
+ * unique index. `claimTopic` below closes that: the buyer is whoever wins the INSERT.
  */
 async function readCached(domainId: number, topic: string): Promise<GeneratedPrompt[] | null> {
    try {
@@ -82,6 +78,53 @@ async function readCached(domainId: number, topic: string): Promise<GeneratedPro
       console.warn('[generate-prompts] cache read failed:', getErrorMessage(e));
       return null;
    }
+}
+
+/** How long a loser waits for the claim holder's pool before buying its own. */
+const CLAIM_WAIT_MS = 3000;
+const CLAIM_POLL_MS = 400;
+
+/**
+ * Claim the (domain, topic) pair by inserting an empty pool. The unique index makes
+ * exactly one concurrent request win, and only the winner pays DataForSEO.
+ *
+ * An empty pool is not a cache hit — `readCached` requires a non-empty array — so a
+ * claim abandoned by a crashed request costs the next caller one wait and is then
+ * overwritten by `writeCached`'s delete-then-insert. No lock to expire, nothing to
+ * clean up on boot.
+ */
+async function claimTopic(domainId: number, topic: string): Promise<boolean> {
+   try {
+      await db.query(
+         'INSERT INTO ai_vis_generated_prompts (domain_id, topic, prompts) VALUES (?, ?, ?)',
+         { replacements: [domainId, topic, '[]'] },
+      );
+      return true;
+   } catch {
+      // The unique index rejected it: someone else is already fetching this topic.
+      return false;
+   }
+}
+
+/** Release a claim we are not going to fill, so the next request does not wait on it. */
+async function releaseTopic(domainId: number, topic: string): Promise<void> {
+   await db.query(
+      'DELETE FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ?',
+      { replacements: [domainId, topic] },
+   ).catch((e) => console.warn('[generate-prompts] claim release failed:', getErrorMessage(e)));
+}
+
+/** Poll for the claim holder's pool. Null means it did not arrive in time — buy our own. */
+async function waitForCached(domainId: number, topic: string): Promise<GeneratedPrompt[] | null> {
+   const deadline = Date.now() + CLAIM_WAIT_MS;
+   while (Date.now() < deadline) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => { setTimeout(r, CLAIM_POLL_MS); });
+      // eslint-disable-next-line no-await-in-loop
+      const cached = await readCached(domainId, topic);
+      if (cached) return cached;
+   }
+   return null;
 }
 
 async function writeCached(domainId: number, topic: string, prompts: GeneratedPrompt[]): Promise<void> {
@@ -121,6 +164,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(200).json({ prompts: templates.slice(0, 8), degraded: true });
    }
 
+   // Only the claim holder pays. `refresh` is an explicit re-buy, so it skips the claim
+   // and overwrites whatever is there — including another request's in-flight claim,
+   // which is what the user asked for by pressing it.
+   let holdsClaim = false;
+   if (!refresh) {
+      holdsClaim = await claimTopic(domainId, topicTrimmed);
+      if (!holdsClaim) {
+         const waited = await waitForCached(domainId, topicTrimmed);
+         if (waited) return res.status(200).json({ prompts: waited, degraded: false, cached: true });
+         // The holder never delivered (it degraded, failed, or is slower than the wait).
+         // Buying our own is the wrong-but-cheap outcome the claim exists to make rare.
+      }
+   }
+
    try {
       const { questions, related } = await getPeopleAlsoAsk({
          keyword: topicTrimmed,
@@ -132,11 +189,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // Non-fatal: a failed write only means the next visit pays again.
          await writeCached(domainId, topicTrimmed, result.prompts)
             .catch((e) => console.warn('[generate-prompts] cache write failed:', getErrorMessage(e)));
+      } else if (holdsClaim) {
+         // Nothing will fill this claim: templates are never cached.
+         await releaseTopic(domainId, topicTrimmed);
       }
       return res.status(200).json(result);
    } catch (error) {
       // DataForSEO locale mismatch — still return Polish/English templates instead of 500 toasts.
       console.warn('[generate-prompts] PAA failed, using templates:', getErrorMessage(error));
+      if (holdsClaim) await releaseTopic(domainId, topicTrimmed);
       const templates = promptTemplatesForLocale(locale.languageCode, topicTrimmed);
       return res.status(200).json({ prompts: templates.slice(0, 8), degraded: true });
    }

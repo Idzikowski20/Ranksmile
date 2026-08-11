@@ -37,9 +37,26 @@ describe('ensureAiVisibilityTables', () => {
     expect(ddlCount()).toBe(first);
   });
 
-  // "already exists" is what the unguarded ALTER TABLE migrations raise on every run
-  // after the first, so it must not count as a failure.
-  it('still latches when a statement only reports the object already exists', async () => {
+  // A column that is already there is what the unguarded ALTER TABLE migrations raise on
+  // every run after the first, so it must not count as a failure — in either dialect.
+  it.each([
+    ['SQLite', new Error('SQLITE_ERROR: duplicate column name: brands')],
+    ['Postgres', Object.assign(new Error('column "brands" of relation "ai_vis_results" already exists'), { original: { code: '42701' } })],
+  ])('still latches on a duplicate column (%s)', async (_dialect, err) => {
+    const { ensureAiVisibilityTables } = await loadFresh();
+    query.mockRejectedValueOnce(err);
+
+    await ensureAiVisibilityTables();
+    const first = ddlCount();
+
+    await ensureAiVisibilityTables();
+    expect(ddlCount()).toBe(first);
+  });
+
+  // A bare "already exists" is NOT benign: every CREATE here is IF NOT EXISTS, so the
+  // phrase can only come from a statement that genuinely failed. Latching over it left
+  // routes querying an incomplete schema with no retry.
+  it('retries when a relation reports it already exists', async () => {
     const { ensureAiVisibilityTables } = await loadFresh();
     query.mockRejectedValueOnce(new Error('relation "ai_vis_configs" already exists'));
 
@@ -47,7 +64,7 @@ describe('ensureAiVisibilityTables', () => {
     const first = ddlCount();
 
     await ensureAiVisibilityTables();
-    expect(ddlCount()).toBe(first);
+    expect(ddlCount()).toBeGreaterThan(first);
   });
 
   // The regression this guards: /duplicate/ used to match, so a unique index that could

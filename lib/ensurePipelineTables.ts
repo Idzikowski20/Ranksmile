@@ -80,6 +80,11 @@ export async function ensurePipelineTables(): Promise<void> {
       try { await db.query(`CREATE INDEX IF NOT EXISTS idx_${t}_domain ON ${t}(domain_id)`); } catch (e) { ignoreExisting(`idx_${t}_domain`, e); }
    }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_jobs_domain_type ON analysis_jobs(domain_id, job_type)'); } catch (e) { ignoreExisting('idx_jobs_domain_type', e); }
+   // autoLearnBrandDna picks the domain's 8 best audited pages: it filters on
+   // (domain_id, fetch_status, word_count) and orders by score. page_audits grows with
+   // every crawled page, and the domain_id-only index above left that a full per-domain
+   // scan plus a sort. Column order is equality first, then the range, then the sort key.
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_page_audits_best ON page_audits(domain_id, fetch_status, word_count, score)'); } catch (e) { ignoreExisting('idx_page_audits_best', e); }
 
    checked = true;
 }
