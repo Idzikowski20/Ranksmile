@@ -19,7 +19,7 @@ import {
   DangerAction,
   DangerDialog,
 } from '../koala/forms';
-import { ThemeSwitcher } from '../koala/theme';
+import { AccentSwitcher, ThemeSwitcher } from '../koala/theme';
 import { Enable2FADialog } from '../koala/product/Enable2FADialog';
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -159,6 +159,10 @@ const ProfileSettings = () => {
           Koala themes: Light, Dark, Cream, and Moonlight. Preference is saved on this device.
         </p>
         <ThemeSwitcher />
+        <p className="koala-account-section__desc" style={{ marginTop: 16 }}>
+          Accent color used for buttons, links, and highlights.
+        </p>
+        <AccentSwitcher />
       </FormSection>
 
       <FormSection title="Password" className="koala-account-section">

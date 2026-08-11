@@ -1,4 +1,4 @@
-import { brandMain, cream, darkBlue, darkOrange, green, greyNeutral, red, slate, yellow } from './colors';
+import { blue, brandMain, cream, darkBlue, darkOrange, green, greyNeutral, purple, red, slate, softGreen, yellow } from './colors';
 import { radius } from './effects';
 
 /** Semantic surface map shared by every Koala theme mode. */
@@ -347,6 +347,64 @@ export const themes: Record<ThemeName, ThemeSemantic> = {
   cream: creamTheme,
   moonlight: moonlightTheme,
 };
+
+/** Accent (brand color) variants — Figma Color page palettes. `default` = Dark Orange. */
+export type AccentName = 'default' | 'darkblue' | 'purple' | 'blue' | 'green' | 'softgreen';
+
+export const ACCENT_NAMES: AccentName[] = ['default', 'darkblue', 'purple', 'blue', 'green', 'softgreen'];
+
+export const ACCENT_LABELS: Record<AccentName, string> = {
+  default: 'Orange',
+  darkblue: 'Dark Blue',
+  purple: 'Purple',
+  blue: 'Blue',
+  green: 'Green',
+  softgreen: 'Soft Green',
+};
+
+type AccentScale = { 400: string; 500: string; 600: string };
+
+export const ACCENT_SCALES: Record<Exclude<AccentName, 'default'>, AccentScale> = {
+  darkblue: darkBlue,
+  purple,
+  blue,
+  green,
+  softgreen: softGreen,
+};
+
+/** Swatch color per accent, for pickers. */
+export const ACCENT_SWATCHES: Record<AccentName, string> = {
+  default: brandMain,
+  darkblue: darkBlue[500],
+  purple: purple[500],
+  blue: blue[500],
+  green: green[500],
+  softgreen: softGreen[500],
+};
+
+/** Re-point every brand-derived surface of a theme at the chosen accent scale. */
+export function applyAccent(t: ThemeSemantic, accent: AccentName, themeName: ThemeName): ThemeSemantic {
+  if (accent === 'default') return t;
+  const scale = ACCENT_SCALES[accent];
+  const isDark = themeName === 'dark' || themeName === 'moonlight';
+  const main = scale[500];
+  return {
+    ...t,
+    background: { ...t.background, brand: main },
+    text: {
+      ...t.text,
+      brand: isDark ? scale[400] : main,
+      link: isDark ? scale[400] : scale[600],
+    },
+    border: { ...t.border, brand: main, focus: main },
+    button: {
+      ...t.button,
+      brand: { ...t.button.brand, bg: main, bgHover: scale[600] },
+    },
+    input: { ...t.input, borderFocus: main },
+    focus: main,
+  };
+}
 
 /** Flatten theme → CSS custom properties (semantic + legacy aliases). */
 export function themeToCssVars(t: ThemeSemantic): Record<string, string> {

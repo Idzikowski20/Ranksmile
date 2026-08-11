@@ -1,2 +1,2 @@
 export { KoalaThemeProvider, useKoalaTheme } from './KoalaThemeProvider';
-export { ThemeSwitcher, ThemeCycleButton } from './ThemeSwitcher';
+export { ThemeSwitcher, AccentSwitcher, ThemeCycleButton } from './ThemeSwitcher';

@@ -2,20 +2,26 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { ThemeProvider as EmotionThemeProvider } from '@emotion/react';
 import { theme as baseTheme } from '../tokens/theme';
 import {
+  ACCENT_NAMES,
   THEME_NAMES,
+  applyAccent,
   lightTheme,
   themes,
   themeToCssVars,
+  type AccentName,
   type ThemeName,
   type ThemeSemantic,
 } from '../tokens/themes';
 
 const STORAGE_KEY = 'ranksmile-theme';
+const ACCENT_STORAGE_KEY = 'ranksmile-accent';
 
 type ThemeContextValue = {
   themeName: ThemeName;
+  accentName: AccentName;
   semantic: ThemeSemantic;
   setTheme: (name: ThemeName) => void;
+  setAccent: (name: AccentName) => void;
   cycleTheme: () => void;
 };
 
@@ -23,6 +29,10 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function isThemeName(v: string): v is ThemeName {
   return (THEME_NAMES as string[]).includes(v);
+}
+
+function isAccentName(v: string): v is AccentName {
+  return (ACCENT_NAMES as string[]).includes(v);
 }
 
 function readStored(): ThemeName {
@@ -36,6 +46,21 @@ function readStored(): ThemeName {
   return 'light';
 }
 
+function readStoredAccent(): AccentName {
+  if (typeof window === 'undefined') return 'default';
+  try {
+    const v = localStorage.getItem(ACCENT_STORAGE_KEY);
+    if (v && isAccentName(v)) return v;
+  } catch {
+    /* ignore */
+  }
+  return 'default';
+}
+
+function buildSemantic(name: ThemeName, accent: AccentName): ThemeSemantic {
+  return applyAccent(themes[name] ?? lightTheme, accent, name);
+}
+
 function applyDomTheme(name: ThemeName, semantic: ThemeSemantic) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
@@ -47,29 +72,48 @@ function applyDomTheme(name: ThemeName, semantic: ThemeSemantic) {
 
 export function KoalaThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeName, setThemeName] = useState<ThemeName>('light');
+  const [accentName, setAccentName] = useState<AccentName>('default');
 
   useEffect(() => {
     const name = readStored();
+    const accent = readStoredAccent();
     setThemeName(name);
-    applyDomTheme(name, themes[name]);
+    setAccentName(accent);
+    applyDomTheme(name, buildSemantic(name, accent));
   }, []);
 
-  const setTheme = useCallback((name: ThemeName) => {
-    setThemeName(name);
-    applyDomTheme(name, themes[name]);
-    try {
-      localStorage.setItem(STORAGE_KEY, name);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const setTheme = useCallback(
+    (name: ThemeName) => {
+      setThemeName(name);
+      applyDomTheme(name, buildSemantic(name, accentName));
+      try {
+        localStorage.setItem(STORAGE_KEY, name);
+      } catch {
+        /* ignore */
+      }
+    },
+    [accentName],
+  );
+
+  const setAccent = useCallback(
+    (accent: AccentName) => {
+      setAccentName(accent);
+      applyDomTheme(themeName, buildSemantic(themeName, accent));
+      try {
+        localStorage.setItem(ACCENT_STORAGE_KEY, accent);
+      } catch {
+        /* ignore */
+      }
+    },
+    [themeName],
+  );
 
   const cycleTheme = useCallback(() => {
     const i = THEME_NAMES.indexOf(themeName);
     setTheme(THEME_NAMES[(i + 1) % THEME_NAMES.length]);
   }, [themeName, setTheme]);
 
-  const semantic = themes[themeName] ?? lightTheme;
+  const semantic = buildSemantic(themeName, accentName);
 
   const emotionTheme = useMemo(
     () => ({
@@ -81,8 +125,8 @@ export function KoalaThemeProvider({ children }: { children: React.ReactNode }) 
   );
 
   const value = useMemo(
-    () => ({ themeName, semantic, setTheme, cycleTheme }),
-    [themeName, semantic, setTheme, cycleTheme],
+    () => ({ themeName, accentName, semantic, setTheme, setAccent, cycleTheme }),
+    [themeName, accentName, semantic, setTheme, setAccent, cycleTheme],
   );
 
   return (
@@ -97,8 +141,10 @@ export function useKoalaTheme(): ThemeContextValue {
   if (!ctx) {
     return {
       themeName: 'light',
+      accentName: 'default',
       semantic: lightTheme,
       setTheme: () => undefined,
+      setAccent: () => undefined,
       cycleTheme: () => undefined,
     };
   }

@@ -1,5 +1,13 @@
 import React from 'react';
-import { THEME_LABELS, THEME_NAMES, themes, type ThemeName } from '../tokens/themes';
+import {
+  ACCENT_LABELS,
+  ACCENT_NAMES,
+  ACCENT_SWATCHES,
+  THEME_LABELS,
+  THEME_NAMES,
+  themes,
+  type ThemeName,
+} from '../tokens/themes';
 import { useKoalaTheme } from './KoalaThemeProvider';
 import { Icon } from '../icons/Icon';
 import { spacing } from '../tokens/spacing';
@@ -64,6 +72,59 @@ function ThemeSwatch({ name }: { name: ThemeName }) {
         flexShrink: 0,
       }}
     />
+  );
+}
+
+/** Accent color picker — Orange (default) / Dark Blue / Purple / Blue / Green / Soft Green. */
+export function AccentSwitcher({ className }: { className?: string }) {
+  const { accentName, setAccent } = useKoalaTheme();
+
+  return (
+    <div
+      className={className}
+      role="group"
+      aria-label="Accent color"
+      style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.sm }}
+    >
+      {ACCENT_NAMES.map((name) => {
+        const active = name === accentName;
+        return (
+          <button
+            key={name}
+            type="button"
+            aria-pressed={active}
+            onClick={() => setAccent(name)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              padding: `${spacing.sm} ${spacing.md}`,
+              borderRadius: radius.sm,
+              border: `1px solid ${active ? 'var(--koala-brand)' : 'var(--koala-border-primary)'}`,
+              background: active ? 'color-mix(in srgb, var(--koala-brand) 12%, var(--koala-bg-primary))' : 'var(--koala-bg-primary)',
+              color: 'var(--koala-text-primary)',
+              font: 'inherit',
+              fontSize: 'var(--font-size-sm)',
+              fontWeight: 500,
+              cursor: 'var(--koala-cursor-pointing)',
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: spacing.xl,
+                height: spacing.xl,
+                borderRadius: '50%',
+                background: ACCENT_SWATCHES[name],
+                border: '1px solid var(--koala-border-primary)',
+                flexShrink: 0,
+              }}
+            />
+            {ACCENT_LABELS[name]}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
