@@ -1,0 +1,19 @@
+lib/ensurePipelineTables.ts
+  s_8d6cce368af4fd::t_7e8a1e9a5ed435 107-111,113-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5a07ba2d38a8dc45aa9c047a6990fd54304e94a0",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
