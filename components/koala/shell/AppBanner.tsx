@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '../icons/Icon';
 
@@ -11,44 +11,59 @@ export type AppBannerState = {
   dismissible?: boolean;
 };
 
+type Entry = { id: symbol; banner: AppBannerState };
+
 type Ctx = {
   banner: AppBannerState | null;
-  /** useState's own setter — the updater form is what lets cleanup compare before clearing. */
-  setBanner: React.Dispatch<React.SetStateAction<AppBannerState | null>>;
+  publish: (id: symbol, banner: AppBannerState | null) => void;
 };
 
 const AppBannerContext = createContext<Ctx | null>(null);
 
+/**
+ * A registry, not a single slot.
+ *
+ * More than one component can hold the hook at once — a page and a wizard inside it. With
+ * one slot it was last-writer-wins in both directions: unmounting the first consumer
+ * cleared the second one's banner, and unmounting the SECOND left the first showing
+ * nothing at all, because its effect had no reason to re-run. Keeping an entry per
+ * consumer means whoever is still mounted keeps their banner, and the most recent one
+ * is what shows.
+ */
 export function AppBannerProvider({ children }: { children: React.ReactNode }) {
-  const [banner, setBanner] = useState<AppBannerState | null>(null);
-  const value = useMemo(() => ({ banner, setBanner }), [banner]);
+  const [entries, setEntries] = useState<Entry[]>([]);
+
+  const publish = useCallback((id: symbol, banner: AppBannerState | null) => {
+    setEntries((prev) => {
+      const without = prev.filter((e) => e.id !== id);
+      return banner ? [...without, { id, banner }] : without;
+    });
+  }, []);
+
+  const value = useMemo(
+    () => ({ banner: entries.length ? entries[entries.length - 1].banner : null, publish }),
+    [entries, publish],
+  );
   return <AppBannerContext.Provider value={value}>{children}</AppBannerContext.Provider>;
 }
 
 /**
  * Declarative: pass the banner to show, or `null` for none. Clears on unmount.
  * `useAppBanner(wpMissing ? { message: '…', action: { … } } : null)`
- *
- * More than one component may hold this hook at a time — a page and the wizard inside it,
- * say. Cleanup therefore clears only the banner this hook actually set: an unconditional
- * `setBanner(null)` on unmount wiped whatever the other consumer had just put up.
  */
 export function useAppBanner(banner: AppBannerState | null) {
   const ctx = useContext(AppBannerContext);
-  const setBanner = ctx?.setBanner;
+  const publish = ctx?.publish;
+  const id = useRef<symbol>();
+  if (!id.current) id.current = Symbol('app-banner');
   const key = banner ? JSON.stringify(banner) : '';
 
   useEffect(() => {
-    if (!setBanner) return undefined;
-    const published = key ? (JSON.parse(key) as AppBannerState) : null;
-    setBanner(published);
-    return () => {
-      // By identity, not by value: two consumers can hold banners that serialise
-      // identically, and comparing the text would let either one clear the other's.
-      // The context holds this exact object, so `===` names the publisher.
-      setBanner((current) => (current === published ? null : current));
-    };
-  }, [key, setBanner]);
+    const self = id.current;
+    if (!publish || !self) return undefined;
+    publish(self, key ? (JSON.parse(key) as AppBannerState) : null);
+    return () => publish(self, null);
+  }, [key, publish]);
 }
 
 const VARIANT_BG: Record<NonNullable<AppBannerState['variant']>, string> = {

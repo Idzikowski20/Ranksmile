@@ -67,10 +67,88 @@ export const THEME_LABELS: Record<ThemeName, string> = {
   moonlight: 'Moonlight',
 };
 
+/**
+ * Readable ink for a filled button, decided by the background it sits on.
+ *
+ * `button.brand.fg` was white for every accent, but a primary button uses scale[500]
+ * at rest and scale[600] on hover — and green 500/600 are light enough that white text
+ * fails AA on both. Picking per accent by hand would leave the next accent to trip over
+ * it, so the choice is computed from the colour.
+ *
+ * sRGB relative luminance (WCAG 2.x), and the darker of the two states decides: a button
+ * whose label flips colour halfway through a hover is worse than one that is readable
+ * throughout.
+ */
+function luminance(hex: string): number {
+  const v = hex.replace('#', '');
+  const full = v.length === 3 ? v.split('').map((c) => c + c).join('') : v;
+  const channel = (i: number) => {
+    const c = parseInt(full.slice(i * 2, i * 2 + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
+}
+
+const INK_DARK = '#1c1917';
+const INK_LIGHT = '#ffffff';
+
+/** WCAG contrast ratio between two colours. Exported so tests assert against this
+ * implementation instead of a second copy of the formula that can drift from it. */
+export function contrast(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+const AA_NORMAL_TEXT = 4.5;
+
+/** The better of the two inks for a pair of backgrounds, with the ratio it achieves. */
+function bestInk(bg: string, bgHover: string): { fg: string; ratio: number } {
+  const worst = (ink: string) => Math.min(contrast(ink, bg), contrast(ink, bgHover));
+  const dark = worst(INK_DARK);
+  const light = worst(INK_LIGHT);
+  return dark > light ? { fg: INK_DARK, ratio: dark } : { fg: INK_LIGHT, ratio: light };
+}
+
+/**
+ * A primary-button palette that actually clears AA on both rest and hover.
+ *
+ * Choosing the better of two inks was not enough: at 500/600, white on purple is 4.23,
+ * dark ink on blue drops to 3.74 on hover, and soft green lands at 4.02 — all short of
+ * 4.5:1. Neither ink can rescue a mid-tone background, so the background moves instead:
+ * one step darker (600/700) is tried next, which is where those three become readable.
+ *
+ * Returned as a triple rather than just a foreground, because the accessible answer is
+ * the pair, not the text colour on its own.
+ */
+export function readableButton(scale: Record<number, string>): { bg: string; bgHover: string; fg: string } {
+  const candidates: Array<[string, string]> = [
+    [scale[500], scale[600]],
+    [scale[600], scale[700]],
+    // Soft green needs the third rung: at 600/700 it reaches 4.36, just short of AA.
+    [scale[700], scale[800]],
+  ];
+  for (const [bg, bgHover] of candidates) {
+    const { fg, ratio } = bestInk(bg, bgHover);
+    if (ratio >= AA_NORMAL_TEXT) return { bg, bgHover, fg };
+  }
+  // Nothing clears AA — take the darkest pair and its better ink rather than the lightest.
+  const [bg, bgHover] = candidates[candidates.length - 1];
+  return { bg, bgHover, fg: bestInk(bg, bgHover).fg };
+}
+
+/**
+ * The brand button runs through the same AA rule as every accent.
+ *
+ * `#F84416` carries white at 3.60 and its 600 hover at 4.36 — both under 4.5:1 — and no
+ * ink rescues either shade, so the surface moves to darkOrange 700/800 where white
+ * clears at 6.11. Only the BUTTON surface: `background.brand`, `border.brand` and
+ * `text.brand` stay on #F84416, so the brand colour itself is unchanged everywhere else.
+ *
+ * Declared after readableButton, which is why this is a function call rather than a
+ * literal — the rule lives in one place for the default and the accents alike.
+ */
 const brandButton = {
-  bg: brandMain,
-  bgHover: darkOrange[600],
-  fg: '#ffffff',
+  ...readableButton(darkOrange),
   radius: radius.button.default,
 };
 
@@ -382,73 +460,6 @@ export const ACCENT_SWATCHES: Record<AccentName, string> = {
   softgreen: softGreen[500],
 };
 
-/**
- * Readable ink for a filled button, decided by the background it sits on.
- *
- * `button.brand.fg` was white for every accent, but a primary button uses scale[500]
- * at rest and scale[600] on hover — and green 500/600 are light enough that white text
- * fails AA on both. Picking per accent by hand would leave the next accent to trip over
- * it, so the choice is computed from the colour.
- *
- * sRGB relative luminance (WCAG 2.x), and the darker of the two states decides: a button
- * whose label flips colour halfway through a hover is worse than one that is readable
- * throughout.
- */
-function luminance(hex: string): number {
-  const v = hex.replace('#', '');
-  const full = v.length === 3 ? v.split('').map((c) => c + c).join('') : v;
-  const channel = (i: number) => {
-    const c = parseInt(full.slice(i * 2, i * 2 + 2), 16) / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
-}
-
-const INK_DARK = '#1c1917';
-const INK_LIGHT = '#ffffff';
-
-/** WCAG contrast ratio between two colours. */
-function contrast(a: string, b: string): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
-}
-
-const AA_NORMAL_TEXT = 4.5;
-
-/** The better of the two inks for a pair of backgrounds, with the ratio it achieves. */
-function bestInk(bg: string, bgHover: string): { fg: string; ratio: number } {
-  const worst = (ink: string) => Math.min(contrast(ink, bg), contrast(ink, bgHover));
-  const dark = worst(INK_DARK);
-  const light = worst(INK_LIGHT);
-  return dark > light ? { fg: INK_DARK, ratio: dark } : { fg: INK_LIGHT, ratio: light };
-}
-
-/**
- * A primary-button palette that actually clears AA on both rest and hover.
- *
- * Choosing the better of two inks was not enough: at 500/600, white on purple is 4.23,
- * dark ink on blue drops to 3.74 on hover, and soft green lands at 4.02 — all short of
- * 4.5:1. Neither ink can rescue a mid-tone background, so the background moves instead:
- * one step darker (600/700) is tried next, which is where those three become readable.
- *
- * Returned as a triple rather than just a foreground, because the accessible answer is
- * the pair, not the text colour on its own.
- */
-export function readableButton(scale: Record<number, string>): { bg: string; bgHover: string; fg: string } {
-  const candidates: Array<[string, string]> = [
-    [scale[500], scale[600]],
-    [scale[600], scale[700]],
-    // Soft green needs the third rung: at 600/700 it reaches 4.36, just short of AA.
-    [scale[700], scale[800]],
-  ];
-  for (const [bg, bgHover] of candidates) {
-    const { fg, ratio } = bestInk(bg, bgHover);
-    if (ratio >= AA_NORMAL_TEXT) return { bg, bgHover, fg };
-  }
-  // Nothing clears AA — take the darkest pair and its better ink rather than the lightest.
-  const [bg, bgHover] = candidates[candidates.length - 1];
-  return { bg, bgHover, fg: bestInk(bg, bgHover).fg };
-}
 
 /**
  * The accent-driven CSS variables, per accent, for the pre-hydration script in

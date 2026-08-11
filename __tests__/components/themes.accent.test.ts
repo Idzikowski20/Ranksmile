@@ -1,4 +1,5 @@
 import {
+  contrast,
   ACCENT_NAMES,
   applyAccent,
   darkTheme,
@@ -52,24 +53,19 @@ describe('applyAccent', () => {
    * shade moves down until the label clears AA. That readability is the contract now.
    */
   it('gives every accent a primary button that clears AA on rest and hover', () => {
-    const luminance = (hex: string) => {
-      const v = hex.replace('#', '');
-      const full = v.length === 3 ? v.split('').map((c) => c + c).join('') : v;
-      const channel = (i: number) => {
-        const c = parseInt(full.slice(i * 2, i * 2 + 2), 16) / 255;
-        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-      };
-      return 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
-    };
-    const ratio = (a: string, b: string) => {
-      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-      return (hi + 0.05) / (lo + 0.05);
-    };
-
     for (const name of ACCENT_NAMES) {
-      if (name === 'default') continue; // the brand orange is not chosen by applyAccent
       const { bg, bgHover, fg } = applyAccent(lightTheme, name, 'light').button.brand;
-      expect(Math.min(ratio(fg, bg), ratio(fg, bgHover))).toBeGreaterThanOrEqual(4.5);
+      expect(Math.min(contrast(fg, bg), contrast(fg, bgHover))).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  /** The brand orange runs through the same rule — it used to be exempt, and failed. */
+  it('gives the default brand button an AA-passing pair too', () => {
+    const { bg, bgHover, fg } = lightTheme.button.brand;
+
+    expect(Math.min(contrast(fg, bg), contrast(fg, bgHover))).toBeGreaterThanOrEqual(4.5);
+    // Only the button surface moved: the brand colour itself is untouched.
+    expect(lightTheme.background.brand).toBe('#f84416');
+    expect(lightTheme.text.brand).toBe('#f84416');
   });
 });

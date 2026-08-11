@@ -43,4 +43,34 @@ describe('AppBanner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(container.querySelector('.koala-app-banner')).toBeNull();
   });
+
+  /**
+   * Two consumers can be mounted at once — a page and a wizard inside it — and their
+   * banners can serialise identically. Cleanup used to call setBanner(null) whatever was
+   * showing, so unmounting one wiped the other's; comparing by VALUE would not have fixed
+   * it either, which is why the hook holds the object it published and compares by
+   * identity.
+   */
+  it('keeps the surviving consumer banner when an identical one unmounts', () => {
+    const same: AppBannerState = { message: 'Ten sam komunikat', variant: 'error' };
+
+    const { rerender } = render(
+      <AppBannerProvider>
+        <AppBanner />
+        <Publisher banner={same} />
+        <Publisher banner={same} />
+      </AppBannerProvider>,
+    );
+    expect(screen.getByText('Ten sam komunikat')).toBeInTheDocument();
+
+    // One of them goes away; the other is still mounted and still wants the banner.
+    rerender(
+      <AppBannerProvider>
+        <AppBanner />
+        <Publisher banner={same} />
+      </AppBannerProvider>,
+    );
+
+    expect(screen.getByText('Ten sam komunikat')).toBeInTheDocument();
+  });
 });
