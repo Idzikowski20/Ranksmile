@@ -1,0 +1,26 @@
+pages/sites/[domain]/site-audit.tsx
+  s_0ec3366eee148d::t_d8110c98d1f967 309
+  s_0ec3366eee148d::t_6fb22ee7e9bc93 225
+  s_0ec3366eee148d::t_4ded835fabe700 15
+  s_0ec3366eee148d::t_93bc6b06108226 298
+  s_0ec3366eee148d::t_7a7b78c9f7cd20 282
+components/siteAudit/SiteAuditSkeleton.tsx
+  s_0ec3366eee148d::t_11c84fbb707cbd 59-89
+  s_0ec3366eee148d::t_c60d6e774ac6bf 1-58,90-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "136fa79d9f1b51a4b83ab5265cd683a30dd5c23a",
+  "prompts": {},
+  "sessions": {
+    "s_0ec3366eee148d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a470c70e-1155-4d45-a740-a8517fa0e004",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
