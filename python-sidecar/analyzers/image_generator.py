@@ -45,9 +45,11 @@ def _safe_alt(text: str) -> str:
 
 
 LANGUAGE_NAMES = {
-    "pl": "Polish", "en": "English", "de": "German", "fr": "French", "es": "Spanish",
-    "it": "Italian", "nl": "Dutch", "cs": "Czech", "sk": "Slovak", "uk": "Ukrainian",
-    "pt": "Portuguese", "ro": "Romanian", "sv": "Swedish", "da": "Danish", "no": "Norwegian",
+    "cs": "Czech", "da": "Danish", "de": "German", "el": "Greek", "en": "English",
+    "es": "Spanish", "fi": "Finnish", "fr": "French", "hu": "Hungarian", "it": "Italian",
+    "ja": "Japanese", "nl": "Dutch", "no": "Norwegian", "pl": "Polish",
+    "pt": "Portuguese", "ro": "Romanian", "sk": "Slovak", "sv": "Swedish",
+    "tr": "Turkish", "uk": "Ukrainian",
 }
 
 
@@ -58,6 +60,10 @@ def _language_name(language: str | None) -> str:
     Was "Polish if it starts with pl, else English", so a German or Spanish article got
     English alt text while its body was written in its own language — the one string on
     the page a screen reader and Google Images actually read.
+
+    The codes are every `code` in lib/setupLocations.ts, the list the workspace creator
+    offers. A first pass covered only the obvious European ones and left Finnish,
+    Hungarian, Turkish, Greek and Japanese on the English fallback.
     """
     code = (language or "pl").strip().lower().replace("_", "-").split("-")[0]
     return LANGUAGE_NAMES.get(code, "English")

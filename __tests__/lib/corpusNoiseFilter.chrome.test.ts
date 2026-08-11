@@ -10,6 +10,10 @@ import { isCorpusNoiseSentence } from '../../lib/corpusNoiseFilter';
 
 const PAGE_CHROME = [
   'od 9:00 do 21:00 ul.',
+  // Wednesday: `\b` is ASCII in JavaScript, so a boundary before `ś` never matched and
+  // this branch was dead on arrival.
+  'Środa od 9:00 do 21:00, w pozostałe dni od 10:00 do 18:00',
+  'środa od 9:00 do 21:00 oraz od 10:00 do 18:00',
   'od 9:00 do 21:00 Sobota od 9:00 do 13:00 ul.',
   '--> Data: 30.03.2025 Czas czytania: 8 min.',
   'Historia świętych miejsc Kathryn Hurlock MAM eMOCje.',

@@ -10,6 +10,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 const OLD_BASE_URL = process.env.NEON_AUTH_BASE_URL;
+/** Restored after each test — a mock left installed feeds every later suite. */
+const REAL_FETCH = global.fetch;
 
 /** Pinned so the suite does not depend on whatever AUTH_SESSION_COOKIE_NAME the env has. */
 const COOKIE = 'test-session';
@@ -48,6 +50,7 @@ beforeEach(() => {
 afterEach(() => {
   if (OLD_BASE_URL === undefined) delete process.env.NEON_AUTH_BASE_URL;
   else process.env.NEON_AUTH_BASE_URL = OLD_BASE_URL;
+  global.fetch = REAL_FETCH;
   jest.restoreAllMocks();
 });
 
@@ -108,6 +111,20 @@ describe('getCurrentUser retry', () => {
     const { getCurrentUser } = await load();
 
     await getCurrentUser(req(), res);
+    expect(cancel).toHaveBeenCalled();
+  });
+
+  /** The last attempt's 5xx body must be released too, not just the retried one. */
+  it('cancels the body of a 5xx that is not retried', async () => {
+    const cancel = jest.fn().mockResolvedValue(undefined);
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, body: { cancel: jest.fn() } })
+      .mockResolvedValueOnce({ ok: false, status: 500, body: { cancel } });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { getCurrentUser } = await load();
+
+    await expect(getCurrentUser(req(), res)).resolves.toBeNull();
     expect(cancel).toHaveBeenCalled();
   });
 });

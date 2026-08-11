@@ -87,8 +87,11 @@ const CORPUS_NOISE_RAW: RegExp[] = [
   // to be "any two clock times in one sentence", which also threw away real claims —
   // "Interwencja trwa od 8:00 do 20:00, a raport powstaje tego samego dnia" is a fact
   // about the work, not a footer.
-  /\d{1,2}:\d{2}\D{0,40}\d{1,2}:\d{2}[\s\S]{0,40}?\b(ul\.|pon|wt|śr|czw|pt|sob|niedz)/iu,
-  /\b(pon|wt|śr|czw|pt|sob|niedz)\p{L}*[\s\S]{0,40}?\d{1,2}:\d{2}\D{0,40}\d{1,2}:\d{2}/iu,
+  /\d{1,2}:\d{2}\D{0,40}\d{1,2}:\d{2}[\s\S]{0,40}?(?<![\p{L}\p{N}_])(ul\.|pon|wt|śr|czw|pt|sob|niedz)/iu,
+  // Unicode lookbehind, not `\b`: JavaScript's `\w` is ASCII, so a boundary before `ś`
+  // never matches and the Wednesday branch was dead — exactly the limitation this file's
+  // header documents, reintroduced. "Środa od 9:00 do 21:00" was passing straight through.
+  /(?<![\p{L}\p{N}_])(pon|wt|śr|czw|pt|sob|niedz)\p{L}*[\s\S]{0,40}?\d{1,2}:\d{2}\D{0,40}\d{1,2}:\d{2}/iu,
   /**
    * A word that starts lowercase and then shouts — "MAM eMOCje", a book cover rendered as
    * text in a sidebar list. Case-sensitive, so it stays out of the folded list above.

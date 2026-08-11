@@ -41,14 +41,26 @@ describe('outlineForReview', () => {
   });
 
   /**
-   * The regression this whole change exists for: the brief lived only in the POST reply,
-   * so every re-entry rebuilt the mechanical version from the bundle and the reviewer got
-   * "Pokryj <heading> z przypisanymi claims" back instead of the brief already paid for.
+   * The guard that is not vacuous: a brief whose text DOES contain the mechanical
+   * wording must still be replayed verbatim rather than re-derived. The earlier version
+   * asserted that a fixture without "Pokryj" contained no "Pokryj" — it could not fail.
    */
-  it('never reproduces the mechanical "Pokryj" outline', () => {
-    const out = outlineForReview({ approvedOutline: null, brief });
+  it('replays the stored brief verbatim, whatever it says', () => {
+    const legacyLooking = [
+      { level: 1, text: 'Tytuł' },
+      { level: 2, text: 'Szybka odpowiedź', instructions: ['Pokryj Szybka odpowiedź z przypisanymi claims.'] },
+    ];
 
-    expect(JSON.stringify(out)).not.toContain('Pokryj');
-    expect(JSON.stringify(out)).not.toContain('Cover:');
+    expect(outlineForReview({ approvedOutline: null, brief: legacyLooking })).toEqual(legacyLooking);
+  });
+
+  /** With neither source there is nothing to show — and nothing to invent. */
+  it('cannot produce headings out of a bundle any more', () => {
+    const out = outlineForReview({
+      approvedOutline: null,
+      brief: null,
+    } as Parameters<typeof outlineForReview>[0]);
+
+    expect(out).toEqual([]);
   });
 });

@@ -473,9 +473,11 @@ const DeepAnalysisPage: NextPage = () => {
         ? `${overallError} — ponawiam za ${retryIn} s (próba ${autoAttempts + 1} z ${AUTO_RETRY_MAX})`
         : `${overallError} — nie udało się po ${AUTO_RETRY_MAX} próbach.`,
       busy: retryIn !== null && retriesLeft > 0,
-      // Keyed on the error, not the message: the countdown rewrites the message every
-      // second, so a dismissal keyed on it lasted until the next tick.
-      dismissKey: `deep-analysis:${overallError}`,
+      // Stable across the countdown ticks, fresh for each run. Keyed on the message it
+      // would rotate every second; keyed on the error alone, dismissing once suppressed
+      // the banner for every later run that failed the same way, and AppBanner never
+      // clears its dismissed key while the page stays mounted.
+      dismissKey: `deep-analysis:${runGenerationRef.current}:${overallError}`,
       dismissible: true,
     }
     : null);

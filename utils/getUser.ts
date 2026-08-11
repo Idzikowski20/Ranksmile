@@ -83,7 +83,13 @@ export const getCurrentUser = async (req: NextApiRequest, _res: NextApiResponse)
                await new Promise((r) => { setTimeout(r, 250); });
                continue;
             }
-            if (!response.ok) return deny(req, `auth server replied HTTP ${response.status}`);
+            if (!response.ok) {
+               // Also on the last attempt: the early `continue` above only released the
+               // first 5xx, so a second failure left its body open just the same.
+               // eslint-disable-next-line no-await-in-loop
+               await response.body?.cancel().catch(() => undefined);
+               return deny(req, `auth server replied HTTP ${response.status}`);
+            }
             // eslint-disable-next-line no-await-in-loop
             const data = await response.json() as { user?: { id?: string; email?: string } };
             if (!data?.user?.id) return deny(req, 'auth server returned no user for this token');

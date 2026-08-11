@@ -43,11 +43,9 @@ export function reviewOutlineToHtml(outline: ApprovedOutlineHeading[]): string {
  */
 const TARGET_LENGTH_LINE = /Target length:\s*~\s*\d+\s*words/i;
 
-/** Every H2, and every H2 whose next element is its instruction list. */
-const HEADING = /<h2[^>]*>/gi;
-const HEADING_THEN_LIST = /<h2[^>]*>.*?<\/h2>\s*<ul[^>]*>/gis;
-/** A paragraph carrying any text at all. reviewOutlineToHtml only ever emits `<p></p>`. */
-const PARAGRAPH_WITH_TEXT = /<p[^>]*>(?!\s*<\/p>)[\s\S]*?\S[\s\S]*?<\/p>/i;
+/** Anything reviewOutlineToHtml can emit: a heading of any level, a list, or `<p></p>`. */
+const OUTLINE_BLOCK = /<h[1-4][^>]*>[\s\S]*?<\/h[1-4]>|<ul[^>]*>[\s\S]*?<\/ul>|<p[^>]*>\s*<\/p>|<br\s*\/?>/gi;
+const ANY_HEADING = /<h[1-4][^>]*>/i;
 
 /**
  * Two ways in, because the format changed and old drafts did not.
@@ -55,23 +53,23 @@ const PARAGRAPH_WITH_TEXT = /<p[^>]*>(?!\s*<\/p>)[\s\S]*?\S[\s\S]*?<\/p>/i;
  * Legacy: the `Target length: ~N words` line every section used to carry. Articles saved
  * before autosave was suspended during review still hold it inside `articles.content`.
  *
- * Current: the exact shape `reviewOutlineToHtml` produces — every H2 followed by its
- * instruction list, and not one paragraph with text in it, because that renderer emits
- * only headings, lists and empty `<p></p>`.
+ * Current: the document contains a heading and NOTHING that reviewOutlineToHtml cannot
+ * emit — headings, instruction lists, and the empty `<p></p>` a section with no bullets
+ * renders. Whatever is left after removing those is prose, and prose means an article.
  *
- * Both conditions are required. A "no paragraph longer than 160 characters" test was too
- * loose: a short, list-heavy article passed it, and being misread as an outline suspends
- * autosave and presents the finished article as planning instructions. Demanding that
- * EVERY heading has a list, and that no paragraph has any text, is a property of our own
- * generated document rather than a guess about how long prose tends to be.
+ * Stated as "nothing else is present" rather than as a count of heading/list pairs. That
+ * pairing was wrong three ways at once: a list belonging to a later section satisfied an
+ * earlier heading, a section whose bullets were all deleted renders `<p></p>` and was
+ * rejected, and only H2 was counted so an outline of H3s read as an article. Being
+ * misread either way is costly — it suspends autosave over a finished article, or resumes
+ * it over an outline the reviewer is still editing.
  */
 export function isReviewOutlineHtml(html: string): boolean {
   const doc = html || '';
   if (TARGET_LENGTH_LINE.test(doc)) return true;
-  if (PARAGRAPH_WITH_TEXT.test(doc)) return false;
-  const headings = (doc.match(HEADING) || []).length;
-  if (headings === 0) return false;
-  return (doc.match(HEADING_THEN_LIST) || []).length === headings;
+  if (!ANY_HEADING.test(doc)) return false;
+  const leftover = doc.replace(OUTLINE_BLOCK, '').replace(/&nbsp;/gi, ' ').trim();
+  return leftover.length === 0;
 }
 
 function nodeText(node: JSONContent): string {

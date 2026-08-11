@@ -65,4 +65,32 @@ describe('isReviewOutlineHtml', () => {
       + '</p><ul><li>Pierwszy sygnał</li></ul>';
     expect(isReviewOutlineHtml(article)).toBe(false);
   });
+
+  /** All bullets deleted: the renderer emits `<p></p>`, and that is still an outline. */
+  it('recognises a section whose instructions were all removed', () => {
+    const emptied = reviewOutlineToHtml([
+      { level: 2, text: 'Kontakt', instructions: [] },
+      { level: 2, text: 'FAQ', instructions: ['Odpowiedz na dwa pytania.'] },
+    ]);
+    expect(isReviewOutlineHtml(emptied)).toBe(true);
+  });
+
+  /** Outlines whose sections are H3 are outlines too — only H2 used to count. */
+  it('recognises an outline built from lower heading levels', () => {
+    const nested = reviewOutlineToHtml([
+      { level: 1, text: 'Tytuł' },
+      { level: 3, text: 'Podsekcja', instructions: ['Opisz krok po kroku.'] },
+    ]);
+    expect(isReviewOutlineHtml(nested)).toBe(true);
+  });
+
+  /**
+   * A list-heavy article: one section has a list, the next is prose. Counting
+   * heading/list pairs let the later list satisfy the earlier heading.
+   */
+  it('does not fire when one section is prose and another has a list', () => {
+    const article = '<h2>Objawy</h2><ul><li>Lęk</li><li>Poczucie winy</li></ul>'
+      + '<h2>Co dalej</h2><p>Skontaktuj się ze specjalistą i zabezpiecz wiadomości.</p>';
+    expect(isReviewOutlineHtml(article)).toBe(false);
+  });
 });
