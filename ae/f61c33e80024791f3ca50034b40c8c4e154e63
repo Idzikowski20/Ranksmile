@@ -1,0 +1,26 @@
+components/koala/tokens/themes.ts
+  s_8d6cce368af4fd::t_7e0a9227f3360c 416-425,427-432,434-435,437-440,443-450,461-467,471-473,482-485,506
+  s_8d6cce368af4fd::t_1e6c0d36e5d119 441-442
+components/koala/shell/AppBanner.tsx
+  s_8d6cce368af4fd::t_c2a6c517d156bd 43-44,46-49
+__tests__/components/themes.accent.test.ts
+  s_8d6cce368af4fd::t_8f3571e18310a2 45-72
+styles/globals.css
+  s_8d6cce368af4fd::t_5a4089e107deaa 7558-7559,7571-7573,7578
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "aef61c33e80024791f3ca50034b40c8c4e154e63",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
