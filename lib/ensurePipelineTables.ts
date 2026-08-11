@@ -104,13 +104,20 @@ export async function ensurePipelineTables(): Promise<void> {
    // IF NOT EXISTS matches on the name alone, so every database that already ran the
    // first definition would have silently kept it.
    //
-   // Create first, drop second — never the other way. If the create fails, dropping the
-   // old index first would leave the query with no index at all until the next boot that
-   // happens to succeed; this order keeps the old one covering the query until the new
-   // one is in place. The drop is a no-op once nobody is on the first definition.
+   // Create first, drop only if the create actually succeeded — never the other way, and
+   // never unconditionally. If the create fails, dropping the old index would leave the
+   // query with no index at all until the next boot that happens to succeed; keeping the
+   // old one until the new exists is the whole point, so the drop is gated on the create,
+   // not just sequenced after it. The drop is a no-op once nobody is on the first name.
    const scoreKey = isPostgres ? 'score DESC NULLS LAST' : 'score DESC';
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_page_audits_top ON page_audits(domain_id, fetch_status, ${scoreKey}, word_count DESC, url ASC)`); } catch (e) { ignoreExisting('idx_page_audits_top', e); }
-   try { await db.query('DROP INDEX IF EXISTS idx_page_audits_best'); } catch (e) { ignoreExisting('drop idx_page_audits_best', e); }
+   let topIndexReady = false;
+   try {
+      await db.query(`CREATE INDEX IF NOT EXISTS idx_page_audits_top ON page_audits(domain_id, fetch_status, ${scoreKey}, word_count DESC, url ASC)`);
+      topIndexReady = true;
+   } catch (e) { ignoreExisting('idx_page_audits_top', e); }
+   if (topIndexReady) {
+      try { await db.query('DROP INDEX IF EXISTS idx_page_audits_best'); } catch (e) { ignoreExisting('drop idx_page_audits_best', e); }
+   }
 
    checked = true;
 }
