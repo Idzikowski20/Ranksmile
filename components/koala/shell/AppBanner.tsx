@@ -13,7 +13,8 @@ export type AppBannerState = {
 
 type Ctx = {
   banner: AppBannerState | null;
-  setBanner: (b: AppBannerState | null) => void;
+  /** useState's own setter — the updater form is what lets cleanup compare before clearing. */
+  setBanner: React.Dispatch<React.SetStateAction<AppBannerState | null>>;
 };
 
 const AppBannerContext = createContext<Ctx | null>(null);
@@ -27,6 +28,10 @@ export function AppBannerProvider({ children }: { children: React.ReactNode }) {
 /**
  * Declarative: pass the banner to show, or `null` for none. Clears on unmount.
  * `useAppBanner(wpMissing ? { message: '…', action: { … } } : null)`
+ *
+ * More than one component may hold this hook at a time — a page and the wizard inside it,
+ * say. Cleanup therefore clears only the banner this hook actually set: an unconditional
+ * `setBanner(null)` on unmount wiped whatever the other consumer had just put up.
  */
 export function useAppBanner(banner: AppBannerState | null) {
   const ctx = useContext(AppBannerContext);
@@ -36,7 +41,11 @@ export function useAppBanner(banner: AppBannerState | null) {
   useEffect(() => {
     if (!setBanner) return undefined;
     setBanner(key ? (JSON.parse(key) as AppBannerState) : null);
-    return () => setBanner(null);
+    return () => {
+      // Compared by value: the context holds the object this effect parsed, and any
+      // banner set since then is a different one that must survive this unmount.
+      setBanner((current) => (current && JSON.stringify(current) === key ? null : current));
+    };
   }, [key, setBanner]);
 }
 
@@ -44,6 +53,20 @@ const VARIANT_BG: Record<NonNullable<AppBannerState['variant']>, string> = {
   error: 'var(--koala-status-danger)',
   warning: 'var(--koala-status-warning)',
   brand: 'var(--koala-brand)',
+};
+
+/**
+ * Text colour per variant, not one hardcoded white.
+ *
+ * `--koala-status-warning` is amber (#eab308 light, #fdc700 dark). White on it lands
+ * around 1.9:1 — WCAG AA wants 4.5:1 for body text — so a warning banner was a white
+ * line on a yellow bar. Dark ink on amber clears it comfortably; the other two variants
+ * are dark enough backgrounds to keep white.
+ */
+const VARIANT_FG: Record<NonNullable<AppBannerState['variant']>, string> = {
+  error: '#ffffff',
+  warning: '#1c1917',
+  brand: '#ffffff',
 };
 
 const VARIANT_ICON: Record<NonNullable<AppBannerState['variant']>, string> = {
@@ -64,7 +87,11 @@ export function AppBanner() {
   const variant = banner.variant ?? 'error';
 
   return (
-    <div className="koala-app-banner" style={{ background: VARIANT_BG[variant] }} role="alert">
+    <div
+      className="koala-app-banner"
+      style={{ background: VARIANT_BG[variant], color: VARIANT_FG[variant] }}
+      role="alert"
+    >
       <div className="koala-app-banner__container">
         <span className="koala-app-banner__message">
           <Icon name={VARIANT_ICON[variant]} size={20} weight="regular" />

@@ -113,7 +113,11 @@ export function KoalaThemeProvider({ children }: { children: React.ReactNode }) 
     setTheme(THEME_NAMES[(i + 1) % THEME_NAMES.length]);
   }, [themeName, setTheme]);
 
-  const semantic = buildSemantic(themeName, accentName);
+  // Memoised because this provider wraps the whole app. For a non-default accent
+  // buildSemantic → applyAccent spreads a fresh object every call, so an unmemoised
+  // `semantic` gave `emotionTheme` and `value` a new identity on every parent render and
+  // re-rendered the tree with them.
+  const semantic = useMemo(() => buildSemantic(themeName, accentName), [themeName, accentName]);
 
   const emotionTheme = useMemo(
     () => ({

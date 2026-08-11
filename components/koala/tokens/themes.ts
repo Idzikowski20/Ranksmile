@@ -382,6 +382,79 @@ export const ACCENT_SWATCHES: Record<AccentName, string> = {
   softgreen: softGreen[500],
 };
 
+/**
+ * Readable ink for a filled button, decided by the background it sits on.
+ *
+ * `button.brand.fg` was white for every accent, but a primary button uses scale[500]
+ * at rest and scale[600] on hover — and green 500/600 are light enough that white text
+ * fails AA on both. Picking per accent by hand would leave the next accent to trip over
+ * it, so the choice is computed from the colour.
+ *
+ * sRGB relative luminance (WCAG 2.x), and the darker of the two states decides: a button
+ * whose label flips colour halfway through a hover is worse than one that is readable
+ * throughout.
+ */
+function luminance(hex: string): number {
+  const v = hex.replace('#', '');
+  const full = v.length === 3 ? v.split('').map((c) => c + c).join('') : v;
+  const channel = (i: number) => {
+    const c = parseInt(full.slice(i * 2, i * 2 + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
+}
+
+const INK_DARK = '#1c1917';
+const INK_LIGHT = '#ffffff';
+
+/** WCAG contrast ratio between two colours. */
+function contrast(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * Ink that stays legible across the button's rest AND hover backgrounds — whichever of
+ * the two inks scores better on the worse of the two states wins.
+ *
+ * Decided by the ratio rather than a tuned luminance threshold, so the rule is the
+ * accessibility requirement itself and cannot drift as accents are added. It picks dark
+ * ink for green, blue and purple, where white lands under AA's 4.5:1, and keeps white on
+ * the brand orange and dark blue.
+ */
+export function readableInk(bg: string, bgHover: string): string {
+  const worst = (ink: string) => Math.min(contrast(ink, bg), contrast(ink, bgHover));
+  return worst(INK_DARK) > worst(INK_LIGHT) ? INK_DARK : INK_LIGHT;
+}
+
+/**
+ * The accent-driven CSS variables, per accent, for the pre-hydration script in
+ * `_document`. Without it a saved accent renders orange for one frame on every reload,
+ * because the provider only applies it after React hydrates — the same flash the
+ * `data-theme` line already prevents for themes.
+ *
+ * Derived here rather than written out in `_document`, so the colours have one source.
+ *
+ * ponytail: ceiling = only the variables that equal scale[500] are covered, which is
+ * every surface except the hover shade and the brand text tint. Those two settle on
+ * hydration and are not what the eye catches. Covering them needs the whole per-theme
+ * accent computation inlined into a string, and two copies of that is how they drift.
+ */
+export function accentPreloadVars(accent: AccentName): Record<string, string> {
+  if (accent === 'default') return {};
+  const main = ACCENT_SCALES[accent][500];
+  return {
+    '--koala-bg-brand': main,
+    '--koala-border-brand': main,
+    '--koala-border-focus': main,
+    '--koala-btn-brand-bg': main,
+    '--koala-input-border-focus': main,
+    '--koala-focus': main,
+    '--koala-brand': main,
+    '--koala-accent': main,
+  };
+}
+
 /** Re-point every brand-derived surface of a theme at the chosen accent scale. */
 export function applyAccent(t: ThemeSemantic, accent: AccentName, themeName: ThemeName): ThemeSemantic {
   if (accent === 'default') return t;
@@ -399,7 +472,12 @@ export function applyAccent(t: ThemeSemantic, accent: AccentName, themeName: The
     border: { ...t.border, brand: main, focus: main },
     button: {
       ...t.button,
-      brand: { ...t.button.brand, bg: main, bgHover: scale[600] },
+      brand: {
+        ...t.button.brand,
+        bg: main,
+        bgHover: scale[600],
+        fg: readableInk(main, scale[600]),
+      },
     },
     input: { ...t.input, borderFocus: main },
     focus: main,

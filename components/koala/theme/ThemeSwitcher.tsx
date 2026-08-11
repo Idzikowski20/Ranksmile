@@ -13,6 +13,30 @@ import { Icon } from '../icons/Icon';
 import { spacing } from '../tokens/spacing';
 import { radius } from '../tokens/effects';
 
+/**
+ * Both pickers are the same control with a different swatch, so the style lives once.
+ * It was duplicated verbatim, which meant every padding or active-border tweak had to be
+ * made twice and stayed correct only until someone forgot.
+ */
+function pickerButtonStyle(active: boolean): React.CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: `${spacing.sm} ${spacing.md}`,
+    borderRadius: radius.sm,
+    border: `1px solid ${active ? 'var(--koala-brand)' : 'var(--koala-border-primary)'}`,
+    background: active
+      ? 'color-mix(in srgb, var(--koala-brand) 12%, var(--koala-bg-primary))'
+      : 'var(--koala-bg-primary)',
+    color: 'var(--koala-text-primary)',
+    font: 'inherit',
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 500,
+    cursor: 'var(--koala-cursor-pointing)',
+  };
+}
+
 /** Compact theme picker — Light / Dark / Cream / Moonlight. */
 export function ThemeSwitcher({ className }: { className?: string }) {
   const { themeName, setTheme } = useKoalaTheme();
@@ -32,20 +56,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
             type="button"
             aria-pressed={active}
             onClick={() => setTheme(name)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              padding: `${spacing.sm} ${spacing.md}`,
-              borderRadius: radius.sm,
-              border: `1px solid ${active ? 'var(--koala-brand)' : 'var(--koala-border-primary)'}`,
-              background: active ? 'color-mix(in srgb, var(--koala-brand) 12%, var(--koala-bg-primary))' : 'var(--koala-bg-primary)',
-              color: 'var(--koala-text-primary)',
-              font: 'inherit',
-              fontSize: 'var(--font-size-sm)',
-              fontWeight: 500,
-              cursor: 'var(--koala-cursor-pointing)',
-            }}
+            style={pickerButtonStyle(active)}
           >
             <ThemeSwatch name={name} />
             {THEME_LABELS[name]}
@@ -94,20 +105,7 @@ export function AccentSwitcher({ className }: { className?: string }) {
             type="button"
             aria-pressed={active}
             onClick={() => setAccent(name)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              padding: `${spacing.sm} ${spacing.md}`,
-              borderRadius: radius.sm,
-              border: `1px solid ${active ? 'var(--koala-brand)' : 'var(--koala-border-primary)'}`,
-              background: active ? 'color-mix(in srgb, var(--koala-brand) 12%, var(--koala-bg-primary))' : 'var(--koala-bg-primary)',
-              color: 'var(--koala-text-primary)',
-              font: 'inherit',
-              fontSize: 'var(--font-size-sm)',
-              fontWeight: 500,
-              cursor: 'var(--koala-cursor-pointing)',
-            }}
+            style={pickerButtonStyle(active)}
           >
             <span
               aria-hidden="true"

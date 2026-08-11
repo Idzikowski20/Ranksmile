@@ -7517,7 +7517,8 @@ html.koala-shell[data-theme="cream"] .app-content {
   min-height: 40px;
   display: flex;
   align-items: center;
-  color: #ffffff;
+  /* Colour comes from the component, per variant: white is unreadable on the amber
+     warning background (~1.9:1). See VARIANT_FG in AppBanner.tsx. */
   font-family: var(--font-family-primary);
   font-size: 14px;
   line-height: 20px;
