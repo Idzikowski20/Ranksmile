@@ -1,0 +1,70 @@
+services/aiVisibility.tsx
+  s_8d6cce368af4fd::t_b8d2f088ee7757 126-128
+pages/sites/[domain]/ai-visibility/manage.tsx
+  s_8d6cce368af4fd::t_1d357ca09c9034 85
+styles/globals.css
+  s_8d6cce368af4fd::t_d6fa1a5c9650b2 3518
+  s_8d6cce368af4fd::t_b556775d9f3ab7 9628-9630,9632-9634,9636-9638,9646-9650
+  s_8d6cce368af4fd::t_10746bc2210152 9654-9660
+  s_8d6cce368af4fd::t_eafc7c27290b23 9583-9587
+  s_8d6cce368af4fd::t_041f77d6d89239 403
+pages/api/ai-visibility/[slug]/generate-prompts.ts
+  s_8d6cce368af4fd::t_bbe52bccf5597e 116-120
+  s_8d6cce368af4fd::t_83459c21757273 52-81,83
+  s_8d6cce368af4fd::t_669662c64af115 93,99-102
+  s_8d6cce368af4fd::t_7ae61ea8c673da 2,13-15
+lib/ensureAiVisibilityTables.ts
+  s_8d6cce368af4fd::t_6a69707533e3c9 48-62
+lib/keywordResearchCompute.ts
+  s_8d6cce368af4fd::t_52e9981eb37dba 2-9
+lib/keywordResearchTypes.ts
+  s_8d6cce368af4fd::t_099acdaad55e89 2,4
+lib/db/query.ts
+  s_8d6cce368af4fd::t_bea5d233465d63 78
+pages/sites/[domain]/ai-visibility/setup.tsx
+  s_8d6cce368af4fd::t_9736a440fd7068 95
+  s_8d6cce368af4fd::t_5b221a44bdd838 125-128
+  s_8d6cce368af4fd::t_98f1b292160dcc 66
+components/settings/PeopleSettings.tsx
+  s_8d6cce368af4fd::t_ec43e0e1cb8d4f 177-179
+  s_8d6cce368af4fd::t_663dc13cf4f10a 167-171
+lib/wie/autoLearnBrandDna.ts
+  s_8d6cce368af4fd::t_fc3211c06b3412 11,13-14
+  s_8d6cce368af4fd::t_83355f53d57238 20-26,39-40
+  s_8d6cce368af4fd::t_38d4d64ad38146 57
+  s_8d6cce368af4fd::t_9ead9e5245c212 66
+  s_8d6cce368af4fd::t_007c33099db6e9 5-9
+  s_8d6cce368af4fd::t_9bbe9a03e7b0a5 55-56,59
+  s_8d6cce368af4fd::t_39667b3d517571 31-38
+__tests__/components/tourScenes.test.tsx
+  s_8d6cce368af4fd::t_b3b3a73d114413 12-15,17
+pages/api/articles/deep-analysis.ts
+  s_8d6cce368af4fd::t_4abbb0a3525ed2 841-849
+components/onboarding/InviteTeamStep.tsx
+  s_8d6cce368af4fd::t_1317475270a6e1 111-115,117,120-121
+  s_8d6cce368af4fd::t_4995ea7aac4ab7 2,20-22
+  s_8d6cce368af4fd::t_6e2c599bd803d9 83-84
+  s_8d6cce368af4fd::t_84cd244da5adac 136-139,141-142
+  s_8d6cce368af4fd::t_b520c8e1ee8404 85-95
+__tests__/lib/autoLearnBrandDna.test.ts
+  s_8d6cce368af4fd::t_63eb6ef08d0063 76,82
+  s_8d6cce368af4fd::t_888ce89e3564e6 28,41-54
+components/koala/forms/FileUpload.tsx
+  s_8d6cce368af4fd::t_b93b09547e7ac2 225-241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "233ac49cff99ee6a46468e9a90fe38fcdc5e1328",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
