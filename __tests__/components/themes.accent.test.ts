@@ -42,7 +42,34 @@ describe('applyAccent', () => {
     for (const name of ACCENT_NAMES) {
       const vars = themeToCssVars(applyAccent(lightTheme, name, 'light'));
       expect(vars['--koala-brand']).toBeTruthy();
-      expect(vars['--koala-btn-brand-bg']).toBe(vars['--koala-brand']);
+      expect(vars['--koala-btn-brand-bg']).toBeTruthy();
+    }
+  });
+
+  /**
+   * The button background is no longer required to equal the brand colour: at 500/600
+   * white on purple reached 4.23 and dark ink on blue dropped to 3.74 on hover, so the
+   * shade moves down until the label clears AA. That readability is the contract now.
+   */
+  it('gives every accent a primary button that clears AA on rest and hover', () => {
+    const luminance = (hex: string) => {
+      const v = hex.replace('#', '');
+      const full = v.length === 3 ? v.split('').map((c) => c + c).join('') : v;
+      const channel = (i: number) => {
+        const c = parseInt(full.slice(i * 2, i * 2 + 2), 16) / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
+    };
+    const ratio = (a: string, b: string) => {
+      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+
+    for (const name of ACCENT_NAMES) {
+      if (name === 'default') continue; // the brand orange is not chosen by applyAccent
+      const { bg, bgHover, fg } = applyAccent(lightTheme, name, 'light').button.brand;
+      expect(Math.min(ratio(fg, bg), ratio(fg, bgHover))).toBeGreaterThanOrEqual(4.5);
     }
   });
 });

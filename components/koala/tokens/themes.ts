@@ -413,18 +413,41 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/**
- * Ink that stays legible across the button's rest AND hover backgrounds — whichever of
- * the two inks scores better on the worse of the two states wins.
- *
- * Decided by the ratio rather than a tuned luminance threshold, so the rule is the
- * accessibility requirement itself and cannot drift as accents are added. It picks dark
- * ink for green, blue and purple, where white lands under AA's 4.5:1, and keeps white on
- * the brand orange and dark blue.
- */
-export function readableInk(bg: string, bgHover: string): string {
+const AA_NORMAL_TEXT = 4.5;
+
+/** The better of the two inks for a pair of backgrounds, with the ratio it achieves. */
+function bestInk(bg: string, bgHover: string): { fg: string; ratio: number } {
   const worst = (ink: string) => Math.min(contrast(ink, bg), contrast(ink, bgHover));
-  return worst(INK_DARK) > worst(INK_LIGHT) ? INK_DARK : INK_LIGHT;
+  const dark = worst(INK_DARK);
+  const light = worst(INK_LIGHT);
+  return dark > light ? { fg: INK_DARK, ratio: dark } : { fg: INK_LIGHT, ratio: light };
+}
+
+/**
+ * A primary-button palette that actually clears AA on both rest and hover.
+ *
+ * Choosing the better of two inks was not enough: at 500/600, white on purple is 4.23,
+ * dark ink on blue drops to 3.74 on hover, and soft green lands at 4.02 — all short of
+ * 4.5:1. Neither ink can rescue a mid-tone background, so the background moves instead:
+ * one step darker (600/700) is tried next, which is where those three become readable.
+ *
+ * Returned as a triple rather than just a foreground, because the accessible answer is
+ * the pair, not the text colour on its own.
+ */
+export function readableButton(scale: Record<number, string>): { bg: string; bgHover: string; fg: string } {
+  const candidates: Array<[string, string]> = [
+    [scale[500], scale[600]],
+    [scale[600], scale[700]],
+    // Soft green needs the third rung: at 600/700 it reaches 4.36, just short of AA.
+    [scale[700], scale[800]],
+  ];
+  for (const [bg, bgHover] of candidates) {
+    const { fg, ratio } = bestInk(bg, bgHover);
+    if (ratio >= AA_NORMAL_TEXT) return { bg, bgHover, fg };
+  }
+  // Nothing clears AA — take the darkest pair and its better ink rather than the lightest.
+  const [bg, bgHover] = candidates[candidates.length - 1];
+  return { bg, bgHover, fg: bestInk(bg, bgHover).fg };
 }
 
 /**
@@ -435,23 +458,31 @@ export function readableInk(bg: string, bgHover: string): string {
  *
  * Derived here rather than written out in `_document`, so the colours have one source.
  *
- * ponytail: ceiling = only the variables that equal scale[500] are covered, which is
- * every surface except the hover shade and the brand text tint. Those two settle on
- * hydration and are not what the eye catches. Covering them needs the whole per-theme
- * accent computation inlined into a string, and two copies of that is how they drift.
+ * The button triple is included: preloading the background without the foreground that
+ * readableButton pairs with it flashed a white label on a shade chosen for dark ink.
+ *
+ * ponytail: ceiling = the remaining accent-derived value, the brand text tint, still
+ * settles on hydration. It is small text on the page background rather than a filled
+ * control, so it does not read as a flash. Covering it needs the per-theme light/dark
+ * branch inlined into a string, and two copies of that is how they drift.
  */
 export function accentPreloadVars(accent: AccentName): Record<string, string> {
   if (accent === 'default') return {};
-  const main = ACCENT_SCALES[accent][500];
+  const scale = ACCENT_SCALES[accent];
+  const main = scale[500];
+  const button = readableButton(scale);
   return {
     '--koala-bg-brand': main,
     '--koala-border-brand': main,
     '--koala-border-focus': main,
-    '--koala-btn-brand-bg': main,
     '--koala-input-border-focus': main,
     '--koala-focus': main,
     '--koala-brand': main,
     '--koala-accent': main,
+    '--koala-btn-brand-bg': button.bg,
+    '--koala-btn-brand-bg-hover': button.bgHover,
+    '--koala-btn-brand-fg': button.fg,
+    '--koala-brand-hover': button.bgHover,
   };
 }
 
@@ -472,12 +503,7 @@ export function applyAccent(t: ThemeSemantic, accent: AccentName, themeName: The
     border: { ...t.border, brand: main, focus: main },
     button: {
       ...t.button,
-      brand: {
-        ...t.button.brand,
-        bg: main,
-        bgHover: scale[600],
-        fg: readableInk(main, scale[600]),
-      },
+      brand: { ...t.button.brand, ...readableButton(scale) },
     },
     input: { ...t.input, borderFocus: main },
     focus: main,

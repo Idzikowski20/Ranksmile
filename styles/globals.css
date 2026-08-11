@@ -7555,7 +7555,8 @@ html.koala-shell[data-theme="cream"] .app-content {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #ffffff;
+  /* Inherits the variant colour set on the banner; white was unreadable on amber. */
+  color: currentColor;
   text-decoration: underline;
   text-underline-offset: 2px;
   white-space: nowrap;
@@ -7567,12 +7568,14 @@ html.koala-shell[data-theme="cream"] .app-content {
   justify-content: center;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.8);
+  /* Same ink as the message, dimmed — see VARIANT_FG in AppBanner.tsx. */
+  color: currentColor;
+  opacity: 0.8;
   padding: 0;
   cursor: var(--koala-cursor-pointing);
 }
 
-.koala-app-banner__close:hover { color: #ffffff; }
+.koala-app-banner__close:hover { opacity: 1; }
 
 @media (max-width: 640px) {
   .koala-app-banner__container { padding: 10px 16px; align-items: flex-start; }

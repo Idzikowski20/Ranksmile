@@ -40,11 +40,13 @@ export function useAppBanner(banner: AppBannerState | null) {
 
   useEffect(() => {
     if (!setBanner) return undefined;
-    setBanner(key ? (JSON.parse(key) as AppBannerState) : null);
+    const published = key ? (JSON.parse(key) as AppBannerState) : null;
+    setBanner(published);
     return () => {
-      // Compared by value: the context holds the object this effect parsed, and any
-      // banner set since then is a different one that must survive this unmount.
-      setBanner((current) => (current && JSON.stringify(current) === key ? null : current));
+      // By identity, not by value: two consumers can hold banners that serialise
+      // identically, and comparing the text would let either one clear the other's.
+      // The context holds this exact object, so `===` names the publisher.
+      setBanner((current) => (current === published ? null : current));
     };
   }, [key, setBanner]);
 }
