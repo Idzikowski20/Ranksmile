@@ -1,0 +1,29 @@
+lib/wie/autoLearnBrandDna.ts
+  s_8d6cce368af4fd::t_25b411c3bfcdb9 57-60,64
+lib/ensurePipelineTables.ts
+  s_8d6cce368af4fd::t_48e3be6b884355 83,85-91
+  s_8d6cce368af4fd::t_df8b1ddf13c04f 92-99
+__tests__/api/ai-vis-generate-prompts-singleflight.test.ts
+  s_8d6cce368af4fd::t_4654a71916ca4a 83-85,88-103
+__tests__/lib/autoLearnBrandDna.test.ts
+  s_8d6cce368af4fd::t_329e2dd3e23afa 66-68
+pages/api/ai-visibility/[slug]/generate-prompts.ts
+  s_8d6cce368af4fd::t_c9afd3576e64fc 183-188
+  s_8d6cce368af4fd::t_60816dea8aeb45 109-116,119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0a1d9afadc87dc8ab267bb5df3b44d63631e1f13",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
