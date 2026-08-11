@@ -80,11 +80,23 @@ export async function ensurePipelineTables(): Promise<void> {
       try { await db.query(`CREATE INDEX IF NOT EXISTS idx_${t}_domain ON ${t}(domain_id)`); } catch (e) { ignoreExisting(`idx_${t}_domain`, e); }
    }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_jobs_domain_type ON analysis_jobs(domain_id, job_type)'); } catch (e) { ignoreExisting('idx_jobs_domain_type', e); }
-   // autoLearnBrandDna picks the domain's 8 best audited pages: it filters on
-   // (domain_id, fetch_status, word_count) and orders by score. page_audits grows with
+   // autoLearnBrandDna picks the domain's 8 best audited pages. page_audits grows with
    // every crawled page, and the domain_id-only index above left that a full per-domain
-   // scan plus a sort. Column order is equality first, then the range, then the sort key.
-   try { await db.query('CREATE INDEX IF NOT EXISTS idx_page_audits_best ON page_audits(domain_id, fetch_status, word_count, score)'); } catch (e) { ignoreExisting('idx_page_audits_best', e); }
+   // scan plus a sort.
+   //
+   // Equality columns first, then the ORDER BY keys in the query's own direction, so the
+   // engine can walk the index and stop once eight rows qualify. word_count is left as a
+   // filter rather than an index range on purpose: a range column before the sort keys
+   // ends the usable ordering right there, which is what a (…, word_count, score) index
+   // did — it served the WHERE and then sorted every qualifying page anyway.
+   //
+   // NULLS LAST is spelled out on Postgres and left off on SQLite, which rejects it in
+   // CREATE INDEX ("unsupported use of NULLS LAST") and does not need it: SQLite sorts
+   // NULLs smallest, so a DESC index already ends with them. Postgres defaults a DESC
+   // index to NULLS FIRST, and an index whose null placement disagrees with the query's
+   // is not usable for the sort at all — the whole point of this index.
+   const scoreKey = isPostgres ? 'score DESC NULLS LAST' : 'score DESC';
+   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_page_audits_best ON page_audits(domain_id, fetch_status, ${scoreKey}, word_count DESC)`); } catch (e) { ignoreExisting('idx_page_audits_best', e); }
 
    checked = true;
 }

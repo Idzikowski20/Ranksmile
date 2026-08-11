@@ -106,10 +106,17 @@ async function claimTopic(domainId: number, topic: string): Promise<boolean> {
    }
 }
 
-/** Release a claim we are not going to fill, so the next request does not wait on it. */
+/**
+ * Release a claim we are not going to fill, so the next request does not wait on it.
+ *
+ * `prompts = '[]'` is the whole point of the WHERE: an unconditional delete on
+ * (domain, topic) also erased a real pool that a concurrent `refresh` had just written,
+ * turning one request's failed call into another request's lost purchase. Only a row
+ * that is still an empty claim may go.
+ */
 async function releaseTopic(domainId: number, topic: string): Promise<void> {
    await db.query(
-      'DELETE FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ?',
+      "DELETE FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ? AND prompts = '[]'",
       { replacements: [domainId, topic] },
    ).catch((e) => console.warn('[generate-prompts] claim release failed:', getErrorMessage(e)));
 }
@@ -173,8 +180,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!holdsClaim) {
          const waited = await waitForCached(domainId, topicTrimmed);
          if (waited) return res.status(200).json({ prompts: waited, degraded: false, cached: true });
-         // The holder never delivered (it degraded, failed, or is slower than the wait).
-         // Buying our own is the wrong-but-cheap outcome the claim exists to make rare.
+         // The holder never delivered — it degraded, it crashed, or it is slower than the
+         // wait. Take the claim over rather than only buying: a claim whose holder died is
+         // otherwise cleared by nobody, and if our own call also degrades every later
+         // visit pays the 3s wait again, forever. Taking it over routes us through the
+         // same release, so the abandoned row goes when we cannot fill it either.
+         holdsClaim = true;
       }
    }
 

@@ -63,7 +63,9 @@ describe('autoLearnBrandDna', () => {
 
     await autoLearnBrandDna({ domainId: 2 });
 
-    expect(String(query.mock.calls[0][0])).toMatch(/ORDER BY COALESCE\(score, 0\) DESC.*url ASC/s);
+    // NULLS LAST rather than COALESCE(score, 0): same order for a 0..100 score, but an
+    // expression the planner cannot match keeps idx_page_audits_best off the sort.
+    expect(String(query.mock.calls[0][0])).toMatch(/ORDER BY score DESC NULLS LAST.*url ASC/s);
   });
 
   // Re-learning on every analysis would hammer the ingest for no gain.

@@ -80,6 +80,25 @@ describe('generate-prompts single-flight', () => {
 
     const deletes = dbQuery.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE'));
     expect(deletes).toHaveLength(1);
+    // Only an empty claim may be deleted: an unconditional delete on (domain, topic)
+    // would also erase a real pool a concurrent refresh had just written.
+    expect(String(deletes[0][0])).toContain("prompts = '[]'");
     expect(res._json).toMatchObject({ degraded: true });
   });
+
+  // A holder that crashed leaves its empty claim behind. If the next request only waits
+  // and then degrades too, nothing ever clears the row and every later visit pays the
+  // wait again — so an expired wait takes the claim over.
+  it('clears a claim its holder abandoned, even when its own call degrades', async () => {
+    cacheRead.mockResolvedValue(null);
+    dbQuery.mockRejectedValueOnce(new Error('duplicate key value violates unique constraint'));
+    paa.mockRejectedValue(new Error('locale mismatch'));
+
+    const res = mockRes();
+    await handler(mockReq(), res);
+
+    const deletes = dbQuery.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE'));
+    expect(deletes).toHaveLength(1);
+    expect(res._json).toMatchObject({ degraded: true });
+  }, 15000);
 });

@@ -54,10 +54,14 @@ export async function autoLearnBrandDna(opts: {
     // url ASC is the tie-break, not decoration: score and word_count collide often
     // enough on a real blog that the LIMIT would otherwise cut an arbitrary eight of
     // the tied pages, and the voice learned from identical data would differ per run.
+    //
+    // `score DESC NULLS LAST` rather than `COALESCE(score, 0) DESC`: an expression the
+    // planner cannot match keeps idx_page_audits_best from serving the sort, and the
+    // two orders agree — score is 0..100, so an unscored page sorts last either way.
     const rows = await db.query(
       `SELECT url FROM page_audits
         WHERE domain_id = ? AND fetch_status = 'OK' AND word_count >= ?
-        ORDER BY COALESCE(score, 0) DESC, word_count DESC, url ASC
+        ORDER BY score DESC NULLS LAST, word_count DESC, url ASC
         LIMIT ${MAX_URLS}`,
       { replacements: [opts.domainId, MIN_WORDS], type: QueryTypes.SELECT },
     ) as Array<{ url: string }>;
