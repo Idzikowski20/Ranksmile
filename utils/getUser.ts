@@ -57,20 +57,44 @@ export const getCurrentUser = async (req: NextApiRequest, _res: NextApiResponse)
       const sessionToken = req.cookies?.[SESSION_COOKIE];
       if (!sessionToken) return deny(req, 'no session cookie on the request');
       if (!NEON_AUTH_BASE_URL) return deny(req, 'NEON_AUTH_BASE_URL is not configured');
-      try {
-         const response = await fetch(`${NEON_AUTH_BASE_URL}/get-session`, {
-            method: 'GET', headers: { cookie: `${SESSION_COOKIE}=${sessionToken}` },
-         });
-         if (!response.ok) return deny(req, `auth server replied HTTP ${response.status}`);
-         const data = await response.json() as { user?: { id?: string; email?: string } };
-         if (!data?.user?.id) return deny(req, 'auth server returned no user for this token');
-         return { id: data.user.id, email: data.user.email ?? null };
-      } catch (err) {
-         // A transport failure is not the same as "logged out", and until now both left
-         // through the same silent `return null` and surfaced to the browser as a flat
-         // 401 "Not authorized" with nothing on the server to explain it.
-         return deny(req, `could not reach the auth server: ${err instanceof Error ? err.message : String(err)}`);
+      /**
+       * One retry, and only for the two failures that are not an answer about the user:
+       * the auth server being unreachable, and it replying 5xx. A 401/403 from it means
+       * this token really is not a session and must not be retried.
+       *
+       * Without this a single blip logged the caller out. Deep analysis showed it
+       * plainly: the request that starts the run 401s, the page reports "Analysis failed
+       * — Not authorized" with every stage still pending, and Try again works because
+       * the next call reaches a healthy auth server.
+       */
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+         try {
+            // eslint-disable-next-line no-await-in-loop
+            const response = await fetch(`${NEON_AUTH_BASE_URL}/get-session`, {
+               method: 'GET', headers: { cookie: `${SESSION_COOKIE}=${sessionToken}` },
+            });
+            if (response.status >= 500 && attempt === 0) {
+               // eslint-disable-next-line no-await-in-loop
+               await new Promise((r) => { setTimeout(r, 250); });
+               continue;
+            }
+            if (!response.ok) return deny(req, `auth server replied HTTP ${response.status}`);
+            // eslint-disable-next-line no-await-in-loop
+            const data = await response.json() as { user?: { id?: string; email?: string } };
+            if (!data?.user?.id) return deny(req, 'auth server returned no user for this token');
+            return { id: data.user.id, email: data.user.email ?? null };
+         } catch (err) {
+            if (attempt === 0) {
+               // eslint-disable-next-line no-await-in-loop
+               await new Promise((r) => { setTimeout(r, 250); });
+               continue;
+            }
+            // A transport failure is not the same as "logged out", but after a retry
+            // there is nothing left to distinguish it with — the log line carries why.
+            return deny(req, `could not reach the auth server: ${err instanceof Error ? err.message : String(err)}`);
+         }
       }
+      return deny(req, 'auth server did not answer after a retry');
    })();
    sessionCache.set(req, promise);
    return promise;

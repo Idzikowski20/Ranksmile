@@ -1,49 +1,42 @@
 import { outlineForReview } from '../../../lib/contentPlanner/reviewOutline';
-import type { ContentPlannerBundle } from '../../../lib/contentPlanner/types';
 
-const bundle = {
-  outline: { h1: 'Planner title', sections: [{ id: 'one', heading: 'Planner section' }] },
-  briefs: [{
-    sectionId: 'one',
-    heading: 'Planner section',
-    objective: 'Planner objective.',
-    claimIds: [],
-    mustAnswer: [],
-    evidence: [],
-    freshnessNotes: [],
-    budget: { words: 300 },
-  }],
-  targetKg: { claims: [] },
-} as unknown as ContentPlannerBundle;
+/**
+ * There is no planner-bundle fallback any more. Rebuilding an outline from the bundle
+ * produced "Pokryj <heading> z przypisanymi claims" plus sentences scraped off
+ * competitor pages, and it ran on every re-entry. The only two sources left are the
+ * reviewer's own edits and the persisted LLM brief.
+ */
+const brief = [
+  { level: 1, text: 'Brief title' },
+  { level: 2, text: 'Brief section', instructions: ['Brief instruction.'] },
+];
 
 describe('outlineForReview', () => {
-  it('prefers the reviewer’s saved outline over the planner’s', () => {
+  it('prefers the reviewer’s saved outline over the brief', () => {
     const saved = [
       { level: 1, text: 'My title' },
       { level: 2, text: 'My section', instructions: ['My instruction.'], targetWords: 420 },
     ];
-    expect(outlineForReview({ approvedOutline: saved, bundle })).toEqual(saved);
+    expect(outlineForReview({ approvedOutline: saved, brief })).toEqual(saved);
   });
 
-  it('falls back to the planner outline when nothing was saved', () => {
-    const result = outlineForReview({ approvedOutline: null, bundle });
-    expect(result[0]).toEqual({ level: 1, text: 'Planner title' });
-    expect(result[1].text).toBe('Planner section');
+  it('uses the persisted brief when nothing was saved', () => {
+    expect(outlineForReview({ approvedOutline: null, brief })).toEqual(brief);
   });
 
   it('ignores a saved outline that carries no usable heading', () => {
-    expect(outlineForReview({ approvedOutline: [{ level: 2, text: '  ' }], bundle })[0].text)
-      .toBe('Planner title');
+    expect(outlineForReview({ approvedOutline: [{ level: 2, text: '  ' }], brief })).toEqual(brief);
   });
 
   it('accepts a saved outline straight from JSON storage', () => {
     const raw = JSON.parse('[{"level":2,"text":"From storage","targetWords":200}]');
-    expect(outlineForReview({ approvedOutline: raw, bundle })).toEqual([
+    expect(outlineForReview({ approvedOutline: raw, brief })).toEqual([
       { level: 2, text: 'From storage', targetWords: 200 },
     ]);
   });
 
-  it('returns nothing when there is neither a saved outline nor a usable bundle', () => {
-    expect(outlineForReview({ approvedOutline: null, bundle: null })).toEqual([]);
+  /** Empty, not a mechanical stand-in: the caller has to ask for a real brief. */
+  it('returns nothing when there is neither a saved outline nor a brief', () => {
+    expect(outlineForReview({ approvedOutline: null, brief: null })).toEqual([]);
   });
 });

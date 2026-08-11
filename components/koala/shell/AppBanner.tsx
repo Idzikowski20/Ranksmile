@@ -1,12 +1,19 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '../icons/Icon';
+import { Spinner } from '../primitives/Spinner';
 
 /** Full-width bar above the shell (Figma `3950:55902`). Single line of text + optional link. */
 export type AppBannerState = {
   message: string;
   variant?: 'error' | 'warning' | 'brand';
   action?: { label: string; href: string };
+  /**
+   * Work is running — a spinner takes the action slot. The countdown itself lives in
+   * `message`, because the owner of the retry owns the timer: `useAppBanner` round-trips
+   * this object through JSON, so a callback or a live counter cannot travel in it.
+   */
+  busy?: boolean;
   /** Close button; omit for banners the user must resolve. */
   dismissible?: boolean;
 };
@@ -71,6 +78,7 @@ export function AppBanner() {
           {banner.message}
         </span>
         <span className="koala-app-banner__actions">
+          {banner.busy && <Spinner size={16} color="currentColor" />}
           {/* Next.js 12 Link: single child, and it must be a real `<a>` (see SidebarItem). */}
           {banner.action && (
             <Link href={banner.action.href} passHref>

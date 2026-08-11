@@ -2,9 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
-import { Alert, Button } from '../../components/koala/core';
+import { Button } from '../../components/koala/core';
+import { useAppBanner } from '../../components/koala/shell';
 import { Icon } from '../../components/koala/icons';
 import { Spinner } from '../../components/koala/primitives';
+
+/** Transient failures dominate here; three tries five seconds apart, then stop. */
+const AUTO_RETRY_MAX = 3;
+const AUTO_RETRY_SECONDS = 5;
 
 // ── Must match the API handler ────────────────────────────────────────
 const STEPS = [
@@ -182,6 +187,8 @@ const DeepAnalysisPage: NextPage = () => {
   const [overallError, setOverallError] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [autoAttempts, setAutoAttempts] = useState(0);
+  const [retryIn, setRetryIn] = useState<number | null>(null);
   const startedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryArticleIdRef = useRef<number | null>(null);
@@ -408,7 +415,7 @@ const DeepAnalysisPage: NextPage = () => {
     router.push(`/articles/content-type?articleId=${articleId}`);
   };
 
-  const handleRetry = () => {
+  const runRetry = () => {
     runGenerationRef.current += 1;
     const retryArticleId = articleId ?? retryArticleIdRef.current;
     retryArticleIdRef.current = retryArticleId;
@@ -423,6 +430,52 @@ const DeepAnalysisPage: NextPage = () => {
     startedRef.current = false;
     setRetryCount((c) => c + 1);
   };
+
+  /** Clicking Try again is a fresh intent — it gets the full three automatic attempts. */
+  const handleRetry = () => {
+    setAutoAttempts(0);
+    setRetryIn(null);
+    runRetry();
+  };
+
+  /**
+   * Most failures here are transient — the auth server blinking, a cold sidecar — and the
+   * user's own fix was to press Try again once. So the page does it: three attempts, five
+   * seconds apart, then it stops and leaves the decision to them.
+   *
+   * The countdown lives here rather than in the banner because `useAppBanner` round-trips
+   * its state through JSON, which no timer or callback survives.
+   */
+  useEffect(() => {
+    if (!overallError || autoAttempts >= AUTO_RETRY_MAX) return undefined;
+    if (retryIn === null) {
+      setRetryIn(AUTO_RETRY_SECONDS);
+      return undefined;
+    }
+    if (retryIn <= 0) {
+      setAutoAttempts((n) => n + 1);
+      setRetryIn(null);
+      runRetry();
+      return undefined;
+    }
+    const t = setTimeout(() => setRetryIn((s) => (s ?? 1) - 1), 1000);
+    return () => clearTimeout(t);
+    // runRetry is recreated every render; including it would restart the countdown on
+    // each tick and the timer would never reach zero.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overallError, autoAttempts, retryIn]);
+
+  const retriesLeft = AUTO_RETRY_MAX - autoAttempts;
+  useAppBanner(overallError
+    ? {
+      variant: 'error',
+      message: retryIn !== null && retriesLeft > 0
+        ? `${overallError} — ponawiam za ${retryIn} s (próba ${autoAttempts + 1} z ${AUTO_RETRY_MAX})`
+        : `${overallError} — nie udało się po ${AUTO_RETRY_MAX} próbach.`,
+      busy: retryIn !== null && retriesLeft > 0,
+      dismissible: true,
+    }
+    : null);
 
   const recoveryTargetArticleId = articleId ?? recoveryArticleId;
 
@@ -454,23 +507,23 @@ const DeepAnalysisPage: NextPage = () => {
         ))}
       </div>
 
+      {/* The message itself is the banner above the topbar; only the choices stay here.
+          They stay available during the countdown too — someone who does not want to wait
+          out three attempts should be able to retry, open the article or leave now. */}
       {overallError && (
-        <Alert variant="error" title="Analysis failed">
-          {overallError}
-          <div className="deep-analysis-actions">
-            <Button variant="primary" size="sm" onClick={handleRetry}>
-              Try again
+        <div className="deep-analysis-actions">
+          <Button variant="primary" size="sm" onClick={handleRetry}>
+            Try again
+          </Button>
+          {recoveryTargetArticleId && (
+            <Button variant="secondary" size="sm" onClick={() => router.push(`/articles/${recoveryTargetArticleId}`)}>
+              Open article
             </Button>
-            {recoveryTargetArticleId && (
-              <Button variant="secondary" size="sm" onClick={() => router.push(`/articles/${recoveryTargetArticleId}`)}>
-                Open article
-              </Button>
-            )}
-            <Button variant="secondary" size="sm" onClick={() => router.push(backHref)}>
-              {backLabel}
-            </Button>
-          </div>
-        </Alert>
+          )}
+          <Button variant="secondary" size="sm" onClick={() => router.push(backHref)}>
+            {backLabel}
+          </Button>
+        </div>
       )}
     </WizardShell>
   );

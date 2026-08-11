@@ -43,10 +43,26 @@ describe('isReviewOutlineHtml', () => {
     expect(isReviewOutlineHtml('<p>Target length:  ~ 120  words</p>')).toBe(true);
   });
 
-  it('omits the marker when a section carries no word budget', () => {
+  /**
+   * The word-count line is gone from the rendered outline, so detection is by shape:
+   * an H2 followed by its instruction list, with no prose paragraph. A section without a
+   * budget used to be invisible to this check — and review mode reads the LIVE editor
+   * document, where the outline is the content, so a miss here turns review off while the
+   * reviewer is still reading it.
+   */
+  it('recognises a section that carries no word budget, by its shape', () => {
     const noBudget = reviewOutlineToHtml([
       { level: 2, text: 'Kontakt', instructions: ['Podaj formy kontaktu.'] },
     ]);
-    expect(isReviewOutlineHtml(noBudget)).toBe(false);
+    expect(isReviewOutlineHtml(noBudget)).toBe(true);
+  });
+
+  /** The article written from that outline must not read as one. */
+  it('does not fire on the written article', () => {
+    const article = '<h2>Kontakt</h2><p>'
+      + 'Szantaż emocjonalny to forma manipulacji wykorzystująca emocje — strach, poczucie winy '
+      + 'i lęk przed odrzuceniem — by kontrolować drugą osobę, i właśnie dlatego tak trudno go rozpoznać.'
+      + '</p><ul><li>Pierwszy sygnał</li></ul>';
+    expect(isReviewOutlineHtml(article)).toBe(false);
   });
 });

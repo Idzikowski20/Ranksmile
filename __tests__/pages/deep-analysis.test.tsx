@@ -2,6 +2,19 @@ import type { ReactNode } from 'react';
 import { TextDecoder as NodeTextDecoder } from 'util';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import DeepAnalysisPage from '../../pages/articles/deep-analysis';
+import { AppBanner, AppBannerProvider } from '../../components/koala/shell';
+
+/**
+ * The failure message is a banner above the topbar now, not a box inside the page, so
+ * the provider AppShell mounts in production has to be here too — without it
+ * `useAppBanner` writes into no context and nothing is rendered to assert on.
+ */
+const renderPage = () => render(
+  <AppBannerProvider>
+    <AppBanner />
+    <DeepAnalysisPage />
+  </AppBannerProvider>,
+);
 
 global.TextDecoder = NodeTextDecoder as unknown as typeof global.TextDecoder;
 
@@ -127,7 +140,7 @@ describe('DeepAnalysisPage', () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const { container, unmount } = render(<DeepAnalysisPage />);
+    const { container, unmount } = renderPage();
     const next = screen.getByRole('button', { name: 'Content type' });
     expect(next).toBeDisabled();
 
@@ -161,7 +174,7 @@ describe('DeepAnalysisPage', () => {
       + 'event: error\ndata: {"step":"pipeline","message":"Fetch failed"}\n\n',
     ));
 
-    const { container } = render(<DeepAnalysisPage />);
+    const { container } = renderPage();
 
     await waitFor(() => expect(container.querySelector('.deep-analysis-step--error')).toBeInTheDocument());
     const errorRow = container.querySelector<HTMLElement>('.deep-analysis-step--error');
@@ -192,7 +205,7 @@ describe('DeepAnalysisPage', () => {
       throw new Error(`Unexpected fetch: ${requestUrl}`);
     });
 
-    const { unmount } = render(<DeepAnalysisPage />);
+    const { unmount } = renderPage();
     const next = screen.getByRole('button', { name: 'Content type' });
 
     await act(async () => {
@@ -204,7 +217,7 @@ describe('DeepAnalysisPage', () => {
       firstStream.finish();
     });
 
-    await waitFor(() => expect(screen.getByText('Initial pipeline failed')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText(/Initial pipeline failed/)[0]).toBeInTheDocument());
     expect(next).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(next).toBeDisabled();
@@ -253,7 +266,7 @@ describe('DeepAnalysisPage', () => {
       throw new Error(`Unexpected fetch: ${requestUrl}`);
     });
 
-    const { unmount } = render(<DeepAnalysisPage />);
+    const { unmount } = renderPage();
 
     await act(async () => {
       firstStream.release('event: created\ndata: {"articleId":177,"jobId":"job_177_1"}\n\n');
@@ -264,10 +277,10 @@ describe('DeepAnalysisPage', () => {
       firstStream.finish();
     });
 
-    await waitFor(() => expect(screen.getByText('Initial pipeline failed')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText(/Initial pipeline failed/)[0]).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
-    await waitFor(() => expect(screen.getByText('Retry request failed')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText(/Retry request failed/)[0]).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Open article' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Content type' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Open article' }));
@@ -294,14 +307,14 @@ describe('DeepAnalysisPage', () => {
       throw new Error(`Unexpected fetch: ${requestUrl}`);
     });
 
-    const { container } = render(<DeepAnalysisPage />);
+    const { container } = renderPage();
 
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent("Couldn't analyze search results. Please try again."));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent("Couldn't analyze search results"));
     const errorRows = container.querySelectorAll<HTMLElement>('.deep-analysis-step--error');
     expect(errorRows).toHaveLength(1);
     expect(errorRows[0]).toHaveTextContent('Analyzing SERP competitors');
     expect(errorRows[0]).toHaveTextContent("Couldn't analyze search results. Please try again.");
-    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't analyze search results. Please try again.");
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't analyze search results");
     expect(screen.queryByText('SERP collection failed')).not.toBeInTheDocument();
     expect(screen.queryByText('Scraping competitor 7/10')).not.toBeInTheDocument();
   });
@@ -333,7 +346,7 @@ describe('DeepAnalysisPage', () => {
       throw new Error(`Unexpected fetch: ${requestUrl}`);
     });
 
-    const first = render(<DeepAnalysisPage />);
+    const first = renderPage();
 
     await waitFor(() => {
       expect(sessionStorage.getItem(
@@ -342,7 +355,7 @@ describe('DeepAnalysisPage', () => {
     });
     first.unmount();
 
-    const second = render(<DeepAnalysisPage />);
+    const second = renderPage();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/articles/job-progress?jobId=job_177_1'));
     expect(deepAnalysisCalls).toBe(1);
     second.unmount();
@@ -369,9 +382,10 @@ describe('DeepAnalysisPage', () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    render(<DeepAnalysisPage />);
+    renderPage();
 
-    await waitFor(() => expect(screen.getByText('Analysis failed')).toBeInTheDocument());
+    // The banner now carries the real reason instead of a generic "Analysis failed" title.
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Content type' })).toBeDisabled();
     expect(sessionStorage.getItem(runKey)).toBeNull();
   });
@@ -390,7 +404,7 @@ describe('DeepAnalysisPage', () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const { container } = render(<DeepAnalysisPage />);
+    const { container } = renderPage();
 
     await waitFor(() => {
       expect(container.querySelectorAll('.deep-analysis-step--done')).toHaveLength(8);

@@ -1,6 +1,14 @@
 /**
  * Knowledge Intelligence — merge competitor + AI claims into Target KG.
+ *
+ * Also the one place page chrome is filtered out. Claims arrive from three routes —
+ * the sidecar's structural extraction, `score_data.competitor_claims` replayed by
+ * enrichWithCorpusClaims, and AI Search — and only the first ever ran a noise check.
+ * Opening hours, bylines, breadcrumbs and stock-photo credits therefore reached reviewed
+ * outlines as "Cover: …" instructions. Every route funnels through the loop below, so
+ * the guard belongs here rather than in each caller.
  */
+import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
 import type {
   ClaimImportance,
   GainClass,
@@ -103,11 +111,13 @@ export function buildTargetKnowledgeGraph(opts: {
   const claimHasAi = new Set<string>();
   for (const p of profiles) {
     for (const c of p.claims) {
+      if (isCorpusNoiseSentence(c)) continue;
       const k = c.trim().toLowerCase();
       if (k && !statements.has(k)) statements.set(k, c.trim());
     }
   }
   for (const c of ai?.claims ?? []) {
+    if (isCorpusNoiseSentence(c)) continue;
     const k = c.trim().toLowerCase();
     if (!k) continue;
     claimHasAi.add(k);

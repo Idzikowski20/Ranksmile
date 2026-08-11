@@ -14,6 +14,73 @@
 import type { ApprovedOutlineHeading } from './applyApprovedOutline';
 import type { ContentPlannerBundle, SectionBrief, TargetClaim } from './types';
 
+/**
+ * Terms are handed to the model as phrases to weave in, and the NLP list is not written
+ * for that job. It arrives as ranked stems, so the brief asked the writer to weave in
+ * `emocjonalne, emocjonalnego, szantazu emocjonalnego, osobe, często, problem` — the same
+ * stem twice, spellings stripped of their diacritics, and bare function words.
+ *
+ * The list itself is left alone: the editor grades the article against exactly these
+ * terms, so filtering at the source would move the score. This narrows only the copy
+ * handed to the brief.
+ *
+ * Exported for the unit test — the ordering and the de-duplication are the behaviour.
+ */
+/** The reference brief names four phrases per section, never a list of twenty. */
+const PHRASE_TERMS_MAX = 6;
+/** Below this there is not enough vocabulary to drop the bare stems as well. */
+const MIN_PHRASES = 3;
+
+export function briefPhraseTerms(terms: readonly string[], max: number): string[] {
+  const byFolded = new Map<string, string>();
+  for (const raw of terms) {
+    const term = raw.trim();
+    if (!term) continue;
+    const folded = term.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/ł/g, 'l');
+    const kept = byFolded.get(folded);
+    // Prefer the spelling that kept its diacritics: `szantażu emocjonalnego` and
+    // `szantazu emocjonalnego` are one term to a Polish reader and two to a Map.
+    if (!kept || (/[ąćęłńóśźż]/i.test(term) && !/[ąćęłńóśźż]/i.test(kept))) {
+      byFolded.set(folded, term);
+    }
+  }
+  const kept = [...byFolded.values()];
+  const hasDia = (s: string) => /[ąćęłńóśźż]/i.test(s);
+  const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/ł/g, 'l');
+  // Stems of the properly spelled terms. 63 of 119 terms in a real run carried no
+  // diacritics at all, because the extractor stores folded variants as separate terms:
+  // `szantazem emocjonalnym`, `emocjonalny szantaz`, `ktorej`, `zwiazku`, `wlasne`.
+  // Those are not different terms, they are the same word misspelled, and the brief was
+  // telling the writer to weave both in.
+  // Per word, not per phrase: the mangled variant is often a reordering too
+  // ("emocjonalny szantaz" against "szantaż emocjonalny"), so matching the start of the
+  // phrase misses it. A stem prefix stands in for a lemmatiser.
+  const STEM = 6;
+  const stemsOf = (t: string) => fold(t).split(/\s+/).filter(Boolean).map((w) => w.slice(0, STEM));
+  const properStems = new Set(
+    kept.flatMap((t) => t.split(/\s+/).filter(hasDia)).map((w) => fold(w).slice(0, STEM)),
+  );
+  const spellable = kept.filter(
+    (t) => hasDia(t) || !stemsOf(t).some((s) => properStems.has(s)),
+  );
+
+  // Multi-word first: "wywoływanie poczucia winy" is an instruction a writer can act on,
+  // "poczucie" on its own is not — and the single words are already implied by them.
+  const isPhrase = (t: string) => t.trim().split(/\s+/).length > 1;
+  const phrases = spellable.filter(isPhrase);
+  const singles = spellable.filter((t) => !isPhrase(t));
+
+  /**
+   * Single stems are dropped outright once there are enough phrases. They are where the
+   * extractor's damage collects — `osobe`, `ktorej`, `wlasne`, `czesto`, `obowiazku` are
+   * all one-word, all misspelled, and all meaningless as an instruction. The reference
+   * brief names four phrases per article and not one bare stem; ours was listing
+   * twenty-two, so the writer was told to weave in "często".
+   */
+  const ranked = phrases.length >= MIN_PHRASES ? phrases : [...phrases, ...singles];
+  return ranked.slice(0, Math.min(max, PHRASE_TERMS_MAX));
+}
+
 /** Evidence per section, capped so a 15-section outline stays inside one call. */
 const CLAIMS_PER_SECTION = 6;
 // 5, not 3: the coverage judge's questions now flow in as mustAnswer, and a cap of
@@ -176,6 +243,7 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
   const lang = (input.language || bundle.reader.language || 'pl').startsWith('en') ? 'en' : 'pl';
   const claims = new Map(bundle.targetKg.claims.map((c) => [c.id, c]));
   const brand = input.brandKnowledge.trim().slice(0, BRAND_CHARS);
+  const phraseTerms = briefPhraseTerms(input.importantTerms || [], TERMS);
 
   const system = [
     'You write the section brief for an SEO article — instructions for a writer, never the article itself.',
@@ -184,8 +252,8 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'our licence, our people, our results — comes from the BRAND section or is not written at all.',
     'A fact about the FIELD is public knowledge and you are expected to name it: the statute that',
     'governs the work, the registry or court that holds the records, the document a reader has to',
-    'bring, the district, the tool, the procedure. "Zgodnie z ustawa o uslugach detektywistycznych',
-    'i RODO" is a field fact and belongs in the brief; "dzialamy od 2015 roku" is a company claim',
+    'bring, the district, the tool, the procedure. "Zgodnie z ustawą o usługach detektywistycznych',
+    'i RODO" is a field fact and belongs in the brief; "działamy od 2015 roku" is a company claim',
     'and needs the BRAND section behind it.',
     'Never name, quote or describe a competitor: their pages are shown to you only as evidence of',
     'what the topic requires.',
@@ -206,14 +274,17 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     '',
     'HEADINGS: each section arrives with a ROLE, not a title. Write the real H2 for it.',
     'A heading names what the section covers and carries the keyword or a close variant —',
-    '"Jak dziala prywatny detektyw w Warszawie - od pierwszej rozmowy do raportu", not "Kim jestesmy".',
+    '"Jak działa prywatny detektyw w Warszawie — od pierwszej rozmowy do raportu", not "Kim jesteśmy".',
     'Keep the given order and count, one heading per role. FAQ and the closing section keep their plain names.',
     'RANKING PAGES shows how the pages already ranking title their sections: match that level of',
     'specificity and cover what they cover. Never reuse a title that names a company.',
     '',
     'INSTRUCTIONS: 5-6 per section, 25-40 words each. A one-line summary is not a brief —',
     'each bullet must carry the concrete detail the writer would otherwise have to invent.',
-    'First bullet: the lead and how long it runs — "Krotki wstep (2-3 zdania), ze ...".',
+    // This used to dictate one sentence — "Krótki wstęp (2-3 zdania), że ..." — and every
+    // section duly opened with it. The SHAPE rules below say what the first bullet must
+    // carry; how it is worded is theirs to vary.
+    'First bullet: the lead and the section\'s format (see SHAPE).',
     'EXCEPTION for section 1: its first bullet must tell the writer to answer the',
     'keyword\'s main question directly in the first two sentences of the article —',
     'the reader and the AI engines get the answer before any context.',
@@ -221,7 +292,7 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'writer what the answer is to cover, never just to restate the question.',
     'Middle bullets: "Punkt o <temat>: <konkretne wyliczenie>" — name the actual services,',
     'registries, documents, courts, districts or steps, not the category they belong to.',
-    'Last bullet: "Wplec frazy: ..." listing the exact phrases from the terms above.',
+    'Last bullet: "Wpleć frazy: ..." listing the exact phrases from the terms above.',
     'Never tell the writer to copy a competitor; say what to cover, from the BRAND section.',
     'Address the writer directly, in the imperative. Never write about them in the third person',
     '("autor powinien", "writer should") — the bullet IS the instruction.',
@@ -231,6 +302,29 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     '("bez podawania...", "bez obiecywania...", "wymaga potwierdzenia") — a missing company fact',
     'is simply left out, not announced. At most one bullet per section may set a limit, and only',
     'when the limit is the point (what this work never does).',
+    '',
+    // Without these the brief said only WHAT to cover, so every section came back as the
+    // same wall of paragraphs. The shape of a section is part of the instruction: a
+    // comparison wants a table, a procedure wants numbered steps, a symptom list wants
+    // bullets — and that shape is what wins the featured snippet.
+    'SHAPE: the first bullet of each section states BOTH the lead and the format, in one',
+    'sentence, the way an editor briefs a writer. Vary the wording across the article —',
+    '"Krótki wstęp (1 akapit), następnie punktowana definicja", "Sekcja praktyczna: krótki',
+    'wstęp plus lista 6-9 kroków", "Krótki akapit wprowadzający, dalej 3-5 punktów",',
+    '"Sekcja opisowa, bez tabel, 5-7 punktów". Never open every section with the same',
+    'sentence — repeating "Napisz krótki wstęp (2-3 zdania)" fourteen times is a template,',
+    'not a brief.',
+    'A section that compares options, costs, kinds or before/after MUST be given a table, and the',
+    'bullet names its columns — "Tabela: kolumny Sytuacja | Sygnał | Reakcja, 4-6 wierszy".',
+    'A section listing symptoms, mistakes or signals MUST be given a bulleted list with a count.',
+    'A section describing a procedure MUST be given numbered steps.',
+    'Ask for the key term or verdict to be bolded so the answer is scannable, and say it in',
+    'plain editorial language ("pogrub kluczowy termin"). Never name an HTML tag: the brief',
+    'is read by a writer, and "<strong>" leaked into instructions as stray markup.',
+    'ORIGINAL DATA: at least one bullet per article asks for something the ranking pages do not',
+    'have — our own case figure, our own checklist, a worked example with real numbers, or a',
+    'decision rule. Take it from the BRAND section; if BRAND has nothing to support it, ask for a',
+    'worked example built from the field facts instead. Never invent a statistic or a source.',
   ].join(' ');
 
   const competitorHeadings = (input.competitorHeadings || [])
@@ -262,8 +356,8 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'BRAND — everything the article says about "us" must come from here:',
     brand || '(no brand document provided — write structural instructions only, invent no facts)',
     '',
-    input.importantTerms?.length
-      ? `Terms to weave in across the article: ${input.importantTerms.slice(0, TERMS).join(', ')}`
+    phraseTerms.length
+      ? `Terms to weave in across the article: ${phraseTerms.join(', ')}`
       : '',
     '',
     // The section roles are the planner's, and the planner's vocabulary is generic

@@ -49,6 +49,17 @@ const CORPUS_NOISE: RegExp[] = [
   /\bpomógł (?:ci )?(znaleźć|wyjaśni)/i,
   /\bwyjaśnił coś bardziej szczegółowo\b/i,
   /\bwięcej informacji na (?:ten )?temat\b/i,
+  // ── Page chrome, all of it seen in one reviewed outline as "Cover: …" ──
+  // A related-links teaser, not a statement: "Więcej o objawach nerwicy 3."
+  /^więcej o\s/i,
+  // Breadcrumb: "Blog Związek i relacje Szantaż emocjonalny – co to jest?"
+  /^blog\s/i,
+  // The byline strip every Polish CMS prints above an article.
+  /\bczas czytania\b/i,
+  // Booking CTA glued to the heading that followed it.
+  /\bbezpłatn\w*\s+konsultacj/i,
+  // Stock-photo credits sit directly under the lead image and get scraped with it.
+  /\bshutterstock\b|\bgetty images\b|\bunsplash\b|\bistock\b|\badobe stock\b/i,
 ].map((re) => new RegExp(foldPolishLetters(re.source), re.flags));
 
 /**
@@ -69,7 +80,21 @@ const CORPUS_NOISE_RAW: RegExp[] = [
   // by a proper noun, or "na ulicach Warszawy" — ordinary prose — gets thrown away too.
   /\bul\.\s*[a-ząćęłńóśźż]/i,
   /\bulic[ayąę]\s*[A-ZĄĆĘŁŃÓŚŹŻ]/,
-  /\bo nas\s*-->/i,
+  // Any leaked HTML comment marker, not just the "o nas" one. `-->` cannot occur in
+  // prose, and it arrived in a brief as "--> Data: 30.03.2025 Czas czytania: 8 min.".
+  /-->/,
+  // Two clock times in one sentence — opening hours, never a claim:
+  // "od 9:00 do 21:00 ul.", "od 9:00 do 21:00 Sobota od 9:00 do 13:00 ul.".
+  /\d{1,2}:\d{2}\D+\d{1,2}:\d{2}/,
+  /**
+   * A word that starts lowercase and then shouts — "MAM eMOCje", a book cover rendered as
+   * text in a sidebar list. Case-sensitive, so it stays out of the folded list above.
+   *
+   * Two or more capitals are required after the lowercase run so ordinary camelCase brand
+   * names survive: `mBank`, `iPhone` and `eBay` all carry a single capital and are things
+   * a real claim may legitimately name.
+   */
+  /\p{Ll}+\p{Lu}{2,}/u,
 ];
 
 /** Folded once here rather than per sentence — this runs over whole competitor bodies. */
