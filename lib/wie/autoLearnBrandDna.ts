@@ -56,8 +56,14 @@ export async function autoLearnBrandDna(opts: {
     // the tied pages, and the voice learned from identical data would differ per run.
     //
     // `score DESC NULLS LAST` rather than `COALESCE(score, 0) DESC`: an expression the
-    // planner cannot match keeps idx_page_audits_best from serving the sort, and the
-    // two orders agree — score is 0..100, so an unscored page sorts last either way.
+    // planner cannot match keeps idx_page_audits_top from serving the sort.
+    //
+    // Not quite the same order, and the difference is deliberate. Under COALESCE an
+    // unscored page tied with a page scored 0 and word_count decided between them;
+    // now every unscored page sorts after every scored one. Both are total orders —
+    // url ASC still closes every tie — and a page the audit could not score is the
+    // weaker example to learn a voice from, so ranking it last is the better answer
+    // rather than a tolerated regression.
     const rows = await db.query(
       `SELECT url FROM page_audits
         WHERE domain_id = ? AND fetch_status = 'OK' AND word_count >= ?

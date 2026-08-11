@@ -90,13 +90,22 @@ export async function ensurePipelineTables(): Promise<void> {
    // ends the usable ordering right there, which is what a (…, word_count, score) index
    // did — it served the WHERE and then sorted every qualifying page anyway.
    //
+   // Every ORDER BY key is in here, url included: without the tie-break the engine can
+   // walk the index but still has to sort each tie group before it knows which eight
+   // rows come first, and score/word_count collide often on a real blog.
+   //
    // NULLS LAST is spelled out on Postgres and left off on SQLite, which rejects it in
    // CREATE INDEX ("unsupported use of NULLS LAST") and does not need it: SQLite sorts
    // NULLs smallest, so a DESC index already ends with them. Postgres defaults a DESC
    // index to NULLS FIRST, and an index whose null placement disagrees with the query's
    // is not usable for the sort at all — the whole point of this index.
+   //
+   // New name, and the superseded one is dropped rather than re-declared: CREATE INDEX
+   // IF NOT EXISTS matches on the name alone, so every database that already ran the
+   // first definition would have silently kept it. The drop is a no-op afterwards.
    const scoreKey = isPostgres ? 'score DESC NULLS LAST' : 'score DESC';
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_page_audits_best ON page_audits(domain_id, fetch_status, ${scoreKey}, word_count DESC)`); } catch (e) { ignoreExisting('idx_page_audits_best', e); }
+   try { await db.query('DROP INDEX IF EXISTS idx_page_audits_best'); } catch (e) { ignoreExisting('drop idx_page_audits_best', e); }
+   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_page_audits_top ON page_audits(domain_id, fetch_status, ${scoreKey}, word_count DESC, url ASC)`); } catch (e) { ignoreExisting('idx_page_audits_top', e); }
 
    checked = true;
 }

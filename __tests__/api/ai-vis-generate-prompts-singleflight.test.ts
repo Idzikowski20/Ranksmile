@@ -48,6 +48,11 @@ function mockRes() {
 }
 
 const POOL = [{ text: 'najlepszy fizjoterapeuta', provenance: ['google'] }];
+/** What a claim row looks like: somebody's token, plus when they took it. */
+const claimRow = (ageMs: number) => ({
+  prompts: JSON.stringify({ claim: 'a2ba0d1e-0000-4000-8000-000000000000' }),
+  created_at: new Date(Date.now() - ageMs),
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -55,13 +60,11 @@ beforeEach(() => {
 });
 
 describe('generate-prompts single-flight', () => {
-  it('the request that loses the claim replays the winner’s pool instead of buying its own', async () => {
-    // Cache miss on entry; the winner's pool lands while we are polling.
+  it('waits out a live claim and replays the winner’s pool instead of buying its own', async () => {
+    // A claim taken a second ago; the holder's pool lands while we are polling.
     cacheRead
-      .mockResolvedValueOnce(null)
-      .mockResolvedValue({ prompts: JSON.stringify(POOL) });
-    // The unique index rejects the second INSERT for the same (domain, topic).
-    dbQuery.mockRejectedValueOnce(new Error('duplicate key value violates unique constraint'));
+      .mockResolvedValueOnce(claimRow(1000))
+      .mockResolvedValue({ prompts: JSON.stringify(POOL), created_at: new Date() });
 
     const res = mockRes();
     await handler(mockReq(), res);
@@ -70,7 +73,27 @@ describe('generate-prompts single-flight', () => {
     expect(res._json).toEqual({ prompts: POOL, degraded: false, cached: true });
   });
 
-  it('the claim holder releases the row when the result is only templates', async () => {
+  // Nothing may wait on a claim whose holder is gone: it would never be filled, and the
+  // wait would be paid again on every visit for as long as the row sits there.
+  it('ignores a stale claim outright — no wait, and the write replaces the row', async () => {
+    cacheRead.mockResolvedValue(claimRow(10 * 60_000));
+    paa.mockResolvedValue({ questions: [{ question: POOL[0].text, domain: 'google.com' }], related: [] });
+
+    const started = Date.now();
+    const res = mockRes();
+    await handler(mockReq(), res);
+
+    // Straight past the abandoned claim: no polling, and no claim INSERT to lose.
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(paa).toHaveBeenCalled();
+    expect(res._json).toMatchObject({ degraded: false });
+    // The stale row goes the ordinary way — writeCached replacing it with a real pool —
+    // rather than this request deleting a claim it never owned.
+    const writes = dbQuery.mock.calls.map(([sql]) => String(sql).split(' ')[0]);
+    expect(writes).toEqual(['DELETE', 'INSERT']);
+  });
+
+  it('the claim holder releases its own row when the result is only templates', async () => {
     cacheRead.mockResolvedValue(null);
     // Claim INSERT succeeds; PAA then fails, so nothing will ever fill the claim.
     paa.mockRejectedValue(new Error('locale mismatch'));
@@ -78,18 +101,20 @@ describe('generate-prompts single-flight', () => {
     const res = mockRes();
     await handler(mockReq(), res);
 
+    const inserted = dbQuery.mock.calls.find(([sql]) => String(sql).startsWith('INSERT'));
+    const token = (inserted?.[1] as { replacements: unknown[] }).replacements[2];
     const deletes = dbQuery.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE'));
     expect(deletes).toHaveLength(1);
-    // Only an empty claim may be deleted: an unconditional delete on (domain, topic)
-    // would also erase a real pool a concurrent refresh had just written.
-    expect(String(deletes[0][0])).toContain("prompts = '[]'");
+    // Scoped to the token this request inserted. Deleting by (domain, topic) also erased
+    // a newer request's claim, and the pool a concurrent refresh had just written.
+    expect(String(deletes[0][0])).toContain('prompts = ?');
+    expect((deletes[0][1] as { replacements: unknown[] }).replacements[2]).toBe(token);
     expect(res._json).toMatchObject({ degraded: true });
   });
 
-  // A holder that crashed leaves its empty claim behind. If the next request only waits
-  // and then degrades too, nothing ever clears the row and every later visit pays the
-  // wait again — so an expired wait takes the claim over.
-  it('clears a claim its holder abandoned, even when its own call degrades', async () => {
+  // Losing the INSERT after a clean read means someone claimed the topic in between —
+  // that is a live holder, so it is waited for like any other.
+  it('waits when it loses the claim race after reading no row at all', async () => {
     cacheRead.mockResolvedValue(null);
     dbQuery.mockRejectedValueOnce(new Error('duplicate key value violates unique constraint'));
     paa.mockRejectedValue(new Error('locale mismatch'));
@@ -97,8 +122,9 @@ describe('generate-prompts single-flight', () => {
     const res = mockRes();
     await handler(mockReq(), res);
 
-    const deletes = dbQuery.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE'));
-    expect(deletes).toHaveLength(1);
+    expect(paa).toHaveBeenCalled();
+    // No token, so nothing of ours to release — and nothing of the holder's to touch.
+    expect(dbQuery.mock.calls.filter(([sql]) => String(sql).startsWith('DELETE'))).toHaveLength(0);
     expect(res._json).toMatchObject({ degraded: true });
   }, 15000);
 });
