@@ -1,0 +1,41 @@
+pages/api/ai-visibility/[slug]/generate-prompts.ts
+  s_8d6cce368af4fd::t_61e413a53f9552 167-180,192-194,200
+  s_8d6cce368af4fd::t_f4ce23a4b2e807 83-129
+  s_8d6cce368af4fd::t_c4b12e41c1ab99 63-65
+__tests__/lib/ensureAiVisibilityTables.test.ts
+  s_8d6cce368af4fd::t_2efcbe96c74923 40-45,47,56-67
+__tests__/api/ai-vis-generate-prompts-singleflight.test.ts
+  s_8d6cce368af4fd::t_7ad274ef2e794c 1-85
+lib/ensureAiVisibilityTables.ts
+  s_8d6cce368af4fd::t_b3dd023f8416f4 35,37
+  s_8d6cce368af4fd::t_4a7c7e299c00ed 10,12,14,16-21
+  s_8d6cce368af4fd::t_a8400f1be29b70 2
+components/settings/ProfileSettings.tsx
+  s_8d6cce368af4fd::t_08eb361bdfac85 1
+  s_8d6cce368af4fd::t_272cebc1a265fd 194
+  s_8d6cce368af4fd::t_cecf7c8926293a 208
+  s_8d6cce368af4fd::t_3dd52c3f10d8de 56-73
+lib/ensurePipelineTables.ts
+  s_8d6cce368af4fd::t_c2502240598751 83-87
+__tests__/components/ProfileSettings.passwordFocus.test.tsx
+  s_8d6cce368af4fd::t_5d324484216796 1,3-17,20-28,30-31,33-34,36-38
+  s_8d6cce368af4fd::t_0a47dbcc7bd4d2 2
+  s_8d6cce368af4fd::t_0a3b4a82382a19 18-19
+  s_8d6cce368af4fd::t_51865e83104e9f 29,32,35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6c6986317284fc2c83de7e9c684edeae2dde48c3",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
