@@ -1,0 +1,90 @@
+components/articles/ArticleEditor.tsx
+  s_8d6cce368af4fd::t_2bd084771fc754 1149-1154,1910-1914,2197-2203,2210,2213,2215,2217-2236,2604
+pages/api/articles/[id]/content-plan.ts
+  s_8d6cce368af4fd::t_2bd084771fc754 156-159,187,193-199,202,236-267
+__tests__/components/AnalysisProgressPanel.test.tsx
+  s_8d6cce368af4fd::t_696c9be9982bff 82-83
+__tests__/lib/contentPlanner/outlineForReview.brief.test.ts
+  s_8d6cce368af4fd::t_ab9f001b3a2fe2 1-20,22-29,31-39
+  s_8d6cce368af4fd::t_da8cbe06a4e4b4 21,30
+lib/contentPlanner/index.ts
+  s_8d6cce368af4fd::t_2bd084771fc754 81
+lib/contentPlanner/knowledgeIntelligence.ts
+  s_8d6cce368af4fd::t_135a281ff27d26 114,120
+  s_8d6cce368af4fd::t_ea705a807cb057 3-9,11
+__tests__/lib/contentPlanner/reviewOutlineDetect.test.ts
+  s_8d6cce368af4fd::t_af9e92229286dd 46-53,57-66
+lib/contentPlanner/reviewOutline.ts
+  s_8d6cce368af4fd::t_418a31f5b7f471 4,23-28,33-35,37-42,46-66,68-71,116-119,121,129
+  s_8d6cce368af4fd::t_f380e1c11dd94f 120,122-125,133
+__tests__/lib/contentPlanner/outlineForReview.test.ts
+  s_8d6cce368af4fd::t_ab9f001b3a2fe2 3-12,15,20,23-24,28,33,38-40
+utils/getUser.ts
+  s_8d6cce368af4fd::t_249cc4e8879a7c 60-95,97
+lib/corpusNoiseFilter.ts
+  s_8d6cce368af4fd::t_de6f2f01cb5f86 83-97
+  s_8d6cce368af4fd::t_23bdc9f636d565 52-62
+__tests__/lib/corpusNoiseFilter.chrome.test.ts
+  s_8d6cce368af4fd::t_de19e6ee4c7595 1-42
+pages/articles/[id]/index.tsx
+  s_8d6cce368af4fd::t_e6667deea58a4b 387-392
+  s_8d6cce368af4fd::t_04e0fcb1c252c6 644
+  s_8d6cce368af4fd::t_0bc4b6d76d5790 600-605
+  s_8d6cce368af4fd::t_297795d91aca48 2123-2127
+components/articles/OutlineGenerateBar.tsx
+  s_8d6cce368af4fd::t_b1ce826b2c7aa2 9-10
+  s_8d6cce368af4fd::t_7d2fd763e0f300 116
+  s_8d6cce368af4fd::t_6ba436ef45a1f1 126
+pages/articles/deep-analysis.tsx
+  s_8d6cce368af4fd::t_f0f3e39e7cfc29 514-520,522-526
+  s_8d6cce368af4fd::t_6dcbc084bc7dfd 510-512
+  s_8d6cce368af4fd::t_f031990732ff3f 5-6,10-13,190-191,418,434-479
+__tests__/pages/deep-analysis.test.tsx
+  s_8d6cce368af4fd::t_47c59691717946 220,280,283
+  s_8d6cce368af4fd::t_188245c942f860 387-388
+  s_8d6cce368af4fd::t_3edf92ee096d6a 5-17,143,177,208,269,310,312,317,349,358,385,407
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_8d6cce368af4fd::t_dd550f0e74f0c5 264
+  s_8d6cce368af4fd::t_f1b53bd3bb1ec3 259-262
+components/koala/shell/AppBanner.tsx
+  s_8d6cce368af4fd::t_1e86f008a31304 4
+  s_8d6cce368af4fd::t_2ed3ab10cefe2f 81
+  s_8d6cce368af4fd::t_4acd9429729ab1 11-16
+python-sidecar/analyzers/image_generator.py
+  s_8d6cce368af4fd::t_21f010199993db 161,168-171
+  s_8d6cce368af4fd::t_7ec4ffd2919443 210,219-221
+  s_8d6cce368af4fd::t_a403fddd462064 101-112,115,117,120-121,126-127,130,133
+  s_8d6cce368af4fd::t_775049a2301607 70,73
+  s_8d6cce368af4fd::t_122bcc4a5a5d80 25,28-33,38,55-60,62-63
+  s_8d6cce368af4fd::t_1806882ce12244 87-89
+lib/analysisPhaseRows.ts
+  s_8d6cce368af4fd::t_ccd90656456b05 46-49,51
+__tests__/lib/contentPlanner/reviewOutline.test.ts
+  s_8d6cce368af4fd::t_9e478da3e0fc3f 7-14,21
+components/articles/AnalysisProgressPanel.tsx
+  s_8d6cce368af4fd::t_b8a6fe71108e55 21-38
+__tests__/lib/briefPhraseTerms.test.ts
+  s_8d6cce368af4fd::t_f1b53bd3bb1ec3 1-103
+lib/contentPlanner/briefWriter.ts
+  s_8d6cce368af4fd::t_e7f4a6f334e4bf 310-316,321-323
+  s_8d6cce368af4fd::t_48dc127f700466 284-287
+  s_8d6cce368af4fd::t_2ec8f869d56657 29-33
+  s_8d6cce368af4fd::t_72c657682ff77b 17-28,34-68,82-83,246,255-256,277,295,305-309,317-320,324-327,359-360
+  s_8d6cce368af4fd::t_b9679c93871f75 69-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5ac9e1f51683a3f35e2ff867a7e7ae21cb56dc88",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
