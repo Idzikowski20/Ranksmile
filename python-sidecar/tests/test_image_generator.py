@@ -37,6 +37,14 @@ def test_safe_alt_strips_every_attribute_breaking_character():
         assert bad not in out, bad
 
 
+def test_safe_alt_ampersand_is_language_neutral():
+    """An earlier version spliced the Polish "i" into German and Spanish alt text."""
+    out = _safe_alt("Frau am Fenster & Handy")
+    assert "&" not in out
+    assert " i " not in out
+    assert out == "Frau am Fenster Handy"
+
+
 def test_safe_alt_keeps_ordinary_polish_text():
     text = "Zestresowana osoba przy oknie trzymająca telefon, sygnał szantażu emocjonalnego"
     assert _safe_alt(text) == text

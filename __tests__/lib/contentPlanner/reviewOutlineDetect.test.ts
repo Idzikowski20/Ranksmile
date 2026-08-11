@@ -111,4 +111,14 @@ describe('isReviewOutlineHtml', () => {
     const doc = '<h2>Objawy</h2><ul><li>Lęk</li></ul><ul><li>Bezsenność</li></ul>';
     expect(isReviewOutlineHtml(doc)).toBe(false);
   });
+
+  /**
+   * reviewOutlineToHtml never emits a standalone break, so one means the document came
+   * from elsewhere. It used to be skipped over before the sections were paired, which let
+   * shapes the renderer cannot produce read as an outline.
+   */
+  it('does not fire when a stray break sits between the blocks', () => {
+    const doc = '<h2>Objawy</h2><br><ul><li>Lęk</li></ul>';
+    expect(isReviewOutlineHtml(doc)).toBe(false);
+  });
 });

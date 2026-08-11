@@ -43,16 +43,24 @@ export function reviewOutlineToHtml(outline: ApprovedOutlineHeading[]): string {
  */
 const TARGET_LENGTH_LINE = /Target length:\s*~\s*\d+\s*words/i;
 
-/** The blocks reviewOutlineToHtml emits, matched in document order. */
-const OUTLINE_BLOCK = /<(h[1-4])[^>]*>[\s\S]*?<\/\1>|<ul[^>]*>[\s\S]*?<\/ul>|<p[^>]*>\s*<\/p>|<br\s*\/?>/gi;
+/**
+ * The blocks reviewOutlineToHtml emits, matched in document order.
+ *
+ * `<br>` is deliberately NOT here. The renderer never emits one, so a standalone break
+ * means the document came from somewhere else — it used to be tolerated as a "skip"
+ * token and filtered out before pairing, which let `<h2>…</h2><br><ul>…</ul>` and other
+ * shapes the renderer cannot produce pass as an outline and suspend autosave. Leaving it
+ * out means it survives as leftover and disqualifies the document, which is the answer.
+ * Breaks INSIDE a heading or list item are part of that block's match and unaffected.
+ */
+const OUTLINE_BLOCK = /<(h[1-4])[^>]*>[\s\S]*?<\/\1>|<ul[^>]*>[\s\S]*?<\/ul>|<p[^>]*>\s*<\/p>/gi;
 
-type OutlineToken = 'title' | 'heading' | 'body' | 'skip';
+type OutlineToken = 'title' | 'heading' | 'body';
 
 function tokenOf(block: string): OutlineToken {
   if (/^<h1/i.test(block)) return 'title';
   if (/^<h[2-4]/i.test(block)) return 'heading';
-  if (/^<(ul|p)/i.test(block)) return 'body';
-  return 'skip';
+  return 'body';
 }
 
 /**
@@ -81,7 +89,7 @@ export function isReviewOutlineHtml(html: string): boolean {
   // image — means this is an article, whatever the rest looks like.
   if (doc.replace(OUTLINE_BLOCK, '').replace(/&nbsp;/gi, ' ').trim()) return false;
 
-  const tokens = blocks.map(tokenOf).filter((t) => t !== 'skip');
+  const tokens = blocks.map(tokenOf);
   let i = 0;
   if (tokens[i] === 'title') i += 1;
   let sections = 0;

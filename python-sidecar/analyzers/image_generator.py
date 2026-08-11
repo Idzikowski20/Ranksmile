@@ -44,11 +44,13 @@ def _safe_alt(text: str) -> str:
     `alt="..."`, so leaving `'` intact left the same break-out open — an earlier version
     even swapped `"` for `'`, which produced the dangerous character from the safe one.
     `&` goes too: it starts an entity, and a consumer that escapes once more would render
-    the mangled result to the reader. Quotes become typographic so the sentence still
-    reads as Polish prose.
+    the mangled result to the reader. It becomes a space, not a conjunction — an earlier
+    version substituted the Polish "i", which corrupted German, Spanish and every other
+    localised alt the moment the model wrote an ampersand. Quotes become typographic so
+    the sentence still reads as prose in any language.
     """
     cleaned = " ".join(str(text or "").split())
-    for bad, good in (("<", ""), (">", ""), ("&", " i "), ('"', "”"), ("'", "’")):
+    for bad, good in (("<", ""), (">", ""), ("&", " "), ('"', "”"), ("'", "’")):
         cleaned = cleaned.replace(bad, good)
     return " ".join(cleaned.split())[:300]
 
