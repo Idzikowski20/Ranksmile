@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, CompactSelect } from '../koala/core';
+import { Button, Select } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import { EmailTagInput } from '../koala/core/emailTagInput/emailTagInput';
 
@@ -15,6 +15,11 @@ const ROLE_OPTIONS: Array<{ value: InviteRole; label: string }> = [
 
 function roleLabel(role: InviteRole): string {
   return ROLE_OPTIONS.find((o) => o.value === role)?.label ?? 'Member';
+}
+
+/** Select hands back a plain string; narrow it rather than casting. */
+function toRole(value: string): InviteRole {
+  return value === 'admin' ? 'admin' : 'member';
 }
 
 /**
@@ -75,12 +80,19 @@ export function InviteTeamStep({
             disabled={disabled}
           />
         </div>
-        <CompactSelect
-          value={draftRole}
-          onChange={(o) => setDraftRole(o.value)}
-          options={ROLE_OPTIONS}
-          disabled={disabled}
-        />
+        {/* Select, not CompactSelect: the latter is @deprecated with an explicit
+            "do not add new call sites for simple menus", and a two-option role
+            picker is exactly that. The .invite-step__role wrapper is what strips its
+            chrome so the row reads as one bordered field — same as in settings. */}
+        <div className="invite-step__role">
+          <Select
+            value={draftRole}
+            onChange={(v) => setDraftRole(toRole(v))}
+            options={ROLE_OPTIONS}
+            disabled={disabled}
+            size="sm"
+          />
+        </div>
       </div>
 
       {invites.length > 0 && (
@@ -96,15 +108,17 @@ export function InviteTeamStep({
                   {i.email.charAt(0).toUpperCase()}
                 </span>
                 <span className="invite-step__email">{i.email}</span>
-                {/* ponytail: ceiling = CompactSelect renders no accessible name of its
-                    own and does not forward aria-label, so a screen reader hears the
-                    role but not whose it is; the row's email is adjacent. Upgrade =
-                    give CompactSelect an ariaLabel prop on its trigger. */}
-                <CompactSelect
+                {/* ponytail: ceiling = Select renders no accessible name of its own and
+                    takes no aria-label, so a screen reader hears the role but not whose
+                    it is; the row's email is adjacent. Upgrade = give Select an
+                    ariaLabel prop on its trigger. */}
+                <Select
                   value={i.role}
-                  onChange={(o) => setRoleFor(i.email, o.value)}
+                  onChange={(v) => setRoleFor(i.email, toRole(v))}
                   options={ROLE_OPTIONS}
                   disabled={disabled}
+                  size="sm"
+                  width={124}
                 />
                 <Button
                   type="button"
@@ -119,9 +133,13 @@ export function InviteTeamStep({
               </li>
             ))}
           </ul>
+          {/* Describes draftRole — the role the control above assigns to the NEXT address
+              typed — not the listed invites, which each carry their own role and can be
+              changed per row. Reading the first invite's role here claimed one role for
+              everyone and went stale as soon as a row was edited. */}
           <p className="invite-step__note">
-            {`Everyone joins as ${roleLabel(invites[0].role)} unless you change it above. `}
-            You can adjust roles later in Settings.
+            {`New invites join as ${roleLabel(draftRole)} unless you change it above. `}
+            You can adjust roles per person here, or later in Settings.
           </p>
         </>
       )}

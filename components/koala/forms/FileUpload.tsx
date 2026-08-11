@@ -222,6 +222,23 @@ export function FileUpload({
         >
           Browse
         </Button>
+        {/* Backs out of "Change" without destroying the current image — otherwise the
+            only ways out of the open Zone were picking a new file or Remove, which
+            deletes what is already there. */}
+        {changing && (
+          <Button
+            type="button"
+            size="sm"
+            variant="transparent"
+            disabled={disabled}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              setChanging(false);
+            }}
+          >
+            Cancel
+          </Button>
+        )}
       </Zone>
       )}
       {preview && previewUrl ? (

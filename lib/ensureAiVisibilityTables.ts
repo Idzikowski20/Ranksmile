@@ -45,6 +45,21 @@ export async function ensureAiVisibilityTables(): Promise<void> {
       sort_order INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('ai_vis_prompts', e));
 
+   // Generated prompt pool per (domain, topic), so revisiting the setup wizard
+   // replays what DataForSEO already charged for instead of buying it again.
+   // Keyed on domain_id, not config_id: the pool is generated *before* the
+   // wizard is finished, when no ai_vis_configs row exists yet.
+   await db.query(`CREATE TABLE IF NOT EXISTS ai_vis_generated_prompts (
+      id ${PK},
+      domain_id INTEGER NOT NULL,
+      topic TEXT NOT NULL,
+      prompts ${JSON_T} NOT NULL,
+      degraded INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('ai_vis_generated_prompts', e));
+   try {
+      await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_vis_generated_prompts_key ON ai_vis_generated_prompts (domain_id, topic)');
+   } catch (e) { ignoreExisting('idx generated prompts', e); }
+
    await db.query(`CREATE TABLE IF NOT EXISTS ai_vis_competitors (
       id ${PK},
       config_id INTEGER NOT NULL,

@@ -164,12 +164,19 @@ const PeopleSettings = () => {
               const editable = canActOn(m) && m.id !== undefined;
               const memberWs = parseIds(m.workspace_ids);
               const access = m.role === 'member' ? describeWorkspaceAccess(m.workspace_ids, wsNames) : 'All';
+              // The WorkspacePicker below already states (and edits) the access for an
+              // editable member, so repeating it as static text in the meta line said the
+              // same thing twice — and unlike Role, which swaps text for a control, the
+              // text version stayed. Rows without the picker still need it spelled out.
+              const showsAccessAsText = !(editable && m.role === 'member');
               return (
                 <li key={m.id} className="invite-step__person">
                   <span className="invite-step__avatar" aria-hidden="true">{(email[0] || '?').toUpperCase()}</span>
                   <span className="invite-step__who">
                     <span className="invite-step__email">{email}</span>
-                    <span className="invite-step__meta">{`Joined ${fmtDate(m.created_at)} · ${access}`}</span>
+                    <span className="invite-step__meta">
+                      {showsAccessAsText ? `Joined ${fmtDate(m.created_at)} · ${access}` : `Joined ${fmtDate(m.created_at)}`}
+                    </span>
                   </span>
                   {editable ? (
                     <div className="invite-step__role">

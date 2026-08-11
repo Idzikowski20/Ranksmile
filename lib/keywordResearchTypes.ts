@@ -1,7 +1,7 @@
 /**
- * Topic Research (More tools › Topic Research) — Ranksmile "Topic Explorer" parity.
+ * Keyword Research (More tools › Keyword Research).
  * One run per (domain, seed, country). The full result is serialized into
- * topic_research_runs.result_json; a small summary is mirrored into stats_json so
+ * keyword_research_runs.result_json; a small summary is mirrored into stats_json so
  * the list cards render without parsing the (large) result.
  *
  * Shape: a run has named topic CLUSTERS; each cluster holds IDEAS; each idea is a

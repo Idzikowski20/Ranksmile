@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 
 describe('autoLearnBrandDna', () => {
-  it('learns from the domain\'s top-clicked pages when the DNA is stale', async () => {
+  it('learns from the domain\'s best audited pages when the DNA is stale', async () => {
     getBrandDnaSummary.mockResolvedValue({ updated_at: daysAgo(30) });
     query.mockResolvedValue([
       { url: 'https://site.pl/a' }, { url: 'https://site.pl/b' }, { url: 'https://site.pl/c' },
@@ -38,7 +38,20 @@ describe('autoLearnBrandDna', () => {
       urls: ['https://site.pl/a', 'https://site.pl/b', 'https://site.pl/c'],
       keyword: 'detektyw',
     });
-    expect(String(query.mock.calls[0][0])).toMatch(/ORDER BY clicks DESC/);
+  });
+
+  // The whole pass silently no-opped in production for exactly this reason: it read
+  // domain_gsc_pages, which ensurePipelineTables creates and truncates but nothing ever
+  // inserts into. Mocking the query hid it, so pin the table the SQL actually names.
+  it('reads page_audits, which is populated, not domain_gsc_pages, which never is', async () => {
+    getBrandDnaSummary.mockResolvedValue(null);
+    query.mockResolvedValue([{ url: 'https://site.pl/a' }, { url: 'https://site.pl/b' }]);
+
+    await autoLearnBrandDna({ domainId: 2 });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toMatch(/FROM page_audits/);
+    expect(sql).not.toMatch(/domain_gsc_pages/);
   });
 
   // Re-learning on every analysis would hammer the ingest for no gain.
@@ -60,13 +73,13 @@ describe('autoLearnBrandDna', () => {
   });
 
   // One article's habits are not a voice.
-  it('holds off below two ranked pages', async () => {
+  it('holds off below two audited pages', async () => {
     getBrandDnaSummary.mockResolvedValue(null);
     query.mockResolvedValue([{ url: 'https://site.pl/only' }]);
 
     const r = await autoLearnBrandDna({ domainId: 2 });
 
-    expect(r).toEqual({ learned: false, reason: 'only 1 ranked page(s)', urls: 1 });
+    expect(r).toEqual({ learned: false, reason: 'only 1 audited page(s)', urls: 1 });
     expect(onboardBrandDna).not.toHaveBeenCalled();
   });
 

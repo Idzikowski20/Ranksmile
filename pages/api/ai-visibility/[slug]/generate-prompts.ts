@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
@@ -9,6 +10,9 @@ import {
   looksLikeLanguage,
   promptTemplatesForLocale,
 } from '../../../../lib/domainLanguage';
+import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
+import { queryOne } from '../../../../lib/db/query';
+import { parseJsonish } from '../../../../lib/types/json';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 /** Provenance tag from where Google surfaced the question. */
@@ -45,7 +49,38 @@ function buildPromptList(
   return { prompts: prompts.slice(0, 10), degraded: false as const };
 }
 
+type GeneratedPrompt = { text: string, provenance: string[] };
+
+/**
+ * Prompt generation costs a DataForSEO call per topic, and the setup wizard
+ * generates for every topic on mount — so revisiting the page used to re-buy
+ * the same lists. The pool is stored per (domain, topic) and replayed instead.
+ *
+ * Degraded results are never stored: they are the template fallback for a
+ * missing/failed paid call, and caching them would freeze the topic on
+ * templates forever.
+ */
+async function readCached(domainId: number, topic: string): Promise<GeneratedPrompt[] | null> {
+   const row = await queryOne<{ prompts: unknown }>(
+      'SELECT prompts FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ? LIMIT 1',
+      [domainId, topic],
+   );
+   const prompts = row ? parseJsonish<GeneratedPrompt[]>(row.prompts) : null;
+   return Array.isArray(prompts) && prompts.length > 0 ? prompts : null;
+}
+
+async function writeCached(domainId: number, topic: string, prompts: GeneratedPrompt[]): Promise<void> {
+   // Delete-then-insert rather than ON CONFLICT: the codebase targets both
+   // Postgres and SQLite, and the unique index makes this idempotent enough.
+   await db.query('DELETE FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ?', { replacements: [domainId, topic] });
+   await db.query(
+      'INSERT INTO ai_vis_generated_prompts (domain_id, topic, prompts) VALUES (?, ?, ?)',
+      { replacements: [domainId, topic, JSON.stringify(prompts)] },
+   );
+}
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
+   await ensureAiVisibilityTables();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed' }); }
@@ -55,11 +90,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
 
    const domainId = (ownership as { ID: number }).ID;
-   const { topic } = req.body as { topic?: string };
+   const { topic, refresh } = req.body as { topic?: string, refresh?: boolean };
    if (!topic?.trim()) return res.status(400).json({ error: 'topic is required' });
 
    const locale = await getDomainLocale(domainId);
    const topicTrimmed = topic.trim();
+
+   if (!refresh) {
+      const cached = await readCached(domainId, topicTrimmed);
+      if (cached) return res.status(200).json({ prompts: cached, degraded: false, cached: true });
+   }
 
    if (!isDataForSeoConfigured()) {
       const templates = promptTemplatesForLocale(locale.languageCode, topicTrimmed);
@@ -73,6 +113,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          languageCode: locale.languageCode,
       });
       const result = buildPromptList(locale, topicTrimmed, questions, related);
+      if (!result.degraded) {
+         // Non-fatal: a failed write only means the next visit pays again.
+         await writeCached(domainId, topicTrimmed, result.prompts)
+            .catch((e) => console.warn('[generate-prompts] cache write failed:', getErrorMessage(e)));
+      }
       return res.status(200).json(result);
    } catch (error) {
       // DataForSEO locale mismatch — still return Polish/English templates instead of 500 toasts.

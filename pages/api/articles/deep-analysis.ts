@@ -838,9 +838,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // be the planner's ONLY claim source — when it fell back to its heuristic the Target
     // KG capped at four claims and the Plan Validator's five-claim floor could never pass.
     // Brand DNA learns here rather than from a form in settings: the site's own
-    // top-ranking pages answer "your best articles" better than a text area, and the
-    // pass rate-limits itself to once a fortnight. Deliberately not awaited — voice
-    // learning must never delay or fail an analysis.
+    // audited pages answer "your best articles" better than a text area.
+    //
+    // The rate limit is GLOBAL, not per-domain — the WIE pattern store is one shared
+    // file, so the 14-day gate reads one shared updated_at and the first domain to
+    // learn suppresses every other domain until it expires. That is a symptom of the
+    // store not being domain-scoped, not of the gate; a per-domain timer here would
+    // only make several domains overwrite the same shared voice in turn.
+    //
+    // Deliberately not awaited — voice learning must never delay or fail an analysis.
     if (resolvedDomainId) {
       void import('../../../lib/wie/autoLearnBrandDna')
         .then(({ autoLearnBrandDna }) => autoLearnBrandDna({
