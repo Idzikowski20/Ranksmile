@@ -82,11 +82,35 @@ export function mapStripeInvoice(
   const status = mapInvoiceStatus(inv.status);
   const currency = inv.currency || 'eur';
   const totalCents = inv.total ?? 0;
-  const subtotalCents = inv.subtotal ?? totalCents;
-  const taxCents = Math.max(0, totalCents - subtotalCents);
+  // Tax from total_taxes, not `total - subtotal`. For tax-INCLUSIVE prices (EUR defaults
+  // to inclusive) Stripe leaves total == subtotal and records the VAT only in
+  // total_taxes, so the subtraction read 0 on invoices that had actually collected VAT —
+  // the "Tax €0.00" on a €59 charge that held €11.03 of Polish VAT. The subtraction is
+  // kept as a fallback for older invoices with no total_taxes array.
+  const totalTaxes = (inv as { total_taxes?: Array<{ amount?: number | null }> | null }).total_taxes;
+  const taxCents = Array.isArray(totalTaxes) && totalTaxes.length
+    ? totalTaxes.reduce((sum, t) => sum + (t.amount ?? 0), 0)
+    : Math.max(0, totalCents - (inv.subtotal ?? totalCents));
+  // Net = total - tax in both behaviours (inclusive: 5900-1103=4797; exclusive:
+  // 7257-1357=5900), so the Subtotal/Tax/Total lines always add up.
+  const subtotalCents = totalCents - taxCents;
   const lineRows = inv.lines?.data ?? [];
   const lines: BillingInvoiceLine[] = lineRows.map((line) => {
-    const amountCents = line.amount ?? 0;
+    // Show each line net, so the line items add up to the net subtotal above. `line.amount`
+    // is gross under inclusive tax, which left one €59.00 line over a €47.97 subtotal.
+    // `amount_excluding_tax` is the field for this but is absent in newer API versions, so
+    // fall back to subtracting only the line's INCLUSIVE taxes — exclusive tax is already
+    // on top of `amount` and must not be subtracted.
+    const l = line as {
+      amount?: number | null;
+      amount_excluding_tax?: number | null;
+      taxes?: Array<{ amount?: number | null; tax_behavior?: string | null }> | null;
+    };
+    const gross = l.amount ?? 0;
+    const inclusiveTax = Array.isArray(l.taxes)
+      ? l.taxes.reduce((s, t) => s + (t.tax_behavior === 'inclusive' ? (t.amount ?? 0) : 0), 0)
+      : 0;
+    const amountCents = l.amount_excluding_tax ?? (gross - inclusiveTax);
     return {
       id: line.id,
       description: line.description || 'Subscription',
