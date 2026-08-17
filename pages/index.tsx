@@ -1,23 +1,28 @@
 import type { GetServerSideProps, NextPage } from 'next';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { dehydrate, QueryClient } from 'react-query';
 import AppLoading from '../components/common/AppLoading';
+import { PlanExpired } from '../components/billing/PlanExpired';
 import { getCurrentUser } from '../utils/getUser';
 import { getBootstrap } from '../lib/getBootstrap';
 import type { BootstrapData } from '../lib/getBootstrap';
+import { isPlanExpired } from '../lib/appAccess/isPlanExpired';
 
 type HomeProps = {
   dehydratedState?: unknown;
+  /** SSR already knows the plan expired — render the block, skip the dispatch effect. */
+  planExpired?: boolean;
 };
 
-const Home: NextPage<HomeProps> = () => {
+const Home: NextPage<HomeProps> = ({ planExpired = false }) => {
   const router = useRouter();
+  const [expired, setExpired] = useState(planExpired);
 
   useEffect(() => {
-    if (!router) return;
+    if (!router || expired) return;
     let stashed: string | null = null;
     try {
       stashed = localStorage.getItem('post_login_redirect');
@@ -39,6 +44,15 @@ const Home: NextPage<HomeProps> = () => {
           return;
         }
         const bootstrap = await res.json() as BootstrapData;
+        // "/" is Public, so ApplicationShell never gates it — this page is its own
+        // dispatcher and needs the shell's exception too. Following the
+        // BILLING_REQUIRED redirect here bounced an expired customer onto the pricing
+        // page with no word of why; the block renders in place instead, and its own
+        // links carry them to /plans.
+        if (bootstrap.access && isPlanExpired(bootstrap.access)) {
+          setExpired(true);
+          return;
+        }
         const to = bootstrap.redirectTo ?? bootstrap.access?.redirect?.redirect;
         if (to) {
           router.replace(to);
@@ -47,7 +61,9 @@ const Home: NextPage<HomeProps> = () => {
         router.replace('/onboarding');
       }
     })();
-  }, [router]);
+  }, [router, expired]);
+
+  if (expired) return <PlanExpired />;
 
   return (
     <div>
@@ -83,6 +99,13 @@ export const getServerSideProps: GetServerSideProps<HomeProps> = async (ctx) => 
     resolveRedirect: true,
     createSetupIfNeeded: true,
   });
+
+  // Same exception as the client effect: an expired plan renders the block in place
+  // rather than bouncing to /plans. Handled on the server too so a full page load of
+  // "/" never flashes through the redirect.
+  if (bootstrap.access && isPlanExpired(bootstrap.access)) {
+    return { props: { planExpired: true } };
+  }
 
   if (bootstrap.redirectTo ?? bootstrap.access?.redirect?.redirect) {
     return {

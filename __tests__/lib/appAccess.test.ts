@@ -114,16 +114,27 @@ describe('projectors', () => {
     expect(projectBillingState({
       subscriptionStatus: 'trialing',
       paymentFailedLocked: false,
+      trialEndsAt: new Date(Date.now() + 86_400_000).toISOString(),
     })).toBe('TRIAL');
+    // A trial whose end date passed projects to NONE even though the row still says
+    // `trialing` — the status only changes via webhook, and when none lands the date
+    // is all that stands between an expired trial and indefinite access.
+    expect(projectBillingState({
+      subscriptionStatus: 'trialing',
+      paymentFailedLocked: false,
+      trialEndsAt: '2020-01-01T00:00:00.000Z',
+    })).toBe('NONE');
     expect(projectBillingState({
       subscriptionStatus: 'active',
       paymentFailedLocked: true,
+      trialEndsAt: null,
     })).toBe('FAILED');
     expect(projectBillingState({
       subscriptionStatus: 'active',
       paymentFailedLocked: false,
       cancelAtPeriodEnd: true,
       currentPeriodEnd: '2020-01-01T00:00:00.000Z',
+      trialEndsAt: null,
     })).toBe('NONE');
     expect(projectWorkspaceState({ readyCount: 0, setupId: 18 })).toBe('SETUP');
     expect(projectWorkspaceState({ readyCount: 1, setupId: 18 })).toBe('READY');
