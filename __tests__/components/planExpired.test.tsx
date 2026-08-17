@@ -58,6 +58,24 @@ describe('PlanExpired', () => {
     expect(screen.getByText('Your plan has expired')).toBeInTheDocument();
   });
 
+  // Two intents, two buttons: "Choose Growth" renews the plan they had — straight to
+  // its checkout — while "Change plan" opens the full pricing page. Both used to point
+  // at /plans, which made the primary CTA a detour through a page most renewals skip.
+  it('sends Choose to the plan checkout and Change plan to /plans', async () => {
+    fetchJson.mockResolvedValue({
+      sites: [], articles: 0, recommendations: 0,
+      plan: { slug: 'growth', name: 'Growth', priceMonthly: 59, priceYearly: 590 },
+    });
+
+    renderScreen();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Choose Growth' })).toBeInTheDocument());
+    const choose = screen.getByRole('button', { name: 'Choose Growth' }).closest('a');
+    expect(choose).toHaveAttribute('href', expect.stringContaining('/billing/checkout/growth'));
+    const change = screen.getByRole('button', { name: 'Change plan' }).closest('a');
+    expect(change).toHaveAttribute('href', '/plans');
+  });
+
   it('offers the changelog', async () => {
     fetchJson.mockResolvedValue({ sites: [], articles: 0, recommendations: 0, plan: null });
 
