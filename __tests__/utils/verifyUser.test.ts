@@ -6,9 +6,10 @@ jest.mock('../../lib/legacyApiKeyLog', () => ({
 }));
 jest.mock('../../utils/getUser', () => ({
   getCurrentUserId: jest.fn().mockResolvedValue(null),
+  wasAuthUnavailable: jest.fn().mockReturnValue(false),
 }));
 
-import { getCurrentUserId } from '../../utils/getUser';
+import { getCurrentUserId, wasAuthUnavailable } from '../../utils/getUser';
 
 const mockLog = logLegacyApiKeyUse as jest.MockedFunction<typeof logLegacyApiKeyUse>;
 const mockUid = getCurrentUserId as jest.MockedFunction<typeof getCurrentUserId>;
@@ -23,6 +24,9 @@ beforeEach(() => {
   process.env.USER = 'admin';
   process.env.PASSWORD = 'secret';
   mockUid.mockResolvedValue(null);
+  // Reset alongside mockUid: clearAllMocks keeps mockReturnValue implementations, so a
+  // test that flips this to true would otherwise leak into every test after it.
+  (wasAuthUnavailable as jest.MockedFunction<typeof wasAuthUnavailable>).mockReturnValue(false);
 });
 
 afterAll(() => {
@@ -71,4 +75,18 @@ it('accepts Neon session', async () => {
     cookies: {},
   } as never;
   await expect(verifyUser(req, res)).resolves.toBe('authorized');
+});
+
+// An unreachable auth server is an infrastructure failure, not a verdict about the
+// session — the message must say so instead of the lie "Not authorized".
+it('names the auth service as the problem when it was unavailable', async () => {
+  mockUid.mockResolvedValue(null);
+  (wasAuthUnavailable as jest.MockedFunction<typeof wasAuthUnavailable>).mockReturnValue(true);
+  const req = {
+    headers: {},
+    url: '/api/articles/deep-analysis',
+    method: 'POST',
+    cookies: {},
+  } as never;
+  await expect(verifyUser(req, res)).resolves.toBe('Authentication service unavailable — please try again');
 });
