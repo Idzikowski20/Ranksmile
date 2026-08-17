@@ -4,7 +4,7 @@ import { semantic } from '../tokens/semantic';
 import { typeface, textScale, fontWeight } from '../tokens/typography';
 import { spacing } from '../tokens/spacing';
 import Button from '../primitives/Button';
-import Modal, { ModalBody, ModalFooter, ModalHeader } from '../primitives/Modal';
+import Modal, { ModalBody, ModalFooter, ModalHeader } from '../core/modal/modal';
 
 const Card = styled.section`
   display: flex;
@@ -107,9 +107,13 @@ export function DangerDialog({
   onConfirm,
   busy,
 }: DangerDialogProps) {
+  // The Koala Modal owns the shell — portal, overlay, Esc, scroll-lock. A destructive
+  // confirm shows no close X (like OptimizeCancelModal); the choice is Cancel vs the
+  // danger action.
+  if (!open) return null;
   return (
-    <Modal open={open} onClose={onClose} aria-label={title}>
-      <ModalHeader>{title}</ModalHeader>
+    <Modal onClose={onClose} width={480}>
+      <ModalHeader title={title} closeButton={false} />
       <ModalBody>{description}</ModalBody>
       <ModalFooter>
         <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={busy}>
