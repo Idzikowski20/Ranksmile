@@ -23,7 +23,7 @@ describe('siteNavigation registry', () => {
   });
 
   it('keeps Tools free of Audit URL', () => {
-    expect(TOOLS_NAV.map((i) => i.id)).toEqual(['keyword-research', 'topic-research']);
+    expect(TOOLS_NAV.map((i) => i.id)).toEqual(['keyword-research']);
     expect(TOOLS_NAV.some((i) => i.path.includes('audit'))).toBe(false);
   });
 

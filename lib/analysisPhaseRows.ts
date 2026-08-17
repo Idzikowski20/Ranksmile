@@ -43,8 +43,12 @@ export function analysisPhaseGroups(phases: AnalysisPhases): PhaseGroup[] {
       title: 'AI Search',
       rows: [
         {
+          // Past tense only once it is true. Same shape as the SERP row's
+          // "Getting search results" → "Got N search results": ai_search is the last
+          // sidecar stage, so this row sits pending for most of a run and a flat
+          // "Generated prompts" claimed work that had not started.
           id: 'prompts',
-          label: 'Generated prompts',
+          label: phases.aiSearch.status === 'NEW' ? 'Generating prompts' : 'Generated prompts',
           state: phases.aiSearch.status === 'NEW' ? 'pending' : 'done',
         },
         {

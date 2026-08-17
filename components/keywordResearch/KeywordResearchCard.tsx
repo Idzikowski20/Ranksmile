@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AUDIT_COUNTRIES } from '../../lib/countryLang';
-import type { TopicResearchCardDTO } from '../../lib/topicResearchTypes';
+import type { KeywordResearchCardDTO } from '../../lib/keywordResearchTypes';
 import CountryFlag from '../audit/CountryFlag';
 
 const FONT = 'var(--font-family-primary)';
@@ -29,7 +29,7 @@ const DotsIcon = () => (
    </svg>
 );
 
-const TopicResearchCard = ({ item, onOpen, onDelete }: { item: TopicResearchCardDTO; onOpen: (id: number) => void; onDelete?: (id: number) => void }) => {
+const KeywordResearchCard = ({ item, onOpen, onDelete }: { item: KeywordResearchCardDTO; onOpen: (id: number) => void; onDelete?: (id: number) => void }) => {
    const busy = item.status === 'running' || item.status === 'queued';
    const done = item.status === 'completed';
    const failed = item.status === 'failed';
@@ -126,4 +126,4 @@ const TopicResearchCard = ({ item, onOpen, onDelete }: { item: TopicResearchCard
    );
 };
 
-export default TopicResearchCard;
+export default KeywordResearchCard;

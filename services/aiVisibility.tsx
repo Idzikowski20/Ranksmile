@@ -123,7 +123,9 @@ export function useUpdateAiVisPriority(slug: string | undefined) {
 
 export function useGeneratePrompts(slug: string | undefined) {
    return useMutation(
-      (topic: string) => fetchJson<{ prompts: Array<{ text: string, provenance: string[] }>, degraded?: boolean }>(`/api/ai-visibility/${slug}/generate-prompts`, jsonPost({ topic })),
+      // `refresh` bypasses the stored pool and re-buys from DataForSEO — only for
+      // the explicit per-topic Generate button, never for the wizard's initial seed.
+      ({ topic, refresh }: { topic: string, refresh?: boolean }) => fetchJson<{ prompts: Array<{ text: string, provenance: string[] }>, degraded?: boolean, cached?: boolean }>(`/api/ai-visibility/${slug}/generate-prompts`, jsonPost({ topic, refresh })),
       { onError: toastError },
    );
 }

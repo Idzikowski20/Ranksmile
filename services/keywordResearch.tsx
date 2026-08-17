@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, UseQueryResult, UseMutationResult } from 'react-query';
 import toast from 'react-hot-toast';
-import type { TopicResearchCardDTO, TopicResearchResult } from '../lib/topicResearchTypes';
+import type { KeywordResearchCardDTO, KeywordResearchResult } from '../lib/keywordResearchTypes';
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
    const r = await fetch(url, init);
@@ -29,13 +29,13 @@ export interface KeywordResearchDetailPayload {
       id: number; seed: string; country: string; status: string;
       createdAt: string | null; finishedAt: string | null; error: string | null;
    };
-   result: TopicResearchResult | null;
+   result: KeywordResearchResult | null;
 }
 
-export function useKeywordResearchList(slug: string | undefined): UseQueryResult<{ items: TopicResearchCardDTO[] }> {
-   return useQuery<{ items: TopicResearchCardDTO[] }>(
+export function useKeywordResearchList(slug: string | undefined): UseQueryResult<{ items: KeywordResearchCardDTO[] }> {
+   return useQuery<{ items: KeywordResearchCardDTO[] }>(
       ['keyword-research-list', slug],
-      () => fetchJson<{ items: TopicResearchCardDTO[] }>(`/api/keyword-research/${slug}/list`),
+      () => fetchJson<{ items: KeywordResearchCardDTO[] }>(`/api/keyword-research/${slug}/list`),
       { enabled: !!slug, keepPreviousData: true },
    );
 }

@@ -1,6 +1,5 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
@@ -9,6 +8,7 @@ import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import AutomationsCalendar, { MONTHS_FULL, toDateKey } from '../../../components/automations/AutomationsCalendar';
 import AddEventDialog from '../../../components/automations/AddEventDialog';
 import { Alert, Button } from '../../../components/koala/core';
+import { useAppBanner } from '../../../components/koala/shell';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import type { AutomationEvent, AutomationPublishMode } from '../../../lib/types/automations';
@@ -103,6 +103,14 @@ const AutomationsPage: NextPage = () => {
   const wordpressConnected = listQ.data?.wordpressConnected ?? true;
   const events = listQ.data?.events ?? [];
 
+  useAppBanner(!listQ.isLoading && !wordpressConnected
+    ? {
+      variant: 'error',
+      message: 'This workspace is not connected to WordPress yet. Connect it in Settings before adding events.',
+      action: { label: 'Open WordPress settings', href: '/settings/wordpress' },
+    }
+    : null);
+
   return (
     <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
       <Head>
@@ -126,17 +134,6 @@ const AutomationsPage: NextPage = () => {
           </Button>
         )}
       >
-        {!listQ.isLoading && !wordpressConnected ? (
-          <div style={{ marginBottom: 16 }}>
-            <Alert variant="error" title="Connect WordPress to use Automations">
-              This workspace is not connected to WordPress yet. Connect it in Settings before adding events.{' '}
-              <Link href="/settings/wordpress" style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline' }}>
-                Open WordPress settings
-              </Link>
-            </Alert>
-          </div>
-        ) : null}
-
         {listQ.isError ? (
           <div style={{ marginBottom: 16 }}>
             <Alert variant="error" title="Could not load calendar">

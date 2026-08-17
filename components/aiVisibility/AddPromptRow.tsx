@@ -32,7 +32,7 @@ const AddPromptRow = ({ topicTitle, onAdd }: { topicTitle: string; onAdd: (text:
                onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setText(''); setEditing(false); } }}
                onBlur={commit}
                placeholder={`Add prompt to ${topicTitle}`}
-               style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: '#18181B', fontFamily: FONT, background: 'transparent' }}
+               style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: FONT, background: 'transparent' }}
             />
          </div>
       );
@@ -41,7 +41,7 @@ const AddPromptRow = ({ topicTitle, onAdd }: { topicTitle: string; onAdd: (text:
       <button
          type="button"
          onClick={() => setEditing(true)}
-         style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minHeight: 52, padding: '0 16px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#71717B', fontSize: 14, fontFamily: FONT, textAlign: 'left' }}
+         style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minHeight: 52, padding: '0 16px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--koala-text-secondary)', fontSize: 14, fontFamily: FONT, textAlign: 'left' }}
       >
          <PlusIcon />
          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Add prompt to {topicTitle}</span>

@@ -19,6 +19,10 @@ function isSkipped(posixRel: string): boolean {
     'pages/api/favicon.ts',
     'pages/api/confirm-account.ts',
     'pages/api/gsc/callback.ts',
+    // The plan-expired block is what a lapsed org sees, so the counts behind it are
+    // the one thing a lapsed org must still be able to read. Auth-only by design;
+    // it returns site names and two integers, never article or recommendation text.
+    'pages/api/billing/expired-summary.ts',
   ]);
   if (exact.has(posixRel)) return true;
   if (posixRel.startsWith('pages/api/auth/')) return true;

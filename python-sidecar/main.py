@@ -358,10 +358,12 @@ async def generate_image_endpoint(body: dict):
     keyword = body.get("keyword", "")
     title = body.get("title", keyword)
     style = body.get("style", "professional")
+    # Forwarded so alt text is written in the article's language, not always Polish.
+    language = body.get("language", "pl")
     if not keyword:
         raise HTTPException(status_code=400, detail="keyword is required")
     print(f"[image] Generating image for: {keyword}")
-    result = await generate_article_image(keyword, title, style)
+    result = await generate_article_image(keyword, title, style, language)
     print(f"[image] Done: {result['source']} → {result['url'][:80]}...")
     return result
 

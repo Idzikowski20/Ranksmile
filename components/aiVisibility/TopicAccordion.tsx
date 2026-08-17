@@ -19,14 +19,14 @@ const TrashIcon = () => (
 );
 
 const Spinner = () => (
-   <span aria-label="Generating" role="status" style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #C9C9D1', borderBottomColor: 'transparent', display: 'inline-block', animation: 'aivSpin 0.7s linear infinite', flexShrink: 0 }} />
+   <span aria-label="Generating" role="status" style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--koala-border-primary)', borderBottomColor: 'transparent', display: 'inline-block', animation: 'aivSpin 0.7s linear infinite', flexShrink: 0 }} />
 );
 
 // Staggered widths + per-row delay so the skeleton visibly "streams" in.
 const SkeletonRow = ({ width, delay }: { width: string; delay: number }) => (
-   <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 52, padding: '0 16px', borderTop: '1px solid #F4F4F5' }}>
-      <div className="aiv-pulse" style={{ width: 16, height: 16, borderRadius: 4, background: '#F4F4F5', animationDelay: `${delay}ms` }} />
-      <div className="aiv-pulse" style={{ height: 14, width, borderRadius: 4, background: '#F4F4F5', animationDelay: `${delay}ms` }} />
+   <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 52, padding: '0 16px', borderTop: '1px solid var(--koala-bg-secondary)' }}>
+      <div className="aiv-pulse" style={{ width: 16, height: 16, borderRadius: 4, background: 'var(--koala-bg-secondary)', animationDelay: `${delay}ms` }} />
+      <div className="aiv-pulse" style={{ height: 14, width, borderRadius: 4, background: 'var(--koala-bg-secondary)', animationDelay: `${delay}ms` }} />
    </div>
 );
 const SKELETON_WIDTHS = ['72%', '54%', '81%', '63%', '48%'];
@@ -51,10 +51,10 @@ const TopicAccordion = ({ topic, open, onToggleOpen, onRename, onRemoveTopic, on
    const sources = topicSources(topic.prompts);
 
    return (
-      <div style={{ border: '1px solid #bebebe', borderRadius: 8, background: '#fff' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <div style={{ border: '1px solid var(--koala-border-primary)', borderRadius: 8, background: 'var(--koala-bg-primary)' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
          {/* Header */}
          <div style={{ display: 'flex', alignItems: 'center', minHeight: 56, padding: '8px 16px', gap: 8 }}>
-            <Button type="button" variant="transparent" size="zero" onClick={onToggleOpen} aria-label={open ? 'Collapse' : 'Expand'} icon={<Chevron open={open} />} style={{ color: '#18181B' }} />
+            <Button type="button" variant="transparent" size="zero" onClick={onToggleOpen} aria-label={open ? 'Collapse' : 'Expand'} icon={<Chevron open={open} />} style={{ color: 'var(--koala-text-primary)' }} />
             {empty ? (
                <input
                   value={title}
@@ -62,17 +62,17 @@ const TopicAccordion = ({ topic, open, onToggleOpen, onRename, onRemoveTopic, on
                   onBlur={() => onRename(title.trim() || topic.title)}
                   onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                   placeholder="Topic title"
-                  style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT, background: 'transparent' }}
+                  style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: FONT, background: 'transparent' }}
                />
             ) : (
                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-                  <span title={topic.title} style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{topic.title}</span>
+                  <span title={topic.title} style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{topic.title}</span>
                   {topic.generating ? (
-                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#71717B', fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: FONT, whiteSpace: 'nowrap' }}>
                         <Spinner /> Generating…
                      </span>
                   ) : (
-                     <span style={{ fontSize: 13, color: '#71717B', fontFamily: FONT, whiteSpace: 'nowrap' }}>{topic.prompts.length} prompts</span>
+                     <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: FONT, whiteSpace: 'nowrap' }}>{topic.prompts.length} prompts</span>
                   )}
                   {!topic.generating && sources.length > 0 && (
                      <span style={{ display: 'inline-flex', marginLeft: 4 }}>
@@ -83,12 +83,12 @@ const TopicAccordion = ({ topic, open, onToggleOpen, onRename, onRemoveTopic, on
             )}
             {empty ? (
                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 150ms ease' }}>
-                  <Button type="button" variant="transparent" size="sm" tabIndex={hover ? 0 : -1} onClick={onRemoveTopic} style={{ color: '#52525C', fontWeight: 600, fontFamily: FONT }}>Remove</Button>
+                  <Button type="button" variant="transparent" size="sm" tabIndex={hover ? 0 : -1} onClick={onRemoveTopic} style={{ color: 'var(--koala-text-secondary)', fontWeight: 600, fontFamily: FONT }}>Remove</Button>
                   <button
                      type="button"
                      tabIndex={hover ? 0 : -1}
                      onClick={onGenerate}
-                     style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid #bebebe', background: '#fff', borderRadius: 8, padding: '6px 14px', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, cursor: 'pointer' }}
+                     style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--koala-border-primary)', background: 'var(--koala-bg-primary)', borderRadius: 8, padding: '6px 14px', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: FONT, cursor: 'pointer' }}
                   >
                      Generate prompts
                   </button>
@@ -101,7 +101,7 @@ const TopicAccordion = ({ topic, open, onToggleOpen, onRename, onRemoveTopic, on
                   aria-label="Remove topic"
                   onClick={onRemoveTopic}
                   icon={<TrashIcon />}
-                  style={{ flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 150ms ease', color: '#71717B' }}
+                  style={{ flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 150ms ease', color: 'var(--koala-text-secondary)' }}
                />
             )}
          </div>

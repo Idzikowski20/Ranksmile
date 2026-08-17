@@ -10,9 +10,9 @@ import type {
    TopicCluster,
    TopicIdea,
    TopicKeyword,
-   TopicResearchResult,
-   TopicResearchStats,
-} from './topicResearchTypes';
+   KeywordResearchResult,
+   KeywordResearchStats,
+} from './keywordResearchTypes';
 
 export type EnrichedKeyword = {
    keyword: string;
@@ -239,7 +239,7 @@ function avg(nums: number[]): number {
    return nums.reduce((s, n) => s + n, 0) / nums.length;
 }
 
-export function computeStats(clusters: TopicCluster[]): TopicResearchStats {
+export function computeStats(clusters: TopicCluster[]): KeywordResearchStats {
    const allIdeas = clusters.flatMap((c) => c.ideas);
    const allKws = allIdeas.flatMap((i) => i.keywords);
    const coveredIdeas = allIdeas.filter((i) => i.position != null && i.position > 0).length;
@@ -282,7 +282,7 @@ export function assembleResult(
    country: string,
    rawClusters: RawCluster[],
    allKeywords: EnrichedKeyword[],
-): TopicResearchResult {
+): KeywordResearchResult {
    const clusters: TopicCluster[] = rawClusters.map((rc, idx) => {
       const kws = rc.indexes
          .filter((i) => i >= 0 && i < allKeywords.length)

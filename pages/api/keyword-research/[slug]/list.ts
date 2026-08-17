@@ -4,7 +4,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
 import { queryRows } from '../../../../lib/db/query';
-import type { TopicResearchCardDTO, TopicResearchStats, TopicResearchStatus } from '../../../../lib/topicResearchTypes';
+import type { KeywordResearchCardDTO, KeywordResearchStats, KeywordResearchStatus } from '../../../../lib/keywordResearchTypes';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type ListRow = {
@@ -17,12 +17,12 @@ type ListRow = {
    finished_at: string | null;
 };
 
-function parseStats(raw: ListRow['stats_json']): TopicResearchStats | null {
+function parseStats(raw: ListRow['stats_json']): KeywordResearchStats | null {
    if (raw == null) return null;
    try {
       const obj = typeof raw === 'string' ? JSON.parse(raw) as unknown : raw;
       if (!obj || typeof obj !== 'object') return null;
-      return obj as TopicResearchStats;
+      return obj as KeywordResearchStats;
    } catch {
       return null;
    }
@@ -45,13 +45,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       [domainId],
    );
 
-   const items: TopicResearchCardDTO[] = rows.map((r) => {
+   const items: KeywordResearchCardDTO[] = rows.map((r) => {
       const stats = parseStats(r.stats_json);
       return {
          id: r.id,
          seed: r.seed,
          country: r.country,
-         status: r.status as TopicResearchStatus,
+         status: r.status as KeywordResearchStatus,
          totalIdeas: stats?.totalIdeas ?? null,
          searchVolume: stats?.searchVolume ?? null,
          createdAt: r.created_at,

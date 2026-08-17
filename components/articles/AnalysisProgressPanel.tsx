@@ -18,7 +18,24 @@ const Marker: React.FC<{ state: PhaseRow['state'] }> = ({ state }) => {
   // Hidden from assistive tech: the panel's own live region announces the running step,
   // and Spinner carries role="status" which would announce a second time.
   if (state === 'active') return <Spinner size={14} color="currentColor" />;
-  return <span style={{ width: 14, height: 14, display: 'inline-block' }} />;
+  // A hollow dot, not an empty box. ai_search is the last stage in the sidecar pipeline
+  // (python-sidecar/pipeline/runner.py), so its three rows sit at NEW for most of a run
+  // while the Google group below fills with ticks — and an invisible marker made them
+  // read as plain prose someone forgot to style rather than as steps still to come.
+  return (
+    <span style={{
+      width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    }}
+    >
+      <span style={{
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        border: '1.5px solid var(--koala-border-strong)',
+      }}
+      />
+    </span>
+  );
 };
 
 /** Deep-analysis progress, rendered from typed phases (lib/analysisPhases). */

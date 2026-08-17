@@ -1,7 +1,7 @@
 /**
- * Keyword Research runner — mirrors lib/topicResearchRunner.ts but drains its own
+ * Keyword Research runner — mirrors lib/keywordResearchCompute.ts but drains its own
  * keyword_research_runs queue. The heavy keyword-expansion + clustering logic is
- * reused from topicResearchRunner.computeTopicResearch (identical result shape).
+ * reused from keywordResearchCompute.computeKeywordResearch (identical result shape).
  */
 import db from '../database/database';
 import { queryOne } from './db/query';
@@ -13,7 +13,7 @@ import {
   processQueueForDomain,
   type QueueRunnerConfig,
 } from './queueRunner';
-import { computeTopicResearch } from './topicResearchRunner';
+import { computeKeywordResearch } from './keywordResearchCompute';
 
 const isPg = !!process.env.DATABASE_URL;
 const STALE_SECS = 5 * 60;
@@ -29,7 +29,7 @@ const KEYWORD_QUEUE: QueueRunnerConfig = {
   onConflict: ON_CONFLICT,
   staleSecs: STALE_SECS,
   runJob: async (row, domainHost) => {
-    const { result, stats } = await computeTopicResearch(row.seed, row.country, domainHost);
+    const { result, stats } = await computeKeywordResearch(row.seed, row.country, domainHost);
     return { resultJson: JSON.stringify(result), statsJson: JSON.stringify(stats) };
   },
 };
@@ -119,7 +119,7 @@ export async function processQueuedForDomain(domainId: number, budgetMs = 45000)
       }
 
       try {
-         const { result, stats } = await computeTopicResearch(candidate.seed, candidate.country, domainHost);
+         const { result, stats } = await computeKeywordResearch(candidate.seed, candidate.country, domainHost);
          await db.query(
             "UPDATE keyword_research_runs SET status = 'completed', result_json = ?, stats_json = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'",
             { replacements: [JSON.stringify(result), JSON.stringify(stats), candidate.id] },

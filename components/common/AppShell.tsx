@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import { registerMotionPlugins } from '../../lib/motion/gsap';
 import { useRouteTransition } from '../../lib/motion/useRouteTransition';
-import { KoalaHeader, KoalaSidebar } from '../koala/shell';
+import { AppBanner, KoalaHeader, KoalaSidebar } from '../koala/shell';
 import MobileSidebar from './MobileSidebar';
 
 type AppShellProps = {
@@ -44,6 +44,7 @@ const AppShell = ({
 
   return (
     <div className="app-shell koala-app-shell">
+      <AppBanner />
       <div className="app-shell-body koala-shell-body">
         {sidebar ?? (showSidebar ? <KoalaSidebar domains={domains} /> : null)}
         <div className="koala-shell-main">

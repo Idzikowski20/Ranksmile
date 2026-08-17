@@ -63,7 +63,7 @@ const AiVisibilitySetup: NextPage = () => {
          setTopics(titles.map((title, i) => ({ key: `topic-${i}`, title, prompts: [], generating: true })));
          await Promise.all(titles.map(async (title, i) => {
             try {
-               const { prompts } = await generate.mutateAsync(title);
+               const { prompts } = await generate.mutateAsync({ topic: title });
                const wp: WizardPrompt[] = prompts.map((p, pi) => ({
                   key: `topic-${i}-p${pi}`, text: p.text, provenance: p.provenance, selected: pi < DEFAULT_SELECTED,
                }));
@@ -92,7 +92,7 @@ const AiVisibilitySetup: NextPage = () => {
    const onGenerate = async (topicKey: string, title: string) => {
       setTopics((prev) => prev.map((t) => (t.key === topicKey ? { ...t, generating: true } : t)));
       try {
-         const { prompts } = await generate.mutateAsync(title);
+         const { prompts } = await generate.mutateAsync({ topic: title, refresh: true });
          const wp: WizardPrompt[] = prompts.map((p, pi) => ({ key: `${topicKey}-p${pi}`, text: p.text, provenance: p.provenance, selected: pi < DEFAULT_SELECTED }));
          setTopics((prev) => prev.map((t) => (t.key === topicKey ? { ...t, prompts: wp, generating: false } : t)));
       } catch {
@@ -122,18 +122,25 @@ const AiVisibilitySetup: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`AI Visibility Setup — ${domain}`}</title></Head>
          <style>{'@keyframes aivPulse{0%,100%{opacity:1}50%{opacity:.5}}.aiv-pulse{animation:aivPulse 1.5s ease-in-out infinite}@keyframes aivSpin{to{transform:rotate(360deg)}}'}</style>
+         {/* No fillHeight: .koala-page is already the page scroller, like every
+             other AI Visibility page. fillHeight is only for pages whose content is
+             an .rs-data-table that scrolls internally. */}
          <DomainSubLayout domain={domain} slug={slug || ''} section="AI Visibility" contentMaxWidth="100%">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 800, width: '100%', margin: '0 auto' }}>
+            <div
+               style={{
+                  display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 800, width: '100%', margin: '0 auto',
+               }}
+            >
                {/* Heading + usage */}
                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                     <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT }}>Select prompts you want to track</h1>
+                     <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: FONT }}>Select prompts you want to track</h1>
                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 14, color: '#52525C', fontFamily: FONT }}>
-                           <span style={{ fontWeight: 600, color: '#18181B' }}>{selectedCount} of {AI_VIS_PROMPT_LIMIT}</span> prompts used
+                        <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', fontFamily: FONT }}>
+                           <span style={{ fontWeight: 600, color: 'var(--koala-text-primary)' }}>{selectedCount} of {AI_VIS_PROMPT_LIMIT}</span> prompts used
                         </span>
-                        <span style={{ display: 'inline-flex', width: 44, height: 8, borderRadius: 9999, background: '#F4F4F5', overflow: 'hidden' }}>
-                           <span style={{ minWidth: 4, width: `${pct}%`, borderRadius: 9999, background: '#E6A817' }} />
+                        <span style={{ display: 'inline-flex', width: 44, height: 8, borderRadius: 9999, background: 'var(--koala-bg-secondary)', overflow: 'hidden' }}>
+                           <span style={{ minWidth: 4, width: `${pct}%`, borderRadius: 9999, background: 'var(--koala-status-warning, #E6A817)' }} />
                         </span>
                      </div>
                   </div>
@@ -147,7 +154,7 @@ const AiVisibilitySetup: NextPage = () => {
 
                {/* Footer */}
                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
-                  <span style={{ fontSize: 14, color: '#18181B', fontFamily: FONT }}>Uses {selectedCount} prompts from your limit</span>
+                  <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: FONT }}>Uses {selectedCount} prompts from your limit</span>
                   <Button type="button" variant="primary" size="sm" onClick={onFinish} disabled={!canFinish}>
                      {finishing ? 'Starting…' : 'Finish'}
                   </Button>
@@ -162,7 +169,7 @@ const AiVisibilitySetup: NextPage = () => {
                         onChange={(e) => setBulkText(e.target.value)}
                         placeholder="One prompt per line"
                         rows={8}
-                        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #D4D4D8', borderRadius: 8, padding: 12, fontSize: 14, fontFamily: FONT, color: '#18181B', resize: 'vertical', outline: 'none' }}
+                        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid var(--koala-border-primary)', borderRadius: 8, padding: 12, fontSize: 14, fontFamily: FONT, color: 'var(--koala-text-primary)', background: 'var(--koala-bg-primary)', resize: 'vertical', outline: 'none' }}
                      />
                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                         <Button type="button" variant="secondary" size="sm" onClick={() => setBulkOpen(false)}>Cancel</Button>

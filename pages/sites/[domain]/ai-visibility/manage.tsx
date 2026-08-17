@@ -82,7 +82,7 @@ const AiVisibilityManage: NextPage = () => {
    const onGenerate = async (topicKey: string, title: string) => {
       setTopics((prev) => prev.map((t) => (t.key === topicKey ? { ...t, generating: true } : t)));
       try {
-         const { prompts } = await generate.mutateAsync(title);
+         const { prompts } = await generate.mutateAsync({ topic: title, refresh: true });
          const wp: WizardPrompt[] = prompts.map((p, pi) => ({ key: `${topicKey}-p${pi}`, text: p.text, provenance: p.provenance, selected: pi < DEFAULT_SELECTED }));
          setTopics((prev) => prev.map((t) => (t.key === topicKey ? { ...t, prompts: wp, generating: false } : t)));
       } catch {

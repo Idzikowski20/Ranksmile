@@ -10,15 +10,6 @@ import { Icon } from '../koala/icons';
 import {
   KoalaSettingsSection,
   KoalaSettingsRow,
-  KoalaPanel,
-} from '../koala/layout';
-import {
-  SentryTable,
-  SentryTableHead,
-  SentryTableBody,
-  SentryTableRow,
-  SentryTableCell,
-  SentryTableHeaderCell,
 } from '../koala/layout';
 
 const font = 'var(--font-family-primary)';
@@ -34,26 +25,6 @@ const parseIds = (json: string | null): number[] => {
   try { const v = JSON.parse(json); return Array.isArray(v) ? v.map(Number) : []; } catch { return []; }
 };
 
-const Avatar = ({ initial }: { initial: string }) => (
-  <div
-    style={{
-      width: 32,
-      height: 32,
-      borderRadius: 9999,
-      background: 'rgba(248,68,22,0.12)',
-      color: '#F84416',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 13,
-      fontWeight: 600,
-      flexShrink: 0,
-      fontFamily: font,
-    }}
-  >
-    {initial}
-  </div>
-);
 
 const roleOptions = (options: readonly string[]) => options.map((o) => ({ value: o, label: cap(o) }));
 
@@ -128,33 +99,47 @@ const PeopleSettings = () => {
     <div className="koala-people-settings" style={{ display: 'flex', flexDirection: 'column', gap: 32, width: '100%', minWidth: 0 }}>
       {canManage && (
         <KoalaSettingsSection title="Invite people">
-          <KoalaSettingsRow
-            layout="stack"
-            label="Email invitation"
-            description="Send an email invitation to add new members to your organization."
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 400 }}>
-              <Input
-                id="invite-email"
-                type="email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendInvite(); } }}
-                placeholder="name@company.com"
-                style={{ width: '100%' }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: font }}>Role</span>
-                <RoleSelect value={inviteRole} options={['member', 'admin']} onChange={(v) => setInviteRole(v as 'member' | 'admin')} />
+          {/* Label carried by the banner inside, so the row does not repeat it. */}
+          <KoalaSettingsRow layout="stack" label="">
+            {/* Same shape as the onboarding invite step (Figma 1:261): a banner, then
+                address + role + action on one line. The two surfaces do the same job and
+                used to look unrelated — this one stacked four full-width controls. */}
+            <div className="invite-step">
+              <div className="invite-step__banner">
+                <p className="invite-step__banner-title">
+                  <strong>Invite others</strong>
+                  {' to collaborate in this organization'}
+                </p>
+                <p className="invite-step__banner-sub">
+                  They receive an email invitation and pick their own password.
+                </p>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: font }}>Workspaces</span>
-                <WorkspacePicker workspaces={workspaces} selected={inviteWs} onChange={setInviteWs} disabled={inviteRole !== 'member'} />
-              </div>
-              <div className="koala-account-actions">
+
+              <div className="invite-step__row">
+                <div className="invite-step__emails">
+                  <Input
+                    id="invite-email"
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendInvite(); } }}
+                    placeholder="name@company.com"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div className="invite-step__role">
+                  <RoleSelect value={inviteRole} options={['member', 'admin']} onChange={(v) => setInviteRole(v as 'member' | 'admin')} />
+                </div>
                 <Button type="button" variant="primary" onClick={sendInvite} disabled={invite.isLoading}>
                   {invite.isLoading ? 'Sending…' : 'Send invite'}
                 </Button>
+              </div>
+
+              {/* Kept below the row, not dropped: unlike the Figma's link controls this
+                  one is real — a member's access is scoped to the workspaces picked here. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: font }}>Workspaces</span>
+                <WorkspacePicker workspaces={workspaces} selected={inviteWs} onChange={setInviteWs} disabled={inviteRole !== 'member'} />
               </div>
             </div>
           </KoalaSettingsRow>
@@ -167,87 +152,70 @@ const PeopleSettings = () => {
           label="Organization members"
           description="People with access to this organization."
         >
-          <div className="koala-people-table">
-            <KoalaPanel noPadding>
-              <SentryTable>
-                <SentryTableHead>
-                  <SentryTableRow>
-                    <SentryTableHeaderCell>Members</SentryTableHeaderCell>
-                    <SentryTableHeaderCell>Role</SentryTableHeaderCell>
-                    <SentryTableHeaderCell>Joined</SentryTableHeaderCell>
-                    <SentryTableHeaderCell>Workspaces</SentryTableHeaderCell>
-                    <SentryTableHeaderCell>{' '}</SentryTableHeaderCell>
-                  </SentryTableRow>
-                </SentryTableHead>
-                <SentryTableBody>
-                  {isLoading && (
-                    <SentryTableRow><SentryTableCell colSpan={5}>Loading…</SentryTableCell></SentryTableRow>
+          {/* A list, not a table — Figma 1:261 puts people on rows, not in columns.
+              Joined date and workspace access move to the row's second line rather than
+              being dropped: in settings they are the answer to "who can see what", which
+              a sharing popover never had to carry. */}
+          <ul className="invite-step__list">
+            {isLoading && <li className="invite-step__note">Loading…</li>}
+            {!isLoading && members.length === 0 && <li className="invite-step__note">No members yet.</li>}
+            {members.map((m) => {
+              const email = m.email || m.user_id;
+              const editable = canActOn(m) && m.id !== undefined;
+              const memberWs = parseIds(m.workspace_ids);
+              const access = m.role === 'member' ? describeWorkspaceAccess(m.workspace_ids, wsNames) : 'All';
+              // The WorkspacePicker below already states (and edits) the access for an
+              // editable member, so repeating it as static text in the meta line said the
+              // same thing twice — and unlike Role, which swaps text for a control, the
+              // text version stayed. Rows without the picker still need it spelled out.
+              const showsAccessAsText = !(editable && m.role === 'member');
+              return (
+                <li key={m.id} className="invite-step__person">
+                  <span className="invite-step__avatar" aria-hidden="true">{(email[0] || '?').toUpperCase()}</span>
+                  <span className="invite-step__who">
+                    <span className="invite-step__email">{email}</span>
+                    <span className="invite-step__meta">
+                      {showsAccessAsText ? `Joined ${fmtDate(m.created_at)} · ${access}` : `Joined ${fmtDate(m.created_at)}`}
+                    </span>
+                  </span>
+                  {editable ? (
+                    <div className="invite-step__role">
+                      <RoleSelect
+                        value={m.role}
+                        options={ROLES}
+                        compact
+                        onChange={(v) => changeRole.mutate({ id: m.id, role: v }, { onSuccess: onOk('Role updated'), onError })}
+                      />
+                    </div>
+                  ) : (
+                    <span className="invite-step__meta">{cap(m.role)}</span>
                   )}
-                  {!isLoading && members.length === 0 && (
-                    <SentryTableRow><SentryTableCell colSpan={5}>No members yet.</SentryTableCell></SentryTableRow>
+                  {editable && m.role === 'member' && (
+                    <WorkspacePicker
+                      workspaces={workspaces}
+                      selected={memberWs}
+                      onChange={(ids) => setWorkspaces.mutate({ id: m.id, workspaceIds: ids.length ? ids : null }, { onError })}
+                    />
                   )}
-                  {members.map((m) => {
-                    const email = m.email || m.user_id;
-                    const editable = canActOn(m) && m.id !== undefined;
-                    const memberWs = parseIds(m.workspace_ids);
-                    return (
-                      <SentryTableRow key={m.id}>
-                        <SentryTableCell>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                            <Avatar initial={(email[0] || '?').toUpperCase()} />
-                            <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
-                          </div>
-                        </SentryTableCell>
-                        <SentryTableCell>
-                          {editable ? (
-                            <RoleSelect
-                              value={m.role}
-                              options={ROLES}
-                              compact
-                              onChange={(v) => changeRole.mutate({ id: m.id, role: v }, { onSuccess: onOk('Role updated'), onError })}
-                            />
-                          ) : (
-                            <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', fontFamily: font }}>{cap(m.role)}</span>
-                          )}
-                        </SentryTableCell>
-                        <SentryTableCell>{fmtDate(m.created_at)}</SentryTableCell>
-                        <SentryTableCell>
-                          {editable && m.role === 'member' ? (
-                            <WorkspacePicker
-                              workspaces={workspaces}
-                              selected={memberWs}
-                              onChange={(ids) => setWorkspaces.mutate({ id: m.id, workspaceIds: ids.length ? ids : null }, { onError })}
-                            />
-                          ) : (
-                            <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', fontFamily: font }}>
-                              {m.role === 'member' ? describeWorkspaceAccess(m.workspace_ids, wsNames) : 'All'}
-                            </span>
-                          )}
-                        </SentryTableCell>
-                        <SentryTableCell align="center">
-                          {editable && (
-                            <Button
-                              type="button"
-                              variant="transparent"
-                              size="sm"
-                              aria-label="Remove member"
-                              onClick={() => { if (window.confirm(`Remove ${email}?`)) removeMember.mutate(m.id, { onSuccess: onOk('Member removed'), onError }); }}
-                              icon={(
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                  <path d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              )}
-                              style={{ color: 'var(--koala-text-tertiary)' }}
-                            />
-                          )}
-                        </SentryTableCell>
-                      </SentryTableRow>
-                    );
-                  })}
-                </SentryTableBody>
-              </SentryTable>
-            </KoalaPanel>
-          </div>
+                  {editable && (
+                    <Button
+                      type="button"
+                      variant="transparent"
+                      size="sm"
+                      aria-label={`Remove ${email}`}
+                      onClick={() => { if (window.confirm(`Remove ${email}?`)) removeMember.mutate(m.id, { onSuccess: onOk('Member removed'), onError }); }}
+                      icon={(
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                      style={{ color: 'var(--koala-text-tertiary)' }}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </KoalaSettingsRow>
       </KoalaSettingsSection>
 
@@ -258,33 +226,18 @@ const PeopleSettings = () => {
             label="Outstanding invites"
             description="Invitations that haven't been accepted yet."
           >
-            <div className="koala-people-table">
-              <KoalaPanel noPadding>
-                <SentryTable>
-                  <SentryTableHead>
-                    <SentryTableRow>
-                      <SentryTableHeaderCell>Invitee</SentryTableHeaderCell>
-                      <SentryTableHeaderCell>Role</SentryTableHeaderCell>
-                      <SentryTableHeaderCell>Expires</SentryTableHeaderCell>
-                      <SentryTableHeaderCell>Workspaces</SentryTableHeaderCell>
-                      <SentryTableHeaderCell>{' '}</SentryTableHeaderCell>
-                    </SentryTableRow>
-                  </SentryTableHead>
-                  <SentryTableBody>
-                    {invitations.map((inv) => (
-                      <SentryTableRow key={inv.id}>
-                        <SentryTableCell>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                            <Avatar initial={(inv.email[0] || '?').toUpperCase()} />
-                            <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.email}</span>
-                          </div>
-                        </SentryTableCell>
-                        <SentryTableCell>{cap(inv.role)}</SentryTableCell>
-                        <SentryTableCell>{fmtDate(inv.expires_at)}</SentryTableCell>
-                        <SentryTableCell>{describeWorkspaceAccess(inv.workspace_ids, wsNames)}</SentryTableCell>
-                        <SentryTableCell align="center">
-                          {canManage && (
-                            <div style={{ position: 'relative', display: 'inline-block' }}>
+            <ul className="invite-step__list">
+              {invitations.map((inv) => (
+                <li key={inv.id} className="invite-step__person">
+                  <span className="invite-step__avatar" aria-hidden="true">{(inv.email[0] || '?').toUpperCase()}</span>
+                  <span className="invite-step__who">
+                    <span className="invite-step__email">{inv.email}</span>
+                    <span className="invite-step__meta">
+                      {`${cap(inv.role)} · expires ${fmtDate(inv.expires_at)} · ${describeWorkspaceAccess(inv.workspace_ids, wsNames)}`}
+                    </span>
+                  </span>
+                  {canManage && (
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
                               <Button
                                 type="button"
                                 variant="transparent"
@@ -307,15 +260,11 @@ const PeopleSettings = () => {
                                   </MenuList>
                                 </div>
                               )}
-                            </div>
-                          )}
-                        </SentryTableCell>
-                      </SentryTableRow>
-                    ))}
-                  </SentryTableBody>
-                </SentryTable>
-              </KoalaPanel>
-            </div>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
           </KoalaSettingsRow>
         </KoalaSettingsSection>
       )}
