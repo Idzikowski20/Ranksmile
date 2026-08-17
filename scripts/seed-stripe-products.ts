@@ -32,10 +32,16 @@ async function main(): Promise<void> {
       metadata: { plan_slug: plan.slug, app: 'ranksmile' },
     });
 
+    // tax_behavior: 'exclusive' — VAT is added ON TOP of the listed price, matching the
+    // "VAT excluded" pricing copy and the exclusive tax preview at checkout. Without it,
+    // the account default (inferred_by_currency) makes EUR prices INCLUSIVE, which buried
+    // the VAT inside the €59 and cut net revenue to €47.97. tax_behavior is immutable on
+    // a Price, so changing this only affects prices created from here on.
     const monthly = await stripe.prices.create({
       product: product.id,
       currency: 'eur',
       unit_amount: plan.monthlyCents,
+      tax_behavior: 'exclusive',
       recurring: { interval: 'month' },
       metadata: { plan_slug: plan.slug, billing_period: 'monthly' },
     });
@@ -44,6 +50,7 @@ async function main(): Promise<void> {
       product: product.id,
       currency: 'eur',
       unit_amount: plan.yearlyCents,
+      tax_behavior: 'exclusive',
       recurring: { interval: 'year' },
       metadata: { plan_slug: plan.slug, billing_period: 'yearly' },
     });

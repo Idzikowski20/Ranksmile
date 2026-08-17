@@ -82,8 +82,18 @@ export function mapStripeInvoice(
   const status = mapInvoiceStatus(inv.status);
   const currency = inv.currency || 'eur';
   const totalCents = inv.total ?? 0;
-  const subtotalCents = inv.subtotal ?? totalCents;
-  const taxCents = Math.max(0, totalCents - subtotalCents);
+  // Tax from total_taxes, not `total - subtotal`. For tax-INCLUSIVE prices (EUR defaults
+  // to inclusive) Stripe leaves total == subtotal and records the VAT only in
+  // total_taxes, so the subtraction read 0 on invoices that had actually collected VAT —
+  // the "Tax €0.00" on a €59 charge that held €11.03 of Polish VAT. The subtraction is
+  // kept as a fallback for older invoices with no total_taxes array.
+  const totalTaxes = (inv as { total_taxes?: Array<{ amount?: number | null }> | null }).total_taxes;
+  const taxCents = Array.isArray(totalTaxes) && totalTaxes.length
+    ? totalTaxes.reduce((sum, t) => sum + (t.amount ?? 0), 0)
+    : Math.max(0, totalCents - (inv.subtotal ?? totalCents));
+  // Net = total - tax in both behaviours (inclusive: 5900-1103=4797; exclusive:
+  // 7257-1357=5900), so the Subtotal/Tax/Total lines always add up.
+  const subtotalCents = totalCents - taxCents;
   const lineRows = inv.lines?.data ?? [];
   const lines: BillingInvoiceLine[] = lineRows.map((line) => {
     const amountCents = line.amount ?? 0;

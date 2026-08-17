@@ -96,5 +96,54 @@ describe('billingInvoices', () => {
     expect(mapped.periodLabel).toContain('Aug 15');
     expect(mapped.lines[0].description).toContain('Ranksmile Agency');
   });
+
+  // Inclusive VAT: Stripe leaves total == subtotal and puts the tax in total_taxes.
+  // `total - subtotal` reads 0, which showed "Tax €0.00" on an invoice that actually
+  // collected €11.03 of Polish VAT. The tax must come from total_taxes, and the shown
+  // subtotal must be the net so the three lines still add up.
+  it('reads inclusive VAT from total_taxes, not total minus subtotal', () => {
+    const mapped = mapStripeInvoice({
+      id: 'in_incl', object: 'invoice', status: 'paid', number: '0002', currency: 'eur',
+      total: 5900, subtotal: 5900, subtotal_excluding_tax: 4797,
+      total_taxes: [{ amount: 1103 }],
+      created: Math.floor(Date.UTC(2026, 7, 15) / 1000),
+      lines: { object: 'list', data: [], has_more: false, url: '' },
+    } as unknown as Stripe.Invoice);
+
+    expect(mapped.taxCents).toBe(1103);
+    expect(mapped.subtotalCents).toBe(4797);
+    expect(mapped.totalCents).toBe(5900);
+    expect(mapped.subtotalCents + mapped.taxCents).toBe(mapped.totalCents);
+  });
+
+  // Exclusive VAT: subtotal is the net and tax sits on top. total_taxes carries it too,
+  // so the same source works — and the net still equals total minus tax.
+  it('reads exclusive VAT and keeps net + tax = total', () => {
+    const mapped = mapStripeInvoice({
+      id: 'in_excl', object: 'invoice', status: 'paid', number: '0003', currency: 'eur',
+      total: 7257, subtotal: 5900, subtotal_excluding_tax: 5900,
+      total_taxes: [{ amount: 1357 }],
+      created: Math.floor(Date.UTC(2026, 7, 15) / 1000),
+      lines: { object: 'list', data: [], has_more: false, url: '' },
+    } as unknown as Stripe.Invoice);
+
+    expect(mapped.taxCents).toBe(1357);
+    expect(mapped.subtotalCents).toBe(5900);
+    expect(mapped.subtotalCents + mapped.taxCents).toBe(mapped.totalCents);
+  });
+
+  // No total_taxes (older API shape, or a genuinely untaxed invoice): fall back to the
+  // difference, which is 0 for an untaxed invoice and correct for a legacy exclusive one.
+  it('falls back to total minus subtotal when total_taxes is absent', () => {
+    const mapped = mapStripeInvoice({
+      id: 'in_legacy', object: 'invoice', status: 'paid', number: '0004', currency: 'eur',
+      total: 1230, subtotal: 1000,
+      created: Math.floor(Date.UTC(2026, 7, 15) / 1000),
+      lines: { object: 'list', data: [], has_more: false, url: '' },
+    } as unknown as Stripe.Invoice);
+
+    expect(mapped.taxCents).toBe(230);
+    expect(mapped.subtotalCents).toBe(1000);
+  });
 });
 
