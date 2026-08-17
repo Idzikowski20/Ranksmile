@@ -10,6 +10,9 @@ interface ModalProps {
   width?: number;
   closeOnOverlayClick?: boolean;
   className?: string;
+  /** Accessible name for the dialog. Falls back to `title`; pass this when the header
+   *  is rendered as a child (e.g. a no-close-button confirm) so the Modal still names it. */
+  'aria-label'?: string;
 }
 
 const fadeIn = keyframes`
@@ -80,7 +83,7 @@ function CloseButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-export function Modal({ title, onClose, children, width = 680, closeOnOverlayClick = true, className }: ModalProps) {
+export function Modal({ title, onClose, children, width = 680, closeOnOverlayClick = true, className, 'aria-label': ariaLabel }: ModalProps) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
@@ -100,7 +103,14 @@ export function Modal({ title, onClose, children, width = 680, closeOnOverlayCli
 
   return createPortal(
     <Overlay onClick={closeOnOverlayClick ? onClose : undefined}>
-      <Dialog $width={width} className={className} onClick={(e) => e.stopPropagation()}>
+      <Dialog
+        $width={width}
+        className={className}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel ?? title}
+        onClick={(e) => e.stopPropagation()}
+      >
         {title && <ModalHeader title={title} onClose={onClose} closeButton />}
         {children}
       </Dialog>

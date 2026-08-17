@@ -112,7 +112,7 @@ export function DangerDialog({
   // danger action.
   if (!open) return null;
   return (
-    <Modal onClose={onClose} width={480}>
+    <Modal onClose={onClose} width={480} aria-label={title}>
       <ModalHeader title={title} closeButton={false} />
       <ModalBody>{description}</ModalBody>
       <ModalFooter>
