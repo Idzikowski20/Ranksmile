@@ -1,0 +1,31 @@
+utils/getUser.ts
+  s_8d6cce368af4fd::t_e286374a5ba9cb 98,101-104,107-108,110-133,135-136
+  s_8d6cce368af4fd::t_d060e20ae8ab4c 25-30,32-39
+__tests__/utils/verifyUser.test.ts
+  s_8d6cce368af4fd::t_bea2173eda3d1d 27-29
+__tests__/api/auth-unavailable-503.test.ts
+  s_8d6cce368af4fd::t_cd21017ac17d2a 1-63
+lib/requireOrgPaymentAccess.ts
+  s_8d6cce368af4fd::t_70ba3909959dc0 46-48
+  s_8d6cce368af4fd::t_db5bffc33bd413 2
+  s_8d6cce368af4fd::t_02242d212bac34 41-45
+__tests__/utils/getUserBackoff.test.ts
+  s_8d6cce368af4fd::t_4a7c68ca5e911e 14,16,18,21-31,36-39,77,80-82,88,91,100-117,132,144-156
+  s_8d6cce368af4fd::t_81d3e8926cc52a 118-131,133-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0762d3fcfc003ef4164093a6eb1bbecfd9298c8c",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
