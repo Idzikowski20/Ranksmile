@@ -68,6 +68,10 @@ const ManageMembersModal = ({ wsId, open, onClose }: { wsId: number; open: boole
                />
             </div>
 
+            {/* The list scrolls on its own so the search field stays put while browsing
+                a long member list — ModalBody would otherwise scroll search and rows
+                together. */}
+            <div style={{ maxHeight: 300, overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                <colgroup>
                   <col style={{ width: 48 }} /><col /><col style={{ width: '24%' }} />
@@ -105,12 +109,13 @@ const ManageMembersModal = ({ wsId, open, onClose }: { wsId: number; open: boole
                   })}
                </tbody>
             </table>
+            </div>
          </ModalBody>
 
          <ModalFooter>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
             <Button variant="primary" busy={setMembers.isLoading} disabled={setMembers.isLoading} onClick={onSave}>
-               Save
+               {setMembers.isLoading ? 'Saving…' : 'Save'}
             </Button>
          </ModalFooter>
       </Modal>
