@@ -9,7 +9,6 @@ import type { SubscriptionStatus } from '../../../lib/orgBilling';
 import { Icon } from '../icons/Icon';
 import { PlanUsageMetricRow } from '../product/PlanUsageMetricRow';
 import { Popover } from '../primitives/Popover';
-import { brandMain } from '../tokens/colors';
 
 type PlanSummaryResponse = {
   summary: PlanSummaryData;
@@ -61,10 +60,6 @@ function planCardAction(planSlug: string, planName: string): PlanCardAction {
   };
 }
 
-function formatCount(n: number): string {
-  return n.toLocaleString('en-US');
-}
-
 /**
  * Sidebar plan widget — starry card (Figma `7956:407782`).
  * Lower tiers: Upgrade CTA → /plans. Agency/top: Manage → billing settings.
@@ -75,7 +70,7 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
   const [open, setOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
 
-  const { data, isLoading } = useQuery(
+  const { data } = useQuery(
     ['plan-summary-sidebar'],
     () => fetchJson<PlanSummaryResponse>('/api/billing/plan-summary', FALLBACK),
     { staleTime: 60_000, retry: false },
@@ -125,8 +120,6 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
 
   if (!summary) return null;
 
-  const totalUsed = summary.metrics.reduce((sum, m) => sum + m.used, 0);
-  const badgeTone = summary.overallPct >= 85 ? 'warn' : 'ok';
   const action = planCardAction(summary.planSlug, summary.planName);
   const trialLeft = isTrialing && trialEndsAt ? formatTrialCountdown(trialEndsAt, now) : '';
 
@@ -172,26 +165,6 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
       placement="right"
       className="koala-plan-limits"
     >
-      <div className="koala-plan-limits__header">
-        <div className="koala-plan-limits__info">
-          <div className="koala-plan-limits__title-row">
-            <Icon name="BatteryMedium" size={20} weight="bold" color={brandMain} />
-            <span className="koala-plan-limits__title">Feature Usage</span>
-          </div>
-          <div className="koala-plan-limits__sales">
-            <span className="koala-plan-limits__total">
-              {isLoading ? '—' : formatCount(totalUsed)}
-            </span>
-            <span className={`koala-plan-limits__badge koala-plan-limits__badge--${badgeTone}`}>
-              {isLoading
-                ? 'Loading…'
-                : `${statusLine || summary.planName} · ${summary.overallPct}% peak`}
-            </span>
-          </div>
-        </div>
-        <span className="koala-plan-limits__period">This period</span>
-      </div>
-
       <ul className="koala-plan-limits__list">
         {summary.metrics.map((metric) => (
           <PlanUsageMetricRow key={metric.key} metric={metric} />
