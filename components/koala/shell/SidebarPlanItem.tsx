@@ -157,12 +157,10 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
         ? (statusLine || 'Manage billing in settings')
         : 'Cancel anytime in settings';
 
-  // planCardAction already draws the line: `manage` is the top tier (Agency), where there
-  // is nothing to upgrade to, so an active paid plan drops the CTA entirely — management
-  // lives in Settings → Billing. Every other case reuses its href/cta rather than
-  // re-deciding "/plans" and "Upgrade now" here.
-  const hideCta = isActivePaid && action.kind === 'manage';
-  const cta: { href: string; label: string } | null = hideCta
+  // "Upgrade now" is a trial-only nudge. A paying subscriber — any tier — sees no CTA;
+  // plan changes live in Settings → Billing. Trial and non-active states keep the
+  // upgrade/manage CTA planCardAction decided (reused, not re-hardcoded here).
+  const cta: { href: string; label: string } | null = isActivePaid
     ? null
     : { href: action.href, label: action.cta };
 

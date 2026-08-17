@@ -20,20 +20,19 @@ The widget's copy is keyed on subscription state and plan tier:
 
 | State | Title | Sub-line | Upgrade CTA | See limits |
 |-------|-------|----------|-------------|------------|
-| `active`, non-top (growth/scale) | `{Plan} plan` | `Renews {date}` / `Ends {date}` | shown → /plans | shown |
-| `active`, top tier (agency) | `Agency plan` | `Renews {date}` / `Ends {date}` | **hidden, nothing replaces it** | shown |
-| `trialing` | unchanged | unchanged (`Trial · Nd` countdown) | shown | shown |
+| `active`, any tier | `{Plan} plan` | `Renews {date}` / `Ends {date}` | **hidden, nothing replaces it** | shown |
+| `trialing` | unchanged | unchanged (`Trial · Nd` countdown) | shown → /plans | shown |
 | anything else (no plan, etc.) | unchanged | unchanged | unchanged | unchanged |
 
 - **Date line:** built from `currentPeriodEnd`. `Ends {date}` when the
   subscription is set to lapse (`cancelAtPeriodEnd === true`), `Renews {date}`
   otherwise. `{date}` is `Mon D, YYYY` (e.g. `Sep 15, 2026`), matching the
   invoice date format already used elsewhere.
-- **Agency:** the top tier has no plan to upgrade to, so the CTA is removed
-  entirely — not replaced by a "Manage" button. Subscription management stays in
-  Settings → Billing. Only the date line and "See limits" remain.
-- **Trial:** untouched. The trial countdown ("Trial · Nd") and its refetch
-  behaviour ship as-is.
+- **No upgrade CTA on any paid plan:** "Upgrade now" is a trial-only nudge.
+  A paying subscriber of any tier sees only the date line and "See limits" — no
+  CTA, and not a "Manage" button either. Plan changes live in Settings → Billing.
+- **Trial:** untouched. The trial countdown ("Trial · Nd"), its "Upgrade now"
+  CTA, and its refetch behaviour ship as-is.
 
 ## Data
 
@@ -45,11 +44,10 @@ copying one boolean.
 
 ## Component shape
 
-`planCardAction(planSlug, planName)` is reused as-is, not extended: it already
-returns `manage` for the top tier (Agency) and `upgrade` (href `/plans`, cta
-`Upgrade now`) for the rest. Under an active paid plan the widget drops the CTA
-when that result is `manage` and otherwise reuses its href/cta, rather than
-re-deciding those values. "Active paid" is gated on `hasActiveBillingEntitlement`
+`planCardAction(planSlug, planName)` is reused as-is, not extended: it returns
+the upgrade/manage href/cta the widget uses for trial and non-active states.
+An active paid plan drops the CTA entirely (any tier), so those values are only
+reused off the paid path. "Active paid" is gated on `hasActiveBillingEntitlement`
 — the same pure check the server uses — not the raw status, so a cancel whose
 period has passed but whose webhook is late does not render as a live plan. The
 date/label derivation (`Renews`/`Ends` + a UTC-pinned formatted date) is a small
@@ -60,9 +58,9 @@ rendering.
 
 - Pure helper: `Renews {date}` for active auto-renewing, `Ends {date}` for
   `cancelAtPeriodEnd`, given `currentPeriodEnd`.
-- Component: agency active renders no upgrade CTA but keeps "See limits";
-  growth active renders the upgrade CTA and the "Renews" line; a cancelled
-  subscription renders "Ends"; trialing still renders the countdown.
+- Component: growth and agency active both render no upgrade CTA but keep the
+  "Renews" line and "See limits"; a cancelled subscription renders "Ends";
+  trialing still renders the countdown and its "Upgrade now" CTA.
 
 ## Non-goals
 

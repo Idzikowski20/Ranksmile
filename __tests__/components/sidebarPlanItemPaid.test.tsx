@@ -35,11 +35,12 @@ function renderWidget(s: PlanSummaryData, statusLine = 'Billed monthly · Active
 beforeEach(() => fetchJson.mockReset());
 
 describe('SidebarPlanItem — active paid widget', () => {
-  it('names the plan and shows the renewal date, with an upgrade CTA on Growth', async () => {
+  it('names the plan and shows the renewal date, with no upgrade CTA on a paid plan', async () => {
     renderWidget(summary({ planSlug: 'growth', planName: 'Growth' }));
     await waitFor(() => expect(screen.getByText('Growth plan')).toBeInTheDocument());
     expect(screen.getByText('Renews Sep 15, 2026')).toBeInTheDocument();
-    expect(screen.getByText('Upgrade now')).toBeInTheDocument();
+    // Upgrade now is a trial-only nudge — a paying subscriber sees no CTA, any tier.
+    expect(screen.queryByText('Upgrade now')).not.toBeInTheDocument();
     expect(screen.getByText('See limits')).toBeInTheDocument();
   });
 
@@ -48,7 +49,7 @@ describe('SidebarPlanItem — active paid widget', () => {
     await waitFor(() => expect(screen.getByText('Ends Sep 15, 2026')).toBeInTheDocument());
   });
 
-  it('drops the upgrade CTA on Agency but keeps the date and See limits', async () => {
+  it('has no CTA on Agency either, just the date and See limits', async () => {
     renderWidget(summary({ planSlug: 'agency', planName: 'Agency' }));
     await waitFor(() => expect(screen.getByText('Agency plan')).toBeInTheDocument());
     expect(screen.queryByText('Upgrade now')).not.toBeInTheDocument();
