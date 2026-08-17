@@ -22,11 +22,21 @@ export function wasAuthUnavailable(req: NextApiRequest): boolean {
 
 /**
  * Backoff for exactly the failures that are not an answer about the user: the auth
- * server unreachable, or replying 5xx. Totals ~7.75s — sized to the measured dev
- * cold-start window, and a bounded worst-case delay for a prod auth blip. A 4xx from
- * the auth server is a verdict about the token and is never retried.
+ * server unreachable, or replying 5xx. Three retries totalling ~4.25s. A single retry
+ * cannot bridge the measured dev cold-start (auth listens ~7.5s after spawn, and the
+ * gap the browser actually hits — Next up, auth still booting — is a few seconds), so
+ * "initial + one" would just move the false 401 a quarter-second later; three spans the
+ * gap while capping a prod auth blip at ~4s of added latency. A 4xx from the auth
+ * server is a verdict about the token and is never retried.
  */
-const RETRY_DELAYS_MS = [250, 500, 1000, 2000, 4000];
+const RETRY_DELAYS_MS = [250, 1000, 3000];
+
+/**
+ * Per-attempt ceiling. A server that accepts the TCP connection but never answers
+ * (half-open, hung) would otherwise pin the request forever, and the backoff above would
+ * never even start. Aborting counts as a transport failure and retries like one.
+ */
+const ATTEMPT_TIMEOUT_MS = 3000;
 
 /**
  * The route, with every dynamic segment masked.
@@ -85,31 +95,45 @@ export const getCurrentUser = async (req: NextApiRequest, _res: NextApiResponse)
             // eslint-disable-next-line no-await-in-loop
             await new Promise((r) => { setTimeout(r, RETRY_DELAYS_MS[attempt - 1]); });
          }
+         let response: Response;
          try {
             // eslint-disable-next-line no-await-in-loop
-            const response = await fetch(`${NEON_AUTH_BASE_URL}/get-session`, {
-               method: 'GET', headers: { cookie: `${SESSION_COOKIE}=${sessionToken}` },
+            response = await fetch(`${NEON_AUTH_BASE_URL}/get-session`, {
+               method: 'GET',
+               headers: { cookie: `${SESSION_COOKIE}=${sessionToken}` },
+               signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
             });
-            if (response.status >= 500) {
-               // The discarded body would otherwise hold the connection open for as long
-               // as the failing server keeps writing.
-               // eslint-disable-next-line no-await-in-loop
-               await response.body?.cancel().catch(() => undefined);
-               lastFailure = `auth server replied HTTP ${response.status}`;
-               continue;
-            }
-            if (!response.ok) {
-               // eslint-disable-next-line no-await-in-loop
-               await response.body?.cancel().catch(() => undefined);
-               return deny(req, `auth server replied HTTP ${response.status}`);
-            }
-            // eslint-disable-next-line no-await-in-loop
-            const data = await response.json() as { user?: { id?: string; email?: string } };
-            if (!data?.user?.id) return deny(req, 'auth server returned no user for this token');
-            return { id: data.user.id, email: data.user.email ?? null };
          } catch (err) {
+            // Only the transport can land here: connection refused, reset, DNS, or the
+            // per-attempt timeout. All are "the server did not answer" and are retried.
             lastFailure = `could not reach the auth server: ${err instanceof Error ? err.message : String(err)}`;
+            continue;
          }
+         if (response.status >= 500) {
+            // The discarded body would otherwise hold the connection open for as long
+            // as the failing server keeps writing.
+            // eslint-disable-next-line no-await-in-loop
+            await response.body?.cancel().catch(() => undefined);
+            lastFailure = `auth server replied HTTP ${response.status}`;
+            continue;
+         }
+         if (!response.ok) {
+            // eslint-disable-next-line no-await-in-loop
+            await response.body?.cancel().catch(() => undefined);
+            return deny(req, `auth server replied HTTP ${response.status}`);
+         }
+         // A 2xx that is not valid JSON is a broken auth response, not a down server:
+         // deny it outright rather than spending the whole backoff on it and then
+         // reporting the service as unavailable.
+         let data: { user?: { id?: string; email?: string } };
+         try {
+            // eslint-disable-next-line no-await-in-loop
+            data = await response.json() as { user?: { id?: string; email?: string } };
+         } catch (err) {
+            return deny(req, `auth server returned an unreadable response: ${err instanceof Error ? err.message : String(err)}`);
+         }
+         if (!data?.user?.id) return deny(req, 'auth server returned no user for this token');
+         return { id: data.user.id, email: data.user.email ?? null };
       }
       // Every attempt hit the server being down, not the token being wrong.
       authUnavailable.add(req);

@@ -1,5 +1,5 @@
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
-import { getCurrentUserId } from '../utils/getUser';
+import { getCurrentUserId, wasAuthUnavailable } from '../utils/getUser';
 import {
   ACCESS_POLICY_VERSION,
   ACCESS_SCHEMA_VERSION,
@@ -38,6 +38,14 @@ async function resolveOrgId(req: NextApiRequest, res: NextApiResponse): Promise<
       return { kind: 'unavailable' };
     }
   }
+  // No user because the auth SERVER was down, not because the token was rejected. This
+  // wrapper runs before every handler, so answering 503 here reaches the client as a
+  // transient failure on all ~117 routes — none of which has to change its own
+  // `res.status(401)` line. Falling through would let the handler's verifyUser turn an
+  // outage into a 401 the browser reads as "session expired".
+  // Guarded call: many route tests mock utils/getUser with only getCurrentUserId, and a
+  // module boundary should not make an incomplete mock throw.
+  if (typeof wasAuthUnavailable === 'function' && wasAuthUnavailable(req)) return { kind: 'unavailable' };
 
   const apiKey = headerApiKey(req);
   if (!apiKey) return { kind: 'none' };

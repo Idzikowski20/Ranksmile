@@ -24,6 +24,9 @@ beforeEach(() => {
   process.env.USER = 'admin';
   process.env.PASSWORD = 'secret';
   mockUid.mockResolvedValue(null);
+  // Reset alongside mockUid: clearAllMocks keeps mockReturnValue implementations, so a
+  // test that flips this to true would otherwise leak into every test after it.
+  (wasAuthUnavailable as jest.MockedFunction<typeof wasAuthUnavailable>).mockReturnValue(false);
 });
 
 afterAll(() => {
