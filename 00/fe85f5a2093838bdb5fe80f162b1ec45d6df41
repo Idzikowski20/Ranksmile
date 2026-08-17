@@ -1,0 +1,19 @@
+components/koala/forms/DangerZone.tsx
+  s_8d6cce368af4fd::t_7e69482de409da 7,110-113,115-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "00fe85f5a2093838bdb5fe80f162b1ec45d6df41",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
