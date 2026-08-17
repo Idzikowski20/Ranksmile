@@ -67,6 +67,7 @@ async function loadAccessSnapshot(orgId: number, userId: string | null): Promise
     paymentFailedLocked: isPaymentFailedLocked(billing),
     currentPeriodEnd: billing?.currentPeriodEnd ?? null,
     cancelAtPeriodEnd: billing?.cancelAtPeriodEnd ?? false,
+    trialEndsAt: billing?.trialEndsAt ?? null,
   });
 
   const db = (await import('../database/database')).default;

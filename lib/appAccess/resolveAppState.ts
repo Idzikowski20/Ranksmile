@@ -42,6 +42,8 @@ export function projectBillingState(args: {
   hardLocked?: boolean;
   currentPeriodEnd?: string | null;
   cancelAtPeriodEnd?: boolean;
+  /** Required by the entitlement check: an expired `trialing` row projects to NONE. */
+  trialEndsAt: string | null;
 }): BillingState {
   if (args.hardLocked) return 'LOCKED';
   if (args.paymentFailedLocked) return 'FAILED';
@@ -50,6 +52,7 @@ export function projectBillingState(args: {
     subscriptionStatus: status as SubscriptionStatus | null,
     currentPeriodEnd: args.currentPeriodEnd ?? null,
     cancelAtPeriodEnd: args.cancelAtPeriodEnd ?? false,
+    trialEndsAt: args.trialEndsAt,
   })) return 'NONE';
   if (status === 'trialing') return 'TRIAL';
   if (status === 'active' || status === 'past_due' || status === 'unpaid') return 'ACTIVE';
