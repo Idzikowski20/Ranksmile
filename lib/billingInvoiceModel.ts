@@ -96,7 +96,21 @@ export function mapStripeInvoice(
   const subtotalCents = totalCents - taxCents;
   const lineRows = inv.lines?.data ?? [];
   const lines: BillingInvoiceLine[] = lineRows.map((line) => {
-    const amountCents = line.amount ?? 0;
+    // Show each line net, so the line items add up to the net subtotal above. `line.amount`
+    // is gross under inclusive tax, which left one €59.00 line over a €47.97 subtotal.
+    // `amount_excluding_tax` is the field for this but is absent in newer API versions, so
+    // fall back to subtracting only the line's INCLUSIVE taxes — exclusive tax is already
+    // on top of `amount` and must not be subtracted.
+    const l = line as {
+      amount?: number | null;
+      amount_excluding_tax?: number | null;
+      taxes?: Array<{ amount?: number | null; tax_behavior?: string | null }> | null;
+    };
+    const gross = l.amount ?? 0;
+    const inclusiveTax = Array.isArray(l.taxes)
+      ? l.taxes.reduce((s, t) => s + (t.tax_behavior === 'inclusive' ? (t.amount ?? 0) : 0), 0)
+      : 0;
+    const amountCents = l.amount_excluding_tax ?? (gross - inclusiveTax);
     return {
       id: line.id,
       description: line.description || 'Subscription',

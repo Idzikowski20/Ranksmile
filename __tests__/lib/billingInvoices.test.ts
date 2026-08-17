@@ -116,6 +116,43 @@ describe('billingInvoices', () => {
     expect(mapped.subtotalCents + mapped.taxCents).toBe(mapped.totalCents);
   });
 
+  // The line item must show net too, or a single €59.00 line sits over a €47.97
+  // subtotal. Under inclusive tax the line carries its own inclusive tax, which is
+  // subtracted; the lines then sum to the net subtotal.
+  it('shows inclusive line items net, reconciling with the subtotal', () => {
+    const mapped = mapStripeInvoice({
+      id: 'in_incl_line', object: 'invoice', status: 'paid', number: '0005', currency: 'eur',
+      total: 5900, subtotal: 5900, total_taxes: [{ amount: 1103 }],
+      created: Math.floor(Date.UTC(2026, 7, 15) / 1000),
+      lines: { object: 'list', has_more: false, url: '', data: [{
+        id: 'il_incl', object: 'line_item', description: '1 × Growth', quantity: 1,
+        amount: 5900,
+        taxes: [{ amount: 1103, tax_behavior: 'inclusive' }],
+      }] },
+    } as unknown as Stripe.Invoice);
+
+    expect(mapped.lines[0].amountCents).toBe(4797);
+    expect(mapped.lines.reduce((s, l) => s + l.amountCents, 0)).toBe(mapped.subtotalCents);
+  });
+
+  // Exclusive line: tax sits on top of amount, so the line stays at its gross amount and
+  // still equals the net subtotal.
+  it('leaves exclusive line items at their amount', () => {
+    const mapped = mapStripeInvoice({
+      id: 'in_excl_line', object: 'invoice', status: 'paid', number: '0006', currency: 'eur',
+      total: 7257, subtotal: 5900, total_taxes: [{ amount: 1357 }],
+      created: Math.floor(Date.UTC(2026, 7, 15) / 1000),
+      lines: { object: 'list', has_more: false, url: '', data: [{
+        id: 'il_excl', object: 'line_item', description: '1 × Growth', quantity: 1,
+        amount: 5900,
+        taxes: [{ amount: 1357, tax_behavior: 'exclusive' }],
+      }] },
+    } as unknown as Stripe.Invoice);
+
+    expect(mapped.lines[0].amountCents).toBe(5900);
+    expect(mapped.lines.reduce((s, l) => s + l.amountCents, 0)).toBe(mapped.subtotalCents);
+  });
+
   // Exclusive VAT: subtotal is the net and tax sits on top. total_taxes carries it too,
   // so the same source works — and the net still equals total minus tax.
   it('reads exclusive VAT and keeps net + tax = total', () => {
