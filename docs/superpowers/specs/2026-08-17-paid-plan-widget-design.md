@@ -45,11 +45,16 @@ copying one boolean.
 
 ## Component shape
 
-`planCardAction(planSlug, planName)` today returns `upgrade` or `manage`. It
-gains an `active-paid` shape that carries the date line and, for non-agency,
-the upgrade href; agency resolves to no CTA. The date/label derivation
-(`Renews`/`Ends` + formatted date) is a small pure helper so it can be unit
-tested without rendering — the one piece of real logic here.
+`planCardAction(planSlug, planName)` is reused as-is, not extended: it already
+returns `manage` for the top tier (Agency) and `upgrade` (href `/plans`, cta
+`Upgrade now`) for the rest. Under an active paid plan the widget drops the CTA
+when that result is `manage` and otherwise reuses its href/cta, rather than
+re-deciding those values. "Active paid" is gated on `hasActiveBillingEntitlement`
+— the same pure check the server uses — not the raw status, so a cancel whose
+period has passed but whose webhook is late does not render as a live plan. The
+date/label derivation (`Renews`/`Ends` + a UTC-pinned formatted date) is a small
+pure helper (`planEndLine`) so the one piece of real logic is unit tested without
+rendering.
 
 ## Testing
 

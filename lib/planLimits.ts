@@ -157,7 +157,13 @@ export function planEndLine(
   if (!currentPeriodEnd) return null;
   const end = new Date(currentPeriodEnd);
   if (Number.isNaN(end.getTime())) return null;
-  const date = end.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  // timeZone: 'UTC' pins the displayed date to the stored instant's calendar date. Without
+  // it, toLocaleDateString uses the host zone, so a period ending 17:01Z reads one day
+  // later east of +7 — flaky in tests and off by a day for some users. The period end is
+  // a billing civil date; showing the UTC date it was recorded in is stable and correct.
+  const date = end.toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC',
+  });
   return `${cancelAtPeriodEnd ? 'Ends' : 'Renews'} ${date}`;
 }
 

@@ -63,4 +63,18 @@ describe('SidebarPlanItem — active paid widget', () => {
     await waitFor(() => expect(screen.getByText(/Trial ·/)).toBeInTheDocument());
     expect(screen.getByText('Upgrade now')).toBeInTheDocument();
   });
+
+  // A cancel whose period already passed still reads `active` until Stripe's webhook
+  // lands. The API already treats it as not entitled, so the widget must not present it
+  // as a live plan with a past "Ends" date — it falls back to the upgrade card.
+  it('does not show the active layout for a lapsed cancel the API no longer entitles', async () => {
+    renderWidget(summary({
+      subscriptionStatus: 'active',
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: new Date(Date.now() - 86_400_000).toISOString(),
+    }));
+    await waitFor(() => expect(screen.getByText('See limits')).toBeInTheDocument());
+    expect(screen.queryByText('Growth plan')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Ends /)).not.toBeInTheDocument();
+  });
 });

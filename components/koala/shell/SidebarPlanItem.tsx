@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from 'react-query';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
 import fetchJson from '../../../lib/fetchJson';
 import { formatTrialCountdown, planEndLine, type PlanSummaryData } from '../../../lib/planLimits';
+import { hasActiveBillingEntitlement } from '../../../lib/billingEntitlement';
+import type { SubscriptionStatus } from '../../../lib/orgBilling';
 import { Icon } from '../icons/Icon';
 import { PlanUsageMetricRow } from '../product/PlanUsageMetricRow';
 import { Popover } from '../primitives/Popover';
@@ -131,8 +133,19 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
   // A paying subscriber, not a trial and not an unpaid account. This is the state the
   // widget reframes: name the plan and say when it renews, rather than always selling an
   // upgrade. Trial keeps its countdown; anything else keeps the old upgrade/manage copy.
-  const isActivePaid = summary.subscriptionStatus === 'active';
-  const isTopTier = MANAGE_SLUGS.has(summary.planSlug.toLowerCase());
+  //
+  // Gated on the real entitlement, not the raw status: a subscription set to cancel whose
+  // period has passed still reads `active` locally until Stripe's webhook lands, and
+  // treating that as a live plan showed "Growth plan", a past "Ends" date and an upgrade
+  // CTA over an account the API already treats as lapsed. hasActiveBillingEntitlement is
+  // the same pure check the server uses, so the two cannot disagree.
+  const entitled = hasActiveBillingEntitlement({
+    subscriptionStatus: summary.subscriptionStatus as SubscriptionStatus | null,
+    currentPeriodEnd: summary.currentPeriodEnd,
+    cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
+    trialEndsAt: summary.trialEndsAt,
+  });
+  const isActivePaid = entitled && summary.subscriptionStatus === 'active';
   const endLine = planEndLine(summary.currentPeriodEnd, summary.cancelAtPeriodEnd);
 
   const cardTitle: React.ReactNode = isActivePaid ? `${summary.planName} plan` : action.title;
@@ -144,11 +157,13 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
         ? (statusLine || 'Manage billing in settings')
         : 'Cancel anytime in settings';
 
-  // Agency is the top tier — there is nothing to upgrade to, so the CTA is dropped
-  // entirely (management lives in Settings → Billing). Every other active plan keeps
-  // "Upgrade now"; non-active accounts keep whatever planCardAction decided.
-  const cta: { href: string; label: string } | null = isActivePaid
-    ? (isTopTier ? null : { href: '/plans', label: 'Upgrade now' })
+  // planCardAction already draws the line: `manage` is the top tier (Agency), where there
+  // is nothing to upgrade to, so an active paid plan drops the CTA entirely — management
+  // lives in Settings → Billing. Every other case reuses its href/cta rather than
+  // re-deciding "/plans" and "Upgrade now" here.
+  const hideCta = isActivePaid && action.kind === 'manage';
+  const cta: { href: string; label: string } | null = hideCta
+    ? null
     : { href: action.href, label: action.cta };
 
   const limitsPopover = (
