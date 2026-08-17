@@ -5,6 +5,7 @@ import { Button, Toggle } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 import fetchJson from '../../lib/fetchJson';
+import { getPlanCheckoutHref } from '../../lib/billingPlans';
 import type { ExpiredSummary } from '../../pages/api/billing/expired-summary';
 
 /**
@@ -96,13 +97,26 @@ export function PlanExpired() {
             <span>Pay annually and save 17%</span>
           </label>
         </div>
-        <Link href="/plans" passHref>
-          <a className="plan-expired__cta">
-            <Button type="button" variant="primary">
-              {`Choose ${plan?.name ?? 'Growth'}`}
-            </Button>
-          </a>
-        </Link>
+        <div className="plan-expired__cta-row">
+          {/* Renewing the plan they had goes straight to its checkout; the pricing
+              page is only for the ones who want something different. The trial is
+              consumed for anyone this screen renders for, so the checkout resolves
+              itself to upfront — no mode pinned here. */}
+          <Link href={getPlanCheckoutHref(plan?.slug ?? 'growth', annual ? 'yearly' : 'monthly')} passHref>
+            <a className="plan-expired__cta">
+              <Button type="button" variant="primary">
+                {`Choose ${plan?.name ?? 'Growth'}`}
+              </Button>
+            </a>
+          </Link>
+          <Link href="/plans" passHref>
+            <a className="plan-expired__cta">
+              <Button type="button" variant="secondary">
+                Change plan
+              </Button>
+            </a>
+          </Link>
+        </div>
       </div>
 
       <p className="plan-expired__news">

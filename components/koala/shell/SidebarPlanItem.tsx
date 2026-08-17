@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
 import fetchJson from '../../../lib/fetchJson';
 import { formatTrialCountdown, type PlanSummaryData } from '../../../lib/planLimits';
@@ -89,6 +89,27 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
     const id = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(id);
   }, [isTrialing, trialEndsAt]);
+
+  // The countdown reaching zero is only a display event unless someone re-asks the
+  // server: bootstrap is cached for minutes, so without this the sidebar sat on
+  // "Trial · 0m" with the whole app still usable. Re-asking lets ApplicationShell
+  // pick up whatever the trial became — active when Stripe charged the card, expired
+  // when it did not.
+  //
+  // Repeats every five minutes rather than firing once: the first answer past the
+  // deadline is often still `trialing` — the server grants a grace window, and the
+  // webhook that flips the status may not have landed yet — and a one-shot guard
+  // left the sidebar stuck on "Trial · 0m" until a full reload.
+  const queryClient = useQueryClient();
+  const lastExpiryRefetch = useRef(0);
+  useEffect(() => {
+    if (!isTrialing || !trialEndsAt) return;
+    if (new Date(trialEndsAt).getTime() > now) return;
+    if (now - lastExpiryRefetch.current < 5 * 60_000) return;
+    lastExpiryRefetch.current = now;
+    void queryClient.invalidateQueries(['bootstrap']);
+    void queryClient.invalidateQueries(['plan-summary-sidebar']);
+  }, [isTrialing, trialEndsAt, now, queryClient]);
 
   const openLimits = useCallback(() => {
     const el = anchorRef.current;

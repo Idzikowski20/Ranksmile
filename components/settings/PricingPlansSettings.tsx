@@ -60,7 +60,12 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
   );
   const locked = subscriptionData?.subscription?.lockedPlanSlug ?? null;
   const currentPlanSlug: PlanSlug | null = isPlanSlug(locked) ? locked : null;
-  const trialEligible = subscriptionData?.subscription?.trialEligible !== false;
+  // Default-closed. `!== false` offered the trial whenever the read failed or had not
+  // answered yet — a promise checkout then broke by silently charging upfront (its own
+  // gate, resolveCheckoutMode, is what actually protects the money). An eligible new
+  // org sees the trial label the moment the read lands; an error shows the paid CTA,
+  // which is the direction that can only undersell.
+  const trialEligible = subscriptionData?.subscription?.trialEligible === true;
   const paymentFailedLocked = subscriptionData?.subscription?.paymentFailedLocked === true;
   const paymentFailedLockedAt = subscriptionData?.subscription?.paymentFailedLockedAt ?? null;
   const lockedLabel = paymentFailedLockedAt

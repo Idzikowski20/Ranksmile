@@ -9525,6 +9525,8 @@ html.koala-shell[data-theme="cream"] .app-content {
   cursor: pointer;
 }
 .plan-expired__cta { text-decoration: none; }
+/* Renew + change side by side; below 640px the offer stacks and so do they. */
+.plan-expired__cta-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .plan-expired__mark { display: inline-flex; margin-bottom: 4px; }
 .plan-expired__title { display: block; }
