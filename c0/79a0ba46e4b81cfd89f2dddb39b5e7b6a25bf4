@@ -1,0 +1,34 @@
+components/settings/UsageSettings.tsx
+  s_8d6cce368af4fd::t_bfbd0dc0be1e7f 26
+__tests__/components/sidebarPlanItemPaid.test.tsx
+  s_8d6cce368af4fd::t_21b36ef8b24938 1-66
+pages/api/billing/plan-summary.ts
+  s_8d6cce368af4fd::t_ab6a774bdce3df 42
+lib/planLimits.ts
+  s_8d6cce368af4fd::t_ba6c4dcfaaf16a 43-44
+  s_8d6cce368af4fd::t_cc6c63cc9bf893 148-163
+__tests__/lib/planLimits.test.ts
+  s_8d6cce368af4fd::t_c3ef4ce6aad3f0 7
+  s_8d6cce368af4fd::t_01d21d3a22565c 42-54
+components/koala/shell/SidebarPlanItem.tsx
+  s_8d6cce368af4fd::t_8fded794138baa 6
+  s_8d6cce368af4fd::t_3dace6757b99e0 25
+  s_8d6cce368af4fd::t_a518748a816d9e 208,212-218
+  s_8d6cce368af4fd::t_6518fbbf5a4a0f 130-138,141-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c079a0ba46e4b81cfd89f2dddb39b5e7b6a25bf4",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
