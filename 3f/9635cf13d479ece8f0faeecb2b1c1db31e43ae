@@ -1,0 +1,26 @@
+components/koala/shell/SidebarPlanItem.tsx
+  s_8d6cce368af4fd::t_ecbbc66c670d12 7-8
+  s_8d6cce368af4fd::t_c6f30a33c38953 136-148,160-166
+docs/superpowers/specs/2026-08-17-paid-plan-widget-design.md
+  s_8d6cce368af4fd::t_eaee40ddb5ee94 48-57
+__tests__/components/sidebarPlanItemPaid.test.tsx
+  s_8d6cce368af4fd::t_bbb61330d33869 66-79
+lib/planLimits.ts
+  s_8d6cce368af4fd::t_8e79060c4f32ef 160-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3f9635cf13d479ece8f0faeecb2b1c1db31e43ae",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
