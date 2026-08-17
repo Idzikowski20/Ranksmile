@@ -1,0 +1,28 @@
+utils/verifyUser.ts
+  s_8d6cce368af4fd::t_ad29fbfb4b7719 66-69
+  s_8d6cce368af4fd::t_582d6bfb27a572 2
+__tests__/utils/getUserBackoff.test.ts
+  s_8d6cce368af4fd::t_b5a820f1eabec2 1-113
+utils/getUser.ts
+  s_8d6cce368af4fd::t_914d0d5640a606 82-112,114-116
+  s_8d6cce368af4fd::t_0ad0a215ace19b 10-30
+__tests__/utils/verifyUser.test.ts
+  s_8d6cce368af4fd::t_38656f20ca0187 76-89
+  s_8d6cce368af4fd::t_1b86af97f4c45d 9,12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8fb6fc5ffcfaca84e62106035390ea18487791a4",
+  "prompts": {},
+  "sessions": {
+    "s_8d6cce368af4fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c46c964f-fa0d-4903-b72b-ee6178188238",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
