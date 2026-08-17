@@ -1,10 +1,10 @@
 /**
  * View-model helpers for the Keyword Research detail page. Adapts the shared
- * TopicResearchResult (clusters → ideas → keywords) into Ranksmile-style keyword
+ * KeywordResearchResult (clusters → ideas → keywords) into Ranksmile-style keyword
  * clusters: one card per cluster, showing an intent badge, MSV/KD and the flat
  * list of keywords in that cluster.
  */
-import type { TopicResearchResult } from './topicResearchTypes';
+import type { KeywordResearchResult } from './keywordResearchTypes';
 
 import type { SearchIntent } from './organicResearch/types';
 
@@ -68,7 +68,7 @@ const ctrForPosition = (pos: number | null): number => {
    return 0.005;
 };
 
-export function buildKwClusters(result: TopicResearchResult): KwCluster[] {
+export function buildKwClusters(result: KeywordResearchResult): KwCluster[] {
    return result.clusters.map((cluster) => {
       const seen = new Map<string, KwKeyword>();
       for (const idea of cluster.ideas) {

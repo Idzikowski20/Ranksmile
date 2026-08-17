@@ -9,8 +9,12 @@ const ALL = Object.entries(scenes).filter(
 );
 
 describe('tour scenes', () => {
+  // 16 = the STEPS list in components/onboarding/PageTour.tsx. Asserting a literal is
+  // what let this drift when Topic Research was removed: the scene went, the number
+  // stayed. Kept as a literal anyway — importing PageTour here would drag react-query
+  // and fetch into a test about SVG — so update both together.
   it('exports one scene per tour step', () => {
-    expect(ALL).toHaveLength(17);
+    expect(ALL).toHaveLength(16);
   });
 
   /**

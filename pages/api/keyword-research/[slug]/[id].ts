@@ -4,8 +4,8 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
-import { queryOne, TopicResearchRunRow } from '../../../../lib/db/query';
-import type { TopicResearchResult } from '../../../../lib/topicResearchTypes';
+import { queryOne, KeywordResearchRunRow } from '../../../../lib/db/query';
+import type { KeywordResearchResult } from '../../../../lib/keywordResearchTypes';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -27,17 +27,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(200).json({ ok: true });
    }
 
-   const row = await queryOne<TopicResearchRunRow>(
+   const row = await queryOne<KeywordResearchRunRow>(
       'SELECT * FROM keyword_research_runs WHERE id = ? AND domain_id = ? LIMIT 1',
       [id, domainId],
    );
    if (!row) return res.status(404).json({ error: 'Keyword research not found' });
 
-   let result: TopicResearchResult | null = null;
+   let result: KeywordResearchResult | null = null;
    if (row.status === 'completed' && row.result_json != null) {
       try {
          const raw = row.result_json as unknown;
-         result = (typeof raw === 'string' ? JSON.parse(raw) : raw) as TopicResearchResult;
+         result = (typeof raw === 'string' ? JSON.parse(raw) : raw) as KeywordResearchResult;
       } catch { result = null; }
    }
 

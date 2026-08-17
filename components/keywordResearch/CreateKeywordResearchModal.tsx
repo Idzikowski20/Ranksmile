@@ -4,7 +4,7 @@ import { Modal, ModalBody, ModalFooter, FormField, Input, Button, CompactSelect 
 import type { SelectOption } from '../koala/core';
 import CountryFlag from '../audit/CountryFlag';
 
-const CreateTopicResearchModal = ({
+const CreateKeywordResearchModal = ({
    onClose, onCreate, submitting, defaultCountry = 'PL',
    title = 'New Topic Research',
    intro = 'Enter a seed topic — we\'ll expand keywords, cluster ideas, and map opportunities.',
@@ -79,4 +79,4 @@ const CreateTopicResearchModal = ({
    );
 };
 
-export default CreateTopicResearchModal;
+export default CreateKeywordResearchModal;

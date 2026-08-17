@@ -1146,6 +1146,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [importUrl, setImportUrl] = useState('');
     const [importBusy, setImportBusy] = useState(false);
     const [outlineBusy, setOutlineBusy] = useState(false);
+    /**
+     * Reading a saved outline back, as opposed to planning a new one. Both used to show
+     * "Generating outline", so a reviewer returning to their own approved outline was
+     * told the planner was running again — and had no way to tell that it wasn't.
+     */
+    const [outlineRestoring, setOutlineRestoring] = useState(false);
     const [generateBusy, setGenerateBusy] = useState(false);
     // Empty while idle. This doubles as the outline bar's status line, and seeding it
     // with "Generating article…" meant a bar that was waiting for the reviewer claimed a
@@ -1901,7 +1907,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const kw = (keyword || articleKeyword || '').trim();
       const articleId = commentArticleId ? Number(commentArticleId) : undefined;
       if (!kw && !articleId) { toast.error('No keyword available to build an outline.'); return; }
-      if (!editor) return;
+      // isDestroyed as well as null: a destroyed editor is still a truthy object, but its
+      // schema is gone, so getHTML() dies inside ProseMirror's DOMSerializer.fromSchema
+      // with "Cannot read properties of null (reading 'cached')". This ran while the page
+      // was unmounting the editor mid-request.
+      if (!editor || editor.isDestroyed) return;
       outlineRequestRef.current?.abort();
       const request = new AbortController();
       outlineRequestRef.current = request;
@@ -2184,25 +2194,53 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             return;
           }
         } catch { /* no running job to re-attach to */ }
+        // "Nothing saved" and "the lookup broke" are different answers. The old catch
+        // wrapped both — and also wrapped the getHTML() below, so a destroyed editor or a
+        // failed fetch was read as "no plan" and silently bought a whole new planner run
+        // over an outline that was sitting in score_data the entire time.
+        let stored: ReturnType<typeof outlineForReview> = [];
+        let lookupFailed = false;
+        setOutlineRestoring(true);
         try {
           const res = await fetch(`/api/articles/${articleId}/content-plan`);
+          // A non-2xx is a failed lookup, not "nothing saved". Reading the body anyway
+          // yielded an empty outline and fell through to a fresh planner run, which can
+          // overwrite a saved outline and bills for planning twice.
+          if (!res.ok) throw new Error(`content-plan lookup failed: HTTP ${res.status}`);
           const data = await res.json() as {
             content_planner_v2?: {
               bundle?: ContentPlannerBundle;
               approvedOutline?: unknown;
+              brief?: unknown;
             } | null;
           };
-          const stored = outlineForReview({
+          stored = outlineForReview({
             approvedOutline: data.content_planner_v2?.approvedOutline,
-            bundle: data.content_planner_v2?.bundle,
+            brief: data.content_planner_v2?.brief,
           });
-          if (stored.length) {
-            outlineOriginalHtmlRef.current ??= editor.getHTML();
-            await playReveal(reviewOutlineToHtml(stored), true, 'preserve');
-            setOutlineHeadingCount(stored.filter((h) => h.level >= 2).length);
-            return;
-          }
-        } catch { /* no usable stored plan — fall through to a fresh one */ }
+        } catch {
+          lookupFailed = true;
+        }
+        // Cleared here, not only on the fallthrough: the success branch returns early, so
+        // the flag stayed true for the rest of the mount and every later planning run
+        // was labelled "Loading saved outline".
+        setOutlineRestoring(false);
+        if (stored.length) {
+          if (editor.isDestroyed) return;
+          outlineOriginalHtmlRef.current ??= editor.getHTML();
+          // Set, not revealed. playReveal types the document in over several seconds,
+          // which is right for a plan being written and wrong for one being read back —
+          // an outline that already exists replaying as an animation is exactly why
+          // re-opening the article looked like it had re-planned from scratch.
+          editor.commands.setContent(normalizeListHtml(reviewOutlineToHtml(stored)), { emitUpdate: true });
+          setOutlineHeadingCount(stored.filter((h) => h.level >= 2).length);
+          return;
+        }
+        if (lookupFailed) {
+          // Re-planning here would charge for work whose result may already exist.
+          toast.error('Could not load the saved outline. Refresh to try again.');
+          return;
+        }
       }
       // The effect owns the one-shot guard (outlineAutoStarted set before this runs), so
       // no re-entry check here — adding one would block handleInsertOutline entirely.
@@ -2570,6 +2608,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         {outlineReviewMode && !readOnly && (
           <OutlineGenerateBar
             planning={outlineBusy}
+            planningLabel={outlineRestoring ? 'Loading saved outline' : undefined}
             busy={generateBusy}
             progressPct={generatePct}
             headingCount={outlineHeadingCount}

@@ -6,6 +6,8 @@ import { useEntrance } from '../../lib/motion/useEntrance';
 export type OutlineGenerateBarProps = {
   /** Outline is being planned — nothing to review or cancel yet. */
   planning?: boolean;
+  /** Overrides the planning label — reading a saved outline back is not planning one. */
+  planningLabel?: string;
   /** Article is being written from the approved outline. */
   busy: boolean;
   progressPct?: number | null;
@@ -111,6 +113,7 @@ const ProgressPill: React.FC<{ label: string; rightReserve: number }> = ({ label
 /** Sticky bottom CTA — review outline → full article generate (Koala / editor zone). */
 const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
   planning = false,
+  planningLabel,
   busy,
   progressPct,
   headingCount,
@@ -120,7 +123,7 @@ const OutlineGenerateBar: React.FC<OutlineGenerateBarProps> = ({
   const barEntranceRef = useEntrance<HTMLButtonElement>({ y: 0 });
 
   if (planning) {
-    return <ProgressPill label="Generating outline" rightReserve={rightReserve} />;
+    return <ProgressPill label={planningLabel || 'Generating outline'} rightReserve={rightReserve} />;
   }
   if (busy) {
     const pct = typeof progressPct === 'number' ? ` ${Math.round(progressPct)}%` : '';

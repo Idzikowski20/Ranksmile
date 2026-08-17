@@ -340,7 +340,7 @@ label {
 }
 
 body {
-   background-color: var(--color-surface-strong);
+   background: var(--koala-bg-secondary);
    font-family: var(--font-family-primary);
    font-size: var(--font-size-base);
    font-weight: var(--font-weight-base);
@@ -356,7 +356,6 @@ body {
    }
 
    body {
-      padding: 8px;
       box-sizing: border-box;
    }
 
@@ -384,17 +383,24 @@ body {
 .app-content {
    position: relative;
    z-index: 2;
-   background-color: #f5f5f5;
-   color: #302e36;
-   /* Light content surface: force light UA form controls (inputs, selects,
-      scrollbars) regardless of the global/system theme. Without this, a native
-      control with no explicit background renders dark under color-scheme: dark. */
-   color-scheme: light;
-   /* Shell :root sets --color-text-primary to #fff; override in light zones. */
-   --color-text-primary: #18181B;
-   --color-text-secondary: #52525C;
-   --color-surface-primary: #ffffff;
-   --color-border-strong: #bebebe;
+   /* Follows the Koala theme instead of pinning the content surface to light.
+      It used to hardcode #f5f5f5 / #302e36 plus `color-scheme: light`, so a page
+      rendered on a dark theme kept a light slab under it and any component that
+      did honour the tokens — a white card, dark text — came out unreadable. The
+      tokens already carry both themes; the content zone just has to read them. */
+   /* --koala-bg-secondary is #f5f5f5 on light, so the light theme is byte-identical
+      to the hardcoded value this replaces; only dark and cream actually change. */
+   background-color: var(--koala-bg-secondary);
+   color: var(--koala-text-primary);
+   /* Native controls (selects, scrollbars) follow the same theme rather than
+      being forced light under a dark surface. */
+   color-scheme: light dark;
+   /* Shell :root pins these for its own dark chrome; inside the content zone they
+      track the theme so legacy --color-* consumers match the Koala tokens. */
+   --color-text-primary: var(--koala-text-primary);
+   --color-text-secondary: var(--koala-text-secondary);
+   --color-surface-primary: var(--koala-bg-primary);
+   --color-border-strong: var(--koala-border-strong);
    flex: 1;
    display: flex;
    flex-direction: column;
@@ -7504,6 +7510,78 @@ html.koala-shell[data-theme="cream"] .app-content {
   background: var(--koala-bg-primary);
 }
 
+/* Global banner — Figma 3950:55902. Full-bleed bar above sidebar + header, 40px tall,
+   inner container capped at 1280 so the text lines up with marketing-width content. */
+.koala-app-banner {
+  flex-shrink: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  /* Colour comes from the component, per variant: white is unreadable on the amber
+     warning background (~1.9:1). See VARIANT_FG in AppBanner.tsx. */
+  font-family: var(--font-family-primary);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
+  font-weight: 500;
+}
+
+.koala-app-banner__container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 10px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.koala-app-banner__message {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.koala-app-banner__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.koala-app-banner__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  /* Inherits the variant colour set on the banner; white was unreadable on amber. */
+  color: currentColor;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.koala-app-banner__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  /* Same ink as the message, dimmed — see VARIANT_FG in AppBanner.tsx. */
+  color: currentColor;
+  opacity: 0.8;
+  padding: 0;
+  cursor: var(--koala-cursor-pointing);
+}
+
+.koala-app-banner__close:hover { opacity: 1; }
+
+@media (max-width: 640px) {
+  .koala-app-banner__container { padding: 10px 16px; align-items: flex-start; }
+  .koala-app-banner__message { align-items: flex-start; }
+}
+
 /* Product Sidebar Variant=2 ? Figma 4903:6905 */
 .koala-sidebar {
   --koala-sidebar-w: 228px;
@@ -8826,15 +8904,18 @@ html.koala-shell[data-theme="cream"] .app-content {
   }
 }
 
-.koala-account-section {
+/* Doubled selector on purpose. FormSection renders a styled-component whose rules are
+   injected into <head> after this stylesheet, so a single `.koala-account-section`
+   loses on source order at equal specificity — the padding and the divider silently
+   did nothing and every section ran into the next one. */
+.koala-form-section.koala-account-section {
   padding: 40px 0;
   border-bottom: 1px solid var(--koala-border-primary);
-}
-.koala-account-section:last-child { border-bottom: none; }
-/* Tighter in-section rhythm: CTAs sit near their fields, sections stay airy. */
-.koala-form-section.koala-account-section {
+  /* Tighter in-section rhythm: CTAs sit near their fields, sections stay airy. */
   gap: 16px;
 }
+.koala-form-section.koala-account-section:first-child { padding-top: 8px; }
+.koala-form-section.koala-account-section:last-child { border-bottom: none; }
 .koala-account-section .koala-form-actions,
 .koala-account-actions {
   display: flex;
@@ -9477,4 +9558,123 @@ html.koala-shell[data-theme="cream"] .app-content {
   color: var(--koala-text-primary);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* Onboarding invite step — Figma 1:261, Koala tokens. */
+.invite-step { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 560px; }
+.invite-step__banner {
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: linear-gradient(102deg, #eff4f9 0%, #f8fafe 99%);
+}
+.invite-step__banner-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--koala-text-primary);
+}
+.invite-step__banner-title strong { font-weight: 700; }
+.invite-step__banner-sub {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--koala-text-secondary);
+}
+.invite-step__row { display: flex; align-items: flex-end; gap: 8px; }
+.invite-step__emails { flex: 1 1 auto; min-width: 0; }
+.invite-step__divider { height: 1px; background: var(--koala-border-primary); }
+.invite-step__count {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--koala-text-secondary);
+}
+.invite-step__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+/* Wraps rather than overflowing: settings member rows carry a role select, a
+   workspace picker and a remove button, which together outgrow a narrow settings
+   column. The name block keeps the full width on its own line once they wrap, so
+   the controls stay reachable instead of being pushed past the edge. */
+.invite-step__person { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.invite-step__avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--koala-bg-secondary);
+  color: var(--koala-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.invite-step__email {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--koala-text-primary);
+}
+.invite-step__note { margin: 0; font-size: 13px; line-height: 18px; color: var(--koala-text-secondary); }
+
+/* Row proportions: the address is the field that matters, the role is a chooser.
+   Without these the role select stretched to half the row and the email shrank. */
+.invite-step__row > * { flex: 0 0 auto; }
+.invite-step__row .invite-step__emails { flex: 1 1 auto; min-width: 0; }
+.invite-step__role { width: 148px; flex-shrink: 0; }
+.invite-step__role > * { width: 100%; }
+
+/* One control, not three boxes: the Figma row is a single bordered field holding
+   the address, the role and the action, with the focus ring on the whole thing. */
+.invite-step__row {
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--koala-border-primary);
+  border-radius: 12px;
+  background: var(--koala-bg-primary);
+}
+/* Ring and glow both derive from the focus token, so they cannot disagree the way a
+   token border plus a hardcoded orange shadow did in the ash/dark themes. The
+   fallback is the brand accent rather than an off-brand blue. */
+.invite-step__row:focus-within {
+  --invite-focus: var(--koala-border-focus, #f84416);
+  border-color: var(--invite-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--invite-focus) 18%, transparent);
+}
+/* Children lose their own chrome so the row reads as one field — the role select
+   included, which otherwise drew its own Select Trigger border and background and
+   turned the "single field" into a box within a box. */
+.invite-step__row .invite-step__emails input,
+.invite-step__row .invite-step__emails > * {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+.invite-step__row .invite-step__emails input:focus { outline: none; box-shadow: none; }
+.invite-step__row .invite-step__role button {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Person rows carry a second line: in settings, "who can see what" is the answer
+   the old table's Joined/Workspaces columns used to give. */
+.invite-step__who { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+/* Once the row wraps, the controls sit on their own line and share it evenly rather
+   than each keeping a fixed width that re-triggers the overflow. */
+@media (max-width: 640px) {
+  /* Leaves room for the 32px avatar and the 12px gap, so identity stays on one line
+     and only the controls wrap below. A flat 100% pushed the name under its avatar. */
+  .invite-step__who { flex-basis: calc(100% - 44px); }
+  .invite-step__person > .invite-step__role { width: auto; flex: 1 1 auto; }
+}
+.invite-step__meta {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--koala-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

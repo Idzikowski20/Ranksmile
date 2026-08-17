@@ -22,7 +22,6 @@ import {
   parseCompetitorCacheJson,
 } from '../../../../lib/contentPlanner/fromArticleInputs';
 import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlanner';
-import { reviewOutlineFromBundle } from '../../../../lib/contentPlanner/reviewOutline';
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readContentSettings } from '../../../../lib/contentSettings';
@@ -154,6 +153,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       commonHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
     });
 
+    // Kept so the brief written further down can be added to exactly this document
+    // instead of a Postgres-only jsonb_set — this route has to work on SQLite too.
+    let persisted: Record<string, unknown> | null = null;
+
     if (persist && scoreData) {
       const prevPlanner = scoreData.content_planner_v2 && typeof scoreData.content_planner_v2 === 'object'
         ? (scoreData.content_planner_v2 as Record<string, unknown>)
@@ -181,25 +184,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           updatedAt: new Date().toISOString(),
         },
       };
+      persisted = next;
       await db.query(
         `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
         { replacements: [JSON.stringify(next), articleId] },
       );
     } else if (persist && !scoreData) {
+      persisted = {
+        content_planner_v2: {
+          bundle: result.bundle,
+          canWrite: result.canWrite,
+          updatedAt: new Date().toISOString(),
+        },
+      };
       await db.query(
         `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-        {
-          replacements: [
-            JSON.stringify({
-              content_planner_v2: {
-                bundle: result.bundle,
-                canWrite: result.canWrite,
-                updatedAt: new Date().toISOString(),
-              },
-            }),
-            articleId,
-          ],
-        },
+        { replacements: [JSON.stringify(persisted), articleId] },
       );
     }
 
@@ -233,7 +233,49 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       competitorHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
       onTokens: (tokens) => recordAiTokens(orgId, tokens),
     });
-    const headings = written ?? reviewOutlineFromBundle(result.bundle);
+    // Persisted, not just returned. The brief is the expensive part of this endpoint and
+    // it used to live only in the reply: the editor rendered it into the TipTap document
+    // and nothing else kept it. Every later read — a refresh, a second generation, the
+    // same keyword after deleting the article — fell through to reviewOutlineFromBundle
+    // and rebuilt the mechanical "Pokryj … / Cover: <scraped sentence>" version from the
+    // bundle, so the LLM brief was paid for and thrown away on every run.
+    if (written?.length && persisted) {
+      const planner = (persisted.content_planner_v2 ?? {}) as Record<string, unknown>;
+      const withBrief = { ...persisted, content_planner_v2: { ...planner, brief: written } };
+      try {
+        await db.query(
+          `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+          { replacements: [JSON.stringify(withBrief), articleId] },
+        );
+      } catch (e) {
+        // Not swallowed. Persisting the brief IS the fix this route exists for now — a
+        // 200 with headings that were never stored puts the reviewer straight back into
+        // the bug, losing the brief on the next refresh with nothing to explain it.
+        console.warn('[content-plan] brief persist failed:', getErrorMessage(e));
+        return res.status(503).json({
+          error: 'Konspekt powstał, ale nie udało się go zapisać. Spróbuj ponownie.',
+          cause: 'brief_persist_failed',
+          headings: [],
+          canWrite: result.canWrite,
+        });
+      }
+    }
+    // No mechanical fallback. reviewOutlineFromBundle used to catch a failed brief and
+    // hand the reviewer "Pokryj <heading> z przypisanymi claims" plus raw scraped
+    // sentences — a rival's opening hours and breadcrumbs as instructions for our writer.
+    // That is worse than no outline: it looks like a result, so nobody retries. A brief
+    // that could not be written is now an error the reviewer can act on.
+    const headings = written ?? [];
+    if (!headings.length && result.bundle.outline && result.bundle.briefs.length) {
+      // The planner had enough to work with — the brief writer is what failed, so a
+      // "your analysis is missing data" message would send the reader to fix the wrong thing.
+      return res.status(503).json({
+        error: 'Nie udało się napisać briefu do konspektu. Spróbuj ponownie za chwilę.',
+        cause: 'brief_writer_failed',
+        headings: [],
+        canWrite: result.canWrite,
+      });
+    }
     if (!headings.length) {
       const reason = [
         ...result.blueprintValidation.issues,

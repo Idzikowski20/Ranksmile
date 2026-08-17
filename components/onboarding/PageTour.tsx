@@ -21,7 +21,6 @@ import {
   PerformanceScene,
   RecommendationsScene,
   SiteAuditScene,
-  TopicResearchScene,
 } from './tourScenes';
 
 const ENDPOINT = '/api/onboarding/page-tour';
@@ -149,13 +148,6 @@ const STEPS: GuidedTourStep[] = [
     title: 'Keyword Research',
     body: 'Start from a seed keyword and pull volume, difficulty and related terms to plan around.',
     illustration: <KeywordResearchScene accent={darkBlue[400]} />,
-  },
-  {
-    id: 'topic-research',
-    selector: '[data-tour="nav-topic-research"]',
-    title: 'Topic Research',
-    body: 'Builds a topic cluster around a pillar so your articles support each other instead of competing.',
-    illustration: <TopicResearchScene accent={yellow[400]} />,
   },
 ];
 

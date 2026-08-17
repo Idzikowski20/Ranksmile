@@ -22,7 +22,7 @@ export const SkeletonBars = () => (
          <div key={h} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
             <SkeletonBox w={28} h={16} radius={4} />
             <span className="aiv-pulse" style={{ ...base, width: 64, height: `${h}%`, borderRadius: '8px 8px 0 0' }} />
-            <div style={{ height: 1, width: '100%', background: '#E4E4E7' }} />
+            <div style={{ height: 1, width: '100%', background: 'var(--koala-border-primary)' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0' }}>
                <SkeletonBox w={20} h={20} radius={9999} />
                <SkeletonBox w={44} h={12} />
@@ -51,7 +51,7 @@ export const SkeletonRows = ({ count = 5, withIcon = false }: { count?: number; 
 export const FanoutPageSkeleton = () => (
    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-         <span style={{ fontSize: 15, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>Common phrases</span>
+         <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: FONT }}>Common phrases</span>
          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {[120, 90, 140, 100, 80, 110].map((w, i) => (
                <SkeletonBox key={i} w={w} h={30} radius={9999} />
@@ -65,7 +65,7 @@ export const FanoutPageSkeleton = () => (
             <SkeletonBox w={148} h={32} radius={8} />
          </div>
       </div>
-      <div style={{ border: '1px solid #dbded4', borderRadius: 12, padding: 24 }}>
+      <div style={{ border: '1px solid var(--koala-border-primary)', borderRadius: 12, padding: 24 }}>
          <SkeletonRows count={6} />
       </div>
    </div>

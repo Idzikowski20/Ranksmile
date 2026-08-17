@@ -13,6 +13,7 @@ import { KoalaThemeProvider } from '../components/koala/theme';
 import AppToaster from '../components/common/AppToaster';
 import TopProgressBar from '../components/common/TopProgressBar';
 import { ApplicationShell } from '../lib/appAccess/ApplicationShell';
+import { AppBannerProvider } from '../components/koala/shell';
 
 const GlobalSmoothCaret = dynamic(
   () => import('../components/common/GlobalSmoothCaret'),
@@ -53,9 +54,11 @@ function MyApp({ Component, pageProps }: AppProps) {
           <IconDefaultsProvider size="sm">
             <TopProgressBar />
             <WorkspaceCookieSync />
-            <ApplicationShell>
-              <Component {...restPageProps} />
-            </ApplicationShell>
+            <AppBannerProvider>
+              <ApplicationShell>
+                <Component {...restPageProps} />
+              </ApplicationShell>
+            </AppBannerProvider>
             <AppToaster />
             <GlobalSmoothCaret />
           </IconDefaultsProvider>

@@ -23,13 +23,13 @@ const PromptRow = ({ prompt, onToggle, onRemove }: {
          className="aiv-prompt-row"
          onMouseEnter={() => setHover(true)}
          onMouseLeave={() => setHover(false)}
-         style={{ display: 'flex', alignItems: 'center', minHeight: 52, padding: '0 16px', borderTop: '1px solid #F4F4F5', gap: 12 }}
+         style={{ display: 'flex', alignItems: 'center', minHeight: 52, padding: '0 16px', borderTop: '1px solid var(--koala-bg-secondary)', gap: 12 }}
       >
          <span style={{ flexShrink: 0 }}><Checkbox checked={prompt.selected} onChange={onToggle} /></span>
          <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span
                title={prompt.text}
-               style={{ fontSize: 14, color: '#18181B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+               style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             >
                {prompt.text}
             </span>
@@ -39,7 +39,7 @@ const PromptRow = ({ prompt, onToggle, onRemove }: {
             type="button"
             aria-label="Remove prompt"
             onClick={onRemove}
-            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#71717B', padding: 0, display: 'inline-flex', flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 150ms ease' }}
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--koala-text-secondary)', padding: 0, display: 'inline-flex', flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 150ms ease' }}
          >
             <TrashIcon />
          </button>

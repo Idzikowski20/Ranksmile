@@ -22,15 +22,78 @@ def _ascii_prompt(text: str) -> str:
     return ''.join(c for c in normalized if ord(c) < 128)
 
 
-async def _enrich_prompt_with_ai(keyword: str, title: str) -> str:
+def _inert(text: str, limit: int = 200) -> str:
+    """
+    Flatten a DB-sourced value before it is interpolated into the LLM prompt.
+
+    `title` and `keyword` are attacker-influenced (a competitor controls the page a
+    keyword is scraped from), and newlines or quotes in them let the value read as a new
+    instruction rather than data.
+    """
+    return " ".join(str(text or "").split()).replace('"', "'").replace("`", "'")[:limit]
+
+
+def _safe_alt(text: str) -> str:
+    """
+    Alt text is returned as JSON from /generate-image and written into article HTML, so
+    the characters that could close an attribute or open a tag are removed here rather
+    than trusted to every consumer. Not html.escape: BeautifulSoup escapes the attribute
+    on the injection path, and escaping twice renders `&quot;` to the reader.
+
+    BOTH quote characters go, not just the double one. `alt='...'` is as valid as
+    `alt="..."`, so leaving `'` intact left the same break-out open — an earlier version
+    even swapped `"` for `'`, which produced the dangerous character from the safe one.
+    `&` goes too: it starts an entity, and a consumer that escapes once more would render
+    the mangled result to the reader. It becomes a space, not a conjunction — an earlier
+    version substituted the Polish "i", which corrupted German, Spanish and every other
+    localised alt the moment the model wrote an ampersand. Quotes become typographic so
+    the sentence still reads as prose in any language.
+    """
+    cleaned = " ".join(str(text or "").split())
+    for bad, good in (("<", ""), (">", ""), ("&", " "), ('"', "”"), ("'", "’")):
+        cleaned = cleaned.replace(bad, good)
+    return " ".join(cleaned.split())[:300]
+
+
+LANGUAGE_NAMES = {
+    "cs": "Czech", "da": "Danish", "de": "German", "el": "Greek", "en": "English",
+    "es": "Spanish", "fi": "Finnish", "fr": "French", "hu": "Hungarian", "it": "Italian",
+    "ja": "Japanese", "nl": "Dutch", "no": "Norwegian", "pl": "Polish",
+    "pt": "Portuguese", "ro": "Romanian", "sk": "Slovak", "sv": "Swedish",
+    "tr": "Turkish", "uk": "Ukrainian",
+}
+
+
+def _language_name(language: str | None) -> str:
+    """
+    Locale code -> language name for the alt-text instruction.
+
+    Was "Polish if it starts with pl, else English", so a German or Spanish article got
+    English alt text while its body was written in its own language — the one string on
+    the page a screen reader and Google Images actually read.
+
+    The codes are every `code` in lib/setupLocations.ts, the list the workspace creator
+    offers. A first pass covered only the obvious European ones and left Finnish,
+    Hungarian, Turkish, Greek and Japanese on the English fallback.
+    """
+    code = (language or "pl").strip().lower().replace("_", "-").split("-")[0]
+    return LANGUAGE_NAMES.get(code, "English")
+
+
+async def _enrich_prompt_with_ai(keyword: str, title: str, language: str = "pl") -> tuple[str, str]:
     """
     Wysyła heading do DeepSeek, który tworzy szczegółowy, obrazowy prompt
-    opisujący co dokładnie ma być przedstawione na obrazie.
+    opisujący co dokładnie ma być przedstawione na obrazie — oraz alt text.
+
+    Zwraca (prompt, alt). Alt powstaje w tym samym wywołaniu, bo model właśnie
+    opisał scenę: alt sklejany z "{heading} - {keyword}" nie mówił nic o tym, co
+    faktycznie widać na obrazku, więc nie pomagał ani czytnikom ekranu, ani Grafice
+    Google. Puste wartości = brak klucza lub błąd; caller ma wtedy fallback.
     """
     api_key = os.getenv("DEEPSEEK_API_KEY", "")
     if not api_key:
         print("[image] No DEEPSEEK_API_KEY — using raw prompt")
-        return ""
+        return "", ""
 
     system_prompt = """You are an expert visual prompt engineer for SEO article images.
 
@@ -47,16 +110,25 @@ RULES:
 - NO: charts, diagrams, UI screens, text overlays, watermarks
 - NO HOLLYWOOD CLICHÉS: no dark offices with men in suits handing envelopes, no handshakes, no people smiling at laptops, no generic stock photography
 
+ALT TEXT — a second, separate job. After the prompt, write the alt attribute for this
+image: one sentence describing what is actually VISIBLE in the scene you just specified,
+in the article's language, 90-140 characters, containing the article topic naturally.
+Describe the scene, not the article. Never start with "Obraz przedstawiajacy", "Na obrazie",
+"Image of" or "Zdjecie" — a screen reader already announces that it is an image.
+
 OUTPUT FORMAT:
-First think through the 3 questions briefly (1-2 lines), then write the final prompt on a new line starting with PROMPT:
+First think through the 3 questions briefly (1-2 lines), then the final prompt on a new
+line starting with PROMPT:, then the alt on a new line starting with ALT:
 Example:
 1. This heading is about fraud detection in corporate accounting — showing how fake invoices get caught
 2. A forensic accountant examining suspicious paperwork, red flags highlighted, calculator and audit reports on desk
 3. Close-up over the shoulder shot showing the hands and documents in detail
 PROMPT: close-up over shoulder shot of forensic accountant examining suspicious invoices with red flags, calculator and audit reports on desk, natural office lighting, shallow depth of field, muted color palette"""
 
-    user_prompt = f"""Heading: "{title}"
-Article topic: "{keyword}"
+    alt_lang = _language_name(language)
+    user_prompt = f"""Heading: "{_inert(title)}"
+Article topic: "{_inert(keyword)}"
+Alt text language: {alt_lang}
 
 Analyze this heading through the 3 questions and create a realistic journalistic photography prompt."""
 
@@ -70,7 +142,9 @@ Analyze this heading through the 3 questions and create a realistic journalistic
                 },
                 json={
                     "model": "deepseek-chat",
-                    "max_tokens": 300,
+                    # 300 was sized for reasoning + PROMPT alone. ALT is emitted last, so
+                    # the old budget would have truncated exactly the new field.
+                    "max_tokens": 500,
                     "temperature": 0.7,
                     "messages": [
                         {"role": "system", "content": system_prompt},
@@ -82,26 +156,39 @@ Analyze this heading through the 3 questions and create a realistic journalistic
                 data = resp.json()
                 raw = data["choices"][0]["message"]["content"].strip()
 
+                # ALT: is split off FIRST. It comes after PROMPT: in the reply, so
+                # slicing on PROMPT: alone would swallow the alt sentence into the image
+                # prompt and ask the generator to draw it.
+                alt = ""
+                alt_idx = raw.upper().find("ALT:")
+                if alt_idx >= 0:
+                    alt = raw[alt_idx + len("ALT:"):].strip().strip('"').strip("'")
+                    alt = _safe_alt(alt.split("\n")[0])
+                    prompt_part = raw[:alt_idx]
+                else:
+                    prompt_part = raw
+
                 # Extract prompt after PROMPT: delimiter
                 prompt_marker = "PROMPT:"
-                marker_idx = raw.upper().find(prompt_marker)
+                marker_idx = prompt_part.upper().find(prompt_marker)
                 if marker_idx >= 0:
-                    enriched = raw[marker_idx + len(prompt_marker):].strip().strip('"').strip("'")
+                    enriched = prompt_part[marker_idx + len(prompt_marker):].strip().strip('"').strip("'")
                 else:
                     # Fallback: use the last non-empty line if no PROMPT: found
-                    lines = [l.strip() for l in raw.split('\n') if l.strip()]
-                    enriched = lines[-1] if lines else raw
+                    lines = [l.strip() for l in prompt_part.split('\n') if l.strip()]
+                    enriched = lines[-1] if lines else prompt_part
                     enriched = enriched.strip('"').strip("'")
 
                 print(f"[image] DeepSeek raw response ({len(raw)} chars): {raw[:200]}...")
                 print(f"[image] DeepSeek enriched prompt: {enriched[:150]}...")
-                return enriched
+                print(f"[image] DeepSeek alt: {alt[:120]}")
+                return enriched, alt
             else:
                 print(f"[image] DeepSeek enrichment failed (HTTP {resp.status_code}): {resp.text[:200]}")
-                return ""
+                return "", ""
     except Exception as e:
         print(f"[image] DeepSeek enrichment error: {e}")
-        return ""
+        return "", ""
 
 
 def _build_prompt(keyword: str, title: str, style: str) -> str:
@@ -121,7 +208,12 @@ def _build_prompt(keyword: str, title: str, style: str) -> str:
     )
 
 
-async def generate_article_image(keyword: str, article_title: str, style: str = "professional") -> dict:
+async def generate_article_image(
+    keyword: str,
+    article_title: str,
+    style: str = "professional",
+    language: str = "pl",
+) -> dict:
     """
     Generuje obraz przez Pollinations.ai (Flux Schnell).
     1. DeepSeek wzbogaca heading w szczegółowy prompt (jeśli dostępny klucz API)
@@ -129,15 +221,17 @@ async def generate_article_image(keyword: str, article_title: str, style: str = 
     Zwraca dict z url (data URI base64), alt, width, height, source.
     """
     # Step 1: Try AI prompt enrichment
-    enriched = await _enrich_prompt_with_ai(keyword, article_title)
+    enriched, ai_alt = await _enrich_prompt_with_ai(keyword, article_title, language)
     if enriched:
         # Prepend quality/style keywords to the enriched prompt
         prompt = f"{enriched}, cinematic 16:9 widescreen composition, 4K, ultra high resolution, professional editorial photography, no text, no watermarks"
     else:
         prompt = _build_prompt(keyword, article_title, style)
 
-    # SEO-friendly alt text: use the original heading + keyword (in article's language)
-    alt_text = f"{article_title} - {keyword}".strip()[:200]
+    # The model has just described this exact scene, so it is the only thing that knows
+    # what the alt should say. "{heading} - {keyword}" described no image at all — it was
+    # the same two fields every time, useful to neither a screen reader nor Google Images.
+    alt_text = ai_alt or _surfer_style_alt(article_title, keyword, language)
 
     return await _pollinations_fetch(prompt, alt_text)
 
@@ -176,7 +270,7 @@ async def generate_article_image_for_embed(
     For mid-article <img src>: return Pollinations CDN URL (not base64).
     Warm the cache with one server GET (fail-soft — URL still returned).
     """
-    enriched = await _enrich_prompt_with_ai(keyword, article_title)
+    enriched, ai_alt = await _enrich_prompt_with_ai(keyword, article_title, language)
     if enriched:
         prompt = (
             f"{enriched}, cinematic 16:9 widescreen composition, 4K, ultra high resolution, "
@@ -185,7 +279,9 @@ async def generate_article_image_for_embed(
     else:
         prompt = _build_prompt(keyword, article_title, style)
 
-    alt_text = _surfer_style_alt(article_title, keyword, language)
+    # _surfer_style_alt is the fallback now, not the answer: it is one sentence template
+    # with the heading slotted in, so every image on the page got the same alt.
+    alt_text = ai_alt or _surfer_style_alt(article_title, keyword, language)
     url = _pollinations_url(prompt)
 
     # Warm generation so first editor load isn't a cold Pollinations miss.

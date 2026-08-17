@@ -2,6 +2,7 @@
 // channels Surfer splits across AiArticleStatusStreaming and AiArticleContentStreaming.
 // The browser polls nothing; this handler tails the job row and pushes deltas.
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 import { QueryTypes } from 'sequelize';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
@@ -144,4 +145,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   return res.end();
 }
 
-export default handler;
+// Generating an article is paid work, so the stream is gated like every other
+// article route. It shipped unwrapped and the payment-access audit has been red
+// ever since.
+export default withOrgPaymentAccess(handler);

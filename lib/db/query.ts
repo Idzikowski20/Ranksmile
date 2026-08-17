@@ -75,8 +75,8 @@ export interface AuditRunRow {
   created_at: string | null;
 }
 
-/** A row of `topic_research_runs` (see lib/ensureTopicResearchTables). */
-export interface TopicResearchRunRow {
+/** A row of `keyword_research_runs` (see lib/ensureKeywordResearchTables). */
+export interface KeywordResearchRunRow {
   id: number;
   domain_id: number;
   seed: string;

@@ -33,7 +33,6 @@ export const SEO_NAV: SiteNavItem[] = [
 /** Tools secondary — Audit URL is Site Audit contextual only, not listed here. */
 export const TOOLS_NAV: SiteNavItem[] = [
   { id: 'keyword-research', label: 'Keyword Research', path: 'keyword-research', match: '/keyword-research', keywords: ['keywords', 'seed'] },
-  { id: 'topic-research', label: 'Topic Research', path: 'topic-research', match: '/topic-research', keywords: ['brief', 'research'] },
 ];
 
 export const AI_VISIBILITY_NAV: SiteNavItem[] = [
