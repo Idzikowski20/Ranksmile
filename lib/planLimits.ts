@@ -40,6 +40,8 @@ export interface PlanSummaryData {
   subscriptionStatus: string | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
+  /** Subscription set to lapse at currentPeriodEnd — drives "Ends" vs "Renews". */
+  cancelAtPeriodEnd: boolean;
   metrics: PlanLimitMetric[];
   overallPct: number;
 }
@@ -141,6 +143,22 @@ export function formatTrialCountdown(endsAt: string | Date, nowMs = Date.now()):
   if (d > 0) return `${d}d, ${h}h, ${m}m`;
   if (h > 0) return `${h}h, ${m}m`;
   return `${m}m`;
+}
+
+/**
+ * The paid widget's second line: when the plan renews, or when it ends if the
+ * subscription is set to lapse. Null when there is no period end to show (no
+ * subscription, or an unparseable date), so the caller renders nothing.
+ */
+export function planEndLine(
+  currentPeriodEnd: string | null,
+  cancelAtPeriodEnd: boolean,
+): string | null {
+  if (!currentPeriodEnd) return null;
+  const end = new Date(currentPeriodEnd);
+  if (Number.isNaN(end.getTime())) return null;
+  const date = end.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return `${cancelAtPeriodEnd ? 'Ends' : 'Renews'} ${date}`;
 }
 
 export function formatPlanStatus(

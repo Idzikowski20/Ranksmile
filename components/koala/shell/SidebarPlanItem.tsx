@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useQuery, useQueryClient } from 'react-query';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
 import fetchJson from '../../../lib/fetchJson';
-import { formatTrialCountdown, type PlanSummaryData } from '../../../lib/planLimits';
+import { formatTrialCountdown, planEndLine, type PlanSummaryData } from '../../../lib/planLimits';
 import { Icon } from '../icons/Icon';
 import { PlanUsageMetricRow } from '../product/PlanUsageMetricRow';
 import { Popover } from '../primitives/Popover';
@@ -22,6 +22,7 @@ const FALLBACK: PlanSummaryResponse = {
     subscriptionStatus: null,
     trialEndsAt: null,
     currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
     metrics: [],
     overallPct: 0,
   },
@@ -126,11 +127,29 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
   const badgeTone = summary.overallPct >= 85 ? 'warn' : 'ok';
   const action = planCardAction(summary.planSlug, summary.planName);
   const trialLeft = isTrialing && trialEndsAt ? formatTrialCountdown(trialEndsAt, now) : '';
+
+  // A paying subscriber, not a trial and not an unpaid account. This is the state the
+  // widget reframes: name the plan and say when it renews, rather than always selling an
+  // upgrade. Trial keeps its countdown; anything else keeps the old upgrade/manage copy.
+  const isActivePaid = summary.subscriptionStatus === 'active';
+  const isTopTier = MANAGE_SLUGS.has(summary.planSlug.toLowerCase());
+  const endLine = planEndLine(summary.currentPeriodEnd, summary.cancelAtPeriodEnd);
+
+  const cardTitle: React.ReactNode = isActivePaid ? `${summary.planName} plan` : action.title;
   const cardSub = trialLeft
     ? `Trial · ${trialLeft}`
-    : action.kind === 'manage'
-      ? (statusLine || 'Manage billing in settings')
-      : 'Cancel anytime in settings';
+    : isActivePaid
+      ? (endLine ?? statusLine ?? 'Manage in settings')
+      : action.kind === 'manage'
+        ? (statusLine || 'Manage billing in settings')
+        : 'Cancel anytime in settings';
+
+  // Agency is the top tier — there is nothing to upgrade to, so the CTA is dropped
+  // entirely (management lives in Settings → Billing). Every other active plan keeps
+  // "Upgrade now"; non-active accounts keep whatever planCardAction decided.
+  const cta: { href: string; label: string } | null = isActivePaid
+    ? (isTopTier ? null : { href: '/plans', label: 'Upgrade now' })
+    : { href: action.href, label: action.cta };
 
   const limitsPopover = (
     <Popover
@@ -186,15 +205,17 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
     <>
       <div className="koala-sidebar__item koala-sidebar__item--plan koala-sidebar__item--plan-upgrade">
         <div className="koala-sidebar-plan-upgrade__copy">
-          <p className="koala-sidebar-plan-upgrade__title">{action.title}</p>
+          <p className="koala-sidebar-plan-upgrade__title">{cardTitle}</p>
           <p className="koala-sidebar-plan-upgrade__sub">{cardSub}</p>
         </div>
         <div className="koala-sidebar-plan-upgrade__rule" aria-hidden />
-        <Link href={action.href} passHref>
-          <a className="koala-sidebar-plan-upgrade__cta" onClick={onNavigate}>
-            {action.cta}
-          </a>
-        </Link>
+        {cta && (
+          <Link href={cta.href} passHref>
+            <a className="koala-sidebar-plan-upgrade__cta" onClick={onNavigate}>
+              {cta.label}
+            </a>
+          </Link>
+        )}
         {seeLimitsBtn}
       </div>
       {limitsPopover}
