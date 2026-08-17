@@ -39,6 +39,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     subscriptionStatus: billing?.subscriptionStatus ?? null,
     trialEndsAt: billing?.trialEndsAt ?? null,
     currentPeriodEnd: billing?.currentPeriodEnd ?? null,
+    cancelAtPeriodEnd: billing?.cancelAtPeriodEnd ?? false,
     metrics,
     overallPct: overallUsagePct(metrics),
   };

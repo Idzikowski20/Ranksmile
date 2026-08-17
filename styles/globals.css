@@ -8014,73 +8014,9 @@ html.koala-shell[data-theme="cream"] .app-content {
   padding: 16px !important;
   box-sizing: border-box;
 }
-.koala-plan-limits__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  margin-bottom: 24px;
-}
-.koala-plan-limits__info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  flex: 1;
-}
-.koala-plan-limits__title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.koala-plan-limits__title {
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 24px;
-  letter-spacing: -0.25px;
-  color: var(--koala-text-primary);
-}
-.koala-plan-limits__sales {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 8px;
-}
-.koala-plan-limits__total {
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.96px;
-  color: var(--koala-text-primary);
-  font-variant-numeric: tabular-nums;
-}
-.koala-plan-limits__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border-radius: 8px;
-  border: 1px solid var(--koala-border-primary);
-  background: var(--koala-bg-primary);
-  box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.04);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  letter-spacing: -0.4px;
-  color: var(--koala-text-secondary);
-  max-width: 100%;
-}
-.koala-plan-limits__badge--ok {
-  color: var(--koala-status-success);
-  border-color: color-mix(in srgb, var(--koala-status-success) 35%, var(--koala-border-primary));
-  background: var(--koala-status-success-bg);
-}
-.koala-plan-limits__badge--warn {
-  color: var(--koala-status-warning);
-  border-color: color-mix(in srgb, var(--koala-status-warning) 35%, var(--koala-border-primary));
-  background: var(--koala-status-warning-bg);
-}
+/* Still used by the full Usage settings page (UsageSettings.tsx) — the "This period"
+   chip there. The sidebar popover no longer has a header, so the rest of that block
+   went with it. */
 .koala-plan-limits__period {
   display: inline-flex;
   align-items: center;
