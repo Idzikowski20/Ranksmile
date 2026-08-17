@@ -7,6 +7,28 @@ export type SessionUser = { id: string; email: string | null };
 const sessionCache = new WeakMap<NextApiRequest, Promise<SessionUser | null>>();
 
 /**
+ * Requests whose session could not be resolved because the auth SERVER was the problem —
+ * unreachable, or answering 5xx — as opposed to the token being rejected. Callers
+ * (verifyUser) use this to say "auth service unavailable, try again" instead of the lie
+ * "Not authorized": in dev the mprocs auth pane needs ~7.5s from spawn to listen
+ * (measured; more when embedded Postgres cold-boots first), and every request in that
+ * window used to come back as a flat 401.
+ */
+const authUnavailable = new WeakSet<NextApiRequest>();
+
+export function wasAuthUnavailable(req: NextApiRequest): boolean {
+   return authUnavailable.has(req);
+}
+
+/**
+ * Backoff for exactly the failures that are not an answer about the user: the auth
+ * server unreachable, or replying 5xx. Totals ~7.75s — sized to the measured dev
+ * cold-start window, and a bounded worst-case delay for a prod auth blip. A 4xx from
+ * the auth server is a verdict about the token and is never retried.
+ */
+const RETRY_DELAYS_MS = [250, 500, 1000, 2000, 4000];
+
+/**
  * The route, with every dynamic segment masked.
  *
  * Logging the raw path leaked credentials: `/api/invitations/<token>/accept` carries the
@@ -57,35 +79,26 @@ export const getCurrentUser = async (req: NextApiRequest, _res: NextApiResponse)
       const sessionToken = req.cookies?.[SESSION_COOKIE];
       if (!sessionToken) return deny(req, 'no session cookie on the request');
       if (!NEON_AUTH_BASE_URL) return deny(req, 'NEON_AUTH_BASE_URL is not configured');
-      /**
-       * One retry, and only for the two failures that are not an answer about the user:
-       * the auth server being unreachable, and it replying 5xx. A 401/403 from it means
-       * this token really is not a session and must not be retried.
-       *
-       * Without this a single blip logged the caller out. Deep analysis showed it
-       * plainly: the request that starts the run 401s, the page reports "Analysis failed
-       * — Not authorized" with every stage still pending, and Try again works because
-       * the next call reaches a healthy auth server.
-       */
-      for (let attempt = 0; attempt < 2; attempt += 1) {
+      let lastFailure = 'auth server did not answer';
+      for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
+         if (attempt > 0) {
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise((r) => { setTimeout(r, RETRY_DELAYS_MS[attempt - 1]); });
+         }
          try {
             // eslint-disable-next-line no-await-in-loop
             const response = await fetch(`${NEON_AUTH_BASE_URL}/get-session`, {
                method: 'GET', headers: { cookie: `${SESSION_COOKIE}=${sessionToken}` },
             });
-            if (response.status >= 500 && attempt === 0) {
+            if (response.status >= 500) {
                // The discarded body would otherwise hold the connection open for as long
-               // as the failing auth server keeps writing, and every request that retries
-               // leaks one more.
+               // as the failing server keeps writing.
                // eslint-disable-next-line no-await-in-loop
                await response.body?.cancel().catch(() => undefined);
-               // eslint-disable-next-line no-await-in-loop
-               await new Promise((r) => { setTimeout(r, 250); });
+               lastFailure = `auth server replied HTTP ${response.status}`;
                continue;
             }
             if (!response.ok) {
-               // Also on the last attempt: the early `continue` above only released the
-               // first 5xx, so a second failure left its body open just the same.
                // eslint-disable-next-line no-await-in-loop
                await response.body?.cancel().catch(() => undefined);
                return deny(req, `auth server replied HTTP ${response.status}`);
@@ -95,17 +108,12 @@ export const getCurrentUser = async (req: NextApiRequest, _res: NextApiResponse)
             if (!data?.user?.id) return deny(req, 'auth server returned no user for this token');
             return { id: data.user.id, email: data.user.email ?? null };
          } catch (err) {
-            if (attempt === 0) {
-               // eslint-disable-next-line no-await-in-loop
-               await new Promise((r) => { setTimeout(r, 250); });
-               continue;
-            }
-            // A transport failure is not the same as "logged out", but after a retry
-            // there is nothing left to distinguish it with — the log line carries why.
-            return deny(req, `could not reach the auth server: ${err instanceof Error ? err.message : String(err)}`);
+            lastFailure = `could not reach the auth server: ${err instanceof Error ? err.message : String(err)}`;
          }
       }
-      return deny(req, 'auth server did not answer after a retry');
+      // Every attempt hit the server being down, not the token being wrong.
+      authUnavailable.add(req);
+      return deny(req, lastFailure);
    })();
    sessionCache.set(req, promise);
    return promise;

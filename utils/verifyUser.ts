@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getCurrentUserId } from './getUser';
+import { getCurrentUserId, wasAuthUnavailable } from './getUser';
 import { logLegacyApiKeyUse } from '../lib/legacyApiKeyLog';
 
 const ALLOWED_APIKEY_ROUTES = [
@@ -63,6 +63,10 @@ const verifyUser = async (req: NextApiRequest, res: NextApiResponse): Promise<st
   const userId = await getCurrentUserId(req, res);
   if (userId) return 'authorized';
 
+  // The auth server being down is not a verdict about this user. Saying "Not
+  // authorized" for an infrastructure failure sent people chasing their session;
+  // the honest message names the real problem and that retrying will fix it.
+  if (wasAuthUnavailable(req)) return 'Authentication service unavailable — please try again';
   return 'Not authorized';
 };
 
