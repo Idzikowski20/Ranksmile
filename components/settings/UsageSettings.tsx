@@ -23,6 +23,7 @@ const FALLBACK: PlanSummaryResponse = {
     subscriptionStatus: null,
     trialEndsAt: null,
     currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
     metrics: [],
     overallPct: 0,
   },

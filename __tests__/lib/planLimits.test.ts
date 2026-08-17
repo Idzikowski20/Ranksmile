@@ -4,6 +4,7 @@ import {
   resolvePlanSlug,
   formatPlanStatus,
   formatTrialCountdown,
+  planEndLine,
 } from '../../lib/planLimits';
 
 describe('planLimits', () => {
@@ -37,5 +38,18 @@ describe('planLimits', () => {
     expect(formatTrialCountdown('2026-08-01T15:05:00.000Z', now)).toBe('3h, 5m');
     expect(formatTrialCountdown('2026-08-01T12:12:00.000Z', now)).toBe('12m');
     expect(formatTrialCountdown('2026-07-01T00:00:00.000Z', now)).toBe('0m');
+  });
+
+  describe('planEndLine', () => {
+    it('says Renews for an auto-renewing subscription', () => {
+      expect(planEndLine('2026-09-15T17:01:12.000Z', false)).toBe('Renews Sep 15, 2026');
+    });
+    it('says Ends when the subscription is set to cancel', () => {
+      expect(planEndLine('2026-09-15T17:01:12.000Z', true)).toBe('Ends Sep 15, 2026');
+    });
+    it('is null without a period end', () => {
+      expect(planEndLine(null, false)).toBeNull();
+      expect(planEndLine('not-a-date', false)).toBeNull();
+    });
   });
 });

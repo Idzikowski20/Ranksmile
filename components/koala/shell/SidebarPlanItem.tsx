@@ -3,11 +3,12 @@ import Link from 'next/link';
 import { useQuery, useQueryClient } from 'react-query';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
 import fetchJson from '../../../lib/fetchJson';
-import { formatTrialCountdown, type PlanSummaryData } from '../../../lib/planLimits';
+import { formatTrialCountdown, planEndLine, type PlanSummaryData } from '../../../lib/planLimits';
+import { hasActiveBillingEntitlement } from '../../../lib/billingEntitlement';
+import type { SubscriptionStatus } from '../../../lib/orgBilling';
 import { Icon } from '../icons/Icon';
 import { PlanUsageMetricRow } from '../product/PlanUsageMetricRow';
 import { Popover } from '../primitives/Popover';
-import { brandMain } from '../tokens/colors';
 
 type PlanSummaryResponse = {
   summary: PlanSummaryData;
@@ -22,6 +23,7 @@ const FALLBACK: PlanSummaryResponse = {
     subscriptionStatus: null,
     trialEndsAt: null,
     currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
     metrics: [],
     overallPct: 0,
   },
@@ -58,10 +60,6 @@ function planCardAction(planSlug: string, planName: string): PlanCardAction {
   };
 }
 
-function formatCount(n: number): string {
-  return n.toLocaleString('en-US');
-}
-
 /**
  * Sidebar plan widget — starry card (Figma `7956:407782`).
  * Lower tiers: Upgrade CTA → /plans. Agency/top: Manage → billing settings.
@@ -72,7 +70,7 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
   const [open, setOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
 
-  const { data, isLoading } = useQuery(
+  const { data } = useQuery(
     ['plan-summary-sidebar'],
     () => fetchJson<PlanSummaryResponse>('/api/billing/plan-summary', FALLBACK),
     { staleTime: 60_000, retry: false },
@@ -122,15 +120,42 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
 
   if (!summary) return null;
 
-  const totalUsed = summary.metrics.reduce((sum, m) => sum + m.used, 0);
-  const badgeTone = summary.overallPct >= 85 ? 'warn' : 'ok';
   const action = planCardAction(summary.planSlug, summary.planName);
   const trialLeft = isTrialing && trialEndsAt ? formatTrialCountdown(trialEndsAt, now) : '';
+
+  // A paying subscriber, not a trial and not an unpaid account. This is the state the
+  // widget reframes: name the plan and say when it renews, rather than always selling an
+  // upgrade. Trial keeps its countdown; anything else keeps the old upgrade/manage copy.
+  //
+  // Gated on the real entitlement, not the raw status: a subscription set to cancel whose
+  // period has passed still reads `active` locally until Stripe's webhook lands, and
+  // treating that as a live plan showed "Growth plan", a past "Ends" date and an upgrade
+  // CTA over an account the API already treats as lapsed. hasActiveBillingEntitlement is
+  // the same pure check the server uses, so the two cannot disagree.
+  const entitled = hasActiveBillingEntitlement({
+    subscriptionStatus: summary.subscriptionStatus as SubscriptionStatus | null,
+    currentPeriodEnd: summary.currentPeriodEnd,
+    cancelAtPeriodEnd: summary.cancelAtPeriodEnd,
+    trialEndsAt: summary.trialEndsAt,
+  });
+  const isActivePaid = entitled && summary.subscriptionStatus === 'active';
+  const endLine = planEndLine(summary.currentPeriodEnd, summary.cancelAtPeriodEnd);
+
+  const cardTitle: React.ReactNode = isActivePaid ? `${summary.planName} plan` : action.title;
   const cardSub = trialLeft
     ? `Trial · ${trialLeft}`
-    : action.kind === 'manage'
-      ? (statusLine || 'Manage billing in settings')
-      : 'Cancel anytime in settings';
+    : isActivePaid
+      ? (endLine ?? statusLine ?? 'Manage in settings')
+      : action.kind === 'manage'
+        ? (statusLine || 'Manage billing in settings')
+        : 'Cancel anytime in settings';
+
+  // "Upgrade now" is a trial-only nudge. A paying subscriber — any tier — sees no CTA;
+  // plan changes live in Settings → Billing. Trial and non-active states keep the
+  // upgrade/manage CTA planCardAction decided (reused, not re-hardcoded here).
+  const cta: { href: string; label: string } | null = isActivePaid
+    ? null
+    : { href: action.href, label: action.cta };
 
   const limitsPopover = (
     <Popover
@@ -140,26 +165,6 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
       placement="right"
       className="koala-plan-limits"
     >
-      <div className="koala-plan-limits__header">
-        <div className="koala-plan-limits__info">
-          <div className="koala-plan-limits__title-row">
-            <Icon name="BatteryMedium" size={20} weight="bold" color={brandMain} />
-            <span className="koala-plan-limits__title">Feature Usage</span>
-          </div>
-          <div className="koala-plan-limits__sales">
-            <span className="koala-plan-limits__total">
-              {isLoading ? '—' : formatCount(totalUsed)}
-            </span>
-            <span className={`koala-plan-limits__badge koala-plan-limits__badge--${badgeTone}`}>
-              {isLoading
-                ? 'Loading…'
-                : `${statusLine || summary.planName} · ${summary.overallPct}% peak`}
-            </span>
-          </div>
-        </div>
-        <span className="koala-plan-limits__period">This period</span>
-      </div>
-
       <ul className="koala-plan-limits__list">
         {summary.metrics.map((metric) => (
           <PlanUsageMetricRow key={metric.key} metric={metric} />
@@ -186,15 +191,17 @@ export function SidebarPlanItem({ onNavigate }: { onNavigate?: () => void }) {
     <>
       <div className="koala-sidebar__item koala-sidebar__item--plan koala-sidebar__item--plan-upgrade">
         <div className="koala-sidebar-plan-upgrade__copy">
-          <p className="koala-sidebar-plan-upgrade__title">{action.title}</p>
+          <p className="koala-sidebar-plan-upgrade__title">{cardTitle}</p>
           <p className="koala-sidebar-plan-upgrade__sub">{cardSub}</p>
         </div>
         <div className="koala-sidebar-plan-upgrade__rule" aria-hidden />
-        <Link href={action.href} passHref>
-          <a className="koala-sidebar-plan-upgrade__cta" onClick={onNavigate}>
-            {action.cta}
-          </a>
-        </Link>
+        {cta && (
+          <Link href={cta.href} passHref>
+            <a className="koala-sidebar-plan-upgrade__cta" onClick={onNavigate}>
+              {cta.label}
+            </a>
+          </Link>
+        )}
         {seeLimitsBtn}
       </div>
       {limitsPopover}
