@@ -18,9 +18,11 @@ describe('parseFanOut', () => {
 
 describe('parseCitations', () => {
    it('coerces missing domain/title to empty strings and drops non-url entries', () => {
-      const out = parseCitations(JSON.stringify([{ url: 'https://a.com/x' }, { title: 'no url' }, { url: 'https://b.com', domain: 'b.com', title: 'B' }]));
+      // A citation with a url + domain but no title keeps the url and coerces title to ''.
+      // Entries without a url (or without a resolvable domain) are dropped by filterCitations.
+      const out = parseCitations(JSON.stringify([{ url: 'https://a.com/x', domain: 'a.com' }, { title: 'no url' }, { url: 'https://b.com', domain: 'b.com', title: 'B' }]));
       expect(out).toEqual([
-         { url: 'https://a.com/x', domain: '', title: '' },
+         { url: 'https://a.com/x', domain: 'a.com', title: '' },
          { url: 'https://b.com', domain: 'b.com', title: 'B' },
       ]);
    });

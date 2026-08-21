@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from '@emotion/styled';
 import { GithubLogo, GoogleLogo, OpenAiLogo, Sparkle, Stack } from '@phosphor-icons/react';
+import { Icon } from '../../koala/icons/Icon';
 import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
 import { BP, Container, CtaLink, DotCanvas, Eyebrow, Section } from '../primitives';
@@ -292,7 +293,7 @@ export function Hero() {
               <Row data-hero="line">
                 Be The Answer in
                 <EngineIcon aria-hidden>
-                  <GoogleLogo weight="bold" />
+                  <Icon name="Sparkle" size={55} weight="fill" />
                 </EngineIcon>
                 <span data-hero="engine">{ENGINES[0]}</span>
                 <Caret aria-hidden />

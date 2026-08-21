@@ -40,7 +40,7 @@ describe('Home Page', () => {
          </QueryClientProvider>,
       );
       const title = await findByRole('heading', { level: 1 });
-      expect(title.textContent).toMatch(/Be the answer in/);
+      expect(title.textContent).toMatch(/Be The Answer in/i);
       expect(container.querySelector('[data-landing-root]')).not.toBeNull();
       expect(fetchMock).not.toHaveBeenCalled();
       expect(routerReplace).not.toHaveBeenCalled();
