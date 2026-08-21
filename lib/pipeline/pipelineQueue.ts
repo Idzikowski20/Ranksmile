@@ -178,6 +178,35 @@ async function pumpMemory(): Promise<void> {
 
 let bullmqReady: Promise<boolean> | null = null;
 
+// Pool one Queue per name for the process. Opening + closing a Queue per enqueue
+// churned a Redis connection (TCP + AUTH) on every job; reuse keeps it warm. The
+// 'error' listener stops a transient Redis blip from surfacing as an unhandled event —
+// enqueue still falls back to the in-memory queue on throw.
+// Memoize the init *promise* (not the resolved Queue): the get/set below is
+// synchronous, so concurrent first-enqueues to one name all await the same
+// promise instead of each racing to open — and leak — its own Redis connection.
+const bullQueues = new Map<string, Promise<import('bullmq').Queue | null>>();
+
+function getBullQueue(queue: QueueName): Promise<import('bullmq').Queue | null> {
+  const url = process.env.REDIS_URL || '';
+  if (!url) return Promise.resolve(null);
+  const name = `ranksmile-${queue}`;
+  let p = bullQueues.get(name);
+  if (!p) {
+    p = (async () => {
+      const { Queue } = await import('bullmq');
+      const q = new Queue(name, { connection: { url } });
+      q.on('error', () => { /* swallow — enqueue degrades to memory queue */ });
+      return q;
+    })();
+    // Drop a failed init so a later enqueue can retry BullMQ instead of being
+    // stuck on the memory fallback for the life of the process.
+    p.catch(() => bullQueues.delete(name));
+    bullQueues.set(name, p);
+  }
+  return p;
+}
+
 async function tryBullmqEnqueue(
   queue: QueueName,
   jobKey: string,
@@ -185,18 +214,15 @@ async function tryBullmqEnqueue(
   priority: number,
   dbJobId: number,
 ): Promise<boolean> {
-  const url = process.env.REDIS_URL || '';
-  if (!url) return false;
   try {
-    const { Queue } = await import('bullmq');
-    const q = new Queue(`ranksmile-${queue}`, { connection: { url } });
+    const q = await getBullQueue(queue);
+    if (!q) return false;
     // Unique BullMQ id per DB row — same jobKey + force:true must not collide after Redis wipe
     await q.add(
       queue,
       { jobKey, payload, dbJobId },
       { jobId: `${jobKey}-${dbJobId}`, priority, removeOnComplete: 100, removeOnFail: 50 },
     );
-    await q.close();
     return true;
   } catch (err: unknown) {
     console.warn('[pipelineQueue] BullMQ unavailable, using memory:', err);
