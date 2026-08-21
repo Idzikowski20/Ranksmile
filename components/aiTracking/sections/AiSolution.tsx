@@ -1,15 +1,15 @@
 import React from 'react';
 import styled from '@emotion/styled';
-import { ChartBar, Megaphone, Target } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
-import { BP, Container, Eyebrow, H2, Lead, Section } from '../../landing/primitives';
+import { BP, Container, Section, Tag } from '../../landing/primitives';
 import { SOLUTION } from '../content';
 
-/* Figma 3:4675 — Solution head + 3 image cards with captions. */
+/* Figma 3:4675 — py 180, gap 90; head 990 wide (tag · 55.2 H2 · 24.7 sub); 3 cards 426×511 r27 + caption. */
 
 const Wrap = styled(Section)`
   padding: 180px 0;
+  border-radius: 27px 27px 0 0;
   ${BP.md} {
     padding: 72px 0;
   }
@@ -23,44 +23,72 @@ const Head = styled.div`
   max-width: 990px;
   margin: 0 auto 90px;
   text-align: center;
+  h2 {
+    margin: 0;
+    font-size: 55.2px;
+    line-height: 60.67px;
+    font-weight: ${fontWeight.bold};
+    color: ${semantic.text.primary};
+  }
+  p {
+    margin: 0;
+    font-size: 24.7px;
+    line-height: 37px;
+    color: ${semantic.text.secondary};
+  }
   ${BP.md} {
     margin-bottom: 45px;
+    h2 {
+      font-size: 36px;
+      line-height: 42px;
+    }
+    p {
+      font-size: 18px;
+      line-height: 28px;
+    }
   }
 `;
 
 const Grid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 27px;
+  display: flex;
+  justify-content: center;
+  gap: 0;
   ${BP.md} {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 36px;
   }
 `;
 
 const Card = styled.article`
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 36px;
+  gap: 49px;
+  padding: 27px 27px 0;
+  ${BP.md} {
+    padding: 0;
+    gap: 27px;
+  }
 `;
 
 const Art = styled.div`
-  aspect-ratio: 426 / 511;
+  aspect-ratio: 426.08 / 511.28;
   border-radius: 27px;
   overflow: hidden;
+  background: ${semantic.background.secondary};
   border: 1px solid ${semantic.border.primary};
-  background:
-    radial-gradient(120% 80% at 30% 20%, color-mix(in srgb, var(--landing-blue) 14%, transparent), transparent 60%),
-    ${semantic.background.tertiary};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 36px;
-  box-sizing: border-box;
+  img {
+    display: block;
+    width: 100%;
+    height: 102.18%;
+    margin-top: -1.09%;
+    object-fit: cover;
+  }
 `;
 
 const Caption = styled.p`
   margin: 0;
-  padding: 0 27px;
+  padding: 36px 27px;
   text-align: center;
   font-size: 23.2px;
   line-height: 29px;
@@ -69,144 +97,39 @@ const Caption = styled.p`
   strong {
     color: ${semantic.text.primary};
   }
-`;
-
-/* ── Per-card CSS art ──────────────────────────────────────────────────────── */
-
-const Panel = styled.div`
-  width: 100%;
-  max-width: 300px;
-  border-radius: 18px;
-  border: 1px solid ${semantic.border.primary};
-  background: ${semantic.background.primary};
-  box-shadow: 0 12px 32px rgba(0,0,0,0.08);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  font-size: 13px;
-  color: ${semantic.text.primary};
-`;
-
-const Bar = styled.div<{ $w: number; $c: string }>`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  span:first-of-type {
-    width: 64px;
-    color: ${semantic.text.secondary};
-  }
-  i {
-    flex: 1;
-    height: 10px;
-    border-radius: 999px;
-    background: ${semantic.background.secondary};
-    overflow: hidden;
-    position: relative;
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: ${(p) => p.$w}%;
-      border-radius: inherit;
-      background: ${(p) => p.$c};
-    }
-  }
-  b {
-    width: 30px;
-    text-align: right;
-    font-weight: ${fontWeight.medium};
+  ${BP.md} {
+    padding: 0;
   }
 `;
 
-const CHIP_BG = { good: semantic.status.successBg, bad: semantic.status.dangerBg, neutral: semantic.background.secondary } as const;
-const CHIP_FG = { good: semantic.status.success, bad: semantic.status.danger, neutral: semantic.text.secondary } as const;
-
-const Chip = styled.span<{ $tone: keyof typeof CHIP_BG }>`
-  align-self: flex-start;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: ${fontWeight.medium};
-  background: ${(p) => CHIP_BG[p.$tone]};
-  color: ${(p) => CHIP_FG[p.$tone]};
-`;
-
-function ShareArt() {
-  return (
-    <Panel>
-      <b style={{ fontWeight: 700 }}>AI Share of Voice</b>
-      <Bar $w={62} $c="var(--koala-bg-brand)"><span>You</span><i /><b>62</b></Bar>
-      <Bar $w={48} $c="var(--landing-blue)"><span>Contoso</span><i /><b>48</b></Bar>
-      <Bar $w={31} $c="var(--landing-green)"><span>Fabrikam</span><i /><b>31</b></Bar>
-      <Bar $w={22} $c={semantic.text.tertiary}><span>Litware</span><i /><b>22</b></Bar>
-    </Panel>
-  );
-}
-
-function NarrativeArt() {
-  return (
-    <Panel>
-      <b style={{ fontWeight: 700 }}>Brand sentiment</b>
-      <Chip $tone="good">Positive · 68%</Chip>
-      <Chip $tone="neutral">Neutral · 24%</Chip>
-      <Chip $tone="bad">Off-brand · 8%</Chip>
-      <div style={{ marginTop: 4, color: semantic.text.secondary, lineHeight: '18px' }}>
-        “Ranksmile is described as the go-to for AI visibility.”
-      </div>
-    </Panel>
-  );
-}
-
-function ActionArt() {
-  return (
-    <Panel>
-      <b style={{ fontWeight: 700 }}>Daily report · actions</b>
-      <Chip $tone="bad">Optimize /pricing — +18</Chip>
-      <Chip $tone="neutral">Outreach 14 sources</Chip>
-      <Chip $tone="good">Published — score 91</Chip>
-      <div style={{ marginTop: 4, color: semantic.text.secondary }}>3 tasks queued for this week</div>
-    </Panel>
-  );
-}
-
-const ART = { share: ShareArt, narrative: NarrativeArt, action: ActionArt } as const;
-const ICON = { share: ChartBar, narrative: Megaphone, action: Target } as const;
+const IMAGES = ['/ai-tracking/solution-01.png', '/ai-tracking/solution-02.png', '/ai-tracking/solution-03.png'];
 
 export function AiSolution() {
   return (
     <Wrap id="solution" aria-labelledby="ai-solution-title">
       <Container>
         <Head data-reveal>
-          <Eyebrow $tone="brand">{SOLUTION.eyebrow}</Eyebrow>
-          <H2 id="ai-solution-title" $size={55.2}>
-            {SOLUTION.titleLines.map((l, i) => (
-              <React.Fragment key={l}>
-                {l}
-                {i === 0 ? <br /> : null}
-              </React.Fragment>
-            ))}
-          </H2>
-          <Lead>{SOLUTION.sub}</Lead>
+          <Tag>{SOLUTION.eyebrow}</Tag>
+          <h2 id="ai-solution-title">
+            {SOLUTION.titleLines[0]}
+            <br />
+            {SOLUTION.titleLines[1]}
+          </h2>
+          <p>{SOLUTION.sub}</p>
         </Head>
 
         <Grid>
-          {SOLUTION.cards.map((card) => {
-            const ArtFor = ART[card.art];
-            const IconComp = ICON[card.art];
-            return (
-              <Card key={card.strong} data-reveal>
-                <Art aria-hidden>
-                  <ArtFor />
-                </Art>
-                <Caption>
-                  <IconComp size={22} weight="fill" aria-hidden style={{ color: 'var(--koala-text-brand)', verticalAlign: '-3px', marginRight: 6 }} />
-                  <strong>{card.strong}</strong>
-                  {card.body}
-                </Caption>
-              </Card>
-            );
-          })}
+          {SOLUTION.cards.map((card, i) => (
+            <Card key={card.strong} data-reveal>
+              <Art>
+                <img src={IMAGES[i]} alt="" loading="lazy" width={426} height={511} />
+              </Art>
+              <Caption>
+                <strong>{card.strong}</strong>
+                {card.body}
+              </Caption>
+            </Card>
+          ))}
         </Grid>
       </Container>
     </Wrap>
