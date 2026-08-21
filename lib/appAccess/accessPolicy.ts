@@ -105,6 +105,7 @@ export function frontendPathCapability(pathname: string): RouteCapability {
     path.startsWith('/legal')
     || path.startsWith('/drafts')
     || path.startsWith('/dev')
+    || path === '/ai-visibility-tracking'
     || path === '/'
   ) {
     return 'Public';
