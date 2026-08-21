@@ -1,0 +1,58 @@
+components/aiTracking/sections/AiSolution.tsx
+  s_4134d8bafd16e7::t_663bb951fcc702 122-125,131-132
+  s_4134d8bafd16e7::t_85b3b7faeaaa48 1-121,126-130,133-216
+components/aiTracking/sections/AiFaq.tsx
+  s_4134d8bafd16e7::t_6b52a723438d82 1-139
+components/aiTracking/sections/AiHow.tsx
+  s_4134d8bafd16e7::t_e1feb980123d20 1-180
+components/aiTracking/mocks.tsx
+  s_4134d8bafd16e7::t_78fc60bf3e4894 1-207,218-314
+  s_4134d8bafd16e7::t_72f5b1c3cc83ea 208-217
+lib/isPublicPath.ts
+  s_4134d8bafd16e7::t_8762cf5019dc97 10
+components/landing/content.ts
+  s_4134d8bafd16e7::t_5cc43c90ef2ccc 454
+pages/ai-visibility-tracking.tsx
+  s_4134d8bafd16e7::t_663bb951fcc702 2
+  s_4134d8bafd16e7::t_506f2f472bee5a 1,3-6
+components/aiTracking/sections/AiFrontPage.tsx
+  s_4134d8bafd16e7::t_3e32bda1389ad7 1-366
+components/aiTracking/sections/AiCta.tsx
+  s_4134d8bafd16e7::t_41719f1ac89bdf 1-116
+components/aiTracking/content.ts
+  s_4134d8bafd16e7::t_2b49c19a6f33ed 78-79
+  s_4134d8bafd16e7::t_ead2ca7a7fc26c 1-77,81-236,252-254,284-310
+  s_4134d8bafd16e7::t_00d2e4ae249324 80
+  s_4134d8bafd16e7::t_6d420a21ce73e5 237-251,255-283
+components/aiTracking/sections/AiAudience.tsx
+  s_4134d8bafd16e7::t_6c1d83eae02806 1-137
+components/aiTracking/AiTrackingPage.tsx
+  s_4134d8bafd16e7::t_954ae26b9509c5 1-104
+lib/appAccess/accessPolicy.ts
+  s_4134d8bafd16e7::t_a8547ff2c5420c 108
+components/aiTracking/sections/AiAdvantage.tsx
+  s_4134d8bafd16e7::t_6119d5d286067c 1-146
+components/aiTracking/sections/AiCapabilities.tsx
+  s_4134d8bafd16e7::t_ec8e90824ee368 1-117
+components/aiTracking/sections/AiHero.tsx
+  s_4134d8bafd16e7::t_00b0fb05643578 1-241,248-282
+  s_4134d8bafd16e7::t_cf5a99b54ba8aa 242-247
+components/aiTracking/sections/AiPricing.tsx
+  s_4134d8bafd16e7::t_ecfd942f3cb6e2 1-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b0cf4363b29136d353bb137aecfba1d69d3846a4",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
