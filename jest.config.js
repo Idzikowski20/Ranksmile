@@ -23,10 +23,6 @@ const customJestConfig = {
   // if using TypeScript with a baseUrl set to the root directory then you need the below for alias' to work
   moduleDirectories: ['node_modules', '<rootDir>/'],
   testEnvironment: 'jest-environment-jsdom',
-  // jsdom defaults package `exports` resolution to the "browser" condition, which
-  // pulls the ESM builds of uuid / @aws-sdk / @smithy and crashes Jest (CJS) on
-  // their `export` syntax. Force the "node" condition so they resolve to CJS.
-  testEnvironmentOptions: { customExportConditions: ['node'] },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     // `ai` SDK is pure ESM with a heavy provider tree Jest can't load; stub its
@@ -35,6 +31,10 @@ const customJestConfig = {
     // Same reason — @ai-sdk provider packages are ESM-only (see __mocks__/@ai-sdk/*).
     '^@ai-sdk/deepseek$': '<rootDir>/__mocks__/@ai-sdk/deepseek.ts',
     '^@ai-sdk/google$': '<rootDir>/__mocks__/@ai-sdk/google.ts',
+    // Under jsdom Jest resolves uuid's ESM "browser" export and chokes on its
+    // `export` syntax. Pin the CJS build. (Scoped map — a global "node" export
+    // condition would break @emotion's React integration.)
+    '^uuid$': '<rootDir>/node_modules/uuid/dist/index.js',
   },
 };
 

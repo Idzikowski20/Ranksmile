@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from '@emotion/styled';
-import { GithubLogo, GoogleLogo, OpenAiLogo, Sparkle, Stack, WordpressLogo } from '@phosphor-icons/react';
+import { GithubLogo, GoogleLogo, OpenAiLogo, Sparkle, Stack } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
 import { BP, Container, CtaLink, DotCanvas, Eyebrow, Section } from '../primitives';
@@ -273,7 +273,6 @@ const Frame = styled.div`
 const AVATAR_ICON = {
   google: GoogleLogo,
   openai: OpenAiLogo,
-  wordpress: WordpressLogo,
   github: GithubLogo,
 } as const;
 
