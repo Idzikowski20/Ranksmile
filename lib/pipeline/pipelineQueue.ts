@@ -178,6 +178,25 @@ async function pumpMemory(): Promise<void> {
 
 let bullmqReady: Promise<boolean> | null = null;
 
+// Pool one Queue per name for the process. Opening + closing a Queue per enqueue
+// churned a Redis connection (TCP + AUTH) on every job; reuse keeps it warm. The
+// 'error' listener stops a transient Redis blip from surfacing as an unhandled event —
+// enqueue still falls back to the in-memory queue on throw.
+const bullQueues = new Map<string, import('bullmq').Queue>();
+
+async function getBullQueue(queue: QueueName): Promise<import('bullmq').Queue | null> {
+  const url = process.env.REDIS_URL || '';
+  if (!url) return null;
+  const name = `ranksmile-${queue}`;
+  const existing = bullQueues.get(name);
+  if (existing) return existing;
+  const { Queue } = await import('bullmq');
+  const q = new Queue(name, { connection: { url } });
+  q.on('error', () => { /* swallow — enqueue degrades to memory queue */ });
+  bullQueues.set(name, q);
+  return q;
+}
+
 async function tryBullmqEnqueue(
   queue: QueueName,
   jobKey: string,
@@ -185,18 +204,15 @@ async function tryBullmqEnqueue(
   priority: number,
   dbJobId: number,
 ): Promise<boolean> {
-  const url = process.env.REDIS_URL || '';
-  if (!url) return false;
   try {
-    const { Queue } = await import('bullmq');
-    const q = new Queue(`ranksmile-${queue}`, { connection: { url } });
+    const q = await getBullQueue(queue);
+    if (!q) return false;
     // Unique BullMQ id per DB row — same jobKey + force:true must not collide after Redis wipe
     await q.add(
       queue,
       { jobKey, payload, dbJobId },
       { jobId: `${jobKey}-${dbJobId}`, priority, removeOnComplete: 100, removeOnFail: 50 },
     );
-    await q.close();
     return true;
   } catch (err: unknown) {
     console.warn('[pipelineQueue] BullMQ unavailable, using memory:', err);

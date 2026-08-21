@@ -15,6 +15,7 @@
  * (the routing layer in `lib/seo/keywordData.ts` does this).
  */
 import axios from 'axios';
+import { withBreaker } from './circuitBreaker';
 import {
    DFS_DEFAULT_KEYWORD_LIMIT,
    DFS_DEFAULT_RANKED_LIMIT,
@@ -110,10 +111,10 @@ async function dfsPost(path: string, task: Task): Promise<unknown[]> {
    if (!isDataForSeoConfigured()) {
       throw new Error('DataForSEO not configured — set DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD.');
    }
-   const res = await axios.post<DfsApiResponse>(`${BASE}${path}`, [task], {
+   const res = await withBreaker('dfs', () => axios.post<DfsApiResponse>(`${BASE}${path}`, [task], {
       headers: { Authorization: authHeader(), 'Content-Type': 'application/json' },
       timeout: 60000,
-   });
+   }));
 
    if (res.data?.status_code !== 20000) {
       throw new Error(`DataForSEO API ${res.data?.status_code}: ${res.data?.status_message}`);

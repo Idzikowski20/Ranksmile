@@ -31,30 +31,52 @@ function l1Set(key: string, value: unknown, ttlMs: number): void {
   l1.set(key, { value, expiresAt: Date.now() + ttlMs });
 }
 
-async function redisGet(key: string): Promise<string | null> {
+// One pooled client for the whole process. A fresh connect+quit per get/set paid a
+// TCP + AUTH handshake on every cache op — so an L2 hit could cost more than the L3
+// read it was meant to save. ioredis auto-reconnects; the 'error' listener keeps a
+// transient Redis outage from surfacing as an unhandled error event.
+import type IORedis from 'ioredis';
+
+let redisClient: IORedis | null = null;
+let redisInit: Promise<IORedis | null> | null = null;
+
+async function getRedis(): Promise<IORedis | null> {
   const url = process.env.REDIS_URL || '';
   if (!url) return null;
+  if (redisClient) return redisClient;
+  if (!redisInit) {
+    redisInit = (async () => {
+      try {
+        const { default: Redis } = await import('ioredis');
+        const r = new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true });
+        r.on('error', () => { /* swallow — callers degrade to null/L3 */ });
+        await r.connect();
+        redisClient = r;
+        return r;
+      } catch {
+        redisInit = null; // allow a later retry
+        return null;
+      }
+    })();
+  }
+  return redisInit;
+}
+
+async function redisGet(key: string): Promise<string | null> {
+  const r = await getRedis();
+  if (!r) return null;
   try {
-    const { default: Redis } = await import('ioredis');
-    const r = new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true });
-    await r.connect();
-    const v = await r.get(`ranksmile:cache:${key}`);
-    await r.quit();
-    return v;
+    return await r.get(`ranksmile:cache:${key}`);
   } catch {
     return null;
   }
 }
 
 async function redisSet(key: string, value: string, ttlSec: number): Promise<void> {
-  const url = process.env.REDIS_URL || '';
-  if (!url) return;
+  const r = await getRedis();
+  if (!r) return;
   try {
-    const { default: Redis } = await import('ioredis');
-    const r = new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true });
-    await r.connect();
     await r.setex(`ranksmile:cache:${key}`, ttlSec, value);
-    await r.quit();
   } catch {
     /* ignore */
   }

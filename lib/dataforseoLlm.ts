@@ -9,6 +9,7 @@
  */
 import axios from 'axios';
 import { z } from 'zod';
+import { withBreaker } from './circuitBreaker';
 import { locationCodeFor, isDataForSeoConfigured } from './dataforseo';
 import { toDfsLanguageCode } from './domainLanguagePrompts';
 import { filterCitations } from './aiVisibilityBlockedDomains';
@@ -183,10 +184,10 @@ async function postWithRetry(path: string, task: Record<string, unknown>): Promi
    let lastErr: unknown;
    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
       try {
-         const res = await axios.post(`${BASE}${path}`, [task], {
+         const res = await withBreaker('dfs-llm', () => axios.post(`${BASE}${path}`, [task], {
             headers: { Authorization: authHeader(), 'Content-Type': 'application/json' },
             timeout: 120000,
-         });
+         }));
          const parsed = dfsApiEnvelopeSchema.safeParse(res.data);
          if (!parsed.success) {
             throw new Error('Invalid DataForSEO response shape');
