@@ -1,77 +1,142 @@
 import React from 'react';
 import styled from '@emotion/styled';
+import { ArrowUpRight, CheckCircle } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
-import { typeface, textScale, fontWeight } from '../../koala/tokens/typography';
-import { radius, shadow } from '../../koala/tokens/effects';
-import { media } from '../../koala/tokens/breakpoints';
-import { Container } from '../primitives';
-import { ENGINES, FOOTER_COLUMNS, SITE_NAME } from '../content';
+import { typeface, fontWeight } from '../../koala/tokens/typography';
+import { shadow } from '../../koala/tokens/effects';
+import { LEGAL_COMPANY } from '../../../lib/legal/company';
+import { BP, Container } from '../primitives';
+import { FOOTER_BADGES, FOOTER_COLUMNS, FOOTER_LEGAL, SIGN_UP_HREF, SITE_NAME, SUPPORT_EMAIL } from '../content';
+
+/* Figma 1:3845 — py 126; grid 1.5fr + 4×1fr, gap-x 18 / gap-y 90; rows: logo+badges · columns · legal. */
 
 const Root = styled.footer`
   border-top: 1px solid ${semantic.border.primary};
   background: ${semantic.background.primary};
-  padding: 56px 0 32px;
   font-family: ${typeface.body};
+  color: ${semantic.text.primary};
 `;
 
-const Top = styled.div`
+const Grid = styled.div`
   display: grid;
-  gap: 40px;
-  grid-template-columns: 1fr;
-  ${media.md} {
-    grid-template-columns: 1.4fr repeat(4, 1fr);
-    gap: 32px;
+  grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 1fr));
+  column-gap: 18px;
+  row-gap: 90px;
+  padding: 126px 0;
+  ${BP.lg} {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 54px;
+    padding: 72px 0;
   }
-`;
-
-const Brand = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 300px;
+  ${BP.sm} {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const Logo = styled.a`
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  height: 78.83px;
   text-decoration: none;
   color: ${semantic.text.primary};
   font-family: ${typeface.heading};
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -0.04em;
   font-weight: ${fontWeight.bold};
-  font-size: ${textScale.xl.fontSize};
-  letter-spacing: -0.02em;
   img {
-    width: 28px;
-    height: 28px;
+    width: 56px;
+    height: 56px;
+  }
+  em {
+    font-style: normal;
+    color: ${semantic.text.brand};
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: ${shadow.focus};
+    border-radius: 8px;
   }
 `;
 
-const Tagline = styled.p`
-  margin: 0;
-  font-size: ${textScale.sm.fontSize};
-  line-height: ${textScale.sm.lineHeight};
-  color: ${semantic.text.secondary};
+const Badges = styled.div`
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 45px;
+  padding-top: 58.83px;
+  flex-wrap: wrap;
+  ${BP.lg} {
+    grid-column: 1 / -1;
+    padding-top: 0;
+  }
 `;
 
-const ColTitle = styled.h3`
-  margin: 0 0 14px;
-  font-size: ${textScale.sm.fontSize};
+const Badge = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  font-size: 18px;
+  line-height: 27px;
   font-weight: ${fontWeight.bold};
   color: ${semantic.text.primary};
+  white-space: pre;
+  svg {
+    color: ${semantic.status.success};
+  }
+  span {
+    font-weight: ${fontWeight.bold};
+    color: ${semantic.text.secondary};
+  }
 `;
 
-const Links = styled.ul`
-  list-style: none;
-  margin: 0;
-  padding: 0;
+const Company = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 17.4px;
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 27px;
+    font-weight: ${fontWeight.regular};
+  }
+  address {
+    font-style: normal;
+    font-size: 15.8px;
+    line-height: 23.63px;
+    color: ${semantic.text.secondary};
+  }
 `;
 
-const FooterLink = styled.a`
-  font-size: ${textScale.sm.fontSize};
+const Col = styled.nav`
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 27px;
+    font-weight: ${fontWeight.regular};
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+`;
+
+const FLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 4.5px;
+  padding: 5.4px 0;
+  font-size: 15.8px;
+  line-height: 23.63px;
   color: ${semantic.text.secondary};
   text-decoration: none;
   &:hover {
@@ -80,64 +145,105 @@ const FooterLink = styled.a`
   &:focus-visible {
     outline: none;
     box-shadow: ${shadow.focus};
-    border-radius: ${radius.sm};
+    border-radius: 6px;
   }
 `;
 
-const Bottom = styled.div`
+const Legal = styled.div`
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 48px;
-  padding-top: 24px;
-  border-top: 1px solid ${semantic.border.primary};
-  font-size: ${textScale.xs.fontSize};
-  color: ${semantic.text.tertiary};
+  gap: 18px;
+  div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+  }
+  small {
+    font-size: 15.8px;
+    line-height: 23.63px;
+    color: ${semantic.text.tertiary};
+  }
 `;
 
 export function Footer() {
   return (
     <Root>
       <Container>
-        <Top>
-          <Brand>
-            <Logo href="/">
-              <img src="/favicon.svg" alt="" width={28} height={28} />
-              {SITE_NAME}
-            </Logo>
-            <Tagline>
-              SEO and AI visibility workspace. Rank in Google and get cited by
-              {' '}
-              {ENGINES.slice(1).join(', ')}
-              .
-            </Tagline>
-          </Brand>
+        <Grid>
+          <Logo href="/">
+            <img src="/favicon.svg" alt="" width={56} height={56} />
+            <span>
+              Rank
+              <em>smile</em>
+            </span>
+          </Logo>
+          <Badges>
+            {FOOTER_BADGES.map((b) => (
+              <Badge key={b.strong} href={b.href}>
+                <CheckCircle size={18} weight="fill" aria-hidden />
+                {b.strong}
+                {' '}
+                <span>{b.muted}</span>
+              </Badge>
+            ))}
+          </Badges>
+
+          <Company>
+            <h3>Company</h3>
+            <address>
+              {LEGAL_COMPANY.legalName}
+              <br />
+              {LEGAL_COMPANY.registeredAddress}
+              <br />
+              {LEGAL_COMPANY.country}
+              <br />
+              {`NIP: ${LEGAL_COMPANY.nip}`}
+            </address>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              <li>
+                <FLink href="/legal">
+                  Legal hub
+                  <ArrowUpRight size={13.5} weight="bold" aria-hidden />
+                </FLink>
+              </li>
+              <li><FLink href={SIGN_UP_HREF}>Start for free</FLink></li>
+              <li><FLink href={`mailto:${SUPPORT_EMAIL}`}>Contact</FLink></li>
+            </ul>
+          </Company>
+
           {FOOTER_COLUMNS.map((col) => (
-            <nav key={col.title} aria-label={col.title}>
-              <ColTitle>{col.title}</ColTitle>
-              <Links>
+            <Col key={col.title} aria-label={col.title}>
+              <h3>{col.title}</h3>
+              <ul>
                 {col.links.map((link) => (
-                  <li key={link.href}>
-                    <FooterLink href={link.href}>{link.label}</FooterLink>
+                  <li key={`${col.title}-${link.label}`}>
+                    <FLink href={link.href}>
+                      {link.label}
+                      {'external' in link && link.external ? <ArrowUpRight size={13.5} weight="bold" aria-hidden /> : null}
+                    </FLink>
                   </li>
                 ))}
-              </Links>
-            </nav>
+              </ul>
+            </Col>
           ))}
-        </Top>
-        <Bottom>
-          <span>
-            ©
-            {' '}
-            {new Date().getFullYear()}
-            {' '}
-            {SITE_NAME}
-            . All rights reserved.
-          </span>
-          <span>Made for content teams who want to be the answer.</span>
-        </Bottom>
+
+          <Legal>
+            <div>
+              {FOOTER_LEGAL.map((l) => <FLink key={l.href} href={l.href}>{l.label}</FLink>)}
+            </div>
+            <small>
+              ©
+              {' '}
+              {new Date().getFullYear()}
+              {' '}
+              {SITE_NAME}
+            </small>
+          </Legal>
+        </Grid>
       </Container>
     </Root>
   );

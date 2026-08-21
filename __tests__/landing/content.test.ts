@@ -4,16 +4,16 @@ describe('landing structured data', () => {
   const nodes = buildJsonLd();
   const byType = (type: string) => nodes.find((n) => n['@type'] === type);
 
-  it('ships Organization, WebSite, SoftwareApplication and FAQPage nodes', () => {
-    expect(nodes.map((n) => n['@type'])).toEqual(['Organization', 'WebSite', 'SoftwareApplication', 'FAQPage']);
+  it('ships Organization, WebSite and SoftwareApplication nodes', () => {
+    expect(nodes.map((n) => n['@type'])).toEqual(['Organization', 'WebSite', 'SoftwareApplication']);
     nodes.forEach((n) => expect(n['@context']).toBe('https://schema.org'));
   });
 
-  it('mirrors every FAQ entry into FAQPage', () => {
-    const faq = byType('FAQPage') as { mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }> };
-    expect(faq.mainEntity).toHaveLength(FAQ.length);
-    expect(faq.mainEntity[0].name).toBe(FAQ[0].q);
-    expect(faq.mainEntity[0].acceptedAnswer.text).toBe(FAQ[0].a);
+  // FAQPage markup is only valid when the Q&A is visible on the page; the landing
+  // follows the reference layout (no FAQ section), so the answers ship in llms.txt only.
+  it('keeps FAQ content out of JSON-LD but available for llms.txt', () => {
+    expect(byType('FAQPage')).toBeUndefined();
+    expect(FAQ.length).toBeGreaterThan(0);
   });
 
   it('lists one EUR offer per sellable plan, priced from the billing source of truth', () => {

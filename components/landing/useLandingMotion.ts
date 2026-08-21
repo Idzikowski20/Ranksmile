@@ -31,8 +31,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement>) {
 
       ctx = gsap.context(() => {
         // ── Hero: one orchestrated entrance ─────────────────────────────────
-        const hero = gsap.timeline({ defaults: { ease: EASE.out, duration: 0.7 } });
-        hero
+        gsap.timeline({ defaults: { ease: EASE.out, duration: 0.7 } })
           .from('[data-hero="eyebrow"]', { y: 12, autoAlpha: 0, duration: 0.5 })
           .from('[data-hero="line"]', { y: 28, autoAlpha: 0, stagger: 0.09 }, '-=0.25')
           .from('[data-hero="cta"]', { y: 16, autoAlpha: 0, duration: 0.5 }, '-=0.35')
@@ -47,7 +46,8 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement>) {
             .to(word, { yPercent: -40, autoAlpha: 0, duration: 0.28, ease: 'power2.in' })
             .call(() => {
               i = (i + 1) % ENGINES.length;
-              word.textContent = ENGINES[i];
+              const node = word;
+              node.textContent = ENGINES[i];
             })
             .fromTo(word, { yPercent: 40, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.36, ease: EASE.out });
         }
@@ -61,7 +61,19 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement>) {
           onEnter: (batch) => gsap.to(batch, { autoAlpha: 1, y: 0, duration: 0.7, ease: EASE.out, stagger: 0.08, overwrite: true }),
         }));
 
-        // ── Stats: count up when the card enters ────────────────────────────
+        // ── Demo: the answer card slides up inside the laptop ───────────────
+        const demoCard = root.querySelector('[data-demo-card]');
+        if (demoCard) {
+          gsap.from(demoCard, {
+            y: 60,
+            autoAlpha: 0,
+            duration: 0.9,
+            ease: EASE.out,
+            scrollTrigger: onRoot({ trigger: demoCard, start: 'top 85%', once: true }),
+          });
+        }
+
+        // ── Stats / data: count up when the number enters ───────────────────
         gsap.utils.toArray<HTMLElement>('[data-count]').forEach((el) => {
           const target = Number(el.dataset.count);
           const decimals = Number(el.dataset.decimals ?? 0);
@@ -89,6 +101,26 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement>) {
             scrollTrigger: onRoot({ trigger: el, start: 'top 85%', once: true }),
           });
         });
+        gsap.utils.toArray<HTMLElement>('[data-grow-x]').forEach((el) => {
+          gsap.from(el, {
+            scaleX: 0,
+            transformOrigin: 'left',
+            duration: 1.2,
+            ease: EASE.out,
+            scrollTrigger: onRoot({ trigger: el, start: 'top 85%', once: true }),
+          });
+        });
+
+        // ── Solution: score rings draw in ───────────────────────────────────
+        gsap.utils.toArray<SVGCircleElement>('[data-ring]').forEach((el) => {
+          const c = el.getTotalLength();
+          gsap.from(el, {
+            strokeDashoffset: c,
+            duration: 1.4,
+            ease: EASE.out,
+            scrollTrigger: onRoot({ trigger: el, start: 'top 85%', once: true }),
+          });
+        });
 
         // ── Workflow: each colour panel slides in from its side ─────────────
         gsap.utils.toArray<HTMLElement>('[data-panel]').forEach((panel) => {
@@ -111,6 +143,26 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement>) {
             });
           }
         });
+
+        // ── Timeline: the rail draws left→right, dots pop after ─────────────
+        const rail = root.querySelector('[data-rail]');
+        if (rail) {
+          gsap.timeline({ scrollTrigger: onRoot({ trigger: rail, start: 'top 85%', once: true }) })
+            .from(rail, { scaleX: 0, duration: 1.2, ease: EASE.inOut })
+            .from('[data-rail-dot]', { scale: 0, duration: 0.4, stagger: 0.12, ease: 'back.out(2)' }, '-=0.5');
+        }
+
+        // ── Data: the chart line draws ──────────────────────────────────────
+        const chartLine = root.querySelector<SVGPolylineElement>('[data-chart-line]');
+        if (chartLine) {
+          const len = chartLine.getTotalLength();
+          gsap.fromTo(chartLine, { strokeDasharray: len, strokeDashoffset: len }, {
+            strokeDashoffset: 0,
+            duration: 1.6,
+            ease: EASE.out,
+            scrollTrigger: onRoot({ trigger: chartLine, start: 'top 85%', once: true }),
+          });
+        }
 
         // ── CTA: the dashboard peeks up as the band arrives ─────────────────
         const ctaMock = root.querySelector('[data-cta-mock]');

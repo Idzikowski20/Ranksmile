@@ -75,14 +75,14 @@ export const ANNOUNCEMENT = {
 } as const;
 
 /** Avatar stack under the hero — services Ranksmile reads from or publishes to. */
-export const HERO_AVATARS: { label: string; icon?: 'google' | 'openai' | 'wordpress' | 'github'; letter?: string; dot?: boolean }[] = [
+export const HERO_AVATARS: { label: string; icon?: 'google' | 'openai' | 'github'; letter?: string; dot?: boolean }[] = [
   { label: 'Google', icon: 'google' },
   { label: 'ChatGPT', icon: 'openai', dot: true },
   { label: 'Claude', letter: 'C' },
   { label: 'Gemini', letter: 'G', dot: true },
   { label: 'Perplexity', letter: 'P' },
   { label: 'AI Overviews', letter: 'A', dot: true },
-  { label: 'WordPress', icon: 'wordpress' },
+  { label: 'WordPress', letter: 'W' },
   { label: 'Search Console', letter: 'S', dot: true },
   { label: 'Bing', letter: 'B' },
   { label: 'GitHub', icon: 'github' },
