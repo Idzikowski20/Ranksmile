@@ -110,7 +110,14 @@ const Widget = styled.div`
   flex-direction: column;
 `;
 
-const WRow = styled.div<{ $first?: boolean; $last?: boolean; $dim?: boolean; $plain?: boolean }>`
+type WRowProps = { $first?: boolean; $last?: boolean; $dim?: boolean; $plain?: boolean };
+function rowRadius(p: WRowProps): string {
+  if (p.$first) return '15.75px 15.75px 0 0';
+  if (p.$last) return '0 0 15.75px 15.75px';
+  return '0';
+}
+
+const WRow = styled.div<WRowProps>`
   display: flex;
   align-items: center;
   gap: 13.5px;
@@ -119,7 +126,7 @@ const WRow = styled.div<{ $first?: boolean; $last?: boolean; $dim?: boolean; $pl
   box-sizing: border-box;
   background: ${(p) => (p.$plain ? 'transparent' : semantic.background.primary)};
   border: 1px solid ${(p) => (p.$first && !p.$plain ? semantic.border.primary : 'transparent')};
-  border-radius: ${(p) => (p.$first ? '15.75px 15.75px 0 0' : p.$last ? '0 0 15.75px 15.75px' : '0')};
+  border-radius: ${(p) => rowRadius(p)};
   font-size: 18px;
   line-height: 27px;
   font-weight: ${fontWeight.medium};
@@ -155,13 +162,17 @@ const ScoreCol = styled.div`
   color: ${semantic.text.primary};
 `;
 
+const dotsContent = (p: { $dots?: boolean }) => (p.$dots ? "''" : 'none');
+
 const HDivider = styled.div<{ $dots?: boolean }>`
   position: relative;
   height: 1.5px;
-  background: ${(p) => (p.$dots ? semantic.border.primary : `linear-gradient(to left, transparent, ${semantic.border.primary} 30%, ${semantic.border.primary} 70%, transparent)`)};
+  background: ${(p) => (p.$dots
+    ? semantic.border.primary
+    : `linear-gradient(to left, transparent, ${semantic.border.primary} 30%, ${semantic.border.primary} 70%, transparent)`)};
   &::before,
   &::after {
-    content: ${(p) => (p.$dots ? "''" : 'none')};
+    content: ${dotsContent};
     position: absolute;
     top: 50%;
     width: 9px;
@@ -225,7 +236,16 @@ function Ring({ value, size, stroke, fontSize }: { value: number; size: number; 
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         data-ring
       />
-      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fontSize={fontSize} fontWeight={700} fill="var(--koala-text-primary)" fontFamily="var(--font-family-primary)">
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={fontSize}
+        fontWeight={700}
+        fill="var(--koala-text-primary)"
+        fontFamily="var(--font-family-primary)"
+      >
         {value}
       </text>
     </svg>

@@ -311,7 +311,11 @@ export const DATA_CARDS = {
       role: 'Unlimited documents and brand spaces*',
     },
   ],
-  footer: { muted: 'Every day, ', strong: 'SEO teams, agencies and content writers', tail: ' grow with Ranksmile — from first site to full client roster.' },
+  footer: {
+    muted: 'Every day, ',
+    strong: 'SEO teams, agencies and content writers',
+    tail: ' grow with Ranksmile — from first site to full client roster.',
+  },
   footerLink: { label: 'Start for free', href: SIGN_UP_HREF },
 } as const;
 
@@ -345,8 +349,20 @@ export const RESOURCES_TOP = [
 export const RESOURCES_BOTTOM = [
   { tag: 'Pricing', title: 'Plans & limits', body: 'Growth, Scale and Agency — EUR, VAT excluded, cancel anytime.', href: PRICING_HREF, gap: 99 },
   { tag: 'Legal', title: 'Terms, privacy, DPA', body: 'Everything a procurement team asks for, in plain English.', href: '/legal', gap: 72 },
-  { tag: 'API', title: 'Ranksmile API access', body: 'Available on Scale and Agency plans for reporting and automation.', href: PRICING_HREF, gap: 45 },
-  { tag: 'Contact', title: 'Talk to a human', body: `Questions, migrations or a walkthrough — write to ${SUPPORT_EMAIL}.`, href: `mailto:${SUPPORT_EMAIL}`, gap: 45 },
+  {
+    tag: 'API',
+    title: 'Ranksmile API access',
+    href: PRICING_HREF,
+    gap: 45,
+    body: 'Available on Scale and Agency plans for reporting and automation.',
+  },
+  {
+    tag: 'Contact',
+    title: 'Talk to a human',
+    href: `mailto:${SUPPORT_EMAIL}`,
+    gap: 45,
+    body: `Questions, migrations or a walkthrough — write to ${SUPPORT_EMAIL}.`,
+  },
 ] as const;
 
 export const FAQ = [

@@ -60,6 +60,13 @@ const TONE_BG = {
   plain: 'var(--koala-bg-primary)',
 } as const;
 
+const TONE_FG = {
+  brand: 'var(--koala-bg-inverse)',
+  blue: '#fff',
+  photo: '#fff',
+  plain: 'var(--koala-text-primary)',
+} as const;
+
 const Card = styled.a<{ $tone: keyof typeof TONE_BG; $gap?: number }>`
   position: relative;
   display: flex;
@@ -71,7 +78,7 @@ const Card = styled.a<{ $tone: keyof typeof TONE_BG; $gap?: number }>`
   border-radius: 18px;
   border: 1px solid ${(p) => (p.$tone === 'plain' ? semantic.border.primary : 'transparent')};
   background: ${(p) => TONE_BG[p.$tone]};
-  color: ${(p) => (p.$tone === 'brand' ? 'var(--koala-bg-inverse)' : p.$tone === 'plain' ? semantic.text.primary : '#fff')};
+  color: ${(p) => TONE_FG[p.$tone]};
   text-decoration: none;
   transition: transform var(--motion-normal) var(--motion-ease-out), box-shadow var(--motion-normal) var(--motion-ease-out);
   &:hover {
@@ -208,7 +215,13 @@ export function Resources() {
 
         <Row $cols={3}>
           {RESOURCES_TOP.map((r) => (
-            <Card key={r.tag} href={r.href} $tone={r.tone} data-reveal style={r.art === 'photo' ? { minHeight: 520, justifyContent: 'space-between' } : undefined}>
+            <Card
+              key={r.tag}
+              href={r.href}
+              $tone={r.tone}
+              data-reveal
+              style={r.art === 'photo' ? { minHeight: 520, justifyContent: 'space-between' } : undefined}
+            >
               {r.art === 'photo' ? (
                 <>
                   <PhotoGrid aria-hidden />

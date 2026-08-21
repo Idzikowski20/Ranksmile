@@ -142,16 +142,6 @@ const Menu = styled.ul`
   }
 `;
 
-const MenuItem = styled.li`
-  position: relative;
-  &:hover > div,
-  &:focus-within > div {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-  }
-`;
-
 const MenuButton = styled.a`
   display: inline-flex;
   align-items: center;
@@ -171,17 +161,32 @@ const MenuButton = styled.a`
     color: ${semantic.text.tertiary};
     transition: transform var(--motion-fast) var(--motion-ease-standard);
   }
-  &:hover,
-  ${MenuItem}:focus-within & {
+  &:hover {
     background: ${semantic.button.ghost.bgHover};
-  }
-  ${MenuItem}:hover & svg,
-  ${MenuItem}:focus-within & svg {
-    transform: rotate(180deg);
   }
   &:focus-visible {
     outline: none;
     box-shadow: ${shadow.focus};
+  }
+`;
+
+/* Component selectors need the Emotion babel plugin (not configured); the hover/focus
+   rules for the button live on the parent <li> instead, via plain child selectors. */
+const MenuItem = styled.li`
+  position: relative;
+  &:hover > div,
+  &:focus-within > div {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  &:hover > a,
+  &:focus-within > a {
+    background: ${semantic.button.ghost.bgHover};
+  }
+  &:hover > a svg,
+  &:focus-within > a svg {
+    transform: rotate(180deg);
   }
 `;
 
@@ -198,7 +203,10 @@ const Dropdown = styled.div`
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
-  transition: opacity var(--motion-fast) var(--motion-ease-standard), transform var(--motion-fast) var(--motion-ease-standard), visibility 0s linear var(--motion-fast);
+  transition:
+    opacity var(--motion-fast) var(--motion-ease-standard),
+    transform var(--motion-fast) var(--motion-ease-standard),
+    visibility 0s linear var(--motion-fast);
 `;
 
 const DropLink = styled.a`

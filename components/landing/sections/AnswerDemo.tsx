@@ -171,7 +171,7 @@ const Toggle = styled.label<{ $on: boolean }>`
     transition: left var(--motion-fast) var(--motion-ease-standard);
   }
   &:focus-within {
-    box-shadow: var(--shadow-focus, 0 0 0 2px #fff, 0 0 0 4px #f84416);
+    box-shadow: var(--shadow-focus);
   }
 `;
 
@@ -360,7 +360,11 @@ const Lines = styled.ul`
 `;
 
 const LINE_FG = { neutral: 'inherit', bad: '#ff1d5d', good: 'var(--landing-green-ink)' } as const;
-const LINE_BG = { neutral: 'rgba(0,0,0,0.15)', bad: 'rgba(255,29,93,0.15)', good: 'color-mix(in srgb, var(--landing-green) 18%, transparent)' } as const;
+const LINE_BG = {
+  neutral: 'rgba(0,0,0,0.15)',
+  bad: 'rgba(255,29,93,0.15)',
+  good: 'color-mix(in srgb, var(--landing-green) 18%, transparent)',
+} as const;
 
 const Line = styled.li<{ $state?: keyof typeof LINE_FG }>`
   display: flex;
@@ -453,7 +457,12 @@ export function AnswerDemo() {
           <Field>
             <FieldLabel>Ranksmile OS</FieldLabel>
             <Pill>
-              <ShieldCheck size={27} weight={on ? 'fill' : 'regular'} color={on ? 'var(--landing-green)' : 'var(--koala-status-danger)'} aria-hidden />
+              <ShieldCheck
+                size={27}
+                weight={on ? 'fill' : 'regular'}
+                color={on ? 'var(--landing-green)' : 'var(--koala-status-danger)'}
+                aria-hidden
+              />
               <span>{on ? 'Visible with Ranksmile' : 'Invisible without Ranksmile'}</span>
               <Toggle $on={on}>
                 <input

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Link from 'next/link';
 import styled from '@emotion/styled';
 import { ArrowRight, BellRinging, CheckCircle, Cursor, Quotes } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
@@ -697,10 +698,12 @@ export function Loop() {
                     &amp; Recent Changes
                   </h2>
                 </div>
-                <a href="/auth/sign-up">
-                  View all
-                  <ArrowRight size={16} weight="bold" aria-hidden />
-                </a>
+                <Link href="/auth/sign-up" legacyBehavior>
+                  <a>
+                    View all
+                    <ArrowRight size={16} weight="bold" aria-hidden />
+                  </a>
+                </Link>
               </UpdatesHead>
               <UpdateList>
                 {UPDATES.map((u) => (

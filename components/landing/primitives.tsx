@@ -11,7 +11,12 @@ import { shadow } from '../koala/tokens/effects';
 export const BP = { lg: '@media (max-width: 1279px)', md: '@media (max-width: 1023px)', sm: '@media (max-width: 767px)' } as const;
 
 /** Figma shadow on stat / resource cards. */
-export const CARD_SHADOW = '0px 1px 1px 0px rgba(0,0,0,0.05), 0px 4px 6px 0px rgba(34,42,53,0.04), 0px 24px 68px 0px rgba(47,48,55,0.05), 0px 2px 3px 0px rgba(0,0,0,0.04)';
+export const CARD_SHADOW = [
+  '0px 1px 1px 0px rgba(0,0,0,0.05)',
+  '0px 4px 6px 0px rgba(34,42,53,0.04)',
+  '0px 24px 68px 0px rgba(47,48,55,0.05)',
+  '0px 2px 3px 0px rgba(0,0,0,0.04)',
+].join(', ');
 
 /** 1440px content column, 27px gutters below the canvas width. */
 export const Container = styled.div`
@@ -114,7 +119,11 @@ export const CtaLink = styled.a<{ $tone?: 'brand' | 'inverse' | 'white' }>`
   text-decoration: none;
   white-space: nowrap;
   cursor: var(--koala-cursor-pointing);
-  background: ${(p) => ({ brand: semantic.button.brand.bg, inverse: semantic.background.inverse, white: semantic.background.primary }[p.$tone ?? 'brand'])};
+  background: ${(p) => ({
+    brand: semantic.button.brand.bg,
+    inverse: semantic.background.inverse,
+    white: semantic.background.primary,
+  }[p.$tone ?? 'brand'])};
   color: ${(p) => ({ brand: semantic.button.brand.fg, inverse: semantic.text.onInverse, white: semantic.text.primary }[p.$tone ?? 'brand'])};
   box-shadow: inset 0px -1px 0px 0px rgba(0,0,0,0.2), inset 0px 1px 0px 0px rgba(255,255,255,0.25);
   transition: transform var(--motion-fast) var(--motion-ease-standard), filter var(--motion-fast) var(--motion-ease-standard);

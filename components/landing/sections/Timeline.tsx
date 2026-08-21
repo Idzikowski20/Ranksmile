@@ -91,7 +91,7 @@ const RailFade = styled.i<{ $dir: 'left' | 'right' }>`
   height: 100%;
   background: ${(p) => (p.$dir === 'left'
     ? `linear-gradient(to right, transparent, ${semantic.border.secondary})`
-    : `repeating-linear-gradient(to right, var(--koala-bg-brand) 0 12px, transparent 12px 24px)`)};
+    : 'repeating-linear-gradient(to right, var(--koala-bg-brand) 0 12px, transparent 12px 24px)')};
   mask-image: ${(p) => (p.$dir === 'right' ? 'linear-gradient(to right, black, transparent)' : 'none')};
   -webkit-mask-image: ${(p) => (p.$dir === 'right' ? 'linear-gradient(to right, black, transparent)' : 'none')};
 `;
