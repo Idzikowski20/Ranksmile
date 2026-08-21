@@ -1,0 +1,85 @@
+components/landing/sections/Timeline.tsx
+  s_4134d8bafd16e7::t_275a2153fb68a4 35
+components/contentEditor/sections/CeToolkit.tsx
+  s_4134d8bafd16e7::t_d97657a89f019d 83-84,90-91
+  s_4134d8bafd16e7::t_0abc26e42324bd 85
+__tests__/landing/ringGeometry.test.ts
+  s_4134d8bafd16e7::t_9712b9da6790df 1-21
+components/landing/sections/Loop.tsx
+  s_4134d8bafd16e7::t_901e43ab6bfcc3 314-316
+components/aiTracking/sections/AiFrontPage.tsx
+  s_4134d8bafd16e7::t_d1140badd7a64b 6
+  s_4134d8bafd16e7::t_48c2c1a4126f99 391
+components/landing/sections/Hero.tsx
+  s_4134d8bafd16e7::t_ea9f72c98b9b62 183-186,197-203
+  s_4134d8bafd16e7::t_77bf09bc679065 343
+  s_4134d8bafd16e7::t_2cdf55dc7118fc 289
+  s_4134d8bafd16e7::t_35cb0fb637e98e 229-237
+components/aiTracking/useRadarMotion.ts
+  s_4134d8bafd16e7::t_a9fb10f828c6b2 4-11
+  s_4134d8bafd16e7::t_5491fb9a0347f3 91
+components/pricing/PricingPage.tsx
+  s_4134d8bafd16e7::t_c8158ee8c67bbb 84
+components/aiTracking/sections/AiHow.tsx
+  s_4134d8bafd16e7::t_88b8ffa9a4387a 49-51
+components/landing/sections/Resources.tsx
+  s_4134d8bafd16e7::t_9afef5e20f6c00 42,44-45
+components/landing/primitives.tsx
+  s_4134d8bafd16e7::t_3797e8268ed70b 121-125
+components/contentEditor/sections/CeWorkflow.tsx
+  s_4134d8bafd16e7::t_fad16bf2fbd476 6
+  s_4134d8bafd16e7::t_dc2b438d40e070 220
+  s_4134d8bafd16e7::t_f3749cb9a7287e 260
+components/landing/sections/ringGeometry.ts
+  s_4134d8bafd16e7::t_fc92b9ef79d4a9 14-15
+  s_4134d8bafd16e7::t_912c26e9f49a47 1-13
+components/landing/sections/Solution.tsx
+  s_4134d8bafd16e7::t_aead7ebb1a1d4c 235
+  s_4134d8bafd16e7::t_1ebb0501a58223 8
+  s_4134d8bafd16e7::t_8ffc3020028d76 222
+__tests__/aiTracking/pricingView.test.ts
+  s_4134d8bafd16e7::t_9be46e9f8d8ea9 1-13
+components/landing/sections/CtaBand.tsx
+  s_4134d8bafd16e7::t_8172b656a4dc1b 126
+  s_4134d8bafd16e7::t_ed83d3e3333cc5 95-98
+components/contentEditor/ContentEditorPage.tsx
+  s_4134d8bafd16e7::t_c8158ee8c67bbb 84
+components/aiTracking/sections/AiCapabilities.tsx
+  s_4134d8bafd16e7::t_83e7ca26efaa46 84-85
+  s_4134d8bafd16e7::t_aa0d555ea5c870 43
+  s_4134d8bafd16e7::t_0c4ad2f3b7d70f 65-67
+components/contentEditor/sections/CeCta.tsx
+  s_4134d8bafd16e7::t_0e5eb90e9b8172 109
+components/aiTracking/sections/AiPricing.tsx
+  s_4134d8bafd16e7::t_7ad842f41e008d 504-508
+  s_4134d8bafd16e7::t_4408ba32ce2a79 8
+  s_4134d8bafd16e7::t_b5ded944a4ace8 531-534
+  s_4134d8bafd16e7::t_0bb8165d842ecb 9,451,517,559,563,591,595
+  s_4134d8bafd16e7::t_c0d4a941e162f6 224-226
+  s_4134d8bafd16e7::t_0c6497251d44cd 7
+  s_4134d8bafd16e7::t_2877615aa7a2bf 503,510
+components/landing/LandingPage.tsx
+  s_4134d8bafd16e7::t_c8158ee8c67bbb 107
+__tests__/aiTracking/useRadarMotion.test.ts
+  s_4134d8bafd16e7::t_c4b4a9d6a8b648 1-19
+components/aiTracking/pricingView.ts
+  s_4134d8bafd16e7::t_635192decfee48 1-17
+components/aiTracking/AiTrackingPage.tsx
+  s_4134d8bafd16e7::t_c8158ee8c67bbb 86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "128afd3bbc49d39ed2b3494eb2ab8c64b2b746b3",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
