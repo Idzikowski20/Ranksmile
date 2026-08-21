@@ -451,7 +451,7 @@ export const FOOTER_LEGAL = [
 ] as const;
 
 /** Public, indexable URLs — sitemap + llms.txt read from here. */
-export const PUBLIC_ROUTES = ['/', '/ai-visibility-tracking', '/seo-content-editor', '/legal', '/legal/terms', '/legal/privacy', '/legal/cookies', '/legal/dpa'] as const;
+export const PUBLIC_ROUTES = ['/', '/ai-visibility-tracking', '/seo-content-editor', '/pricing', '/legal', '/legal/terms', '/legal/privacy', '/legal/cookies', '/legal/dpa'] as const;
 
 export function buildJsonLd(): Record<string, unknown>[] {
   const organization = {
