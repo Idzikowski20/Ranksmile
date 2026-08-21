@@ -111,19 +111,23 @@ async function dfsPost(path: string, task: Task): Promise<unknown[]> {
    if (!isDataForSeoConfigured()) {
       throw new Error('DataForSEO not configured — set DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD.');
    }
-   const res = await withBreaker('dfs', () => axios.post<DfsApiResponse>(`${BASE}${path}`, [task], {
-      headers: { Authorization: authHeader(), 'Content-Type': 'application/json' },
-      timeout: 60000,
-   }));
+   // Validate inside the breaker: a non-20000 envelope/task is an HTTP-200 provider
+   // failure, and must count toward tripping the circuit — not reset it as a success.
+   return withBreaker('dfs', async () => {
+      const res = await axios.post<DfsApiResponse>(`${BASE}${path}`, [task], {
+         headers: { Authorization: authHeader(), 'Content-Type': 'application/json' },
+         timeout: 60000,
+      });
 
-   if (res.data?.status_code !== 20000) {
-      throw new Error(`DataForSEO API ${res.data?.status_code}: ${res.data?.status_message}`);
-   }
-   const taskData = res.data?.tasks?.[0];
-   if (taskData?.status_code !== 20000) {
-      throw new Error(`DataForSEO task ${taskData?.status_code}: ${taskData?.status_message}`);
-   }
-   return taskData?.result?.[0]?.items ?? [];
+      if (res.data?.status_code !== 20000) {
+         throw new Error(`DataForSEO API ${res.data?.status_code}: ${res.data?.status_message}`);
+      }
+      const taskData = res.data?.tasks?.[0];
+      if (taskData?.status_code !== 20000) {
+         throw new Error(`DataForSEO task ${taskData?.status_code}: ${taskData?.status_message}`);
+      }
+      return taskData?.result?.[0]?.items ?? [];
+   });
 }
 
 /** Normalises both the flat (keyword_ideas) and nested (ranked_keywords) item shapes. */

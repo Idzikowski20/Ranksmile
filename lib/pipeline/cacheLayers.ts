@@ -3,6 +3,7 @@
  * Thin cache for Corpus / Feature Store reads.
  */
 import { createHash } from 'crypto';
+import type IORedis from 'ioredis';
 
 type CacheEntry = { value: unknown; expiresAt: number };
 
@@ -35,8 +36,6 @@ function l1Set(key: string, value: unknown, ttlMs: number): void {
 // TCP + AUTH handshake on every cache op — so an L2 hit could cost more than the L3
 // read it was meant to save. ioredis auto-reconnects; the 'error' listener keeps a
 // transient Redis outage from surfacing as an unhandled error event.
-import type IORedis from 'ioredis';
-
 let redisClient: IORedis | null = null;
 let redisInit: Promise<IORedis | null> | null = null;
 
