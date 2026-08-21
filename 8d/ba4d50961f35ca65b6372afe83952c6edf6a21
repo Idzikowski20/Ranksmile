@@ -1,0 +1,31 @@
+lib/circuitBreaker.ts
+  s_0a0a7a99358138::t_a299a215354cda 1-51
+lib/dataforseo.ts
+  s_0a0a7a99358138::t_60b5fb37a4f470 18
+  s_0a0a7a99358138::t_fa2d381b78e820 114,117
+lib/pipeline/pipelineQueue.ts
+  s_0a0a7a99358138::t_cbae9b4978f09a 181-199,208-209
+__tests__/lib/circuitBreaker.test.ts
+  s_0a0a7a99358138::t_11db35caabd453 1-29
+lib/pipeline/cacheLayers.ts
+  s_0a0a7a99358138::t_5a32a209969da4 34-43,46-67,69,76-77
+lib/dataforseoLlm.ts
+  s_0a0a7a99358138::t_5d239f59fd1cab 12
+  s_0a0a7a99358138::t_786d3238139b67 187,190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8dba4d50961f35ca65b6372afe83952c6edf6a21",
+  "prompts": {},
+  "sessions": {
+    "s_0a0a7a99358138": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c02357ce-f161-4d1d-a21e-feaac2f5b774",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
