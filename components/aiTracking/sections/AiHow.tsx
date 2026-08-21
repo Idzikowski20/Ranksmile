@@ -46,6 +46,9 @@ const Step = styled.div<{ $imageLeft: boolean }>`
   align-items: flex-start;
   gap: 90px;
   padding: 126px 27px;
+  & > [data-col='art'] {
+    order: ${(p) => (p.$imageLeft ? 0 : 1)};
+  }
   ${BP.lg} {
     flex-direction: column;
     gap: 36px;
@@ -53,9 +56,6 @@ const Step = styled.div<{ $imageLeft: boolean }>`
     & > [data-col='art'] {
       order: 1;
     }
-  }
-  & > [data-col='art'] {
-    order: ${(p) => (p.$imageLeft ? 0 : 1)};
   }
 `;
 

@@ -92,6 +92,10 @@ const Shot = styled.div`
   border-radius: 18px 18px 0 0;
   background: ${semantic.background.primary};
   box-shadow: 0 -10px 60px rgba(0,0,0,0.18);
+  ${BP.md} {
+    top: 0;
+    height: 100%;
+  }
 `;
 
 export function CtaBand() {
@@ -119,7 +123,7 @@ export function CtaBand() {
               loading="lazy"
               width={1440}
               height={1160}
-              style={{ display: 'block', width: '100%', height: 'auto' }}
+              style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
             />
           </Shot>
         </Stage>

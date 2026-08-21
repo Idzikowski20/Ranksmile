@@ -4,7 +4,9 @@ import { Check } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
 import { BP, ArrowLink, Container, Section, Tag } from '../../landing/primitives';
-import { PLANS, PRICING, PRICING_HREF, SIGN_UP_HREF } from '../content';
+import { PLANS, PRICING, PRICING_HREF } from '../content';
+import { SUPPORT_EMAIL } from '../../landing/content';
+import { planHref, yearlySaving } from '../pricingView';
 
 /*
  * Figma 3:4942 — head (tag · 55.2 H2) · top card 1386×456 (926fr / 611fr): title, price + billing
@@ -218,6 +220,9 @@ const Stop = styled.button<{ $active: boolean }>`
     font-weight: ${fontWeight.bold};
   }
 `;
+
+/* The ∞ stop is a real link to a custom-volume enquiry, not a plan selector. */
+const StopLink = Stop.withComponent('a');
 
 const Hint = styled.p`
   margin: 0;
@@ -443,7 +448,7 @@ export function AiPricing() {
   const [stop, setStop] = useState(0);
   const plan = PLANS[stop];
   const price = yearly ? plan.priceYearly : plan.priceMonthly;
-  const saving = (plan.priceMonthly - plan.priceYearly) * 12;
+  const saving = yearlySaving(plan.priceMonthly, plan.priceYearly);
   const pct = [20.6, 55, 100][stop];
   const [pro, peace] = [PLANS[1], PLANS[2]];
 
@@ -495,16 +500,21 @@ export function AiPricing() {
                     {s.label}
                   </Stop>
                 ))}
-                <Stop type="button" className="inf" $active={false} onClick={() => setStop(PLANS.length - 1)} aria-label="Custom volume">
+                <StopLink
+                  className="inf"
+                  $active={false}
+                  href={`mailto:${SUPPORT_EMAIL}?subject=Ranksmile%20custom%20prompt%20volume`}
+                  aria-label="Custom prompt volume — contact us"
+                >
                   ∞
-                </Stop>
+                </StopLink>
               </Stops>
             </Slider>
             <Hint>
               {PRICING.top.hint.strong}
               <span>{PRICING.top.hint.muted}</span>
             </Hint>
-            <WideCta href={`${SIGN_UP_HREF}?plan=${plan.slug}&billing=${yearly ? 'yearly' : 'monthly'}`}>
+            <WideCta href={planHref(plan.slug, yearly)}>
               {`Start ${plan.name} for €${price}/mo${yearly ? ', billed yearly' : ''}`}
               <span>{PRICING.top.ctaMuted}</span>
             </WideCta>
@@ -518,7 +528,10 @@ export function AiPricing() {
                   {b.value ? `${b.label}: ${b.value}` : b.label}
                   {b.label.startsWith('AI Visibility engines') || b.label.startsWith('AI Prompts (all') ? (
                     <Engines aria-hidden>
-                      {ENGINE_ICONS.map((src) => <img key={src} src={src} alt="" />)}
+                      {ENGINE_ICONS
+                        // The engines row caps at the plan's included count; the prompts row spans all 5.
+                        .slice(0, b.label.startsWith('AI Visibility engines') ? (Number(b.value) || ENGINE_ICONS.length) : ENGINE_ICONS.length)
+                        .map((src) => <img key={src} src={src} alt="" />)}
                     </Engines>
                   ) : null}
                 </span>
@@ -543,11 +556,11 @@ export function AiPricing() {
                   <input type="checkbox" checked={yearly} onChange={(e) => setYearly(e.target.checked)} />
                   <i aria-hidden />
                   Billed yearly
-                  {yearly ? <Saving>{`Saving €${(pro.priceMonthly - pro.priceYearly) * 12}`}</Saving> : null}
+                  {yearly ? <Saving>{`Saving €${yearlySaving(pro.priceMonthly, pro.priceYearly)}`}</Saving> : null}
                 </Billing>
                 <p className="desc">{pro.desc}</p>
               </PlanHead>
-              <PlanCta href={`${SIGN_UP_HREF}?plan=${pro.slug}&billing=${yearly ? 'yearly' : 'monthly'}`}>Start for Free</PlanCta>
+              <PlanCta href={planHref(pro.slug, yearly)}>{`Get ${pro.name}`}</PlanCta>
             </PlanBody>
             <Features $cols={2}>
               {pro.cardBenefits.map((b) => (
@@ -575,11 +588,11 @@ export function AiPricing() {
                   <input type="checkbox" checked={yearly} onChange={(e) => setYearly(e.target.checked)} />
                   <i aria-hidden />
                   Billed yearly
-                  {yearly ? <Saving>{`Saving €${(peace.priceMonthly - peace.priceYearly) * 12}`}</Saving> : null}
+                  {yearly ? <Saving>{`Saving €${yearlySaving(peace.priceMonthly, peace.priceYearly)}`}</Saving> : null}
                 </Billing>
                 <p className="desc">{peace.desc}</p>
               </PlanHead>
-              <PlanCta $inverse href={`${SIGN_UP_HREF}?plan=${peace.slug}&billing=${yearly ? 'yearly' : 'monthly'}`}>Start for Free</PlanCta>
+              <PlanCta $inverse href={planHref(peace.slug, yearly)}>{`Get ${peace.name}`}</PlanCta>
             </PlanBody>
             <Features $cols={1}>
               <Feature>

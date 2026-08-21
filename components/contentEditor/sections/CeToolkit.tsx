@@ -80,14 +80,15 @@ const Photo = styled.div`
   width: 324px;
   height: 450px;
   flex-shrink: 0;
-  border-radius: 27px;
-  overflow: hidden;
-  border: 1px solid ${semantic.border.primary};
-  img {
+  /* No overflow clip here — the quote badge sits 36px past the right edge.
+     Rounding + border move onto the image so the badge stays visible. */
+  > img {
     display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 27px;
+    border: 1px solid ${semantic.border.primary};
   }
   i {
     position: absolute;

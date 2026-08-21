@@ -40,11 +40,11 @@ const Head = styled.div`
 
 const Grid = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 9px;
   padding-top: 76px;
   ${BP.lg} {
-    flex-wrap: wrap;
     padding-top: 0;
   }
 `;
@@ -62,6 +62,9 @@ const Card = styled.article`
     transform: translateY(-3px);
     box-shadow: 0px 24px 68px rgba(47,48,55,0.08);
   }
+  @media (max-width: 1439px) {
+    width: calc(25% - 6.75px);
+  }
   ${BP.lg} {
     width: calc(50% - 4.5px);
   }
@@ -78,6 +81,8 @@ const Icon = styled.img`
   top: 72px;
   width: 45px;
   height: 45px;
+  object-fit: contain;
+  object-position: left center;
 `;
 
 const Text = styled.p`

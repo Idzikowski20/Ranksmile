@@ -3,7 +3,7 @@ import styled from '@emotion/styled';
 import { FacebookLogo, Globe, GoogleLogo, RedditLogo, Rss, ShoppingBagOpen, YoutubeLogo } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
-import { BP, CARD_SHADOW, Container, Section, Tag } from '../../landing/primitives';
+import { BP, CARD_SHADOW, Container, Section, Tag, VisuallyHidden } from '../../landing/primitives';
 import { FRONTPAGE, STATS } from '../content';
 
 /*
@@ -388,6 +388,7 @@ export function AiFrontPage() {
                     ) : null}
                   </Viz>
                   <Text>
+                    <VisuallyHidden>{label}</VisuallyHidden>
                     <Claim>
                       {stat.lead}
                       <strong>{stat.strong}</strong>

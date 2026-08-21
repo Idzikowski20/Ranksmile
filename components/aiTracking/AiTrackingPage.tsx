@@ -83,7 +83,7 @@ export function AiTrackingPage() {
       <Root ref={rootRef} data-landing-root>
         <SkipLink href="#main">Skip to main content</SkipLink>
         <Header />
-        <main id="main">
+        <main id="main" tabIndex={-1}>
           <AiHero />
           <AiFrontPage />
           <AiSolution />

@@ -3,7 +3,7 @@ import styled from '@emotion/styled';
 import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
 import { BP, Container, Section } from '../../landing/primitives';
-import { WORKFLOW, A } from '../content';
+import { WORKFLOW, A, SIGN_UP_HREF } from '../content';
 
 /* Figma 5:528 — pt 125: head (eyebrow · 44.5px H2 @ .5) gap 90 → 3 rows × (444 | 915) h 541 gap 27. */
 
@@ -19,7 +19,6 @@ const Head = styled.div`
   flex-direction: column;
   gap: 26px;
   max-width: 990px;
-  padding: 0 27px;
   margin-bottom: 90px;
   p {
     margin: 0;
@@ -52,11 +51,9 @@ const Grid = styled.div`
   grid-template-columns: 444.08px minmax(0, 1fr);
   grid-auto-rows: minmax(541px, auto);
   gap: 27px;
-  padding: 0 27px;
   ${BP.lg} {
     grid-template-columns: 1fr;
     grid-auto-rows: auto;
-    padding: 0;
   }
 `;
 
@@ -220,7 +217,7 @@ export function CeWorkflow() {
               <li><img src={`${A}/icon-discover-1.svg`} alt="" />{WORKFLOW.discover.items[0]}</li>
               <li><img src={`${A}/icon-discover-2.svg`} alt="" />{WORKFLOW.discover.items[1]}</li>
             </List>
-            <Btn href="#workflow">
+            <Btn href={SIGN_UP_HREF}>
               {WORKFLOW.discover.cta}
               <img src={`${A}/icon-arrow.svg`} alt="" />
             </Btn>
@@ -260,7 +257,7 @@ export function CeWorkflow() {
               <li><img src={`${A}/icon-audit-1.svg`} alt="" />{WORKFLOW.audit.items[0]}</li>
               <li><img src={`${A}/icon-audit-2.svg`} alt="" />{WORKFLOW.audit.items[1]}</li>
             </List>
-            <Btn href="#workflow">
+            <Btn href={SIGN_UP_HREF}>
               {WORKFLOW.audit.cta}
               <img src={`${A}/icon-arrow.svg`} alt="" />
             </Btn>

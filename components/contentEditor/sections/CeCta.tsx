@@ -106,7 +106,7 @@ export function CeCta() {
           <p className="note">{CTA.note}</p>
         </Copy>
         <Shot data-cta-mock>
-          <img src={`${A}/cta-dashboard.png`} alt="Ranksmile AI Tracker prompts dashboard" width={1440} height={920} loading="lazy" />
+          <img src={`${A}/cta-dashboard.png`} alt="Ranksmile SEO Content Editor dashboard" width={1440} height={920} loading="lazy" />
         </Shot>
       </Container>
     </Wrap>
