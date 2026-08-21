@@ -1,6 +1,15 @@
 import { useEffect, type RefObject } from 'react';
 
 /**
+ * Did the sweep pass a pill's angle between the previous frame (`last`) and this one (`cur`)?
+ * True on both directions of the yoyo, and when a frame lands exactly on the angle.
+ * Pure so the threshold-crossing logic is testable without GSAP.
+ */
+export function crossedAngle(last: number, cur: number, angle: number): boolean {
+  return (last < angle && cur >= angle) || (last > angle && cur <= angle);
+}
+
+/**
  * Hero radar: the scanner sweeps left↔right and every pill it passes re-samples its
  * number inside its own range, so the stats tick like a live tracker.
  *
@@ -79,8 +88,7 @@ export function useRadarMotion(rootRef: RefObject<HTMLElement>) {
           onUpdate: () => {
             sweep.style.transform = `rotate(${rot.a}deg)`;
             pills.forEach((p, i) => {
-              const a = angles[i];
-              if ((last < a && rot.a >= a) || (last > a && rot.a <= a)) tick(p);
+              if (crossedAngle(last, rot.a, angles[i])) tick(p);
             });
             last = rot.a;
           },

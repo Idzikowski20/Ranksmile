@@ -39,8 +39,10 @@ const Head = styled.div`
 
 const Row = styled.div<{ $cols: 3 | 4 }>`
   display: grid;
-  grid-template-columns: ${(p) => (p.$cols === 3 ? 'repeat(3, 1fr)' : 'repeat(4, minmax(0, 339.8px))')};
+  grid-template-columns: ${(p) => (p.$cols === 3 ? 'repeat(3, 1fr)' : 'repeat(4, minmax(0, 1fr))')};
   justify-content: center;
+  max-width: ${(p) => (p.$cols === 4 ? '1359px' : 'none')};
+  margin-inline: auto;
   gap: 27px;
   & + & {
     margin-top: 27px;

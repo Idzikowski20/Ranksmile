@@ -311,7 +311,9 @@ const UpdateList = styled.ul`
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 248.8px));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 1265px;
+  margin-inline: auto;
   gap: 90px;
   ${BP.lg} {
     grid-template-columns: repeat(2, 1fr);

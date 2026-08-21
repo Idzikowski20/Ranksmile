@@ -5,6 +5,7 @@ import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
 import { BP, Container, Section, Tag } from '../primitives';
 import { PILLARS, USE_CASES } from '../content';
+import { ringGeometry } from './ringGeometry';
 
 /* Figma 1:2884 (Solution) + 1:3034 (two cards). Both sit inside the white 27px frame. */
 
@@ -218,8 +219,7 @@ const Pillar = styled.div`
 
 /* Ring gauges — 68.58 side / 130.63 centre (Figma 1:2907 / 1:2921). */
 function Ring({ value, size, stroke, fontSize }: { value: number; size: number; stroke: number; fontSize: number }) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
+  const { r, c, offset } = ringGeometry(value, size, stroke);
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label={`Score ${value}`}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--koala-border-primary)" strokeWidth={stroke} />
@@ -232,7 +232,7 @@ function Ring({ value, size, stroke, fontSize }: { value: number; size: number; 
         strokeWidth={stroke}
         strokeLinecap="round"
         strokeDasharray={c}
-        strokeDashoffset={c * (1 - value / 100)}
+        strokeDashoffset={offset}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         data-ring
       />

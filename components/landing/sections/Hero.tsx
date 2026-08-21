@@ -180,6 +180,10 @@ const AvatarList = styled.ul`
   padding: 0;
   display: flex;
   height: 36px;
+  max-width: 100%;
+  ${BP.sm} {
+    height: 30px;
+  }
 `;
 
 const AvatarItem = styled.li`
@@ -189,6 +193,14 @@ const AvatarItem = styled.li`
   flex-shrink: 0;
   &:last-of-type {
     width: 36px;
+  }
+  ${BP.sm} {
+    /* tighten the 13-avatar overlap so the stack fits a 354px mobile column */
+    width: 22px;
+    height: 30px;
+    &:last-of-type {
+      width: 30px;
+    }
   }
 `;
 
@@ -213,6 +225,15 @@ const Avatar = styled.span`
   svg {
     width: 18px;
     height: 18px;
+  }
+  ${BP.sm} {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+    svg {
+      width: 15px;
+      height: 15px;
+    }
   }
 `;
 
@@ -265,7 +286,7 @@ const Frame = styled.div`
   box-shadow: 0px 24px 68px 0px rgba(47,48,55,0.06);
   ${BP.md} {
     aspect-ratio: auto;
-    min-height: 420px;
+    height: 420px;
     border-radius: 18px;
   }
 `;
@@ -319,7 +340,7 @@ export function Hero() {
                   const IconComp = a.icon ? AVATAR_ICON[a.icon] : null;
                   return (
                     <AvatarItem key={a.label} title={a.label}>
-                      <Avatar aria-label={a.label}>
+                      <Avatar role="img" aria-label={a.label}>
                         {IconComp ? <IconComp weight="bold" aria-hidden /> : a.letter}
                       </Avatar>
                       {a.dot ? <Dot aria-hidden /> : null}

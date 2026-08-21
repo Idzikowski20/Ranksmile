@@ -32,6 +32,7 @@ const Rules = styled.div`
 const Rule = styled.i<{ $tick: number; $active?: boolean }>`
   position: relative;
   width: 1px;
+  flex-shrink: 0;
   height: 100%;
   background: linear-gradient(to bottom, transparent, ${semantic.border.primary} 12%, ${semantic.border.primary} 88%, transparent);
   &::after {

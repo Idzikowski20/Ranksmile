@@ -118,6 +118,11 @@ export const CtaLink = styled.a<{ $tone?: 'brand' | 'inverse' | 'white' }>`
   font-weight: ${fontWeight.bold};
   text-decoration: none;
   white-space: nowrap;
+  max-width: 100%;
+  ${BP.sm} {
+    white-space: normal;
+    text-align: center;
+  }
   cursor: var(--koala-cursor-pointing);
   background: ${(p) => ({
     brand: semantic.button.brand.bg,

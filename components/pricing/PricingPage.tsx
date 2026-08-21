@@ -81,7 +81,7 @@ export function PricingPage() {
       <Root ref={rootRef} data-landing-root>
         <SkipLink href="#main">Skip to main content</SkipLink>
         <Header />
-        <main id="main">
+        <main id="main" tabIndex={-1}>
           <PrHead tab={tab} onTab={setTab} />
           {tab === 0 ? (
             <>
