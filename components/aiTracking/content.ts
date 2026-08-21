@@ -26,17 +26,26 @@ export const ENGINES = ['ChatGPT', 'Claude', 'Gemini', 'Perplexity', 'AI Overvie
 
 export const HERO = {
   eyebrow: 'AI Tracker',
-  titleLines: ['Monitor, Analyze, and', "Grow Your Brand's", 'AI Search Visibility'],
-  sub: 'See exactly how ChatGPT, Claude, Gemini, Google AI Overviews and Perplexity talk about your brand — and use '
-    + 'the insights to win buyer trust, demand, and AI citations at scale.',
-  cta: 'Start Growing AI Search Visibility',
-  proof: 'Track every AI engine that names brands — one Visibility Score, updated daily.',
-  chips: ['Track AI Visibility & Sentiment', 'Spy on Competitors', 'Find & Fix Mention Gaps', 'Strategize & Report'],
-  stats: [
-    { label: 'Visibility Score', value: '17', delta: '+19', trend: 'up' as const, sub: 'since last 30d' },
-    { label: 'Mention Rate', value: '26%', delta: '-24', trend: 'down' as const, sub: 'since last 30d' },
-    { label: 'Average Position', value: '2.3', delta: '+0.6', trend: 'up' as const, sub: 'since last 30d' },
+  titleLines: ['Monitor, Analyze, and', 'Grow Your Brand’s', 'AI Search Visibility'],
+  subLines: [
+    'See exactly how ChatGPT, Claude, Gemini, Google AI Overviews',
+    'and Perplexity talk about your brand — and use the insights',
+    'to win buyer trust, demand, and AI citations at scale.',
   ],
+  cta: 'Start Growing AI Search Visibility',
+  ratingStrong: '5 AI engines',
+  ratingMuted: 'Join teams already tracking & improving AI Search visibility with Ranksmile',
+  chips: ['Track AI Visibility & Sentiment', 'Spy on Competitors', 'Find & Fix Mention Gaps', 'Strategize & Report'],
+  enginesLabel: 'Built for every AI Search Engine:',
+  /** Radar pills — each cycles inside [min, max] as the scanner sweeps past. */
+  stats: [
+    { id: 'visibility', label: 'Visibility Score', value: 17, min: 14, max: 23, decimals: 0, suffix: '', delta: -19, deltaSuffix: '' },
+    { id: 'mention', label: 'Mention Rate', value: 26, min: 22, max: 31, decimals: 0, suffix: '%', delta: -24, deltaSuffix: '%' },
+    { id: 'position', label: 'Average Position', value: 2.3, min: 1.9, max: 2.8, decimals: 1, suffix: '', delta: 0.6, deltaSuffix: '' },
+  ],
+  topSources: ['G', 'W', 'R', 'Y', 'L'],
+  trustedTitle: 'Built for the Engines Buyers Actually Ask',
+  trusted: ['Google', 'ChatGPT', 'Claude', 'Gemini', 'Perplexity', 'AI Overviews', 'WordPress', 'Search Console'],
 } as const;
 
 /** The "AI is the new Front Page" stat cards — same figures the landing uses. */
@@ -182,10 +191,29 @@ export const HOW = {
 export const ADVANTAGE = {
   eyebrow: 'The Ranksmile advantage',
   titleLines: ['5x the Data. 1x the Price.', '100% Reality.'],
-  sub: 'Most tools use “sanitized” APIs and force you to pick a single model to track. Ranksmile doesn\'t.',
-  body1strong: 'Our team constantly analyzes',
+  subLines: ['Most tools use "sanitized" APIs and force', 'you to pick a model to track. Ranksmile doesn’t.'],
+  cards: [
+    {
+      italic: 'Real, ',
+      strong: 'unfiltered data',
+      lead: 'We scrape the real-world interfaces your customers actually see',
+      muted: '—capturing the citations, links, and live browsing data that APIs miss.',
+      image: '/ai-tracking/advantage-data.png',
+      imageFirst: false,
+    },
+    {
+      italic: 'Everywhere ',
+      strong: 'at once',
+      lead: 'One prompt tracks your brand across all 5 major models simultaneously. ',
+      muted: 'You get 5x the insights for the same credit—because "visibility" isn’t a choice between ChatGPT, '
+        + 'Perplexity, or Google. It’s all of them.',
+      image: '/ai-tracking/advantage-prompts.png',
+      imageFirst: true,
+    },
+  ],
+  body1strong: 'Ranksmile’s engineering team constantly analyzes',
   body1: ' how AI models rank, cite, and surface brands — refining our detection in real time as the landscape shifts.',
-  body2: 'Because when AI changes the rules, we don\'t react. ',
+  body2: 'Because when AI changes the rules, we don’t react. ',
   body2accent: 'We adapt first.',
   cta: 'Start Growing AI Search Visibility',
 } as const;
@@ -215,6 +243,17 @@ export const AUDIENCE = {
 export const PRICING = {
   eyebrow: 'Pricing',
   titleLines: ['AI visibility tracking', 'without hidden fees'],
+  top: {
+    title: 'AI Search Analytics',
+    sub: 'Track & improve your brand’s position in AI answers.',
+    question: 'How many prompts do you want to track daily?',
+    hint: { strong: 'Most brands start here ', muted: '— covers your brand and competitors.' },
+    ctaMuted: ' — cancel or switch plan anytime.',
+    includes: 'Includes:',
+  },
+  footer: { strong: 'Not sure yet?', muted: ' Start smaller — or go bigger.', link: 'Compare all plans' },
+  proTagline: 'Most teams choose Scale',
+  peaceTagline: 'Upgrade anytime as your needs grow',
 } as const;
 
 export const CTA = {
@@ -228,11 +267,23 @@ export const CTA = {
 export const FAQ_LEFT = [
   {
     q: 'Can Ranksmile help me with AI visibility?',
-    a: 'Of course. Ranksmile is a complete platform for AI Search Optimization and visibility. AI Tracker helps you '
-      + 'track, measure, and improve your AI visibility with clear insights on your Visibility Score, mention gaps, '
-      + 'competitor share of voice, and more. Topical Map helps you research and plan content clusters that increase '
-      + 'topical authority. Content Audit monitors performance and flags quick-win refreshes. Content Editor\'s live '
-      + 'guidelines help you write and refresh content that is rewarded in both SERPs and AI chats.',
+    a: 'Of course! Ranksmile is a complete platform for AI Search Optimization and visibility.',
+    bullets: [
+      { strong: 'AI Tracker',
+        rest: ' helps you track, measure, and improve your AI visibility with clear insights on your Visibility '
+          + 'Score, mention gaps, competitor share of voice, and more.' },
+      { strong: 'Topical Map',
+        rest: ' helps you research and plan new content clusters designed to increase your topical authority and '
+          + 'position you as an expert in your niche, thereby enhancing your chances of being cited and '
+          + 'mentioned.' },
+      { strong: 'Content Audit',
+        rest: ' helps you monitor your content’s performance, notifies you about ranking drops so you can act fast, '
+          + 'and suggests articles with the best quick-win potential to refresh (the fresher your content, the '
+          + 'higher its chances of being mentioned and cited).' },
+      { strong: 'Content Editor’s',
+        rest: ' live guidelines help you write new and refresh existing content in a way that is rewarded both in '
+          + 'SERPs and AI chats.' },
+    ],
   },
   {
     q: 'How does Ranksmile work?',
