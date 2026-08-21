@@ -1,0 +1,31 @@
+components/landing/mocks/DashboardMock.tsx
+  s_4134d8bafd16e7::t_21cd73a1c2f025 1
+  s_4134d8bafd16e7::t_a905530f999279 222-224
+  s_4134d8bafd16e7::t_a1fec50c42ff4e 293,298
+__tests__/landing/answer-demo.test.tsx
+  s_4134d8bafd16e7::t_7a1561f0a3e734 1,8,13-14,16,18,21-22
+  s_4134d8bafd16e7::t_ae5a96f3e6e680 2-7,9-12,15,17,19-20,23-24
+components/landing/sections/Timeline.tsx
+  s_4134d8bafd16e7::t_c4c1e24279d8ff 183-210
+  s_4134d8bafd16e7::t_d0ec7d475d6654 92
+  s_4134d8bafd16e7::t_593aa93c09d0f9 104
+  s_4134d8bafd16e7::t_ee184dd17c3b1d 258-261
+__tests__/api/articles-optimize-sections-guard.test.ts
+  s_4134d8bafd16e7::t_2bc4e7ae2692cf 304
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d5096ae4d60948cf16b99e7991f7567b4a801a48",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
