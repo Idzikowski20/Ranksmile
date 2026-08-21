@@ -1,168 +1,126 @@
 /**
- * Marketing-scale primitives built on Koala tokens. The product scale tops out at
- * product headings; the landing needs display sizes, so these live here and nowhere else.
+ * Landing primitives. Sizes mirror the Figma reference (1920 canvas, 1440 content
+ * column) and fall back gracefully below it. Colours are Koala semantic tokens only:
+ * every dark surface of the reference is mapped to the light theme.
  */
 import styled from '@emotion/styled';
 import { semantic } from '../koala/tokens/semantic';
-import { typeface, textScale, fontWeight } from '../koala/tokens/typography';
-import { radius, shadow } from '../koala/tokens/effects';
-import { media } from '../koala/tokens/breakpoints';
+import { typeface, fontWeight } from '../koala/tokens/typography';
+import { shadow } from '../koala/tokens/effects';
 
+export const BP = { lg: '@media (max-width: 1279px)', md: '@media (max-width: 1023px)', sm: '@media (max-width: 767px)' } as const;
+
+/** Figma shadow on stat / resource cards. */
+export const CARD_SHADOW = '0px 1px 1px 0px rgba(0,0,0,0.05), 0px 4px 6px 0px rgba(34,42,53,0.04), 0px 24px 68px 0px rgba(47,48,55,0.05), 0px 2px 3px 0px rgba(0,0,0,0.04)';
+
+/** 1440px content column, 27px gutters below the canvas width. */
 export const Container = styled.div`
   width: 100%;
-  max-width: 1216px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 27px;
   box-sizing: border-box;
-  ${media.md} {
-    padding: 0 32px;
+  ${BP.sm} {
+    padding: 0 18px;
   }
 `;
 
-export const Section = styled.section<{ $tone?: 'primary' | 'secondary' }>`
+export const Section = styled.section`
   position: relative;
-  padding: 72px 0;
-  background: ${(p) => (p.$tone === 'secondary' ? semantic.background.secondary : semantic.background.primary)};
-  ${media.md} {
-    padding: 112px 0;
-  }
+  background: ${semantic.background.primary};
+  font-family: ${typeface.body};
+  color: ${semantic.text.primary};
 `;
 
-export const Eyebrow = styled.p`
-  margin: 0 0 16px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: ${typeface.body};
-  font-size: ${textScale.xs.fontSize};
-  line-height: ${textScale.xs.lineHeight};
-  font-weight: ${fontWeight.medium};
-  letter-spacing: 0.12em;
+/** 13.5px uppercase label (Figma `text-[13.5px] uppercase`). */
+export const Eyebrow = styled.p<{ $tone?: 'muted' | 'brand'; $tracking?: number }>`
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 13.5px;
+  font-weight: ${(p) => (p.$tone === 'brand' ? fontWeight.medium : fontWeight.regular)};
+  letter-spacing: ${(p) => (p.$tracking ?? 0)}px;
   text-transform: uppercase;
-  color: ${semantic.text.brand};
+  color: ${(p) => (p.$tone === 'brand' ? semantic.text.brand : semantic.text.tertiary)};
 `;
 
-export const Display = styled.h1`
+/** 20.3px uppercase semibold section tag (Solution / Resources / 01 — Diagnose). */
+export const Tag = styled.p<{ $color?: string }>`
+  margin: 0;
+  font-size: 20.3px;
+  line-height: 24.3px;
+  font-weight: ${fontWeight.bold};
+  text-transform: uppercase;
+  color: ${(p) => p.$color ?? semantic.text.brand};
+`;
+
+export const H2 = styled.h2<{ $size?: 55.2 | 44.5 | 45 | 35.8; $align?: 'center' | 'left' }>`
   margin: 0;
   font-family: ${typeface.heading};
   font-weight: ${fontWeight.bold};
-  font-size: clamp(38px, 6.2vw, ${textScale['7xl'].fontSize});
-  line-height: 1.04;
-  letter-spacing: -0.035em;
+  font-size: ${(p) => p.$size ?? 44.5}px;
+  line-height: ${(p) => ({ 55.2: '60.67px', 44.5: '53.41px', 45: '54px', 35.8: '42.93px' }[p.$size ?? 44.5])};
+  letter-spacing: ${(p) => (p.$size === 45 ? '-1.08px' : '0')};
+  text-align: ${(p) => p.$align ?? 'center'};
   color: ${semantic.text.primary};
   text-wrap: balance;
+  ${BP.md} {
+    font-size: ${(p) => Math.round((p.$size ?? 44.5) * 0.72)}px;
+    line-height: 1.12;
+  }
 `;
 
-export const H2 = styled.h2`
+export const Lead = styled.p<{ $size?: 20.3 | 18; $align?: 'center' | 'left' }>`
   margin: 0;
-  font-family: ${typeface.heading};
-  font-weight: ${fontWeight.bold};
-  font-size: clamp(30px, 4.2vw, ${textScale['5xl'].fontSize});
-  line-height: 1.08;
-  letter-spacing: -0.03em;
-  color: ${semantic.text.primary};
-  text-wrap: balance;
-`;
-
-export const H3 = styled.h3`
-  margin: 0;
-  font-family: ${typeface.heading};
-  font-weight: ${fontWeight.bold};
-  font-size: ${textScale.xl.fontSize};
-  line-height: ${textScale.xl.lineHeight};
-  letter-spacing: -0.02em;
-  color: ${semantic.text.primary};
-`;
-
-export const Lead = styled.p`
-  margin: 0;
-  font-family: ${typeface.body};
-  font-size: ${textScale.lg.fontSize};
-  line-height: 1.5;
-  letter-spacing: ${textScale.base.letterSpacing};
+  font-size: ${(p) => p.$size ?? 20.3}px;
+  line-height: ${(p) => (p.$size === 18 ? '28.81px' : '30.39px')};
+  text-align: ${(p) => p.$align ?? 'center'};
   color: ${semantic.text.secondary};
   text-wrap: pretty;
-  strong {
+  strong,
+  b {
+    font-weight: ${fontWeight.bold};
     color: ${semantic.text.primary};
-    font-weight: ${fontWeight.medium};
+  }
+  em {
+    font-style: normal;
+    color: ${semantic.text.primary};
   }
 `;
 
-export const Body = styled.p`
+export const Body18 = styled.p`
   margin: 0;
-  font-family: ${typeface.body};
-  font-size: ${textScale.base.fontSize};
-  line-height: ${textScale.base.lineHeight};
-  letter-spacing: ${textScale.base.letterSpacing};
+  font-size: 18px;
+  line-height: 27px;
   color: ${semantic.text.secondary};
-  text-wrap: pretty;
-`;
-
-export const Muted = styled.span`
-  color: ${semantic.text.tertiary};
-`;
-
-export const Panel = styled.div`
-  background: ${semantic.card.bg};
-  border: 1px solid ${semantic.card.border};
-  border-radius: ${radius['2xl']};
-  box-shadow: ${shadow.xs};
-`;
-
-export const SectionHead = styled.div<{ $align?: 'center' | 'start' }>`
-  display: flex;
-  flex-direction: column;
-  align-items: ${(p) => (p.$align === 'start' ? 'flex-start' : 'center')};
-  text-align: ${(p) => (p.$align === 'start' ? 'left' : 'center')};
-  gap: 20px;
-  max-width: 720px;
-  margin: ${(p) => (p.$align === 'start' ? '0' : '0 auto')};
-  margin-bottom: 48px;
-  ${media.md} {
-    margin-bottom: 64px;
+  strong {
+    font-weight: ${fontWeight.regular};
+    color: ${semantic.text.primary};
   }
 `;
 
-/** Primary CTA as an anchor — Koala brand button metrics (lg: 44px / radius 14px). */
-export const CtaLink = styled.a<{ $variant?: 'primary' | 'secondary' | 'onBrand' }>`
+/** Figma `Link` CTA: 27×18 padding, radius 13.5, 19.8/24.75 semibold, inset bevel. */
+export const CtaLink = styled.a<{ $tone?: 'brand' | 'inverse' | 'white' }>`
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 44px;
-  padding: 0 18px;
-  border-radius: ${radius.button.lg};
+  gap: 8px;
+  padding: 18px 27px;
+  border-radius: 13.5px;
   font-family: ${typeface.body};
-  font-size: ${textScale.base.fontSize};
-  font-weight: ${fontWeight.medium};
-  letter-spacing: ${textScale.sm.letterSpacing};
-  white-space: nowrap;
+  font-size: 19.8px;
+  line-height: 24.75px;
+  font-weight: ${fontWeight.bold};
   text-decoration: none;
+  white-space: nowrap;
   cursor: var(--koala-cursor-pointing);
-  transition: background var(--motion-fast) var(--motion-ease-standard), transform var(--motion-fast) var(--motion-ease-standard);
-  border: 1px solid transparent;
-  ${(p) => {
-    if (p.$variant === 'secondary') {
-      return `
-        background: ${semantic.button.secondary.bg};
-        color: ${semantic.button.secondary.fg};
-        border-color: ${semantic.button.secondary.border};
-        &:hover { background: ${semantic.button.secondary.bgHover}; }
-      `;
-    }
-    if (p.$variant === 'onBrand') {
-      return `
-        background: ${semantic.background.primary};
-        color: ${semantic.text.primary};
-        &:hover { background: ${semantic.background.secondary}; }
-      `;
-    }
-    return `
-      background: ${semantic.button.brand.bg};
-      color: ${semantic.button.brand.fg};
-      &:hover { background: ${semantic.button.brand.bgHover}; }
-    `;
-  }}
+  background: ${(p) => ({ brand: semantic.button.brand.bg, inverse: semantic.background.inverse, white: semantic.background.primary }[p.$tone ?? 'brand'])};
+  color: ${(p) => ({ brand: semantic.button.brand.fg, inverse: semantic.text.onInverse, white: semantic.text.primary }[p.$tone ?? 'brand'])};
+  box-shadow: inset 0px -1px 0px 0px rgba(0,0,0,0.2), inset 0px 1px 0px 0px rgba(255,255,255,0.25);
+  transition: transform var(--motion-fast) var(--motion-ease-standard), filter var(--motion-fast) var(--motion-ease-standard);
+  &:hover {
+    filter: brightness(0.96);
+  }
   &:active {
     transform: translateY(1px);
   }
@@ -170,46 +128,45 @@ export const CtaLink = styled.a<{ $variant?: 'primary' | 'secondary' | 'onBrand'
     outline: none;
     box-shadow: ${shadow.focus};
   }
-  svg {
-    transition: transform var(--motion-fast) var(--motion-ease-standard);
-  }
-  &:hover svg {
-    transform: translateX(2px);
-  }
 `;
 
-export const TextLink = styled.a`
+/** Small arrow link: "Data Studies ->", "View all →". */
+export const ArrowLink = styled.a<{ $size?: 18 | 16.9 }>`
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-family: ${typeface.body};
-  font-size: ${textScale.sm.fontSize};
-  font-weight: ${fontWeight.medium};
-  color: ${semantic.text.primary};
+  gap: ${(p) => (p.$size === 16.9 ? '6.75px' : '9px')};
+  font-size: ${(p) => p.$size ?? 18}px;
+  line-height: ${(p) => (p.$size === 16.9 ? '25.32px' : '27px')};
+  letter-spacing: ${(p) => (p.$size === 16.9 ? '-0.174px' : '0')};
+  color: ${semantic.text.secondary};
   text-decoration: none;
-  border-bottom: 1px solid ${semantic.border.secondary};
-  padding-bottom: 1px;
-  &:hover {
+  white-space: nowrap;
+  span:last-of-type {
+    color: ${semantic.text.primary};
+  }
+  &:hover span {
     color: ${semantic.text.brand};
-    border-color: ${semantic.border.brand};
   }
   &:focus-visible {
     outline: none;
     box-shadow: ${shadow.focus};
-    border-radius: ${radius.sm};
+    border-radius: 6px;
   }
 `;
 
-/** Subtle dot grid — the reference hero texture, inverted for the light theme. */
-export const DotGrid = styled.div`
+/** Reference hero texture: a dot canvas. Inverted for the light theme. */
+export const DotCanvas = styled.div`
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: -108px;
+  height: 1260px;
   pointer-events: none;
-  background-image: radial-gradient(${semantic.border.secondary} 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 30%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 30%, transparent 100%);
-  opacity: 0.7;
+  background-image: radial-gradient(${semantic.border.secondary} 1.1px, transparent 1.1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(ellipse 62% 55% at 50% 35%, black 20%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 55% at 50% 35%, black 20%, transparent 100%);
+  opacity: 0.8;
 `;
 
 export const VisuallyHidden = styled.span`

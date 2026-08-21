@@ -22,6 +22,7 @@ jest.mock('../../lib/ensureArticlesTables', () => ({
 
 jest.mock('../../lib/tenancy', () => ({
   getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([1]),
+  getScopedWorkspaceIds: jest.fn().mockResolvedValue([1]),
   ForbiddenWorkspaceError: class ForbiddenWorkspaceError extends Error {},
 }));
 

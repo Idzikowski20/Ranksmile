@@ -1,431 +1,347 @@
 import React from 'react';
 import styled from '@emotion/styled';
-import { ArrowRight, Sparkle, TrendUp } from '@phosphor-icons/react';
-import Gauge from '../../ranksmile/Gauge';
+import { GithubLogo, GoogleLogo, OpenAiLogo, Sparkle, Stack, WordpressLogo } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
-import { typeface, textScale, fontWeight } from '../../koala/tokens/typography';
-import { radius, shadow } from '../../koala/tokens/effects';
-import { media } from '../../koala/tokens/breakpoints';
-import { Container, CtaLink, Display, DotGrid, Eyebrow, Panel, Section } from '../primitives';
-import { ENGINES, SIGN_UP_HREF } from '../content';
+import { fontWeight } from '../../koala/tokens/typography';
+import { BP, Container, CtaLink, DotCanvas, Eyebrow, Section } from '../primitives';
+import { ENGINES, HERO_AVATARS, SIGN_UP_HREF } from '../content';
+import { DashboardMock } from '../mocks/DashboardMock';
+
+/* Figma 1:6 — section gap 90, pb 90; content column px 27 + pl 13.5; copy block py 90, gap 45. */
 
 const HeroSection = styled(Section)`
   overflow: hidden;
-  padding-top: 64px;
-  padding-bottom: 0;
-  ${media.md} {
-    padding-top: 104px;
-    padding-bottom: 0;
+  padding-bottom: 90px;
+  margin-top: -92px; /* the floating nav sits over the canvas, as in the reference */
+  ${BP.md} {
+    padding-bottom: 54px;
+    margin-top: -73px;
+  }
+`;
+
+const Inner = styled.div`
+  position: relative;
+  padding: 0 0 0 13.5px;
+  min-height: 720px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  ${BP.md} {
+    padding-left: 0;
+    min-height: 0;
   }
 `;
 
 const Copy = styled.div`
-  position: relative;
-  max-width: 820px;
-`;
-
-const Line = styled.span`
-  display: block;
-`;
-
-/* Fixed-width slot so the cycling engine name never reflows the headline. */
-const EngineSlot = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.18em;
-  color: ${semantic.text.brand};
-  white-space: nowrap;
-  &::after {
-    content: '';
-    display: inline-block;
-    width: 3px;
-    height: 0.9em;
-    margin-left: 2px;
-    background: ${semantic.text.primary};
-    border-radius: 2px;
-    animation: landing-caret 1s steps(2, start) infinite;
-  }
-  @keyframes landing-caret {
-    to { visibility: hidden; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    &::after { animation: none; }
-  }
-`;
-
-const CtaRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-top: 36px;
-`;
-
-const Proof = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 72px;
-  ${media.md} {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 96px;
+  gap: 45px;
+  max-width: 1170px;
+  padding: 90px 0;
+  padding-top: 200px; /* 108 canvas offset + 92 nav */
+  ${BP.md} {
+    padding-top: 150px;
+    gap: 32px;
   }
 `;
 
-const ProofText = styled.p`
-  margin: 0;
-  font-family: ${typeface.body};
-  font-size: ${textScale.sm.fontSize};
-  line-height: ${textScale.sm.lineHeight};
-  color: ${semantic.text.tertiary};
-  strong {
-    color: ${semantic.text.primary};
-    font-weight: ${fontWeight.medium};
-  }
-`;
-
-const Engines = styled.ul`
-  list-style: none;
-  margin: 0;
-  padding: 0;
+const EyebrowRow = styled.div`
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-`;
-
-const EngineChip = styled.li`
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px 0 10px;
-  border: 1px solid ${semantic.border.primary};
-  border-radius: ${radius.full};
-  background: ${semantic.background.primary};
-  font-family: ${typeface.body};
-  font-size: ${textScale.sm.fontSize};
-  font-weight: ${fontWeight.medium};
-  color: ${semantic.text.primary};
+  gap: 9px;
   svg {
     color: ${semantic.text.brand};
   }
 `;
 
-/* ── Product preview (pure HTML/CSS mock of the dashboard) ─────────────────── */
-
-const PreviewWrap = styled.div`
-  position: relative;
-  margin-top: 56px;
-  ${media.md} {
-    margin-top: 72px;
-  }
-  /* fade the bottom edge into the next section */
-  &::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 0 0;
-    height: 120px;
-    background: linear-gradient(to bottom, transparent, ${semantic.background.primary});
-    pointer-events: none;
-  }
-`;
-
-const Preview = styled(Panel)`
-  overflow: hidden;
-  box-shadow: ${shadow.lg};
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  border-bottom: 0;
-  font-family: ${typeface.body};
-`;
-
-const PreviewBar = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 16px;
-  border-bottom: 1px solid ${semantic.border.primary};
-  background: ${semantic.background.tertiary};
-  span {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: ${semantic.border.secondary};
-  }
-`;
-
-const PreviewBody = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  ${media.lg} {
-    grid-template-columns: 200px 1fr;
-  }
-`;
-
-const PreviewSide = styled.div`
-  display: none;
-  ${media.lg} {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 16px 12px;
-    border-right: 1px solid ${semantic.border.primary};
-    background: ${semantic.background.secondary};
-  }
-`;
-
-const SideItem = styled.div<{ $active?: boolean }>`
-  height: 30px;
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  border-radius: ${radius.sm};
-  font-size: ${textScale.sm.fontSize};
-  font-weight: ${(p) => (p.$active ? fontWeight.medium : fontWeight.regular)};
-  color: ${(p) => (p.$active ? semantic.text.primary : semantic.text.secondary)};
-  background: ${(p) => (p.$active ? semantic.background.primary : 'transparent')};
-`;
-
-const SideGroup = styled.div`
-  margin: 12px 10px 4px;
-  font-size: ${textScale.xs.fontSize};
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: ${semantic.text.tertiary};
-`;
-
-const PreviewMain = styled.div`
-  padding: 24px 20px 0;
-  ${media.md} {
-    padding: 32px 32px 0;
-  }
-`;
-
-const Greeting = styled.p`
-  margin: 0 0 8px;
-  font-size: ${textScale.xl.fontSize};
-  font-weight: ${fontWeight.bold};
-  letter-spacing: -0.02em;
-  color: ${semantic.text.primary};
-`;
-
-const Summary = styled.p`
-  margin: 0 0 24px;
-  max-width: 640px;
-  font-size: ${textScale.base.fontSize};
-  line-height: ${textScale.base.lineHeight};
-  color: ${semantic.text.secondary};
-  b {
-    font-weight: ${fontWeight.medium};
-    color: ${semantic.text.primary};
-  }
-  mark {
-    background: ${semantic.background.secondary};
-    color: ${semantic.text.primary};
-    padding: 1px 6px;
-    border-radius: 6px;
-    font-weight: ${fontWeight.medium};
-  }
-`;
-
-const Widgets = styled.div`
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr;
-  ${media.md} {
-    grid-template-columns: 1.4fr 1fr 1fr;
-  }
-`;
-
-const Widget = styled.div`
-  border: 1px solid ${semantic.border.primary};
-  border-bottom: 0;
-  border-radius: ${radius.card.default} ${radius.card.default} 0 0;
-  padding: 16px;
-  min-height: 150px;
+const H1 = styled.h1`
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  background: ${semantic.background.primary};
-`;
-
-const WidgetLabel = styled.span`
-  font-size: ${textScale.xs.fontSize};
-  color: ${semantic.text.tertiary};
-`;
-
-const WidgetValue = styled.span`
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: ${textScale['2xl'].fontSize};
+  align-items: flex-start;
   font-weight: ${fontWeight.bold};
-  letter-spacing: -0.02em;
+  font-size: 76.5px;
+  line-height: 84.16px;
+  letter-spacing: -2.25px;
   color: ${semantic.text.primary};
-  small {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    font-size: ${textScale.xs.fontSize};
-    font-weight: ${fontWeight.medium};
-    color: ${semantic.status.success};
+  ${BP.lg} {
+    font-size: 64px;
+    line-height: 70px;
+    letter-spacing: -1.8px;
+  }
+  ${BP.md} {
+    font-size: 48px;
+    line-height: 54px;
+    letter-spacing: -1.3px;
+  }
+  ${BP.sm} {
+    font-size: 38px;
+    line-height: 44px;
+    letter-spacing: -1px;
   }
 `;
 
-const GaugeRow = styled.div`
+const Row = styled.span`
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+`;
+
+const EngineIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76.5px;
+  height: 76.5px;
+  margin: 0 11.477px;
+  color: ${semantic.text.brand};
+  svg {
+    width: 55px;
+    height: 55px;
+  }
+  ${BP.md} {
+    width: 48px;
+    height: 48px;
+    margin: 0 6px;
+    svg {
+      width: 36px;
+      height: 36px;
+    }
+  }
+`;
+
+const Caret = styled.span`
+  display: inline-block;
+  width: 2.25px;
+  height: 68.86px;
+  margin: 0 0 6.121px 2px;
+  background: ${semantic.text.primary};
+  animation: landing-caret 1.1s steps(2, start) infinite;
+  @keyframes landing-caret {
+    to { visibility: hidden; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+  ${BP.md} {
+    height: 0.9em;
+  }
+`;
+
+const CtaWrap = styled.div`
+  padding-top: 36px;
+  ${BP.md} {
+    padding-top: 0;
+  }
+`;
+
+/* Proof row — Figma 1:83: 90px tall; line at top, avatars + copy at 54px; rating right at 1107px. */
+
+const Proof = styled.div`
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: 27px 36px;
+  row-gap: 27px;
+  align-items: center;
+  min-height: 90px;
+  ${BP.lg} {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    row-gap: 18px;
+  }
+`;
+
+const ProofLine = styled.p`
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 18px;
+  line-height: 27px;
+  color: ${semantic.text.secondary};
+  strong {
+    font-weight: ${fontWeight.regular};
+    color: ${semantic.text.primary};
+  }
+`;
+
+const AvatarRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  span {
-    font-size: ${textScale.sm.fontSize};
-    color: ${semantic.text.secondary};
+  gap: 27px;
+  ${BP.sm} {
+    flex-wrap: wrap;
+    gap: 12px;
   }
 `;
 
-const SPARK = '0,52 30,48 60,50 90,40 120,42 150,34 180,30 210,24 240,26 270,18 300,14';
+const AvatarList = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  height: 36px;
+`;
+
+const AvatarItem = styled.li`
+  position: relative;
+  width: 29.7px;
+  height: 36px;
+  flex-shrink: 0;
+  &:last-of-type {
+    width: 36px;
+  }
+`;
+
+const Avatar = styled.span`
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 36px;
+  height: 36px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  border: 2px solid ${semantic.background.primary};
+  background: ${semantic.background.secondary};
+  color: ${semantic.text.primary};
+  font-size: 15.3px;
+  line-height: 22.95px;
+  font-weight: ${fontWeight.bold};
+  box-shadow: 0 0 0 1px ${semantic.border.primary};
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+`;
+
+const Dot = styled.span`
+  position: absolute;
+  left: 16.2px;
+  top: 41.4px;
+  width: 3.59px;
+  height: 3.59px;
+  border-radius: 0.54px;
+  background: ${semantic.background.brand};
+`;
+
+const Already = styled.p`
+  margin: 0;
+  font-size: 18px;
+  line-height: 27px;
+  color: ${semantic.text.primary};
+  white-space: nowrap;
+`;
+
+const Rating = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  justify-self: end;
+  ${BP.lg} {
+    justify-self: start;
+  }
+`;
+
+const EngineDots = styled.span`
+  display: inline-flex;
+  gap: 3px;
+  svg {
+    color: ${semantic.text.brand};
+  }
+`;
+
+/* Video frame — Figma 1:176: aspect 1440/675, radius 27, border, product still inside. */
+
+const Frame = styled.div`
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1440.23 / 675.11;
+  overflow: hidden;
+  border-radius: 27px;
+  border: 1px solid ${semantic.border.primary};
+  background: ${semantic.background.tertiary};
+  box-shadow: 0px 24px 68px 0px rgba(47,48,55,0.06);
+  ${BP.md} {
+    aspect-ratio: auto;
+    min-height: 420px;
+    border-radius: 18px;
+  }
+`;
+
+const AVATAR_ICON = {
+  google: GoogleLogo,
+  openai: OpenAiLogo,
+  wordpress: WordpressLogo,
+  github: GithubLogo,
+} as const;
 
 export function Hero() {
   return (
     <HeroSection aria-labelledby="hero-title">
-      <DotGrid aria-hidden />
-      <Container>
-        <Copy>
-          <Eyebrow data-hero="eyebrow">
-            <Sparkle size={14} weight="fill" aria-hidden />
-            SEO + AI visibility workspace
-          </Eyebrow>
-          <Display id="hero-title">
-            <Line data-hero="line">
-              Be the answer in
-              {' '}
-              <EngineSlot aria-live="off">
+      <DotCanvas aria-hidden />
+      <Container style={{ position: 'relative' }}>
+        <Inner>
+          <Copy>
+            <EyebrowRow data-hero="eyebrow">
+              <Stack size={15.75} weight="fill" aria-hidden />
+              <Eyebrow>AI visibility platform</Eyebrow>
+            </EyebrowRow>
+
+            <H1 id="hero-title">
+              <Row data-hero="line">
+                Be The Answer in
+                <EngineIcon aria-hidden>
+                  <GoogleLogo weight="bold" />
+                </EngineIcon>
                 <span data-hero="engine">{ENGINES[0]}</span>
-              </EngineSlot>
-            </Line>
-            <Line data-hero="line">— everywhere buyers search.</Line>
-          </Display>
-          <CtaRow data-hero="cta">
-            <CtaLink href={SIGN_UP_HREF}>
-              Start 7-day free trial
-              <ArrowRight size={18} weight="bold" aria-hidden />
-            </CtaLink>
-            <CtaLink href="#workflow" $variant="secondary">See the workflow</CtaLink>
-          </CtaRow>
-        </Copy>
+                <Caret aria-hidden />
+              </Row>
+              <Row data-hero="line">– Everywhere Buyers Search.</Row>
+            </H1>
 
-        <Proof data-hero="proof">
-          <ProofText>
-            <strong>One score for rankings and AI citations.</strong>
-            {' '}
-            Ranksmile tracks where each engine names your brand — and what to publish to change it.
-          </ProofText>
-          <Engines aria-label="Engines tracked by Ranksmile">
-            {ENGINES.map((engine) => (
-              <EngineChip key={engine}>
-                <Sparkle size={12} weight="fill" aria-hidden />
-                {engine}
-              </EngineChip>
-            ))}
-          </Engines>
-        </Proof>
+            <CtaWrap data-hero="cta">
+              <CtaLink href={SIGN_UP_HREF}>Try Ranksmile Platform →</CtaLink>
+            </CtaWrap>
+          </Copy>
 
-        <PreviewWrap data-hero="preview">
-          <Preview role="img" aria-label="Ranksmile dashboard: clicks, AI visibility and Content Score widgets">
-            <PreviewBar aria-hidden>
-              <span />
-              <span />
-              <span />
-            </PreviewBar>
-            <PreviewBody aria-hidden>
-              <PreviewSide>
-                <SideItem $active>Dashboard</SideItem>
-                <SideItem>Recommendations</SideItem>
-                <SideItem>Content Editor</SideItem>
-                <SideGroup>SEO</SideGroup>
-                <SideItem>Rank tracking</SideItem>
-                <SideItem>Keyword research</SideItem>
-                <SideItem>Coverage gap</SideItem>
-                <SideGroup>AI visibility</SideGroup>
-                <SideItem>Overview</SideItem>
-                <SideItem>Sources</SideItem>
-                <SideItem>Competitors</SideItem>
-                <SideItem>Prompts</SideItem>
-              </PreviewSide>
-              <PreviewMain>
-                <Greeting>Good morning, Alex</Greeting>
-                <Summary>
-                  Your site received
-                  {' '}
-                  <b>3,270 clicks</b>
-                  {' '}
-                  — a 19% increase vs the last 30 days. Your AI Visibility is
-                  {' '}
-                  <mark>21</mark>
-                  , placing you
-                  {' '}
-                  <b>4th</b>
-                  {' '}
-                  behind
-                  {' '}
-                  <mark>Northwind 81</mark>
-                  ,
-                  {' '}
-                  <mark>Contoso 71</mark>
-                  {' '}
-                  and
-                  {' '}
-                  <mark>Fabrikam 68</mark>
-                  .
-                </Summary>
-                <Widgets>
-                  <Widget>
-                    <WidgetLabel>Clicks · last 30 days</WidgetLabel>
-                    <WidgetValue>
-                      3,270
-                      <small>
-                        <TrendUp size={12} weight="bold" />
-                        19%
-                      </small>
-                    </WidgetValue>
-                    <svg viewBox="0 0 300 60" preserveAspectRatio="none" width="100%" height="56" aria-hidden>
-                      <defs>
-                        <linearGradient id="hero-spark" x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0" stopColor="var(--koala-bg-brand)" stopOpacity="0.22" />
-                          <stop offset="1" stopColor="var(--koala-bg-brand)" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <polygon points={`0,60 ${SPARK} 300,60`} fill="url(#hero-spark)" />
-                      <polyline points={SPARK} fill="none" stroke="var(--koala-bg-brand)" strokeWidth="2" strokeLinejoin="round" />
-                    </svg>
-                  </Widget>
-                  <Widget>
-                    <WidgetLabel>AI Visibility · 5 engines</WidgetLabel>
-                    <WidgetValue>21</WidgetValue>
-                    <svg viewBox="0 0 300 60" preserveAspectRatio="none" width="100%" height="56" aria-hidden>
-                      <polyline
-                        points="0,56 60,56 120,54 180,52 220,40 260,28 300,16"
-                        fill="none"
-                        stroke="var(--koala-text-secondary)"
-                        strokeWidth="2"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </Widget>
-                  <Widget>
-                    <WidgetLabel>Content Score · latest draft</WidgetLabel>
-                    <GaugeRow>
-                      <Gauge score={91} size="sm" />
-                      <span>Ready to publish</span>
-                    </GaugeRow>
-                  </Widget>
-                </Widgets>
-              </PreviewMain>
-            </PreviewBody>
-          </Preview>
-        </PreviewWrap>
+          <Proof data-hero="proof">
+            <ProofLine>
+              Marketers, Agencies, and SEOs
+              {' '}
+              <strong>grow and get mentioned</strong>
+              {' '}
+              with Ranksmile every day
+            </ProofLine>
+            <AvatarRow>
+              <AvatarList aria-label="Engines and integrations Ranksmile works with">
+                {HERO_AVATARS.map((a) => {
+                  const IconComp = a.icon ? AVATAR_ICON[a.icon] : null;
+                  return (
+                    <AvatarItem key={a.label} title={a.label}>
+                      <Avatar aria-label={a.label}>
+                        {IconComp ? <IconComp weight="bold" aria-hidden /> : a.letter}
+                      </Avatar>
+                      {a.dot ? <Dot aria-hidden /> : null}
+                    </AvatarItem>
+                  );
+                })}
+              </AvatarList>
+              <Already>Already the answer. Are you?</Already>
+            </AvatarRow>
+            <Rating>
+              <EngineDots aria-hidden>
+                {ENGINES.map((e) => <Sparkle key={e} size={19} weight="fill" />)}
+              </EngineDots>
+              <Eyebrow>{`${ENGINES.length} engines · tracked daily`}</Eyebrow>
+            </Rating>
+          </Proof>
+        </Inner>
+
+        <Frame data-hero="preview" role="img" aria-label="Ranksmile dashboard: clicks, AI visibility and Content Score">
+          <DashboardMock />
+        </Frame>
       </Container>
     </HeroSection>
   );

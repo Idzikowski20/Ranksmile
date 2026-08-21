@@ -126,7 +126,7 @@ it('returns a generic curated error for an opaque failed deep analysis', async (
     cookies: {},
   } as NextApiRequest, res);
 
-  expect(mockDbQuery.mock.calls[0]?.[0]).toContain('progress_message, error, updated_at');
+  expect(mockDbQuery.mock.calls[0]?.[0]).toContain('progress_message, progress_json, error, updated_at');
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
     error: 'Deep analysis failed. Please try again.',
     progressMessage: 'Deep analysis failed. Please try again.',

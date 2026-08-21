@@ -1,6 +1,11 @@
 jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' }, QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT' } }));
 jest.mock('../../lib/cronAuth', () => ({ assertCronSecret: jest.fn().mockReturnValue(false), cronSecrets: () => [] }));
+// Locale resolution runs its own DB queries the ordered db.query mock chain below
+// doesn't account for; stub it so the chain stays aligned with the job queries.
+jest.mock('../../lib/domainLanguage', () => ({
+  resolveContentLocale: jest.fn().mockResolvedValue({ languageCode: 'pl', countryCode: 'PL' }),
+}));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('intruder') }));
 jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(false) }));
 // false = domain exists but the caller's workspace can't reach it → 403.
@@ -30,7 +35,9 @@ const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;
 const mockAssertArticleAccess = assertArticleAccess as jest.MockedFunction<typeof assertArticleAccess>;
 const mockSidecarBase = sidecarBase as jest.MockedFunction<typeof sidecarBase>;
 const mockAssertPublicUrl = assertPublicUrl as jest.MockedFunction<typeof assertPublicUrl>;
-const dbResult = (value: unknown) => value as Awaited<ReturnType<typeof db.query>>;
+// Sequelize resolves `[rows, metadata]`; call sites destructure `const [rows] = ...`.
+// Model that shape so rows land in the right slot (a bare value isn't iterable).
+const dbResult = (value: unknown) => [value, {}] as unknown as Awaited<ReturnType<typeof db.query>>;
 
 const makeRes = () => {
   const res: any = {};

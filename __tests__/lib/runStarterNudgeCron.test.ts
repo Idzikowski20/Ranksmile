@@ -93,7 +93,11 @@ describe('starter nudge cron selection', () => {
 
     expect(result).toEqual({ scanned: 1, sent: 1, skipped: 0 });
     expect(mockSend).toHaveBeenCalledWith('owner@example.com');
-    expect(mockUpdate).toHaveBeenCalledWith(10, { starterNudgeSentAt: now });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      10,
+      { starterNudgeSentAt: now },
+      { reason: 'starter_nudge_sent', source: 'STARTER_NUDGE' },
+    );
   });
 
   it('skips paid org and does not mark sent', async () => {
