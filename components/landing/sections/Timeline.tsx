@@ -89,6 +89,7 @@ const Rail = styled.div`
 const RailFade = styled.i<{ $dir: 'left' | 'right' }>`
   width: 455.9px;
   height: 100%;
+  flex-shrink: 0;
   background: ${(p) => (p.$dir === 'left'
     ? `linear-gradient(to right, transparent, ${semantic.border.secondary})`
     : 'repeating-linear-gradient(to right, var(--koala-bg-brand) 0 12px, transparent 12px 24px)')};
@@ -100,6 +101,7 @@ const RailLine = styled.div`
   position: relative;
   width: 1008.17px;
   height: 100%;
+  flex-shrink: 0; /* dots are positioned at fixed px; the line must not shrink at 1280px */
   background: ${semantic.background.brand};
   transform-origin: left;
 `;
@@ -178,9 +180,34 @@ const Note = styled.div<{ $x: number }>`
     border: 1px solid ${semantic.border.primary};
     border-radius: 18px;
     text-align: left;
-    h3::before {
-      content: attr(data-year) ' · ';
-      color: ${semantic.text.tertiary};
+  }
+`;
+
+/*
+ * The year as real text (not CSS) so screen readers announce each milestone.
+ * On desktop the visible year lives on the rail (aria-hidden), so this copy is
+ * sr-only there; on mobile the rail is gone, so it becomes the visible prefix.
+ */
+const YearTag = styled.span`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  ${BP.lg} {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    color: ${semantic.text.tertiary};
+    &::after {
+      content: ' · ';
     }
   }
 `;
@@ -228,7 +255,10 @@ export function Timeline() {
       <Notes>
         {TIMELINE.map((t, i) => (
           <Note key={t.year} $x={DOT_X[i]} data-reveal>
-            <h3 data-year={t.year}>{t.title}</h3>
+            <h3>
+              <YearTag>{t.year}</YearTag>
+              {t.title}
+            </h3>
             <p>{t.body}</p>
           </Note>
         ))}
