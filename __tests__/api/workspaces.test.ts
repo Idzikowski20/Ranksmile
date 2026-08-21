@@ -1,3 +1,4 @@
+jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('u1') }));
 jest.mock('../../lib/tenancy', () => ({
   getActiveWorkspaceId: jest.fn().mockResolvedValue(9),
@@ -45,7 +46,7 @@ describe('/api/workspaces', () => {
 
   it('POST /api/workspaces/setup returns 201 with the new workspace id', async () => {
     const res = makeRes();
-    await setupHandler({ method: 'POST', cookies: {} } as any, res);
+    await setupHandler({ method: 'POST', cookies: {}, headers: {} } as any, res);
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({ id: 7 });
   });

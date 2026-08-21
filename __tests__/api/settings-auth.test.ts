@@ -1,3 +1,4 @@
+jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 import type { NextApiRequest, NextApiResponse } from 'next';
 import settingsHandler from '../../pages/api/settings';
 import verifyUser from '../../utils/verifyUser';
