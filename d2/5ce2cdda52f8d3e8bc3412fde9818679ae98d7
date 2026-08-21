@@ -1,0 +1,31 @@
+components/landing/sections/CtaBand.tsx
+  s_4134d8bafd16e7::t_3d534537bc1b66 115-123
+components/landing/sections/Hero.tsx
+  s_4134d8bafd16e7::t_3d534537bc1b66 341-343,346,349
+components/landing/sections/Data.tsx
+  s_4134d8bafd16e7::t_3d534537bc1b66 220-221,223,225-227,229,317
+components/landing/sections/Solution.tsx
+  s_4134d8bafd16e7::t_3d534537bc1b66 367-368,374,503-504
+components/landing/sections/Loop.tsx
+  s_4134d8bafd16e7::t_3d534537bc1b66 4,205-206,208-212,380-385,389,424
+components/landing/sections/AnswerDemo.tsx
+  s_4134d8bafd16e7::t_3d534537bc1b66 214-222,316,322,504,529
+components/landing/sections/Resources.tsx
+  s_4134d8bafd16e7::t_3d534537bc1b66 143,146,148-150,187-195,198-202,228,241-243,248,260,262
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d25ce2cdda52f8d3e8bc3412fde9818679ae98d7",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
