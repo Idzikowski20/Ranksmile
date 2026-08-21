@@ -1,0 +1,46 @@
+components/pricing/sections/PrPlans.tsx
+  s_4134d8bafd16e7::t_bd0f34924c04b3 1-241
+components/pricing/sections/PrFaq.tsx
+  s_4134d8bafd16e7::t_143ad398ce8d65 1-10
+components/pricing/sections/PrCta.tsx
+  s_4134d8bafd16e7::t_ecbe980cd07113 1-99
+lib/appAccess/accessPolicy.ts
+  s_4134d8bafd16e7::t_d8750c535ce5a1 110
+components/pricing/sections/PrHead.tsx
+  s_4134d8bafd16e7::t_308ad723b24d6b 1-123
+pages/pricing.tsx
+  s_4134d8bafd16e7::t_3b37c66a6a7a5d 1-7
+lib/isPublicPath.ts
+  s_4134d8bafd16e7::t_d8750c535ce5a1 12
+components/pricing/sections/PrAnalytics.tsx
+  s_4134d8bafd16e7::t_cb8ca5a7163e9e 1-327
+components/pricing/content.ts
+  s_4134d8bafd16e7::t_969f5259bcc1c7 24
+  s_4134d8bafd16e7::t_e2c8a551f47cee 1-23,25-307
+components/pricing/PricingPage.tsx
+  s_4134d8bafd16e7::t_f2d22b899f5c39 1-104
+components/pricing/sections/PrSmaller.tsx
+  s_4134d8bafd16e7::t_1ce48300004a6e 1-290
+components/pricing/sections/PrCompare.tsx
+  s_4134d8bafd16e7::t_7c8dd7364cea0c 1-130,137-170,172-186
+  s_4134d8bafd16e7::t_927bb49478c3a4 131-136
+  s_4134d8bafd16e7::t_40b0f3e98b2af6 171
+components/landing/content.ts
+  s_4134d8bafd16e7::t_d8750c535ce5a1 454
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d591b7f7669128d439fdef8d37d0ad3bf00518e2",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
