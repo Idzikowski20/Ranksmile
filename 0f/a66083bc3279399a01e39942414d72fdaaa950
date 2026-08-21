@@ -1,0 +1,67 @@
+public/ai-tracking/engine-aioverview.svg
+  s_4134d8bafd16e7::t_e9dc8082164101 1-5
+public/ai-tracking/engine-chatgpt.svg
+  s_4134d8bafd16e7::t_e9dc8082164101 1-5
+public/ai-tracking/advantage-360.svg
+  s_4134d8bafd16e7::t_e9dc8082164101 1-61
+components/aiTracking/sections/AiHow.tsx
+  s_4134d8bafd16e7::t_54c2b45500e3f5 5,8-12,14,18,22-23,25-32,34-39,44-46,48,50-55,59-76,81-84,87-93,97,100,109-112,116,128,132-134,138,146-147,151-155,163-169,172-199
+components/aiTracking/sections/AiAdvantage.tsx
+  s_4134d8bafd16e7::t_e90388c5c750d6 5,8-12,15,17-37,45,47,49-70,72-79,83-96,98,100-106,108-129,131,135-147,150,152-183,187-188,190-193,195,200-207,209-216,224-275
+components/aiTracking/sections/AiSolution.tsx
+  s_4134d8bafd16e7::t_46974659b6fa9d 5,8,12,26-38,41-48,53-55,57-58,63,66-71,75,78,80-86,91,100-101,105,112-118,122-132
+components/aiTracking/content.ts
+  s_4134d8bafd16e7::t_d613647c9a5c1b 272,274-275,277-279
+  s_4134d8bafd16e7::t_7949c45e0bb45a 194-214,216,246-256
+  s_4134d8bafd16e7::t_be02e7c8ffd8e3 29-34,36-37,39-40,42-44,46-48
+  s_4134d8bafd16e7::t_211869c9143bbb 270-271,286
+  s_4134d8bafd16e7::t_8228092ae71d10 273,276,280-285
+public/ai-tracking/cap-icon-3.svg
+  s_4134d8bafd16e7::t_e9dc8082164101 1-3
+components/aiTracking/useRadarMotion.ts
+  s_4134d8bafd16e7::t_6368482ddab0a0 1-98
+public/ai-tracking/engine-perplexity.svg
+  s_4134d8bafd16e7::t_e9dc8082164101 1-5
+public/ai-tracking/cap-icon-2.svg
+  s_4134d8bafd16e7::t_e9dc8082164101 1-3
+components/aiTracking/sections/AiCta.tsx
+  s_4134d8bafd16e7::t_f451a3bc8af009 5,8-11,16-17,19-38,47-48,51-54,56-79,83,86-98,100,104,108-111,117-121,124-130,133-134,136-138,140
+components/aiTracking/sections/AiFrontPage.tsx
+  s_4134d8bafd16e7::t_5f16c6d9693fa4 3,6,9-13,17-22,24,28-31,34-36,40-41,48-50,53-60,64-74,76-90,92,95-98,101-102,104-107,114-115,118,134,136-139,144-145,154-157,168,181,185,191,193-195,197-198,208-209,215-216,219,228,233,237-258,262-266,268-278,281-283,288-289,293-296,298-302,306-307,312-313,318-319,322,325-330,337-358,360-405,407-413,415-416,419-421,426-427,429
+  s_4134d8bafd16e7::t_e19223b6ca9edf 162-163,169-172
+  s_4134d8bafd16e7::t_83b94f32395f07 359
+components/aiTracking/sections/AiPricing.tsx
+  s_4134d8bafd16e7::t_85edb24dd18d40 3,5-6,9-14,17,19,27-28,30-185,188-190,192-236,238-294,297-317,319-324,326-393,398-409,411,416,419,427-433,435-448,454-459,462-609
+components/aiTracking/sections/AiCapabilities.tsx
+  s_4134d8bafd16e7::t_0d83e131d2294b 5,8,24-30,34-37,42-43,45,47-48,53-55,59,65-71,75-78,84-87,96-99,107-108,111-119
+components/aiTracking/sections/AiHero.tsx
+  s_4134d8bafd16e7::t_0f7eb414a13243 162-167,226,242,258,260-261,264-265,292
+  s_4134d8bafd16e7::t_63e0f9c7aaaefd 1,4,8,10-18,22,24-26,29-30,34,37-42,46-48,51-54,56,63-65,67-71,74-79,82-95,101-111,113,115-161,169-171,175,177-189,192,194-195,202-215,217-225,227-230,234-241,243,246-257,259,262-263,266-291,293-296,299-302,304,308-329,331-340,342-358,361-365,367-368,370-378,382-403,405,409,411,414-423,427-476,482-493,495-497,500-598,607-622
+  s_4134d8bafd16e7::t_0a4e59c3522b64 599-606
+public/ai-tracking/cap-icon-1.svg
+  s_4134d8bafd16e7::t_e9dc8082164101 1-3
+components/aiTracking/sections/AiFaq.tsx
+  s_4134d8bafd16e7::t_844f59d13ba82d 6,10-13,23,25,27,31-34,38,40-41,43-46,51,65-69,76,78-79,88,92,96-98,103-124,128-130,137,139-151,171
+public/ai-tracking/cap-icon-4.svg
+  s_4134d8bafd16e7::t_e9dc8082164101 1-3
+components/aiTracking/sections/AiAudience.tsx
+  s_4134d8bafd16e7::t_324c5ae741fa63 5,8,11,18-19,21-27,29-33,37-40,43-49,53-56,58-62,67-69,78-83,85-92,102
+public/ai-tracking/frontpage-area.svg
+  s_4134d8bafd16e7::t_e9dc8082164101 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0fa66083bc3279399a01e39942414d72fdaaa950",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
