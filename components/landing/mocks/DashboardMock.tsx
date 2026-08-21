@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import styled from '@emotion/styled';
 import { TrendUp } from '@phosphor-icons/react';
 import Gauge from '../../ranksmile/Gauge';
@@ -219,6 +219,9 @@ const GaugeRow = styled.div`
 const SPARK = '0,52 30,48 60,50 90,40 120,42 150,34 180,30 210,24 240,26 270,18 300,14';
 
 export function DashboardMock({ org = 'Northwind Inc.' }: { org?: string }) {
+  // The mock mounts twice (hero + CTA); a per-instance id keeps each chart's
+  // fill pointing at its own gradient rather than the first one in the document.
+  const sparkId = `dash-spark-${useId().replace(/:/g, '')}`;
   return (
     <Root aria-hidden>
       <Side>
@@ -287,12 +290,12 @@ export function DashboardMock({ org = 'Northwind Inc.' }: { org?: string }) {
               </WValue>
               <svg viewBox="0 0 300 60" preserveAspectRatio="none" width="100%" height="64">
                 <defs>
-                  <linearGradient id="dash-spark" x1="0" x2="0" y1="0" y2="1">
+                  <linearGradient id={sparkId} x1="0" x2="0" y1="0" y2="1">
                     <stop offset="0" stopColor="var(--koala-bg-brand)" stopOpacity="0.2" />
                     <stop offset="1" stopColor="var(--koala-bg-brand)" stopOpacity="0" />
                   </linearGradient>
                 </defs>
-                <polygon points={`0,60 ${SPARK} 300,60`} fill="url(#dash-spark)" />
+                <polygon points={`0,60 ${SPARK} 300,60`} fill={`url(#${sparkId})`} />
                 <polyline points={SPARK} fill="none" stroke="var(--koala-bg-brand)" strokeWidth="2" strokeLinejoin="round" />
               </svg>
             </Widget>
