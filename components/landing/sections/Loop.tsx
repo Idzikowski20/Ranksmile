@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import styled from '@emotion/styled';
-import { ArrowRight, BellRinging, CheckCircle, Cursor, Quotes } from '@phosphor-icons/react';
+import { ArrowRight, Cursor, Quotes } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
 import { BP, Container, Eyebrow, Section } from '../primitives';
@@ -202,99 +202,14 @@ const Panel = styled.div<{ $color: string }>`
   }
 `;
 
-const Mock = styled.div`
+/* Figma 1:3124 — the reference card art fills the panel (h 100%, w 100.92%). */
+const PanelImg = styled.img`
   position: absolute;
-  left: 54px;
-  right: -1px;
-  top: 72px;
-  bottom: 0;
-  padding: 24px;
-  border: 1px solid ${semantic.border.primary};
-  border-right: 0;
-  border-bottom: 0;
-  border-radius: 18px 0 0 0;
-  background: ${semantic.background.primary};
-  color: ${semantic.text.primary};
-  box-shadow: 0 30px 80px rgba(0,0,0,0.18);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  ${BP.md} {
-    left: 18px;
-    top: 45px;
-    padding: 16px;
-  }
-`;
-
-const MockHead = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 15px;
-  font-weight: ${fontWeight.medium};
-  span {
-    font-weight: ${fontWeight.regular};
-    color: ${semantic.text.tertiary};
-  }
-`;
-
-const Row = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid ${semantic.border.primary};
-  border-radius: 12px;
-  font-size: 15px;
-  line-height: 20px;
-  b {
-    font-weight: ${fontWeight.medium};
-  }
-  small {
-    margin-left: auto;
-    color: ${semantic.text.tertiary};
-    white-space: nowrap;
-  }
-  svg {
-    flex-shrink: 0;
-  }
-`;
-
-const METER = { up: 'var(--koala-status-success)', brand: 'var(--koala-bg-brand)' } as const;
-
-const Meter = styled.i<{ $value: number; $tone: keyof typeof METER }>`
-  position: relative;
-  height: 8px;
-  flex: 1;
-  border-radius: 9999px;
-  background: ${semantic.background.secondary};
-  overflow: hidden;
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: ${(p) => p.$value}%;
-    border-radius: inherit;
-    background: ${(p) => METER[p.$tone]};
-  }
-`;
-
-const CHIP = {
-  danger: [semantic.status.dangerBg, semantic.status.danger],
-  neutral: [semantic.background.secondary, semantic.text.secondary],
-  success: [semantic.status.successBg, semantic.status.success],
-} as const;
-
-const Chip = styled.span<{ $tone: keyof typeof CHIP }>`
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: ${fontWeight.medium};
-  background: ${(p) => CHIP[p.$tone][0]};
-  color: ${(p) => CHIP[p.$tone][1]};
+  inset: 0 0 0 calc(0.14% - 1px);
+  width: 100.92%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left top;
 `;
 
 /* Quote band — 591.94 tall, content at left 81. */
@@ -462,152 +377,16 @@ const CursorTag = styled.div<{ $x: string; $y: string; $flip?: boolean }>`
   }
 `;
 
-function DiagnoseMock() {
-  return (
-    <Mock data-panel-mock aria-hidden>
-      <MockHead>
-        Mention gap
-        <span>last 30 days</span>
-      </MockHead>
-      <Row>
-        <b>yourdomain.com</b>
-        <Meter $value={21} $tone="brand" />
-        <small>21</small>
-      </Row>
-      <Row>
-        contoso.io
-        <Meter $value={81} $tone="up" />
-        <small>81</small>
-      </Row>
-      <Row>
-        fabrikam.co
-        <Meter $value={71} $tone="up" />
-        <small>71</small>
-      </Row>
-      <Row>
-        litware.com
-        <Meter $value={68} $tone="up" />
-        <small>68</small>
-      </Row>
-      <MockHead style={{ marginTop: 12 }}>URLs the engines cite instead</MockHead>
-      <Row>
-        contoso.io/guides/ai-rank-tracking
-        <small>4 engines</small>
-      </Row>
-      <Row>
-        fabrikam.co/blog/seo-for-agencies
-        <small>3 engines</small>
-      </Row>
-      <Row>
-        litware.com/compare/rank-trackers
-        <small>2 engines</small>
-      </Row>
-    </Mock>
-  );
-}
-
-function FixMock() {
-  return (
-    <Mock data-panel-mock aria-hidden>
-      <MockHead>
-        Action list
-        <span>sorted by impact</span>
-      </MockHead>
-      <Row>
-        <Chip $tone="danger">Optimize</Chip>
-        <b>/pricing</b>
-        — add comparison table; cited by 0 of 5 engines
-        <small>+18 visibility</small>
-      </Row>
-      <Row>
-        <Chip $tone="neutral">Create</Chip>
-        <b>“AI rank tracking for agencies”</b>
-        — coverage gap
-        <small>+11</small>
-      </Row>
-      <Row>
-        <Chip $tone="success">Publish</Chip>
-        <b>/blog/content-score-explained</b>
-        — score 91, ready for WordPress
-        <small>today</small>
-      </Row>
-      <MockHead style={{ marginTop: 12 }}>
-        Live guidelines
-        <span>Content Score 91 / 100</span>
-      </MockHead>
-      <Row>
-        <CheckCircle size={16} weight="fill" color="var(--koala-status-success)" />
-        Terms: 38 / 42 used
-        <Meter $value={90} $tone="up" />
-      </Row>
-      <Row>
-        <CheckCircle size={16} weight="fill" color="var(--koala-status-success)" />
-        Headings: 9 / 10
-        <Meter $value={90} $tone="up" />
-      </Row>
-      <Row>
-        <CheckCircle size={16} weight="fill" color="var(--koala-status-warning)" />
-        Entities: 12 / 18
-        <Meter $value={66} $tone="brand" />
-      </Row>
-    </Mock>
-  );
-}
-
-function MonitorMock() {
-  return (
-    <Mock data-panel-mock aria-hidden>
-      <MockHead>
-        Inbox
-        <span>unread only</span>
-      </MockHead>
-      <Row>
-        <BellRinging size={16} weight="fill" color="var(--koala-status-danger)" />
-        <div>
-          <b>Rank drop detected</b>
-          {' '}
-          — yourdomain.com
-          <br />
-          5 pages dropped out of top 10 · no recovery in 7 days
-        </div>
-        <small>2m ago</small>
-      </Row>
-      <Row>
-        <BellRinging size={16} weight="fill" color="var(--koala-status-warning)" />
-        <div>
-          <b>AI mention lost</b>
-          {' '}
-          — ChatGPT stopped citing you for “best rank tracker”
-        </div>
-        <small>24m ago</small>
-      </Row>
-      <Row>
-        <CheckCircle size={16} weight="fill" color="var(--koala-status-success)" />
-        <div>
-          <b>New recommendations ready</b>
-          <br />
-          2 quick wins detected on pages losing traffic
-        </div>
-        <small>1h ago</small>
-      </Row>
-      <Row>
-        <CheckCircle size={16} weight="fill" color="var(--koala-status-success)" />
-        <div>
-          <b>Re-optimization shipped</b>
-          {' '}
-          — /guides/ai-visibility back in 5 of 5 engines
-        </div>
-        <small>yesterday</small>
-      </Row>
-    </Mock>
-  );
-}
-
-const MOCKS: Record<string, () => JSX.Element> = { diagnose: DiagnoseMock, fix: FixMock, monitor: MonitorMock };
+/* Three reference cards per step — the open accordion item picks which one shows. */
+const STEP_IMAGES: Record<string, string[]> = {
+  diagnose: ['/landing/loop-card-01.png', '/landing/loop-card-02.png', '/landing/loop-card-03.png'],
+  fix: ['/landing/loop-card-04.png', '/landing/loop-card-05.png', '/landing/loop-card-06.png'],
+  monitor: ['/landing/loop-card-07.png', '/landing/loop-card-08.png', '/landing/loop-card-09.png'],
+};
 
 function StepBlock({ step }: { step: WorkflowStep }) {
   const [open, setOpen] = useState(0);
-  const MockFor = MOCKS[step.id];
+  const images = STEP_IMAGES[step.id];
   const color = TONE[step.tone];
 
   return (
@@ -642,7 +421,7 @@ function StepBlock({ step }: { step: WorkflowStep }) {
         })}
       </Left>
       <Panel $color={color} data-panel>
-        <MockFor />
+        <PanelImg key={open} src={images[open]} alt="" loading="lazy" width={1264} height={1582} data-panel-mock />
       </Panel>
     </Step>
   );
