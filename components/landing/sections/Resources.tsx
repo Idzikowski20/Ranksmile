@@ -140,24 +140,14 @@ const Shot = styled.div<{ $inset: number; $top: number }>`
   bottom: 0;
   overflow: hidden;
   border-radius: 9px;
-  border: 1px solid rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
   background: ${semantic.background.primary};
   box-shadow: ${CARD_SHADOW};
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  color: ${semantic.text.primary};
-  font-size: 12px;
-  i {
+  img {
     display: block;
-    height: 8px;
-    border-radius: 4px;
-    background: ${semantic.background.secondary};
-  }
-  b {
-    font-weight: ${fontWeight.bold};
-    font-size: 14px;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 `;
 
@@ -194,11 +184,22 @@ const PhotoFade = styled.div`
   background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.75) 83%);
 `;
 
-const PhotoGrid = styled.div`
+const PhotoImg = styled.img`
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
-  background-size: 36px 36px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
+
+const CardBg = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.5;
+  pointer-events: none;
 `;
 
 export function Resources() {
@@ -224,7 +225,7 @@ export function Resources() {
             >
               {r.art === 'photo' ? (
                 <>
-                  <PhotoGrid aria-hidden />
+                  <PhotoImg src="/landing/resources-community.jpg" alt="" loading="lazy" />
                   <PhotoFade aria-hidden />
                 </>
               ) : null}
@@ -237,27 +238,14 @@ export function Resources() {
               </CardTop>
               {r.art === 'stack' ? (
                 <Art aria-hidden>
-                  <Shot $inset={40.4} $top={-13.36}><i /><i style={{ width: '60%' }} /></Shot>
-                  <Shot $inset={20.2} $top={-6.68}><i /><i style={{ width: '70%' }} /></Shot>
-                  <Shot $inset={0} $top={0}>
-                    <b>Publish to WordPress</b>
-                    <i style={{ width: '80%' }} />
-                    <i />
-                    <i style={{ width: '55%' }} />
-                    <i style={{ width: '90%' }} />
-                  </Shot>
+                  <Shot $inset={40.4} $top={-13.36}><img src="/landing/resources-yt-3.jpg" alt="" loading="lazy" /></Shot>
+                  <Shot $inset={20.2} $top={-6.68}><img src="/landing/resources-yt-1.png" alt="" loading="lazy" /></Shot>
+                  <Shot $inset={0} $top={0}><img src="/landing/resources-yt-2.png" alt="" loading="lazy" /></Shot>
                 </Art>
               ) : null}
               {r.art === 'image' ? (
                 <Art aria-hidden>
-                  <Shot $inset={0} $top={0}>
-                    <b># Ranksmile</b>
-                    <i style={{ width: '92%' }} />
-                    <i style={{ width: '70%' }} />
-                    <i style={{ width: '84%' }} />
-                    <i style={{ width: '40%' }} />
-                    <i style={{ width: '76%' }} />
-                  </Shot>
+                  <Shot $inset={0} $top={0}><img src="/landing/resources-academy.jpg" alt="" loading="lazy" /></Shot>
                 </Art>
               ) : null}
               <Text>
@@ -269,8 +257,9 @@ export function Resources() {
         </Row>
 
         <Row $cols={4}>
-          {RESOURCES_BOTTOM.map((r) => (
+          {RESOURCES_BOTTOM.map((r, i) => (
             <Card key={r.tag} href={r.href} $tone="plain" $gap={r.gap} data-reveal>
+              {i === 3 ? <CardBg src="/landing/resources-masterclass.png" alt="" loading="lazy" aria-hidden /> : null}
               <CardTop>
                 <Label $muted>
                   <BookOpen size={22.5} weight="fill" aria-hidden />

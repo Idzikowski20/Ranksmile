@@ -6,7 +6,6 @@ import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
 import { BP, Container, CtaLink, DotCanvas, Eyebrow, Section } from '../primitives';
 import { ENGINES, HERO_AVATARS, SIGN_UP_HREF } from '../content';
-import { DashboardMock } from '../mocks/DashboardMock';
 
 /* Figma 1:6 — section gap 90, pb 90; content column px 27 + pl 13.5; copy block py 90, gap 45. */
 
@@ -339,8 +338,15 @@ export function Hero() {
           </Proof>
         </Inner>
 
-        <Frame data-hero="preview" role="img" aria-label="Ranksmile dashboard: clicks, AI visibility and Content Score">
-          <DashboardMock />
+        <Frame data-hero="preview">
+          {/* The reference poster frame is a blank white still; the dashboard render is the product shot. */}
+          <img
+            src="/landing/cta-dashboard.png"
+            alt="Ranksmile dashboard with AI visibility metrics"
+            width={1440}
+            height={1160}
+            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
+          />
         </Frame>
       </Container>
     </HeroSection>

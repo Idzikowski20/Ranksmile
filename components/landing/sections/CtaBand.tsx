@@ -4,7 +4,6 @@ import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
 import { BP, CtaLink, Section } from '../primitives';
 import { SIGN_UP_HREF } from '../content';
-import { DashboardMock } from '../mocks/DashboardMock';
 
 /* Figma 1:3692 — section py 126 px 27; band radius 27, pt 125, gap 45; dashboard 1440×675 crop. */
 
@@ -113,8 +112,15 @@ export function CtaBand() {
         </Copy>
         <CtaLink href={SIGN_UP_HREF} $tone="inverse">Try Ranksmile for free →</CtaLink>
         <Stage>
-          <Shot data-cta-mock role="img" aria-label="Ranksmile dashboard preview">
-            <DashboardMock org="Acme Inc." />
+          <Shot data-cta-mock>
+            <img
+              src="/landing/cta-dashboard.png"
+              alt="Ranksmile dashboard with AI visibility metrics"
+              loading="lazy"
+              width={1440}
+              height={1160}
+              style={{ display: 'block', width: '100%', height: 'auto' }}
+            />
           </Shot>
         </Stage>
       </Band>

@@ -217,18 +217,16 @@ const QuoteCard = styled.div<{ $size: 45 | 36 }>`
   }
 `;
 
-const QuoteArt = styled.div`
+/* Figma 1:3516 — the reference art, inset -19.74% top/bottom, from 40% across. */
+const QuoteArt = styled.img`
   position: absolute;
-  top: -20%;
-  bottom: -20%;
+  top: -19.74%;
   left: 40%;
-  right: 0;
+  width: 60%;
+  height: 139.5%;
+  object-fit: cover;
   pointer-events: none;
-  background-image: radial-gradient(${semantic.border.secondary} 1px, transparent 1px);
-  background-size: 14px 14px;
-  mask-image: linear-gradient(135deg, transparent 30%, black 60%, transparent 90%);
-  -webkit-mask-image: linear-gradient(135deg, transparent 30%, black 60%, transparent 90%);
-  opacity: 0.8;
+  opacity: 0.9;
 `;
 
 const QuoteAuthor = styled.div`
@@ -316,7 +314,7 @@ export function Data() {
 
         <QuoteGrid>
           <QuoteCard $size={45} data-reveal>
-            <QuoteArt aria-hidden />
+            <QuoteArt src="/landing/data-quote-bg.png" alt="" loading="lazy" aria-hidden />
             <p>
               {quotes[0].muted}
               <strong>{quotes[0].strong}</strong>

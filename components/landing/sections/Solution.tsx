@@ -364,17 +364,15 @@ const Author = styled.div`
   }
 `;
 
-const SideArt = styled.div<{ $side: 'left' | 'right' }>`
+/* Figma 1:3036 / 1:3038 — the reference side art (302×180) floating off both edges. */
+const SideArt = styled.img<{ $side: 'left' | 'right' }>`
   position: absolute;
   top: ${(p) => (p.$side === 'left' ? 'calc(50% + 225px)' : 'calc(50% - 189px)')};
   ${(p) => (p.$side === 'left' ? 'right: 100%; margin-right: 20px;' : 'left: 100%; margin-left: 20px;')}
   width: 302px;
   height: 180px;
+  object-fit: cover;
   pointer-events: none;
-  background-image: radial-gradient(${semantic.border.secondary} 1px, transparent 1px);
-  background-size: 18px 18px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
   ${BP.lg} {
     display: none;
   }
@@ -502,8 +500,8 @@ export function Solution() {
       <CardsWrap id="solution" aria-label="Who Ranksmile is built for">
         <Container>
           <Cards>
-            <SideArt $side="left" aria-hidden />
-            <SideArt $side="right" aria-hidden />
+            <SideArt $side="left" src="/landing/loop-testimonial-bg.png" alt="" loading="lazy" aria-hidden />
+            <SideArt $side="right" src="/landing/loop-testimonial-bg.png" alt="" loading="lazy" aria-hidden />
             {USE_CASES.map((u, i) => (
               <Card key={u.tag} data-reveal>
                 <CardTag>

@@ -211,7 +211,15 @@ const Screen = styled.div`
   height: 876.75px;
   overflow: hidden;
   border-radius: 14px 14px 0 0;
-  background: linear-gradient(180deg, #eaf4ff 0%, #bcdcff 38%, #d8ecff 70%, #f4f8fb 100%);
+  background: ${semantic.background.secondary};
+  > img.wallpaper {
+    position: absolute;
+    left: 0;
+    top: -18.58%;
+    width: 100%;
+    height: 118.58%;
+    object-fit: cover;
+  }
   ${BP.md} {
     height: 640px;
   }
@@ -305,12 +313,13 @@ const PromptRow = styled.div`
   padding: 15.75px 18px;
   border-radius: 13.5px;
   background: rgba(0,0,0,0.05);
-  i {
+  img {
     flex-shrink: 0;
     width: 27px;
     height: 27px;
     border-radius: 9999px;
     background: rgba(0,0,0,0.15);
+    object-fit: cover;
   }
   b {
     display: block;
@@ -492,6 +501,7 @@ export function AnswerDemo() {
         <LaptopWrap data-reveal data-state={on ? 'on' : 'off'}>
           <Bezel>
             <Screen>
+              <img className="wallpaper" src="/landing/demo-wallpaper-day.jpg" alt="" loading="lazy" width={1440} height={877} />
               <MenuBar aria-hidden>
                 <div>
                   <AppleLogo size={14} weight="fill" />
@@ -516,7 +526,7 @@ export function AnswerDemo() {
                   <span style={{ background: '#28c840' }} />
                 </Lights>
                 <PromptRow>
-                  <i aria-hidden />
+                  <img src="/landing/demo-avatar.png" alt="" width={27} height={27} />
                   <div>
                     <b>Zara Okafor</b>
                     <p>{PROMPT}</p>
