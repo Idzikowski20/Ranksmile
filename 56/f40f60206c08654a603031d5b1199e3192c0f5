@@ -1,0 +1,31 @@
+.verify.tmp.mjs
+  s_0a0a7a99358138::t_a45dda625b7399 1,3-8,12,15,17-24
+__tests__/api/articles-job-progress-guard.test.ts
+  s_0a0a7a99358138::t_90e1eaa04c60ad 220-221
+pages/dev/landing-preview.tsx
+  s_4134d8bafd16e7::t_b0103e4756134c 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "56f40f60206c08654a603031d5b1199e3192c0f5",
+  "prompts": {},
+  "sessions": {
+    "s_0a0a7a99358138": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c02357ce-f161-4d1d-a21e-feaac2f5b774",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    },
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
