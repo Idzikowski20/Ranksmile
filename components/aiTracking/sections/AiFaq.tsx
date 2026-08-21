@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from '@emotion/styled';
-import { Plus } from '@phosphor-icons/react';
+import { Plus as PlusIcon } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
 import { shadow } from '../../koala/tokens/effects';
@@ -134,7 +134,7 @@ function FaqList({ items, openFirst }: { items: readonly Faq[]; openFirst?: bool
         <Item key={item.q} open={openFirst && i === 0}>
           <summary>
             <h3 style={{ margin: 0, font: 'inherit' }}>{item.q}</h3>
-            <Plus size={36} weight="regular" aria-hidden />
+            <PlusIcon size={36} weight="regular" aria-hidden />
           </summary>
           <div className="answer">
             <p>{item.a}</p>
@@ -155,7 +155,7 @@ function FaqList({ items, openFirst }: { items: readonly Faq[]; openFirst?: bool
   );
 }
 
-export function AiFaq() {
+export function AiFaq({ left = FAQ_LEFT, right = FAQ_RIGHT }: { left?: readonly Faq[]; right?: readonly Faq[] }) {
   return (
     <Wrap id="faq" aria-labelledby="faq-title">
       <Container>
@@ -165,7 +165,7 @@ export function AiFaq() {
             <br />
             Asked Questions
           </Title>
-          <FaqList items={FAQ_LEFT} openFirst />
+          <FaqList items={left} openFirst />
         </Block>
         <Block data-reveal>
           <Title $big>
@@ -173,7 +173,7 @@ export function AiFaq() {
             <br />
             Capabilities
           </Title>
-          <FaqList items={FAQ_RIGHT} />
+          <FaqList items={right} />
         </Block>
       </Container>
     </Wrap>

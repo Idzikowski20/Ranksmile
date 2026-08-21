@@ -8,6 +8,7 @@ export function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/legal')
     || pathname.startsWith('/dev')
     || pathname === '/ai-visibility-tracking'
+    || pathname === '/seo-content-editor'
     || pathname === '/'
     || pathname === '/404'
     || pathname === '/no-access'
