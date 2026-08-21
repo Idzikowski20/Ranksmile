@@ -1,3 +1,4 @@
+jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../utils/verifyUser', () => ({
   __esModule: true,
   default: jest.fn().mockResolvedValue('authorized'),

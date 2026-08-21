@@ -16,6 +16,12 @@ jest.mock('../../lib/getBootstrap', () => ({
    getBootstrap: jest.fn(),
 }));
 
+// The landing lazy-loads GSAP; jsdom has no layout, so opt out like a reduced-motion user.
+jest.mock('../../lib/motion/gsap', () => ({
+   prefersReducedMotion: () => true,
+   registerMotionPlugins: jest.fn(),
+}));
+
 import Home from '../../pages/index';
 
 describe('Home Page', () => {
@@ -25,6 +31,19 @@ describe('Home Page', () => {
       routerReplace.mockReset();
       fetchMock.resetMocks();
       localStorage.clear();
+   });
+
+   it('renders the public landing page when the server found no session', async () => {
+      const { findByRole, container } = render(
+         <QueryClientProvider client={queryClient}>
+            <Home landing />
+         </QueryClientProvider>,
+      );
+      const title = await findByRole('heading', { level: 1 });
+      expect(title.textContent).toMatch(/Be the answer in/);
+      expect(container.querySelector('[data-landing-root]')).not.toBeNull();
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(routerReplace).not.toHaveBeenCalled();
    });
 
    it('redirects unauthenticated visitors to sign-in', async () => {

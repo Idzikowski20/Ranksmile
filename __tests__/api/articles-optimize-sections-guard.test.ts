@@ -1,3 +1,4 @@
+jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 // Tenancy / auth guards + Precision AO contracts for optimize-sections.
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' } }));
 jest.mock('cheerio', () => jest.requireActual('cheerio'));
