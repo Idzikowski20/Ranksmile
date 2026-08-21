@@ -1,0 +1,79 @@
+public/content-editor/hero-star.svg
+  s_4134d8bafd16e7::t_7a556531ea5066 1-5
+components/contentEditor/sections/CeFeatures.tsx
+  s_4134d8bafd16e7::t_4312d2a4a557ea 206,261,266,366,388
+  s_4134d8bafd16e7::t_57a9a1c2965742 269-275,306,314-327
+  s_4134d8bafd16e7::t_7d53786df7238d 1-205,207-260,262-265,267-268,276-305,307-313,328-365,367-387,389-429
+components/contentEditor/sections/CeFaq.tsx
+  s_4134d8bafd16e7::t_d9cfc27c2d475c 1-10
+public/content-editor/quote-mark.svg
+  s_4134d8bafd16e7::t_7a556531ea5066 1-11
+components/landing/content.ts
+  s_4134d8bafd16e7::t_d9cfc27c2d475c 454
+public/content-editor/ranking-factors.svg
+  s_4134d8bafd16e7::t_5495d3cb57cdcd 1-22
+components/contentEditor/ContentEditorPage.tsx
+  s_4134d8bafd16e7::t_937f141a5f889b 1-100
+public/content-editor/icon-arrow.svg
+  s_4134d8bafd16e7::t_957c94231d76da 1-5
+components/contentEditor/sections/CeHero.tsx
+  s_4134d8bafd16e7::t_326e845126fc47 1-351
+public/content-editor/icon-audit-1.svg
+  s_4134d8bafd16e7::t_957c94231d76da 1-3
+components/contentEditor/sections/CeAi.tsx
+  s_4134d8bafd16e7::t_fe073e04732c38 1-253
+public/content-editor/icon-audit-2.svg
+  s_4134d8bafd16e7::t_957c94231d76da 1-3
+public/content-editor/hero-gauge.svg
+  s_4134d8bafd16e7::t_7a556531ea5066 1-5
+public/content-editor/icon-discover-1.svg
+  s_4134d8bafd16e7::t_957c94231d76da 1-3
+public/content-editor/icon-create-1.svg
+  s_4134d8bafd16e7::t_957c94231d76da 1-3
+components/contentEditor/sections/CeCta.tsx
+  s_4134d8bafd16e7::t_2126a611f3223c 1-116
+public/content-editor/underline.svg
+  s_4134d8bafd16e7::t_7a556531ea5066 1-10
+components/contentEditor/sections/CeWorkflow.tsx
+  s_4134d8bafd16e7::t_f32169ab2aab10 1-277
+public/content-editor/icon-discover-2.svg
+  s_4134d8bafd16e7::t_957c94231d76da 1-3
+components/aiTracking/sections/AiFaq.tsx
+  s_4134d8bafd16e7::t_d9cfc27c2d475c 137,158,168,176
+  s_4134d8bafd16e7::t_57a9a1c2965742 3
+public/content-editor/workflow-badge.svg
+  s_4134d8bafd16e7::t_957c94231d76da 1-10
+components/contentEditor/sections/CeToolkit.tsx
+  s_4134d8bafd16e7::t_3ff2a3cc119031 1-214
+public/content-editor/hero-arrow.svg
+  s_4134d8bafd16e7::t_957c94231d76da 1-5
+pages/seo-content-editor.tsx
+  s_4134d8bafd16e7::t_760d0b4d83450b 1-7
+lib/isPublicPath.ts
+  s_4134d8bafd16e7::t_d9cfc27c2d475c 11
+components/contentEditor/content.ts
+  s_4134d8bafd16e7::t_27c4f916690fa4 1-68,76-77,81-178,182-185,189-228,249-318
+  s_4134d8bafd16e7::t_57a9a1c2965742 69-75,78-80,229-248
+  s_4134d8bafd16e7::t_e6aabf0f308860 179-181,186-188
+lib/appAccess/accessPolicy.ts
+  s_4134d8bafd16e7::t_d9cfc27c2d475c 109
+components/contentEditor/sections/CeOptimize.tsx
+  s_4134d8bafd16e7::t_57a9a1c2965742 75-81,90,213-216,271-277
+  s_4134d8bafd16e7::t_a7f91869914c94 1-74,82-89,91-212,217-270,278-303
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "44086034f7305d219eee8ba60995af9334a28df8",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
