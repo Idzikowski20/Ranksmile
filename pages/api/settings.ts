@@ -180,7 +180,7 @@ export const getAppSettings = async () : Promise<SettingsType> => {
          adwords_refresh_token: adwords_refresh_token ? '(connected)' : '',
       };
    } catch (error) {
-      console.error('Error Decrypting Settings API Keys!');
+      console.error('Error Decrypting Settings API Keys!', error);
    }
 
    return decryptedSettings;
