@@ -1,0 +1,66 @@
+pages/api/settings.ts
+  s_0a0a7a99358138::t_df47814d67f1f9 83,183
+pages/api/articles/import.ts
+  s_0a0a7a99358138::t_7702800045e2a8 19-22
+  s_0a0a7a99358138::t_df47814d67f1f9 131
+  s_0a0a7a99358138::t_0a09fbf22d127a 281
+  s_0a0a7a99358138::t_d257e7ae8f54e0 254,257,261,266
+  s_0a0a7a99358138::t_299f9ed04e5ca2 291
+lib/uploadToBlob.ts
+  s_0a0a7a99358138::t_725f6a3f946e22 37
+lib/auth/fetchAuth.ts
+  s_0a0a7a99358138::t_65f5871e108df7 37
+lib/confirmEmail.ts
+  s_0a0a7a99358138::t_daa3cc860020cf 45
+lib/ssrfGuard.ts
+  s_0a0a7a99358138::t_61f04305d78fa1 78-80
+lib/wordpressPublish.ts
+  s_0a0a7a99358138::t_386689e84f7c53 34
+  s_0a0a7a99358138::t_6455768dbcd51b 74
+pages/api/sites.ts
+  s_0a0a7a99358138::t_df47814d67f1f9 162,172
+lib/pipeline/fetchSerperUrls.ts
+  s_0a0a7a99358138::t_845ce9c6d3e75a 26
+lib/llmGateway.ts
+  s_0a0a7a99358138::t_f522fce15db29d 140
+  s_0a0a7a99358138::t_c1520171b58670 120
+jest.setup.js
+  s_0a0a7a99358138::t_e5a873e62d0124 27-36
+next.config.js
+  s_0a0a7a99358138::t_2dcb1e7c41376c 59-79
+lib/gsc/domainSearchData.ts
+  s_0a0a7a99358138::t_df47814d67f1f9 74,94
+  s_0a0a7a99358138::t_0a3beb58259120 95-96
+lib/domainPipeline.ts
+  s_0a0a7a99358138::t_409cd12ca9fccd 167
+pages/api/adwords.ts
+  s_0a0a7a99358138::t_df47814d67f1f9 127,131,153,170
+pages/api/domains.ts
+  s_0a0a7a99358138::t_df47814d67f1f9 119,147,200
+lib/wpRest.ts
+  s_0a0a7a99358138::t_8cc325aba62608 13-14,17,22
+pages/api/articles/deep-analysis.ts
+  s_0a0a7a99358138::t_df47814d67f1f9 651,690,747
+lib/wie/eval/editorialJudge.ts
+  s_0a0a7a99358138::t_5d2c07679416e0 275
+pages/api/keywords.ts
+  s_0a0a7a99358138::t_df47814d67f1f9 96,171,195,237
+lib/fetchSitemapUrls.ts
+  s_0a0a7a99358138::t_8ba106470612f9 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1975a83c3c8f09022470b79ef25d2335c458a854",
+  "prompts": {},
+  "sessions": {
+    "s_0a0a7a99358138": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c02357ce-f161-4d1d-a21e-feaac2f5b774",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
