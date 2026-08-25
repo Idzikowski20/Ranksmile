@@ -190,7 +190,7 @@ export function CeAi() {
               {AI.titleLines[1]}
               <span>
                 {AI.titleTail}
-                <img src={`${A}/underline.svg`} alt="" aria-hidden />
+                <img loading="lazy" decoding="async" src={`${A}/underline.svg`} alt="" aria-hidden />
               </span>
             </h3>
           </Head>

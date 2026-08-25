@@ -24,7 +24,7 @@ function KwRow({ keyword, position, clicks, impr, selected, onSelect, suggest, a
    selected: boolean; onSelect: () => void; suggest?: boolean; addNew?: boolean;
 }) {
    return (
-      <div onClick={onSelect} className="kw-row" style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--koala-bg-secondary)', cursor: 'pointer', background: selected ? 'var(--koala-bg-secondary)' : 'var(--koala-bg-primary)', transition: 'background 100ms ease' }}>
+      <div onClick={onSelect} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } }} className="kw-row" style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--koala-bg-secondary)', cursor: 'pointer', background: selected ? 'var(--koala-bg-secondary)' : 'var(--koala-bg-primary)', transition: 'background 100ms ease' }}>
          <label style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer' }}>
             <input type="radio" checked={selected} readOnly style={{ accentColor: 'var(--koala-text-primary)', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
             <span style={{ minWidth: 0, fontSize: 14, fontWeight: addNew ? 500 : 400, color: addNew ? 'var(--koala-text-brand)' : 'var(--koala-text-primary)', fontFamily: KW_FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{keyword}</span>

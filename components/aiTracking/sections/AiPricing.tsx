@@ -531,7 +531,7 @@ export function AiPricing() {
                       {ENGINE_ICONS
                         // The engines row caps at the plan's included count; the prompts row spans all 5.
                         .slice(0, b.label.startsWith('AI Visibility engines') ? (Number(b.value) || ENGINE_ICONS.length) : ENGINE_ICONS.length)
-                        .map((src) => <img key={src} src={src} alt="" />)}
+                        .map((src) => <img loading="lazy" decoding="async" key={src} src={src} alt="" />)}
                     </Engines>
                   ) : null}
                 </span>
