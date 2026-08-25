@@ -117,6 +117,7 @@ async function callProvider(
     }
     const res = await fetch(resolved.url, {
       method: 'POST',
+      signal: AbortSignal.timeout(180_000),
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${key}`,
@@ -136,6 +137,7 @@ async function callProvider(
     if (!key) throw new Error('anthropic API key not configured');
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      signal: AbortSignal.timeout(180_000),
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': key,

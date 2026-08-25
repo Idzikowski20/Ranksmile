@@ -23,6 +23,7 @@ export async function fetchSerperUrls(opts: {
     try {
       const res = await fetch('https://google.serper.dev/search', {
         method: 'POST',
+        signal: AbortSignal.timeout(20_000),
         headers: {
           'Content-Type': 'application/json',
           'X-API-KEY': apiKey,

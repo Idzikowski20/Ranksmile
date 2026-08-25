@@ -164,6 +164,7 @@ async function emit(jobId: string, stage: StageKey, percent: number, message: st
    try {
       await fetch(`${nextjsUrl()}/api/articles/job-progress`, {
          method: 'POST',
+         signal: AbortSignal.timeout(10_000),
          headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' },
          body: JSON.stringify({ jobId, currentStage: stage, stageProgress: percent, totalProgress: Math.round((STAGE_ORDER.indexOf(stage) * 100 + percent) / STAGE_ORDER.length), message }),
       });

@@ -34,6 +34,7 @@ async function authPost<T>(path: string, body: JsonRecord): Promise<AuthFetchRes
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10_000),
   });
 
   let data: unknown = null;

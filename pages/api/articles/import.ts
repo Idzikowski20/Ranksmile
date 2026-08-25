@@ -16,6 +16,10 @@ import { getErrorMessage } from '../../../lib/errors';
 import { countOccurrences } from '../../../lib/contentScore';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { isSidecarConfigured } from '../../../lib/sidecar';
+// cheerio .text() DECODES entities — a page whose text contains "&lt;img onerror=…&gt;"
+// comes back as a live tag; re-escape before interpolating into contentHtml, which the
+// app later renders via dangerouslySetInnerHTML (stored XSS otherwise).
+import { escapeHtml } from '../../../lib/emails/layout';
 import { publicAppUrl } from '../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
@@ -124,7 +128,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          }
       } catch (e) {
          if (e instanceof BlockedUrlError) return res.status(400).json({ error: getErrorMessage(e) || 'Blocked URL' });
-         console.log(`[import] HTTP fetch failed (${getErrorMessage(e)}), falling back to Puppeteer`);
+         console.error(`[import] HTTP fetch failed (${getErrorMessage(e)}), falling back to Puppeteer`);
       }
 
       // Fallback to Puppeteer for SPAs and sites requiring JS rendering
@@ -247,19 +251,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
          if (/^h[1-6]$/.test(tag)) {
             const text = $(el).text().trim();
-            if (text) contentParts.push(`<${tag}>${text}</${tag}>`);
+            if (text) contentParts.push(`<${tag}>${escapeHtml(text)}</${tag}>`);
          } else if (tag === 'p') {
             const text = $(el).text().trim();
-            if (text.split(/\s+/).length >= 3) contentParts.push(`<p>${text}</p>`);
+            if (text.split(/\s+/).length >= 3) contentParts.push(`<p>${escapeHtml(text)}</p>`);
          } else if (tag === 'ul' || tag === 'ol') {
             const items = $(el).children('li').map((_, li) => {
                const t = $(li).text().trim();
-               return t ? `<li>${t}</li>` : '';
+               return t ? `<li>${escapeHtml(t)}</li>` : '';
             }).get().filter(Boolean).join('');
             if (items) contentParts.push(`<${tag}>${items}</${tag}>`);
          } else if (tag === 'blockquote') {
             const text = $(el).text().trim();
-            if (text) contentParts.push(`<blockquote><p>${text}</p></blockquote>`);
+            if (text) contentParts.push(`<blockquote><p>${escapeHtml(text)}</p></blockquote>`);
          }
       });
 
@@ -274,7 +278,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             if (wc >= 8) {
                $(el).find('*').each((__, child) => { seen.add(child); });
                seen.add(el);
-               contentParts.push(`<p>${text}</p>`);
+               contentParts.push(`<p>${escapeHtml(text)}</p>`);
             }
          });
       }
@@ -284,7 +288,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Fallback: chunk plain text into paragraphs
       const contentHtml = contentParts.length > 2
          ? contentParts.join('\n')
-         : plainText.match(/[^\n]{80,}/g)?.map(c => `<p>${c.trim()}</p>`).join('\n') || `<p>${title}</p>`;
+         : plainText.match(/[^\n]{80,}/g)?.map(c => `<p>${escapeHtml(c.trim())}</p>`).join('\n') || `<p>${escapeHtml(title)}</p>`;
 
       // Extract-only mode — the Content Editor imports directly into the current
       // (already-created) article, so we just return the parsed HTML and metadata

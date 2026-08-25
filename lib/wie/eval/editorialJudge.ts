@@ -272,6 +272,7 @@ export async function runEditorialJudge(opts: {
         if (!llm.apiKey) return { ok: false as const, status: 0, reason: `${llm.keyEnv}_missing` };
         const aiRes = await fetch(llm.url, {
           method: 'POST',
+          signal: AbortSignal.timeout(180_000),
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${llm.apiKey}` },
           body: JSON.stringify({
             model: llm.model,

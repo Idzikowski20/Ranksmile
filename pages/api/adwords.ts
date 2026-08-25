@@ -124,11 +124,11 @@ const getAdwordsRefreshToken = async (req: NextApiRequest, res: NextApiResponse<
          if (typeof errorMsg === 'string' && errorMsg.includes('redirect_uri_mismatch')) {
             errorMsg += ` Redirected URL: ${redirectURL}`;
          }
-         console.log('[Error] Getting Google Ads Refresh Token! Reason: ', errorMsg);
+         console.error('[Error] Getting Google Ads Refresh Token! Reason: ', errorMsg);
          return res.status(400).send(`Error Saving the Google Ads Refresh Token${errorMsg ? `. Details: ${errorMsg}` : ''}. Please Try Again!`);
       }
    } catch (error) {
-      console.log('[ERROR] Getting Google Ads Refresh Token: ', error);
+      console.error('[ERROR] Getting Google Ads Refresh Token: ', error);
       return res.status(400).send('Error Getting Google Ads Refresh Token. Please Try Again!');
    }
 };
@@ -150,7 +150,7 @@ const validateAdwordsIntegration = async (req: NextApiRequest, res: NextApiRespo
       }
       return res.status(400).json({ valid: false, error: errMsg });
    } catch (error) {
-      console.log('[ERROR] Validating Google Ads Integration: ', error);
+      console.error('[ERROR] Validating Google Ads Integration: ', error);
       return res.status(400).json({ valid: false, error: errMsg });
    }
 };
@@ -167,7 +167,7 @@ const disconnectGoogleAds = async (_req: NextApiRequest, res: NextApiResponse) =
       );
       return res.status(200).json({ disconnected: true });
    } catch (error) {
-      console.log('[ERROR] Disconnecting Google Ads:', error);
+      console.error('[ERROR] Disconnecting Google Ads:', error);
       return res.status(400).json({ error: 'Failed to disconnect Google Ads' });
    }
 };

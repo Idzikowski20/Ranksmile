@@ -42,6 +42,7 @@ export async function sendConfirmationEmail(email: string, confirmUrl: string): 
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: FROM, to: [email], subject: CONFIRM_EMAIL_SUBJECT, html: buildConfirmEmailHtml(confirmUrl) }),
+      signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
       console.warn(`[confirmEmail] Resend responded ${res.status} — confirmation e-mail not sent.`);
