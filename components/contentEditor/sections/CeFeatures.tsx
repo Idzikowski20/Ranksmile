@@ -292,7 +292,7 @@ export function CeFeatures() {
               </List>
             </Text>
             <Art aria-hidden>
-              <img src={`${A}/ranking-factors.svg`} alt="" width={385} height={385} />
+              <img loading="lazy" decoding="async" src={`${A}/ranking-factors.svg`} alt="" width={385} height={385} />
             </Art>
           </Card>
           <Card data-reveal style={{ width: 706.63, maxWidth: '100%' }}>
@@ -311,7 +311,7 @@ export function CeFeatures() {
             </Text>
             <Art aria-hidden style={{ flexWrap: 'wrap', gap: 18, padding: 36 }}>
               {['engine-chatgpt.svg', 'engine-google.png', 'engine-gemini.png', 'engine-perplexity.svg', 'engine-aioverview.svg'].map((f) => (
-                <img
+                <img loading="lazy" decoding="async"
                   key={f}
                   src={`/ai-tracking/${f}`}
                   alt=""
@@ -341,7 +341,7 @@ export function CeFeatures() {
               <p>{briefs.body}</p>
             </Text>
             <Art style={{ padding: '36px 36px 0', alignItems: 'flex-end' }} aria-hidden>
-              <img src={`${A}/briefs.png`} alt="" width={437} height={364} />
+              <img loading="lazy" decoding="async" src={`${A}/briefs.png`} alt="" width={437} height={364} />
             </Art>
           </Col>
           <Col data-reveal>
@@ -352,7 +352,7 @@ export function CeFeatures() {
             <Flags aria-hidden>
               {languages.flags.map((f) => (
                 <span key={f.code}>
-                  <img src={`${A}/flag-${f.code}.png`} alt="" width={36} height={36} />
+                  <img loading="lazy" decoding="async" src={`${A}/flag-${f.code}.png`} alt="" width={36} height={36} />
                   {f.label}
                 </span>
               ))}
@@ -379,7 +379,7 @@ export function CeFeatures() {
               ))}
               <ExplainerBtn href="#write">
                 <span>
-                  <img src={`${A}/surfy-ce.png`} alt="" width={96} height={54} />
+                  <img loading="lazy" decoding="async" src={`${A}/surfy-ce.png`} alt="" width={96} height={54} />
                   <i aria-hidden><Play size={14} weight="fill" /></i>
                 </span>
                 {smily.cta}

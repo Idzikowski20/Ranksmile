@@ -514,7 +514,7 @@ export function Solution() {
                   {u.tail}
                 </Quote>
                 <Author>
-                  <i aria-hidden><img src="/favicon.svg" alt="" width={28} height={28} /></i>
+                  <i aria-hidden><img loading="lazy" decoding="async" src="/favicon.svg" alt="" width={28} height={28} /></i>
                   <div>
                     <b>{u.name}</b>
                     <span>{u.role}</span>

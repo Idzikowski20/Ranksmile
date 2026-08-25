@@ -320,7 +320,7 @@ export function Data() {
               <strong>{quotes[0].strong}</strong>
             </p>
             <QuoteAuthor>
-              <img src="/favicon.svg" alt="" />
+              <img loading="lazy" decoding="async" src="/favicon.svg" alt="" />
               <div>
                 <b>{quotes[0].name}</b>
                 <span>{quotes[0].role}</span>
@@ -333,7 +333,7 @@ export function Data() {
               <strong>{quotes[1].strong}</strong>
             </p>
             <QuoteAuthor>
-              <img src="/favicon.svg" alt="" />
+              <img loading="lazy" decoding="async" src="/favicon.svg" alt="" />
               <div>
                 <b>{quotes[1].name}</b>
                 <span>{quotes[1].role}</span>
