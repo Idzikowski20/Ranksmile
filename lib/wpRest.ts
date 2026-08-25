@@ -10,14 +10,16 @@
 export async function wpRestFetch(siteUrl: string, route: string, init?: RequestInit): Promise<Response> {
    const base = siteUrl.replace(/\/+$/, '');
    const clean = route.replace(/^\/+/, '');
-   // Default timeout — a hung WP site must not hang publish; caller's init.signal wins.
-   const opts: RequestInit = { signal: AbortSignal.timeout(30_000), ...init };
+   // Fresh timeout per request — a shared signal would arrive at the fallback fetch
+   // already aborted (or with a burnt budget) after a hung pretty-form attempt.
+   // Caller's init.signal wins when provided.
+   const opts = (): RequestInit => ({ signal: AbortSignal.timeout(30_000), ...init });
 
    try {
-      const pretty = await fetch(`${base}/wp-json/${clean}`, opts);
+      const pretty = await fetch(`${base}/wp-json/${clean}`, opts());
       const ct = pretty.headers.get('content-type') || '';
       if (pretty.status !== 404 && ct.includes('json')) return pretty;
-   } catch { /* network error on the pretty form — try the fallback below */ }
+   } catch { /* network error / timeout on the pretty form — try the fallback below */ }
 
-   return fetch(`${base}/?rest_route=/${clean}`, opts);
+   return fetch(`${base}/?rest_route=/${clean}`, opts());
 }

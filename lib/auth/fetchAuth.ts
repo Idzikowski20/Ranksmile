@@ -28,14 +28,33 @@ function extractMessage(data: unknown): string | undefined {
   return undefined;
 }
 
+/** AbortSignal.timeout is missing on older Safari (<16) — no signal beats broken sign-in. */
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  return typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(ms) : undefined;
+}
+
 async function authPost<T>(path: string, body: JsonRecord): Promise<AuthFetchResult<T>> {
-  const res = await fetch(`${AUTH_BASE}/${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(10_000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${AUTH_BASE}/${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+      signal: timeoutSignal(10_000),
+    });
+  } catch (err) {
+    // Timeout or network failure — keep the AuthFetchResult contract so forms
+    // surface an error instead of hanging on an unhandled rejection.
+    const timedOut = err instanceof Error && err.name === 'TimeoutError';
+    return {
+      ok: false,
+      error: {
+        message: timedOut ? 'Auth server did not respond. Try again.' : 'Network error. Try again.',
+        status: 0,
+      },
+    };
+  }
 
   let data: unknown = null;
   const text = await res.text();
