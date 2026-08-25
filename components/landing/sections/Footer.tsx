@@ -1,14 +1,17 @@
 import React from 'react';
 import styled from '@emotion/styled';
-import { ArrowUpRight, CheckCircle } from '@phosphor-icons/react';
+import { ArrowUpRight, FacebookLogo, Globe, InstagramLogo, LinkedinLogo, XLogo } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
 import { typeface, fontWeight } from '../../koala/tokens/typography';
 import { shadow } from '../../koala/tokens/effects';
 import { LEGAL_COMPANY } from '../../../lib/legal/company';
 import { BP, Container } from '../primitives';
-import { FOOTER_BADGES, FOOTER_COLUMNS, FOOTER_LEGAL, SIGN_UP_HREF, SITE_NAME, SUPPORT_EMAIL } from '../content';
+import { FOOTER_COLUMNS, FOOTER_LEGAL, SITE_NAME } from '../content';
 
-/* Figma 1:3845 — py 126; grid 1.5fr + 4×1fr, gap-x 18 / gap-y 90; rows: logo+badges · columns · legal. */
+/*
+ * Koala UI footer (Figma 8984:146288) with Ranksmile content: logo + social icons left,
+ * four link columns right; bottom row = language pill + copyright | payment icons.
+ */
 
 const Root = styled.footer`
   border-top: 1px solid ${semantic.border.primary};
@@ -17,37 +20,47 @@ const Root = styled.footer`
   color: ${semantic.text.primary};
 `;
 
-const Grid = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 1fr));
-  column-gap: 18px;
-  row-gap: 90px;
-  padding: 126px 0;
+const Wrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+  padding: 96px 0 32px;
+  ${BP.md} {
+    gap: 45px;
+    padding: 64px 0 24px;
+  }
+`;
+
+const Top = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 45px;
   ${BP.lg} {
-    grid-template-columns: repeat(2, 1fr);
-    row-gap: 54px;
-    padding: 72px 0;
+    flex-direction: column;
   }
-  ${BP.sm} {
-    grid-template-columns: 1fr;
-  }
+`;
+
+const Branding = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 `;
 
 const Logo = styled.a`
   display: inline-flex;
   align-items: center;
-  gap: 14px;
-  height: 78.83px;
+  gap: 10px;
   text-decoration: none;
   color: ${semantic.text.primary};
   font-family: ${typeface.heading};
-  font-size: 44px;
-  line-height: 1;
+  font-size: 28px;
+  line-height: 40px;
   letter-spacing: -0.04em;
   font-weight: ${fontWeight.bold};
   img {
-    width: 56px;
-    height: 56px;
+    width: 40px;
+    height: 40px;
   }
   em {
     font-style: normal;
@@ -60,66 +73,50 @@ const Logo = styled.a`
   }
 `;
 
-const Badges = styled.div`
-  grid-column: 2 / -1;
+const Social = styled.div`
   display: flex;
-  align-items: flex-end;
-  justify-content: flex-start;
-  gap: 45px;
-  padding-top: 58.83px;
-  flex-wrap: wrap;
-  ${BP.lg} {
-    grid-column: 1 / -1;
-    padding-top: 0;
-  }
-`;
-
-const Badge = styled.a`
-  display: inline-flex;
   align-items: center;
-  gap: 9px;
-  text-decoration: none;
-  font-size: 18px;
-  line-height: 27px;
-  font-weight: ${fontWeight.bold};
-  color: ${semantic.text.primary};
-  white-space: pre;
-  svg {
-    color: ${semantic.status.success};
-  }
-  span {
-    font-weight: ${fontWeight.bold};
-    color: ${semantic.text.secondary};
+  gap: 8px;
+  a {
+    display: inline-flex;
+    color: ${semantic.text.primary};
+    &:hover {
+      color: ${semantic.text.brand};
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: ${shadow.focus};
+      border-radius: 4px;
+    }
   }
 `;
 
-const Company = styled.div`
+/* Four equal columns, Figma: header 14 medium primary, links 14 regular secondary, gap 8. */
+
+const Columns = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 17.4px;
-  h3 {
-    margin: 0;
-    font-size: 18px;
-    line-height: 27px;
-    font-weight: ${fontWeight.regular};
-  }
-  address {
-    font-style: normal;
-    font-size: 15.8px;
-    line-height: 23.63px;
-    color: ${semantic.text.secondary};
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 628px;
+  max-width: 100%;
+  ${BP.sm} {
+    width: 100%;
   }
 `;
 
 const Col = styled.nav`
+  flex: 1 0 0;
+  min-width: 130px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 8px;
   h3 {
-    margin: 0;
-    font-size: 18px;
-    line-height: 27px;
-    font-weight: ${fontWeight.regular};
+    margin: 0 0 0;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.4px;
+    font-weight: ${fontWeight.medium};
+    color: ${semantic.text.primary};
   }
   ul {
     list-style: none;
@@ -127,16 +124,20 @@ const Col = styled.nav`
     padding: 0;
     display: flex;
     flex-direction: column;
+    gap: 8px;
+  }
+  ${BP.sm} {
+    flex: 1 0 40%;
   }
 `;
 
 const FLink = styled.a`
   display: inline-flex;
   align-items: center;
-  gap: 4.5px;
-  padding: 5.4px 0;
-  font-size: 15.8px;
-  line-height: 23.63px;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
   color: ${semantic.text.secondary};
   text-decoration: none;
   &:hover {
@@ -149,101 +150,189 @@ const FLink = styled.a`
   }
 `;
 
-const Legal = styled.div`
-  grid-column: 1 / -1;
+/* Bottom row — Figma: language pill + copyright left, payment icons right. */
+
+const Bottom = styled.div`
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+`;
+
+const BottomLeft = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+`;
+
+const LangPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid ${semantic.border.primary};
+  border-radius: ${semantic.button.brand.radius};
+  background: ${semantic.background.primary};
+  box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.04);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
+  font-weight: ${fontWeight.medium};
+  color: ${semantic.text.primary};
+  svg {
+    color: ${semantic.text.secondary};
+  }
+`;
+
+const LegalRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  div {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 18px;
-  }
+  gap: 4px 16px;
+`;
+
+const Copyright = styled.p`
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
+  font-weight: ${fontWeight.medium};
+  color: ${semantic.text.secondary};
   small {
-    font-size: 15.8px;
-    line-height: 23.63px;
+    display: block;
+    font-size: 12.5px;
+    font-weight: ${fontWeight.regular};
     color: ${semantic.text.tertiary};
   }
 `;
+
+const Payments = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+`;
+
+const PayIcon = styled.span<{ $boxed?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 24px;
+  box-sizing: border-box;
+  border: ${(p) => (p.$boxed ? `0.5px solid ${semantic.border.primary}` : 'none')};
+  border-radius: 3px;
+  background: ${(p) => (p.$boxed ? semantic.background.primary : 'transparent')};
+  img {
+    display: block;
+  }
+  > img {
+    width: 100%;
+    height: 100%;
+  }
+`;
+
+const GpayInner = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5px;
+  img {
+    height: 8.6px;
+    width: auto;
+  }
+`;
+
+const SOCIAL = [
+  { label: 'LinkedIn', icon: LinkedinLogo, href: '#' },
+  { label: 'X (Twitter)', icon: XLogo, href: '#' },
+  { label: 'Facebook', icon: FacebookLogo, href: '#' },
+  { label: 'Instagram', icon: InstagramLogo, href: '#' },
+] as const;
+
+const P = '/landing/pay';
 
 export function Footer() {
   return (
     <Root>
       <Container>
-        <Grid>
-          <Logo href="/">
-            <img loading="lazy" decoding="async" src="/favicon.svg" alt="" width={56} height={56} />
-            <span>
-              Rank
-              <em>smile</em>
-            </span>
-          </Logo>
-          <Badges>
-            {FOOTER_BADGES.map((b) => (
-              <Badge key={b.strong} href={b.href}>
-                <CheckCircle size={18} weight="fill" aria-hidden />
-                {b.strong}
-                {' '}
-                <span>{b.muted}</span>
-              </Badge>
-            ))}
-          </Badges>
-
-          <Company>
-            <h3>Company</h3>
-            <address>
-              {LEGAL_COMPANY.legalName}
-              <br />
-              {LEGAL_COMPANY.registeredAddress}
-              <br />
-              {LEGAL_COMPANY.country}
-              <br />
-              {`NIP: ${LEGAL_COMPANY.nip}`}
-            </address>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              <li>
-                <FLink href="/legal">
-                  Legal hub
-                  <ArrowUpRight size={13.5} weight="bold" aria-hidden />
-                </FLink>
-              </li>
-              <li><FLink href={SIGN_UP_HREF}>Start for free</FLink></li>
-              <li><FLink href={`mailto:${SUPPORT_EMAIL}`}>Contact</FLink></li>
-            </ul>
-          </Company>
-
-          {FOOTER_COLUMNS.map((col) => (
-            <Col key={col.title} aria-label={col.title}>
-              <h3>{col.title}</h3>
-              <ul>
-                {col.links.map((link) => (
-                  <li key={`${col.title}-${link.label}`}>
-                    <FLink href={link.href}>
-                      {link.label}
-                      {'external' in link && link.external ? <ArrowUpRight size={13.5} weight="bold" aria-hidden /> : null}
-                    </FLink>
-                  </li>
+        <Wrap>
+          <Top>
+            <Branding>
+              <Logo href="/">
+                <img loading="lazy" decoding="async" src="/favicon.svg" alt="" width={40} height={40} />
+                <span>
+                  Rank
+                  <em>smile</em>
+                </span>
+              </Logo>
+              <Social aria-label="Ranksmile on social media">
+                {SOCIAL.map(({ label, icon: IconComp, href }) => (
+                  <a key={label} href={href} aria-label={label}>
+                    <IconComp size={20} weight="fill" aria-hidden />
+                  </a>
                 ))}
-              </ul>
-            </Col>
-          ))}
+              </Social>
+            </Branding>
 
-          <Legal>
-            <div>
-              {FOOTER_LEGAL.map((l) => <FLink key={l.href} href={l.href}>{l.label}</FLink>)}
-            </div>
-            <small>
-              ©
-              {' '}
-              {new Date().getFullYear()}
-              {' '}
-              {SITE_NAME}
-            </small>
-          </Legal>
-        </Grid>
+            <Columns>
+              {FOOTER_COLUMNS.map((col) => (
+                <Col key={col.title} aria-label={col.title}>
+                  <h3>{col.title}</h3>
+                  <ul>
+                    {col.links.map((link) => (
+                      <li key={`${col.title}-${link.label}`}>
+                        <FLink href={link.href}>
+                          {link.label}
+                          {'external' in link && link.external ? <ArrowUpRight size={12} weight="bold" aria-hidden /> : null}
+                        </FLink>
+                      </li>
+                    ))}
+                  </ul>
+                </Col>
+              ))}
+            </Columns>
+          </Top>
+
+          <Bottom>
+            <BottomLeft>
+              <LangPill>
+                <Globe size={20} weight="bold" aria-hidden />
+                English
+              </LangPill>
+              <LegalRow>
+                {FOOTER_LEGAL.map((l) => <FLink key={l.href} href={l.href}>{l.label}</FLink>)}
+              </LegalRow>
+              <Copyright>
+                {`Copyright © ${new Date().getFullYear()} ${SITE_NAME}`}
+                <small>
+                  {`${LEGAL_COMPANY.legalName} · ${LEGAL_COMPANY.registeredAddress}, `}
+                  {`${LEGAL_COMPANY.country} · NIP: ${LEGAL_COMPANY.nip}`}
+                </small>
+              </Copyright>
+            </BottomLeft>
+
+            <Payments aria-label="Accepted payment methods">
+              <PayIcon><img src={`${P}/visa.svg`} alt="Visa" width={36} height={24} loading="lazy" /></PayIcon>
+              <PayIcon><img src={`${P}/stripe.svg`} alt="Stripe" width={36} height={24} loading="lazy" /></PayIcon>
+              <PayIcon $boxed>
+                <img src={`${P}/mastercard-mark.svg`} alt="Mastercard" width={23} height={14} loading="lazy" />
+              </PayIcon>
+              <PayIcon $boxed>
+                <GpayInner aria-label="Google Pay" role="img">
+                  <img src={`${P}/gpay-g.svg`} alt="" loading="lazy" />
+                  <img src={`${P}/gpay-pay.svg`} alt="" loading="lazy" />
+                </GpayInner>
+              </PayIcon>
+              <PayIcon><img src={`${P}/applepay.svg`} alt="Apple Pay" width={36} height={24} loading="lazy" /></PayIcon>
+              <PayIcon><img src={`${P}/klarna.svg`} alt="Klarna" width={36} height={24} loading="lazy" /></PayIcon>
+              <PayIcon $boxed>
+                <img src={`${P}/paypal-mark.svg`} alt="PayPal" width={21} height={17} loading="lazy" />
+              </PayIcon>
+            </Payments>
+          </Bottom>
+        </Wrap>
       </Container>
     </Root>
   );
