@@ -1,54 +1,75 @@
 import React from 'react';
 import styled from '@emotion/styled';
-import { GithubLogo, GoogleLogo, OpenAiLogo, Sparkle, Stack } from '@phosphor-icons/react';
+import {
+  ChartLineUp,
+  FileText,
+  Gauge,
+  GithubLogo,
+  GoogleLogo,
+  MagnifyingGlass,
+  OpenAiLogo,
+  Sparkle,
+  SquaresFour,
+  Stack,
+} from '@phosphor-icons/react';
 import { Icon } from '../../koala/icons/Icon';
 import { semantic } from '../../koala/tokens/semantic';
 import { fontWeight } from '../../koala/tokens/typography';
-import { BP, Container, CtaLink, DotCanvas, Eyebrow, Section } from '../primitives';
+import { BP, Container, DotCanvas, Section } from '../primitives';
 import { ENGINES, HERO_AVATARS, SIGN_UP_HREF } from '../content';
 
-/* Figma 1:6 — section gap 90, pb 90; content column px 27 + pl 13.5; copy block py 90, gap 45. */
+/*
+ * Hybrid hero — Surfer accents (typed engine headline, dot canvas) on the Koala UI
+ * centred hero shell (Figma 4009:213717): badge pill, brand + outline button pair,
+ * tab pills over the product shot, bottom white fade.
+ */
 
 const HeroSection = styled(Section)`
   overflow: hidden;
-  padding-bottom: 90px;
-  margin-top: -92px; /* the floating nav sits over the canvas, as in the reference */
+  margin-top: -92px; /* the floating nav sits over the canvas, as before */
   ${BP.md} {
-    padding-bottom: 54px;
     margin-top: -73px;
   }
 `;
 
 const Inner = styled.div`
   position: relative;
-  padding: 0 0 0 13.5px;
-  min-height: 720px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  align-items: center;
+  gap: 64px;
   ${BP.md} {
-    padding-left: 0;
-    min-height: 0;
+    gap: 40px;
   }
 `;
 
 const Copy = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 45px;
-  max-width: 1170px;
-  padding: 90px 0;
-  padding-top: 200px; /* 108 canvas offset + 92 nav */
+  align-items: center;
+  gap: 32px;
+  padding-top: 188px; /* canvas offset + floating nav */
+  text-align: center;
   ${BP.md} {
-    padding-top: 150px;
-    gap: 32px;
+    padding-top: 140px;
+    gap: 24px;
   }
 `;
 
-const EyebrowRow = styled.div`
-  display: flex;
+/* Badge pill — Figma Content Badge: white, 1px border, fully rounded. */
+const Badge = styled.div`
+  display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
+  padding: 4px 12px 4px 8px;
+  border: 1px solid ${semantic.border.primary};
+  border-radius: 56px;
+  background: ${semantic.background.primary};
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: ${fontWeight.medium};
+  letter-spacing: -0.4px;
+  color: ${semantic.text.primary};
   svg {
     color: ${semantic.text.brand};
   }
@@ -58,32 +79,33 @@ const H1 = styled.h1`
   margin: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   font-weight: ${fontWeight.bold};
-  font-size: 76.5px;
-  line-height: 84.16px;
-  letter-spacing: -2.25px;
+  font-size: 64px;
+  line-height: 71px;
+  letter-spacing: -1.9px;
   color: ${semantic.text.primary};
   ${BP.lg} {
-    font-size: 64px;
-    line-height: 70px;
-    letter-spacing: -1.8px;
+    font-size: 54px;
+    line-height: 60px;
+    letter-spacing: -1.5px;
   }
   ${BP.md} {
-    font-size: 48px;
-    line-height: 54px;
-    letter-spacing: -1.3px;
+    font-size: 42px;
+    line-height: 48px;
+    letter-spacing: -1.1px;
   }
   ${BP.sm} {
-    font-size: 38px;
-    line-height: 44px;
-    letter-spacing: -1px;
+    font-size: 34px;
+    line-height: 40px;
+    letter-spacing: -0.9px;
   }
 `;
 
 const Row = styled.span`
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
 `;
 
@@ -91,21 +113,21 @@ const EngineIcon = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 76.5px;
-  height: 76.5px;
-  margin: 0 11.477px;
+  width: 64px;
+  height: 64px;
+  margin: 0 8px;
   color: ${semantic.text.brand};
   svg {
-    width: 55px;
-    height: 55px;
+    width: 46px;
+    height: 46px;
   }
   ${BP.md} {
-    width: 48px;
-    height: 48px;
-    margin: 0 6px;
+    width: 42px;
+    height: 42px;
+    margin: 0 5px;
     svg {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
     }
   }
 `;
@@ -113,8 +135,8 @@ const EngineIcon = styled.span`
 const Caret = styled.span`
   display: inline-block;
   width: 2.25px;
-  height: 68.86px;
-  margin: 0 0 6.121px 2px;
+  height: 0.85em;
+  margin: 0 0 0.06em 2px;
   background: ${semantic.text.primary};
   animation: landing-caret 1.1s steps(2, start) infinite;
   @keyframes landing-caret {
@@ -123,54 +145,93 @@ const Caret = styled.span`
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
-  ${BP.md} {
-    height: 0.9em;
+`;
+
+/* Button pair — Figma Button Group: brand fill + outline, Koala button tokens. */
+
+const Buttons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+`;
+
+const BrandBtn = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 18px;
+  border-radius: ${semantic.button.brand.radius};
+  background: ${semantic.button.brand.bg};
+  color: ${semantic.button.brand.fg};
+  text-decoration: none;
+  font-size: 15.8px;
+  line-height: 22px;
+  font-weight: ${fontWeight.medium};
+  letter-spacing: -0.4px;
+  transition: background var(--motion-fast) var(--motion-ease-standard), transform var(--motion-fast) var(--motion-ease-standard);
+  &:hover {
+    background: ${semantic.button.brand.bgHover};
+  }
+  &:active {
+    transform: translateY(1px);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
   }
 `;
 
-const CtaWrap = styled.div`
-  padding-top: 36px;
-  ${BP.md} {
-    padding-top: 0;
+const OutlineBtn = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 18px;
+  border: 1px solid ${semantic.border.primary};
+  border-radius: ${semantic.button.brand.radius};
+  background: ${semantic.background.primary};
+  color: ${semantic.text.primary};
+  text-decoration: none;
+  font-size: 15.8px;
+  line-height: 22px;
+  font-weight: ${fontWeight.medium};
+  letter-spacing: -0.4px;
+  box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.04);
+  transition: background var(--motion-fast) var(--motion-ease-standard), transform var(--motion-fast) var(--motion-ease-standard);
+  &:hover {
+    background: ${semantic.background.secondary};
+  }
+  &:active {
+    transform: translateY(1px);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
   }
 `;
 
-/* Proof row — Figma 1:83: 90px tall; line at top, avatars + copy at 54px; rating right at 1107px. */
+/* Social proof — Surfer copy in the Figma centred avatar-row shape. */
 
 const Proof = styled.div`
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: 27px 36px;
-  row-gap: 27px;
+  display: flex;
   align-items: center;
-  min-height: 90px;
-  ${BP.lg} {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    row-gap: 18px;
-  }
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
 `;
 
 const ProofLine = styled.p`
-  grid-column: 1 / -1;
   margin: 0;
-  font-size: 18px;
-  line-height: 27px;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: -0.25px;
   color: ${semantic.text.secondary};
   strong {
-    font-weight: ${fontWeight.regular};
+    font-weight: ${fontWeight.medium};
     color: ${semantic.text.primary};
-  }
-`;
-
-const AvatarRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 27px;
-  ${BP.sm} {
-    flex-wrap: wrap;
-    gap: 12px;
   }
 `;
 
@@ -179,28 +240,17 @@ const AvatarList = styled.ul`
   margin: 0;
   padding: 0;
   display: flex;
-  height: 36px;
+  height: 32px;
   max-width: 100%;
-  ${BP.sm} {
-    height: 30px;
-  }
 `;
 
 const AvatarItem = styled.li`
   position: relative;
-  width: 29.7px;
-  height: 36px;
+  width: 24px;
+  height: 32px;
   flex-shrink: 0;
   &:last-of-type {
-    width: 36px;
-  }
-  ${BP.sm} {
-    /* tighten the 13-avatar overlap so the stack fits a 354px mobile column */
-    width: 22px;
-    height: 30px;
-    &:last-of-type {
-      width: 30px;
-    }
+    width: 32px;
   }
 `;
 
@@ -208,88 +258,119 @@ const Avatar = styled.span`
   position: absolute;
   left: 0;
   top: 0;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
+  border-radius: 16px;
   border: 2px solid ${semantic.background.primary};
   background: ${semantic.background.secondary};
   color: ${semantic.text.primary};
-  font-size: 15.3px;
-  line-height: 22.95px;
+  font-size: 13.5px;
+  line-height: 20px;
   font-weight: ${fontWeight.bold};
   box-shadow: 0 0 0 1px ${semantic.border.primary};
   svg {
-    width: 18px;
-    height: 18px;
-  }
-  ${BP.sm} {
-    width: 30px;
-    height: 30px;
-    font-size: 13px;
-    svg {
-      width: 15px;
-      height: 15px;
-    }
+    width: 16px;
+    height: 16px;
   }
 `;
 
-const Dot = styled.span`
-  position: absolute;
-  left: 16.2px;
-  top: 41.4px;
-  width: 3.59px;
-  height: 3.59px;
-  border-radius: 0.54px;
-  background: ${semantic.background.brand};
+/* Product stage — Figma: tab pills row + top-rounded shot with a deep soft shadow. */
+
+const Stage = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  ${BP.md} {
+    gap: 16px;
+  }
 `;
 
-const Already = styled.p`
-  margin: 0;
-  font-size: 18px;
-  line-height: 27px;
-  color: ${semantic.text.primary};
-  white-space: nowrap;
-`;
-
-const Rating = styled.div`
+const Tabs = styled.div`
   display: flex;
   align-items: center;
-  gap: 9px;
-  justify-self: end;
-  ${BP.lg} {
-    justify-self: start;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  ${BP.md} {
+    gap: 8px;
   }
 `;
 
-const EngineDots = styled.span`
+const Tab = styled.span<{ $active?: boolean }>`
   display: inline-flex;
-  gap: 3px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid ${semantic.border.primary};
+  border-radius: ${semantic.button.brand.radius};
+  background: ${(p) => (p.$active ? semantic.background.secondary : semantic.background.primary)};
+  box-shadow: ${(p) => (p.$active ? 'none' : '0px 1px 1px rgba(0, 0, 0, 0.04)')};
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: ${fontWeight.medium};
+  letter-spacing: -0.25px;
+  color: ${(p) => (p.$active ? semantic.text.primary : semantic.text.secondary)};
+  white-space: nowrap;
   svg {
-    color: ${semantic.text.brand};
+    flex-shrink: 0;
+  }
+  ${BP.sm} {
+    font-size: 14px;
   }
 `;
-
-/* Video frame — Figma 1:176: aspect 1440/675, radius 27, border, product still inside. */
 
 const Frame = styled.div`
   position: relative;
   width: 100%;
-  aspect-ratio: 1440.23 / 675.11;
+  aspect-ratio: 1216 / 800;
   overflow: hidden;
-  border-radius: 27px;
   border: 1px solid ${semantic.border.primary};
+  border-radius: 16px 16px 0 0;
   background: ${semantic.background.tertiary};
-  box-shadow: 0px 24px 68px 0px rgba(47,48,55,0.06);
+  box-shadow: 0px 25px 100px 0px rgba(0, 0, 0, 0.1);
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
   ${BP.md} {
     aspect-ratio: auto;
-    height: 420px;
-    border-radius: 18px;
+    height: 380px;
+    border-radius: 12px 12px 0 0;
   }
 `;
+
+/* Bottom fade — Figma Overlay: the shot melts into the page background. */
+const Fade = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 192px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, ${semantic.background.primary});
+  ${BP.md} {
+    height: 96px;
+  }
+`;
+
+const TABS = [
+  { label: 'Dashboard', icon: SquaresFour, active: true },
+  { label: 'AI Visibility', icon: Sparkle },
+  { label: 'Content Score', icon: Gauge },
+  { label: 'Rank Tracking', icon: ChartLineUp },
+  { label: 'Keyword Gap', icon: MagnifyingGlass },
+  { label: 'Reports', icon: FileText },
+] as const;
 
 const AVATAR_ICON = {
   google: GoogleLogo,
@@ -304,16 +385,16 @@ export function Hero() {
       <Container style={{ position: 'relative' }}>
         <Inner>
           <Copy>
-            <EyebrowRow data-hero="eyebrow">
-              <Stack size={15.75} weight="fill" aria-hidden />
-              <Eyebrow>AI visibility platform</Eyebrow>
-            </EyebrowRow>
+            <Badge data-hero="eyebrow">
+              <Stack size={18} weight="fill" aria-hidden />
+              AI visibility platform
+            </Badge>
 
             <H1 id="hero-title">
               <Row data-hero="line">
                 Be The Answer in
                 <EngineIcon aria-hidden>
-                  <Icon name="Sparkle" size={55} weight="fill" />
+                  <Icon name="Sparkle" size={46} weight="fill" />
                 </EngineIcon>
                 <span data-hero="engine">{ENGINES[0]}</span>
                 <Caret aria-hidden />
@@ -321,20 +402,12 @@ export function Hero() {
               <Row data-hero="line">– Everywhere Buyers Search.</Row>
             </H1>
 
-            <CtaWrap data-hero="cta">
-              <CtaLink href={SIGN_UP_HREF}>Try Ranksmile Platform →</CtaLink>
-            </CtaWrap>
-          </Copy>
+            <Buttons data-hero="cta">
+              <BrandBtn href={SIGN_UP_HREF}>Try Ranksmile Platform</BrandBtn>
+              <OutlineBtn href="#platform">Explore features</OutlineBtn>
+            </Buttons>
 
-          <Proof data-hero="proof">
-            <ProofLine>
-              Marketers, Agencies, and SEOs
-              {' '}
-              <strong>grow and get mentioned</strong>
-              {' '}
-              with Ranksmile every day
-            </ProofLine>
-            <AvatarRow>
+            <Proof data-hero="proof">
               <AvatarList aria-label="Engines and integrations Ranksmile works with">
                 {HERO_AVATARS.map((a) => {
                   const IconComp = a.icon ? AVATAR_ICON[a.icon] : null;
@@ -343,32 +416,41 @@ export function Hero() {
                       <Avatar role="img" aria-label={a.label}>
                         {IconComp ? <IconComp weight="bold" aria-hidden /> : a.letter}
                       </Avatar>
-                      {a.dot ? <Dot aria-hidden /> : null}
                     </AvatarItem>
                   );
                 })}
               </AvatarList>
-              <Already>Already the answer. Are you?</Already>
-            </AvatarRow>
-            <Rating>
-              <EngineDots aria-hidden>
-                {ENGINES.map((e) => <Sparkle key={e} size={19} weight="fill" />)}
-              </EngineDots>
-              <Eyebrow>{`${ENGINES.length} engines · tracked daily`}</Eyebrow>
-            </Rating>
-          </Proof>
-        </Inner>
+              <ProofLine>
+                Marketers, Agencies, and SEOs
+                {' '}
+                <strong>grow and get mentioned</strong>
+                {' '}
+                with Ranksmile every day
+              </ProofLine>
+            </Proof>
+          </Copy>
 
-        <Frame data-hero="preview">
-          {/* The reference poster frame is a blank white still; the dashboard render is the product shot. */}
-          <img
-            src="/landing/cta-dashboard.png"
-            alt="Ranksmile dashboard with AI visibility metrics"
-            width={1440}
-            height={1160}
-            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
-          />
-        </Frame>
+          <Stage data-hero="preview">
+            <Tabs aria-hidden>
+              {TABS.map(({ label, icon: TabIcon, ...t }) => (
+                <Tab key={label} $active={'active' in t && t.active}>
+                  <TabIcon size={20} weight="bold" />
+                  {label}
+                </Tab>
+              ))}
+            </Tabs>
+            <Frame>
+              <img
+                src="/landing/hero-koala-dashboard.png"
+                alt="Ranksmile dashboard with AI visibility metrics"
+                width={1216}
+                height={800}
+              />
+            </Frame>
+          </Stage>
+
+          <Fade aria-hidden />
+        </Inner>
       </Container>
     </HeroSection>
   );
