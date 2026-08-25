@@ -26,10 +26,7 @@ import { ENGINES, HERO_AVATARS, SIGN_UP_HREF } from '../content';
 
 const HeroSection = styled(Section)`
   overflow: hidden;
-  margin-top: -92px; /* the floating nav sits over the canvas, as before */
-  ${BP.md} {
-    margin-top: -73px;
-  }
+  margin-top: -73px; /* the floating nav (9 + 64) sits over the canvas */
 `;
 
 const Inner = styled.div`
@@ -48,7 +45,7 @@ const Copy = styled.div`
   flex-direction: column;
   align-items: center;
   gap: 32px;
-  padding-top: 188px; /* canvas offset + floating nav */
+  padding-top: 170px; /* canvas offset + floating nav */
   text-align: center;
   ${BP.md} {
     padding-top: 140px;

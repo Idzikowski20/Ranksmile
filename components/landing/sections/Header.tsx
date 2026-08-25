@@ -1,13 +1,33 @@
 import React, { useState } from 'react';
 import styled from '@emotion/styled';
-import { ArrowUpRight, CaretDown, List, X, YoutubeLogo } from '@phosphor-icons/react';
+import {
+  ArrowUpRight,
+  Buildings,
+  CaretDown,
+  ChartLineUp,
+  ChatCircleDots,
+  FileText,
+  Gauge,
+  List,
+  LockKey,
+  MagnifyingGlass,
+  PenNib,
+  Receipt,
+  Scales,
+  Sparkle,
+  UsersThree,
+  Plug,
+  X,
+  YoutubeLogo,
+} from '@phosphor-icons/react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { semantic } from '../../koala/tokens/semantic';
 import { typeface, fontWeight } from '../../koala/tokens/typography';
 import { shadow } from '../../koala/tokens/effects';
 import { BP } from '../primitives';
 import { ANNOUNCEMENT, NAV, SIGN_IN_HREF, SIGN_UP_HREF, SITE_NAME, SUPPORT_EMAIL } from '../content';
 
-/* ── Announcement bar (Figma 1:4061 · 60px, centred, 15.8/23.63) ─────────────── */
+/* ── Announcement bar (unchanged) ────────────────────────────────────────────── */
 
 const Bar = styled.div`
   display: flex;
@@ -68,7 +88,7 @@ const BarLink = styled.a`
   }
 `;
 
-/* ── Floating pill nav (Figma 2:11 · 83px, radius 27, inset 105px) ──────────── */
+/* ── Floating navbar (Figma 3950:207658 · h 64, radius 20, ghost links) ──────── */
 
 const Sticky = styled.header`
   position: sticky;
@@ -86,19 +106,18 @@ const Nav = styled.nav`
   position: relative;
   display: flex;
   align-items: center;
-  height: 83px;
-  padding: 13.5px;
+  height: 64px;
+  padding: 0 16px;
   box-sizing: border-box;
   border: 1px solid ${semantic.border.primary};
-  border-radius: 27px;
-  background: color-mix(in srgb, ${semantic.background.primary} 92%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, ${semantic.background.primary} 94%, transparent);
   backdrop-filter: blur(12px) saturate(1.3);
   -webkit-backdrop-filter: blur(12px) saturate(1.3);
   box-shadow: ${shadow.sm};
   font-family: ${typeface.body};
   ${BP.md} {
-    height: 64px;
-    padding: 8px 8px 8px 14px;
+    padding: 0 8px 0 14px;
     border-radius: 18px;
   }
 `;
@@ -106,17 +125,16 @@ const Nav = styled.nav`
 const Brand = styled.a`
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 13.5px 18px;
-  border-radius: 13.5px;
+  gap: 8px;
+  margin-right: 16px;
+  padding: 6px 8px;
+  border-radius: 12px;
   text-decoration: none;
   color: ${semantic.text.primary};
   font-family: ${typeface.heading};
   font-weight: ${fontWeight.bold};
-  font-size: 22px;
+  font-size: 21px;
   letter-spacing: -0.02em;
-  height: 28px;
-  box-sizing: content-box;
   img {
     width: 28px;
     height: 28px;
@@ -127,13 +145,14 @@ const Brand = styled.a`
     box-shadow: ${shadow.focus};
   }
   ${BP.md} {
+    margin-right: 0;
     padding: 0;
   }
 `;
 
 const Menu = styled.ul`
   list-style: none;
-  margin: 0 0 0 26px;
+  margin: 0;
   padding: 0;
   display: flex;
   align-items: center;
@@ -142,23 +161,29 @@ const Menu = styled.ul`
   }
 `;
 
+/* Ghost nav button — Figma: h 38, p 8, radius 16, 16px medium, caret 14. */
 const MenuButton = styled.a`
   display: inline-flex;
   align-items: center;
-  gap: 13.5px;
-  padding: 13.5px 18px;
-  border-radius: 13.5px;
+  gap: 4px;
+  height: 38px;
+  padding: 8px;
+  box-sizing: border-box;
+  border-radius: 16px;
   border: 0;
   background: transparent;
   font-family: ${typeface.body};
-  font-size: 18px;
-  line-height: 27px;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: -0.25px;
+  font-weight: ${fontWeight.medium};
   color: ${semantic.text.primary};
   text-decoration: none;
+  white-space: nowrap;
   cursor: var(--koala-cursor-pointing);
   transition: background var(--motion-fast) var(--motion-ease-standard);
   svg {
-    color: ${semantic.text.tertiary};
+    color: ${semantic.text.secondary};
     transition: transform var(--motion-fast) var(--motion-ease-standard);
   }
   &:hover {
@@ -190,14 +215,18 @@ const MenuItem = styled.li`
   }
 `;
 
-const Dropdown = styled.div`
+/* Mega dropdown — Figma 3950:207884: white card, icon + bold title + description rows. */
+
+const Dropdown = styled.div<{ $cols: 1 | 2 }>`
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 10px);
   left: 0;
-  min-width: 280px;
-  padding: 9px;
+  display: grid;
+  grid-template-columns: repeat(${(p) => p.$cols}, minmax(232px, 1fr));
+  gap: 0 8px;
+  padding: 8px;
   border: 1px solid ${semantic.border.primary};
-  border-radius: 18px;
+  border-radius: 16px;
   background: ${semantic.background.primary};
   box-shadow: ${shadow.lg};
   opacity: 0;
@@ -211,20 +240,32 @@ const Dropdown = styled.div`
 
 const DropLink = styled.a`
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
   border-radius: 12px;
   text-decoration: none;
   color: ${semantic.text.primary};
-  font-size: 15.8px;
-  line-height: 20px;
-  font-weight: ${fontWeight.medium};
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: ${semantic.text.primary};
+  }
+  b {
+    display: block;
+    font-size: 16px;
+    line-height: 24px;
+    letter-spacing: -0.25px;
+    font-weight: ${fontWeight.bold};
+  }
   small {
-    font-size: 13.5px;
-    line-height: 18px;
+    display: block;
+    margin-top: 2px;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.4px;
     font-weight: ${fontWeight.regular};
-    color: ${semantic.text.tertiary};
+    color: ${semantic.text.secondary};
   }
   &:hover {
     background: ${semantic.background.secondary};
@@ -235,20 +276,25 @@ const DropLink = styled.a`
   }
 `;
 
+/* Right buttons — Figma Button Group: brand sm + outline sm, radius 12. */
+
 const Right = styled.div`
   margin-left: auto;
   display: flex;
   align-items: center;
+  gap: 8px;
   ${BP.lg} {
     display: none;
   }
 `;
 
 const TextLink = styled.a`
-  padding: 13.5px 18px;
-  border-radius: 13.5px;
-  font-size: 18px;
-  line-height: 27px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
+  font-weight: ${fontWeight.medium};
   color: ${semantic.text.primary};
   text-decoration: none;
   &:hover {
@@ -260,17 +306,18 @@ const TextLink = styled.a`
   }
 `;
 
-const Outline = styled.a`
-  margin: 0 4.5px;
-  padding: 13.5px 18px;
-  border: 1px solid ${semantic.border.secondary};
-  border-radius: 13.5px;
-  font-size: 18px;
-  line-height: 27px;
-  color: ${semantic.text.primary};
+const Primary = styled.a`
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: ${semantic.button.brand.bg};
+  color: ${semantic.button.brand.fg};
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
+  font-weight: ${fontWeight.medium};
   text-decoration: none;
   &:hover {
-    background: ${semantic.button.secondary.bgHover};
+    background: ${semantic.button.brand.bgHover};
   }
   &:focus-visible {
     outline: none;
@@ -278,17 +325,20 @@ const Outline = styled.a`
   }
 `;
 
-const Primary = styled.a`
-  padding: 14.75px 18px 15.75px;
-  border-radius: 13.5px;
-  background: ${semantic.button.brand.bg};
-  color: ${semantic.button.brand.fg};
-  font-size: 18px;
-  line-height: 22.5px;
-  font-weight: ${fontWeight.bold};
+const Outline = styled.a`
+  padding: 6px 10px;
+  border: 1px solid ${semantic.border.primary};
+  border-radius: 12px;
+  background: ${semantic.background.primary};
+  color: ${semantic.text.primary};
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
+  font-weight: ${fontWeight.medium};
   text-decoration: none;
+  box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.04);
   &:hover {
-    background: ${semantic.button.brand.bgHover};
+    background: ${semantic.button.secondary.bgHover};
   }
   &:focus-visible {
     outline: none;
@@ -351,11 +401,31 @@ const SheetCtas = styled.div`
   gap: 8px;
   padding-top: 12px;
   a {
+    display: flex;
     justify-content: center;
     text-align: center;
     margin: 0;
+    padding: 10px;
   }
 `;
+
+/* Figma dropdown rows carry an icon per link; NAV stays data-only, glyphs map here. */
+const ITEM_ICON: Record<string, PhosphorIcon> = {
+  'Content Score': Gauge,
+  'AI Visibility': Sparkle,
+  'Rank Tracking': ChartLineUp,
+  'Coverage & Keyword Gap': MagnifyingGlass,
+  'In-house SEO teams': Buildings,
+  Agencies: UsersThree,
+  'Content managers & writers': PenNib,
+  'WordPress plugin': Plug,
+  'llms.txt': FileText,
+  'pricing.md': Receipt,
+  'Legal hub': Scales,
+  Contact: ChatCircleDots,
+  'Terms of Service': FileText,
+  'Privacy Policy': LockKey,
+};
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -392,16 +462,22 @@ export function Header() {
                   onClick={(e) => { if (!entry.href) e.preventDefault(); }}
                 >
                   {entry.label}
-                  {entry.items ? <CaretDown size={9} weight="bold" aria-hidden /> : null}
+                  {entry.items ? <CaretDown size={14} weight="bold" aria-hidden /> : null}
                 </MenuButton>
                 {entry.items ? (
-                  <Dropdown role="menu" aria-label={entry.label}>
-                    {entry.items.map((item) => (
-                      <DropLink key={item.label} href={item.href} role="menuitem">
-                        {item.label}
-                        {item.hint ? <small>{item.hint}</small> : null}
-                      </DropLink>
-                    ))}
+                  <Dropdown role="menu" aria-label={entry.label} $cols={entry.items.length > 4 ? 2 : 1}>
+                    {entry.items.map((item) => {
+                      const ItemIcon = ITEM_ICON[item.label];
+                      return (
+                        <DropLink key={item.label} href={item.href} role="menuitem">
+                          {ItemIcon ? <ItemIcon size={20} weight="bold" aria-hidden /> : null}
+                          <span>
+                            <b>{item.label}</b>
+                            {item.hint ? <small>{item.hint}</small> : null}
+                          </span>
+                        </DropLink>
+                      );
+                    })}
                   </Dropdown>
                 ) : null}
               </MenuItem>
@@ -410,8 +486,8 @@ export function Header() {
 
           <Right>
             <TextLink href={SIGN_IN_HREF}>Login</TextLink>
-            <Outline href={`mailto:${SUPPORT_EMAIL}?subject=Ranksmile%20demo`}>Book a demo</Outline>
             <Primary href={SIGN_UP_HREF}>Start for Free</Primary>
+            <Outline href={`mailto:${SUPPORT_EMAIL}?subject=Ranksmile%20demo`}>Book a demo</Outline>
           </Right>
 
           <Burger
@@ -431,10 +507,20 @@ export function Header() {
               <SheetGroup key={entry.label}>
                 <p>{entry.label}</p>
                 {entry.items
-                  ? entry.items.map((item) => (
-                    <DropLink key={item.label} href={item.href} onClick={() => setOpen(false)}>{item.label}</DropLink>
-                  ))
-                  : <DropLink href={entry.href ?? '#'} onClick={() => setOpen(false)}>{entry.label}</DropLink>}
+                  ? entry.items.map((item) => {
+                    const ItemIcon = ITEM_ICON[item.label];
+                    return (
+                      <DropLink key={item.label} href={item.href} onClick={() => setOpen(false)}>
+                        {ItemIcon ? <ItemIcon size={20} weight="bold" aria-hidden /> : null}
+                        <span><b>{item.label}</b></span>
+                      </DropLink>
+                    );
+                  })
+                  : (
+                    <DropLink href={entry.href ?? '#'} onClick={() => setOpen(false)}>
+                      <span><b>{entry.label}</b></span>
+                    </DropLink>
+                  )}
               </SheetGroup>
             ))}
             <SheetCtas>
