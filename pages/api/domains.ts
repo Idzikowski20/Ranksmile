@@ -116,7 +116,7 @@ export const addDomain = async (req: NextApiRequest, res: NextApiResponse<Domain
          const formattedDomains = newDomains.map((el) => el.get({ plain: true }));
          return res.status(201).json({ domains: formattedDomains });
       } catch (error) {
-         console.log('[ERROR] Adding New Domain ', error);
+         console.error('[ERROR] Adding New Domain ', error);
          return res.status(400).json({ domains: [], error: 'Error Adding Domain.' });
       }
    } else {
@@ -144,7 +144,7 @@ export const deleteDomain = async (req: NextApiRequest, res: NextApiResponse<Dom
 
       return res.status(200).json({ domainRemoved: removedDomCount, keywordsRemoved: removedKeywordCount, SCDataRemoved });
    } catch (error) {
-      console.log('[ERROR] Deleting Domain: ', req.query.domain, error);
+      console.error('[ERROR] Deleting Domain: ', req.query.domain, error);
       return res.status(400).json({ domainRemoved: 0, keywordsRemoved: 0, SCDataRemoved: false, error: 'Error Deleting Domain' });
    }
 };
@@ -197,7 +197,7 @@ export const updateDomain = async (req: NextApiRequest, res: NextApiResponse<Dom
       }
       return res.status(200).json({ domain: domainToUpdate });
    } catch (error) {
-      console.log('[ERROR] Updating Domain: ', req.query.domain, error);
+      console.error('[ERROR] Updating Domain: ', req.query.domain, error);
       return res.status(400).json({ domain: null, error: 'Error Updating Domain. An Unknown Error Occurred.' });
    }
 };

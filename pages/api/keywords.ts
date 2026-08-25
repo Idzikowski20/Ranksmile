@@ -93,7 +93,7 @@ const getKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGet
       });
       return res.status(200).json({ keywords: processedKeywords });
    } catch (error) {
-      console.log('[ERROR] Getting Domain Keywords for ', domain, error);
+      console.error('[ERROR] Getting Domain Keywords for ', domain, error);
       return res.status(400).json({ error: 'Error Loading Keywords for this Domain.' });
    }
 };
@@ -168,7 +168,7 @@ const addKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGet
 
          return res.status(201).json({ keywords: keywordsParsed });
       } catch (error) {
-         console.log('[ERROR] Adding New Keywords ', error);
+         console.error('[ERROR] Adding New Keywords ', error);
          return res.status(400).json({ error: 'Could Not Add New Keyword!' });
       }
    } else {
@@ -192,7 +192,7 @@ const deleteKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywords
 
       return res.status(200).json({ keywordsRemoved: removedKeywordCount });
    } catch (error) {
-      console.log('[ERROR] Removing Keyword. ', error);
+      console.error('[ERROR] Removing Keyword. ', error);
       return res.status(400).json({ error: 'Could Not Remove Keyword!' });
    }
 };
@@ -234,7 +234,7 @@ const updateKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywords
       }
       return res.status(400).json({ error: 'Invalid Payload!' });
    } catch (error) {
-      console.log('[ERROR] Updating Keyword. ', error);
+      console.error('[ERROR] Updating Keyword. ', error);
       return res.status(200).json({ error: 'Error Updating keywords!' });
    }
 };

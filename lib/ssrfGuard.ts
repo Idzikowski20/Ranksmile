@@ -75,7 +75,9 @@ export async function ssrfSafeFetch(
   for (let i = 0; i < maxRedirects; i += 1) {
     await assertPublicUrl(current);
     // eslint-disable-next-line no-await-in-loop
-    const r = await fetch(current, { ...init, redirect: 'manual' });
+    // Default timeout so a slow-dripping host can't hang the import; a caller-provided
+    // signal (in init) still wins over the default.
+    const r = await fetch(current, { signal: AbortSignal.timeout(15_000), ...init, redirect: 'manual' });
     if (r.status >= 300 && r.status < 400) {
       const loc = r.headers.get('location');
       if (!loc) return r;

@@ -24,5 +24,15 @@ if (typeof window !== 'undefined') {
 
 global.ResizeObserver = require('resize-observer-polyfill');
 
+// jsdom's AbortSignal lacks the static timeout() (Node 17.3+/browsers have it);
+// lib fetch calls pass `signal: AbortSignal.timeout(ms)` for hang protection.
+if (typeof AbortSignal.timeout !== 'function') {
+   AbortSignal.timeout = (ms) => {
+      const c = new AbortController();
+      setTimeout(() => c.abort(new Error(`TimeoutError: ${ms}ms`)), ms);
+      return c.signal;
+   };
+}
+
 // Enable Fetch Mocking
 enableFetchMocks();

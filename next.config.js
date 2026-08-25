@@ -56,6 +56,27 @@ const nextConfig = {
     };
     return config;
   },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          // Clickjacking: nothing embeds this app in an iframe today.
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          // Stop MIME-sniffing responses into executable types.
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // Don't leak full URLs (workspace/article ids) to external origins.
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Browsers pin HTTPS after first visit; no-op over plain HTTP in dev.
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+          // The app never uses these sensors/APIs.
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // No CSP yet — Emotion/TipTap inline styles need a real inventory first;
+          // a blind policy would break the editor.
+        ],
+      },
+    ];
+  },
   async rewrites() {
     return [
       { source: '/content-editor', destination: '/articles' },

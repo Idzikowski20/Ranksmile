@@ -21,7 +21,7 @@ async function fetchXml(url: string): Promise<string | null> {
       let current = url;
       for (let hop = 0; hop < MAX_REDIRECTS; hop += 1) {
          await assertPublicUrl(current);
-         const r = await fetch(current, { headers: { 'User-Agent': RANKSMILE_UA }, redirect: 'manual' });
+         const r = await fetch(current, { headers: { 'User-Agent': RANKSMILE_UA }, redirect: 'manual', signal: AbortSignal.timeout(15_000) });
          if (r.status >= 300 && r.status < 400) {
             const location = r.headers.get('location');
             if (!location) return null;

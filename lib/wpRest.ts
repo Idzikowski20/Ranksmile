@@ -10,12 +10,14 @@
 export async function wpRestFetch(siteUrl: string, route: string, init?: RequestInit): Promise<Response> {
    const base = siteUrl.replace(/\/+$/, '');
    const clean = route.replace(/^\/+/, '');
+   // Default timeout — a hung WP site must not hang publish; caller's init.signal wins.
+   const opts: RequestInit = { signal: AbortSignal.timeout(30_000), ...init };
 
    try {
-      const pretty = await fetch(`${base}/wp-json/${clean}`, init);
+      const pretty = await fetch(`${base}/wp-json/${clean}`, opts);
       const ct = pretty.headers.get('content-type') || '';
       if (pretty.status !== 404 && ct.includes('json')) return pretty;
    } catch { /* network error on the pretty form — try the fallback below */ }
 
-   return fetch(`${base}/?rest_route=/${clean}`, init);
+   return fetch(`${base}/?rest_route=/${clean}`, opts);
 }
