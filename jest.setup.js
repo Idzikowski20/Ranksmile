@@ -29,7 +29,9 @@ global.ResizeObserver = require('resize-observer-polyfill');
 if (typeof AbortSignal.timeout !== 'function') {
    AbortSignal.timeout = (ms) => {
       const c = new AbortController();
-      setTimeout(() => c.abort(new Error(`TimeoutError: ${ms}ms`)), ms);
+      // Native aborts with a DOMException named TimeoutError — match it so code
+      // branching on err.name behaves the same under the polyfill.
+      setTimeout(() => c.abort(new DOMException(`signal timed out after ${ms}ms`, 'TimeoutError')), ms);
       return c.signal;
    };
 }

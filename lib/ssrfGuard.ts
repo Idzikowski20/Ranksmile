@@ -66,6 +66,20 @@ export async function assertPublicUrl(rawUrl: string): Promise<URL> {
  * Fetch following redirects manually, re-validating every hop with assertPublicUrl.
  * Use this instead of fetch(..., { redirect: 'follow' }) / axios maxRedirects for user URLs.
  */
+/** Abort on EITHER the caller's signal or the timeout — a caller passing its own
+ *  signal must not silently lose the hang protection. (AbortSignal.any is Node 20.3+;
+ *  this runs on Node 18, so combine manually.) */
+function withTimeout(callerSignal: AbortSignal | null | undefined, ms: number): AbortSignal {
+  const timeout = AbortSignal.timeout(ms);
+  if (!callerSignal) return timeout;
+  const combined = new AbortController();
+  const onAbort = (src: AbortSignal) => () => combined.abort(src.reason);
+  if (callerSignal.aborted) combined.abort(callerSignal.reason);
+  else callerSignal.addEventListener('abort', onAbort(callerSignal), { once: true });
+  timeout.addEventListener('abort', onAbort(timeout), { once: true });
+  return combined.signal;
+}
+
 export async function ssrfSafeFetch(
   initial: string,
   init: RequestInit = {},
@@ -75,9 +89,7 @@ export async function ssrfSafeFetch(
   for (let i = 0; i < maxRedirects; i += 1) {
     await assertPublicUrl(current);
     // eslint-disable-next-line no-await-in-loop
-    // Default timeout so a slow-dripping host can't hang the import; a caller-provided
-    // signal (in init) still wins over the default.
-    const r = await fetch(current, { signal: AbortSignal.timeout(15_000), ...init, redirect: 'manual' });
+    const r = await fetch(current, { ...init, signal: withTimeout(init.signal, 15_000), redirect: 'manual' });
     if (r.status >= 300 && r.status < 400) {
       const loc = r.headers.get('location');
       if (!loc) return r;
