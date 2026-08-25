@@ -31,6 +31,7 @@ export async function publishToWordPress(opts: WPPublishOptions): Promise<WPPubl
 
    const response = await fetch(endpoint, {
       method: 'POST',
+      signal: AbortSignal.timeout(30_000),
       headers: {
          'Content-Type': 'application/json',
          Authorization: `Basic ${Buffer.from(apiKey).toString('base64')}`,
@@ -70,6 +71,7 @@ export async function publishToNextJs(opts: {
 
    const response = await fetch(`${endpointUrl.replace(/\/$/, '')}/api/publish`, {
       method: 'POST',
+      signal: AbortSignal.timeout(30_000),
       headers: {
          'Content-Type': 'application/json',
          Authorization: `Bearer ${apiKey}`,

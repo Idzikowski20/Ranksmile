@@ -71,7 +71,7 @@ export async function getDomainSearchConsoleData(
     );
     return res.status(200).json({ data: scData });
   } catch (error) {
-    console.log('[ERROR] Getting Search Console Data for: ', domainname, error);
+    console.error('[ERROR] Getting Search Console Data for: ', domainname, error);
     return res.status(400).json({ data: null, error: 'Error Fetching Data from Google Search Console.' });
   }
 }
@@ -91,7 +91,8 @@ export async function cronRefreshSearchConsoleData(
     }
     return res.status(200).json({ status: 'completed' });
   } catch (error) {
-    console.log('[ERROR] CRON Updating Search Console Data. ', error);
-    return res.status(400).json({ status: 'failed', error: 'Error Fetching Data from Google Search Console.' });
+    console.error('[ERROR] CRON Updating Search Console Data. ', error);
+    // 500, not 400 — an internal fetch/DB failure, not a bad request; schedulers retry on 5xx.
+    return res.status(500).json({ status: 'failed', error: 'Error Fetching Data from Google Search Console.' });
   }
 }

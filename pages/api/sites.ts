@@ -159,7 +159,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<SitesResponse>)
     }
 
     if (allSites.length === 0 && errors.length > 0) {
-      console.log('[SITES API] All attempts failed:', errors.join(' | '));
+      console.error('[SITES API] All attempts failed:', errors.join(' | '));
       const expired = errors.some((e) => /invalid_grant/i.test(e));
       const error = expired
         ? 'Your Google Search Console connection has expired. Go to Settings and reconnect your Google account.'
@@ -169,7 +169,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<SitesResponse>)
 
     return res.status(200).json({ sites: allSites, domainStats });
   } catch (err) {
-    console.log('[ERROR] Fetching GSC sites:', getErrorMessage(err));
+    console.error('[ERROR] Fetching GSC sites:', getErrorMessage(err));
     return res.status(500).json({ error: 'Failed to fetch sites from Search Console.' });
   }
 }

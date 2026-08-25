@@ -80,7 +80,7 @@ const updateSettings = async (req: NextApiRequest, res: NextApiResponse<Settings
       await writeSettingsBlob(securedSettings);
       return res.status(200).json({ settings });
    } catch (error) {
-      console.log('[ERROR] Updating App Settings. ', error);
+      console.error('[ERROR] Updating App Settings. ', error);
       return res.status(200).json({ error: 'Error Updating Settings!' });
    }
 };
@@ -180,7 +180,7 @@ export const getAppSettings = async () : Promise<SettingsType> => {
          adwords_refresh_token: adwords_refresh_token ? '(connected)' : '',
       };
    } catch (error) {
-      console.log('Error Decrypting Settings API Keys!');
+      console.error('Error Decrypting Settings API Keys!');
    }
 
    return decryptedSettings;

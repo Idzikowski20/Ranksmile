@@ -648,7 +648,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
       }
     } catch (err) {
-      console.log('[deep-analysis] keyword discovery failed (non-fatal):', getErrorMessage(err));
+      console.error('[deep-analysis] keyword discovery failed (non-fatal):', getErrorMessage(err));
     }
 
     const enrichedTerms = await enrichNlpTermsIfNeeded({
@@ -687,7 +687,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         mergedTerms = normalizeMergedTerms(competitorBenchmarks.real.terms);
       }
     } catch (err) {
-      console.log('[deep-analysis] competitor benchmarks failed (non-fatal):', getErrorMessage(err));
+      console.error('[deep-analysis] competitor benchmarks failed (non-fatal):', getErrorMessage(err));
     }
 
     mergedTerms = normalizeMergedTerms(filterNlpTermsForAnalysis(
@@ -744,7 +744,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           competitorWordSpread = { min: Math.min(...bodyWords), max: Math.max(...bodyWords) };
         }
       } catch (err) {
-        console.log('[deep-analysis] audit result failed (non-fatal):', getErrorMessage(err));
+        console.error('[deep-analysis] audit result failed (non-fatal):', getErrorMessage(err));
       }
     }
 
