@@ -1,0 +1,259 @@
+__tests__/api/articles-ai-readability-coverage.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,88
+components/landing/sections/Hero.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-377
+public/ai-tracking/cap-icon-1.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-3
+components/pricing/content.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-307
+__tests__/api/workspaces.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,49,53
+__tests__/landing/content.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-31
+components/contentEditor/sections/CeWorkflow.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-274
+public/content-editor/icon-audit-1.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-3
+__tests__/landing/ringGeometry.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-21
+components/landing/LandingPage.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-126
+components/aiTracking/sections/AiHow.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-205
+components/landing/sections/Footer.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-252
+pages/pricing.md.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-39
+public/content-editor/quote-mark.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-11
+lib/isPublicPath.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 10-12
+components/pricing/PricingPage.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-104
+components/landing/content.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-508
+public/ai-tracking/frontpage-area.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-5
+public/content-editor/hero-star.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-5
+__tests__/api/articles-import-ssrf.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,9-16,41
+public/ai-tracking/engine-aioverview.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-5
+__tests__/api/payment-failed-lock.e2e.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,511
+jest.config.js
+  s_0a0a7a99358138::t_f57e120cc94cf9 19-21,31-37
+public/ai-tracking/engine-perplexity.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-5
+__tests__/api/cannibalization-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,22
+components/aiTracking/content.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-361
+components/landing/sections/CtaBand.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-135
+components/contentEditor/sections/CeAi.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-253
+__tests__/api/articles-deep-analysis-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,3-8,38-40,139
+components/contentEditor/ContentEditorPage.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-100
+components/landing/primitives.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-196
+__mocks__/@ai-sdk/deepseek.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-7
+__tests__/api/inbox.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-2
+public/content-editor/hero-gauge.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-5
+__tests__/pages/index.test.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 19-24,36-46
+.claude/launch.json
+  s_0a0a7a99358138::t_f57e120cc94cf9 7-12
+__tests__/api/rank-tracking-organic-ui-flag.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,53
+__tests__/api/settings-auth.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,79
+components/pricing/sections/PrFaq.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-10
+__tests__/api/articles-optimize-sections-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1
+components/pricing/sections/PrHead.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-123
+components/pricing/sections/PrCta.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-99
+components/contentEditor/sections/CeOptimize.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-303
+__tests__/api/articles-pagination.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,25-26,77
+components/contentEditor/content.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-318
+components/contentEditor/sections/CeFaq.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-10
+components/aiTracking/pricingView.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-17
+public/content-editor/icon-audit-2.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-3
+components/pricing/sections/PrSmaller.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-290
+__mocks__/@ai-sdk/google.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-5
+components/aiTracking/sections/AiFrontPage.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-434
+__tests__/api/billing-guards.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1
+__tests__/api/articles-import-backfill-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,87
+components/landing/sections/Timeline.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-271
+pages/index.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 13,19-20,23,28,67,69,91-92,94
+__tests__/api/article-id-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,24
+pages/robots.txt.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-37
+public/content-editor/hero-arrow.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-5
+components/landing/useLandingMotion.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-192
+__tests__/lib/runStarterNudgeCron.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 96-100
+__tests__/api/article-helper-guards.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,148
+pages/sitemap.xml.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-33
+__tests__/api/articles-job-progress-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 129,220-221
+__tests__/api/article-keywords-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,23
+__tests__/api/articles-ai-visibility-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,30
+components/aiTracking/sections/AiPricing.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-628
+pages/seo-content-editor.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-7
+public/ai-tracking/engine-chatgpt.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-5
+__tests__/lib/uploadToBlob.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-4
+public/content-editor/ranking-factors.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-22
+public/ai-tracking/cap-icon-2.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-3
+__tests__/api/notify-enqueue.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,116
+__tests__/api/articles-publish-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,27
+pages/llms.txt.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-46
+__tests__/api/accept-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,30
+components/landing/sections/Stats.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-273
+components/aiTracking/sections/AiHero.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-628
+public/content-editor/icon-arrow.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-5
+public/content-editor/workflow-badge.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-10
+public/content-editor/icon-discover-1.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-3
+components/aiTracking/useRadarMotion.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-106
+__tests__/aiTracking/pricingView.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-13
+lib/appAccess/accessPolicy.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 108-110
+components/aiTracking/sections/AiAudience.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-108
+pages/ai-visibility-tracking.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-6
+components/landing/sections/Loop.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-516
+components/landing/sections/AnswerDemo.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-601
+components/aiTracking/sections/AiCta.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-145
+components/aiTracking/AiTrackingPage.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-104
+public/content-editor/icon-create-1.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-3
+components/landing/sections/Data.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-360
+components/pricing/sections/PrCompare.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-186
+public/ai-tracking/advantage-360.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-61
+components/landing/sections/Header.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-451
+__tests__/api/domains-configure-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,56
+components/aiTracking/sections/AiSolution.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-139
+__tests__/api/rank-tracking-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,78
+components/contentEditor/sections/CeToolkit.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-215
+public/content-editor/underline.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-10
+components/landing/sections/ringGeometry.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-15
+components/pricing/sections/PrPlans.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-241
+__tests__/api/keyword-single-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,27
+components/aiTracking/sections/AiCapabilities.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-131
+__tests__/api/setup-status.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,71
+components/aiTracking/sections/AiFaq.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-183
+components/landing/sections/Solution.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-538
+__tests__/aiTracking/useRadarMotion.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-19
+components/pricing/sections/PrAnalytics.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-327
+components/contentEditor/sections/CeFeatures.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-429
+__tests__/api/articles-accept-guard.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 1,26
+__tests__/landing/answer-demo.test.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-24
+components/contentEditor/sections/CeCta.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-116
+pages/_document.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 13
+components/aiTracking/sections/AiAdvantage.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-281
+components/contentEditor/sections/CeHero.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-351
+components/landing/sections/Resources.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-284
+public/ai-tracking/cap-icon-4.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-3
+public/content-editor/icon-discover-2.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-3
+pages/pricing.tsx
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-7
+__tests__/lib/aiVisibilityRead.test.ts
+  s_0a0a7a99358138::t_f57e120cc94cf9 21-23,25
+public/ai-tracking/cap-icon-3.svg
+  s_0a0a7a99358138::t_f57e120cc94cf9 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "11f5df6e3ad35da538e772a6028c45571dfe726e",
+  "prompts": {},
+  "sessions": {
+    "s_0a0a7a99358138": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c02357ce-f161-4d1d-a21e-feaac2f5b774",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
