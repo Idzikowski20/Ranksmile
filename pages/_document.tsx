@@ -10,7 +10,7 @@ class MyDocument extends Document {
   // eslint-disable-next-line class-methods-use-this
   render() {
     return (
-      <Html>
+      <Html lang="en">
         <Head>
           <link rel="manifest" href="/manifest.json" />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />

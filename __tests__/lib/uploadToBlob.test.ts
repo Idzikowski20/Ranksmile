@@ -1,3 +1,7 @@
+// @aws-sdk/client-s3 pulls a large ESM (@smithy) tree Jest can't load; parseDataUrl
+// is pure and never touches S3, so stub the client.
+jest.mock('@aws-sdk/client-s3', () => ({ S3Client: class {}, PutObjectCommand: class {} }));
+
 import { parseDataUrl } from '../../lib/uploadToBlob';
 
 describe('parseDataUrl', () => {

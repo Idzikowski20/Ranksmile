@@ -10,19 +10,22 @@ import { getCurrentUser } from '../utils/getUser';
 import { getBootstrap } from '../lib/getBootstrap';
 import type { BootstrapData } from '../lib/getBootstrap';
 import { isPlanExpired } from '../lib/appAccess/isPlanExpired';
+import { LandingPage } from '../components/landing/LandingPage';
 
 type HomeProps = {
   dehydratedState?: unknown;
   /** SSR already knows the plan expired — render the block, skip the dispatch effect. */
   planExpired?: boolean;
+  /** No session on the server — render the public marketing page, never dispatch. */
+  landing?: boolean;
 };
 
-const Home: NextPage<HomeProps> = ({ planExpired = false }) => {
+const Home: NextPage<HomeProps> = ({ planExpired = false, landing = false }) => {
   const router = useRouter();
   const [expired, setExpired] = useState(planExpired);
 
   useEffect(() => {
-    if (!router || expired) return;
+    if (!router || expired || landing) return;
     let stashed: string | null = null;
     try {
       stashed = localStorage.getItem('post_login_redirect');
@@ -61,8 +64,9 @@ const Home: NextPage<HomeProps> = ({ planExpired = false }) => {
         router.replace('/onboarding');
       }
     })();
-  }, [router, expired]);
+  }, [router, expired, landing]);
 
+  if (landing) return <LandingPage />;
   if (expired) return <PlanExpired />;
 
   return (
@@ -84,10 +88,10 @@ export const getServerSideProps: GetServerSideProps<HomeProps> = async (ctx) => 
   const res = ctx.res as NextApiResponse;
   const user = await getCurrentUser(req, res);
 
+  // Anonymous visitors get the marketing landing (SSR, indexable). Signed-in users
+  // are dispatched to their workspace below exactly as before.
   if (!user) {
-    return {
-      redirect: { destination: '/auth/sign-in', permanent: false },
-    };
+    return { props: { landing: true } };
   }
 
   const cookie = typeof req.cookies?.active_workspace === 'string'
