@@ -126,7 +126,7 @@ it('returns a generic curated error for an opaque failed deep analysis', async (
     cookies: {},
   } as NextApiRequest, res);
 
-  expect(mockDbQuery.mock.calls[0]?.[0]).toContain('progress_message, error, updated_at');
+  expect(mockDbQuery.mock.calls[0]?.[0]).toContain('progress_message, progress_json, error, updated_at');
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
     error: 'Deep analysis failed. Please try again.',
     progressMessage: 'Deep analysis failed. Please try again.',
@@ -217,40 +217,8 @@ it('does not expose stored errors for failed non-deep jobs', async () => {
   }));
 });
 
-it('does not let the article cancellation endpoint cancel a domain setup job', async () => {
-  mockDbQuery.mockResolvedValueOnce(dbResult([{
-    id: 'domain_123', status: 'running', job_type: 'domain_setup', domain_id: 12, article_id: null,
-  }]));
-  mockVerifyDomainOwnership.mockResolvedValueOnce(true);
-  const res = makeRes();
-
-  await handler({
-    method: 'DELETE', headers: {}, body: {}, query: { jobId: 'domain_123' }, cookies: {},
-  } as NextApiRequest, res);
-
-  expect(res.status).toHaveBeenCalledWith(409);
-  expect(db.transaction).not.toHaveBeenCalled();
-});
-
-it('atomically cancels an article job only while it is still running', async () => {
-  mockDbQuery
-    .mockResolvedValueOnce(dbResult([{
-      id: 'gen_123', status: 'running', job_type: 'article_generate', domain_id: null, article_id: 55,
-    }]))
-    .mockResolvedValueOnce(dbResult([[], { changes: 1 }]))
-    .mockResolvedValueOnce(dbResult([[], { changes: 1 }]));
-  mockAssertArticleAccess.mockResolvedValueOnce(true);
-  mockDbTransaction.mockImplementation(async (callback) => callback({} as never));
-  const res = makeRes();
-
-  await handler({
-    method: 'DELETE', headers: {}, body: {}, query: { jobId: 'gen_123' }, cookies: {},
-  } as NextApiRequest, res);
-
-  expect(mockDbQuery.mock.calls[1]?.[0]).toContain("status IN ('queued', 'running')");
-  expect(mockDbQuery.mock.calls[2]?.[1]).toMatchObject({ transaction: expect.anything() });
-  expect(res.status).toHaveBeenCalledWith(200);
-});
+// Job cancellation (DELETE) was removed in "refactor: remove generation cancellation"
+// (d88e645f); the endpoint now only serves GET polling + POST sidecar updates.
 
 it('recovers a stale finalizing job so polling can stop waiting forever', async () => {
   mockDbQuery

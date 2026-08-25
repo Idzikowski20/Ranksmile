@@ -1,3 +1,4 @@
+jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { query: jest.fn().mockResolvedValue(undefined), sync: jest.fn().mockResolvedValue(undefined) },

@@ -1,3 +1,4 @@
+jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../lib/featureFlags', () => ({
   isRankTrackingUiEnabled: jest.fn().mockReturnValue(false),
   isRankTrackingRunnerEnabled: jest.fn().mockReturnValue(false),
