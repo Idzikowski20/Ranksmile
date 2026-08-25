@@ -1,3 +1,4 @@
+jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import type { OrgBillingState } from '../../lib/orgBilling';
@@ -508,4 +509,3 @@ describe('payment failed lock (webhook + access enforcement)', () => {
     expect(billing.paymentLockLastEventId).toBe(stateAfterFirst.paymentLockLastEventId);
   });
 });
-
