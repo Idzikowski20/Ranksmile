@@ -6,6 +6,15 @@ jest.mock('../../database/database', () => ({ __esModule: true, default: { query
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
 jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn(), ensureUserTenancy: jest.fn() }));
+// Opening-policy enforcement rewrites the lead independently of term coverage and
+// consumes LLM calls, which breaks this suite's precision-guard assertions. It has
+// its own suite (__tests__/lib/wie/openingPolicyEnforce.test.ts) — no-op it here.
+jest.mock('../../lib/wie/enforceOpeningPolicy', () => ({
+  enforceOpeningPolicy: jest.fn(async (opts: { html: string }) => ({
+    html: opts.html, attempted: false, applied: false, usedHeuristic: false, tokens: 0,
+  })),
+  heuristicProblemFirstInject: jest.fn((html: string) => html),
+}));
 
 jest.mock('../../lib/articleContext', () => ({
   buildArticleContext: jest.fn(async () => ({
@@ -154,11 +163,13 @@ it('blocks with 429 org_limit when the shared token pool is exhausted, before op
   expect(res.setHeader).not.toHaveBeenCalled();
 });
 
-it('no candidates → zero LLM and no section event', async () => {
-  const fetchSpy = jest.spyOn(global, 'fetch');
+it('covered content yields no accepted section edit', async () => {
+  // V4 planner may still ATTEMPT a quality-driven rewrite (that's by design — it
+  // diagnoses section quality, not just term coverage), but with no usable LLM
+  // output nothing may be accepted or emitted as a change.
   const events = await runHandler({ content: '<h2>Covered</h2><p>full and complete</p>', articleId: 1 });
-  expect(events.find((e) => e.event === 'section')).toBeUndefined();
-  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(events.filter((e) => e.event === 'section' && e.data.changed === true)).toHaveLength(0);
+  expect(events.find((e) => e.event === 'done')?.data.changedCount).toBe(0);
 });
 
 it('records tokens when a precision edit is accepted', async () => {
@@ -196,13 +207,15 @@ it('rejects unsafe LLM rewrite via EditSafetyGate (no section accept)', async ()
   });
 
   const events = await runHandler({ content: LONG_SECTION, articleId: 1, maxRounds: 1 });
-  expect(events.find((e) => e.event === 'section')).toBeUndefined();
+  expect(events.filter((e) => e.event === 'section' && e.data.changed === true)).toHaveLength(0);
   expect(events.find((e) => e.event === 'done')?.data.changedCount).toBe(0);
   expect(events.find((e) => e.event === 'done')?.data.outcome).toBe('no_usable_edit');
-});
+}, 20_000); // V4 runs multiple LLM rounds against the unsafe rewrite before giving up
 
 it('done event carries trimmed + ignoredLift + precision strategy', async () => {
-  const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
+  // Explicit strategy — diagnosis routes structurally-weak content to deep_optimize
+  // by design; this test checks the precision passthrough fields.
+  const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1, optimizationStrategy: 'precision' });
   const done = events.find((e) => e.event === 'done');
   expect(done?.data).toHaveProperty('trimmed');
   expect(done?.data).toHaveProperty('ignoredLift');
@@ -225,9 +238,12 @@ it('precision prompt asks for a bounded operation (not whole-article rewrite)', 
   expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(0);
   const [, opts] = (global.fetch as jest.Mock).mock.calls[0] as [string, { body: string }];
   const body = JSON.parse(opts.body) as { messages: Array<{ content: string }> };
-  expect(body.messages[0].content).toMatch(/precision editor/i);
-  expect(body.messages[1].content).toMatch(/OPERATION:/);
-  expect(body.messages[1].content).not.toMatch(/Optimize this section/i);
+  // Prompt architecture: system = WIE Writer persona; the per-objective precision
+  // contract lives in the user message (WHAT/WHERE/ACTION + word ceiling).
+  expect(body.messages[1].content).toMatch(/precision content editor/i);
+  expect(body.messages[1].content).toMatch(/ACTION:/);
+  expect(body.messages[1].content).toMatch(/MAX NEW WORDS/i);
+  expect(body.messages[1].content).not.toMatch(/rewrite the whole article/i);
 });
 
 it('accepted precision edit emits section with Precision reason', async () => {
@@ -250,9 +266,12 @@ it('accepted precision edit emits section with Precision reason', async () => {
   const events = await runHandler({ content: LONG_SECTION, articleId: 1, maxRounds: 1 });
   const sectionEvts = events.filter((e) => e.event === 'section');
   expect(sectionEvts.some((e) => e.data.changed === true)).toBe(true);
-  expect(sectionEvts.find((e) => e.data.changed)?.data.reason).toBe('Precision section optimization');
-  expect(sectionEvts.find((e) => e.data.changed)?.data.mode).toBe('less');
-});
+  // Section events now come from the before/after diff (buildArticleSectionDiffEvents):
+  // changed events carry an inferred focus + mode; the old per-edit reason string is gone.
+  const changed = sectionEvts.find((e) => e.data.changed);
+  expect(String(changed?.data.newHtml)).toContain('A short clarification about gizmo usage.');
+  expect(changed?.data).toHaveProperty('focus');
+}, 20_000);
 
 it('emits a terms SSE event when NLP enrichment grows the term list', async () => {
   const thinTerms = [{ term: 'detektyw', target_count: 2 }, { term: 'warszawa', target_count: 2 }];

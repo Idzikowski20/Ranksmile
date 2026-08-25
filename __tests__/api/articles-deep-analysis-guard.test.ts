@@ -91,16 +91,18 @@ it('preserves existing article content when the sidecar pipeline fails', async (
     ok: false,
     text: async () => 'sidecar exploded',
   });
-  mockDbQuery
-    .mockResolvedValueOnce(dbResult(undefined))
-    .mockResolvedValueOnce(dbResult(undefined))
-    .mockResolvedValueOnce(dbResult(undefined))
-    .mockResolvedValueOnce(dbResult(undefined))
-    .mockResolvedValueOnce(dbResult([{ status: 'running', attempts: 1 }]))
-    .mockResolvedValueOnce(dbResult(undefined))
-    .mockResolvedValueOnce(dbResult([{ id: 'job_123_current' }]))
-    .mockResolvedValueOnce(dbResult(undefined))
-    .mockResolvedValueOnce(dbResult(undefined));
+  // Route by SQL, not by call order — the handler's query sequence shifts as it
+  // evolves. Calls with `type: QueryTypes.SELECT` get flat rows (Sequelize
+  // semantics); everything else gets the [rows, meta] tuple.
+  mockDbQuery.mockImplementation((async (sql: unknown, opts?: { type?: string }) => {
+    const s = String(sql);
+    const rows = s.includes('SELECT status, attempts')
+      ? [{ status: 'running', attempts: 1 }]
+      : s.includes('FROM analysis_jobs current_job')
+        ? [{ id: 'job_123_current' }]
+        : [];
+    return (opts?.type === 'SELECT' ? rows : [rows, {}]) as never;
+  }) as never);
 
   const res = makeRes();
   await handler({ method: 'POST', body: { articleId: 123, url: 'http://example.com/page' }, query: {}, cookies: {} } as any, res);

@@ -526,7 +526,7 @@ export function AnswerDemo() {
                   <span style={{ background: '#28c840' }} />
                 </Lights>
                 <PromptRow>
-                  <img src="/landing/demo-avatar.png" alt="" width={27} height={27} />
+                  <img loading="lazy" decoding="async" src="/landing/demo-avatar.png" alt="" width={27} height={27} />
                   <div>
                     <b>Zara Okafor</b>
                     <p>{PROMPT}</p>

@@ -71,8 +71,26 @@ const nextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
           // The app never uses these sensors/APIs.
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          // No CSP yet — Emotion/TipTap inline styles need a real inventory first;
-          // a blind policy would break the editor.
+          // CSP in Report-Only first — zero breakage risk while violations surface in
+          // DevTools/reports. Promote to Content-Security-Policy once quiet.
+          // 'unsafe-inline'/'unsafe-eval' required today: Emotion injects inline styles,
+          // the theme bootstrap is an inline script, Next dev uses eval.
+          // img-src allows https: — imported articles hot-load featured images from
+          // arbitrary origins.
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https:",
+              "connect-src 'self' https://*.sentry.io wss://localhost:* ws://localhost:*",
+              "frame-ancestors 'self'",
+              "object-src 'none'",
+              "base-uri 'self'",
+            ].join('; '),
+          },
         ],
       },
     ];

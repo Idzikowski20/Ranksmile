@@ -781,7 +781,7 @@ const RecommendationsPage: NextPage = () => {
 
                                     <div style={{ width: 154, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px' }}>
                                        {row.content_score > 0 ? (
-                                          <div style={{ cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                          <div style={{ cursor: 'pointer' }} onClick={() => setPanelRow(row)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPanelRow(row); } }} >
                                              <Gauge score={row.content_score} size="sm" />
                                           </div>
                                        ) : analyzingIds.has(row.id) ? (
@@ -793,7 +793,7 @@ const RecommendationsPage: NextPage = () => {
                                        )}
                                     </div>
 
-                                    <div style={{ width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                    <div style={{ width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPanelRow(row); } }} >
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                           {row.position > 0 && <DeltaDown />}
                                           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
@@ -802,7 +802,7 @@ const RecommendationsPage: NextPage = () => {
                                        </div>
                                     </div>
 
-                                    <div style={{ width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                    <div style={{ width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPanelRow(row); } }} >
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                           {row.clicks > 0 && <DeltaDown />}
                                           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
@@ -811,7 +811,7 @@ const RecommendationsPage: NextPage = () => {
                                        </div>
                                     </div>
 
-                                    <div style={{ width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                    <div style={{ width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPanelRow(row); } }} >
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                           {row.impressions > 0 && <DeltaDown />}
                                           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>

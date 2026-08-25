@@ -107,13 +107,13 @@ const KeywordResearchCard = ({ item, onOpen, onDelete }: { item: KeywordResearch
                </button>
                {menuOpen && (
                   <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 100, display: 'flex', flexDirection: 'column', padding: 6, borderRadius: 8, background: '#fff', boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.06)', border: '1px solid #F4F4F5', minWidth: 180, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}>
-                     <div role="button" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, fontSize: 14, fontWeight: 500, color: '#2F2F34', cursor: 'pointer' }} onClick={shareLink}>
+                     <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); shareLink(); } }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, fontSize: 14, fontWeight: 500, color: '#2F2F34', cursor: 'pointer' }} onClick={shareLink}>
                         Get shareable link
                      </div>
                      {onDelete && (
                         <>
                            <div style={{ height: 1, background: '#F4F4F5', margin: '4px -6px' }} />
-                           <div role="button" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, fontSize: 14, fontWeight: 500, color: '#EF4444', cursor: 'pointer' }} onClick={del}>
+                           <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); del(); } }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, fontSize: 14, fontWeight: 500, color: '#EF4444', cursor: 'pointer' }} onClick={del}>
                               Delete
                            </div>
                         </>

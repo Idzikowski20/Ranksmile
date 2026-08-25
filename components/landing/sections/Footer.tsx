@@ -175,7 +175,7 @@ export function Footer() {
       <Container>
         <Grid>
           <Logo href="/">
-            <img src="/favicon.svg" alt="" width={56} height={56} />
+            <img loading="lazy" decoding="async" src="/favicon.svg" alt="" width={56} height={56} />
             <span>
               Rank
               <em>smile</em>

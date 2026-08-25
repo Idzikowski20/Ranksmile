@@ -1,4 +1,5 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+// NOTE: deliberately NOT mocking lib/requireOrgPaymentAccess — this suite exercises
+// the real access-enforcement wrapper (402 on payment-failed lock) end to end.
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import type { OrgBillingState } from '../../lib/orgBilling';
@@ -62,6 +63,20 @@ jest.mock('../../lib/notifications/syncOptimizationInbox', () => ({
 
 jest.mock('../../lib/errors', () => ({
   getErrorMessage: jest.fn(() => 'DB error'),
+}));
+
+// Stateful fake of the webhook dedup ledger (the real one destructures db.query's
+// [rows, meta] which the bare db mock can't satisfy). A Set mirrors the real
+// semantics: first claim of an event id wins, replays are deduped, release re-arms.
+const claimedEvents = new Set<string>();
+jest.mock('../../lib/stripeWebhookEvents', () => ({
+  claimStripeEvent: jest.fn(async (event: { id: string }) => {
+    if (claimedEvents.has(event.id)) return false;
+    claimedEvents.add(event.id);
+    return true;
+  }),
+  releaseStripeEvent: jest.fn(async (eventId: string) => { claimedEvents.delete(eventId); }),
+  pruneStripeWebhookEvents: jest.fn(async () => undefined),
 }));
 
 import stripeWebhookHandler from '../../pages/api/webhooks/stripe';
@@ -154,6 +169,7 @@ describe('payment failed lock (webhook + access enforcement)', () => {
 
   beforeEach(() => {
     billing = { ...baseBilling };
+    claimedEvents.clear();
 
     jest.clearAllMocks();
 

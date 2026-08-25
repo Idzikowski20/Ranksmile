@@ -214,12 +214,12 @@ export function CeWorkflow() {
           <Card data-reveal>
             <h3>{WORKFLOW.discover.title}</h3>
             <List>
-              <li><img src={`${A}/icon-discover-1.svg`} alt="" />{WORKFLOW.discover.items[0]}</li>
-              <li><img src={`${A}/icon-discover-2.svg`} alt="" />{WORKFLOW.discover.items[1]}</li>
+              <li><img loading="lazy" decoding="async" src={`${A}/icon-discover-1.svg`} alt="" />{WORKFLOW.discover.items[0]}</li>
+              <li><img loading="lazy" decoding="async" src={`${A}/icon-discover-2.svg`} alt="" />{WORKFLOW.discover.items[1]}</li>
             </List>
             <Btn href={SIGN_UP_HREF}>
               {WORKFLOW.discover.cta}
-              <img src={`${A}/icon-arrow.svg`} alt="" />
+              <img loading="lazy" decoding="async" src={`${A}/icon-arrow.svg`} alt="" />
             </Btn>
           </Card>
           <ImgCard data-reveal>
@@ -230,7 +230,7 @@ export function CeWorkflow() {
             <div className="badge">
               {WORKFLOW.badge.muted}
               <b>
-                <img src={`${A}/workflow-badge.svg`} alt="" aria-hidden />
+                <img loading="lazy" decoding="async" src={`${A}/workflow-badge.svg`} alt="" aria-hidden />
                 {WORKFLOW.badge.strong}
               </b>
             </div>
@@ -242,24 +242,24 @@ export function CeWorkflow() {
           <Card data-reveal>
             <h3>{WORKFLOW.create.title}</h3>
             <List>
-              <li><img src={`${A}/icon-create-1.svg`} alt="" />{WORKFLOW.create.items[0]}</li>
-              <li><img src={`${A}/hero-star.svg`} alt="" />{WORKFLOW.create.items[1]}</li>
+              <li><img loading="lazy" decoding="async" src={`${A}/icon-create-1.svg`} alt="" />{WORKFLOW.create.items[0]}</li>
+              <li><img loading="lazy" decoding="async" src={`${A}/hero-star.svg`} alt="" />{WORKFLOW.create.items[1]}</li>
             </List>
             <Btn href="#write">
               {WORKFLOW.create.cta}
-              <img src={`${A}/icon-arrow.svg`} alt="" />
+              <img loading="lazy" decoding="async" src={`${A}/icon-arrow.svg`} alt="" />
             </Btn>
           </Card>
 
           <Card data-reveal>
             <h3>{WORKFLOW.audit.title}</h3>
             <List>
-              <li><img src={`${A}/icon-audit-1.svg`} alt="" />{WORKFLOW.audit.items[0]}</li>
-              <li><img src={`${A}/icon-audit-2.svg`} alt="" />{WORKFLOW.audit.items[1]}</li>
+              <li><img loading="lazy" decoding="async" src={`${A}/icon-audit-1.svg`} alt="" />{WORKFLOW.audit.items[0]}</li>
+              <li><img loading="lazy" decoding="async" src={`${A}/icon-audit-2.svg`} alt="" />{WORKFLOW.audit.items[1]}</li>
             </List>
             <Btn href={SIGN_UP_HREF}>
               {WORKFLOW.audit.cta}
-              <img src={`${A}/icon-arrow.svg`} alt="" />
+              <img loading="lazy" decoding="async" src={`${A}/icon-arrow.svg`} alt="" />
             </Btn>
           </Card>
           <ImgCard data-reveal>

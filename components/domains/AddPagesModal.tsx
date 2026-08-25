@@ -148,7 +148,7 @@ const AddPagesModal = ({ pages, onClose, onAdd }: {
                      {filtered.map((p) => {
                         const isSel = selected.has(p.path);
                         return (
-                           <div key={p.path} onClick={() => toggle(p.path)} className="addpage-row" style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--koala-bg-secondary)', cursor: 'pointer', background: isSel ? 'var(--koala-bg-secondary)' : 'var(--koala-bg-primary)', transition: 'background 100ms ease' }}>
+                           <div key={p.path} onClick={() => toggle(p.path)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(p.path); } }} className="addpage-row" style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid var(--koala-bg-secondary)', cursor: 'pointer', background: isSel ? 'var(--koala-bg-secondary)' : 'var(--koala-bg-primary)', transition: 'background 100ms ease' }}>
                               <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center' }}>
                                  <Checkbox checked={isSel} onChange={() => toggle(p.path)} />
                               </div>

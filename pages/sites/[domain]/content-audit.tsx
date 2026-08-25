@@ -497,7 +497,7 @@ const ContentAuditPage: NextPage = () => {
                               <Checkbox checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
                            </div>
                            <div style={{ padding: '12px', flexGrow: 1, minWidth: 256, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, overflow: 'hidden' }}>
-                              <div onClick={() => setPanelRow(row)} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
+                              <div onClick={() => setPanelRow(row)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPanelRow(row); } }} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                        {row.title}

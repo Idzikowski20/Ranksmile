@@ -184,7 +184,7 @@ export function CeToolkit() {
         <Band data-reveal>
           <Photo>
             <img src={`${A}/hero-explainer.png`} alt="" loading="lazy" />
-            <i aria-hidden><img src={`${A}/quote-mark.svg`} alt="" /></i>
+            <i aria-hidden><img loading="lazy" decoding="async" src={`${A}/quote-mark.svg`} alt="" /></i>
           </Photo>
           <Quote>
             <div className="stars" aria-hidden>
@@ -203,7 +203,7 @@ export function CeToolkit() {
                 <b>{TOOLKIT.name}</b>
                 <span>{TOOLKIT.role}</span>
               </div>
-              <img src="/favicon.svg" alt="" />
+              <img loading="lazy" decoding="async" src="/favicon.svg" alt="" />
             </div>
           </Quote>
         </Band>
