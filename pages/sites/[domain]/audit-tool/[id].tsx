@@ -9,7 +9,7 @@ import CompetitorsModal from '../../../../components/competitors/CompetitorsModa
 import { useAuditRun, useRerunAudit, useRunAudits } from '../../../../services/auditTool';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
-import { AuditFactor, AuditResult } from '../../../../lib/auditTypes';
+import { AuditFactor, AuditResult } from '@/src/core/domain/audit/types';
 import { Button } from '../../../../components/koala/core';
 
 const AuditFactorChart = dynamic(() => import('../../../../components/audit/AuditFactorChart'), { ssr: false });

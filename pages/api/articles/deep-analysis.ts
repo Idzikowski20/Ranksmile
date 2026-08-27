@@ -114,7 +114,7 @@ function buildScoreData(
   opts?: {
     scoringModel?: 'competitor' | 'legacy';
     contentTargets?: { avgWords: number; avgHeadings: number; avgPs: number };
-    auditResult?: import('../../../lib/auditTypes').AuditResult;
+    auditResult?: import('@/src/core/domain/audit/types').AuditResult;
     seoScore?: number;
     competitorWordSpread?: { min: number; max: number };
   },
