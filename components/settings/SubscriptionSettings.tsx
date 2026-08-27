@@ -8,8 +8,8 @@ import { overlayZ, ShellPortal } from '../koala/overlay/ShellPortal';
 import PricingPlansSettings from './PricingPlansSettings';
 import { resolveSubscriptionBadge, SubscriptionStatusRow } from './SubscriptionStatusBadge';
 import type { SubscriptionDetails } from '../../lib/subscriptionDetails';
-import type { UpcomingPaymentDetails } from '../../lib/subscriptionFormat';
-import { formatMoney, formatUpcomingTotal } from '../../lib/subscriptionFormat';
+import type { UpcomingPaymentDetails } from '@/src/core/shared/money';
+import { formatMoney, formatUpcomingTotal } from '@/src/core/shared/money';
 import { Icon } from '../koala/icons/Icon';
 
 function ShellEscapeOverlay({
