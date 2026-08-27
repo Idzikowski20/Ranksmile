@@ -13,7 +13,7 @@ import {
   type BudgetedTopic,
 } from './harvest/enforceBudget';
 import { fillMissingTopics } from './harvest/fillMissingTopics';
-import { checkKeywordArticleIntent } from './harvest/keywordArticleIntentGate';
+import { checkKeywordArticleIntent } from '@/src/core/domain/keywords/articleIntentGate';
 import {
   fetchAllProviders,
   type CoverageProvider,
