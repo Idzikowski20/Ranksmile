@@ -1,0 +1,29 @@
+ARCHITECTURE.md
+  s_e3556ba0769b4b::t_d2823fdc6261cd 36-38
+lib/rankTracking/analytics.ts
+  s_e3556ba0769b4b::t_f499ad1393c300 11
+lib/rankTracking/summaryStore.ts
+  s_e3556ba0769b4b::t_f499ad1393c300 18
+lib/arch/layerRules.ts
+  s_e3556ba0769b4b::t_ad91fba87c8b55 26-31
+src/core/domain/rankTracking/buckets.ts
+  s_e3556ba0769b4b::t_12c95a4e2814ce 1
+__tests__/lib/rankTracking/buckets.test.ts
+  s_e3556ba0769b4b::t_f499ad1393c300 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "75902c1dd55ca03a6fca7ea8907a710fd0d0c0a4",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
