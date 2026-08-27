@@ -1,4 +1,4 @@
-# Clean Architecture Migration — Implementation Plan (rev. 2)
+# Clean Architecture Migration — Implementation Plan (rev. 3)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -38,6 +38,7 @@ Composition is **not** a domain layer — it is the wiring edge. Infrastructure 
 - **Green gate every task:** `npx tsc --noEmit` clean AND relevant `npx jest` suites pass before commit. Full suite = 407 suites / 2486 tests green (2 known flaky timeouts: `emitObservations.q2`, `ccmStaleCron` — pass in isolation).
 - **tsconfig excludes `__tests__`** — run Jest to catch broken test imports; tsc won't.
 - **Directory casing:** lowercase (`src/core/domain`).
+- **`src/core/shared` discipline (guard against a second `lib/`):** `src/core/shared` holds ONLY pure, vendor-free primitives shared across **multiple** domains (e.g. `money.ts`, `date.ts`). If something is used by one domain only → it belongs in `src/core/domain/<that-domain>/`, not shared. If something touches an SDK/DB/fs/env → it is infrastructure, never shared. No `logger/api/env/db/stripe/http/utils` grab-bag files in `shared`. A file entering `shared` must be justified by 2+ domain consumers.
 - **Per-feature dependency inventory BEFORE moving anything** (see Task 0.5) — for each file destined for `domain`, confirm it has no transitive SDK/DB/fs/env dependency. If it does, it belongs in infrastructure, not domain.
 
 ---
@@ -100,7 +101,16 @@ export const LAYER_RULES = [
 ] as const;
 ```
 
-- [ ] **Step 3: Implement `lib/arch/scanLayerImports.ts`** — walk files under each `root`, extract import specifiers (reuse `extractImportSpecifiers` from `lib/cia/scanImports` if it exists; otherwise regex `/(from\s+|import\s*\(|require\s*\()['"]([^'"]+)['"]/g`), flag any specifier matching that layer's `forbid`. Return `{file, specifier, layer}[]`.
+- [ ] **Step 3: Implement `lib/arch/scanLayerImports.ts`** — walk files under each `root`, extract import specifiers using the **TypeScript compiler API**, not regex. Use `ts.preProcessFile(source, true, true).importedFiles` (from the already-installed `typescript` package) — it uses the TS scanner and correctly handles every import/export/`require`/dynamic-`import()` form, type-only imports, and multi-line statements that a regex mishandles. (Do **not** reuse `lib/cia/scanImports.extractImportSpecifiers` — it is regex-based; the architecture guard must be AST-accurate.) Flag any specifier matching that layer's `forbid`. Return `{file, specifier, layer}[]`.
+
+```ts
+import ts from 'typescript';
+import fs from 'node:fs';
+export function extractSpecifiers(source: string): string[] {
+  return ts.preProcessFile(source, /*readImportFiles*/ true, /*detectJavaScriptImports*/ true)
+    .importedFiles.map((f) => f.fileName);
+}
+```
 
 - [ ] **Step 4: Run test.** Run: `npx jest __tests__/architecture/clean-arch-boundaries.test.ts` (Expected: PASS — `src/` is empty so zero violations; the guard is now armed for all later tasks).
 
@@ -348,6 +358,18 @@ Same 4-task shape (+ per-feature dependency inventory + boundary test stays gree
 4. **articles** — `lib/articles/` (12); more moving parts.
 5. **aiVisibility** — `lib/aiVisibility/` (10); LLM + store infra.
 6. **AO / pipeline — LAST.** `lib/ao/` is entangled with scoring, coverage, planner, intelligence, compiler, pipeline, workers, Redis/BullMQ. Migrate only after the pattern is proven and the simpler domains are stable; likely needs its own multi-plan decomposition and may stay partly inside the CIA zones.
+
+**Phase N (after feature migration stabilises): `lib/` infrastructure extraction.**
+During feature migration, `src/infrastructure` is allowed to import `lib/*`
+(`lib/stripe`, `lib/orgBilling`, `lib/db`, external-API helpers) as a **transitional**
+bridge — otherwise every feature would stall on shared plumbing. This is NOT the
+target state: left unchecked, `src/infrastructure` becomes a thin wrapper around a
+permanent legacy `lib/` backend. Once the features are migrated, run a dedicated
+phase that relocates the shared infrastructure primitives into `src/infrastructure/`
+(e.g. `lib/stripe` → `src/infrastructure/stripe/`, `lib/db`/Sequelize access →
+`src/infrastructure/persistence/`, external clients → `src/infrastructure/external/`),
+then tighten the boundary test to also forbid `src/infrastructure → lib/` (except the
+CIA zones). Do this last, not now.
 
 **Per-feature checklist (repeat):**
 - **inventory** first: for each candidate domain file, confirm zero transitive SDK/DB/fs/env deps; anything impure → infrastructure.
