@@ -1,0 +1,39 @@
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 117
+pages/api/audit-tool/[slug]/[id].ts
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 8
+components/audit/AuditCard.tsx
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 3
+pages/api/audit-tool/[slug]/list.ts
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 8
+pages/sites/[domain]/audit-tool/[id].tsx
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 12
+components/audit/AuditFactorChart.tsx
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 4
+services/auditTool.ts
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 3
+lib/contentScore.ts
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 64
+lib/auditCompute.ts
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 20
+lib/auditInternalLinks.ts
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 11
+components/audit/TermsTable.tsx
+  s_e3556ba0769b4b::t_ea872b0dd9ddfd 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4e49a83816201edbc2f3a81200a874d2d09d5487",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
