@@ -4,7 +4,7 @@ import { join } from 'path';
 it('maps raw sidecar and terminal errors before writing Deep Analysis SSE', () => {
   const source = readFileSync(join(process.cwd(), 'pages/api/articles/deep-analysis.ts'), 'utf8');
 
-  expect(source).toContain("import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';");
+  expect(source).toContain("import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';");
   expect(source).toContain("console.error('[deep-analysis] sidecar error:', errText);");
   expect(source).toContain('replacements: [errText, jobId]');
   expect(source).toContain("console.error('[deep-analysis] sidecar error:', errorMessage);");

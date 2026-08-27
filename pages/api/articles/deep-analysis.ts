@@ -57,7 +57,7 @@ import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
 import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articles/articleAnalysisStorage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
+import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
 
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
