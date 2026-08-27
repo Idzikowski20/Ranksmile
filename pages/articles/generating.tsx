@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import WizardShell from '../../components/articles/WizardShell';
 import GeneratingStage from '../../components/articles/GeneratingStage';
 import { clearWizardState } from '../../lib/wizardState';
-import { isUsableArticleHtml } from '../../lib/articles/articleHtmlUsable';
+import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 import { shouldSkipFreshGenerate } from '../../lib/generateResume';
 import { articleOutlineReviewHref } from '../../lib/articles/articleFlow';
 

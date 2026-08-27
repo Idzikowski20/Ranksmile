@@ -243,7 +243,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           // articles.content is the canonical body rendered by the editor, preview and
           // publish surfaces — sanitize at this boundary, not at each render site.
           const html = sanitizeArticleHtml((result?.article_html as string) || '');
-          const { isUsableArticleHtml, stripHtmlToPlain } = await import('../../../lib/articles/articleHtmlUsable');
+          const { isUsableArticleHtml, stripHtmlToPlain } = await import('@/src/core/domain/articles/htmlUsable');
           // Never wipe a draft with an empty LLM response — fail the job so the UI can retry.
           if (!isUsableArticleHtml(html)) {
             await db.query(

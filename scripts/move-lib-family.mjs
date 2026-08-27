@@ -49,7 +49,7 @@ function toRel(fromDir, absNoExt) {
   return r;
 }
 
-const SKIP = /(^|[\\/])(node_modules|\.next|\.git|\.venv|\.worktrees|\.claude|graphify-out|python-sidecar|coverage)([\\/]|$)/;
+const SKIP = /(^|[\\/])(node_modules|\.next|\.git|\.venv|\.worktrees|\.claude|graphify-out|python-sidecar|coverage|\.local-postgres|\.pytest_cache)([\\/]|$)/;
 function walk(dir, acc = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
