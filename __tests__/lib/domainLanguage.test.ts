@@ -1,5 +1,5 @@
-import { toDfsLanguageCode } from '../../lib/domainLanguagePrompts';
-import { looksPolish, polishPromptTemplates } from '../../lib/domainLanguagePrompts';
+import { toDfsLanguageCode } from '@/src/core/shared/language';
+import { looksPolish, polishPromptTemplates } from '@/src/core/shared/language';
 
 describe('domainLanguage', () => {
   describe('toDfsLanguageCode', () => {

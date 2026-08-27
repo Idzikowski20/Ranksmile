@@ -22,7 +22,7 @@ import {
    DFS_SERP_PAA,
    serpCrawlBudget,
 } from './dataforseoBudget';
-import { toDfsLanguageCode } from './domainLanguagePrompts';
+import { toDfsLanguageCode } from '@/src/core/shared/language';
 
 const BASE = 'https://api.dataforseo.com/v3';
 
