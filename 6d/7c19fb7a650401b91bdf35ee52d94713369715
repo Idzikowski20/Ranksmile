@@ -1,0 +1,27 @@
+src/infrastructure/competitors/competitorRow.ts
+  s_e3556ba0769b4b::t_5c2c7b4d06fc2d 1-36
+components/competitors/CompetitorsSection.tsx
+  s_e3556ba0769b4b::t_303b30cc46b812 2
+lib/competitorScan.ts
+  s_e3556ba0769b4b::t_303b30cc46b812 10-11
+src/core/domain/competitors/competitor.ts
+  s_e3556ba0769b4b::t_0502ae362a109e 1-19
+services/competitors.ts
+  s_e3556ba0769b4b::t_303b30cc46b812 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6d7c19fb7a650401b91bdf35ee52d94713369715",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
