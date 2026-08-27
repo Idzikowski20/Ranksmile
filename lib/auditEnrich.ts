@@ -8,7 +8,7 @@ import { fetchPage, extractFactorValues, RealAuditData, auditContentScore, termS
 import type { RichTerm } from './competitorContentScore';
 import { getSearchVolumes } from './dataforseo';
 import { callSidecar } from './sidecar';
-import { isContentCompetitor } from './competitorRelevance';
+import { isContentCompetitor } from '@/src/core/domain/competitors/relevance';
 import { ensureCompetitorsTables } from './ensureCompetitorsTables';
 
 const PL_DIACRITICS = /[ąćęłńóśźż]/i;
