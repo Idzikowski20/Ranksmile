@@ -8,7 +8,7 @@ import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '../../../..
 import { queryOne } from '../../../../lib/db/query';
 import { callSidecar } from '../../../../lib/sidecar';
 import { getErrorMessage } from '../../../../lib/errors';
-import { manualRefreshCooldownDays, refreshIntervalDays } from '../../../../lib/aiVisibility/aiVisibility';
+import { manualRefreshCooldownDays, refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
 import { nextjsUrl } from '../../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

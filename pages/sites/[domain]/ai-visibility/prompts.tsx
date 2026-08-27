@@ -6,7 +6,7 @@ import PromptTopicsTable, { TopicRow } from '../../../../components/aiVisibility
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { HoverTooltip, Button } from '../../../../components/koala/core';
 import { useAiVisPromptTopics, useAiVisData } from '../../../../services/aiVisibility';
-import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility/aiVisibility';
+import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
 
 const FONT = 'var(--font-family-primary)';
 
