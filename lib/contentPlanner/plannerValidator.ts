@@ -2,7 +2,7 @@
  * Planner Validator — plan quality (≠ Knowledge Verifier schema checks).
  */
 import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
-import type { PlannerTargets } from '../benchmarkIntelligence/types';
+import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
 import type { KnowledgeGraph } from '../knowledgeEngine/types';
 import type {
   AdaptiveOutline,

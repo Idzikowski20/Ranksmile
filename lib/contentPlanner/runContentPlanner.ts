@@ -39,7 +39,7 @@ import type {
 import { KNOWLEDGE_COVERAGE_MIN_PCT } from './types';
 import type { KnowledgeGraph, TopicBlock } from '../knowledgeEngine/types';
 import { knowledgeGraphToTargetKg } from '../knowledgeEngine/toTargetKg';
-import type { PlannerTargets } from '../benchmarkIntelligence/types';
+import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
 
 export type RunContentPlannerInput = {
   keyword: string;

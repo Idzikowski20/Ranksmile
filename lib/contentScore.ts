@@ -79,7 +79,7 @@ export interface ScoreData {
    knowledge_graph?: import('./knowledgeEngine/types').KnowledgeGraph;
    /** CIE — coverage overlay report (never written into frozen graph). */
    knowledge_coverage_report?: import('./knowledgeEngine/types').KnowledgeCoverageReport;
-   structural_benchmark?: import('./benchmarkIntelligence/types').StructuralBenchmark;
+   structural_benchmark?: import('@/src/core/domain/benchmark/types').StructuralBenchmark;
 }
 
 // Term-coverage helpers now live in the terms domain; re-exported for back-compat.
