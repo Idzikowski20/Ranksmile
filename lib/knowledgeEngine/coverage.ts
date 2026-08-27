@@ -2,7 +2,7 @@
  * Claim coverage overlay — never mutates frozen KnowledgeGraph claims.
  * Results live in knowledge_coverage_report / plan annotations.
  */
-import type { ArticleExecutionPlan } from '../contentPlanner/types';
+import type { ArticleExecutionPlan } from '@/src/core/domain/contentPlanner/types';
 import { getEmbeddingProvider, type EmbeddingProvider } from './embeddingProvider';
 import { semanticMatchScore } from './semanticMatch';
 import { patchExecutionPlanFromCoverage } from './aoPlanPatch';

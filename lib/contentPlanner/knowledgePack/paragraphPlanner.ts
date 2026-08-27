@@ -1,4 +1,4 @@
-import type { ContentBlockType, ExecutionPlanSection } from '../types';
+import type { ContentBlockType, ExecutionPlanSection } from '@/src/core/domain/contentPlanner/types';
 import type { ParagraphGoal, ParagraphPlan } from './types';
 
 const SPECIAL_BLOCKS: ContentBlockType[] = ['checklist', 'steps', 'faq'];

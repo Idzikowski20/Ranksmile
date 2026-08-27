@@ -10,7 +10,7 @@ import type {
   TargetKnowledgeGraph,
   ValidationIssue,
   ValidationResult,
-} from './types';
+} from '@/src/core/domain/contentPlanner/types';
 import type { PlannerQualityMetrics } from '@/src/core/domain/knowledgeEngine/types';
 
 export type PlannerValidateInput = {

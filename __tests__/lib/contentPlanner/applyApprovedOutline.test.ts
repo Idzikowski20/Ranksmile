@@ -4,7 +4,7 @@ import {
   approvedOutlineWarnings,
   parseApprovedOutline,
 } from '../../../lib/contentPlanner/applyApprovedOutline';
-import type { ArticleExecutionPlan, ExecutionPlanSection } from '../../../lib/contentPlanner/types';
+import type { ArticleExecutionPlan, ExecutionPlanSection } from '@/src/core/domain/contentPlanner/types';
 
 function section(id: string): ExecutionPlanSection {
   return {

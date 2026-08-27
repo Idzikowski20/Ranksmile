@@ -1,4 +1,4 @@
-export * from './types';
+export * from '@/src/core/domain/contentPlanner/types';
 export * from './knowledgePack/types';
 export { buildCompileDiagnostics } from './knowledgePack/compileDiagnostics';
 export { validateStructural } from './knowledgePack/validateStructural';
