@@ -45,6 +45,9 @@ const Copy = styled.div`
   flex-direction: column;
   align-items: center;
   gap: 32px;
+  /* Full width so the headline / proof rows wrap inside the viewport instead of
+     shrink-wrapping past it on mobile; children stay centred by align-items. */
+  width: 100%;
   padding-top: 170px; /* canvas offset + floating nav */
   text-align: center;
   ${BP.md} {
@@ -77,6 +80,7 @@ const H1 = styled.h1`
   display: flex;
   flex-direction: column;
   align-items: center;
+  max-width: 100%;
   font-weight: ${fontWeight.bold};
   font-size: 64px;
   line-height: 71px;
@@ -154,24 +158,19 @@ const Buttons = styled.div`
   justify-content: center;
 `;
 
-const BrandBtn = styled.a`
+const HeroBtn = styled.a`
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
   padding: 10px 18px;
   border-radius: ${semantic.button.brand.radius};
-  background: ${semantic.button.brand.bg};
-  color: ${semantic.button.brand.fg};
   text-decoration: none;
   font-size: 15.8px;
   line-height: 22px;
   font-weight: ${fontWeight.medium};
   letter-spacing: -0.4px;
   transition: background var(--motion-fast) var(--motion-ease-standard), transform var(--motion-fast) var(--motion-ease-standard);
-  &:hover {
-    background: ${semantic.button.brand.bgHover};
-  }
   &:active {
     transform: translateY(1px);
   }
@@ -181,32 +180,21 @@ const BrandBtn = styled.a`
   }
 `;
 
-const OutlineBtn = styled.a`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 10px 18px;
+const BrandBtn = styled(HeroBtn)`
+  background: ${semantic.button.brand.bg};
+  color: ${semantic.button.brand.fg};
+  &:hover {
+    background: ${semantic.button.brand.bgHover};
+  }
+`;
+
+const OutlineBtn = styled(HeroBtn)`
   border: 1px solid ${semantic.border.primary};
-  border-radius: ${semantic.button.brand.radius};
   background: ${semantic.background.primary};
   color: ${semantic.text.primary};
-  text-decoration: none;
-  font-size: 15.8px;
-  line-height: 22px;
-  font-weight: ${fontWeight.medium};
-  letter-spacing: -0.4px;
   box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.04);
-  transition: background var(--motion-fast) var(--motion-ease-standard), transform var(--motion-fast) var(--motion-ease-standard);
   &:hover {
     background: ${semantic.background.secondary};
-  }
-  &:active {
-    transform: translateY(1px);
-  }
-  &:focus-visible {
-    outline: none;
-    box-shadow: var(--shadow-focus);
   }
 `;
 
