@@ -11,9 +11,9 @@ import { isKeywordOnTopic, seedTokens } from '../topicRelevance';
 import { isDictionaryQueryNoise } from '../termUtils';
 import { factReadinessScore } from '../factReadiness';
 import type { AiCitation, AiVisibilitySummary } from '../ai/aiSearchScore';
-import type { ArticleFact } from './articleFactTypes';
+import type { ArticleFact } from '@/src/core/domain/articles/factTypes';
 
-export type { ArticleFact, FactSourceKind } from './articleFactTypes';
+export type { ArticleFact, FactSourceKind } from '@/src/core/domain/articles/factTypes';
 export { factReadinessScore } from '../factReadiness';
 
 export function splitFactSentences(text: string): string[] {
