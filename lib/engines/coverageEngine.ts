@@ -4,7 +4,7 @@
  */
 import type { CoverageItem } from '../ai/aiCoverage';
 import { curateConceptsFromTerms, type TermLike } from '../coverage/curateConcepts';
-import { normalizeTerm } from '../termUtils';
+import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 export type CoverageEngineInput = {
   keyword: string;

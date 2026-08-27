@@ -1,4 +1,4 @@
-import { normalizeTerm, dedupeUsefulTerms, isUsefulTerm } from '../../lib/termUtils';
+import { normalizeTerm, dedupeUsefulTerms, isUsefulTerm } from '@/src/core/domain/terms/termUtils';
 import { filterUsefulNlpTerms } from '../../lib/competitorTermCalibration';
 
 describe('normalizeTerm Polish diacritics', () => {

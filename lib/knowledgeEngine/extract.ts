@@ -1,5 +1,5 @@
 import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
-import { foldPolishLetters } from '../termUtils';
+import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
 import type { CompetitorDocument, SourceKind } from './types';
 
 export type RawSentence = {

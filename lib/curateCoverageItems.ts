@@ -10,7 +10,7 @@ import {
 } from './citationPrompts';
 import { isCorpusNoiseSentence } from './corpusNoiseFilter';
 import { isKeywordOnTopic, seedTokens } from './topicRelevance';
-import { normalizeTerm } from './termUtils';
+import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 import { runCoverageEngine } from './engines/coverageEngine';
 
 /** Target curated AI Search checklist size (citation prompts + PAA). */
