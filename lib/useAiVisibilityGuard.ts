@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
-import type { AiVisConfig } from './aiVisibility';
+import type { AiVisConfig } from './aiVisibility/aiVisibility';
 
 /** Gate AI Visibility sub-pages: no completed config ⇒ redirect to the wizard.
  * Returns { ready } true only once a completed config is confirmed, so pages

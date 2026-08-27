@@ -1,6 +1,6 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
 
-import { findDueConfigIds } from '../../lib/aiVisibilityScan';
+import { findDueConfigIds } from '../../lib/aiVisibility/aiVisibilityScan';
 
 describe('findDueConfigIds', () => {
    it('selects configs whose latest completed scan is stale and none active, oldest first, capped', async () => {

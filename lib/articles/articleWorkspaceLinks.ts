@@ -1,4 +1,4 @@
-import { workspaceHref } from './activeWorkspace';
+import { workspaceHref } from '../activeWorkspace';
 
 export type ArticleWorkspaceLinks = {
    recommendations: string;

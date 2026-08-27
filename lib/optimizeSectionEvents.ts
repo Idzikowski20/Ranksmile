@@ -1,5 +1,5 @@
-import type { Section } from './articleSections';
-import { splitSections, normalizeHtmlForDiff } from './articleSections';
+import type { Section } from './articles/articleSections';
+import { splitSections, normalizeHtmlForDiff } from './articles/articleSections';
 import type { SectionResult } from '../components/articles/optimizeStore';
 import type { StepFocus, EditMode, PlanStep } from './optimizationPlanner';
 

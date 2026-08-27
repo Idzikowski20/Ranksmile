@@ -1,6 +1,6 @@
 import { createMemoryFeatureStore, setFeatureStore } from '../../lib/featureStoreCore';
 import { persistCoverageFeatureRun } from '../../lib/persistCoverageFeatureRun';
-import type { CoverageSnapshot } from '../../lib/aiCoverage';
+import type { CoverageSnapshot } from '../../lib/ai/aiCoverage';
 
 function stubSnapshot(): CoverageSnapshot {
   return {

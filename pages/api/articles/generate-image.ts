@@ -3,7 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 import verifyUser from '../../../utils/verifyUser';
-import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
+import { resolveOrgId, orgBudgetBlocked } from '../../../lib/ai/aiBudget';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 import { sidecarUrl } from '../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';

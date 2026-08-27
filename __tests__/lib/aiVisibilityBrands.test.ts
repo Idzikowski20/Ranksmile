@@ -1,6 +1,6 @@
 // Import the pure helpers directly; the main aiVisibilityBrands module pulls in
 // @ai-sdk/deepseek which is ESM and would need extra Jest config to load.
-import { parseBrandResponse, buildBrandPrompt } from '../../lib/aiVisibilityBrandsPure';
+import { parseBrandResponse, buildBrandPrompt } from '../../lib/aiVisibility/aiVisibilityBrandsPure';
 
 describe('parseBrandResponse', () => {
    it('parses an array, coercing fields and clamping quotes to 3', () => {

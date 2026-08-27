@@ -4,7 +4,7 @@ import {
   buildRankingSourcesPayload,
   parseRankingSources,
 } from '../../lib/rankingSources';
-import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
+import type { AiVisibilitySummary } from '../../lib/ai/aiSearchScore';
 
 describe('rankingSources', () => {
   it('builds google sources from SERP competitors', () => {

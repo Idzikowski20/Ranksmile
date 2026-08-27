@@ -1,4 +1,4 @@
-import type { LlmCitation } from './dataforseoLlm';
+import type { LlmCitation } from '../dataforseoLlm';
 import type { ResultRow } from './aiVisibilityMetricsTypes';
 
 const pairScore = (r: ResultRow): number => (

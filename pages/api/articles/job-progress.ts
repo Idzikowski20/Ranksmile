@@ -57,7 +57,7 @@ async function failStaleFinalization(job: JobAccessRow): Promise<boolean> {
     );
     if (affectedRows(claim) === 0) return false;
     if (job.article_id) {
-      const { getArticleIdSql } = await import('../../../lib/articleSql');
+      const { getArticleIdSql } = await import('../../../lib/articles/articleSql');
       const articleIdSql = await getArticleIdSql();
       await db.query(
         `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
@@ -237,13 +237,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         await releaseSiteAuditRun(Number(domainId), jobId).catch(() => {});
       }
       if (jt === 'article_generate' && genArticleId) {
-        const { getArticleIdSql } = await import('../../../lib/articleSql');
+        const { getArticleIdSql } = await import('../../../lib/articles/articleSql');
         const articleIdSql = await getArticleIdSql();
         if (status === 'done') {
           // articles.content is the canonical body rendered by the editor, preview and
           // publish surfaces — sanitize at this boundary, not at each render site.
           const html = sanitizeArticleHtml((result?.article_html as string) || '');
-          const { isUsableArticleHtml, stripHtmlToPlain } = await import('../../../lib/articleHtmlUsable');
+          const { isUsableArticleHtml, stripHtmlToPlain } = await import('../../../lib/articles/articleHtmlUsable');
           // Never wipe a draft with an empty LLM response — fail the job so the UI can retry.
           if (!isUsableArticleHtml(html)) {
             await db.query(

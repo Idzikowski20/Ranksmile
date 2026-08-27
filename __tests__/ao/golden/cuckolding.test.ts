@@ -17,7 +17,7 @@ import { resolveAoWorkOutcome, aoOutcomeUserMessage } from '../../../lib/ao/aoRu
 import { selectSectionTarget } from '../../../lib/ao/sectionTargeting';
 import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
 import type { CriticalContentMap } from '../../../lib/ao/criticalContentMap';
-import type { Section } from '../../../lib/articleSections';
+import type { Section } from '../../../lib/articles/articleSections';
 
 const ARTICLE = {
   keyword: 'cuckolding',

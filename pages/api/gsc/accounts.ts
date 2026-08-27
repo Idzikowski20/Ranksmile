@@ -8,7 +8,7 @@ import {
   refreshAccountProfileFromGoogle,
   verifyAccountToken,
   type GscAccountRecord,
-} from '../../../lib/gscAccounts';
+} from '../../../lib/gsc/gscAccounts';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type GscAccountsResponse = {

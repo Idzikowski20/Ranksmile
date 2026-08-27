@@ -1,4 +1,4 @@
-import type { ArticleContext } from './articleContext';
+import type { ArticleContext } from './articles/articleContext';
 import type { Guideline } from './recommendationEngine';
 import {
   computeTermUsageGaps,
@@ -11,7 +11,7 @@ import { buildEffortOptimizeGuidance } from './contentEffort';
 import { buildWhatsMissingOptimizeGuidance } from './contentScore';
 import { countOccurrences } from './termMatch';
 import { STOP_SLOP_RULES } from './stopSlopPrompt';
-import { isUncoveredAiSearchItem } from './aiCoverage';
+import { isUncoveredAiSearchItem } from './ai/aiCoverage';
 
 export { computeMissingTerms, computeOverusedTerms } from './optimizeSectionEdit';
 export const WHOLE_ARTICLE_ID = 'article-whole';

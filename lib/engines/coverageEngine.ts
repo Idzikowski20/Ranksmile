@@ -2,7 +2,7 @@
  * Coverage Engine — materialize typed coverage checklist from SERP/NLP/PAA.
  * Does not invent ENTITY (NER only).
  */
-import type { CoverageItem } from '../aiCoverage';
+import type { CoverageItem } from '../ai/aiCoverage';
 import { curateConceptsFromTerms, type TermLike } from '../coverage/curateConcepts';
 import { normalizeTerm } from '../termUtils';
 

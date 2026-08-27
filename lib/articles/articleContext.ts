@@ -1,18 +1,18 @@
-import db from '../database/database';
+import db from '../../database/database';
 import { getArticleIdSql } from './articleSql';
-import { safeJsonParse } from './safeJson';
-import { parseSnapshot } from './coverageStore';
-import type { CoverageSnapshot } from './aiCoverage';
-import type { ScoreData } from './contentScore';
+import { safeJsonParse } from '../safeJson';
+import { parseSnapshot } from '../coverageStore';
+import type { CoverageSnapshot } from '../ai/aiCoverage';
+import type { ScoreData } from '../contentScore';
 import { readArticleTerms, type ArticleTermRow } from './articleTerms';
-import { readContentSettings } from './contentSettings';
-import { getDomainLocale } from './domainLanguage';
-import { getDomainVoices } from './domainVoices';
+import { readContentSettings } from '../contentSettings';
+import { getDomainLocale } from '../domainLanguage';
+import { getDomainVoices } from '../domainVoices';
 import {
   parseCompetitorSynthesis,
   type CompetitorSynthesis,
-} from './wie/competitorSynthesis';
-import { buildHeuristicReaderBrief, type ReaderBrief } from './wie/readerBrief';
+} from '../wie/competitorSynthesis';
+import { buildHeuristicReaderBrief, type ReaderBrief } from '../wie/readerBrief';
 
 export interface CompetitorContext {
   domain: string;
@@ -105,7 +105,7 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
 
   let wiePromptBlock: string | undefined;
   try {
-    const { buildWieWriteContext, formatWieWriteBlocks } = await import('./wie/writerContext');
+    const { buildWieWriteContext, formatWieWriteBlocks } = await import('../wie/writerContext');
     const wie = await buildWieWriteContext({
       keyword,
       paa,

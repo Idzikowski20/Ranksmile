@@ -1,6 +1,6 @@
-import type { ArticleFact } from './articleFactTypes';
-import { factReadinessScore } from './factReadiness';
-import { DEFAULT_WEIGHTS, type ScoreFactor } from './aiScore/factors';
+import type { ArticleFact } from '../articles/articleFactTypes';
+import { factReadinessScore } from '../factReadiness';
+import { DEFAULT_WEIGHTS, type ScoreFactor } from '../aiScore/factors';
 
 export type AiCitation = {
    prompt: string;

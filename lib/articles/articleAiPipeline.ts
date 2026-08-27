@@ -8,12 +8,12 @@ import {
   mergeVisibilitySummaries,
   type ArticleFact,
 } from './articleFacts';
-import { resolveFactKeyword } from './resolveFactKeyword';
-import { getAiSearchInfo } from './seo/keywordData';
+import { resolveFactKeyword } from '../resolveFactKeyword';
+import { getAiSearchInfo } from '../seo/keywordData';
 import {
   resolveAiScore,
   type AiVisibilitySummary,
-} from './aiSearchScore';
+} from '../ai/aiSearchScore';
 
 export type ArticleAiPipelineResult = {
   facts: ArticleFact[];

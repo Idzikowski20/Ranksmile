@@ -7,7 +7,7 @@ import { getScopedWorkspaceIds, ForbiddenWorkspaceError } from '../../lib/tenanc
 import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
-import { buildOAuthClientFromAccount } from '../../lib/gscAccounts';
+import { buildOAuthClientFromAccount } from '../../lib/gsc/gscAccounts';
 import { readLocalSCData, getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../utils/searchConsole';
 import { getErrorMessage } from '../../lib/errors';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';

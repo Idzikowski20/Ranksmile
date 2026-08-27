@@ -10,7 +10,7 @@ import { slugToDomain } from '../../../../utils/slugToDomain';
 import PromptSelector from '../../../../components/aiVisibility/PromptSelector';
 import type { WizardTopic, WizardPrompt } from '../../../../components/aiVisibility/wizardTypes';
 import { useSaveAiVisConfig, useStartAiVisScan, useGeneratePrompts } from '../../../../services/aiVisibility';
-import { AI_VIS_PROMPT_LIMIT } from '../../../../lib/aiVisibility';
+import { AI_VIS_PROMPT_LIMIT } from '../../../../lib/aiVisibility/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
 

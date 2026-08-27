@@ -11,7 +11,7 @@ import {
   EMAIL_RADIUS_CARD,
   emailAssetUrl,
   escapeHtml,
-} from './emails/layout';
+} from '../emails/layout';
 
 export type DomainDigest = { domain: string; summary: DropResult['summary']; tiers: DropResult['tiers'] };
 

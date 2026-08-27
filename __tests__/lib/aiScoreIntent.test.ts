@@ -1,6 +1,6 @@
-import { computeAiSearchScoreV2 } from '../../lib/aiSearchScore';
+import { computeAiSearchScoreV2 } from '../../lib/ai/aiSearchScore';
 import type { ScoreFactor } from '../../lib/aiScore/factors';
-import type { ArticleFact } from '../../lib/articleFacts';
+import type { ArticleFact } from '../../lib/articles/articleFacts';
 
 const facts = [
   { id: '1', text: 'Licencję wydaje komendant wojewódzki policji.', sourceFrequency: 2 },

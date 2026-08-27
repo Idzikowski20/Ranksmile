@@ -1,4 +1,4 @@
-import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, domainMentionGap, domainGapCandidates, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, overviewForDomain, ResultRow } from '../../lib/aiVisibilityMetrics';
+import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, domainMentionGap, domainGapCandidates, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, overviewForDomain, ResultRow } from '../../lib/aiVisibility/aiVisibilityMetrics';
 
 const cit = (domain: string, url?: string) => ({ domain, url: url || `https://${domain}/x`, title: '' });
 const brand = (b: string, domain = '', sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' = 'neutral', pos = 1) => ({ brand: b, domain, sentiment, pos, quotes: [] });

@@ -6,9 +6,9 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
-import { loadScanResultRows, loadScanCitationRows, getDisplayScan, getPreviousDisplayScan } from '../../../../lib/aiVisibilityRead';
-import { refreshIntervalDays } from '../../../../lib/aiVisibility';
+import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibility/aiVisibilityMetrics';
+import { loadScanResultRows, loadScanCitationRows, getDisplayScan, getPreviousDisplayScan } from '../../../../lib/aiVisibility/aiVisibilityRead';
+import { refreshIntervalDays } from '../../../../lib/aiVisibility/aiVisibility';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 // Compare never renders a competitor's Sources → drop them to bound the payload.

@@ -1,4 +1,4 @@
-import { splitSections } from './articleSections';
+import { splitSections } from './articles/articleSections';
 import type { SectionEvent } from './optimizeSectionEvents';
 
 /** Escape a value for safe interpolation into a double-quoted HTML attribute. */

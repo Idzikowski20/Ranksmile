@@ -1,5 +1,5 @@
 import type { NlpTerm } from '../contentScore';
-import type { AiVisibilitySummary } from '../aiSearchScore';
+import type { AiVisibilitySummary } from '../ai/aiSearchScore';
 
 export type SerpCompetitor = {
    url: string;

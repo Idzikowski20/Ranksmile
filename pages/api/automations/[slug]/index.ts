@@ -8,7 +8,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAutomationTables } from '../../../../lib/ensureAutomationTables';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articleSql';
+import { getArticleIdSql } from '../../../../lib/articles/articleSql';
 import { getConnectionForWorkspace } from '../../../../lib/wpConnection';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 import { getErrorMessage } from '../../../../lib/errors';

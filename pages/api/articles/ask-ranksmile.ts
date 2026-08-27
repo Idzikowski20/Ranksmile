@@ -12,7 +12,7 @@ import { extractJsonObject, isRanksmileReplyShape, stripCodeFence } from '../../
 import { stripEmoji } from '../../../lib/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureUserTenancy } from '../../../lib/tenancy';
-import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
+import { getOrgUsage5h, recordAiTokens } from '../../../lib/ai/aiTokenUsage';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { chatLlm } from '../../../lib/ai/deepseek';

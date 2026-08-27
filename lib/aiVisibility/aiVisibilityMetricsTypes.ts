@@ -1,4 +1,4 @@
-import type { LlmCitation } from './dataforseoLlm';
+import type { LlmCitation } from '../dataforseoLlm';
 
 export type BrandMention = { brand: string, domain: string, sentiment: 'positive' | 'neutral' | 'negative' | 'mixed', pos: number, quotes: string[] };
 

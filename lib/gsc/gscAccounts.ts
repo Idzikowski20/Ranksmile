@@ -1,9 +1,9 @@
 import Cryptr from 'cryptr';
 import { auth } from '@googleapis/searchconsole';
-import db from '../database/database';
-import GscAccount from '../database/models/gscAccount';
+import db from '../../database/database';
+import GscAccount from '../../database/models/gscAccount';
 
-export { GOOGLE_OAUTH_SCOPES } from './googleOAuthScopes';
+export { GOOGLE_OAUTH_SCOPES } from '../googleOAuthScopes';
 
 let gscIndexesFixed = false;
 /**
