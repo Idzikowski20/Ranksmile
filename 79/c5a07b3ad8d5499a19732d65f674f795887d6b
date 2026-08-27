@@ -1,0 +1,21 @@
+services/auditTool.ts
+  s_e3556ba0769b4b::t_79e82197d726e0 5
+services/competitors.ts
+  s_e3556ba0769b4b::t_3307fe5beb6f66 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "79c5a07b3ad8d5499a19732d65f674f795887d6b",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
