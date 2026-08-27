@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, UseQueryResult, UseMutationResul
 import toast from 'react-hot-toast';
 import type { AuditCardDTO, AuditResult } from '../lib/auditTypes';
 
-/** Single fetch+parse+error helper — mirrors services/aiVisibility.tsx so every hook
+/** Single fetch+parse+error helper — mirrors services/aiVisibility.ts so every hook
  *  throws Error(message-from-server) and react-query onError can toast it uniformly. */
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
    const r = await fetch(url, init);
