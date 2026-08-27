@@ -3,7 +3,7 @@ import { getCheckoutPlan } from './billingPlans';
 import { formatPaymentMethodLabel } from './billingInvoiceModel';
 import { getOrgBillingState } from '../orgBilling';
 import { getStripe, isStripeConfigured } from '../stripe';
-import { formatMoney } from '../subscriptionFormat';
+import { formatMoney } from '@/src/core/shared/money';
 import { syncSubscriptionToOrg } from '../stripeBillingSync';
 
 export type ConfirmationLine = {

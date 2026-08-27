@@ -5,7 +5,7 @@ import { getLockedCheckoutPlanSlug } from './billing/billingPlanLock';
 import { isTrialEligible } from './billing/billingTrial';
 import { getOrgBillingState, type OrgBillingState, type SubscriptionStatus } from './orgBilling';
 import { DEFAULT_PLAN_SLUG, resolvePlanSlug } from './planLimits';
-import type { UpcomingPaymentDetails } from './subscriptionFormat';
+import type { UpcomingPaymentDetails } from '@/src/core/shared/money';
 import { getStripe, isStripeConfigured } from './stripe';
 import { syncSubscriptionToOrg } from './stripeBillingSync';
 import type { LegacyPlanSlug } from './stripePrices';
