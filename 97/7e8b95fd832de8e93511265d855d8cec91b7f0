@@ -1,0 +1,21 @@
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_eb19aaee843782 28
+__tests__/lib/carriedScoreData.test.ts
+  s_e3556ba0769b4b::t_eb19aaee843782 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "977e8b95fd832de8e93511265d855d8cec91b7f0",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
