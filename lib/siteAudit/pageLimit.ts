@@ -1,4 +1,4 @@
-import { getCheckoutPlan } from '../billingPlans';
+import { getCheckoutPlan } from '../billing/billingPlans';
 import { getOrgBillingState } from '../orgBilling';
 import { getSiteAuditPageLimit, resolvePlanSlug } from '../planLimits';
 import { ensureUserTenancy } from '../tenancy';

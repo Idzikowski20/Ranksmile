@@ -1,10 +1,10 @@
 import type Stripe from 'stripe';
 import { getCheckoutPlan } from './billingPlans';
 import { formatPaymentMethodLabel } from './billingInvoiceModel';
-import { getOrgBillingState } from './orgBilling';
-import { getStripe, isStripeConfigured } from './stripe';
-import { formatMoney } from './subscriptionFormat';
-import { syncSubscriptionToOrg } from './stripeBillingSync';
+import { getOrgBillingState } from '../orgBilling';
+import { getStripe, isStripeConfigured } from '../stripe';
+import { formatMoney } from '../subscriptionFormat';
+import { syncSubscriptionToOrg } from '../stripeBillingSync';
 
 export type ConfirmationLine = {
   id: string;

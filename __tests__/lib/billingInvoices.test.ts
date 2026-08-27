@@ -5,7 +5,7 @@ import {
   mapInvoiceStatus,
   mapStripeInvoice,
   type BillingInvoice,
-} from '../../lib/billingInvoiceModel';
+} from '../../lib/billing/billingInvoiceModel';
 
 function inv(partial: Partial<BillingInvoice> & Pick<BillingInvoice, 'id' | 'createdAt'>): BillingInvoice {
   return {

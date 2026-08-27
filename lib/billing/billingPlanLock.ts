@@ -1,4 +1,4 @@
-import type { LegacyPlanSlug } from './stripePrices';
+import type { LegacyPlanSlug } from '../stripePrices';
 
 const LOCKED_CHECKOUT_STATUSES = new Set([
   'active',

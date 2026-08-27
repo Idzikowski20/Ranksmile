@@ -9,11 +9,11 @@ import {
 import {
   appendBillingDomainEvent,
   type BillingDomainEventSource,
-} from './billing/domainEvents';
+} from './domainEvents';
 import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from './billingTrial';
-import { claimTrialActivation, getOrgBillingState, updateOrgBillingState } from './orgBilling';
-import { getStripePriceId, type PlanSlug } from './stripePrices';
-import { syncSubscriptionToOrg } from './stripeBillingSync';
+import { claimTrialActivation, getOrgBillingState, updateOrgBillingState } from '../orgBilling';
+import { getStripePriceId, type PlanSlug } from '../stripePrices';
+import { syncSubscriptionToOrg } from '../stripeBillingSync';
 
 export type ActivateTrialResult =
   | { ok: true; subscriptionId: string }

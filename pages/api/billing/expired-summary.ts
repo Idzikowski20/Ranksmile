@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
-import { getCheckoutPlan } from '../../../lib/billingPlans';
+import { getCheckoutPlan } from '../../../lib/billing/billingPlans';
 import { getOrgBillingState } from '../../../lib/orgBilling';
 import { countActionableRecommendations, type RecFilterable } from '../../../lib/recommendations';
 import { ensurePipelineTables } from '../../../lib/ensurePipelineTables';
