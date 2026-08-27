@@ -1,0 +1,33 @@
+__tests__/lib/subscriptionDetails.test.ts
+  s_e3556ba0769b4b::t_a465badc6537d3 4-5
+__tests__/src/core/domain/billing/invoice.test.ts
+  s_e3556ba0769b4b::t_df159071d08d35 1-23
+lib/subscriptionDetails.ts
+  s_e3556ba0769b4b::t_a465badc6537d3 8
+lib/billing/billingInvoiceModel.ts
+  s_e3556ba0769b4b::t_a465badc6537d3 2
+src/core/domain/billing/invoice.ts
+  s_e3556ba0769b4b::t_34ae7c10f102a0 1-89
+components/settings/SubscriptionSettings.tsx
+  s_e3556ba0769b4b::t_a465badc6537d3 11-12
+src/core/domain/billing/invoiceRepository.ts
+  s_e3556ba0769b4b::t_2be8334faf19ab 1-13
+lib/billing/billingConfirmation.ts
+  s_e3556ba0769b4b::t_a465badc6537d3 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4613b78d9b1b2ce8553bd1000fda5b3241769eec",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
