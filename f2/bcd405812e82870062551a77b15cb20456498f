@@ -1,0 +1,31 @@
+lib/use-cases/index.ts
+  s_e3556ba0769b4b::t_d79a4ca9049147 1-3
+ARCHITECTURE.md
+  s_e3556ba0769b4b::t_979929eb226dcf 1-67
+lib/repositories/index.ts
+  s_e3556ba0769b4b::t_c0f0b07c6611a1 1-6
+lib/repositories/billing/invoiceRepository.ts
+  s_e3556ba0769b4b::t_a9c0a520aae092 1-44
+lib/billingInvoices.ts
+  s_e3556ba0769b4b::t_9cd2caf30dde2e 1-3,17-23
+__tests__/lib/use-cases/listOrgBillingInvoices.test.ts
+  s_e3556ba0769b4b::t_0640c2d8fa98e3 1-64
+lib/use-cases/billing/listOrgBillingInvoices.ts
+  s_e3556ba0769b4b::t_fa9b44cfe1364b 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f2bcd405812e82870062551a77b15cb20456498f",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
