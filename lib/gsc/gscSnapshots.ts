@@ -1,11 +1,11 @@
 import db from '../../database/database';
 import { readLocalSCData } from '../../utils/searchConsole';
 import { ensureGscSnapshotTables } from '../ensureGscSnapshotTables';
-import { aggregateSevenDays } from './gscWeek';
-import type { SnapMap } from './gscDrops';
+import { aggregateSevenDays } from '@/src/core/domain/gsc/week';
+import type { SnapMap } from '@/src/core/domain/gsc/drops';
 
 // Re-export the pure week helpers so callers (cron, badge API) have one import surface.
-export { weekStartFor, shiftWeek, aggregateSevenDays } from './gscWeek';
+export { weekStartFor, shiftWeek, aggregateSevenDays } from '@/src/core/domain/gsc/week';
 
 type RawItem = { page: string; clicks: number; impressions: number; position: number };
 
