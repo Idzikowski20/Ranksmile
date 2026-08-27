@@ -61,7 +61,7 @@ export interface ScoreData {
    scoring_model?: 'competitor' | 'legacy';
    content_targets?: { avgWords: number; avgHeadings: number; avgPs: number };
    /** Full Ranksmile-style audit payload (factors, terms, internal links). */
-   audit_result?: import('./auditTypes').AuditResult;
+   audit_result?: import('@/src/core/domain/audit/types').AuditResult;
    /** On-page SEO score from audit factor verdicts. */
    seo_score?: number;
    /** AI Search score (Facts + Intent) — persisted after deep-analysis. */

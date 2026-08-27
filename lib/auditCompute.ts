@@ -17,7 +17,7 @@ import {
 import { plainText, wordCount } from './optimizationPlanner';
 import {
    AuditResult, AuditFactor, AuditCompetitor, AuditInternalLink, AuditTerm,
-} from './auditTypes';
+} from '@/src/core/domain/audit/types';
 
 export type { RichTerm } from './competitorContentScore';
 export {

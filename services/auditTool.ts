@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, UseQueryResult, UseMutationResult } from 'react-query';
 import toast from 'react-hot-toast';
-import type { AuditCardDTO, AuditResult } from '../lib/auditTypes';
+import type { AuditCardDTO, AuditResult } from '@/src/core/domain/audit/types';
 
 /** Single fetch+parse+error helper — mirrors services/aiVisibility.ts so every hook
  *  throws Error(message-from-server) and react-query onError can toast it uniformly. */
