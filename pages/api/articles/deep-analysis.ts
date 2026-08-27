@@ -20,7 +20,7 @@ import {
   filterUsefulNlpTerms,
   hasMinCompetitorDomains,
   scaleTermRangesToWordCount,
-} from '../../../lib/competitorTermCalibration';
+} from '@/src/core/domain/competitors/termCalibration';
 import { runArticleAiPipeline } from '../../../lib/articles/articleAiPipeline';
 import { computeOverallContentScore, resolveAiScore } from '../../../lib/ai/aiSearchScore';
 import type { ArticleFact } from '../../../lib/articles/articleFacts';

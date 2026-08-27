@@ -1,5 +1,5 @@
 import type { NlpTerm } from './contentScore';
-import { filterUsefulNlpTerms } from './competitorTermCalibration';
+import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
 import { mergeNlpTerms } from './pickArticleTerms';
 import type { ArticleTermRow } from './articles/articleTerms';
 

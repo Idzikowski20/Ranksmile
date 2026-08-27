@@ -5,7 +5,7 @@
 // Injected into computeAudit; any failure degrades to null → placeholder result.
 import { getCompetitors, scanCompetitors } from './competitorScan';
 import { fetchPage, extractFactorValues, RealAuditData, auditContentScore, termScoreFraction } from './auditCompute';
-import type { RichTerm } from './competitorContentScore';
+import type { RichTerm } from '@/src/core/domain/competitors/contentScore';
 import { getSearchVolumes } from './dataforseo';
 import { callSidecar } from './sidecar';
 import { isContentCompetitor } from '@/src/core/domain/competitors/relevance';

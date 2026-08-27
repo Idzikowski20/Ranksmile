@@ -20,7 +20,7 @@ import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySumm
 import { buildArticleContext } from '../../../lib/articles/articleContext';
 import type { ArticleContext } from '../../../lib/articles/articleContext';
 import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articles/articleKeywordDiscovery';
-import { filterUsefulNlpTerms } from '../../../lib/competitorTermCalibration';
+import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
 import { termsForOptimize } from '../../../lib/mergeArticleTerms';
 import { liveCoverageItems } from '../../../lib/liveCoverage';
 import {

@@ -10,7 +10,7 @@ import { getRankedKeywords, isDataForSeoConfigured } from '../dataforseo';
 import { DFS_DEFAULT_RANKED_LIMIT } from '../dataforseoBudget';
 import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
 import type { NlpTerm } from '../contentScore';
-import { isWeakTermList } from '../competitorTermCalibration';
+import { isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
 import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';
 import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
 import { keywordFromUrl, urlAnchorSeed } from '../inferPageKeyword';

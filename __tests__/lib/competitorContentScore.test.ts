@@ -1,4 +1,4 @@
-import { termRangeCoverageFraction } from '../../lib/competitorContentScore';
+import { termRangeCoverageFraction } from '@/src/core/domain/competitors/contentScore';
 
 describe('competitorContentScore anti-stuffing', () => {
   it('penalizes term usage above max with 0.7 score cap per term', () => {
