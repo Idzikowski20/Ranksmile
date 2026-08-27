@@ -1,5 +1,5 @@
-import type { LlmCitation } from '../dataforseoLlm';
-import type { ResultRow } from './aiVisibilityMetricsTypes';
+import type { LlmCitation } from './citation';
+import type { ResultRow } from './metricsTypes';
 
 const pairScore = (r: ResultRow): number => (
   r.ownCited && r.ownPosition ? Math.max(0, 100 - (r.ownPosition - 1) * 15) : 0

@@ -8,17 +8,17 @@
  *   avgPosition     = mean own_position over cited pairs (1 dp); null if never cited
  *   directCitations = count of own-domain citation entries; pages = distinct own URLs
  */
-import { computeOverview, ownDomainPosition, mean, pairScore } from './aiVisibilityMetricsOverview';
+import { computeOverview, ownDomainPosition, mean, pairScore } from '@/src/core/domain/aiVisibility/metricsOverview';
 import { BLOCKED_CITATION_DOMAINS, isBlockedCitationDomain } from '@/src/core/domain/aiVisibility/blockedDomains';
 import type {
   GapCard,
   ResultRow,
   SourceBrand,
   SourceDetailBrand,
-} from './aiVisibilityMetricsTypes';
+} from '@/src/core/domain/aiVisibility/metricsTypes';
 
-export type { BrandMention, GapCard, ResultRow, SourceBrand, SourceDetailBrand } from './aiVisibilityMetricsTypes';
-export { ownDomainPosition, computeOverview } from './aiVisibilityMetricsOverview';
+export type { BrandMention, GapCard, ResultRow, SourceBrand, SourceDetailBrand } from '@/src/core/domain/aiVisibility/metricsTypes';
+export { ownDomainPosition, computeOverview } from '@/src/core/domain/aiVisibility/metricsOverview';
 
 // AI grounding / redirect proxies, not real competitors — excluded from the ranking.
 export const COMPETITOR_NOISE: string[] = [...BLOCKED_CITATION_DOMAINS];

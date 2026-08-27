@@ -18,7 +18,8 @@ import { DFS_SERP_AI_ELEMENT } from './dataforseoBudget';
 const BASE = 'https://api.dataforseo.com/v3';
 
 export type AiModel = 'ai_overview' | 'ai_mode' | 'chat_gpt' | 'perplexity' | 'gemini';
-export type LlmCitation = { url: string, domain: string, title: string };
+import type { LlmCitation } from '@/src/core/domain/aiVisibility/citation';
+export type { LlmCitation };
 export type LlmAnswer = { text: string, citations: LlmCitation[], fanOutQueries: string[], costUsd: number };
 
 /** llm_responses/live is only for these three; the two Google engines route to SERP. */
