@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, UseQueryResult, UseMutationResult } from 'react-query';
 import toast from 'react-hot-toast';
-import type { KeywordResearchCardDTO, KeywordResearchResult } from '../lib/keywordResearchTypes';
+import type { KeywordResearchCardDTO, KeywordResearchResult } from '@/src/core/domain/keywords/types';
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
    const r = await fetch(url, init);

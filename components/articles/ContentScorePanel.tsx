@@ -3,7 +3,7 @@ import { Button } from '../koala/core';
 import { KoalaPanelHeader } from '../koala/layout';
 import { ScoreData, NlpTerm, countOccurrences } from '../../lib/contentScore';
 import { scoreArticleHtml } from '../../lib/scoreArticleHtml';
-import { computeOpportunityScore } from '../../lib/keywordEnrichment';
+import { computeOpportunityScore } from '@/src/core/domain/keywords/enrichment';
 import { useArticleKeywords } from '../../services/articleKeywords';
 import type { KeywordItem } from './KeywordResearchSection';
 import KeywordResearchSection from './KeywordResearchSection';

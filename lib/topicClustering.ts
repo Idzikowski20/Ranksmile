@@ -12,7 +12,7 @@ import type {
    TopicKeyword,
    KeywordResearchResult,
    KeywordResearchStats,
-} from './keywordResearchTypes';
+} from '@/src/core/domain/keywords/types';
 
 export type EnrichedKeyword = {
    keyword: string;

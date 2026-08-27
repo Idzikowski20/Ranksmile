@@ -17,7 +17,7 @@ import {
    clusterKeywords,
    type EnrichedKeyword,
 } from './topicClustering';
-import type { KeywordResearchResult, KeywordResearchStats } from './keywordResearchTypes';
+import type { KeywordResearchResult, KeywordResearchStats } from '@/src/core/domain/keywords/types';
 
 async function expandKeywords(seed: string, country: string): Promise<EnrichedKeyword[]> {
    if (!isDataForSeoConfigured()) {
