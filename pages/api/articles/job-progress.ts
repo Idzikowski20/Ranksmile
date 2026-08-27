@@ -18,7 +18,7 @@ import { staleFinalizationSql } from '../../../lib/staleFinalization';
 
 import {
   mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
-} from '../../../lib/analysisPhases';
+} from '@/src/core/domain/articles/analysisPhases';
 
 /** Same boundary as articles.content: no raw article HTML survives in the job row. */
 function sanitizedResult(result: unknown): unknown {
