@@ -1,0 +1,25 @@
+lib/arch/layerRules.ts
+  s_e3556ba0769b4b::t_8545d9adbc0658 1-41
+__tests__/architecture/clean-arch-boundaries.test.ts
+  s_e3556ba0769b4b::t_52fb707378348e 1-23
+lib/arch/scanLayerImports.ts
+  s_e3556ba0769b4b::t_78333806a6ae33 1-46
+package.json
+  s_e3556ba0769b4b::t_fa6d92bfe65218 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "eba7f686b25cff4841ac5428c67b2549e5828170",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
