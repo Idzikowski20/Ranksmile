@@ -2,7 +2,7 @@
  * Client-safe Ranksmile-style competitor content scoring (no Node/network deps).
  * Server fetch + HTML parsing lives in auditCompute / competitorAuditScore.
  */
-import { countOccurrences } from './termMatch';
+import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 import { termSalienceWeight } from './termSalienceCore';
 
 export interface RichTerm {

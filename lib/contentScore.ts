@@ -9,9 +9,9 @@ import {
    titleQueryScore,
 } from './contentEffort';
 import { termWeight } from './termWeight';
-import { countOccurrences, normalizePl, tokenize, wordMatch } from './termMatch';
+import { countOccurrences, normalizePl, tokenize, wordMatch } from '@/src/core/domain/terms/termMatch';
 
-export { countOccurrences } from './termMatch';
+export { countOccurrences } from '@/src/core/domain/terms/termMatch';
 
 // Content Score formula — targets derived from average of top-10 competitor pages.
 //

@@ -2,7 +2,7 @@
  * Client-safe salience scoring helpers (no cheerio).
  */
 import type { NlpTerm } from './contentScore';
-import { countOccurrences } from './termMatch';
+import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 
 export type SalienceZones = {
   headings: string;

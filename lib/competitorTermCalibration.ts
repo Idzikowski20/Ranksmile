@@ -2,7 +2,7 @@
  * Ranksmile-style term range calibration — min/max usage counts across competitor pages.
  */
 import type { NlpTerm } from './contentScore';
-import { countOccurrences } from './termMatch';
+import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 import { isUsefulTerm, normalizeTerm } from './termUtils';
 
 /** Per-term occurrence counts across a competitor corpus → suggested_min/max + target_count. */
