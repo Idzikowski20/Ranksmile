@@ -1,0 +1,21 @@
+__tests__/src/core/application/billing/listOrgBillingInvoices.test.ts
+  s_e3556ba0769b4b::t_fd86274ab216ae 1-46
+src/core/application/billing/listOrgBillingInvoices.ts
+  s_e3556ba0769b4b::t_d9fedcaebd7a26 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2ef9394a75bb1838e56002341bd642416c95b575",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
