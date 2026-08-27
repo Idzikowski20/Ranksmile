@@ -7,7 +7,7 @@ import { readLocalSCData } from '../utils/searchConsole';
 import { buildGscUrlKeywordStrings } from '../utils/gsc';
 import { getCompetitors, scanCompetitors, setSelection } from './competitorScan';
 import { enrichAudit } from './auditEnrich';
-import { computeCompetitorContentScore, type CompetitorScoreTargets, type RichTerm } from './competitorContentScore';
+import { computeCompetitorContentScore, type CompetitorScoreTargets, type RichTerm } from '@/src/core/domain/competitors/contentScore';
 import { inferPageKeyword, langFromKeyword, pickBenchmarkKeyword } from './inferPageKeyword';
 import { ensureCompetitorsTables } from './ensureCompetitorsTables';
 import db from '../database/database';

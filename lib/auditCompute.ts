@@ -13,19 +13,19 @@ import {
    termRangeCoverageFraction,
    termScoreFraction,
    type RichTerm,
-} from './competitorContentScore';
+} from '@/src/core/domain/competitors/contentScore';
 import { plainText, wordCount } from './optimizationPlanner';
 import {
    AuditResult, AuditFactor, AuditCompetitor, AuditInternalLink, AuditTerm,
 } from '@/src/core/domain/audit/types';
 
-export type { RichTerm } from './competitorContentScore';
+export type { RichTerm } from '@/src/core/domain/competitors/contentScore';
 export {
    auditContentScore,
    termCoverageFraction,
    termRangeCoverageFraction,
    termScoreFraction,
-} from './competitorContentScore';
+} from '@/src/core/domain/competitors/contentScore';
 
 export interface FetchTiming { ttfbMs: number; loadMs: number; }
 

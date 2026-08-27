@@ -1,5 +1,5 @@
 import { normalizeTerm, dedupeUsefulTerms, isUsefulTerm } from '@/src/core/domain/terms/termUtils';
-import { filterUsefulNlpTerms } from '../../lib/competitorTermCalibration';
+import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
 
 describe('normalizeTerm Polish diacritics', () => {
   it('maps ł to l instead of deleting it into a space', () => {

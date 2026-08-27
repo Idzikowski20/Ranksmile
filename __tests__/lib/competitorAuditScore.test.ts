@@ -1,4 +1,4 @@
-import { termRangeCoverageFraction, computeCompetitorContentScore } from '../../lib/competitorContentScore';
+import { termRangeCoverageFraction, computeCompetitorContentScore } from '@/src/core/domain/competitors/contentScore';
 
 describe('termRangeCoverageFraction', () => {
   it('counts terms within suggested min/max only', () => {

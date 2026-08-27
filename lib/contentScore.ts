@@ -1,5 +1,5 @@
 import type { CoverageItem } from './ai/aiCoverage';
-import { computeCompetitorContentScore } from './competitorContentScore';
+import { computeCompetitorContentScore } from '@/src/core/domain/competitors/contentScore';
 import {
    aiExtractabilityScore,
    datesAuthorScore,
