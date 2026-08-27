@@ -34,7 +34,7 @@ import { buildCriticalContentMap } from '../../../lib/ao/criticalContentMap';
 import { countWordsFromHtml } from '../../../lib/ao/aoBaseline';
 import type { AoScores } from '../../../lib/ao/aoScoreDelta';
 import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '../../../lib/ao/aoRunOutcome';
-import { structureIssues } from '../../../lib/validateArticleStructure';
+import { structureIssues } from '@/src/core/domain/articles/validateStructure';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import db from '../../../database/database';
