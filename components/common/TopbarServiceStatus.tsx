@@ -5,7 +5,7 @@ import { Icon } from '../koala/icons/Icon';
 import { semantic } from '../koala/tokens/semantic';
 import { spacing } from '../koala/tokens/spacing';
 import { fontWeight } from '../koala/tokens/typography';
-import { levelCss } from '../../lib/serviceStatus';
+import { levelCss } from '@/src/core/shared/serviceStatus';
 import { useServiceStatus } from '../../services/serviceStatus';
 
 const TriggerBtn = styled.button`
