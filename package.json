@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --watch --verbose",
     "test:ci": "jest --ci",
-    "test:arch": "jest __tests__/architecture/cia-boundaries.test.ts --ci",
+    "test:arch": "jest __tests__/architecture/cia-boundaries.test.ts __tests__/architecture/clean-arch-boundaries.test.ts --ci",
     "test:e2e": "playwright test e2e/smoke.spec.ts",
     "test:visual": "playwright test e2e/visual",
     "test:visual:update": "playwright test e2e/visual --update-snapshots",
