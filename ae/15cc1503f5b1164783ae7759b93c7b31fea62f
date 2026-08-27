@@ -1,0 +1,27 @@
+lib/dataforseoLlm.ts
+  s_e3556ba0769b4b::t_1f23cfd6553663 21-22
+src/core/domain/aiVisibility/citation.ts
+  s_e3556ba0769b4b::t_1f23cfd6553663 1-2
+src/core/domain/aiVisibility/metricsTypes.ts
+  s_e3556ba0769b4b::t_03b2555a354f48 1-19
+lib/aiVisibility/aiVisibilityMetrics.ts
+  s_e3556ba0769b4b::t_03b2555a354f48 11,18,20-21
+src/core/domain/aiVisibility/metricsOverview.ts
+  s_e3556ba0769b4b::t_03b2555a354f48 1-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ae15cc1503f5b1164783ae7759b93c7b31fea62f",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
