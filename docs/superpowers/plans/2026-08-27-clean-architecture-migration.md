@@ -1,188 +1,311 @@
-# Clean Architecture Migration — Implementation Plan
+# Clean Architecture Migration — Implementation Plan (rev. 2)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Migrate Ranksmile to a feature-based Clean Architecture (cubic's proposal) incrementally, feature-by-feature, keeping the app green — Phase 1 establishes the `src/` skeleton + composition root and migrates the billing-invoices vertical as the reference implementation.
+**Goal:** Migrate Ranksmile to feature-based Clean Architecture incrementally, feature-by-feature, keeping the app green — Phase 1 establishes the boundary-enforcing architecture test + `src/` skeleton + composition root and migrates the billing-invoices vertical as the reference implementation, with the domain fully vendor-free (zero Stripe).
 
-**Architecture:** Four layers with the dependency rule (deps point inward): `src/core/domain` (entities + repository interfaces/ports) ← `src/core/application` (use-cases + DTOs) ← `src/infrastructure` (repository impls, external clients). Presentation stays in `pages/api/**` (Pages Router requires it) as thin controllers that resolve wired use-cases from `src/composition` (the composition root). No DI library — the composition root is a typed factory module (manual injection), which satisfies cubic's "manual injection at the composition root".
+**Architecture:** The value is the **dependency rule**, not the folders. Layers:
 
-**Tech Stack:** Next.js 15 (Pages Router — unchanged), TypeScript strict, Jest, Stripe SDK, Sequelize/Postgres. Path alias `@/*` → `./*` already configured in `tsconfig.json`.
+```
+        pages/api  (Presentation — thin controllers)
+             │ knows only ↓
+        src/composition  (Composition Root — factories, manual DI)
+             │ ↓
+        src/core/application  (Use-cases + DTOs)
+             │ ↓
+        src/core/domain  (Entities, value objects, ports/interfaces, pure logic)
+             ↑ implements ports
+        src/infrastructure  (Stripe / DB / APIs / Redis — off to the side)
+```
+Composition is **not** a domain layer — it is the wiring edge. Infrastructure implements domain ports; domain never imports it.
+
+**Tech Stack:** Next.js 15 (Pages Router — unchanged), TypeScript strict, Jest, Stripe SDK, Sequelize/Postgres. Path alias `@/*` → `./*` in `tsconfig.json`.
 
 ## Global Constraints
 
-- **No `any`** — `unknown` + narrowing, concrete types (project CLAUDE.md §7). Exceptions only in `__tests__`.
-- **Pages Router stays.** API routes remain physically in `pages/api/**` — do NOT move them into `src/`; Next.js resolves routes only from `pages/`. No App Router migration in this plan.
+- **No `any`** (CLAUDE.md §7). `unknown` + narrowing. Exceptions only in `__tests__`.
+- **The Dependency Rule (enforced by Task 0's test):**
+  - `src/core/domain` imports: nothing outside `src/core/domain` and `src/core/shared`. **Zero** Stripe, Sequelize, Next.js, Redis, HTTP, `env`, `lib/*`.
+  - `src/core/application` imports: only `src/core/domain` + `src/core/shared`. **Zero** infrastructure, `pages`, Stripe, Sequelize, Next.js, Redis.
+  - `src/infrastructure` may import domain/application/shared/lib and any SDK, but **must not** be imported by domain or application.
+  - `src/composition` imports application + infrastructure + domain. Imported only by `pages/api/**` (+ the transitional `lib/*` facades).
+  - `pages/api/**` (Presentation) imports only `src/composition` (+ Next types).
+- **DTO rule:** request/response shapes crossing the Presentation↔Application boundary are DTOs (plain domain-owned types). Vendor types (`Stripe.*`, Sequelize models, `NextApiRequest/Response`) never appear in `src/core/**`. Repositories return **domain types**, not SDK types — mapping happens inside infrastructure.
+- **Use-case granularity:** a use-case is a real business operation (`ListOrgBillingInvoices`, `UpgradeSubscription`, `CancelSubscription`), not a one-line wrapper. Do not create `getX`/`formatX`/`validateX` use-cases; those are domain helpers or repository methods.
+- **Pages Router stays.** API routes remain in `pages/api/**` — never moved into `src/`. No App Router migration.
 - **No DI library.** Composition root = plain typed factory functions. Do not add inversify/tsyringe.
-- **CIA zones untouched** — `lib/{ccm,compiler,intelligence,planner,projections}` keep their own architecture + boundary test (`__tests__/architecture/cia-boundaries.test.ts`). Out of scope.
-- **Green gate every task:** `npx tsc --noEmit` clean AND relevant `npx jest` suites pass before commit. Full suite (`npx jest --ci`) = 407 suites / 2486 tests must stay green (2 known flaky timeouts — `emitObservations.q2`, `ccmStaleCron` — pass in isolation).
-- **tsconfig excludes `__tests__`** — tsc will NOT catch broken test imports; run Jest to catch them.
-- **Directory casing:** lowercase (`src/core/domain`), matching TS/Next ecosystem norm, not cubic's PascalCase.
-- **Reuse existing work:** the billing-invoices repository/use-case already exist in `lib/repositories/billing/` + `lib/use-cases/billing/` (commit `f2bcd405`). Phase 1 relocates them into `src/`, it does not rewrite them.
+- **CIA zones untouched** — `lib/{ccm,compiler,intelligence,planner,projections}` keep their own architecture + boundary test. Out of scope.
+- **Green gate every task:** `npx tsc --noEmit` clean AND relevant `npx jest` suites pass before commit. Full suite = 407 suites / 2486 tests green (2 known flaky timeouts: `emitObservations.q2`, `ccmStaleCron` — pass in isolation).
+- **tsconfig excludes `__tests__`** — run Jest to catch broken test imports; tsc won't.
+- **Directory casing:** lowercase (`src/core/domain`).
+- **Per-feature dependency inventory BEFORE moving anything** (see Task 0.5) — for each file destined for `domain`, confirm it has no transitive SDK/DB/fs/env dependency. If it does, it belongs in infrastructure, not domain.
 
 ---
 
-## Target structure (reference)
+## Target structure (reference — billing)
 
 ```text
 src/
 ├── core/
+│   ├── shared/
+│   │   └── money.ts                  # formatMoney (pure, vendor-free)
 │   ├── domain/
 │   │   └── billing/
-│   │       ├── invoice.ts            # BillingInvoice entity + pure mappers
-│   │       └── invoiceRepository.ts  # IInvoiceRepository port (interface only)
+│   │       ├── invoice.ts            # BillingInvoice entity + PURE helpers (status, grouping). NO Stripe.
+│   │       └── invoiceRepository.ts  # IInvoiceRepository port — domain-typed, NO Stripe
 │   └── application/
 │       └── billing/
-│           └── listOrgBillingInvoices.ts  # use-case (imports port, not impl)
+│           └── listOrgBillingInvoices.ts  # use-case: gating + clamp; returns domain type
 ├── infrastructure/
 │   └── billing/
-│       └── stripeInvoiceRepository.ts     # implements IInvoiceRepository via Stripe
+│       └── stripe/
+│           ├── stripeBillingClient.ts     # thin Stripe access wrapper
+│           ├── stripeInvoiceMapper.ts      # Stripe.Invoice -> BillingInvoice (all Stripe knowledge)
+│           └── stripeInvoiceRepository.ts  # implements IInvoiceRepository, returns BillingInvoice[]
 └── composition/
-    └── billing.ts                    # wires impl -> use-case; exported factory
+    └── billing.ts                    # wires repo -> use-case; exported factory
 ```
-`pages/api/billing/invoices.ts` (Presentation) imports only from `src/composition/billing`.
+`pages/api/billing/invoices.ts` imports only `src/composition/billing`.
 
 ---
 
-## Task 1: Domain layer — billing invoice entity + port
+## Task 0: Architecture boundary test (enforce the dependency rule first)
 
 **Files:**
-- Create: `src/core/domain/billing/invoice.ts`
-- Create: `src/core/domain/billing/invoiceRepository.ts`
-- Test: `__tests__/src/core/domain/billing/invoice.test.ts`
+- Create: `lib/arch/layerRules.ts` (layer definitions + forbidden-import predicate)
+- Create: `lib/arch/scanLayerImports.ts` (reuse `lib/cia/scanImports` extractor if present, else a small regex extractor)
+- Test: `__tests__/architecture/clean-arch-boundaries.test.ts`
 
 **Interfaces:**
-- Produces: `BillingInvoice`, `BillingInvoiceLine`, `BillingInvoiceStatus`, `InvoiceDateGroup` types; `mapStripeInvoice(inv, opts?)`, `formatPaymentMethodLabel(pm)`, `mapInvoiceStatus(s)`, `groupInvoicesByDate(list, now?)` functions (moved verbatim from `lib/billingInvoiceModel.ts`). Interface `IInvoiceRepository` with `isConfigured(): boolean`, `getStripeCustomerId(orgId: number): Promise<string | null>`, `listInvoices(customerId: string, limit: number): Promise<Stripe.Invoice[]>`, `getDefaultPaymentMethod(customerId: string): Promise<Stripe.PaymentMethod | string | null>`.
+- Produces: `LAYER_RULES` (array of `{ root: string; forbid: RegExp[] }`), `findLayerViolations(rootDir: string): Array<{ file: string; specifier: string; layer: string }>`.
 
-- [ ] **Step 1: Move the entity file.** `git mv lib/billingInvoiceModel.ts src/core/domain/billing/invoice.ts`. It is already pure (types + mappers, only `Stripe` types + `./subscriptionFormat`). Fix its one relative import: `./subscriptionFormat` → `../../../../lib/subscriptionFormat` (subscriptionFormat stays in lib for now).
-
-- [ ] **Step 2: Create the port** `src/core/domain/billing/invoiceRepository.ts`:
+- [ ] **Step 1: Write the failing test** `__tests__/architecture/clean-arch-boundaries.test.ts`:
 
 ```ts
-import type Stripe from 'stripe';
+/** @jest-environment node */
+import { findLayerViolations } from '../../lib/arch/scanLayerImports';
 
-export interface IInvoiceRepository {
-  isConfigured(): boolean;
-  getStripeCustomerId(orgId: number): Promise<string | null>;
-  listInvoices(customerId: string, limit: number): Promise<Stripe.Invoice[]>;
-  getDefaultPaymentMethod(customerId: string): Promise<Stripe.PaymentMethod | string | null>;
-}
+it('src/core/domain and application never import forbidden layers', () => {
+  const violations = findLayerViolations(process.cwd());
+  expect(violations).toEqual([]);
+});
 ```
 
-- [ ] **Step 3: Move the entity test.** `git mv __tests__/lib/billingInvoiceModel.test.ts __tests__/src/core/domain/billing/invoice.test.ts` (if it exists; else write minimal mapper test asserting `mapStripeInvoice` on a fake invoice returns `status:'paid'` + a `totalLabel` string). Update its import path to `../../../../../src/core/domain/billing/invoice`.
+- [ ] **Step 2: Implement `lib/arch/layerRules.ts`** — forbid patterns per layer root:
 
-- [ ] **Step 4: Rewrite all importers of the old model path** across the repo using the family codemod pattern (`scripts/move-lib-family.mjs` handles `lib/<base>` moves; for a cross-tree move, do a targeted grep + sed: `lib/billingInvoiceModel` → `src/core/domain/billing/invoice`, and `lib/billing/billingInvoiceModel` if referenced). Grep first: `grep -rn "billingInvoiceModel" --include=*.ts --include=*.tsx lib pages components services __tests__`.
+```ts
+export const LAYER_RULES = [
+  { root: 'src/core/domain', forbid: [/stripe/i, /sequelize/, /next(\/|$)/, /ioredis|bullmq/, /^\.\.\/\.\.\/\.\.\/lib\//, /src[\\/]infrastructure/, /src[\\/]composition/, /pages[\\/]/] },
+  { root: 'src/core/application', forbid: [/stripe/i, /sequelize/, /ioredis|bullmq/, /src[\\/]infrastructure/, /src[\\/]composition/, /pages[\\/]/] },
+] as const;
+```
 
-- [ ] **Step 5: Verify.** Run: `npx tsc --noEmit` (Expected: exit 0) and `npx jest __tests__/src/core/domain/billing __tests__/lib/billingInvoices.test.ts` (Expected: PASS).
+- [ ] **Step 3: Implement `lib/arch/scanLayerImports.ts`** — walk files under each `root`, extract import specifiers (reuse `extractImportSpecifiers` from `lib/cia/scanImports` if it exists; otherwise regex `/(from\s+|import\s*\(|require\s*\()['"]([^'"]+)['"]/g`), flag any specifier matching that layer's `forbid`. Return `{file, specifier, layer}[]`.
+
+- [ ] **Step 4: Run test.** Run: `npx jest __tests__/architecture/clean-arch-boundaries.test.ts` (Expected: PASS — `src/` is empty so zero violations; the guard is now armed for all later tasks).
+
+- [ ] **Step 5: Wire into the arch script.** Add to `package.json` `test:arch`: `jest __tests__/architecture/cia-boundaries.test.ts __tests__/architecture/clean-arch-boundaries.test.ts --ci`.
 
 - [ ] **Step 6: Commit.**
 
 ```bash
 git add -A
-git commit -m "refactor(arch): billing invoice entity + port -> src/core/domain"
+git commit -m "test(arch): clean-architecture layer boundary test (dependency rule)"
+```
+
+### Task 0.5: Billing dependency inventory (do before Task 1, no code)
+
+- [ ] For each candidate domain file (`lib/billing/billingInvoiceModel.ts`, `lib/subscriptionFormat.ts`), list: external SDK imports, DB access, fs, `env`, internal deps. Confirm `billingInvoiceModel` is pure-except-Stripe-types (it is: `Stripe` types + `formatMoney`) and `subscriptionFormat.formatMoney` is fully pure (it is: 23 lines, no imports). Record the finding in the commit message of Task 1. This gate prevents mislabelling infrastructure as domain.
+
+---
+
+## Task 1: Domain layer — vendor-free entity + port + shared money
+
+**Files:**
+- Create: `src/core/shared/money.ts` (moved `formatMoney` from `lib/subscriptionFormat.ts`)
+- Create: `src/core/domain/billing/invoice.ts`
+- Create: `src/core/domain/billing/invoiceRepository.ts`
+- Test: `__tests__/src/core/domain/billing/invoice.test.ts`
+
+**Interfaces:**
+- Produces: `formatMoney(cents: number, currency: string): string` (shared). Entity `BillingInvoice`, `BillingInvoiceLine`, `BillingInvoiceStatus`, `InvoiceDateGroup`; pure helpers `mapInvoiceStatus(s: string | null): BillingInvoiceStatus`, `groupInvoicesByDate(list: BillingInvoice[], now?: Date): InvoiceDateGroup[]`. Port `IInvoiceRepository { isConfigured(): boolean; getCustomerId(orgId: number): Promise<string | null>; listInvoices(customerId: string, limit: number): Promise<BillingInvoice[]> }`.
+
+- [ ] **Step 1: Move shared money.** `git mv lib/subscriptionFormat.ts src/core/shared/money.ts`. Grep + rewrite all importers of `subscriptionFormat` (`grep -rn "subscriptionFormat" --include=*.ts --include=*.tsx`); most are in `lib/**` and `components/**` — point them at `@/src/core/shared/money`.
+
+- [ ] **Step 2: Create the entity** `src/core/domain/billing/invoice.ts` — copy the type declarations (`BillingInvoice*`, `InvoiceDateGroup`) and the **pure, Stripe-free** helpers `mapInvoiceStatus`, `groupInvoicesByDate` from `lib/billing/billingInvoiceModel.ts`. Do **not** copy `mapStripeInvoice` or `formatPaymentMethodLabel` (those know Stripe → Task 3). No imports except (if needed) `formatMoney` from `../../shared/money`. Note: `mapInvoiceStatus` takes a plain `string | null`, not `Stripe.Invoice.Status`.
+
+- [ ] **Step 3: Create the port** `src/core/domain/billing/invoiceRepository.ts`:
+
+```ts
+import type { BillingInvoice } from './invoice';
+
+export interface IInvoiceRepository {
+  isConfigured(): boolean;
+  getCustomerId(orgId: number): Promise<string | null>;
+  listInvoices(customerId: string, limit: number): Promise<BillingInvoice[]>;
+}
+```
+
+- [ ] **Step 4: Write the entity test** `__tests__/src/core/domain/billing/invoice.test.ts`:
+
+```ts
+import { mapInvoiceStatus, groupInvoicesByDate, type BillingInvoice } from '../../../../../src/core/domain/billing/invoice';
+
+it('maps unknown status to "unknown"', () => {
+  expect(mapInvoiceStatus('weird')).toBe('unknown');
+  expect(mapInvoiceStatus('paid')).toBe('paid');
+});
+it('groups invoices into date buckets', () => {
+  const inv = { id: 'a', createdAt: new Date().toISOString() } as BillingInvoice;
+  expect(groupInvoicesByDate([inv]).length).toBe(1);
+});
+```
+
+- [ ] **Step 5: Verify.** Run: `npx jest __tests__/src/core/domain/billing __tests__/architecture/clean-arch-boundaries.test.ts` (Expected: PASS, zero boundary violations) and `npx tsc --noEmit` (Expected: exit 0). If tsc flags `lib/billing/billingInvoiceModel.ts` still referencing moved helpers, leave that file for Task 3 (it still holds `mapStripeInvoice`); ensure its imports of `mapInvoiceStatus`/`formatMoney` now point at the new locations.
+
+- [ ] **Step 6: Commit** (include the Task 0.5 inventory finding in the message).
+
+```bash
+git add -A
+git commit -m "refactor(arch): billing domain (vendor-free entity + port) + shared money -> src/core"
 ```
 
 ---
 
-## Task 2: Application layer — listOrgBillingInvoices use-case
+## Task 2: Application layer — ListOrgBillingInvoices use-case
 
 **Files:**
-- Create: `src/core/application/billing/listOrgBillingInvoices.ts` (moved from `lib/use-cases/billing/listOrgBillingInvoices.ts`)
-- Test: `__tests__/src/core/application/billing/listOrgBillingInvoices.test.ts` (moved from `__tests__/lib/use-cases/listOrgBillingInvoices.test.ts`)
+- Create: `src/core/application/billing/listOrgBillingInvoices.ts`
+- Delete: `lib/use-cases/billing/listOrgBillingInvoices.ts` (relocated)
+- Test: `__tests__/src/core/application/billing/listOrgBillingInvoices.test.ts`
 
 **Interfaces:**
-- Consumes: `IInvoiceRepository` (Task 1), entity mappers from `src/core/domain/billing/invoice`.
+- Consumes: `IInvoiceRepository`, `BillingInvoice` (Task 1).
 - Produces: `listOrgBillingInvoices(repo: IInvoiceRepository, orgId: number, limit?: number): Promise<BillingInvoice[]>`.
 
-- [ ] **Step 1: Move the use-case.** `git mv lib/use-cases/billing/listOrgBillingInvoices.ts src/core/application/billing/listOrgBillingInvoices.ts`.
-
-- [ ] **Step 2: Fix its imports** to the new domain paths:
+- [ ] **Step 1: Author the use-case** (thinner now — repo returns domain types, so no mapping here):
 
 ```ts
-import { formatPaymentMethodLabel, mapStripeInvoice, type BillingInvoice } from '../../domain/billing/invoice';
+import type { BillingInvoice } from '../../domain/billing/invoice';
 import type { IInvoiceRepository } from '../../domain/billing/invoiceRepository';
+
+export async function listOrgBillingInvoices(
+  repo: IInvoiceRepository,
+  orgId: number,
+  limit = 40,
+): Promise<BillingInvoice[]> {
+  if (!repo.isConfigured()) return [];
+  const customerId = await repo.getCustomerId(orgId);
+  if (!customerId) return [];
+  return repo.listInvoices(customerId, Math.min(100, Math.max(1, limit)));
+}
 ```
-Change the `repo` parameter type from `InvoiceRepository` to `IInvoiceRepository`. Body unchanged.
 
-- [ ] **Step 3: Move + fix the test.** `git mv __tests__/lib/use-cases/listOrgBillingInvoices.test.ts __tests__/src/core/application/billing/listOrgBillingInvoices.test.ts`; update imports to `../../../../../src/core/application/billing/listOrgBillingInvoices` and `../../../../../src/core/domain/billing/invoiceRepository` (type `IInvoiceRepository`).
+- [ ] **Step 2: Move + rewrite the test** `__tests__/src/core/application/billing/listOrgBillingInvoices.test.ts` — reuse the existing fake-repo test (commit `f2bcd405`) but the fake now returns `BillingInvoice[]` directly from `listInvoices` and drops `getDefaultPaymentMethod`. Keep the 4 cases: not-configured → [], no-customer → [], returns invoices, clamps limit to [1,100].
 
-- [ ] **Step 4: Verify.** Run: `npx jest __tests__/src/core/application/billing` (Expected: 4 tests PASS) and `npx tsc --noEmit` (Expected: exit 0).
+- [ ] **Step 3: Delete the old use-case** `git rm lib/use-cases/billing/listOrgBillingInvoices.ts`.
+
+- [ ] **Step 4: Verify.** Run: `npx jest __tests__/src/core/application/billing __tests__/architecture/clean-arch-boundaries.test.ts` (Expected: PASS) and `npx tsc --noEmit` (Expected: exit 0 except the transitional `lib/billingInvoices.ts` facade, fixed in Task 4 — combine commits if a green tsc is required at each step).
 
 - [ ] **Step 5: Commit.**
 
 ```bash
 git add -A
-git commit -m "refactor(arch): listOrgBillingInvoices use-case -> src/core/application"
+git commit -m "refactor(arch): ListOrgBillingInvoices use-case -> src/core/application"
 ```
 
 ---
 
-## Task 3: Infrastructure layer — Stripe invoice repository
+## Task 3: Infrastructure — Stripe client + mapper + repository (isolated)
 
 **Files:**
-- Create: `src/infrastructure/billing/stripeInvoiceRepository.ts` (moved from `lib/repositories/billing/invoiceRepository.ts`)
-- Delete: `lib/repositories/billing/invoiceRepository.ts`, and `lib/repositories/index.ts` if now empty
-- Test: `__tests__/src/infrastructure/billing/stripeInvoiceRepository.test.ts` (new — integration-style with `getStripe`/`getOrgBillingState` mocked)
+- Create: `src/infrastructure/billing/stripe/stripeBillingClient.ts`
+- Create: `src/infrastructure/billing/stripe/stripeInvoiceMapper.ts`
+- Create: `src/infrastructure/billing/stripe/stripeInvoiceRepository.ts`
+- Delete: `lib/repositories/billing/invoiceRepository.ts` (+ `lib/repositories/index.ts` if empty), `lib/billing/billingInvoiceModel.ts` (its pure parts moved in Task 1; Stripe mapper moves here)
+- Test: `__tests__/src/infrastructure/billing/stripeInvoiceMapper.test.ts`, `__tests__/src/infrastructure/billing/stripeInvoiceRepository.test.ts`
 
 **Interfaces:**
-- Consumes: `IInvoiceRepository` port (Task 1), `lib/stripe` (`getStripe`, `isStripeConfigured`), `lib/orgBilling` (`getOrgBillingState`).
-- Produces: `createStripeInvoiceRepository(): IInvoiceRepository`.
+- Consumes: `IInvoiceRepository`, `BillingInvoice` (domain), `formatMoney` (shared), `lib/stripe`, `lib/orgBilling`.
+- Produces: `getStripeClient()` (client), `mapStripeInvoice(inv, opts?)` (mapper), `createStripeInvoiceRepository(): IInvoiceRepository`.
 
-- [ ] **Step 1: Move + retype.** `git mv lib/repositories/billing/invoiceRepository.ts src/infrastructure/billing/stripeInvoiceRepository.ts`. Change its declared return type to the port and fix imports:
-
-```ts
-import type { IInvoiceRepository } from '../../core/domain/billing/invoiceRepository';
-import { getOrgBillingState } from '../../../lib/orgBilling';
-import { getStripe, isStripeConfigured } from '../../../lib/stripe';
-
-export function createStripeInvoiceRepository(): IInvoiceRepository { /* body unchanged */ }
-```
-Remove the old `InvoiceRepository` interface export (now the port lives in domain).
-
-- [ ] **Step 2: Write the failing test** `__tests__/src/infrastructure/billing/stripeInvoiceRepository.test.ts`:
+- [ ] **Step 1: Client** `stripeBillingClient.ts` — re-export thin access over `lib/stripe`:
 
 ```ts
-jest.mock('../../../../lib/stripe', () => ({ getStripe: jest.fn(), isStripeConfigured: jest.fn(() => true) }));
-jest.mock('../../../../lib/orgBilling', () => ({ getOrgBillingState: jest.fn(async () => ({ stripeCustomerId: 'cus_1' })) }));
-import { createStripeInvoiceRepository } from '../../../../src/infrastructure/billing/stripeInvoiceRepository';
-
-it('reads the org stripe customer id', async () => {
-  const repo = createStripeInvoiceRepository();
-  expect(await repo.getStripeCustomerId(1)).toBe('cus_1');
-});
+export { getStripe as getStripeClient, isStripeConfigured } from '../../../../lib/stripe';
 ```
 
-- [ ] **Step 3: Run test to verify it passes.** Run: `npx jest __tests__/src/infrastructure/billing/stripeInvoiceRepository.test.ts` (Expected: PASS).
+- [ ] **Step 2: Mapper** `stripeInvoiceMapper.ts` — move `mapStripeInvoice` + `formatPaymentMethodLabel` verbatim from `lib/billing/billingInvoiceModel.ts` here. Imports: `type Stripe`, `formatMoney` from `../../../core/shared/money`, entity types from `../../../core/domain/billing/invoice`, `mapInvoiceStatus` from the same. This file is the ONLY place `Stripe.Invoice` is read.
 
-- [ ] **Step 4: Delete the empty repositories barrel** if `lib/repositories/` now only held billing: `git rm lib/repositories/index.ts` (and remove the dir). Update `lib/use-cases/index.ts` — it will be deleted in Task 4.
+- [ ] **Step 3: Write the mapper test** `stripeInvoiceMapper.test.ts` — move the old `billingInvoiceModel` mapper test here (assert `mapStripeInvoice(fakeInvoice)` yields `status:'paid'`, correct `taxCents`, `totalLabel`).
 
-- [ ] **Step 5: Verify.** `npx tsc --noEmit` (Expected: exit 0 — but Task 4 rewires callers, so expect ONE unresolved import in `lib/billingInvoices.ts` here; that is fixed in Task 4. If tsc must be green now, do Steps of Task 4 before committing — combine Task 3+4 commit).
+- [ ] **Step 4: Repository** `stripeInvoiceRepository.ts` implementing the port, returning **domain** invoices (mapping + fallback PM inside):
 
-- [ ] **Step 6: Commit** (may be combined with Task 4).
+```ts
+import type Stripe from 'stripe';
+import type { IInvoiceRepository } from '../../../core/domain/billing/invoiceRepository';
+import type { BillingInvoice } from '../../../core/domain/billing/invoice';
+import { getStripeClient, isStripeConfigured } from './stripeBillingClient';
+import { getOrgBillingState } from '../../../../lib/orgBilling';
+import { mapStripeInvoice, formatPaymentMethodLabel } from './stripeInvoiceMapper';
+
+export function createStripeInvoiceRepository(): IInvoiceRepository {
+  return {
+    isConfigured: () => isStripeConfigured(),
+    async getCustomerId(orgId) {
+      const billing = await getOrgBillingState(orgId);
+      return billing?.stripeCustomerId ?? null;
+    },
+    async listInvoices(customerId, limit) {
+      const [result, customer] = await Promise.all([
+        getStripeClient().invoices.list({ customer: customerId, limit, expand: ['data.default_payment_method'] }),
+        getStripeClient().customers.retrieve(customerId, { expand: ['invoice_settings.default_payment_method'] }),
+      ]);
+      let fallback: string | null = null;
+      if (!customer.deleted) {
+        fallback = formatPaymentMethodLabel(
+          customer.invoice_settings?.default_payment_method as Stripe.PaymentMethod | string | null | undefined,
+        );
+      }
+      return result.data.map((inv) => mapStripeInvoice(inv, { fallbackPaymentMethodLabel: fallback }));
+    },
+  };
+}
+```
+
+- [ ] **Step 5: Write the repository test** `stripeInvoiceRepository.test.ts` — mock `../../../../lib/stripe` + `../../../../lib/orgBilling`; assert `getCustomerId(1)` returns the mocked `stripeCustomerId`, and `isConfigured()` reflects the mock.
+
+- [ ] **Step 6: Delete old files** `git rm lib/repositories/billing/invoiceRepository.ts lib/billing/billingInvoiceModel.ts` (and `lib/repositories/index.ts` if now empty). Rewrite any remaining importers of `billingInvoiceModel` (grep) to the new domain (`mapInvoiceStatus`, types, `groupInvoicesByDate`) or mapper (`mapStripeInvoice`) locations.
+
+- [ ] **Step 7: Verify.** Run: `npx jest __tests__/src/infrastructure/billing __tests__/architecture/clean-arch-boundaries.test.ts` (Expected: PASS) and `npx tsc --noEmit` (Expected: only the `lib/billingInvoices.ts` facade unresolved until Task 4).
+
+- [ ] **Step 8: Commit** (may combine with Task 4).
 
 ```bash
 git add -A
-git commit -m "refactor(arch): stripe invoice repository -> src/infrastructure"
+git commit -m "refactor(arch): stripe billing client/mapper/repository -> src/infrastructure (domain now Stripe-free)"
 ```
 
 ---
 
-## Task 4: Composition root + Presentation wiring
+## Task 4: Composition root + Presentation wiring + docs
 
 **Files:**
 - Create: `src/composition/billing.ts`
-- Modify: `lib/billingInvoices.ts` (facade delegates to composition root) — or delete it and point `pages/api/billing/invoices.ts` directly at the composition root
-- Delete: `lib/use-cases/billing/`, `lib/use-cases/index.ts` (now relocated)
-- Test: existing `__tests__/lib/billingInvoices.test.ts`, `__tests__/lib/billing/buildBillingSnapshot.test.ts`, `__tests__/lib/billing/billingSnapshotDomain.test.ts`
+- Modify: `lib/billing/billingInvoices.ts` (facade delegates to composition root, public surface kept)
+- Delete: `lib/use-cases/` (empty), `lib/repositories/` (empty)
+- Modify: `ARCHITECTURE.md`
+- Test: `__tests__/lib/billing/*`, `__tests__/lib/billingInvoices.test.ts`, full suite
 
 **Interfaces:**
 - Consumes: `createStripeInvoiceRepository` (Task 3), `listOrgBillingInvoices` use-case (Task 2).
-- Produces: `listOrgBillingInvoices(orgId: number, limit?: number): Promise<BillingInvoice[]>` — the wired, ready-to-call facade.
+- Produces: `listOrgBillingInvoices(orgId: number, limit?: number): Promise<BillingInvoice[]>` (wired facade).
 
-- [ ] **Step 1: Create the composition root** `src/composition/billing.ts`:
+- [ ] **Step 1: Composition root** `src/composition/billing.ts`:
 
 ```ts
 import { listOrgBillingInvoices as useCase } from '../core/application/billing/listOrgBillingInvoices';
-import { createStripeInvoiceRepository } from '../infrastructure/billing/stripeInvoiceRepository';
+import { createStripeInvoiceRepository } from '../infrastructure/billing/stripe/stripeInvoiceRepository';
 import type { BillingInvoice } from '../core/domain/billing/invoice';
 
 export function listOrgBillingInvoices(orgId: number, limit = 40): Promise<BillingInvoice[]> {
@@ -190,48 +313,50 @@ export function listOrgBillingInvoices(orgId: number, limit = 40): Promise<Billi
 }
 ```
 
-- [ ] **Step 2: Repoint the facade.** In `lib/billingInvoices.ts`, replace the body to re-export from the composition root, keeping its public surface (existing callers/mocks depend on it):
+- [ ] **Step 2: Repoint the facade** `lib/billing/billingInvoices.ts` (keep public surface for existing callers/mocks):
 
 ```ts
-export type { BillingInvoice, BillingInvoiceLine, BillingInvoiceStatus, InvoiceDateGroup } from '../src/core/domain/billing/invoice';
-export { groupInvoicesByDate, mapInvoiceStatus, mapStripeInvoice } from '../src/core/domain/billing/invoice';
-export { listOrgBillingInvoices } from '../src/composition/billing';
+export type { BillingInvoice, BillingInvoiceLine, BillingInvoiceStatus, InvoiceDateGroup } from '../../src/core/domain/billing/invoice';
+export { groupInvoicesByDate, mapInvoiceStatus } from '../../src/core/domain/billing/invoice';
+export { mapStripeInvoice } from '../../src/infrastructure/billing/stripe/stripeInvoiceMapper';
+export { listOrgBillingInvoices } from '../../src/composition/billing';
 ```
-(`lib/billingInvoices.ts` currently lives in `lib/billing/` after commit `154c855a` — adjust the relative depth: from `lib/billing/`, `../../src/...`.)
+(Note: `mapStripeInvoice` re-export keeps back-compat for any caller that imported it from `billingInvoices`; new code should import from the mapper directly.)
 
-- [ ] **Step 3: Delete relocated use-case dir.** `git rm -r lib/use-cases`.
+- [ ] **Step 3: Delete emptied dirs.** `git rm -r lib/use-cases lib/repositories` (only if empty).
 
-- [ ] **Step 4: Verify full.** Run: `npx tsc --noEmit` (Expected: exit 0). Run: `npx jest __tests__/lib/billing __tests__/src/core __tests__/src/infrastructure` (Expected: all PASS). Then `npx jest --ci` (Expected: 407 suites / 2486 tests, ≤2 flaky-timeout retries).
+- [ ] **Step 4: Verify full.** Run: `npx tsc --noEmit` (Expected: exit 0). Run: `npx jest __tests__/lib/billing __tests__/src __tests__/architecture` (Expected: all PASS). Then `npx jest --ci` (Expected: 407 suites / 2486 tests, ≤2 flaky retries).
 
-- [ ] **Step 5: Update `ARCHITECTURE.md`** — replace the "light layering" framing with the four-layer clean-architecture description + the `src/` map above; update the worked-example table paths to the `src/` locations.
+- [ ] **Step 5: Rewrite `ARCHITECTURE.md`** — four-layer clean-architecture description, the mental-model diagram from this plan's header, the dependency-rule bullets, and the billing worked-example table pointing at the `src/` paths. State that the domain is vendor-free and mapping lives in infrastructure.
 
 - [ ] **Step 6: Commit.**
 
 ```bash
 git add -A
-git commit -m "refactor(arch): billing composition root + presentation wiring; billing vertical now full clean-architecture"
+git commit -m "refactor(arch): billing composition root + presentation wiring; billing vertical fully clean (domain Stripe-free)"
 ```
 
 ---
 
 ## Roadmap — subsequent phases (each its own plan)
 
-Phase 1 (above) proves the pattern end-to-end for one vertical. Each following feature is a **separate plan** using the identical 4-task shape (domain → application → infrastructure → composition + wiring). Suggested order (highest cohesion / clearest boundaries first), reusing the already-consolidated `lib/` domain folders as migration sources:
+Same 4-task shape (+ per-feature dependency inventory + boundary test stays green). Order by cohesion and **decoupling from the entangled core** — stabilise the model on simple domains before touching AO/pipeline:
 
-1. **billing (rest)** — activate-trial, upgrade, confirmation, entitlement, plans verticals (~14 files in `lib/billing/`).
-2. **gsc** — `lib/gsc/` (7) → `src/core/domain/gsc` + application + `src/infrastructure/gsc` (Google API client).
-3. **aiVisibility** — `lib/aiVisibility/` (10) → domain/application/infrastructure (LLM + store).
-4. **articles** — `lib/articles/` (12) + `lib/ao/` optimization use-cases.
-5. **keywords / rankTracking / siteAudit / competitors** — one plan each.
-6. **stripe / ensure(schema) / shared infra** — fold `stripe*` into `src/infrastructure/billing` or `src/infrastructure/stripe`; `ensure*` DB bootstrap → `src/infrastructure/persistence/schema`.
+1. **billing (rest)** — activate-trial, upgrade, confirmation, entitlement, plans (`lib/billing/`, ~14 files). Real use-cases: `UpgradeSubscription`, `CancelSubscription`, `ActivateTrial`, `GetBillingEntitlements`.
+2. **gsc** — `lib/gsc/` (7); infra = Google Search Console client. Clean, CRUD-ish.
+3. **simple domains** — competitors, rankTracking, keywords, siteAudit (one plan each). CRUD-ish, clear boundaries.
+4. **articles** — `lib/articles/` (12); more moving parts.
+5. **aiVisibility** — `lib/aiVisibility/` (10); LLM + store infra.
+6. **AO / pipeline — LAST.** `lib/ao/` is entangled with scoring, coverage, planner, intelligence, compiler, pipeline, workers, Redis/BullMQ. Migrate only after the pattern is proven and the simpler domains are stable; likely needs its own multi-plan decomposition and may stay partly inside the CIA zones.
 
 **Per-feature checklist (repeat):**
-- domain: move pure types/entities + define port interface (`I<Thing>Repository`, `I<Thing>Service`).
-- application: move/author use-cases depending only on ports; DTOs for request/response shapes.
-- infrastructure: implement ports (DB via Sequelize, external via SDK clients); mock only the port in tests.
-- composition: wire impl→use-case; `pages/api/**` controller consumes the composition root only.
-- gate: `tsc` + `jest` green; keep old `lib/<feature>` facade re-exporting until all callers move, then delete.
+- **inventory** first: for each candidate domain file, confirm zero transitive SDK/DB/fs/env deps; anything impure → infrastructure.
+- **domain**: entity/value-objects + port interfaces; vendor-free; pure logic only.
+- **application**: real-operation use-cases depending only on ports; DTOs for request/response; no vendor types.
+- **infrastructure**: split client / mapper / repository per external system; repositories return domain types.
+- **composition**: wire impl→use-case; `pages/api/**` consumes composition only.
+- **gate**: `tsc` + `jest` + the clean-arch boundary test green; keep the old `lib/<feature>` facade re-exporting until all callers move, then delete.
 
-**Out of scope (explicit):** App Router migration; moving `pages/api` into `src`; a DI-container library; touching CIA zones. Revisit only if the team decides to also migrate the router.
+**Out of scope (explicit):** App Router migration; moving `pages/api` into `src`; a DI-container library; rewriting CIA zones. Revisit only on a team decision.
 
-**Risk controls:** one feature per branch/worktree; run the family/move codemod for import rewrites (never hand-edit at scale); `jest.mock` paths need manual grep after each move (tsc can't see them); regenerate `scripts/dead-exports-baseline.json` if the budget check trips.
+**Risk controls:** one feature per branch/worktree; codemod (`scripts/move-lib-family.mjs` pattern) for import rewrites — never hand-edit at scale; `jest.mock` paths need manual grep after each move; regenerate `scripts/dead-exports-baseline.json` if the budget check trips.
