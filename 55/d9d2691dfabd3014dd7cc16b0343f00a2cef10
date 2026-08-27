@@ -1,0 +1,73 @@
+__tests__/lib/corpusNoiseFilter.test.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 2
+__tests__/lib/inferPageKeyword.test.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 1
+lib/coverage/curateConcepts.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 2
+lib/knowledgeEngine/competitorBrands.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 13
+lib/corpusNoiseFilter.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 1
+lib/citationPrompts.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 4
+lib/entities/entityResolver.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 5
+lib/wie/corpusClaims.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 16
+lib/articles/articleFacts.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 11
+lib/seo/keywordData.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 23
+lib/competitorTermCalibration.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 6
+lib/buildImportKeywordList.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 7
+lib/sitemapLinkTargets.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 13
+lib/infoToCoverTopics.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 7
+lib/curateCoverageItems.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 13
+lib/llmCoverageQuestions.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 13
+lib/inferPageKeyword.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 3
+lib/knowledgeEngine/extract.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 2
+lib/coverageStore.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 3
+lib/harvest/clusterQuestions.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 1
+lib/engines/coverageEngine.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 7
+lib/harvest/fillMissingTopics.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 2
+lib/articles/articleKeywordDiscovery.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 15
+lib/buildCoverageSnapshot.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 11
+lib/topicRelevance.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 5
+lib/harvest/canonicalizeQuestion.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 2
+lib/articles/articleTerms.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 4
+__tests__/lib/termUtils-polish.test.ts
+  s_e3556ba0769b4b::t_ea1c72349a888a 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "55d9d2691dfabd3014dd7cc16b0343f00a2cef10",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
