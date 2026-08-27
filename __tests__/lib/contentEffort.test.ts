@@ -8,7 +8,7 @@ import {
    keywordStuffingScore,
    thinOriginalityScore,
    titleQueryScore,
-} from '../../lib/contentEffort';
+} from '@/src/core/domain/terms/contentEffort';
 import { collectScoreSlots, computeContentScoreBreakdown, type ScoreData } from '../../lib/contentScore';
 
 const baseScoreData = (): ScoreData => ({

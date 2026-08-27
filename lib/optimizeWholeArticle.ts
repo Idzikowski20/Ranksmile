@@ -7,7 +7,7 @@ import {
 import { selectOptimizeMode, type OptimizeMode } from './optimizeMode';
 import type { OptimizePhase } from './optimizeRunPhase';
 import type { EditMode, StepFocus } from './optimizationPlanner';
-import { buildEffortOptimizeGuidance } from './contentEffort';
+import { buildEffortOptimizeGuidance } from '@/src/core/domain/terms/contentEffort';
 import { buildWhatsMissingOptimizeGuidance } from './contentScore';
 import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 import { STOP_SLOP_RULES } from './stopSlopPrompt';

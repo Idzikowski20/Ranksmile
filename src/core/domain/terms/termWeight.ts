@@ -2,7 +2,7 @@
  * SERP-first term weight — IDF-like from doc_freq across competitor set.
  * Prefer SERP prevalence over local salience alone.
  */
-import type { NlpTerm } from './contentScore';
+import type { NlpTerm } from './types';
 import { termSalienceWeight } from '@/src/core/domain/terms/salienceCore';
 
 export type TermWeightInput = {

@@ -11,7 +11,7 @@ import DomainFavicon from '../common/DomainFavicon';
 import ScoreTrio from './ScoreTrio';
 import EffortChecklist from './EffortChecklist';
 import SourceExplorer from './SourceExplorer';
-import { buildEffortChecklist } from '../../lib/contentEffort';
+import { buildEffortChecklist } from '@/src/core/domain/terms/contentEffort';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 import type { Action } from '../../lib/primitives/types';
 import type { CanonicalClaim } from '../../lib/knowledgeEngine/types';

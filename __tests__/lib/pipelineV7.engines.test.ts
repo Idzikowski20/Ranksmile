@@ -1,6 +1,6 @@
 import { buildJobKey } from '../../lib/pipeline/jobKey';
 import { QUEUE_PRIORITY, PIPELINE_VERSION } from '../../lib/pipeline/queuePriorities';
-import { termWeight, weightedTermCoverageRatio } from '../../lib/termWeight';
+import { termWeight, weightedTermCoverageRatio } from '@/src/core/domain/terms/termWeight';
 import { computeMultiScore } from '../../lib/engines/multiScore';
 import { runCoverageEngine } from '../../lib/engines/coverageEngine';
 import { runGapEngine } from '../../lib/engines/gapEngine';

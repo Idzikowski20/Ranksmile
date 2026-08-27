@@ -10,7 +10,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, ArticleRow } from '../../../lib/db/query';
-import { heuristicContentEffort, type ContentEffortInsight } from '../../../lib/contentEffort';
+import { heuristicContentEffort, type ContentEffortInsight } from '@/src/core/domain/terms/contentEffort';
 import { safeJsonParse } from '../../../lib/safeJson';
 import type { ScoreData } from '../../../lib/contentScore';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
