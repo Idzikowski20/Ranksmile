@@ -51,7 +51,7 @@ import {
    resolveOptimizePhase,
    targetContentForPhase,
    type AoMeta,
-} from '../../../lib/optimizeRunPhase';
+} from '@/src/core/domain/optimize/runPhase';
 import { getErrorMessage } from '../../../lib/errors';
 import { throwIfAborted } from '../../../lib/abortSignal';
 import { queryOne } from '../../../lib/db/query';
