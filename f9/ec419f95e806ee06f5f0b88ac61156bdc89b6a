@@ -1,0 +1,73 @@
+lib/knowledgeEngine/cluster.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 7
+components/articles/WriteOptimizePanel.tsx
+  s_e3556ba0769b4b::t_ec7da493ffd661 17,70-71
+lib/knowledgeEngine/coverage.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 16
+lib/knowledgeEngine/aoPlanPatch.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 8
+__tests__/lib/knowledgeEngine/competitorBrands.test.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 2
+lib/contentPlanner/planningLoop.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 28,30-31
+components/articles/SourceExplorer.tsx
+  s_e3556ba0769b4b::t_ec7da493ffd661 7
+lib/knowledgeEngine/normalizeClaims.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 27
+lib/knowledgeEngine/runKnowledgeEngine.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 11
+lib/knowledgeEngine/vote.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 1
+lib/knowledgeEngine/buildGraph.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 12
+lib/knowledgeEngine/verify.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 1
+lib/knowledgeEngine/competitorBrands.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 15
+lib/knowledgeEngine/index.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 5,30
+lib/knowledgeEngine/competitorDocument.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 2
+lib/contentPlanner/runContentPlanner.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 40
+lib/contentPlanner/plannerValidator.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 6,14
+__tests__/lib/contentPlanner/reviewFixes.test.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 39
+__tests__/lib/knowledgeEngine/cluster.test.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 2
+lib/knowledgeEngine/canonicalize.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 13
+lib/contentScore.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 79,81
+lib/knowledgeEngine/constants.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 1
+__tests__/lib/contentPlanner/narrativeOptimizer.test.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 5
+__tests__/lib/knowledgeEngine/normalizeClaims.test.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 4
+lib/knowledgeEngine/extract.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 3
+pages/api/articles/[id]/content-plan.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 37
+lib/knowledgeEngine/toTargetKg.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 12
+lib/contentPlanner/narrativeOptimizer.ts
+  s_e3556ba0769b4b::t_ec7da493ffd661 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f9ec419f95e806ee06f5f0b88ac61156bdc89b6a",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
