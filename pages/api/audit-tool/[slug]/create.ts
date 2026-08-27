@@ -5,7 +5,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { enqueueAudit } from '../../../../lib/auditRunner';
-import { langForCountry } from '../../../../lib/countryLang';
+import { langForCountry } from '@/src/core/domain/audit/country';
 import { getErrorMessage } from '../../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

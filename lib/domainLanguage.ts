@@ -1,5 +1,5 @@
 import { queryOne } from './db/query';
-import { countryForLang } from './countryLang';
+import { countryForLang } from '@/src/core/domain/audit/country';
 import { toDfsLanguageCode } from '@/src/core/shared/language';
 
 export type DomainLocale = {

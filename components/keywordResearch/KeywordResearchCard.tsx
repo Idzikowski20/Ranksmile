@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AUDIT_COUNTRIES } from '../../lib/countryLang';
+import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
 import type { KeywordResearchCardDTO } from '@/src/core/domain/keywords/types';
 import CountryFlag from '../audit/CountryFlag';
 

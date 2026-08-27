@@ -14,7 +14,7 @@ import {
   type OrganicCurrency,
   type OrganicDevice,
 } from '../../../components/searchIntelligence/organic/OrganicPageHeader';
-import { AUDIT_COUNTRIES } from '../../../lib/countryLang';
+import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
 import OrganicPositionChart from '../../../components/searchIntelligence/organic/OrganicPositionChart';
 import {
   Button,

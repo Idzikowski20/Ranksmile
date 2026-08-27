@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AUDIT_COUNTRIES } from '../../lib/countryLang';
+import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
 import { Modal, ModalBody, ModalFooter, FormField, Input, Button, CompactSelect } from '../koala/core';
 import type { SelectOption } from '../koala/core';
 import CountryFlag from '../audit/CountryFlag';
