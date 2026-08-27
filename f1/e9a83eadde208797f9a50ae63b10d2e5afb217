@@ -1,0 +1,25 @@
+pages/dashboard/index.tsx
+  s_e3556ba0769b4b::t_0816462ca242f7 31
+__tests__/src/core/domain/recommendations/actionable.test.ts
+  s_e3556ba0769b4b::t_5c5795549843da 1-26
+components/koala/shell/Sidebar.tsx
+  s_e3556ba0769b4b::t_0816462ca242f7 7
+pages/api/billing/expired-summary.ts
+  s_e3556ba0769b4b::t_0816462ca242f7 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f1e9a83eadde208797f9a50ae63b10d2e5afb217",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
