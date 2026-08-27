@@ -1,4 +1,4 @@
-import type { DropEntry, DropResult } from './gscDrops';
+import type { DropEntry, DropResult } from '@/src/core/domain/gsc/drops';
 import {
   EMAIL_BG_CONTENT,
   EMAIL_BG_PAGE,

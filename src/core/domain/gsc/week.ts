@@ -1,4 +1,4 @@
-import type { PageSnap, SnapMap } from './gscDrops';
+import type { PageSnap, SnapMap } from './drops';
 
 type RawItem = { page: string; clicks: number; impressions: number; position: number };
 
