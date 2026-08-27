@@ -1,0 +1,23 @@
+services/serviceStatus.ts
+  s_e3556ba0769b4b::t_3963cd041fc207 2
+components/common/TopbarServiceStatus.tsx
+  s_e3556ba0769b4b::t_3963cd041fc207 8
+__tests__/lib/serviceStatus.test.ts
+  s_e3556ba0769b4b::t_3963cd041fc207 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5fea615f22a134045b0127c1a69b2d7605df57f5",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
