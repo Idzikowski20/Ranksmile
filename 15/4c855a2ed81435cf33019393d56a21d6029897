@@ -1,0 +1,163 @@
+pages/api/billing/invoices.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 2
+pages/api/billing/activate-trial.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 3-5
+components/settings/PricingPlansSettings.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 5
+__tests__/lib/paymentFailedLock.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 2
+lib/orgBilling.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1,11
+pages/api/billing/checkout-session.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 2-5
+pages/api/billing/expired-summary.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 4
+lib/billing/billingActivateTrial.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-288
+__tests__/lib/billingAudit.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 6
+lib/billing/billingConfirmation.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-361
+pages/api/billing/tax-preview.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 3
+__tests__/lib/billingActivateTrial.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 2
+  s_e3556ba0769b4b::t_f1aac7148780b2 13,33
+pages/billing/confirmation/success.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 9
+components/siteAudit/crawlLimitContent.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 4
+__tests__/lib/billingTrial.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 6
+__tests__/lib/billing/billingSnapshotDomain.test.ts
+  s_e3556ba0769b4b::t_f1aac7148780b2 19
+components/koala/product/ComparePricingTable.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 17
+lib/billing/buildBillingSnapshot.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 3
+__tests__/lib/billingEntitlement.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1
+lib/billing/billingEntitlement.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-58
+lib/appAccess/resolveAppState.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 7
+lib/stripeCustomer.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 2
+__tests__/lib/billingConfirmationToken.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 4
+pages/api/billing/confirmation.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 2-3
+pages/api/billing/upgrade-preview.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 3,8
+lib/planLimits.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1
+pages/billing/checkout/[plan].tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 24-27
+scripts/seed-stripe-products.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 7
+__tests__/lib/billingInvoices.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 8
+lib/billing/billingPlanLock.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-30
+pages/api/billing/plan-summary.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 2-3
+lib/billing/billingInvoices.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-24
+pages/api/workspaces/setup.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 4
+lib/billing/billingInvoiceModel.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-180
+lib/subscriptionDetails.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-5
+__tests__/api/payment-failed-lock.e2e.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 88
+  s_e3556ba0769b4b::t_f1aac7148780b2 22
+lib/billing/billingEmailClaim.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-80
+components/billing/CheckoutStripeProvider.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 14
+__tests__/lib/billingConfirmation.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 24
+lib/siteAudit/pageLimit.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1
+components/koala/product/PricingCard.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 11
+lib/appAccess/ApplicationShell.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 21
+components/billing/PlanExpired.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 8
+lib/stripePrices.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1
+pages/api/billing/create-subscription.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 3-7
+pages/api/billing/issue-confirmation.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 3
+lib/stripeBillingSync.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 2-3,9
+components/billing/OrderConfirmationBody.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 8
+lib/pricing/planDefinition.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 7-8
+lib/stripeBillingReconcile.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 3
+lib/billing/billingAudit.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-82
+lib/use-cases/billing/listOrgBillingInvoices.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 5
+__tests__/lib/billingPlans.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 7
+components/settings/BillingHistorySettings.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 11
+__tests__/lib/billingAbandoned.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 5
+lib/billing/billingTrial.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-68
+lib/billing/billingUpgrade.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-245
+__tests__/lib/billing/buildBillingSnapshot.test.ts
+  s_e3556ba0769b4b::t_f1aac7148780b2 27
+__tests__/lib/billingUpgrade.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 8
+lib/emails/runStarterNudgeCron.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 2
+pages/api/billing/audit-beacon.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 9
+pages/api/billing/upgrade-subscription.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 3,8
+components/koala/shell/SidebarPlanItem.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 4,7
+pages/api/webhooks/stripe.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 12,14,16-17,203
+__tests__/api/billing-guards.test.ts
+  s_e3556ba0769b4b::t_f1aac7148780b2 8,42
+__tests__/lib/getLockedCheckoutPlanSlug.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1
+components/billing/CheckoutKoalaBody.tsx
+  s_e3556ba0769b4b::t_103a9700bbf0bb 16-17,23
+__tests__/lib/grantedAccessAtSomePoint.test.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-2
+lib/quota/quotaService.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 4
+lib/getBootstrap.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 12
+lib/billing/billingEverSubscribed.ts
+  s_e3556ba0769b4b::t_103a9700bbf0bb 1-47
+__tests__/lib/stripeBillingSync.test.ts
+  s_e3556ba0769b4b::t_f1aac7148780b2 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "154c855a2ed81435cf33019393d56a21d6029897",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
