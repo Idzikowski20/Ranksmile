@@ -1,0 +1,21 @@
+components/landing/sections/Hero.tsx
+  s_4134d8bafd16e7::t_44d55761f90358 48-50
+  s_4134d8bafd16e7::t_28097bb1980444 83
+  s_4134d8bafd16e7::t_deadd9443535e0 161,183-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "642044edfaee4e83adf863e6810247023a650ace",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
