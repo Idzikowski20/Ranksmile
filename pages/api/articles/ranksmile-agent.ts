@@ -82,7 +82,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let runningTokens = 0;
     try {
       const today = new Date().toISOString().slice(0, 10); // server clock — the model never guesses the date
-      const { computeGeoCues, geoPromptBlock } = await import('../../../lib/geo/geoCues');
+      const { computeGeoCues, geoPromptBlock } = await import('@/src/core/domain/geo/geoCues');
       const plain = String(content).replace(/<[^>]+>/g, ' ');
       const geoHints = geoPromptBlock(computeGeoCues(String(content), plain));
       const result = streamText({

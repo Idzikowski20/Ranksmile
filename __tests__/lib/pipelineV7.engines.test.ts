@@ -13,7 +13,7 @@ import { resolveEntities, heuristicNerExtract } from '../../lib/entities/entityR
 import { bm25Rank, assignHarvestToSections } from '@/src/core/domain/search/bm25';
 import { extractKeybertTerms } from '../../lib/semantic/keybert';
 import { hashEmbed, cosineSim, findEmbeddingGaps } from '../../lib/semantic/embeddings';
-import { computeGeoCues, geoPromptBlock } from '../../lib/geo/geoCues';
+import { computeGeoCues, geoPromptBlock } from '@/src/core/domain/geo/geoCues';
 import { runLearningLoop } from '../../lib/learning/learningLoopCore';
 import { curateConceptsFromTerms } from '../../lib/coverage/curateConcepts';
 import { informationGain } from '../../lib/engines/evidence';
