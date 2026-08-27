@@ -28,7 +28,7 @@ import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanne
 import { resolveArticleEntry, articleEntryHref } from '../../../lib/articles/articleFlow';
 import AnalysisProgressPanel from '../../../components/articles/AnalysisProgressPanel';
 import CompetitorOutlinesPanel from '../../../components/articles/CompetitorOutlinesPanel';
-import { emptyPhases, type AnalysisPhases } from '../../../lib/analysisPhases';
+import { emptyPhases, type AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
 import { computeOptimizeLiveSnapshot } from '../../../lib/computeLiveArticleScores';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { liveCoverageItems, scoreDeltaGate } from '../../../lib/liveCoverage';

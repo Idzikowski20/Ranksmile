@@ -1,7 +1,7 @@
 import {
   emptyPhases, mergePhases, phasesFromStage,
   type AnalysisPhases, type AnalysisPhasesPatch,
-} from '../../lib/analysisPhases';
+} from '@/src/core/domain/articles/analysisPhases';
 import { safeJsonParse } from '../../lib/safeJson';
 
 /**

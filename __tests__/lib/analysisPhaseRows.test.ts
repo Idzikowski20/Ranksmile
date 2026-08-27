@@ -1,4 +1,4 @@
-import { emptyPhases, mergePhases, type AnalysisPhases } from '../../lib/analysisPhases';
+import { emptyPhases, mergePhases, type AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
 import { analysisPhaseGroups } from '../../lib/analysisPhaseRows';
 
 function rows(phases: AnalysisPhases = emptyPhases()) {
