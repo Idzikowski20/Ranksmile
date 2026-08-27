@@ -1,0 +1,51 @@
+lib/pickArticleTerms.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 2
+lib/scoreDomainPages.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 10
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 23
+__tests__/lib/competitorTermCalibration.test.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 1
+__tests__/lib/termMatch.test.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 2
+lib/auditCompute.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 16,22,28
+lib/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 10
+src/core/domain/competitors/termCalibration.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 1-125
+lib/mergeArticleTerms.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 2
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 23
+lib/contentScore.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 2
+lib/competitorAuditScore.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 11-12,15,22
+__tests__/lib/competitorAuditScore.test.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 1
+__tests__/lib/termUtils-polish.test.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 2
+__tests__/lib/competitorContentScore.test.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 1
+lib/articles/articleKeywordDiscovery.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 13
+lib/auditEnrich.ts
+  s_e3556ba0769b4b::t_fd7e15653b2eb6 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "226922741da8b68ac425cfd4c92e5393b7d2441c",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
