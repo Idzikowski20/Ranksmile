@@ -12,7 +12,7 @@
  */
 import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
 import { tokensShareStem } from '../topicRelevance';
-import type { CanonicalClaim } from './types';
+import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 
 /** Below this a token matches hostnames by accident ("pl", "biz", "osob"). */
 const MIN_BRAND_TOKEN = 5;

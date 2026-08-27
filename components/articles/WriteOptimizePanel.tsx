@@ -14,7 +14,7 @@ import SourceExplorer from './SourceExplorer';
 import { buildEffortChecklist } from '@/src/core/domain/terms/contentEffort';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 import type { Action } from '../../lib/primitives/types';
-import type { CanonicalClaim } from '../../lib/knowledgeEngine/types';
+import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 
 const F = 'var(--font-family-primary)';
 
@@ -67,8 +67,8 @@ interface Props {
   onOptimizeAction?: (action: Action) => void;
   domainSlug?: string;
   /** CIE immutable Knowledge Graph (optional — enables Knowledge Coverage UI). */
-  knowledgeGraph?: import('../../lib/knowledgeEngine/types').KnowledgeGraph | null;
-  knowledgeCoverageReport?: import('../../lib/knowledgeEngine/types').KnowledgeCoverageReport | null;
+  knowledgeGraph?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeGraph | null;
+  knowledgeCoverageReport?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeCoverageReport | null;
 };
 
 /* ── Reusable: hover tooltip (portal → never clipped by the panel overflow) ── */

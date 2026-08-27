@@ -34,7 +34,7 @@ import {
   buildStructuralBenchmark,
   toPlannerTargets,
 } from '../../../../lib/benchmarkIntelligence';
-import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine/types';
+import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 import type { PlannerTargets, StructuralBenchmark } from '@/src/core/domain/benchmark/types';
 
 type ArticlePlanRow = {

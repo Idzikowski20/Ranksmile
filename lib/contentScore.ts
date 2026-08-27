@@ -76,9 +76,9 @@ export interface ScoreData {
    /** WIE Think hints from Deep Analysis (policy / narrative / explainability) */
    wie_policy_hints?: Record<string, unknown>;
    /** CIE — immutable Knowledge Graph snapshot (when USE_KNOWLEDGE_ENGINE passes gate). */
-   knowledge_graph?: import('./knowledgeEngine/types').KnowledgeGraph;
+   knowledge_graph?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeGraph;
    /** CIE — coverage overlay report (never written into frozen graph). */
-   knowledge_coverage_report?: import('./knowledgeEngine/types').KnowledgeCoverageReport;
+   knowledge_coverage_report?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeCoverageReport;
    structural_benchmark?: import('@/src/core/domain/benchmark/types').StructuralBenchmark;
 }
 
