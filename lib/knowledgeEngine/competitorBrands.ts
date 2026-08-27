@@ -10,7 +10,7 @@
  * every claim came from, and a brand shows up in its own hostname (`agencjatemida.pl`
  * contains `temida`).
  */
-import { foldPolishLetters } from '../termUtils';
+import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
 import { tokensShareStem } from '../topicRelevance';
 import type { CanonicalClaim } from './types';
 

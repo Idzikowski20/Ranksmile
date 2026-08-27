@@ -12,7 +12,7 @@ import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords
 import type { NlpTerm } from '../contentScore';
 import { isWeakTermList } from '../competitorTermCalibration';
 import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';
-import { isDictionaryQueryNoise } from '../termUtils';
+import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
 import { keywordFromUrl, urlAnchorSeed } from '../inferPageKeyword';
 import { kwScore } from '../../utils/gsc';
 

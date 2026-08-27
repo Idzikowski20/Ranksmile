@@ -2,7 +2,7 @@
  * Strict topic matching for keyword/term enrichment — prevents DFS/GSC noise
  * (e.g. "test z lektury…" matching seed "warszawa" via substring "a").
  */
-import { foldPolishLetters, isDictionaryQueryNoise, isUsefulTerm, normalizeTerm } from './termUtils';
+import { foldPolishLetters, isDictionaryQueryNoise, isUsefulTerm, normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 const SEED_NOISE_TOKENS = new Set([
   'znaczy', 'znaczenie', 'definicja', 'slownik', 'tlumacz', 'tlumaczenie', 'oznacza',

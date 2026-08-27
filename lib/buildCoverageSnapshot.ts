@@ -8,7 +8,7 @@ import {
 } from './ai/aiCoverage';
 import { deepseekJudge } from './ai/aiCoverageJudge';
 import { analyzeIntroduction, deepseekIntroJudge } from './introductionAnalyzer';
-import { normalizeTerm } from './termUtils';
+import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 import { citationIntentItems } from './citationPrompts';
 import { curateAiCoverageItems, dedupePaaQuestions } from './curateCoverageItems';
 import { mergeCoverageItems, buildSnapshot } from './coverageStore';

@@ -20,7 +20,7 @@ import { readLocalSCData } from '../../utils/searchConsole';
 import { AiVisibilitySummary } from '../ai/aiSearchScore';
 import { CoverageItem, hashId } from '../ai/aiCoverage';
 import { normalizePl, tokenize } from '@/src/core/domain/terms/termMatch';
-import { isUsefulTerm, isDictionaryQueryNoise } from '../termUtils';
+import { isUsefulTerm, isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
 import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';
 import { throwIfAborted } from '../abortSignal';
 

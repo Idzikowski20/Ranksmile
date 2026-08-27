@@ -8,7 +8,7 @@ import { cached, TTL } from '../cache/fileCache';
 import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
 import { resolveFactKeyword } from '../resolveFactKeyword';
 import { isKeywordOnTopic, seedTokens } from '../topicRelevance';
-import { isDictionaryQueryNoise } from '../termUtils';
+import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
 import { factReadinessScore } from '../factReadiness';
 import type { AiCitation, AiVisibilitySummary } from '../ai/aiSearchScore';
 import type { ArticleFact } from '@/src/core/domain/articles/factTypes';

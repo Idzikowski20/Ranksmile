@@ -3,7 +3,7 @@
  */
 import type { NlpTerm } from './contentScore';
 import { countOccurrences } from '@/src/core/domain/terms/termMatch';
-import { isUsefulTerm, normalizeTerm } from './termUtils';
+import { isUsefulTerm, normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 /** Per-term occurrence counts across a competitor corpus → suggested_min/max + target_count. */
 export function calibrateTermRangesFromCorpus(terms: NlpTerm[], corpusTexts: string[]): NlpTerm[] {

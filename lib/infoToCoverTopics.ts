@@ -4,7 +4,7 @@
  */
 import type { AiVisibilitySummary } from './ai/aiSearchScore';
 import type { CoverageItem, CoverageTopicGroup, LlmCoverageSource } from './ai/aiCoverage';
-import { normalizeTerm } from './termUtils';
+import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 export type InfoSource = {
   key: string;

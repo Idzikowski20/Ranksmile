@@ -1,5 +1,5 @@
 import { languageInstructionForLlm } from '@/src/core/shared/language';
-import { normalizeTerm } from '../termUtils';
+import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 import { safeJsonParse } from '../safeJson';
 import { chatLlm } from '../ai/deepseek';
 import type { TopicBucket } from './clusterQuestions';

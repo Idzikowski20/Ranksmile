@@ -1,4 +1,4 @@
-import { normalizeTerm } from '../termUtils';
+import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 import { tokensShareStem } from '../topicRelevance';
 import type { HarvestedQuestion } from './canonicalizeQuestion';
 
