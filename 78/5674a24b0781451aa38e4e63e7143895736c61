@@ -1,0 +1,109 @@
+lib/contentPlanner/briefWriter.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 15
+lib/contentPlanner/sectionWriter.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 4
+__tests__/lib/contentPlanner/outlineTables.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 9
+__tests__/lib/contentPlanner/sectionLabels.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 13
+components/articles/ArticleEditor.tsx
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 59
+__tests__/lib/contentPlanner/toSidecarCompiledPlan.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 8
+lib/contentPlanner/applyApprovedOutline.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 12
+lib/contentPlanner/intentBlueprint.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 4
+lib/contentPlanner/knowledgeCompletion.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 10,13
+lib/contentPlanner/readerModel.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 4
+lib/knowledgeEngine/aoPlanPatch.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 5
+lib/knowledgeEngine/coverage.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 5
+lib/benchmarkIntelligence/toPlannerTargets.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 1
+lib/contentPlanner/plannerValidator.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 13
+__tests__/lib/contentPlanner/compileWritePlan.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 9
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 2
+lib/contentPlanner/planningLoop.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 27
+lib/wie/writerContext.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 10
+__tests__/lib/knowledgeEngine/coverage.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 9
+lib/contentPlanner/knowledgePack/sectionPlanner.ts
+  s_e3556ba0769b4b::t_e672713a75df32 1
+lib/contentPlanner/knowledgeIntelligence.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 23-24
+__tests__/lib/contentPlanner/validators.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 17
+lib/contentPlanner/executionPlan.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 9-10
+lib/contentPlanner/quickAnswer.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 4
+lib/contentPlanner/validators/planValidators.ts
+  s_e3556ba0769b4b::t_e672713a75df32 15-16
+__tests__/lib/contentPlanner/applyApprovedOutline.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 7
+__tests__/lib/contentPlanner/paragraphPlanner.blocks.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 2
+__tests__/lib/contentPlanner/buildFactSheet.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 2
+lib/contentPlanner/budgetEngine.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 15
+lib/contentPlanner/knowledgePack/paragraphPlanner.ts
+  s_e3556ba0769b4b::t_e672713a75df32 1
+lib/pipelineVersion.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 1
+__tests__/lib/contentPlanner/budgetEngine.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 3
+__tests__/lib/contentPlanner/reviewFixes.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 38
+lib/contentPlanner/outlineBuilder.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 17
+lib/contentPlanner/runContentPlanner.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 38-39
+__tests__/lib/contentPlanner/narrativeOptimizer.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 4
+lib/knowledgeEngine/toTargetKg.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 10
+lib/contentPlanner/validators/postWriteValidators.ts
+  s_e3556ba0769b4b::t_e672713a75df32 13
+lib/contentPlanner/competitorIntelligence.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 4
+lib/contentPlanner/knowledgePack/compileWritePlan.ts
+  s_e3556ba0769b4b::t_e672713a75df32 2
+lib/contentPlanner/narrativeOptimizer.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 6
+lib/contentPlanner/index.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 1
+lib/contentPlanner/competitorBenchmark.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 4-5
+__tests__/lib/contentPlanner/executionPlan.test.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 24
+lib/contentPlanner/formatPrompt.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 4
+lib/contentPlanner/knowledgeCoverage.ts
+  s_e3556ba0769b4b::t_b9617f1dc6afd4 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "785674a24b0781451aa38e4e63e7143895736c61",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
