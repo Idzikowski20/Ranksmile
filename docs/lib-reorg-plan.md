@@ -32,6 +32,13 @@ The billing consolidation (commit `154c855a`) is the template. Repeat per family
 > Tip: generalize the billing codemod into `scripts/move-family.mjs` taking a
 > family prefix + target dir, so each family is one script run + one test run.
 
+## Done so far
+
+- ✅ `billing` — 15 flat files → `lib/billing/` (commit `154c855a`).
+- ✅ `gsc` (7) → `lib/gsc/`, `article` (12) → `lib/articles/`, `aiVisibility` (10) →
+  `lib/aiVisibility/`, `ai` rest (5) → `lib/ai/` (commit `a6928646`).
+- Tooling: `scripts/move-lib-family.mjs` does the move + import rewrite for any family.
+
 ## Families, ranked
 
 Order: highest navigability payoff / lowest risk first. "Split-brain" = a subdir
