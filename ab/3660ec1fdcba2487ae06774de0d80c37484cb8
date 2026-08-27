@@ -1,0 +1,39 @@
+pages/api/articles/[id]/keywords/suggest.ts
+  s_e3556ba0769b4b::t_339dc7da510906 6
+components/keywordResearch/KeywordResearchCard.tsx
+  s_e3556ba0769b4b::t_8ef59f62f93f89 3
+lib/keywordResearchView.ts
+  s_e3556ba0769b4b::t_8ef59f62f93f89 7
+lib/keywordResearchCompute.ts
+  s_e3556ba0769b4b::t_8ef59f62f93f89 20
+lib/topicClustering.ts
+  s_e3556ba0769b4b::t_8ef59f62f93f89 15
+components/articles/ContentScorePanel.tsx
+  s_e3556ba0769b4b::t_8ef59f62f93f89 6
+__tests__/lib/keywordEnrichment.test.ts
+  s_e3556ba0769b4b::t_7d87ef58583537 1
+pages/api/keyword-research/[slug]/[id].ts
+  s_e3556ba0769b4b::t_339dc7da510906 8
+lib/articles/articleKeywordDiscovery.ts
+  s_e3556ba0769b4b::t_8ef59f62f93f89 11
+pages/api/articles/[id]/keywords/enrich.ts
+  s_e3556ba0769b4b::t_339dc7da510906 6
+pages/api/keyword-research/[slug]/list.ts
+  s_e3556ba0769b4b::t_339dc7da510906 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ab3660ec1fdcba2487ae06774de0d80c37484cb8",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
