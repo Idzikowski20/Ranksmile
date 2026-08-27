@@ -1,0 +1,23 @@
+__tests__/lib/aiVisibilityBrands.test.ts
+  s_e3556ba0769b4b::t_171187f97d9f8a 3
+lib/aiVisibility/aiVisibilityBrands.ts
+  s_e3556ba0769b4b::t_77d62f6db1cf43 13-15
+  s_e3556ba0769b4b::t_171187f97d9f8a 11
+  s_e3556ba0769b4b::t_191cbe9197944d 16-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c8f821b6ca25f3fa70439e4fe0ab4a4732f4f444",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
