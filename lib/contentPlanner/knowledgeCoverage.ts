@@ -8,7 +8,7 @@ import type {
   KnowledgeCoverageSlice,
   SectionBrief,
   TargetKnowledgeGraph,
-} from './types';
+} from '@/src/core/domain/contentPlanner/types';
 
 function slice(total: number, assigned: number): KnowledgeCoverageSlice {
   const t = Math.max(0, total);

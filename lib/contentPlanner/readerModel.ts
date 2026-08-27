@@ -1,7 +1,7 @@
 /**
  * Reader Model — persona for the searcher (not brand niche).
  */
-import type { IntentBlueprint, ReaderModel } from './types';
+import type { IntentBlueprint, ReaderModel } from '@/src/core/domain/contentPlanner/types';
 
 const BEGINNER_RE = /\b(jak|samemu|samodziel|beginner|dla pocz|od zera|krok po kroku)\b/i;
 

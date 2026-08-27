@@ -3,7 +3,7 @@
  * Prefer action-first for step-by-step; never inject product-SEO meta H2s.
  */
 import type { TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
-import type { IntentBlueprint } from './types';
+import type { IntentBlueprint } from '@/src/core/domain/contentPlanner/types';
 import { headingFillersFromCompetitors, isSeoMetaHeading } from './sectionLabels';
 
 export type NarrativeSeed = {

@@ -7,7 +7,7 @@ import { buildPolicyContext, resolvePolicyBundle, formatPolicyBundleForPrompt, t
 import { buildNarrativePlan, formatNarrativePlanForPrompt, type NarrativePlan } from './narrativePlanner';
 import { bundleToExplainability, type ExplainabilityRecord } from './explainability';
 import { formatContentPlannerForPrompt } from '../contentPlanner/formatPrompt';
-import type { ContentPlannerBundle } from '../contentPlanner/types';
+import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
 
 export type WieWriteContext = {
   synthesis: CompetitorSynthesis | null;

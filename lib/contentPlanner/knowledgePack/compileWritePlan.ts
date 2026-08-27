@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import type { ArticleExecutionPlan, ExecutionPlanSection } from '../types';
+import type { ArticleExecutionPlan, ExecutionPlanSection } from '@/src/core/domain/contentPlanner/types';
 import {
   PIPELINE_COMPONENT_VERSIONS,
   type Claim,

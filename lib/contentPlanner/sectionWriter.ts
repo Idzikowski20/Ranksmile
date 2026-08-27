@@ -1,7 +1,7 @@
 /**
  * Section Memory, Humanizer hints, Assembler, prompt blocks for Writer.
  */
-import type { AdaptiveOutline, ReaderModel, SectionBrief, TargetKnowledgeGraph } from './types';
+import type { AdaptiveOutline, ReaderModel, SectionBrief, TargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/types';
 
 export type SectionMemory = {
   previousHeading: string | null;

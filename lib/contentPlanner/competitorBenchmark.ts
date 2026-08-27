@@ -1,8 +1,8 @@
 /**
  * Competitor Synthesis + Benchmark — Surfer-style structural aggregates.
  */
-import type { CompetitorBenchmark, CompetitorProfile, CompetitorSynthesisMetrics } from './types';
-import { BENCHMARK_H2_FLOOR, BENCHMARK_WORDS_FLOOR } from './types';
+import type { CompetitorBenchmark, CompetitorProfile, CompetitorSynthesisMetrics } from '@/src/core/domain/contentPlanner/types';
+import { BENCHMARK_H2_FLOOR, BENCHMARK_WORDS_FLOOR } from '@/src/core/domain/contentPlanner/types';
 
 function mean(xs: number[]): number {
   return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;

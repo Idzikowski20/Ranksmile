@@ -24,7 +24,7 @@ import {
   type SectionBrief,
   type TargetKnowledgeGraph,
   type ValidationResult,
-} from './types';
+} from '@/src/core/domain/contentPlanner/types';
 import type { TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
 import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
 import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
