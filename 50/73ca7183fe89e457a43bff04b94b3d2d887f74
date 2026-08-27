@@ -1,0 +1,39 @@
+components/audit/CreateAuditModal.tsx
+  s_e3556ba0769b4b::t_f6f7d22627b131 2
+__tests__/lib/countryLang.test.ts
+  s_e3556ba0769b4b::t_f6f7d22627b131 1
+pages/api/audit-tool/[slug]/create.ts
+  s_e3556ba0769b4b::t_f6f7d22627b131 8
+components/keywordResearch/CreateKeywordResearchModal.tsx
+  s_e3556ba0769b4b::t_f6f7d22627b131 2
+lib/domainLanguage.ts
+  s_e3556ba0769b4b::t_f6f7d22627b131 2
+lib/keywordResearchCompute.ts
+  s_e3556ba0769b4b::t_f6f7d22627b131 14
+pages/sites/[domain]/keyword-list.tsx
+  s_e3556ba0769b4b::t_f6f7d22627b131 17
+pages/sites/[domain]/keyword-research/[id].tsx
+  s_e3556ba0769b4b::t_f6f7d22627b131 15
+lib/rankTracking/defaultConfig.ts
+  s_e3556ba0769b4b::t_f6f7d22627b131 2
+components/searchIntelligence/organic/OrganicPageHeader.tsx
+  s_e3556ba0769b4b::t_f6f7d22627b131 5
+components/keywordResearch/KeywordResearchCard.tsx
+  s_e3556ba0769b4b::t_f6f7d22627b131 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5073ca7183fe89e457a43bff04b94b3d2d887f74",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
