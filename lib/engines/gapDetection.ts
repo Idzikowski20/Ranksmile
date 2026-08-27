@@ -3,7 +3,7 @@
  */
 import type { CoverageItem } from '../ai/aiCoverage';
 import { runGapEngine, type CoverageGap } from '../engines/gapEngine';
-import { bm25Rank } from '../harvest/bm25';
+import { bm25Rank } from '@/src/core/domain/search/bm25';
 
 export type ResearchGap = {
   id: string;
