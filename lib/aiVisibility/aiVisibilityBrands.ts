@@ -8,12 +8,13 @@ import { generateText } from 'ai';
 import { deepseek } from '../ai/deepseek';
 import { queryOne, queryRows } from '../db/query';
 import db from '../../database/database';
-import { buildBrandPrompt, parseBrandResponse, RawBrand } from './aiVisibilityBrandsPure';
+import { buildBrandPrompt, parseBrandResponse, RawBrand } from '@/src/core/domain/aiVisibility/brands';
 
-// Re-export pure helpers so callers keep a single import surface. Tests hit
-// aiVisibilityBrandsPure directly to avoid pulling in ESM-only @ai-sdk/deepseek.
-export { buildBrandPrompt, parseBrandResponse } from './aiVisibilityBrandsPure';
-export type { RawBrand } from './aiVisibilityBrandsPure';
+// Re-export the pure brand helpers (now src/core/domain/aiVisibility/brands) so
+// callers keep a single import surface. Tests hit the domain module directly to
+// avoid pulling in the ESM-only @ai-sdk/deepseek client.
+export { buildBrandPrompt, parseBrandResponse } from '@/src/core/domain/aiVisibility/brands';
+export type { RawBrand } from '@/src/core/domain/aiVisibility/brands';
 
 export async function extractBrandsForRow(answer: string, ownBrand: string): Promise<RawBrand[] | null> {
    try {
