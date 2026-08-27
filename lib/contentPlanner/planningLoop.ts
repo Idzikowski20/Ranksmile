@@ -26,7 +26,7 @@ import {
   type ValidationResult,
 } from './types';
 import type { TopicBlock } from '../knowledgeEngine/types';
-import type { PlannerTargets } from '../benchmarkIntelligence/types';
+import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
 import type { KnowledgeGraph } from '../knowledgeEngine/types';
 import type { PlannerQualityMetrics } from '../knowledgeEngine/types';
 import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';

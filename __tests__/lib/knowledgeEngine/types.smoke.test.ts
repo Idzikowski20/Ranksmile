@@ -1,4 +1,4 @@
-import type { DistributionStats } from '../../../lib/benchmarkIntelligence/types';
+import type { DistributionStats } from '@/src/core/domain/benchmark/types';
 import type { CanonicalClaim } from '../../../lib/knowledgeEngine';
 import {
   KNOWLEDGE_SCHEMA_VERSION,
