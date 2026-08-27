@@ -7,7 +7,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getActiveWorkspaceId } from '../../../lib/tenancy';
 import { parseDataUrl, uploadImageBuffer } from '../../../lib/uploadToBlob';
-import { SETUP_LOCATIONS } from '../../../lib/setupLocations';
+import { SETUP_LOCATIONS } from '@/src/core/domain/setup/locations';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 // Logo data URLs can be a few MB — raise the JSON body limit above the 1mb default.
