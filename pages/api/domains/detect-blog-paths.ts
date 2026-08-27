@@ -1,7 +1,7 @@
 // POST /api/domains/detect-blog-paths { domain, siteUrl } → { blogPaths: string[] }
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
-import { rankBlogSegments } from '../../../lib/detectBlogPaths';
+import { rankBlogSegments } from '@/src/core/domain/blog/detectBlogPaths';
 import { fetchSitemapUrls } from '../../../lib/fetchSitemapUrls';
 import { ssrfSafeFetch } from '../../../lib/ssrfGuard';
 
