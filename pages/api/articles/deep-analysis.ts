@@ -25,7 +25,7 @@ import { runArticleAiPipeline } from '../../../lib/articles/articleAiPipeline';
 import { computeOverallContentScore, resolveAiScore } from '../../../lib/ai/aiSearchScore';
 import type { ArticleFact } from '../../../lib/articles/articleFacts';
 import { safeJsonParse } from '../../../lib/safeJson';
-import { carriedScoreData } from '../../../lib/carriedScoreData';
+import { carriedScoreData } from '@/src/core/domain/articles/carriedScoreData';
 
 type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: number };
 import {
