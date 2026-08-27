@@ -10,7 +10,7 @@ import { fitCalibration, predictCalibrated, extractFeatureVector } from '../../l
 import { diffCorpora } from '../../lib/engines/corpusDiff';
 import { serpChangeRatio, shouldForceRefresh } from '../../lib/corpus/serpChange';
 import { resolveEntities, heuristicNerExtract } from '../../lib/entities/entityResolver';
-import { bm25Rank, assignHarvestToSections } from '../../lib/harvest/bm25';
+import { bm25Rank, assignHarvestToSections } from '@/src/core/domain/search/bm25';
 import { extractKeybertTerms } from '../../lib/semantic/keybert';
 import { hashEmbed, cosineSim, findEmbeddingGaps } from '../../lib/semantic/embeddings';
 import { computeGeoCues, geoPromptBlock } from '../../lib/geo/geoCues';
