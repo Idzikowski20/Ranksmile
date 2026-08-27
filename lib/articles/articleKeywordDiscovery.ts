@@ -8,7 +8,7 @@ import { cached, TTL } from '../cache/fileCache';
 import { enrichTerms, getOwnVisibleKeywords } from '../seo/keywordData';
 import { getRankedKeywords, isDataForSeoConfigured } from '../dataforseo';
 import { DFS_DEFAULT_RANKED_LIMIT } from '../dataforseoBudget';
-import { computeRelevanceScore, checkCoverage } from '../keywordEnrichment';
+import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
 import type { NlpTerm } from '../contentScore';
 import { isWeakTermList } from '../competitorTermCalibration';
 import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AUDIT_COUNTRIES } from '../../lib/countryLang';
-import type { KeywordResearchCardDTO } from '../../lib/keywordResearchTypes';
+import type { KeywordResearchCardDTO } from '@/src/core/domain/keywords/types';
 import CountryFlag from '../audit/CountryFlag';
 
 const FONT = 'var(--font-family-primary)';
