@@ -1,0 +1,34 @@
+src/composition/siteAudit.ts
+  s_e3556ba0769b4b::t_9358f908a97758 1-14
+__tests__/lib/siteAudit/crawlVsPreviousDeltas.test.ts
+  s_e3556ba0769b4b::t_5dc2498a1866a1 1
+__tests__/src/core/application/siteAudit/computeCrawlDeltas.test.ts
+  s_e3556ba0769b4b::t_bbe608fa24a6c4 1-28
+src/infrastructure/siteAudit/previousCrawlRepository.ts
+  s_e3556ba0769b4b::t_a3cc77f725b2cc 1-22
+lib/siteAudit/crawlSnapshot.ts
+  s_e3556ba0769b4b::t_5dc2498a1866a1 194
+src/core/application/siteAudit/computeCrawlDeltas.ts
+  s_e3556ba0769b4b::t_75cbf648569947 1-23
+src/core/domain/siteAudit/previousCrawlRepository.ts
+  s_e3556ba0769b4b::t_ab9cb51e150869 1-10
+lib/siteAudit/buildOverview.ts
+  s_e3556ba0769b4b::t_1cc6525e88fc76 15
+  s_e3556ba0769b4b::t_e338e18db6e314 192-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "feded26aec2bb39409c5a357af9740021bedb2f4",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
