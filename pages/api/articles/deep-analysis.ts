@@ -811,7 +811,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Baseline content-effort estimate (heuristic). LLM refine is available in Pre-Publish.
     {
-      const { heuristicContentEffort } = await import('../../../lib/contentEffort');
+      const { heuristicContentEffort } = await import('@/src/core/domain/terms/contentEffort');
       const effort = heuristicContentEffort({
         html: pageContent || '',
         plainText,

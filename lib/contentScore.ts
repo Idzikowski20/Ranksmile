@@ -7,8 +7,8 @@ import {
    keywordStuffingScore,
    thinOriginalityScore,
    titleQueryScore,
-} from './contentEffort';
-import { termWeight } from './termWeight';
+} from '@/src/core/domain/terms/contentEffort';
+import { termWeight } from '@/src/core/domain/terms/termWeight';
 import { countOccurrences, normalizePl, tokenize, wordMatch } from '@/src/core/domain/terms/termMatch';
 
 export { countOccurrences } from '@/src/core/domain/terms/termMatch';

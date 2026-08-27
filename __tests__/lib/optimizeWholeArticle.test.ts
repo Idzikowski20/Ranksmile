@@ -1,5 +1,5 @@
 import { buildWholeArticlePrompt } from '../../lib/optimizeWholeArticle';
-import { buildEffortOptimizeGuidance } from '../../lib/contentEffort';
+import { buildEffortOptimizeGuidance } from '@/src/core/domain/terms/contentEffort';
 import type { ArticleContext } from '../../lib/articles/articleContext';
 import type { ScoreData } from '../../lib/contentScore';
 

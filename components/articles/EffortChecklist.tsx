@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge } from '../koala/core';
-import type { EffortChecklistItem, EffortSignalStatus } from '../../lib/contentEffort';
+import type { EffortChecklistItem, EffortSignalStatus } from '@/src/core/domain/terms/contentEffort';
 
 const F = 'var(--font-family-primary)';
 
