@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
-import type { AiVisConfig, AiVisTopic, AiVisPriority } from '../lib/aiVisibility';
+import type { AiVisConfig, AiVisTopic, AiVisPriority } from '../lib/aiVisibility/aiVisibility';
 
 export type AiVisScanStatus = {
    status: 'idle' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled',

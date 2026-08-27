@@ -2,8 +2,8 @@
 // Used by both the manual /ai-visibility endpoint and the deep-analysis pipeline
 // so the editor's "AI Search — Info to cover" list is populated either way.
 import { QueryTypes } from 'sequelize';
-import db from '../database/database';
-import { computeAiSearchScore, type AiVisibilitySummary } from './aiSearchScore';
+import db from '../../database/database';
+import { computeAiSearchScore, type AiVisibilitySummary } from '../ai/aiSearchScore';
 
 /** Insert one ai_visibility_runs row (+ citations) and return the run id. */
 export async function persistAiVisibilityRun(

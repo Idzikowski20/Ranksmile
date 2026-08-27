@@ -2,19 +2,19 @@
  * Ranksmile-style Facts pipeline — factual statements from DataForSEO People Also Ask.
  * No synthetic citation templates ("X czy warto?") — only real SERP questions + answers.
  */
-import { getPeopleAlsoAsk, isDataForSeoConfigured } from './dataforseo';
-import { hashId, type CoverageItem } from './aiCoverage';
-import { cached, TTL } from './cache/fileCache';
-import { isCorpusNoiseSentence } from './corpusNoiseFilter';
-import { resolveFactKeyword } from './resolveFactKeyword';
-import { isKeywordOnTopic, seedTokens } from './topicRelevance';
-import { isDictionaryQueryNoise } from './termUtils';
-import { factReadinessScore } from './factReadiness';
-import type { AiCitation, AiVisibilitySummary } from './aiSearchScore';
+import { getPeopleAlsoAsk, isDataForSeoConfigured } from '../dataforseo';
+import { hashId, type CoverageItem } from '../ai/aiCoverage';
+import { cached, TTL } from '../cache/fileCache';
+import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
+import { resolveFactKeyword } from '../resolveFactKeyword';
+import { isKeywordOnTopic, seedTokens } from '../topicRelevance';
+import { isDictionaryQueryNoise } from '../termUtils';
+import { factReadinessScore } from '../factReadiness';
+import type { AiCitation, AiVisibilitySummary } from '../ai/aiSearchScore';
 import type { ArticleFact } from './articleFactTypes';
 
 export type { ArticleFact, FactSourceKind } from './articleFactTypes';
-export { factReadinessScore } from './factReadiness';
+export { factReadinessScore } from '../factReadiness';
 
 export function splitFactSentences(text: string): string[] {
   return (text || '')

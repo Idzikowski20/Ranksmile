@@ -4,8 +4,8 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
-import { getSnapshot, weekStartFor, shiftWeek } from '../../../lib/gscSnapshots';
-import { computeDrops } from '../../../lib/gscDrops';
+import { getSnapshot, weekStartFor, shiftWeek } from '../../../lib/gsc/gscSnapshots';
+import { computeDrops } from '../../../lib/gsc/gscDrops';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

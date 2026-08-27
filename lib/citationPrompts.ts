@@ -1,5 +1,5 @@
-import type { CoverageItem } from './aiCoverage';
-import { hashId } from './aiCoverage';
+import type { CoverageItem } from './ai/aiCoverage';
+import { hashId } from './ai/aiCoverage';
 import { isNewCoverageIdsEnabled } from './featureFlags';
 import { normalizeTerm } from './termUtils';
 import { isKeywordOnTopic, seedTokens } from './topicRelevance';

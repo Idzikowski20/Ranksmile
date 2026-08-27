@@ -7,7 +7,7 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articleSql';
+import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
 import { buildGradedCoverageSnapshot } from '../../../lib/buildCoverageSnapshot';
 import { dedupePaaQuestions } from '../../../lib/curateCoverageItems';
@@ -21,9 +21,9 @@ import {
   hasMinCompetitorDomains,
   scaleTermRangesToWordCount,
 } from '../../../lib/competitorTermCalibration';
-import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
-import { computeOverallContentScore, resolveAiScore } from '../../../lib/aiSearchScore';
-import type { ArticleFact } from '../../../lib/articleFacts';
+import { runArticleAiPipeline } from '../../../lib/articles/articleAiPipeline';
+import { computeOverallContentScore, resolveAiScore } from '../../../lib/ai/aiSearchScore';
+import type { ArticleFact } from '../../../lib/articles/articleFacts';
 import { safeJsonParse } from '../../../lib/safeJson';
 import { carriedScoreData } from '../../../lib/carriedScoreData';
 
@@ -34,18 +34,18 @@ import {
   hostFromUrl,
   mergeNlpTerms,
   saveArticleKeywords,
-} from '../../../lib/articleKeywordDiscovery';
+} from '../../../lib/articles/articleKeywordDiscovery';
 import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPageKeyword';
 import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
-import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
+import { persistAiVisibilityRun } from '../../../lib/aiVisibility/aiVisibilityStore';
 import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
-import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
+import { AiVisibilitySummary } from '../../../lib/ai/aiSearchScore';
 import { sidecarBase, nextjsUrl } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
-import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
-import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
+import { resolveOrgId, orgBudgetBlocked } from '../../../lib/ai/aiBudget';
+import { getOrgUsage5h, recordAiTokens } from '../../../lib/ai/aiTokenUsage';
 import { getErrorMessage } from '../../../lib/errors';
 import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
 import { buildRankingSourcesPayload } from '../../../lib/rankingSources';
@@ -55,7 +55,7 @@ import { buildAuditResult, computeSeoScoreFromAudit } from '../../../lib/auditCo
 import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articleAnalysisStorage';
+import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articles/articleAnalysisStorage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
 

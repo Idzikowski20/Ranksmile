@@ -1,6 +1,6 @@
-import db from '../database/database';
-import { readLocalSCData } from '../utils/searchConsole';
-import { ensureGscSnapshotTables } from './ensureGscSnapshotTables';
+import db from '../../database/database';
+import { readLocalSCData } from '../../utils/searchConsole';
+import { ensureGscSnapshotTables } from '../ensureGscSnapshotTables';
 import { aggregateSevenDays } from './gscWeek';
 import type { SnapMap } from './gscDrops';
 
@@ -33,7 +33,7 @@ export async function captureWeeklySnapshot(domain: string, domainId: number, we
    }
 
    try {
-      const { emitObservations, observationsFromGscLowCtr } = await import('./emitObservations');
+      const { emitObservations, observationsFromGscLowCtr } = await import('../emitObservations');
       const pageRows = rows.map(([page, s]) => ({
          page,
          impressions: Math.round(s.impressions),

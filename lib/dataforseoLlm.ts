@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { withBreaker } from './circuitBreaker';
 import { locationCodeFor, isDataForSeoConfigured } from './dataforseo';
 import { toDfsLanguageCode } from './domainLanguagePrompts';
-import { filterCitations } from './aiVisibilityBlockedDomains';
+import { filterCitations } from './aiVisibility/aiVisibilityBlockedDomains';
 import { DFS_SERP_AI_ELEMENT } from './dataforseoBudget';
 
 const BASE = 'https://api.dataforseo.com/v3';

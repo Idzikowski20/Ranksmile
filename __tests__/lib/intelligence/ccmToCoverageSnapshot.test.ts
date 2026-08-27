@@ -1,6 +1,6 @@
 import { projectCcmToCoverageSnapshot } from '../../../lib/intelligence/ccmToCoverageSnapshot';
 import { compile } from '../../../lib/compiler/compile';
-import type { CoverageSnapshot } from '../../../lib/aiCoverage';
+import type { CoverageSnapshot } from '../../../lib/ai/aiCoverage';
 
 const FIXED_AT = '2026-08-03T12:00:00.000Z';
 

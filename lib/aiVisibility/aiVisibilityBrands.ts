@@ -5,9 +5,9 @@
  * chunk mirrors runScanChunk (resumable, idempotent, per-row best effort).
  */
 import { generateText } from 'ai';
-import { deepseek } from './ai/deepseek';
-import { queryOne, queryRows } from './db/query';
-import db from '../database/database';
+import { deepseek } from '../ai/deepseek';
+import { queryOne, queryRows } from '../db/query';
+import db from '../../database/database';
 import { buildBrandPrompt, parseBrandResponse, RawBrand } from './aiVisibilityBrandsPure';
 
 // Re-export pure helpers so callers keep a single import surface. Tests hit

@@ -2,19 +2,19 @@
 // Generates a ready-to-use brief from competitor structures + brand + AI gaps.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
-import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/aiBudget';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/ai/aiBudget';
 import type { CompetitorOutline } from '../../../components/articles/ResearchOutlinePanel';
 import { getErrorMessage } from '../../../lib/errors';
 import db from '../../../database/database';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articleSql';
+import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { queryOne } from '../../../lib/db/query';
 import { readContentSettings } from '../../../lib/contentSettings';
 import { getDomainVoices } from '../../../lib/domainVoices';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { safeJsonParse } from '../../../lib/safeJson';
-import type { CoverageSnapshot } from '../../../lib/aiCoverage';
+import type { CoverageSnapshot } from '../../../lib/ai/aiCoverage';
 import { resolveContentLocale, languageDisplayName } from '../../../lib/domainLanguage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { chatLlm } from '../../../lib/ai/deepseek';
@@ -137,7 +137,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const scoreData = articleId
       ? await (async () => {
           const { queryOne } = await import('../../../lib/db/query');
-          const { getArticleIdSql } = await import('../../../lib/articleSql');
+          const { getArticleIdSql } = await import('../../../lib/articles/articleSql');
           const idSql = await getArticleIdSql();
           const r = await queryOne<{ score_data: string | null }>(
             `SELECT score_data FROM articles WHERE ${idSql} = ? LIMIT 1`,

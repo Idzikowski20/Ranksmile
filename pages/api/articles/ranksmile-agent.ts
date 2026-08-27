@@ -14,7 +14,7 @@ import { extractJsonObject, isRanksmileReplyShape } from '../../../lib/ai/extrac
 import { splitRanksmileThinkingAndMessage, stripEmoji } from '../../../lib/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
-import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
+import { getOrgUsage5h, recordAiTokens } from '../../../lib/ai/aiTokenUsage';
 import type { ToolCtx } from '../../../lib/ai/types';
 import { getErrorMessage } from '../../../lib/errors';
 import { flushSse } from '../../../lib/types/api';

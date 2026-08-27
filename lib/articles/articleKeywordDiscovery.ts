@@ -3,18 +3,18 @@
  * Primary source: DataForSEO ranked keywords from SERP competitors.
  * GSC is validation-only (page queries that match the URL anchor).
  */
-import db from '../database/database';
-import { cached, TTL } from './cache/fileCache';
-import { enrichTerms, getOwnVisibleKeywords } from './seo/keywordData';
-import { getRankedKeywords, isDataForSeoConfigured } from './dataforseo';
-import { DFS_DEFAULT_RANKED_LIMIT } from './dataforseoBudget';
-import { computeRelevanceScore, checkCoverage } from './keywordEnrichment';
-import type { NlpTerm } from './contentScore';
-import { isWeakTermList } from './competitorTermCalibration';
-import { filterOnTopicTerms, isKeywordOnTopic } from './topicRelevance';
-import { isDictionaryQueryNoise } from './termUtils';
-import { keywordFromUrl, urlAnchorSeed } from './inferPageKeyword';
-import { kwScore } from '../utils/gsc';
+import db from '../../database/database';
+import { cached, TTL } from '../cache/fileCache';
+import { enrichTerms, getOwnVisibleKeywords } from '../seo/keywordData';
+import { getRankedKeywords, isDataForSeoConfigured } from '../dataforseo';
+import { DFS_DEFAULT_RANKED_LIMIT } from '../dataforseoBudget';
+import { computeRelevanceScore, checkCoverage } from '../keywordEnrichment';
+import type { NlpTerm } from '../contentScore';
+import { isWeakTermList } from '../competitorTermCalibration';
+import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';
+import { isDictionaryQueryNoise } from '../termUtils';
+import { keywordFromUrl, urlAnchorSeed } from '../inferPageKeyword';
+import { kwScore } from '../../utils/gsc';
 
 export type DiscoveredKeyword = {
   keyword: string;

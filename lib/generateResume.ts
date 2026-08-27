@@ -1,4 +1,4 @@
-import { isUsableArticleHtml } from './articleHtmlUsable';
+import { isUsableArticleHtml } from './articles/articleHtmlUsable';
 
 /**
  * Resume rules for /articles/generating:

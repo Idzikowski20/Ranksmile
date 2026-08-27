@@ -10,7 +10,7 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { getWorkspace } from '../../../lib/workspaces';
 import { getErrorMessage } from '../../../lib/errors';
-import { mergeGscProperty } from '../../../lib/gscProperty';
+import { mergeGscProperty } from '../../../lib/gsc/gscProperty';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

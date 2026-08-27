@@ -1,5 +1,5 @@
-import type { CoverageItem, LlmCoverageSource } from './aiCoverage';
-import type { ArticleFact } from './articleFactTypes';
+import type { CoverageItem, LlmCoverageSource } from './ai/aiCoverage';
+import type { ArticleFact } from './articles/articleFactTypes';
 import {
   citationIntentItems,
   citationItemId,

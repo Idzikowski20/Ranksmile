@@ -1,7 +1,7 @@
-import db from '../database/database';
-import { CoverageItem, CoverageSource, hashId } from './aiCoverage';
+import db from '../../database/database';
+import { CoverageItem, CoverageSource, hashId } from '../ai/aiCoverage';
 
-export { isUsefulTerm, normalizeTerm, dedupeUsefulTerms } from './termUtils';
+export { isUsefulTerm, normalizeTerm, dedupeUsefulTerms } from '../termUtils';
 
 export type ArticleTerm = {
    term: string;

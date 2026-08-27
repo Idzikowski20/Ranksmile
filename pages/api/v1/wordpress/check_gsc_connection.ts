@@ -5,7 +5,7 @@
 // only once 30 days of data has been scraped.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authPluginRequest } from '../../../../lib/wpConnection';
-import { getAccountsForUser } from '../../../../lib/gscAccounts';
+import { getAccountsForUser } from '../../../../lib/gsc/gscAccounts';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

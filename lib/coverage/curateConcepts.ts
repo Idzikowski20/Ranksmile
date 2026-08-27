@@ -1,4 +1,4 @@
-import type { CoverageItem, Importance } from '../aiCoverage';
+import type { CoverageItem, Importance } from '../ai/aiCoverage';
 import { normalizeTerm } from '../termUtils';
 
 export type TermLike = {

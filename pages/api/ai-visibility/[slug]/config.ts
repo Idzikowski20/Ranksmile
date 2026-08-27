@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { AiVisConfig, AiVisTopic, AI_VIS_DEFAULT_MODELS, AI_VIS_PROMPT_LIMIT, sanitizeModels, normalizeAiVisPriority, type AiVisPriority } from '../../../../lib/aiVisibility';
+import { AiVisConfig, AiVisTopic, AI_VIS_DEFAULT_MODELS, AI_VIS_PROMPT_LIMIT, sanitizeModels, normalizeAiVisPriority, type AiVisPriority } from '../../../../lib/aiVisibility/aiVisibility';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type ConfigRow = { id: number, brand_name: string, prompt_limit: number, models: string | null, completed_at: string | null, priority: string | null };

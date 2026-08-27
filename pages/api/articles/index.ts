@@ -9,7 +9,7 @@ import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceErr
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
-import { getArticleIdSql } from '../../../lib/articleSql';
+import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, type ArticleRow } from '../../../lib/db/query';
 import type { SqlReplacements } from '../../../lib/types/db';
