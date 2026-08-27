@@ -1,4 +1,4 @@
-import { hasActiveBillingEntitlement } from '../../lib/billingEntitlement';
+import { hasActiveBillingEntitlement } from '../../lib/billing/billingEntitlement';
 
 describe('hasActiveBillingEntitlement', () => {
   const now = new Date('2026-07-27T12:00:00Z');

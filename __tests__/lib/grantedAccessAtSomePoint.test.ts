@@ -1,5 +1,5 @@
-import { grantedAccessAtSomePoint } from '../../lib/billingEverSubscribed';
-import type { EverSubscribedInput } from '../../lib/billingEverSubscribed';
+import { grantedAccessAtSomePoint } from '../../lib/billing/billingEverSubscribed';
+import type { EverSubscribedInput } from '../../lib/billing/billingEverSubscribed';
 
 type Billing = Parameters<typeof grantedAccessAtSomePoint>[0];
 

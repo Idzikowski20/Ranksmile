@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { formatMoney } from './subscriptionFormat';
+import { formatMoney } from '../subscriptionFormat';
 
 export type BillingInvoiceStatus = 'paid' | 'open' | 'draft' | 'void' | 'uncollectible' | 'unknown';
 

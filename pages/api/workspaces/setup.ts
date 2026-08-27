@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { createSetupWorkspace } from '../../../lib/workspaces';
-import { BillingSource, emitBillingEvent, ensureCorrelationId } from '../../../lib/billingAudit';
+import { BillingSource, emitBillingEvent, ensureCorrelationId } from '../../../lib/billing/billingAudit';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

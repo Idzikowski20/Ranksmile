@@ -2,7 +2,7 @@ import {
   formatPaymentMethodLabel,
   mapStripeInvoice,
   type BillingInvoice,
-} from '../../billingInvoiceModel';
+} from '../../billing/billingInvoiceModel';
 import type { InvoiceRepository } from '../../repositories/billing/invoiceRepository';
 
 /**

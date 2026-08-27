@@ -9,12 +9,12 @@ import {
   syncSubscriptionToOrg,
 } from '../../../lib/stripeBillingSync';
 import { getOrgBillingState, getOrgIdByStripeCustomerId, updateOrgBillingState } from '../../../lib/orgBilling';
-import { BillingSource, ensureCorrelationId } from '../../../lib/billingAudit';
+import { BillingSource, ensureCorrelationId } from '../../../lib/billing/billingAudit';
 import db from '../../../database/database';
-import { getCheckoutPlan } from '../../../lib/billingPlans';
+import { getCheckoutPlan } from '../../../lib/billing/billingPlans';
 import { getAppOrigin } from '../../../lib/appOrigin';
-import { claimBillingEmailAndEnqueue } from '../../../lib/billingEmailClaim';
-import { shouldSendAbandonedForSubscription } from '../../../lib/billingAbandoned';
+import { claimBillingEmailAndEnqueue } from '../../../lib/billing/billingEmailClaim';
+import { shouldSendAbandonedForSubscription } from '../../../lib/billing/billingAbandoned';
 import {
   EMAIL_JOB_TYPE_ABANDONED_CHECKOUT,
   EMAIL_JOB_TYPE_PAYMENT_FAILED,
@@ -200,7 +200,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const orgId = await resolveOrgId(stripe, setupIntent.metadata, setupIntent.customer);
         const userId = setupIntent.metadata?.user_id;
         if (!orgId || !userId) break;
-        const { activateTrialFromSetupIntent } = await import('../../../lib/billingActivateTrial');
+        const { activateTrialFromSetupIntent } = await import('../../../lib/billing/billingActivateTrial');
         const result = await activateTrialFromSetupIntent(stripe, {
           orgId,
           userId,

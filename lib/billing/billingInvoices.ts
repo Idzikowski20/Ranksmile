@@ -1,6 +1,6 @@
 import type { BillingInvoice } from './billingInvoiceModel';
-import { createStripeInvoiceRepository } from './repositories/billing/invoiceRepository';
-import { listOrgBillingInvoices as listOrgBillingInvoicesUseCase } from './use-cases/billing/listOrgBillingInvoices';
+import { createStripeInvoiceRepository } from '../repositories/billing/invoiceRepository';
+import { listOrgBillingInvoices as listOrgBillingInvoicesUseCase } from '../use-cases/billing/listOrgBillingInvoices';
 
 export type {
   BillingInvoice,

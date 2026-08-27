@@ -18,7 +18,7 @@ import {
 } from './index';
 import { OnboardingStatusContext } from '../onboardingStatus';
 import { EmailConfirmedStatusContext } from '../emailConfirmedStatus';
-import { logOnboardingRedirect } from '../billingAuditShared';
+import { logOnboardingRedirect } from '../billing/billingAuditShared';
 import AppLoading from '../../components/common/AppLoading';
 
 const BOOTSTRAP_STALE_MS = 5 * 60_000;

@@ -1,5 +1,5 @@
 import db from '../../database/database';
-import { BillingSource } from '../billingAudit';
+import { BillingSource } from '../billing/billingAudit';
 import { ensureBillingTables } from '../ensureBillingTables';
 import {
   getOrgBillingState,

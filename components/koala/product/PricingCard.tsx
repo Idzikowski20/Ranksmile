@@ -8,7 +8,7 @@ import type {
   PlanSlug,
 } from '../../../lib/pricing/planDefinition';
 import { ctaLabel } from '../../../lib/pricing/planDefinition';
-import type { BillingPeriod } from '../../../lib/billingPlans';
+import type { BillingPeriod } from '../../../lib/billing/billingPlans';
 import { semantic } from '../tokens/semantic';
 import { typeface, textScale, fontWeight } from '../tokens/typography';
 import { spacing } from '../tokens/spacing';

@@ -1,8 +1,8 @@
 /**
  * Server billing observability — ledger writes. Import only from API / lib server paths.
  */
-import db from '../database/database';
-import { ensureBillingTables } from './ensureBillingTables';
+import db from '../../database/database';
+import { ensureBillingTables } from '../ensureBillingTables';
 import {
   ensureCorrelationId,
   isBillingAuditLogEnabled,

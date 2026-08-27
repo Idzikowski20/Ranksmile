@@ -1,8 +1,8 @@
-import type { BillingPeriod } from './billingPlans';
-import { getCheckoutPlan, getLegacyCheckoutPlan, getPlanPeriodPrice } from './billingPlans';
-import { hasActiveBillingEntitlement } from './billingEntitlement';
-import { getLockedCheckoutPlanSlug } from './billingPlanLock';
-import { isTrialEligible } from './billingTrial';
+import type { BillingPeriod } from './billing/billingPlans';
+import { getCheckoutPlan, getLegacyCheckoutPlan, getPlanPeriodPrice } from './billing/billingPlans';
+import { hasActiveBillingEntitlement } from './billing/billingEntitlement';
+import { getLockedCheckoutPlanSlug } from './billing/billingPlanLock';
+import { isTrialEligible } from './billing/billingTrial';
 import { getOrgBillingState, type OrgBillingState, type SubscriptionStatus } from './orgBilling';
 import { DEFAULT_PLAN_SLUG, resolvePlanSlug } from './planLimits';
 import type { UpcomingPaymentDetails } from './subscriptionFormat';

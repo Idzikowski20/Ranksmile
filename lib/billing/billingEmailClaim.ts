@@ -1,12 +1,12 @@
 import type { Transaction } from 'sequelize';
-import db from '../database/database';
-import { ensureBillingEmailTables } from './ensureBillingEmailTables';
-import { ensureNotificationEmailTables } from './ensureNotificationEmailTables';
+import db from '../../database/database';
+import { ensureBillingEmailTables } from '../ensureBillingEmailTables';
+import { ensureNotificationEmailTables } from '../ensureNotificationEmailTables';
 import {
   EMAIL_MAX_ATTEMPTS,
   billingEmailIdempotencyKey,
   type BillingEmailEventType,
-} from './notifications/emailTypes';
+} from '../notifications/emailTypes';
 
 export type ClaimBillingEmailResult =
   | { claimed: true; dbJobId: number; idempotencyKey: string }
