@@ -9,7 +9,7 @@ import type { OptimizePhase } from './optimizeRunPhase';
 import type { EditMode, StepFocus } from './optimizationPlanner';
 import { buildEffortOptimizeGuidance } from './contentEffort';
 import { buildWhatsMissingOptimizeGuidance } from './contentScore';
-import { countOccurrences } from './termMatch';
+import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 import { STOP_SLOP_RULES } from './stopSlopPrompt';
 import { isUncoveredAiSearchItem } from './ai/aiCoverage';
 

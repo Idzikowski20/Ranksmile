@@ -1,5 +1,5 @@
 import { normalizeUrlForMatch } from '../utils/gsc';
-import { tokenize } from './termMatch';
+import { tokenize } from '@/src/core/domain/terms/termMatch';
 import { isDictionaryQueryNoise } from './termUtils';
 import { isKeywordOnTopic } from './topicRelevance';
 

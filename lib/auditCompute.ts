@@ -6,7 +6,7 @@
 import { load } from 'cheerio';
 import { assertPublicUrl } from './ssrfGuard';
 import { findTermRangesBatch, ScoreData, computeContentScore } from './contentScore';
-import { countOccurrences } from './termMatch';
+import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 import {
    auditContentScore,
    termCoverageFraction,

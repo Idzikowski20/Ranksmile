@@ -19,7 +19,7 @@ import { DFS_DEFAULT_KEYWORD_LIMIT, DFS_DEFAULT_RANKED_LIMIT } from '../datafors
 import { readLocalSCData } from '../../utils/searchConsole';
 import { AiVisibilitySummary } from '../ai/aiSearchScore';
 import { CoverageItem, hashId } from '../ai/aiCoverage';
-import { normalizePl, tokenize } from '../termMatch';
+import { normalizePl, tokenize } from '@/src/core/domain/terms/termMatch';
 import { isUsefulTerm, isDictionaryQueryNoise } from '../termUtils';
 import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';
 import { throwIfAborted } from '../abortSignal';

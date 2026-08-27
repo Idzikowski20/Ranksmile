@@ -1,4 +1,4 @@
-import { countOccurrences } from '../../lib/termMatch';
+import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 import { filterUsefulNlpTerms } from '../../lib/competitorTermCalibration';
 import type { NlpTerm } from '../../lib/contentScore';
 

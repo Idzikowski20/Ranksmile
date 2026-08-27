@@ -2,7 +2,7 @@
  * Content Effort signals — proxies for "hard to cheaply replicate", not AI detection.
  * Used by Content Score slots, Pre-Publish checklist, and domain portfolio insights.
  */
-import { countOccurrences, tokenize, wordMatch } from './termMatch';
+import { countOccurrences, tokenize, wordMatch } from '@/src/core/domain/terms/termMatch';
 
 export type EffortSignalKey =
    | 'original_data'
