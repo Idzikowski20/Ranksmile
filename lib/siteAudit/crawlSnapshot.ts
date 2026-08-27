@@ -191,7 +191,7 @@ export type CrawlVsPreviousDeltas = {
   warningsDelta: number | null;
 };
 
-export { crawlVsPreviousDeltas } from './crawlDeltas';
+export { crawlVsPreviousDeltas } from '@/src/core/domain/siteAudit/crawlDeltas';
 
 /** Second-newest snapshot metrics for domain (null if <2 crawls). */
 export async function getPreviousCrawlMetrics(
