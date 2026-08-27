@@ -33,6 +33,9 @@ implements domain ports; domain never imports it.
   infrastructure, `pages`, Stripe, Sequelize, Next.js, Redis.
 - Infrastructure may import domain/application/shared/lib + any SDK, but must not be
   imported by domain or application.
+- **Transitional carve-out:** core may import **type-only** declarations from
+  `lib/types/**` (a pure, runtime-free type barrel). Everything else in `lib/` stays
+  forbidden. These types fold into `src/core` during the lib-extraction phase.
 
 Run it via `npm run test:arch` (alongside the CIA-zone boundary test).
 
