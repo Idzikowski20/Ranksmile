@@ -1,0 +1,25 @@
+components/onboarding/OrganizationProfileStep.tsx
+  s_e3556ba0769b4b::t_cdcf9282fc7911 3
+__tests__/api/organization.test.ts
+  s_e3556ba0769b4b::t_cdcf9282fc7911 3
+components/settings/OrganizationGeneralSettings.tsx
+  s_e3556ba0769b4b::t_cdcf9282fc7911 3
+pages/api/organization.ts
+  s_e3556ba0769b4b::t_cdcf9282fc7911 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "da47dd9055c39924441b7e8506ff54601960a155",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
