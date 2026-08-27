@@ -1,0 +1,25 @@
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_2225f550f8cc74 60
+pages/api/articles/job-progress.ts
+  s_e3556ba0769b4b::t_2225f550f8cc74 13
+__tests__/api/articles-deep-analysis-errors.test.ts
+  s_e3556ba0769b4b::t_2225f550f8cc74 7
+__tests__/lib/deepAnalysisErrors.test.ts
+  s_e3556ba0769b4b::t_2225f550f8cc74 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "fc9dbf7604b61b749a7b6ec2ad8ddf1ab3465266",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
