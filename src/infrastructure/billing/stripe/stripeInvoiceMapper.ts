@@ -1,54 +1,16 @@
 import type Stripe from 'stripe';
-import { formatMoney } from '@/src/core/shared/money';
+import { formatMoney } from '../../../core/shared/money';
+import {
+  mapInvoiceStatus,
+  STATUS_LABEL,
+  type BillingInvoice,
+  type BillingInvoiceLine,
+} from '../../../core/domain/billing/invoice';
 
-export type BillingInvoiceStatus = 'paid' | 'open' | 'draft' | 'void' | 'uncollectible' | 'unknown';
-
-export type BillingInvoiceLine = {
-  id: string;
-  description: string;
-  quantity: number;
-  amountCents: number;
-  amountLabel: string;
-};
-
-export type BillingInvoice = {
-  id: string;
-  number: string;
-  status: BillingInvoiceStatus;
-  statusLabel: string;
-  currency: string;
-  totalCents: number;
-  totalLabel: string;
-  subtotalCents: number;
-  subtotalLabel: string;
-  taxCents: number;
-  taxLabel: string;
-  createdAt: string;
-  createdLabel: string;
-  periodStart: string | null;
-  periodEnd: string | null;
-  periodLabel: string | null;
-  pdfUrl: string | null;
-  hostedUrl: string | null;
-  lines: BillingInvoiceLine[];
-  paymentMethodLabel: string | null;
-};
-
-const STATUS_LABEL: Record<BillingInvoiceStatus, string> = {
-  paid: 'Paid',
-  open: 'Open',
-  draft: 'Draft',
-  void: 'Void',
-  uncollectible: 'Failed',
-  unknown: 'Unknown',
-};
-
-export function mapInvoiceStatus(status: Stripe.Invoice.Status | null): BillingInvoiceStatus {
-  if (status === 'paid' || status === 'open' || status === 'draft' || status === 'void' || status === 'uncollectible') {
-    return status as BillingInvoiceStatus;
-  }
-  return 'unknown';
-}
+/**
+ * Infrastructure adapter: the ONLY place that reads Stripe.Invoice shapes and
+ * turns them into the vendor-free BillingInvoice domain entity.
+ */
 
 function formatDateLabel(unix: number): string {
   return new Date(unix * 1000).toLocaleDateString('en-US', {
@@ -149,32 +111,4 @@ export function mapStripeInvoice(
     lines,
     paymentMethodLabel,
   };
-}
-
-export type InvoiceDateGroup = {
-  label: string;
-  invoices: BillingInvoice[];
-};
-
-export function groupInvoicesByDate(invoices: BillingInvoice[], now = new Date()): InvoiceDateGroup[] {
-  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const today = startOf(now);
-  const yesterday = today - 86_400_000;
-  const buckets = new Map<string, BillingInvoice[]>();
-
-  for (const inv of invoices) {
-    const t = startOf(new Date(inv.createdAt));
-    let label: string;
-    if (t === today) label = 'Today';
-    else if (t === yesterday) label = 'Yesterday';
-    else {
-      const d = new Date(inv.createdAt);
-      label = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-    }
-    const list = buckets.get(label) ?? [];
-    list.push(inv);
-    buckets.set(label, list);
-  }
-
-  return Array.from(buckets.entries()).map(([label, rows]) => ({ label, invoices: rows }));
 }
