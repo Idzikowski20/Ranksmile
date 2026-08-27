@@ -1,0 +1,21 @@
+pages/api/articles/ask-ranksmile.ts
+  s_e3556ba0769b4b::t_84a32a74385df1 8-9
+lib/ai/systemPrompt.ts
+  s_e3556ba0769b4b::t_84a32a74385df1 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "259dd8005bd94fcb583153f5ee1e2856687a3e49",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
