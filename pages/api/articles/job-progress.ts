@@ -10,7 +10,7 @@ import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership'
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
-import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
+import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
 import { safeJsonParse } from '../../../lib/safeJson';
 import { MAX_STREAM_CHARS } from '../../../lib/streamText';
 import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
