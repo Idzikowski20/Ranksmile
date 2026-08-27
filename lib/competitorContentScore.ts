@@ -3,7 +3,7 @@
  * Server fetch + HTML parsing lives in auditCompute / competitorAuditScore.
  */
 import { countOccurrences } from '@/src/core/domain/terms/termMatch';
-import { termSalienceWeight } from './termSalienceCore';
+import { termSalienceWeight } from '@/src/core/domain/terms/salienceCore';
 
 export interface RichTerm {
   term: string;

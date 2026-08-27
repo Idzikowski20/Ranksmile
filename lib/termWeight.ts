@@ -3,7 +3,7 @@
  * Prefer SERP prevalence over local salience alone.
  */
 import type { NlpTerm } from './contentScore';
-import { termSalienceWeight } from './termSalienceCore';
+import { termSalienceWeight } from '@/src/core/domain/terms/salienceCore';
 
 export type TermWeightInput = {
   term: string;
