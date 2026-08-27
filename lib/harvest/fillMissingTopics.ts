@@ -1,4 +1,4 @@
-import { languageInstructionForLlm } from '../domainLanguagePrompts';
+import { languageInstructionForLlm } from '@/src/core/shared/language';
 import { normalizeTerm } from '../termUtils';
 import { safeJsonParse } from '../safeJson';
 import { chatLlm } from '../ai/deepseek';

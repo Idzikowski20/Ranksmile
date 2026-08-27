@@ -4,7 +4,7 @@
  */
 import { generateText } from 'ai';
 import { chatLlm, deepseek } from './ai/deepseek';
-import { languageInstructionForLlm } from './domainLanguagePrompts';
+import { languageInstructionForLlm } from '@/src/core/shared/language';
 import { computeTopicalCohesion } from './contentEffort';
 import type {
    TopicCluster,

@@ -11,7 +11,7 @@ import axios from 'axios';
 import { z } from 'zod';
 import { withBreaker } from './circuitBreaker';
 import { locationCodeFor, isDataForSeoConfigured } from './dataforseo';
-import { toDfsLanguageCode } from './domainLanguagePrompts';
+import { toDfsLanguageCode } from '@/src/core/shared/language';
 import { filterCitations } from '@/src/core/domain/aiVisibility/blockedDomains';
 import { DFS_SERP_AI_ELEMENT } from './dataforseoBudget';
 
