@@ -5,7 +5,7 @@
 import { queryRows, queryOne } from '../db/query';
 import { ResultRow, BrandMention } from './aiVisibilityMetrics';
 import type { LlmCitation } from '../dataforseoLlm';
-import { filterCitations } from './aiVisibilityBlockedDomains';
+import { filterCitations } from '@/src/core/domain/aiVisibility/blockedDomains';
 
 export type DbResultRow = {
    prompt_id: number; model: string; own_cited: number; own_position: number | null;

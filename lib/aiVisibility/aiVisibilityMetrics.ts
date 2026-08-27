@@ -9,7 +9,7 @@
  *   directCitations = count of own-domain citation entries; pages = distinct own URLs
  */
 import { computeOverview, ownDomainPosition, mean, pairScore } from './aiVisibilityMetricsOverview';
-import { BLOCKED_CITATION_DOMAINS, isBlockedCitationDomain } from './aiVisibilityBlockedDomains';
+import { BLOCKED_CITATION_DOMAINS, isBlockedCitationDomain } from '@/src/core/domain/aiVisibility/blockedDomains';
 import type {
   GapCard,
   ResultRow,

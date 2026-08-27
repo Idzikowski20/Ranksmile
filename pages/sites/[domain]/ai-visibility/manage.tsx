@@ -11,7 +11,7 @@ import { slugToDomain } from '../../../../utils/slugToDomain';
 import PromptSelector from '../../../../components/aiVisibility/PromptSelector';
 import type { WizardTopic, WizardPrompt } from '../../../../components/aiVisibility/wizardTypes';
 import { useAiVisConfig, useSaveAiVisConfig, useStartAiVisScan, useGeneratePrompts } from '../../../../services/aiVisibility';
-import { AI_VIS_PROMPT_LIMIT, type AiVisPriority } from '../../../../lib/aiVisibility/aiVisibility';
+import { AI_VIS_PROMPT_LIMIT, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
 
 const FONT = 'var(--font-family-primary)';
 

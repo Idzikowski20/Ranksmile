@@ -15,7 +15,7 @@ import { queryOne, queryRows } from '../db/query';
 import { runModelPrompt, AiModel } from '../dataforseoLlm';
 import { getDomainLocale } from '../domainLanguage';
 import { ownDomainPosition } from './aiVisibilityMetrics';
-import { sanitizeModels, AI_VIS_CONCURRENCY, AI_VIS_HARD_CAP_PAIRS, AI_VIS_SCAN_STALE_MS, AI_VIS_SETTINGS } from './aiVisibility';
+import { sanitizeModels, AI_VIS_CONCURRENCY, AI_VIS_HARD_CAP_PAIRS, AI_VIS_SCAN_STALE_MS, AI_VIS_SETTINGS } from '@/src/core/domain/aiVisibility/config';
 
 type Exec = (sql: string, replacements?: unknown[]) => Promise<[unknown[], number]>;
 
