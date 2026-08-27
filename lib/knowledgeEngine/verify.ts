@@ -1,4 +1,4 @@
-import type { KnowledgeGraph, VerifierIssue, VerifierResult } from './types';
+import type { KnowledgeGraph, VerifierIssue, VerifierResult } from '@/src/core/domain/knowledgeEngine/types';
 
 export function verifyKnowledgeGraph(graph: Omit<KnowledgeGraph, 'verifier'> & { verifier?: VerifierResult }): VerifierResult {
   const issues: VerifierIssue[] = [];

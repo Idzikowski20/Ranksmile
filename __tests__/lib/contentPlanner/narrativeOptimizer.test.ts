@@ -2,7 +2,7 @@ import { optimizeNarrative } from '../../../lib/contentPlanner/narrativeOptimize
 import { validatePlannerPlan } from '../../../lib/contentPlanner/plannerValidator';
 import { runPlannerImproveLoop } from '../../../lib/contentPlanner/planningLoop';
 import type { IntentBlueprint, AdaptiveOutline, SectionBrief, TargetKnowledgeGraph, ArticleBlueprint } from '../../../lib/contentPlanner/types';
-import type { TopicBlock } from '../../../lib/knowledgeEngine/types';
+import type { TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
 
 const intent: IntentBlueprint = {
   keyword: 'jak pozycjonować stronę',

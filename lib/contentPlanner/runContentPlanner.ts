@@ -37,7 +37,7 @@ import type {
   CompetitorBenchmark, ContentPlannerBundle, ValidationIssue, ValidationResult,
 } from './types';
 import { KNOWLEDGE_COVERAGE_MIN_PCT } from './types';
-import type { KnowledgeGraph, TopicBlock } from '../knowledgeEngine/types';
+import type { KnowledgeGraph, TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
 import { knowledgeGraphToTargetKg } from '../knowledgeEngine/toTargetKg';
 import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
 

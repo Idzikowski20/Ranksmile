@@ -13,7 +13,7 @@ import type {
   KnowledgeCoverageReport,
   KnowledgeGraph,
   WriterQualityMetrics,
-} from './types';
+} from '@/src/core/domain/knowledgeEngine/types';
 
 const COVERED_MIN = 0.82;
 const PARTIAL_MIN = 0.55;

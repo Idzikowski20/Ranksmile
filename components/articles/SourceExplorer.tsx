@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import DomainFavicon from '../common/DomainFavicon';
-import type { CanonicalClaim, ClaimEvidence, SourceDiversity } from '../../lib/knowledgeEngine/types';
+import type { CanonicalClaim, ClaimEvidence, SourceDiversity } from '@/src/core/domain/knowledgeEngine/types';
 
 const F = 'var(--font-family-primary)';
 

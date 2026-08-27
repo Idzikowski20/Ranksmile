@@ -2,7 +2,7 @@
  * Narrative Optimizer — Topic Blocks + intent → ordered outline seeds.
  * Prefer action-first for step-by-step; never inject product-SEO meta H2s.
  */
-import type { TopicBlock } from '../knowledgeEngine/types';
+import type { TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
 import type { IntentBlueprint } from './types';
 import { headingFillersFromCompetitors, isSeoMetaHeading } from './sectionLabels';
 

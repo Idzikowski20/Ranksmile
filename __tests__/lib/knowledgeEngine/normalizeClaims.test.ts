@@ -1,7 +1,7 @@
 // Batched now, so the fall-back path rebuilds the array from its slices: the contract is
 // that every claim comes back unchanged, not that it is the very same array object.
 import { normalizeClaims } from '../../../lib/knowledgeEngine/normalizeClaims';
-import type { CanonicalClaim, ClaimEvidence } from '../../../lib/knowledgeEngine/types';
+import type { CanonicalClaim, ClaimEvidence } from '@/src/core/domain/knowledgeEngine/types';
 
 function evidence(url: string): ClaimEvidence {
   const domain = new URL(url).hostname;
