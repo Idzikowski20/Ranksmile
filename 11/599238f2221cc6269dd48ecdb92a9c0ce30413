@@ -1,0 +1,29 @@
+lib/corpus/corpusService.ts
+  s_e3556ba0769b4b::t_e505aabcf94c84 233
+__tests__/lib/keywordArticleIntentGate.test.ts
+  s_e3556ba0769b4b::t_e505aabcf94c84 1
+__tests__/lib/pipelineV7.engines.test.ts
+  s_e3556ba0769b4b::t_e505aabcf94c84 11,14
+lib/engines/corpusDiff.ts
+  s_e3556ba0769b4b::t_e505aabcf94c84 4
+lib/harvestAiCoverage.ts
+  s_e3556ba0769b4b::t_e505aabcf94c84 16
+lib/workers/embeddings/index.ts
+  s_e3556ba0769b4b::t_e505aabcf94c84 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "11599238f2221cc6269dd48ecdb92a9c0ce30413",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
