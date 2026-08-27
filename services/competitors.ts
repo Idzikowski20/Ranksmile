@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, UseQueryResult, UseMutationResult } from 'react-query';
 import toast from 'react-hot-toast';
-import type { CompetitorDTO } from '../lib/competitorTypes';
+import type { CompetitorDTO } from '@/src/core/domain/competitors/competitor';
 
 /** Single fetch+parse+error helper — mirrors services/auditTool.ts so every hook
  *  throws Error(message-from-server) and react-query onError can toast it uniformly. */
