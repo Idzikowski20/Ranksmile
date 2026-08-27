@@ -1,0 +1,55 @@
+pages/sites/[domain]/ai-visibility/setup.tsx
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 13
+pages/sites/[domain]/ai-visibility/prompts.tsx
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 9
+__tests__/lib/aiVisibilityBlockedDomains.test.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 1
+pages/sites/[domain]/ai-visibility/competitors.tsx
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 9
+pages/sites/[domain]/ai-visibility/overview.tsx
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 11
+pages/sites/[domain]/ai-visibility/sources.tsx
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 11
+components/aiVisibility/SourceDetailModal.tsx
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 7
+lib/useAiVisibilityGuard.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 4
+pages/api/ai-visibility/[slug]/config.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 9
+pages/sites/[domain]/ai-visibility/manage.tsx
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 14
+lib/aiVisibility/aiVisibilityScan.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 18
+pages/sites/[domain]/ai-visibility/fanout-queries.tsx
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 10
+lib/dataforseoLlm.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 15
+pages/api/ai-visibility/[slug]/scan.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 11
+lib/aiVisibility/aiVisibilityRead.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 8
+components/aiVisibility/AiVisDetailModal.tsx
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 5
+services/aiVisibility.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 3
+pages/api/ai-visibility/[slug]/data.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 11
+lib/aiVisibility/aiVisibilityMetrics.ts
+  s_e3556ba0769b4b::t_d71ecc9dde48e1 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3ab8a118a00932cd515b7e2e305a66285eeba00e",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
