@@ -1,0 +1,45 @@
+pages/api/cron/daily.ts
+  s_e3556ba0769b4b::t_b4c6231ef1b8a3 8-9
+  s_e3556ba0769b4b::t_81087fa8bc1d40 83-84
+lib/gsc/gscDigestEmail.ts
+  s_e3556ba0769b4b::t_e623f0605ab392 1
+lib/gsc/gscSnapshots.ts
+  s_e3556ba0769b4b::t_b4bd1a6d963c0b 4-5,8
+__tests__/src/core/application/gsc/getWeeklyDrops.test.ts
+  s_e3556ba0769b4b::t_28dbfd2b4f146d 1-29
+src/core/domain/gsc/week.ts
+  s_e3556ba0769b4b::t_7ce67d0a9266c0 1
+src/infrastructure/gsc/snapshotRepository.ts
+  s_e3556ba0769b4b::t_578b2fe6d9a5d9 1-13
+src/core/application/gsc/getWeeklyDrops.ts
+  s_e3556ba0769b4b::t_df81cac77287ab 1-4,8-16,18-23,25
+  s_e3556ba0769b4b::t_ea5e1fe7c8fb41 5-7,17,24
+__tests__/lib/gscDrops.test.ts
+  s_e3556ba0769b4b::t_e2c3957a98dbf4 1
+src/composition/gsc.ts
+  s_e3556ba0769b4b::t_6d5d0627cae6f2 1,5
+  s_e3556ba0769b4b::t_50e3f453d003fe 2-4,6-7
+src/core/domain/gsc/snapshotRepository.ts
+  s_e3556ba0769b4b::t_a45853bdfe51a1 1-10
+__tests__/lib/gscWeek.test.ts
+  s_e3556ba0769b4b::t_993caca8004ab9 1
+pages/api/gsc/traffic-alerts.ts
+  s_e3556ba0769b4b::t_e6f22fb72fe934 24,27-28
+  s_e3556ba0769b4b::t_33401330856386 7-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6a1dd124bc387ab58d01284c4978d6b1d9110506",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
