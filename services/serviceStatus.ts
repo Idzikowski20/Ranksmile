@@ -1,5 +1,5 @@
 import { useQuery } from 'react-query';
-import { buildServiceStatus, type ReadyFlags, type ServiceStatusView } from '../lib/serviceStatus';
+import { buildServiceStatus, type ReadyFlags, type ServiceStatusView } from '@/src/core/shared/serviceStatus';
 
 const KEY = 'service-status';
 
