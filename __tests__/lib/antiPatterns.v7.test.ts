@@ -138,7 +138,7 @@ describe('v7 anti-pattern guards', () => {
     it('workers and pipelineQueue do not SQL serp_corpora', () => {
       const files = [
         ...walkTsFiles(path.join(ROOT, 'lib/workers')),
-        path.join(ROOT, 'lib/pipeline/pipelineQueue.ts'),
+        path.join(ROOT, 'src/infrastructure/pipeline/pipelineQueue.ts'),
       ];
       const banned = [/serp_corpora/i, /INSERT\s+INTO\s+serp_/i, /FROM\s+serp_fingerprints/i];
       for (const file of files) {
