@@ -1,4 +1,4 @@
-import type { ScoreFactor } from './factors';
+import type { ScoreFactor } from '@/src/core/domain/aiScore/factors';
 import { scoreIntroduction } from './introductionFactors';
 
 type ScoreDataLike = {

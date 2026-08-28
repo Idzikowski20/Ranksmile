@@ -1,4 +1,4 @@
-import type { FactorName, ScoreFactor } from './factors';
+import type { FactorName, ScoreFactor } from '@/src/core/domain/aiScore/factors';
 
 /** Surfer judges the opening hard; only the first few sentences count as introduction. */
 const INTRO_SENTENCE_LIMIT = 6;
