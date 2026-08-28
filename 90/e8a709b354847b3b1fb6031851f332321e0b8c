@@ -1,0 +1,207 @@
+src/infrastructure/siteAudit/buildIssueDetail.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_8c1df220158759 15-16
+src/infrastructure/rankTracking/snapshotQueries.ts
+  s_e3556ba0769b4b::t_8c1df220158759 2
+components/articles/ArticleGenerationSkeleton.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 2
+pages/api/rank-tracking/[slug]/analytics.ts
+  s_e3556ba0769b4b::t_8c1df220158759 5
+lib/intelligence/llmGapFacts.ts
+  s_e3556ba0769b4b::t_8c1df220158759 7
+__tests__/lib/rankTracking/analytics.test.ts
+  s_e3556ba0769b4b::t_8c1df220158759 2
+pages/api/articles/[id]/debug-export.ts
+  s_e3556ba0769b4b::t_8c1df220158759 18
+__tests__/lib/motionGsap.test.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 1-2
+src/infrastructure/ai/articleMeta.ts
+  s_e3556ba0769b4b::t_8c1df220158759 4
+components/articles/ArticleEditor.tsx
+  s_e3556ba0769b4b::t_8c1df220158759 8
+  s_e3556ba0769b4b::t_14a6b87c5154a7 50-51
+components/landing/useLandingMotion.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 4,24
+components/onboarding/tourScenes.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 28
+src/infrastructure/userProfile.ts
+  s_e3556ba0769b4b::t_8c1df220158759 2
+pages/api/articles/backfill.ts
+  s_e3556ba0769b4b::t_8c1df220158759 13
+components/articles/AoScoreFloat.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 2
+components/motion/useEntrance.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 1-22
+components/automations/AddEventDialog.tsx
+  s_e3556ba0769b4b::t_8c1df220158759 6
+components/rankTracking/TrackedKeywordsTable.tsx
+  s_e3556ba0769b4b::t_8c1df220158759 19
+__tests__/lib/editor/revealHtmlProgressive.test.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 10
+components/articles/OutlineGenerateBar.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 4
+src/infrastructure/workspaces.ts
+  s_e3556ba0769b4b::t_8c1df220158759 4
+pages/dashboard/index.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 14
+__tests__/lib/rankTracking/buckets.test.ts
+  s_e3556ba0769b4b::t_8c1df220158759 6
+src/infrastructure/rankTracking/serpRankCheck.ts
+  s_e3556ba0769b4b::t_8c1df220158759 4
+components/searchIntelligence/organic/OrganicKeywordsTable.tsx
+  s_e3556ba0769b4b::t_8c1df220158759 5
+src/infrastructure/siteAudit/redirectScan.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1
+__tests__/lib/automationsMap.test.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1
+src/infrastructure/siteAudit/buildPageReport.ts
+  s_e3556ba0769b4b::t_8c1df220158759 2
+pages/sites/[domain]/content-audit.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 10
+src/infrastructure/rankTracking/analytics.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1,3
+__tests__/components/OutlineGenerateBar.test.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 4
+__tests__/pages/domains.test.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 10
+components/common/AppShell.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 3-4
+src/infrastructure/rankTracking/keywordMetricsCache.ts
+  s_e3556ba0769b4b::t_8c1df220158759 3-4
+src/infrastructure/members.ts
+  s_e3556ba0769b4b::t_8c1df220158759 6
+pages/api/articles/ranksmile-agent.ts
+  s_e3556ba0769b4b::t_8c1df220158759 20
+pages/articles/[id]/index.tsx
+  s_e3556ba0769b4b::t_8c1df220158759 60,65
+  s_e3556ba0769b4b::t_14a6b87c5154a7 59
+src/infrastructure/siteAudit/issues.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1
+src/infrastructure/organization.ts
+  s_e3556ba0769b4b::t_8c1df220158759 3
+components/rankTracking/TrackingOverview.tsx
+  s_e3556ba0769b4b::t_8c1df220158759 2
+pages/api/domains/[slug]/cannibalization.ts
+  s_e3556ba0769b4b::t_8c1df220158759 7
+lib/arch/layerRules.ts
+  s_e3556ba0769b4b::t_8ab31fd169f2d3 26-28
+pages/api/rank-tracking/[slug]/configs.ts
+  s_e3556ba0769b4b::t_8c1df220158759 5
+components/editor/revealHtmlProgressive.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 1-169
+src/infrastructure/rankTracking/runner.ts
+  s_e3556ba0769b4b::t_8c1df220158759 2
+src/infrastructure/articles/articleAnalysisStorage.ts
+  s_e3556ba0769b4b::t_8c1df220158759 4
+src/infrastructure/domainVoices.ts
+  s_e3556ba0769b4b::t_8c1df220158759 5
+src/infrastructure/rankTracking/results.ts
+  s_e3556ba0769b4b::t_8c1df220158759 11-12
+components/articles/OptimizeReviewBar.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 3
+components/aiTracking/useRadarMotion.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 27
+components/articles/WriteOptimizePanel.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 3
+pages/api/rank-tracking/[slug]/export.ts
+  s_e3556ba0769b4b::t_8c1df220158759 6-7
+src/infrastructure/rankTracking/summaryStore.ts
+  s_e3556ba0769b4b::t_8c1df220158759 10
+services/rankTracking.ts
+  s_e3556ba0769b4b::t_8c1df220158759 12
+components/motion/useOpenReveal.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 1-27
+src/infrastructure/rankTracking/schedule.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1
+pages/api/rank-tracking/[slug]/history/[keywordId].ts
+  s_e3556ba0769b4b::t_8c1df220158759 6
+pages/api/rank-tracking/[slug]/runs/[id].ts
+  s_e3556ba0769b4b::t_8c1df220158759 3
+pages/api/rank-tracking/[slug]/configs/[id].ts
+  s_e3556ba0769b4b::t_8c1df220158759 5
+pages/api/articles/index.ts
+  s_e3556ba0769b4b::t_8c1df220158759 15
+pages/sites/[domain]/automations.tsx
+  s_e3556ba0769b4b::t_8c1df220158759 14
+src/infrastructure/tenancy.ts
+  s_e3556ba0769b4b::t_8c1df220158759 7
+pages/sites/[domain]/recommendations.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 9
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_8c1df220158759 58
+src/infrastructure/siteAudit/incomingLinkGraph.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1
+src/infrastructure/rankingSources.ts
+  s_e3556ba0769b4b::t_8c1df220158759 2
+src/infrastructure/rankTracking/cost.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1-2
+src/infrastructure/rankTracking/service.ts
+  s_e3556ba0769b4b::t_8c1df220158759 2
+__tests__/pages/index.test.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 20
+components/articles/ContentOptimizerNodeView.tsx
+  s_e3556ba0769b4b::t_14a6b87c5154a7 8
+src/infrastructure/rankTracking/defaultConfig.ts
+  s_e3556ba0769b4b::t_8c1df220158759 3
+__tests__/lib/editor/clearEditorHistory.test.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 6
+src/infrastructure/siteAudit/buildOverview.ts
+  s_e3556ba0769b4b::t_8c1df220158759 2
+src/infrastructure/rankTracking/exporter.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1
+components/automations/AutomationsCalendar.tsx
+  s_e3556ba0769b4b::t_8c1df220158759 2
+src/infrastructure/siteAudit/crawlSnapshot.ts
+  s_e3556ba0769b4b::t_8c1df220158759 4
+components/motion/useStaggerReveal.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 1-59
+pages/api/ai-visibility/[slug]/generate-prompts.ts
+  s_e3556ba0769b4b::t_8c1df220158759 16
+pages/sites/[domain]/keyword-tracking.tsx
+  s_e3556ba0769b4b::t_8c1df220158759 30
+pages/api/articles/[id]/generate-stream.ts
+  s_e3556ba0769b4b::t_8c1df220158759 12
+src/infrastructure/rankTracking/repository.ts
+  s_e3556ba0769b4b::t_8c1df220158759 10-11
+services/article.ts
+  s_e3556ba0769b4b::t_8c1df220158759 7
+src/core/domain/rankTracking/buckets.ts
+  s_e3556ba0769b4b::t_8c1df220158759 1
+src/infrastructure/siteAudit/externalLinkProbe.ts
+  s_e3556ba0769b4b::t_8c1df220158759 4
+src/infrastructure/invitations.ts
+  s_e3556ba0769b4b::t_8c1df220158759 5
+src/infrastructure/workspaceMembers.ts
+  s_e3556ba0769b4b::t_8c1df220158759 6
+src/infrastructure/wpDraft.ts
+  s_e3556ba0769b4b::t_8c1df220158759 5
+pages/api/automations/[slug]/index.ts
+  s_e3556ba0769b4b::t_8c1df220158759 15
+components/motion/useRouteTransition.ts
+  s_e3556ba0769b4b::t_14a6b87c5154a7 1-29
+src/infrastructure/queueRunner.ts
+  s_e3556ba0769b4b::t_8c1df220158759 5
+src/infrastructure/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_8c1df220158759 20
+__tests__/lib/rankTracking/serpRankCheck.test.ts
+  s_e3556ba0769b4b::t_8c1df220158759 4
+pages/api/rank-tracking/[slug]/results.ts
+  s_e3556ba0769b4b::t_8c1df220158759 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "90e8a709b354847b3b1fb6031851f332321e0b8c",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
