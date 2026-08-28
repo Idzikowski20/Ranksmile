@@ -1,4 +1,4 @@
-import type { PipelineWorker } from '../types';
+import type { PipelineWorker } from '@/src/infrastructure/workers/types';
 import { PIPELINE_VERSION } from '@/src/core/domain/pipeline/queuePriorities';
 
 /** SERP crawl worker — corpus via Corpus API; Serper fallback when no serpUrls. */

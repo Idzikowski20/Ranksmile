@@ -7,7 +7,7 @@ import {
   moveJobToDlq,
   updatePipelineJob,
 } from '@/src/infrastructure/persistence/schema/ensurePipelineJobsTables';
-import { getWorker } from '@/lib/workers/registry';
+import { getWorker } from '@/src/infrastructure/workers/registry';
 import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
 
 export class PipelineQueueDisabledError extends Error {

@@ -1,5 +1,5 @@
-import type { PipelineWorker } from '../types';
-import type { Feature, ScoreVector, Signal, Action } from '../../primitives/types';
+import type { PipelineWorker } from '@/src/infrastructure/workers/types';
+import type { Feature, ScoreVector, Signal, Action } from '@/lib/primitives/types';
 
 /** AI / SERP visibility feature producer. */
 export const visibilityWorker: PipelineWorker = {
@@ -59,7 +59,7 @@ export const visibilityWorker: PipelineWorker = {
       actions,
     };
 
-    const { getFeatureStore } = await import('../../featureStore');
+    const { getFeatureStore } = await import('@/lib/featureStore');
     await getFeatureStore().appendFeature(feature, {
       articleId: ctx.payload.articleId != null ? Number(ctx.payload.articleId) : undefined,
       domainId: ctx.payload.domainId != null ? Number(ctx.payload.domainId) : undefined,

@@ -20,7 +20,7 @@ describe('coverage worker product wire', () => {
 
   it('merges NER entityItems and skips planner at stage 0', async () => {
     process.env.PIPELINE_STAGE = '0';
-    const { resetWorkerRegistry, getWorker } = await import('../../lib/workers/registry');
+    const { resetWorkerRegistry, getWorker } = await import('@/src/infrastructure/workers/registry');
     resetWorkerRegistry();
     const coverage = getWorker('coverage');
     expect(coverage).toBeDefined();
@@ -55,7 +55,7 @@ describe('coverage worker product wire', () => {
 
   it('chains planner when stage >= 2', async () => {
     process.env.PIPELINE_STAGE = '2';
-    const { resetWorkerRegistry, getWorker } = await import('../../lib/workers/registry');
+    const { resetWorkerRegistry, getWorker } = await import('@/src/infrastructure/workers/registry');
     resetWorkerRegistry();
     const coverage = getWorker('coverage');
     const result = await coverage!.execute({

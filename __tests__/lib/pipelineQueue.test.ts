@@ -27,7 +27,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables', ()
   };
 });
 
-jest.mock('../../lib/workers/registry', () => ({
+jest.mock('@/src/infrastructure/workers/registry', () => ({
   getWorker: jest.fn(() => ({
     id: 'serp',
     queue: 'serp_crawl',

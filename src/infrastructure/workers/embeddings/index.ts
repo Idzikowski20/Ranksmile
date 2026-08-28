@@ -1,4 +1,4 @@
-import type { PipelineWorker } from '../types';
+import type { PipelineWorker } from '@/src/infrastructure/workers/types';
 
 /** Night embeddings worker — hash embed stub; real model via LLM Gateway later. */
 export const embeddingsWorker: PipelineWorker = {
