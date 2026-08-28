@@ -1,5 +1,5 @@
 import { Button, Input, Modal, ModalBody, ModalFooter, Select } from '../koala/core';
-import { KEYWORD_OPERATOR_OPTIONS, type KeywordOperator } from '../../lib/performance/types';
+import { KEYWORD_OPERATOR_OPTIONS, type KeywordOperator } from '@/src/infrastructure/performance/types';
 
 type KeywordFilterModalProps = {
   mode: 'custom' | 'brand';

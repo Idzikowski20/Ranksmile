@@ -11,7 +11,7 @@ jest.mock('../../utils/verifyDomainOwnership', () => ({
 jest.mock('@/src/infrastructure/persistence/schema/ensureRankTrackingTables', () => ({
   ensureRankTrackingTables: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('../../lib/organicResearch', () => ({
+jest.mock('@/src/infrastructure/organicResearch/index', () => ({
   loadOrganicDatasetForDomainId: jest.fn().mockResolvedValue({
     ok: true,
     dataset: { domain: 'protektyw.pl', keywords: [], metrics: {}, meta: {}, chart: [], topics: [] },
@@ -25,7 +25,7 @@ jest.mock('../../lib/organicResearch', () => ({
 
 import handler from '../../pages/api/rank-tracking/[slug]/organic';
 import { isRankTrackingUiEnabled } from '../../lib/featureFlags';
-import { loadOrganicDatasetForDomainId } from '../../lib/organicResearch';
+import { loadOrganicDatasetForDomainId } from '@/src/infrastructure/organicResearch/index';
 
 const makeRes = () => {
   const res: { status: jest.Mock; json: jest.Mock; setHeader: jest.Mock } = {

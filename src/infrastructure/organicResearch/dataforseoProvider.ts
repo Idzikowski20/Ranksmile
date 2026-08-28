@@ -1,7 +1,7 @@
-import { fetchRankedKeywordsRaw, isDataForSeoConfigured } from '../../providers/dataforseo/organic';
-import { fetchHistoricalRankOverview } from '../../providers/dataforseo/overview';
-import { locationCodeFor } from '../../providers/dataforseo/client';
-import { buildCacheMeta } from './cache';
+import { fetchRankedKeywordsRaw, isDataForSeoConfigured } from '@/providers/dataforseo/organic';
+import { fetchHistoricalRankOverview } from '@/providers/dataforseo/overview';
+import { locationCodeFor } from '@/providers/dataforseo/client';
+import { buildCacheMeta } from '@/src/infrastructure/organicResearch/cache';
 import {
   buildChart,
   buildMetrics,
@@ -9,10 +9,10 @@ import {
   buildUncategorizedTopic,
   emptyBuckets,
   mapKeywords,
-} from './derive';
-import type { OrganicProvider, OrganicProviderContext } from './provider';
-import { localeFromCtx } from './provider';
-import type { OrganicDataset, ProviderOrganicPayload } from './types';
+} from '@/src/infrastructure/organicResearch/derive';
+import type { OrganicProvider, OrganicProviderContext } from '@/src/infrastructure/organicResearch/provider';
+import { localeFromCtx } from '@/src/infrastructure/organicResearch/provider';
+import type { OrganicDataset, ProviderOrganicPayload } from '@/src/infrastructure/organicResearch/types';
 
 function assembleDataset(payload: ProviderOrganicPayload): OrganicDataset {
   const localeKey = `${payload.locale.country}:${payload.locale.language}`;

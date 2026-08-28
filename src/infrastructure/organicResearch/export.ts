@@ -1,4 +1,4 @@
-import type { OrganicDataset, OrganicKeyword } from './types';
+import type { OrganicDataset, OrganicKeyword } from '@/src/infrastructure/organicResearch/types';
 
 export type ExportFormat = 'csv' | 'json' | 'google_sheets';
 

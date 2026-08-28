@@ -11,7 +11,7 @@ import type {
   ProviderOrganicPayload,
   ProviderOverviewPoint,
   TopicRef,
-} from './types';
+} from '@/src/infrastructure/organicResearch/types';
 
 const CTR_BY_POS: Record<number, number> = {
   1: 0.3, 2: 0.15, 3: 0.1, 4: 0.07, 5: 0.05,

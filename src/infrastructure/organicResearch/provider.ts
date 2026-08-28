@@ -1,4 +1,4 @@
-import type { DatasetLocale, OrganicDataset } from './types';
+import type { DatasetLocale, OrganicDataset } from '@/src/infrastructure/organicResearch/types';
 
 export type OrganicProviderContext = {
   domain: string;

@@ -7,7 +7,7 @@ import { Button, Checkbox } from '../../koala/core';
 import { KeywordDifficultyDot } from '../../koala/product/helpers/KeywordDifficultyDot';
 import { KeywordIntentBadge } from '../../koala/product/helpers/KeywordIntentBadge';
 import { TrendDeltaBadge } from '../../koala/product/helpers/TrendDeltaBadge';
-import type { OrganicKeyword } from '../../../lib/organicResearch/types';
+import type { OrganicKeyword } from '@/src/infrastructure/organicResearch/types';
 import { formatCompact } from './OrganicKpiRow';
 import { DEFAULT_VISIBLE, OrganicColumnMenu, type ColumnId } from './OrganicColumnMenu';
 import { ExpandedPanel } from './OrganicKeywordExpand';

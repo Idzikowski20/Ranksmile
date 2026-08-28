@@ -1,4 +1,4 @@
-import { synthesizePositionHistory } from '../../../lib/organicResearch/synthesizePositionHistory';
+import { synthesizePositionHistory } from '@/src/infrastructure/organicResearch/synthesizePositionHistory';
 
 describe('synthesizePositionHistory', () => {
   it('builds a sparse series from current + previous position', () => {

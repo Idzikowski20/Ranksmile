@@ -71,7 +71,7 @@ export async function runActionExecution(opts: {
       ids,
     );
     try {
-      const { recordOptimization } = await import('./learning/learningLoop');
+      const { recordOptimization } = await import('@/src/infrastructure/learning/learningLoop');
       await recordOptimization({
         workspaceId: String(opts.domainId ?? articleId),
         articleId,
@@ -92,7 +92,7 @@ export async function runActionExecution(opts: {
 
   if (result.status === 'done' || result.status === 'running') {
     try {
-      const { recordOptimization } = await import('./learning/learningLoop');
+      const { recordOptimization } = await import('@/src/infrastructure/learning/learningLoop');
       await recordOptimization({
         workspaceId: String(opts.domainId ?? articleId),
         articleId,

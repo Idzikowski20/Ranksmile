@@ -1,4 +1,4 @@
-import type { KeywordState, OrganicKeyword, SearchIntent } from './types';
+import type { KeywordState, OrganicKeyword, SearchIntent } from '@/src/infrastructure/organicResearch/types';
 
 export type OrganicTab = 'all' | 'organic' | 'serp_features';
 

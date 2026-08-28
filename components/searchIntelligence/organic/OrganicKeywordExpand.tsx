@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { Chart } from '../../koala/charts';
 import type { ChartPreparedData } from '../../koala/charts';
-import type { OrganicKeyword } from '../../../lib/organicResearch/types';
+import type { OrganicKeyword } from '@/src/infrastructure/organicResearch/types';
 import { useOrganicKeywordHistory } from '../../../services/organicResearch';
 import { useRankKeywordHistory } from '../../../services/rankTracking';
 import { absoluteUrl, normalizeFeature, SerpMiniIcon } from './organicSerp';

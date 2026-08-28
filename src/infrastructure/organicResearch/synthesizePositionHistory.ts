@@ -1,4 +1,4 @@
-import type { KeywordPositionPoint } from '../../providers/dataforseo/historicalSerps';
+import type { KeywordPositionPoint } from '@/providers/dataforseo/historicalSerps';
 
 /** Fallback when Labs history is empty — sparse series from current/previous metrics. */
 export function synthesizePositionHistory(opts: {
