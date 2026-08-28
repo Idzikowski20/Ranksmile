@@ -1,5 +1,5 @@
 import type { PipelineWorker } from '../types';
-import type { FingerprintMetrics } from '../../corpus/corpusService';
+import type { FingerprintMetrics } from '@/src/infrastructure/corpus/corpusService';
 
 /** Structural fingerprint of corpus competitor pages. */
 export const fingerprintWorker: PipelineWorker = {
@@ -53,9 +53,9 @@ export const fingerprintWorker: PipelineWorker = {
     };
 
     if (corpusId) {
-      const { upsertFingerprint } = await import('../../corpus/corpusService');
+      const { upsertFingerprint } = await import('@/src/infrastructure/corpus/corpusService');
       await upsertFingerprint(corpusId, metrics);
-      const { wireFingerprintFeatures } = await import('../../features/fingerprintFeatures');
+      const { wireFingerprintFeatures } = await import('@/src/infrastructure/features/fingerprintFeatures');
       await wireFingerprintFeatures({
         workspaceId: String(ctx.payload.workspaceId || '0'),
         keyword: String(ctx.payload.keyword || ''),

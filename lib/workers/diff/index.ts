@@ -9,7 +9,7 @@ export const diffWorker: PipelineWorker = {
   produces: ['planner_signals'],
   consumes: ['corpus'],
   async execute(ctx) {
-    const { getLatestCorpusVersions } = await import('../../corpus/corpusService');
+    const { getLatestCorpusVersions } = await import('@/src/infrastructure/corpus/corpusService');
     const { diffCorpora } = await import('@/src/core/domain/engines/corpusDiff');
 
     const workspaceId = String(ctx.payload.workspaceId || '0');

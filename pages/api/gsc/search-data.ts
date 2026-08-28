@@ -5,7 +5,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import {
   cronRefreshSearchConsoleData,
   getDomainSearchConsoleData,
-} from '../../../lib/gsc/domainSearchData';
+} from '@/src/infrastructure/gsc/domainSearchData';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 /** Custom date ranges can return up to 25k×2 query/page rows — above Next's 4mb default. */

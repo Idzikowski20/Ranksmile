@@ -157,7 +157,7 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
 // ── Integration orchestration (GSC + sidecar kick) ────────────────────────
 
 import GscAccount from '../database/models/gscAccount';
-import { buildOAuthClientFromAccount } from './gsc/gscAccounts';
+import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
 import { searchconsole_v1 } from '@googleapis/searchconsole';
 
 async function emit(jobId: string, stage: StageKey, percent: number, message: string) {

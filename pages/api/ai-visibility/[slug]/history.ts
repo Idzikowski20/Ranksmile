@@ -8,7 +8,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows } from '../../../../lib/db/query';
-import { loadScanCitationRowsForScans } from '../../../../lib/aiVisibility/aiVisibilityRead';
+import { loadScanCitationRowsForScans } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import { overviewForDomain } from '@/src/core/domain/aiVisibility/metrics';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

@@ -10,10 +10,10 @@
  * — no signature changes. Results are per (prompt, model); a failed call is
  * recorded on its own row so one bad prompt never fails the whole scan.
  */
-import db from '../../database/database';
-import { queryOne, queryRows } from '../db/query';
-import { runModelPrompt, AiModel } from '../dataforseoLlm';
-import { getDomainLocale } from '../domainLanguage';
+import db from '@/database/database';
+import { queryOne, queryRows } from '@/lib/db/query';
+import { runModelPrompt, AiModel } from '@/lib/dataforseoLlm';
+import { getDomainLocale } from '@/lib/domainLanguage';
 import { ownDomainPosition } from '@/src/core/domain/aiVisibility/metrics';
 import { sanitizeModels, AI_VIS_CONCURRENCY, AI_VIS_HARD_CAP_PAIRS, AI_VIS_SCAN_STALE_MS, AI_VIS_SETTINGS } from '@/src/core/domain/aiVisibility/config';
 
@@ -280,7 +280,7 @@ export async function runBrandsForScan(scanId: number): Promise<void> {
       const ownBrand = cfg?.brand_name || '';
       // Dynamic import keeps @ai-sdk/deepseek (ESM) out of this module's static import
       // graph, so unit tests of aiVisibilityScan don't have to transform it.
-      const { runBrandChunk } = await import('./aiVisibilityBrands');
+      const { runBrandChunk } = await import('@/src/infrastructure/aiVisibility/aiVisibilityBrands');
       let prevRemaining = Number.POSITIVE_INFINITY;
       for (let i = 0; i < 100; i += 1) {
          const { remaining } = await runBrandChunk(scanId, ownBrand);
@@ -297,7 +297,7 @@ export async function kickAiVisScan(scanId: number, ownDomain: string): Promise<
          const { finished } = await runScanChunk(scanId, ownDomain);
          if (finished) {
             await runBrandsForScan(scanId);
-            const { emitAiVisibilityScanObservations } = await import('../emitObservations');
+            const { emitAiVisibilityScanObservations } = await import('@/lib/emitObservations');
             await emitAiVisibilityScanObservations(scanId, ownDomain).catch(() => {});
             return;
          }

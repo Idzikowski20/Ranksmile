@@ -6,7 +6,7 @@ import type { Feature } from '../../lib/primitives/types';
 import {
   observationsFromCoverage,
   runFeatures,
-} from '../../lib/features/featureEngine';
+} from '@/src/infrastructure/features/featureEngine';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 function stubSnapshot(overrides?: Partial<CoverageSnapshot>): CoverageSnapshot {

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import Domain from '../../database/models/domain';
-import { fetchDomainSCData, getSearchConsoleApiInfo, readLocalSCData, hasValidSCAuth } from '../../utils/searchConsole';
-import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
+import Domain from '@/database/models/domain';
+import { fetchDomainSCData, getSearchConsoleApiInfo, readLocalSCData, hasValidSCAuth } from '@/utils/searchConsole';
+import { verifyDomainOwnership } from '@/utils/verifyDomainOwnership';
 
 export type SearchConsoleDataRes = {
   data: SCDomainDataType | null;
