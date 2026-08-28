@@ -8,7 +8,7 @@ import {
   filterSyntheticCitationTemplates,
   isMisalignedSyntheticCitation,
 } from './citationPrompts';
-import { isCorpusNoiseSentence } from './corpusNoiseFilter';
+import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import { isKeywordOnTopic, seedTokens } from '@/src/core/domain/relevance/topicRelevance';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 import { runCoverageEngine } from './engines/coverageEngine';

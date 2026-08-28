@@ -5,7 +5,7 @@ import {
   isUsefulCitationPrompt,
   scoreCitationPrompt,
 } from '../../lib/citationPrompts';
-import { isCorpusNoiseSentence } from '../../lib/corpusNoiseFilter';
+import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import {
   AI_COVERAGE_MAX,
   curateAiCoverageItems,

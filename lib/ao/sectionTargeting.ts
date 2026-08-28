@@ -3,7 +3,7 @@
  * Chain: explicit → semantic/heading → body-only for term/entity/fact → reject.
  * Never generic best-scored intro for missing topics.
  */
-import type { CriticalContentMap } from './criticalContentMap';
+import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import type { EditCandidate } from '@/src/core/domain/optimize/editCandidate';
 import type { Section } from '../articles/articleSections';
 

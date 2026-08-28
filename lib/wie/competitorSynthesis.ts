@@ -3,7 +3,7 @@
  * Small JSON brief from Top-N competitor bodies — never dump full HTML into Writer.
  */
 import { safeJsonParse } from '../safeJson';
-import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
+import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 
 export type CompetitorSynthesis = {
   critical: string[];

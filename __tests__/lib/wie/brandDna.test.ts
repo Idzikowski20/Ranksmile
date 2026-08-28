@@ -1,4 +1,4 @@
-import { judgeArticleQuality, QUALITY_DNA_THRESHOLD } from '../../../lib/wie/qualityJudge';
+import { judgeArticleQuality, QUALITY_DNA_THRESHOLD } from '@/src/core/domain/wie/qualityJudge';
 import { bumpDnaVersion, readPatternStore } from '../../../lib/wie/patternStore';
 import { discoverAndAcceptPattern } from '../../../lib/wie/patternDiscovery';
 

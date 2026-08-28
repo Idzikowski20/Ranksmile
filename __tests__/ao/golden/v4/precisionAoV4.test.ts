@@ -5,7 +5,7 @@ import {
   isPromisingSeoContent,
   hasSeoContentRegression,
 } from '@/src/core/domain/optimize/aoScoreDelta';
-import { buildCriticalContentMap, unitSemanticallyPresent } from '../../../../lib/ao/criticalContentMap';
+import { buildCriticalContentMap, unitSemanticallyPresent } from '@/src/core/domain/optimize/criticalContentMap';
 import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { selectSectionTarget } from '../../../../lib/ao/sectionTargeting';
 import { splitSections } from '../../../../lib/articles/articleSections';

@@ -1,4 +1,4 @@
-import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
+import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
 import type { CompetitorDocument, SourceKind } from '@/src/core/domain/knowledgeEngine/types';
 

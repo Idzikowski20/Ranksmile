@@ -10,7 +10,7 @@ import { computeOverallContentScore } from './ai/aiSearchScore';
 import { filterUsefulNlpTerms, isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
 import { countOccurrences, computeContentScore, type NlpTerm, type ScoreData } from './contentScore';
 import { factsCoverageFactor } from '@/src/core/domain/aiScore/factors';
-import { scoreIntroduction } from './aiScore/introductionFactors';
+import { scoreIntroduction } from '@/src/core/domain/aiScore/introductionFactors';
 import { parseSnapshot } from './coverageStore';
 import { liveCoverageItems } from './liveCoverage';
 import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';

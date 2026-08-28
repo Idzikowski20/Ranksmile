@@ -5,7 +5,7 @@
  */
 import { mergeFaqHtml } from '../aoFaqSection';
 import { htmlMatchesNormalized } from './aoBaseline';
-import type { CriticalContentMap } from './criticalContentMap';
+import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import type { AoRejectionReason } from '@/src/core/domain/optimize/aoRejectionReason';
 import type { AoScores, ScoreAvailability, ScoreGatePolicy } from '@/src/core/domain/optimize/aoScoreDelta';
 import { makeScoreDeltaSet, STRICT_SCORE_GATE_POLICY } from '@/src/core/domain/optimize/aoScoreDelta';
