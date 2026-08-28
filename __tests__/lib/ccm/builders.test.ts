@@ -1,7 +1,7 @@
-import { buildEntityNodes } from '../../../lib/ccm/builders/entityBuilder';
-import { buildFactNodes } from '../../../lib/ccm/builders/factBuilder';
-import { buildIntentNodes } from '../../../lib/ccm/builders/intentBuilder';
-import type { ContentIr } from '../../../lib/ccm/types/ir';
+import { buildEntityNodes } from '@/src/core/ccm/builders/entityBuilder';
+import { buildFactNodes } from '@/src/core/ccm/builders/factBuilder';
+import { buildIntentNodes } from '@/src/core/ccm/builders/intentBuilder';
+import type { ContentIr } from '@/src/core/ccm/types/ir';
 
 const ir: ContentIr = {
   version: 1,

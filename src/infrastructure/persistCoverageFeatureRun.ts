@@ -10,9 +10,9 @@ import {
 import {
   assignExperimentBucket,
   COVERAGE_EXPERIMENT,
-} from '@/lib/primitives/experiments';
-import { makeDomainEvent } from '@/lib/primitives/events';
-import type { Action, ExperimentRef, Feature, Observation } from '@/lib/primitives/types';
+} from '@/src/core/primitives/experiments';
+import { makeDomainEvent } from '@/src/core/primitives/events';
+import type { Action, ExperimentRef, Feature, Observation } from '@/src/core/primitives/types';
 
 export type PersistCoverageFeatureResult = {
   features: Feature[];
@@ -118,7 +118,7 @@ export async function persistCoverageFeatureRun(opts: {
 
   if (!(process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test')) {
     try {
-      const { buildKnowledgeLayer } = await import('@/lib/primitives/knowledgeLayer');
+      const { buildKnowledgeLayer } = await import('@/src/core/primitives/knowledgeLayer');
       const { persistKnowledgeLayer } = await import('@/src/infrastructure/growthMetaStore');
       const graph = buildKnowledgeLayer({
         keyword: opts.keyword,

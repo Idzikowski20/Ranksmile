@@ -1,5 +1,5 @@
-import type { Action, ActionExecution } from '@/lib/primitives/types';
-import { executeAction, pickExecutor } from '@/lib/primitives/actionExecutor';
+import type { Action, ActionExecution } from '@/src/core/primitives/types';
+import { executeAction, pickExecutor } from '@/src/core/primitives/actionExecutor';
 import { getErrorMessage } from '@/src/core/shared/errors';
 
 async function recordActionEvent(

@@ -1,11 +1,11 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { compile } from '../../../lib/compiler/compile';
+import { compile } from '@/src/core/compiler/compile';
 import {
   buildInfoToCoverFromCcm,
   preferCcmInfoToCover,
-} from '../../../lib/intelligence/ccmToInfoToCover';
-import { projectArticleIntelligence } from '../../../lib/intelligence/runtimeApi';
+} from '@/src/core/intelligence/ccmToInfoToCover';
+import { projectArticleIntelligence } from '@/src/core/intelligence/runtimeApi';
 
 const FIXED_AT = '2026-08-03T16:00:00.000Z';
 const FIXTURE = readFileSync(

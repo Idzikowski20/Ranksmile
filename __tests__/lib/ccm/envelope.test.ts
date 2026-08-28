@@ -1,6 +1,6 @@
-import { createEmptyCcm } from '../../../lib/ccm/emptyCcm';
-import type { CanonicalContentModel } from '../../../lib/ccm/types/ccm';
-import type { GraphIndexes } from '../../../lib/ccm/types/graph';
+import { createEmptyCcm } from '@/src/core/ccm/emptyCcm';
+import type { CanonicalContentModel } from '@/src/core/ccm/types/ccm';
+import type { GraphIndexes } from '@/src/core/ccm/types/graph';
 
 describe('ccm envelope', () => {
   it('empty CCM has schemaVersion 1, immutable, compilerId', () => {

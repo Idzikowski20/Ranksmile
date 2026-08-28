@@ -4,7 +4,7 @@ import {
   observationsFromVisibilityDelta,
 } from '@/src/infrastructure/emitObservations';
 import { runActionExecution } from '@/src/infrastructure/runActionExecution';
-import type { Action } from '../../lib/primitives/types';
+import type { Action } from '@/src/core/primitives/types';
 
 describe('observationsFromGscLowCtr', () => {
   it('emits low_ctr for high-impression low-CTR pages', () => {

@@ -1,7 +1,7 @@
 /**
  * Bridge OrganicKeyword → Q1 Observation primitives (no full Action engine in v1).
  */
-import type { Observation } from '@/lib/primitives/types';
+import type { Observation } from '@/src/core/primitives/types';
 import type { OrganicDataset, OrganicKeyword } from '@/src/infrastructure/organicResearch/types';
 
 function droppedFromTop10(keywords: OrganicKeyword[]): OrganicKeyword[] {

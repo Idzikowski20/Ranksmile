@@ -2,15 +2,15 @@ import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
 import { buildGuidelines } from '@/src/infrastructure/recommendationEngine';
 import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
-import type { Action, Feature, Observation, ScoreVector } from '@/lib/primitives/types';
-import { guidelinesToActions } from '@/lib/primitives/guidelineToAction';
-import { prioritizeActions } from '@/lib/primitives/prioritizeActions';
+import type { Action, Feature, Observation, ScoreVector } from '@/src/core/primitives/types';
+import { guidelinesToActions } from '@/src/core/primitives/guidelineToAction';
+import { prioritizeActions } from '@/src/core/primitives/prioritizeActions';
 import {
   defaultFeatureRegistry,
   type FeatureContext,
   type FeatureProducer,
   type FeatureRegistration,
-} from '@/lib/primitives/featureRegistry';
+} from '@/src/core/primitives/featureRegistry';
 import { persistFeatureRun, type FeatureStoreScope } from '@/src/infrastructure/featureStoreCore';
 
 export type { FeatureContext, FeatureProducer };

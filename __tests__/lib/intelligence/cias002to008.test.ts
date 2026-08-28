@@ -1,8 +1,8 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { compile } from '../../../lib/compiler/compile';
-import { isFactNode, isIntentNode } from '../../../lib/ccm/types/graph';
-import { projectCoverage } from '../../../lib/projections/coverageView';
+import { compile } from '@/src/core/compiler/compile';
+import { isFactNode, isIntentNode } from '@/src/core/ccm/types/graph';
+import { projectCoverage } from '@/src/core/projections/coverageView';
 
 const FIXED_AT = '2026-08-03T10:00:00.000Z';
 const FIXTURE_DIR = join(__dirname, '../../fixtures');

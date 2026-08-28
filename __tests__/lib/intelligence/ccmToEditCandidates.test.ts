@@ -1,7 +1,7 @@
-import { compile } from '../../../lib/compiler/compile';
-import { buildActionGraph } from '../../../lib/planner/actionGraphBuilder';
-import { summarizeRecommendations } from '../../../lib/intelligence/ccmRecommendations';
-import { ccmRecommendationsToEditCandidates } from '../../../lib/intelligence/ccmToEditCandidates';
+import { compile } from '@/src/core/compiler/compile';
+import { buildActionGraph } from '@/src/core/planner/actionGraphBuilder';
+import { summarizeRecommendations } from '@/src/core/intelligence/ccmRecommendations';
+import { ccmRecommendationsToEditCandidates } from '@/src/core/intelligence/ccmToEditCandidates';
 import { collectPrecisionCandidates } from '@/src/infrastructure/ao/runPrecisionOptimize';
 import { buildProfileFromContext } from '@/src/infrastructure/ao/runPrecisionOptimize';
 

@@ -2,7 +2,7 @@
  * Calibration — Feature Store vectors only (no LLM ranking).
  * Fits simple linear weights from historical score vs outcomes.
  */
-import type { Feature } from '@/lib/primitives/types';
+import type { Feature } from '@/src/core/primitives/types';
 
 export type CalibrationSample = {
   featureVector: number[];

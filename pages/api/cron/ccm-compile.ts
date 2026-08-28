@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { withCronWatchdog } from '@/src/infrastructure/cronWatchdog';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { runCcmCompileCron } from '../../../lib/intelligence/ccmStaleCron';
+import { runCcmCompileCron } from '@/src/core/intelligence/ccmStaleCron';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {

@@ -1,7 +1,7 @@
 /**
  * Planner — ROI + confidence ranking over Actions (Feature Store vectors, no LLM ranking).
  */
-import type { Action, Feature } from '@/lib/primitives/types';
+import type { Action, Feature } from '@/src/core/primitives/types';
 
 export type PlannerCandidate = Action & {
   roi: number;

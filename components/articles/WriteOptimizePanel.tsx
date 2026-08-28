@@ -13,7 +13,7 @@ import EffortChecklist from './EffortChecklist';
 import SourceExplorer from './SourceExplorer';
 import { buildEffortChecklist } from '@/src/core/domain/terms/contentEffort';
 import { TIP_BUBBLE_BASE } from './tipBubble';
-import type { Action } from '../../lib/primitives/types';
+import type { Action } from '@/src/core/primitives/types';
 import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 
 const F = 'var(--font-family-primary)';

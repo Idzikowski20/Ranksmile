@@ -6,10 +6,10 @@ import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
-import { SqlCompileStore } from '../../../../../lib/intelligence/sqlCompileStore';
-import { getCcm, projectArticleIntelligence } from '../../../../../lib/intelligence/runtimeApi';
-import { applyLivePresence } from '../../../../../lib/intelligence/livePresence';
-import { buildActionGraph } from '../../../../../lib/planner/actionGraphBuilder';
+import { SqlCompileStore } from '@/src/core/intelligence/sqlCompileStore';
+import { getCcm, projectArticleIntelligence } from '@/src/core/intelligence/runtimeApi';
+import { applyLivePresence } from '@/src/core/intelligence/livePresence';
+import { buildActionGraph } from '@/src/core/planner/actionGraphBuilder';
 
 type Body = {
   plainText?: string;

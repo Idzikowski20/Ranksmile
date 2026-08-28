@@ -1,6 +1,6 @@
-import { compile } from '../../../lib/compiler/compile';
-import { projectVisibility } from '../../../lib/projections/visibilityView';
-import { runConstraints } from '../../../lib/ccm/constraintEngine';
+import { compile } from '@/src/core/compiler/compile';
+import { projectVisibility } from '@/src/core/projections/visibilityView';
+import { runConstraints } from '@/src/core/ccm/constraintEngine';
 
 const AT = '2026-08-03T14:00:00.000Z';
 
