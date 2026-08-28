@@ -7,7 +7,7 @@ import type { ArticleContext } from '../articles/articleContext';
 import { computeTermUsageGaps } from '../optimizeSectionEdit';
 import { liveCoverageItems } from '../liveCoverage';
 import { scoreArticleHtml } from '../scoreArticleHtml';
-import { computeOverallContentScore } from '../ai/aiSearchScore';
+import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { ScoreData } from '../contentScore';
 import { buildIntentProfile, type ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { filterCandidatesByIntent, filterPlanStepsByAction } from './intentGuard';
@@ -38,7 +38,7 @@ import {
   type OptimizationPolicy,
   type OptimizationStrategy,
 } from './optimizationPolicy';
-import { TARGET_AI, TARGET_SEO } from '../optimizeMode';
+import { TARGET_AI, TARGET_SEO } from '@/src/core/domain/optimize/optimizeMode';
 import { evaluateRxQualityGate } from '../wie/rxQualityGate';
 import { parseCompetitorSynthesis, type CompetitorSynthesis } from '../wie/competitorSynthesis';
 import type { ReaderBrief } from '@/src/core/domain/wie/readerBrief';

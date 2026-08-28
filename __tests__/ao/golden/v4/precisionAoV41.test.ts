@@ -13,7 +13,7 @@ import {
   assessStructuralHealth,
 } from '../../../../lib/ao/optimizationPolicy';
 import { budgetForAction, DEEP_EDIT_BUDGET, DEFAULT_EDIT_BUDGET } from '@/src/core/domain/optimize/editBudget';
-import { shouldSkipOptimize, TARGET_AI, TARGET_SEO } from '../../../../lib/optimizeMode';
+import { shouldSkipOptimize, TARGET_AI, TARGET_SEO } from '@/src/core/domain/optimize/optimizeMode';
 import type { Section } from '../../../../lib/articles/articleSections';
 import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 

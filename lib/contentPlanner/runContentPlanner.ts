@@ -31,7 +31,7 @@ import { buildRewritePlan, runKnowledgeCompletion } from '@/src/core/domain/cont
 import { computeKnowledgeCoverage } from '@/src/core/domain/contentPlanner/knowledgeCoverage';
 import { buildArticleExecutionPlan } from './executionPlan';
 import { generateQuickAnswer } from './quickAnswer';
-import { validatePlanForWrite } from './validators/planValidators';
+import { validatePlanForWrite } from '@/src/core/domain/contentPlanner/planValidators';
 import { titleizeH1 } from '@/src/core/domain/contentPlanner/sectionLabels';
 import type {
   CompetitorBenchmark, ContentPlannerBundle, ValidationIssue, ValidationResult,

@@ -3,7 +3,7 @@ import {
   computeAiSearchScore,
   computeOverallContentScore,
   type AiVisibilitySummary,
-} from '../../lib/ai/aiSearchScore';
+} from '@/src/core/domain/aiScore/aiSearchScore';
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import type { ScoreData } from '../../lib/contentScore';
 

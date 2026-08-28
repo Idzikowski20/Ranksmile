@@ -13,7 +13,7 @@ import { getAiSearchInfo } from '../seo/keywordData';
 import {
   resolveAiScore,
   type AiVisibilitySummary,
-} from '../ai/aiSearchScore';
+} from '@/src/core/domain/aiScore/aiSearchScore';
 
 export type ArticleAiPipelineResult = {
   facts: ArticleFact[];

@@ -15,7 +15,7 @@ import type { AiReadabilityResult } from './PrePublishPanel';
 import type { PlagiarismResult } from './PlagiarismPanel';
 import ScoreTrio from './ScoreTrio';
 import ScoreFactorList from './ScoreFactorList';
-import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '../../lib/ai/aiSearchScore';
+import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import { introFactorsFromScoreData } from '@/src/core/domain/aiScore/liveFactors';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { useCompetitors } from '../../services/competitors';

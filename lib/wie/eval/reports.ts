@@ -8,8 +8,8 @@ import {
   formatRewriteActionsMarkdown,
   formatWeaknessItemsMarkdown,
 } from './editorialJudge';
-import type { CompetitorBenchmarkResult } from './competitorBenchmark';
-import { formatBenchmarkMarkdown } from './competitorBenchmark';
+import type { CompetitorBenchmarkResult } from '@/src/core/domain/wie/evalCompetitorBenchmark';
+import { formatBenchmarkMarkdown } from '@/src/core/domain/wie/evalCompetitorBenchmark';
 import type { ExplainabilityRecord } from '../explainability';
 import type { PublishGateResult, RootIntentCoverage } from './publishGate';
 import { formatPublishGateMarkdown } from './publishGate';

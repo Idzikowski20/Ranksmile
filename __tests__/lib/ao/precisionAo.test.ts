@@ -10,7 +10,7 @@ import {
   livePresenceQualityCap,
 } from '@/src/core/domain/optimize/coverageState';
 import { faqBudgetForWordCount, selectFaqQuestions } from '../../../lib/aoFaqSection';
-import { shouldSkipOptimize, TARGET_AI, TARGET_SEO } from '../../../lib/optimizeMode';
+import { shouldSkipOptimize, TARGET_AI, TARGET_SEO } from '@/src/core/domain/optimize/optimizeMode';
 import { resolveOptimizationStrategy } from '../../../lib/ao/runPrecisionOptimize';
 import { buildEditCandidates } from '../../../lib/ao/buildCandidates';
 

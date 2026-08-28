@@ -29,7 +29,7 @@ import { getOrgBillingState } from '../../../lib/orgBilling';
 import type { SubscriptionDetails } from '../../../lib/subscriptionDetails';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
-import { isStripeCheckoutConfigured, type PlanSlug } from '../../../lib/stripePrices';
+import { isStripeCheckoutConfigured, type PlanSlug } from '@/src/core/domain/billing/prices';
 
 const F = 'var(--font-family-primary)';
 

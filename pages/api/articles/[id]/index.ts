@@ -11,8 +11,8 @@ import { assertArticleAccess } from '../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
 import type { ArticleRow } from '../../../../lib/db/query';
-import type { AiVisibilitySummary } from '../../../../lib/ai/aiSearchScore';
-import { computeAiSearchScore } from '../../../../lib/ai/aiSearchScore';
+import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
+import { computeAiSearchScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import {
   buildAiRankingSources,
   buildGoogleRankingSourcesFromRows,

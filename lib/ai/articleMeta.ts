@@ -1,6 +1,6 @@
 import { getArticleIdSql } from '../articles/articleSql';
 import { queryOne, queryRows, type ArticleRow } from '../db/query';
-import type { AiVisibilitySummary } from './aiSearchScore';
+import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { parseJsonish } from '../types/json';
 import { getDomainLocale } from '../domainLanguage';
 

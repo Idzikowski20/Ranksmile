@@ -1,5 +1,5 @@
 import type { BillingPeriod } from '@/src/core/domain/billing/plans';
-import type { PlanSlug } from './stripePrices';
+import type { PlanSlug } from '@/src/core/domain/billing/prices';
 import type { OrgPlanUsage } from './planUsage';
 
 /** Quota meter kinds — see docs/superpowers/specs/2026-07-26-plan-quotas-ledger-design.md */

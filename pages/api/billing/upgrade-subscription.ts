@@ -11,7 +11,7 @@ import { getOrgBillingState } from '../../../lib/orgBilling';
 import { getStripe } from '../../../lib/stripe';
 import { syncSubscriptionToOrg } from '../../../lib/stripeBillingSync';
 import { assertStripeModeOrThrow } from '../../../lib/stripeMode';
-import type { PlanSlug } from '../../../lib/stripePrices';
+import type { PlanSlug } from '@/src/core/domain/billing/prices';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';

@@ -5,7 +5,7 @@ import type { RoutedGuideline } from './optimizeGuidelineRouting';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { assignGuidelinesToSections } from './optimizeGuidelineRouting';
 import { countOccurrences } from './contentScore';
-import { selectOptimizeMode, type OptimizeMode, SEO_READY, AI_GAP } from './optimizeMode';
+import { selectOptimizeMode, type OptimizeMode, SEO_READY, AI_GAP } from '@/src/core/domain/optimize/optimizeMode';
 import type { OptimizePhase } from '@/src/core/domain/optimize/runPhase';
 import { STOP_SLOP_RULES } from '@/src/core/domain/optimize/stopSlopPrompt';
 
@@ -15,7 +15,7 @@ export type StepFocus = 'seo-terms' | 'ai-coverage' | 'readability' | 'expand' |
 
 export type EditMode = 'less' | 'normal' | 'expand';
 
-export type { OptimizeMode } from './optimizeMode';
+export type { OptimizeMode } from '@/src/core/domain/optimize/optimizeMode';
 
 // --- benefit-threshold + takeover constants (tunable; 0..100 AI-score scale) ---
 const LESS_MIN = 6;

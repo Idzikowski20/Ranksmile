@@ -13,7 +13,7 @@ import {
   updateOrgBillingState,
   type SubscriptionStatus,
 } from './orgBilling';
-import { getPlanFromPriceId, type LegacyPlanSlug, type PlanSlug } from './stripePrices';
+import { getPlanFromPriceId, type LegacyPlanSlug, type PlanSlug } from '@/src/core/domain/billing/prices';
 
 function toDate(unixSeconds: number | null | undefined): Date | null {
   if (!unixSeconds) return null;

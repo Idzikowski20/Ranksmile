@@ -19,7 +19,7 @@ import {
   patternUsageScore,
   scale10to100,
 } from '@/src/core/domain/wie/scorecard';
-import { buildCompetitorBenchmark, type CompetitorDoc } from './competitorBenchmark';
+import { buildCompetitorBenchmark, type CompetitorDoc } from '@/src/core/domain/wie/evalCompetitorBenchmark';
 import { runEditorialJudge } from './editorialJudge';
 import {
   buildTechnicalMarkdown,

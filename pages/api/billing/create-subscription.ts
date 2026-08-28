@@ -11,7 +11,7 @@ import { getStripe } from '../../../lib/stripe';
 import { assertStripeModeOrThrow } from '../../../lib/stripeMode';
 import { ensureStripeCustomer } from '../../../lib/stripeCustomer';
 import { clientSecretFromSubscriptionInvoice } from '../../../lib/stripeInvoiceClientSecret';
-import { getStripePriceId, type PlanSlug } from '../../../lib/stripePrices';
+import { getStripePriceId, type PlanSlug } from '@/src/core/domain/billing/prices';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
 import { isCheckoutAttemptId } from '../../../lib/checkoutAttemptId';

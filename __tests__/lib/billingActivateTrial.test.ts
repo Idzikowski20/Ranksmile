@@ -36,7 +36,7 @@ jest.mock('@/src/core/domain/billing/plans', () => ({
   )),
 }));
 
-jest.mock('../../lib/stripePrices', () => ({
+jest.mock('@/src/core/domain/billing/prices', () => ({
   getStripePriceId: jest.fn(() => 'price_growth_y'),
 }));
 

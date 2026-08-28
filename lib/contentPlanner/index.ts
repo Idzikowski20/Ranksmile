@@ -34,7 +34,7 @@ export {
   validateMustAnswerComplete,
   validateRequiredAssignments,
   validatePlanForWrite,
-} from './validators/planValidators';
+} from '@/src/core/domain/contentPlanner/planValidators';
 export {
   validateFlow,
   validateClaims,
@@ -49,7 +49,7 @@ export {
   buildSectionBriefs,
   improveBrief,
   allocateSectionBudget,
-} from './outlineBuilder';
+} from '@/src/core/domain/contentPlanner/outlineBuilder';
 export {
   runOutlinePlanningLoop,
   runBriefPlanningLoop,

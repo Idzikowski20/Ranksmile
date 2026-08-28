@@ -3,13 +3,13 @@ import {
   buildSectionBriefs,
   improveBrief,
   improveOutline,
-} from './outlineBuilder';
+} from '@/src/core/domain/contentPlanner/outlineBuilder';
 import {
   validateAgainstBenchmark,
   validateBriefs,
   validateBlueprint,
   validateOutline,
-} from './validators/planValidators';
+} from '@/src/core/domain/contentPlanner/planValidators';
 import { validatePlannerPlan } from '@/src/core/domain/contentPlanner/plannerValidator';
 import { optimizeNarrative } from '@/src/core/domain/contentPlanner/narrativeOptimizer';
 import {

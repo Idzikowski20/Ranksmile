@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { computeOverallContentScore } from '../../../lib/ai/aiSearchScore';
+import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibility/aiVisibilityStore';
 import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';

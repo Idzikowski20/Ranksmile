@@ -1,4 +1,4 @@
-import type { AiVisibilitySummary } from './ai/aiSearchScore';
+import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { SerpCompetitor } from './types/sidecar';
 
 export type RankingGoogleSource = { rank: number; domain: string; url: string; title: string };

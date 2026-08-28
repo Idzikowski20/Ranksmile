@@ -8,7 +8,7 @@ import {
   scoreDocFeatures,
   buildCompetitorBenchmark,
   formatBenchmarkMarkdown,
-} from '../../../lib/wie/eval/competitorBenchmark';
+} from '@/src/core/domain/wie/evalCompetitorBenchmark';
 import {
   parseEditorialJudgeResult,
   formatEditorialReviewMarkdown,

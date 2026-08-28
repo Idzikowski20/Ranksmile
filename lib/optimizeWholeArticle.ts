@@ -4,7 +4,7 @@ import {
   computeTermUsageGaps,
   type TermUsageGap,
 } from './optimizeSectionEdit';
-import { selectOptimizeMode, type OptimizeMode } from './optimizeMode';
+import { selectOptimizeMode, type OptimizeMode } from '@/src/core/domain/optimize/optimizeMode';
 import type { OptimizePhase } from '@/src/core/domain/optimize/runPhase';
 import type { EditMode, StepFocus } from './optimizationPlanner';
 import { buildEffortOptimizeGuidance } from '@/src/core/domain/terms/contentEffort';

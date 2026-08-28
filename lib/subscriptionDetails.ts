@@ -8,7 +8,7 @@ import { DEFAULT_PLAN_SLUG, resolvePlanSlug } from './planLimits';
 import type { UpcomingPaymentDetails } from '@/src/core/shared/money';
 import { getStripe, isStripeConfigured } from './stripe';
 import { syncSubscriptionToOrg } from './stripeBillingSync';
-import type { LegacyPlanSlug } from './stripePrices';
+import type { LegacyPlanSlug } from '@/src/core/domain/billing/prices';
 import type Stripe from 'stripe';
 
 export type { UpcomingPaymentDetails };
