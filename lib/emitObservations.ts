@@ -147,7 +147,7 @@ export async function emitAiVisibilityScanObservations(
   ownDomain: string,
 ): Promise<void> {
   const { queryOne } = await import('./db/query');
-  const { buildSnapshotsForScan, computeDelta } = await import('./aiVisibility/aiVisibilityMetrics');
+  const { buildSnapshotsForScan, computeDelta } = await import('@/src/core/domain/aiVisibility/metrics');
   const { loadScanResultRows } = await import('./aiVisibility/aiVisibilityRead');
 
   const meta = await queryOne<{ domain_id: number; config_id: number }>(

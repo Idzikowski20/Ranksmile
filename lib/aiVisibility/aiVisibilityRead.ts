@@ -3,7 +3,7 @@
  *  mapDbRowsToResultRows) are exported for unit tests. Rows carry the prompt's
  *  topic/text so snapshotForDomain can compose prompts/topics without re-querying. */
 import { queryRows, queryOne } from '../db/query';
-import { ResultRow, BrandMention } from './aiVisibilityMetrics';
+import { ResultRow, BrandMention } from '@/src/core/domain/aiVisibility/metrics';
 import type { LlmCitation } from '../dataforseoLlm';
 import { filterCitations } from '@/src/core/domain/aiVisibility/blockedDomains';
 
