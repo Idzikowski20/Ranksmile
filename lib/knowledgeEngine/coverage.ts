@@ -4,7 +4,7 @@
  */
 import type { ArticleExecutionPlan } from '@/src/core/domain/contentPlanner/types';
 import { getEmbeddingProvider, type EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
-import { semanticMatchScore } from './semanticMatch';
+import { semanticMatchScore } from '@/src/core/domain/knowledgeEngine/semanticMatch';
 import { patchExecutionPlanFromCoverage } from './aoPlanPatch';
 import type {
   CanonicalClaim,

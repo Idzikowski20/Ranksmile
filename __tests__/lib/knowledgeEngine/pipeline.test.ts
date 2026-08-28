@@ -248,7 +248,7 @@ describe('competitor documents + gate', () => {
 
 describe('knowledgeGraphToTargetKg', () => {
   it('maps high-consensus claims into Target KG', async () => {
-    const { knowledgeGraphToTargetKg } = await import('../../../lib/knowledgeEngine/toTargetKg');
+    const { knowledgeGraphToTargetKg } = await import('@/src/core/domain/knowledgeEngine/toTargetKg');
     const g = buildKnowledgeGraph({
       claims: [{
         id: 'CLAIM_ok',

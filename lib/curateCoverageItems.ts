@@ -11,7 +11,7 @@ import {
 import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import { isKeywordOnTopic, seedTokens } from '@/src/core/domain/relevance/topicRelevance';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
-import { runCoverageEngine } from './engines/coverageEngine';
+import { runCoverageEngine } from '@/src/core/domain/engines/coverageEngine';
 
 /** Target curated AI Search checklist size (citation prompts + PAA). */
 export const AI_COVERAGE_MAX = 35;

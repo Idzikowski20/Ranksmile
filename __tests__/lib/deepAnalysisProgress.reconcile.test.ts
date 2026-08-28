@@ -1,7 +1,7 @@
 import {
   isStaleDeepAnalysisJob,
   resolveAnalyzingStatusOnLoad,
-} from '../../lib/deepAnalysisProgress';
+} from '@/src/core/domain/articles/deepAnalysisProgress';
 
 describe('resolveAnalyzingStatusOnLoad', () => {
   it('keeps analyzing when no job exists yet (fresh import race)', () => {

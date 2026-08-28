@@ -1,4 +1,4 @@
-import { isNonClaimSentence, isNoiseEntity, normalizeCandidates } from '../../../lib/knowledgeEngine/extract';
+import { isNonClaimSentence, isNoiseEntity, normalizeCandidates } from '@/src/core/domain/knowledgeEngine/extract';
 
 // Every string here was scraped by a real run (article 15, "prywatny detektyw warszawa")
 // and reached the writer as something to cover.

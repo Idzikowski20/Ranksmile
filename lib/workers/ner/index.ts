@@ -26,7 +26,7 @@ export const nerWorker: PipelineWorker = {
     }
     if (!corpusText.trim()) return { ok: false, error: 'text required for NER' };
 
-    const { heuristicNerExtract, resolveEntities } = await import('../../entities/entityResolver');
+    const { heuristicNerExtract, resolveEntities } = await import('@/src/core/domain/semantic/entityResolver');
     let raw: Parameters<typeof resolveEntities>[0] = Array.isArray(ctx.payload.nerSpans)
       ? (ctx.payload.nerSpans as Parameters<typeof resolveEntities>[0])
       : [];

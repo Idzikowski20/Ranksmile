@@ -5,7 +5,7 @@ import { useWorkspaces } from '../../services/workspaces';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Flag } from '../../components/koala';
-import { writeAnalyzeSession } from '../../lib/deepAnalysisProgress';
+import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProgress';
 import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import toast from 'react-hot-toast';
 

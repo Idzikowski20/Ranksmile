@@ -1,12 +1,12 @@
 import { buildCompetitorDocuments } from './competitorDocument';
-import { extractRawKnowledge, isNonClaimSentence, normalizeCandidates } from './extract';
+import { extractRawKnowledge, isNonClaimSentence, normalizeCandidates } from '@/src/core/domain/knowledgeEngine/extract';
 import { canonicalizeClaims, sentencesToCanonicalizeInputs } from './canonicalize';
 import { normalizeClaims, type ClaimCompletion } from './normalizeClaims';
 import { dropCompetitorBrandClaims } from '@/src/core/domain/knowledgeEngine/competitorBrands';
-import { voteClaims } from './vote';
+import { voteClaims } from '@/src/core/domain/knowledgeEngine/vote';
 import { buildTopicBlocks, discoverGaps } from './cluster';
-import { buildKnowledgeGraph, voteEntities } from './buildGraph';
-import { verifyKnowledgeGraph } from './verify';
+import { buildKnowledgeGraph, voteEntities } from '@/src/core/domain/knowledgeEngine/buildGraph';
+import { verifyKnowledgeGraph } from '@/src/core/domain/knowledgeEngine/verify';
 import { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 import type { KnowledgeGraph, StageTimingsMs } from '@/src/core/domain/knowledgeEngine/types';
 

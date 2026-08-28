@@ -41,17 +41,17 @@ export {
 
 export { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 export type { EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
-export { semanticMatchScore } from './semanticMatch';
+export { semanticMatchScore } from '@/src/core/domain/knowledgeEngine/semanticMatch';
 export { buildCompetitorDocuments, headingTextsFromOutline } from './competitorDocument';
-export { extractRawKnowledge, normalizeCandidates, isLocalLeftoverEntity } from './extract';
+export { extractRawKnowledge, normalizeCandidates, isLocalLeftoverEntity } from '@/src/core/domain/knowledgeEngine/extract';
 export { canonicalizeClaims, sentencesToCanonicalizeInputs } from './canonicalize';
-export { voteClaims } from './vote';
+export { voteClaims } from '@/src/core/domain/knowledgeEngine/vote';
 export { buildTopicBlocks, discoverGaps, inferTopicRole } from './cluster';
-export { buildKnowledgeGraph, voteEntities } from './buildGraph';
-export { verifyKnowledgeGraph } from './verify';
+export { buildKnowledgeGraph, voteEntities } from '@/src/core/domain/knowledgeEngine/buildGraph';
+export { verifyKnowledgeGraph } from '@/src/core/domain/knowledgeEngine/verify';
 export { runKnowledgeEngine } from './runKnowledgeEngine';
 export type { RunKnowledgeEngineInput, RunKnowledgeEngineResult } from './runKnowledgeEngine';
-export { knowledgeGraphToTargetKg } from './toTargetKg';
+export { knowledgeGraphToTargetKg } from '@/src/core/domain/knowledgeEngine/toTargetKg';
 export {
   computeClaimCoverage,
   coverageStatusForClaim,

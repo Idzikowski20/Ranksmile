@@ -1,4 +1,4 @@
-import { isStaleDeepAnalysisJob } from '../../lib/deepAnalysisProgress';
+import { isStaleDeepAnalysisJob } from '@/src/core/domain/articles/deepAnalysisProgress';
 
 describe('isStaleDeepAnalysisJob', () => {
   it('treats claimed-but-never-started jobs as stale after 5 minutes', () => {

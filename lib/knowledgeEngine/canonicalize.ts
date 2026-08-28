@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import type { EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 import { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
-import { semanticMatchScore } from './semanticMatch';
+import { semanticMatchScore } from '@/src/core/domain/knowledgeEngine/semanticMatch';
 import { CANONICALIZE_SIM_MIN, OFFICIAL_DOMAINS, SOURCE_TIER_WEIGHTS } from '@/src/core/domain/knowledgeEngine/constants';
 import type {
   CanonicalClaim,
@@ -11,7 +11,7 @@ import type {
   SourceDiversity,
   SourceKind,
 } from '@/src/core/domain/knowledgeEngine/types';
-import type { RawSentence } from './extract';
+import type { RawSentence } from '@/src/core/domain/knowledgeEngine/extract';
 
 export type CanonicalizeInput = {
   text: string;

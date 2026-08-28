@@ -18,7 +18,7 @@ import { captureAoBaseline, htmlMatchesNormalized, type AoBaseline } from './aoB
 import { makeSnapshot, type AoDocumentSnapshot } from './aoSnapshot';
 import type { AoScores, ScoreAvailability, ScoreGatePolicy } from '@/src/core/domain/optimize/aoScoreDelta';
 import { makeScoreDeltaSet, isOverallFlat, OVERALL_FLAT_EPSILON } from '@/src/core/domain/optimize/aoScoreDelta';
-import { createAoTrace, type AoTrace } from './aoTrace';
+import { createAoTrace, type AoTrace } from '@/src/core/domain/optimize/aoTrace';
 import { buildCriticalContentMap, type CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import { selectSectionTarget } from './sectionTargeting';
 import {
