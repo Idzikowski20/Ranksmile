@@ -1,5 +1,5 @@
 import type { PipelineWorker } from '../types';
-import { PIPELINE_VERSION } from '../../pipeline/queuePriorities';
+import { PIPELINE_VERSION } from '@/src/core/domain/pipeline/queuePriorities';
 
 /** SERP crawl worker — corpus via Corpus API; Serper fallback when no serpUrls. */
 export const serpWorker: PipelineWorker = {

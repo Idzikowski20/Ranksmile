@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Hydrate } from 'react-query/hydration';
-import { parseWorkspaceId } from '../lib/activeWorkspace';
+import { parseWorkspaceId } from '@/src/core/domain/navigation/activeWorkspace';
 import { IconDefaultsProvider } from '../components/koala/core/IconDefaultsProvider';
 import { KoalaThemeProvider } from '../components/koala/theme';
 import AppToaster from '../components/common/AppToaster';

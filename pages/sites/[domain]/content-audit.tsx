@@ -12,7 +12,7 @@ import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skel
 import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
-import { deriveActiveId } from '../../../lib/activeWorkspace';
+import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
 import { useTrafficAlerts } from '../../../lib/useTrafficAlerts';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { kwScore } from '../../../utils/gsc';

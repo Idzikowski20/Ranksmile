@@ -39,8 +39,8 @@ export {
   MAX_CLAIMS_PER_SECTION,
 } from './constants';
 
-export { getEmbeddingProvider } from './embeddingProvider';
-export type { EmbeddingProvider } from './embeddingProvider';
+export { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
+export type { EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 export { semanticMatchScore } from './semanticMatch';
 export { buildCompetitorDocuments, headingTextsFromOutline } from './competitorDocument';
 export { extractRawKnowledge, normalizeCandidates, isLocalLeftoverEntity } from './extract';

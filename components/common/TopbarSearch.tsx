@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/router';
 import { useWorkspaces } from '../../services/workspaces';
 import { useFetchDomains } from '../../services/domains';
-import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { AI_VISIBILITY_NAV, resolveSiteNav, SEO_NAV, TOOLS_NAV } from '../../lib/navigation';
 import {
   IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings,

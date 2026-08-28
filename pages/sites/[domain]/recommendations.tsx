@@ -9,7 +9,7 @@ import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
-import { deriveActiveId, workspaceHref } from '../../../lib/activeWorkspace';
+import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { writeAnalyzeSession } from '../../../lib/deepAnalysisProgress';
 import { buildImportKeywordList } from '../../../lib/buildImportKeywordList';
 import { normalizeUrlForMatch, kwScore, buildGscUrlKeywordMap } from '../../../utils/gsc';

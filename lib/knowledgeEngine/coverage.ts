@@ -3,7 +3,7 @@
  * Results live in knowledge_coverage_report / plan annotations.
  */
 import type { ArticleExecutionPlan } from '@/src/core/domain/contentPlanner/types';
-import { getEmbeddingProvider, type EmbeddingProvider } from './embeddingProvider';
+import { getEmbeddingProvider, type EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 import { semanticMatchScore } from './semanticMatch';
 import { patchExecutionPlanFromCoverage } from './aoPlanPatch';
 import type {

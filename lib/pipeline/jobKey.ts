@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { PIPELINE_VERSION } from './queuePriorities';
+import { PIPELINE_VERSION } from '@/src/core/domain/pipeline/queuePriorities';
 
 export type JobKeyParts = {
   workspaceId: string | number;

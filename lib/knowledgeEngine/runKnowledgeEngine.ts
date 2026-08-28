@@ -7,7 +7,7 @@ import { voteClaims } from './vote';
 import { buildTopicBlocks, discoverGaps } from './cluster';
 import { buildKnowledgeGraph, voteEntities } from './buildGraph';
 import { verifyKnowledgeGraph } from './verify';
-import { getEmbeddingProvider } from './embeddingProvider';
+import { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 import type { KnowledgeGraph, StageTimingsMs } from '@/src/core/domain/knowledgeEngine/types';
 
 export type RunKnowledgeEngineInput = {

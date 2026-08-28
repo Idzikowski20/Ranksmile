@@ -2,7 +2,7 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQueryClient } from 'react-query';
-import { parseWorkspaceId } from '../lib/activeWorkspace';
+import { parseWorkspaceId } from '@/src/core/domain/navigation/activeWorkspace';
 import { SETUP_LOCATIONS, type SetupLocation } from '@/src/core/domain/setup/locations';
 import BlogPathsField from '../components/domains/BlogPathsField';
 import DomainFavicon from '../components/common/DomainFavicon';

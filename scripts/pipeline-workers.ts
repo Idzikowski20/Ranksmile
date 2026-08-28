@@ -42,8 +42,8 @@ async function reclaimQueuedJobs(url: string): Promise<void> {
   const { expireStaleQueuedJobs, listQueuedPipelineJobs } = await import(
     '../lib/ensurePipelineJobsTables'
   );
-  const { QUEUE_PRIORITY } = await import('../lib/pipeline/queuePriorities');
-  type QueueName = import('../lib/pipeline/queuePriorities').QueueName;
+  const { QUEUE_PRIORITY } = await import('@/src/core/domain/pipeline/queuePriorities');
+  type QueueName = import('@/src/core/domain/pipeline/queuePriorities').QueueName;
 
   const expired = await expireStaleQueuedJobs();
   if (expired > 0) {
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
   const { listWorkers, resetWorkerRegistry } = await import('../lib/workers/registry');
   const { findActiveJobByKey, insertPipelineJob } = await import('../lib/ensurePipelineJobsTables');
   const { processJobInline } = await import('../lib/pipeline/pipelineQueue');
-  const { PIPELINE_VERSION } = await import('../lib/pipeline/queuePriorities');
+  const { PIPELINE_VERSION } = await import('@/src/core/domain/pipeline/queuePriorities');
   const { getPipelineStage } = await import('../lib/pipeline/pipelineStage');
 
   resetWorkerRegistry();
