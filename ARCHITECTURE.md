@@ -5,6 +5,21 @@ keeping the app green. The value is the **dependency rule**, not the folders. Se
 `docs/superpowers/plans/2026-08-27-clean-architecture-migration.md` for the plan and
 roadmap. The billing-invoices vertical is the reference implementation.
 
+## Status (Phase N complete)
+
+The migration is essentially complete: **all domain, application, shared and
+infrastructure code now lives under `src/`**. `lib/` retains only:
+- **CIA zones** (`ccm`, `cia`, `compiler`, `intelligence`, `planner`, `projections`)
+  + the `primitives` intelligence kernel — their own architecture, out of scope.
+- **`types`** — the shared type carve-out (core may import type-only).
+- **`arch`** — the boundary-test tooling itself.
+- **`editor` / `motion`** — presentation utilities (belong with `components/`, not a
+  clean-arch layer).
+
+`src/core/{domain,application,shared}` + `src/composition` + `src/infrastructure`
+hold the whole business + infrastructure surface; `pages/api/**` are the thin
+controllers.
+
 ## Layers
 
 ```
