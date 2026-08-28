@@ -1,0 +1,151 @@
+lib/wie/eval/runEvalSuite.ts
+  s_e3556ba0769b4b::t_e74546f9975962 22
+pages/api/articles/[id]/index.ts
+  s_e3556ba0769b4b::t_e74546f9975962 14-15
+components/articles/ScoreTrio.tsx
+  s_e3556ba0769b4b::t_e74546f9975962 3
+pages/articles/context.tsx
+  s_e3556ba0769b4b::t_e74546f9975962 14
+lib/wie/eval/reports.ts
+  s_e3556ba0769b4b::t_e74546f9975962 11-12
+__tests__/lib/contentPlanner/validators.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 10
+lib/navigation/index.ts
+  s_e3556ba0769b4b::t_e74546f9975962 1-2
+lib/types/sidecar.ts
+  s_e3556ba0769b4b::t_e74546f9975962 2
+lib/infoToCoverTopics.ts
+  s_e3556ba0769b4b::t_e74546f9975962 5
+lib/subscriptionDetails.ts
+  s_e3556ba0769b4b::t_e74546f9975962 11
+__tests__/api/articles-ai-visibility-guard.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 7
+pages/articles/[id]/index.tsx
+  s_e3556ba0769b4b::t_e74546f9975962 48-49
+lib/articles/articleFacts.ts
+  s_e3556ba0769b4b::t_e74546f9975962 13
+__tests__/lib/contentPlanner/sectionLabels.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 9
+lib/billing/billingActivateTrial.ts
+  s_e3556ba0769b4b::t_e74546f9975962 15
+__tests__/lib/billingActivateTrial.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 39
+pages/api/billing/create-subscription.ts
+  s_e3556ba0769b4b::t_e74546f9975962 14
+lib/orgBilling.ts
+  s_e3556ba0769b4b::t_e74546f9975962 14
+__tests__/ao/golden/v4/precisionAoV41.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 16
+__tests__/lib/aiSearchScore.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 7
+lib/aiVisibility/aiVisibilityStore.ts
+  s_e3556ba0769b4b::t_e74546f9975962 6
+lib/ao/runPrecisionOptimize.ts
+  s_e3556ba0769b4b::t_e74546f9975962 10,41
+pages/api/billing/checkout-session.ts
+  s_e3556ba0769b4b::t_e74546f9975962 9
+lib/computeLiveArticleScores.ts
+  s_e3556ba0769b4b::t_e74546f9975962 4
+__tests__/lib/aiScoreIntent.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 1
+lib/ai/tools.ts
+  s_e3556ba0769b4b::t_e74546f9975962 7-8
+components/articles/ContentScorePanel.tsx
+  s_e3556ba0769b4b::t_e74546f9975962 18
+__tests__/lib/stripePrices.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 1
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_e74546f9975962 19,48
+lib/optimizeWholeArticle.ts
+  s_e3556ba0769b4b::t_e74546f9975962 7
+lib/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_e74546f9975962 9
+__tests__/lib/optimizeMode.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 9
+__tests__/api/articles-deep-analysis-guard.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 22
+__tests__/lib/competitorTermCalibration.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 3
+__tests__/lib/infoToCoverTopics.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 3
+__tests__/lib/paymentFailedLock.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 3
+lib/contentPlanner/runContentPlanner.ts
+  s_e3556ba0769b4b::t_e74546f9975962 34
+lib/ao/optimizationPolicy.ts
+  s_e3556ba0769b4b::t_e74546f9975962 19
+lib/optimizationPlanner.ts
+  s_e3556ba0769b4b::t_e74546f9975962 8,18
+pages/api/articles/ai-visibility.ts
+  s_e3556ba0769b4b::t_e74546f9975962 5
+lib/articles/buildDeveloperReport.ts
+  s_e3556ba0769b4b::t_e74546f9975962 6-7
+pages/api/billing/upgrade-subscription.ts
+  s_e3556ba0769b4b::t_e74546f9975962 14
+__tests__/lib/articleFacts.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 21
+__tests__/lib/contentPlanner/outlineTables.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 1
+lib/billing/billingUpgrade.ts
+  s_e3556ba0769b4b::t_e74546f9975962 11-12
+lib/stripeBillingSync.ts
+  s_e3556ba0769b4b::t_e74546f9975962 16
+__tests__/lib/wie/evalSuite.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 11
+lib/rankingSources.ts
+  s_e3556ba0769b4b::t_e74546f9975962 1
+__tests__/api/billing-guards.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 41
+lib/wie/eval/verdictAlign.ts
+  s_e3556ba0769b4b::t_e74546f9975962 5
+pages/api/articles/[id]/generate.ts
+  s_e3556ba0769b4b::t_e74546f9975962 26
+lib/contentPlanner/index.ts
+  s_e3556ba0769b4b::t_e74546f9975962 37,52
+lib/seo/keywordData.ts
+  s_e3556ba0769b4b::t_e74546f9975962 20
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_e74546f9975962 25,42
+pages/billing/checkout/[plan].tsx
+  s_e3556ba0769b4b::t_e74546f9975962 32
+components/articles/WriteOptimizePanel.tsx
+  s_e3556ba0769b4b::t_e74546f9975962 6
+__tests__/lib/pipelineVersion.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 1
+lib/scoreArticleHtml.ts
+  s_e3556ba0769b4b::t_e74546f9975962 8
+lib/billing/billingPlanLock.ts
+  s_e3556ba0769b4b::t_e74546f9975962 1
+__tests__/lib/stripeBillingSync.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 28
+__tests__/lib/ao/precisionAo.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 13
+__tests__/lib/computeOptimizeLiveSnapshot.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 6
+__tests__/lib/rankingSources.test.ts
+  s_e3556ba0769b4b::t_e74546f9975962 7
+lib/planLimits.ts
+  s_e3556ba0769b4b::t_e74546f9975962 2
+lib/ai/articleMeta.ts
+  s_e3556ba0769b4b::t_e74546f9975962 3
+lib/contentPlanner/planningLoop.ts
+  s_e3556ba0769b4b::t_e74546f9975962 6,12
+lib/articles/articleAiPipeline.ts
+  s_e3556ba0769b4b::t_e74546f9975962 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "31972a911fb80190ed21a72e7d471988df965230",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
