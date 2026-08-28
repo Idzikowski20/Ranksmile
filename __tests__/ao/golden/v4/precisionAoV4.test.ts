@@ -4,9 +4,9 @@ import {
   strictScoreGateRejectReason,
   isPromisingSeoContent,
   hasSeoContentRegression,
-} from '../../../../lib/ao/aoScoreDelta';
+} from '@/src/core/domain/optimize/aoScoreDelta';
 import { buildCriticalContentMap, unitSemanticallyPresent } from '../../../../lib/ao/criticalContentMap';
-import { buildIntentProfile } from '../../../../lib/ao/intentProfile';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { selectSectionTarget } from '../../../../lib/ao/sectionTargeting';
 import { splitSections } from '../../../../lib/articles/articleSections';
 import {
@@ -14,7 +14,7 @@ import {
   runFinalScoreGate,
   runCandidateScoreGate,
 } from '../../../../lib/ao/aoQualityGates';
-import { makeCandidate } from '../../../../lib/ao/editCandidate';
+import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 import { htmlMatchesNormalized } from '../../../../lib/ao/aoBaseline';
 
 const LEAD =

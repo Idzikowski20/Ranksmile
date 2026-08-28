@@ -5,7 +5,7 @@
 import type { CompetitorSynthesis } from './competitorSynthesis';
 import { evaluateRxQualityGate } from './rxQualityGate';
 import { scoreEeat } from '@/src/core/domain/wie/eeatScore';
-import type { AoScores } from '../ao/aoScoreDelta';
+import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 
 export type AbVariantLabel = 'A' | 'B';
 

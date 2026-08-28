@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { normalizeHtmlForDiff } from '../articles/articleSections';
-import type { AoScores } from './aoScoreDelta';
+import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 
 export type AoBaseline = {
   runId: string;

@@ -7,7 +7,7 @@ import {
   validateFaqHtmlStructure,
 } from '../../lib/aoFaqSection';
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
-import { buildIntentProfile } from '../../lib/ao/intentProfile';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 
 const items: CoverageItem[] = [
   { id: '1', label: 'Kiedy można oskarżyć?', category: 'intent', type: 'paa', covered: false, quality: 2, importance: 'critical', source: 'llm' },

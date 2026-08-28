@@ -1,6 +1,6 @@
-import type { EditBudget } from './editBudget';
-import type { ArticleIntentProfile } from './intentProfile';
-import { textHitsForbidden } from './intentProfile';
+import type { EditBudget } from '@/src/core/domain/optimize/editBudget';
+import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
+import { textHitsForbidden } from '@/src/core/domain/optimize/intentProfile';
 
 export type RejectReason =
   | 'WORD_BUDGET'

@@ -2,7 +2,7 @@
  * Critical Content Map — multi-candidate definition detection (no LLM).
  * Lead = semantic role, not first-paragraph-only.
  */
-import type { ArticleIntentProfile } from './intentProfile';
+import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 
 export type CriticalUnitType =
   | 'definition'

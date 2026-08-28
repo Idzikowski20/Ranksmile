@@ -1,5 +1,5 @@
-import type { AoScores, AoScoreDeltaSet } from './aoScoreDelta';
-import type { AoRejectionReason } from './aoRejectionReason';
+import type { AoScores, AoScoreDeltaSet } from '@/src/core/domain/optimize/aoScoreDelta';
+import type { AoRejectionReason } from '@/src/core/domain/optimize/aoRejectionReason';
 
 export type AoTraceStep =
   | 'baseline'

@@ -8,7 +8,7 @@ import type {
   ScoreAvailability,
   ScoreGatePolicy,
   CandidateGateDecision,
-} from './aoScoreDelta';
+} from '@/src/core/domain/optimize/aoScoreDelta';
 import {
   DEFAULT_SCORE_GATE_CONFIG,
   STRICT_SCORE_GATE_POLICY,
@@ -18,12 +18,12 @@ import {
   evaluateCandidateGateDecision,
   evaluateFinalGateDecision,
   strictScoreGateRejectReason,
-} from './aoScoreDelta';
-import type { AoRejectionReason } from './aoRejectionReason';
+} from '@/src/core/domain/optimize/aoScoreDelta';
+import type { AoRejectionReason } from '@/src/core/domain/optimize/aoRejectionReason';
 import { countWordsFromHtml } from './aoBaseline';
 import { runEditSafetyGate, type RejectReason } from './editSafetyGate';
-import type { EditBudget } from './editBudget';
-import type { ArticleIntentProfile } from './intentProfile';
+import type { EditBudget } from '@/src/core/domain/optimize/editBudget';
+import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 
 export type GateResult =
   | { ok: true; detail?: string }
