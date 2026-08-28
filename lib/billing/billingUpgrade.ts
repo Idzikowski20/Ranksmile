@@ -5,7 +5,7 @@ import {
   getPlanPeriodPrice,
   type BillingPeriod,
   type CheckoutPlan,
-} from './billingPlans';
+} from '@/src/core/domain/billing/plans';
 import { blocksNewPaidCheckout } from './billingPlanLock';
 import type { OrgBillingState } from '../orgBilling';
 import type { LegacyPlanSlug, PlanSlug } from '../stripePrices';

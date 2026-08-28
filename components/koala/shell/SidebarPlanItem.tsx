@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from 'react-query';
-import { getCheckoutPlan } from '../../../lib/billing/billingPlans';
+import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import fetchJson from '../../../lib/fetchJson';
 import { formatTrialCountdown, planEndLine, type PlanSummaryData } from '../../../lib/planLimits';
 import { hasActiveBillingEntitlement } from '../../../lib/billing/billingEntitlement';

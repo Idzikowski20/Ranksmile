@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQuery } from 'react-query';
 import { useRouter } from 'next/router';
-import { getPlanCheckoutHref, type BillingPeriod } from '../../lib/billing/billingPlans';
+import { getPlanCheckoutHref, type BillingPeriod } from '@/src/core/domain/billing/plans';
 import type { SubscriptionDetails } from '../../lib/subscriptionDetails';
 import {
   COMPARE_SECTIONS,

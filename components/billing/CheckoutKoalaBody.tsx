@@ -13,14 +13,14 @@ import {
   type CompanyState,
 } from './CheckoutStripeProvider';
 import type { CheckoutFieldErrors } from '../../lib/checkoutValidation';
-import type { BillingPeriod, CheckoutPlan } from '../../lib/billing/billingPlans';
+import type { BillingPeriod, CheckoutPlan } from '@/src/core/domain/billing/plans';
 import type { UpgradePreview } from '../../lib/billing/billingUpgrade';
 import {
   CHECKOUT_PLANS,
   formatEuro,
   getPlanMonthlyPrice,
   getPlanPeriodPrice,
-} from '../../lib/billing/billingPlans';
+} from '@/src/core/domain/billing/plans';
 import { typeface } from '../koala/tokens/typography';
 import { shadow } from '../koala/tokens/effects';
 

@@ -11,7 +11,7 @@ import {
 import { getOrgBillingState, getOrgIdByStripeCustomerId, updateOrgBillingState } from '../../../lib/orgBilling';
 import { BillingSource, ensureCorrelationId } from '../../../lib/billing/billingAudit';
 import db from '../../../database/database';
-import { getCheckoutPlan } from '../../../lib/billing/billingPlans';
+import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { getAppOrigin } from '../../../lib/appOrigin';
 import { claimBillingEmailAndEnqueue } from '../../../lib/billing/billingEmailClaim';
 import { shouldSendAbandonedForSubscription } from '../../../lib/billing/billingAbandoned';

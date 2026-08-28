@@ -30,7 +30,7 @@ jest.mock('../../lib/billing/domainEvents', () => ({
   appendBillingDomainEvent: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/billing/billingPlans', () => ({
+jest.mock('@/src/core/domain/billing/plans', () => ({
   getCheckoutPlan: jest.fn((slug: string) => (
     slug === 'growth' ? { slug: 'growth', name: 'Growth', priceMonthly: 59, priceYearly: 49, features: [] } : undefined
   )),

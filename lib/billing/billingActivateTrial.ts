@@ -1,6 +1,6 @@
 import type Stripe from 'stripe';
-import type { BillingPeriod } from './billingPlans';
-import { getCheckoutPlan } from './billingPlans';
+import type { BillingPeriod } from '@/src/core/domain/billing/plans';
+import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import {
   BillingSource,
   emitBillingEvent,

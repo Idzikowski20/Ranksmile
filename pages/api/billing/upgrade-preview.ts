@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { getCheckoutPlan, getLegacyCheckoutPlan } from '../../../lib/billing/billingPlans';
+import { getCheckoutPlan, getLegacyCheckoutPlan } from '@/src/core/domain/billing/plans';
 import {
   assertCanUpgradeSubscription,
   previewSubscriptionUpgrade,
