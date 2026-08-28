@@ -7,7 +7,7 @@ jest.mock('../../lib/dataforseo', () => ({
   getRankedKeywords: jest.fn(),
   isDataForSeoConfigured: jest.fn().mockReturnValue(true),
 }));
-jest.mock('../../lib/cache/fileCache', () => ({
+jest.mock('@/src/infrastructure/cache/fileCache', () => ({
   cached: jest.fn(({ producer }: { producer: () => Promise<unknown> }) => producer()),
   TTL: { RANKED_KEYWORDS: 1 },
 }));

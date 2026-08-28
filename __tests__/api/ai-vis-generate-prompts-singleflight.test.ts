@@ -6,7 +6,7 @@ jest.mock('../../database/database', () => ({
   default: { query: jest.fn().mockResolvedValue([]) },
 }));
 
-jest.mock('../../lib/db/query', () => ({ queryOne: jest.fn() }));
+jest.mock('@/src/infrastructure/db/query', () => ({ queryOne: jest.fn() }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
 jest.mock('../../utils/verifyDomainOwnership', () => ({
@@ -27,7 +27,7 @@ jest.mock('../../lib/dataforseo', () => ({
 jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 import db from '../../database/database';
-import { queryOne } from '../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getPeopleAlsoAsk } from '../../lib/dataforseo';
 import handler from '../../pages/api/ai-visibility/[slug]/generate-prompts';
 

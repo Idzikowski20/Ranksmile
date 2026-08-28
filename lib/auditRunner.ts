@@ -7,7 +7,7 @@
  * The API run.ts route is the client-driven worker that calls processQueuedForDomain.
  */
 import db from '../database/database';
-import { queryOne } from './db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { computeAudit } from './auditCompute';
 import { enrichAudit } from './auditEnrich';
 import { findInternalLinkOpportunities } from './auditInternalLinks';

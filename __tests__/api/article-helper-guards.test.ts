@@ -7,7 +7,7 @@ jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResol
 jest.mock('../../utils/verifyDomainOwnership', () => ({ verifyDomainOwnershipById: jest.fn().mockResolvedValue(false) }));
 jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
-jest.mock('../../lib/db/query', () => ({ queryOne: jest.fn() }));
+jest.mock('@/src/infrastructure/db/query', () => ({ queryOne: jest.fn() }));
 jest.mock('../../lib/sidecar', () => ({ callSidecar: jest.fn() }));
 jest.mock('@/src/infrastructure/ai/aiBudget', () => ({ resolveOrgId: jest.fn(), orgBudgetBlocked: jest.fn(), recordAiTokens: jest.fn() }));
 jest.mock('axios', () => ({ __esModule: true, default: { post: jest.fn() } }));
@@ -22,7 +22,7 @@ import publishTargetsHandler from '../../pages/api/articles/publish-targets';
 import keywordsHandler from '../../pages/api/articles/[id]/keywords';
 import { assertArticleAccess } from '../../lib/tenancy';
 import { verifyDomainOwnershipById } from '../../utils/verifyDomainOwnership';
-import { queryOne } from '../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { callSidecar } from '../../lib/sidecar';
 
 const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;

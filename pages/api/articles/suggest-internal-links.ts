@@ -11,7 +11,7 @@ import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastruc
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryOne } from '../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';

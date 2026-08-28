@@ -7,7 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { runScanChunk, AI_VIS_CHUNK_PAIRS } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
-import { queryOne } from '../../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '../../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

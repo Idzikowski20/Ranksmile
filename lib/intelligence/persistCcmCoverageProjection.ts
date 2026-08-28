@@ -12,7 +12,7 @@ export async function persistCcmCoverageProjection(opts: {
   readonly model: CanonicalContentModel;
   readonly createdAt: string;
 }): Promise<CoverageSnapshot | null> {
-  const { queryOne, queryRows } = await import('../db/query');
+  const { queryOne, queryRows } = await import('@/src/infrastructure/db/query');
   const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
   const articleIdSql = await getArticleIdSql();
 

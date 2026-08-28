@@ -8,7 +8,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import db from '../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { queryOne } from '../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { readContentSettings } from '../../../lib/contentSettings';
 import { getDomainVoices } from '../../../lib/domainVoices';
 import { assertArticleAccess } from '../../../lib/tenancy';
@@ -136,7 +136,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { buildWieWriteContext, formatWieWriteBlocks } = await import('../../../lib/wie/writerContext');
     const scoreData = articleId
       ? await (async () => {
-          const { queryOne } = await import('../../../lib/db/query');
+          const { queryOne } = await import('@/src/infrastructure/db/query');
           const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
           const idSql = await getArticleIdSql();
           const r = await queryOne<{ score_data: string | null }>(

@@ -9,7 +9,7 @@ import { Button, Chip } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import { KoalaEmptyState } from '../koala/layout';
 import { useProfile } from '../../services/profile';
-import { authClient } from '../../lib/auth/client';
+import { authClient } from '@/src/infrastructure/auth/client';
 import type { PendingAction } from '@/src/infrastructure/ai/types';
 import { shouldShowRanksmileAnswerStream } from '@/src/infrastructure/ai/text';
 

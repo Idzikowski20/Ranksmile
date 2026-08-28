@@ -63,7 +63,7 @@ export async function loadDaFactSeeds(
   articleId: number,
   articlePlain: string,
 ): Promise<readonly DaFactSeed[]> {
-  const { queryRows } = await import('../db/query');
+  const { queryRows } = await import('@/src/infrastructure/db/query');
   const rows = await queryRows<CitationRow>(
     `SELECT c.prompt, c.answer, c.cited_url, c.cited_domain
      FROM ai_visibility_citations c

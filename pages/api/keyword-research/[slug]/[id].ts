@@ -4,7 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
-import { queryOne, KeywordResearchRunRow } from '../../../../lib/db/query';
+import { queryOne, KeywordResearchRunRow } from '@/src/infrastructure/db/query';
 import type { KeywordResearchResult } from '@/src/core/domain/keywords/types';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

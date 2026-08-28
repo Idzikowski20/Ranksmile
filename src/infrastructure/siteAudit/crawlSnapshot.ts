@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import db from '@/database/database';
-import { queryOne, queryRows } from '@/lib/db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { parseJsonish } from '@/lib/types/json';
 import {
   buildIssuesReport,

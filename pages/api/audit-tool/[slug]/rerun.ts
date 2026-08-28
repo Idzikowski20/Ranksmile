@@ -4,7 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
-import { queryOne } from '../../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 // POST /api/audit-tool/[slug]/rerun { id } — re-queue one audit so it recomputes (e.g.

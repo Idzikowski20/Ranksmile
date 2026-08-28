@@ -3,7 +3,7 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { queryRows } from '../../../../lib/db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import type { SqlReplacements } from '../../../../lib/types/db';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

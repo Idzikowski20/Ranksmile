@@ -4,7 +4,7 @@
  * GSC is validation-only (page queries that match the URL anchor).
  */
 import db from '@/database/database';
-import { cached, TTL } from '@/lib/cache/fileCache';
+import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import { enrichTerms, getOwnVisibleKeywords } from '@/lib/seo/keywordData';
 import { getRankedKeywords, isDataForSeoConfigured } from '@/lib/dataforseo';
 import { DFS_DEFAULT_RANKED_LIMIT } from '@/lib/dataforseoBudget';

@@ -57,7 +57,7 @@ async function resolveHtml(
   contentHtml: string | null | undefined,
 ): Promise<string> {
   if (contentHtml != null && contentHtml !== '') return contentHtml;
-  const { queryOne } = await import('../db/query');
+  const { queryOne } = await import('@/src/infrastructure/db/query');
   const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
   const articleIdSql = await getArticleIdSql();
   const row = await queryOne<{ content: string | null }>(

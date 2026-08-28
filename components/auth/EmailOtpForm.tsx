@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { verifyEmailOtp } from '../../lib/auth/fetchAuth';
+import { verifyEmailOtp } from '@/src/infrastructure/auth/fetchAuth';
 import Button from '../koala/primitives/Button';
 import AuthBrandMark from './AuthBrandMark';
 import AuthField from './AuthField';

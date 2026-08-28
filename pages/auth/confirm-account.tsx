@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import AuthPageLayout from '../../components/auth/AuthPageLayout';
 import AuthShell from '../../components/auth/AuthShell';
 import { authSubtitleStyle, authTitleStyle } from '../../components/auth/authStyles';
-import { signOut } from '../../lib/auth/fetchAuth';
+import { signOut } from '@/src/infrastructure/auth/fetchAuth';
 import { useMarkEmailConfirmed } from '../../lib/emailConfirmedStatus';
 import { Card } from '../../components/koala/product';
 import Button from '../../components/koala/primitives/Button';

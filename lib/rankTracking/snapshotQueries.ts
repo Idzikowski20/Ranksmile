@@ -1,4 +1,4 @@
-import { queryRows } from '../db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import type { ComparePeriod, RankDevice, RankSnapshotRow } from '../types/rankTracking';
 
 function comparePeriodDays(period: ComparePeriod): number {

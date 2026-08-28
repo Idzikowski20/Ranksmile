@@ -9,7 +9,7 @@ import {
   emptyBuckets,
   mapKeywords,
 } from './derive';
-import { cached, TTL } from '../cache/fileCache';
+import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import {
   DATASET_VERSION,
   ORGANIC_GSC_CACHE_TTL_MS,

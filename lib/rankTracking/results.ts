@@ -1,4 +1,4 @@
-import { queryOne, queryRows } from '../db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import type {
   ComparePeriod,
   RankDevice,

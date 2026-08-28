@@ -9,8 +9,8 @@ import { getErrorMessage } from '../../../../../lib/errors';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { queryOne } from '../../../../../lib/db/query';
-import type { ArticleRow } from '../../../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
+import type { ArticleRow } from '@/src/infrastructure/db/query';
 import { SqlCompileStore } from '../../../../../lib/intelligence/sqlCompileStore';
 import {
   compileArticle,

@@ -10,7 +10,7 @@ import {
   type BillingAuditContext,
 } from '@/src/infrastructure/billing/billingAudit';
 import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ensureBillingTables';
-import { queryOne } from './db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import type { LegacyPlanSlug } from '@/src/core/domain/billing/prices';
 
 export type SubscriptionStatus =

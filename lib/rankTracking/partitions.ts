@@ -1,5 +1,5 @@
 import db from '../../database/database';
-import { queryRows } from '../db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 
 const isPostgres = !!process.env.DATABASE_URL;
 const RETENTION_MONTHS = 24;

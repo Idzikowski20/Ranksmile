@@ -9,7 +9,7 @@ import db from '../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryOne, ArticleRow } from '../../../lib/db/query';
+import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
 import { assertArticleAccess } from '../../../lib/tenancy';

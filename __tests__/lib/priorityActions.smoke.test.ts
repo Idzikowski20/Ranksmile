@@ -1,4 +1,4 @@
-import { actionsFromObservations, isLlmAction } from '../../lib/observations/actionsFromObservations';
+import { actionsFromObservations, isLlmAction } from '@/src/infrastructure/observations/actionsFromObservations';
 import { applyStrategy, prioritizeActions } from '../../lib/primitives/prioritizeActions';
 import { computeFeatureScoreDelta } from '../../lib/featureStoreCore';
 import type { Action, Feature, Observation } from '../../lib/primitives/types';

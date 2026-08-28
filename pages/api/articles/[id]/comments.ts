@@ -11,7 +11,7 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import { emitCommentChange } from '../../../../lib/commentBus';
 import { getCommentAccessKind } from '../../../../lib/commentAccess';
 import { getErrorMessage } from '../../../../lib/errors';
-import { queryOne } from '../../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type Row = {

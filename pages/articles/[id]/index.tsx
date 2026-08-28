@@ -39,7 +39,7 @@ import AoScoreFloat from '../../../components/articles/AoScoreFloat';
 import { substituteOptimizerPlaceholders } from '../../../lib/optimizePostHtml';
 import { collectOptimizerPositions } from '@/src/core/domain/optimize/resolveAll';
 import type { PMDocLike } from '@/src/core/domain/optimize/resolveAll';
-import { authClient } from '../../../lib/auth/client';
+import { authClient } from '@/src/infrastructure/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
 import { useContentSettings } from '../../../services/contentSettings';

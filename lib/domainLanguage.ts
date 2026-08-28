@@ -1,4 +1,4 @@
-import { queryOne } from './db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { countryForLang } from '@/src/core/domain/audit/country';
 import { toDfsLanguageCode } from '@/src/core/shared/language';
 

@@ -12,8 +12,8 @@ import { ScoreData, computeContentScore, computeContentScoreBreakdown, updateTer
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../lib/errors';
-import { queryRows, queryOne } from '../../../../lib/db/query';
-import type { ArticleRow } from '../../../../lib/db/query';
+import { queryRows, queryOne } from '@/src/infrastructure/db/query';
+import type { ArticleRow } from '@/src/infrastructure/db/query';
 
 import { parseJsonish } from '../../../../lib/types/json';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';

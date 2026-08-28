@@ -3,7 +3,7 @@
  */
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { queryOne, queryRows } from '../../db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { buildArticleContext } from '@/src/infrastructure/articles/articleContext';
 import { runPrecisionOptimizeV4 } from '../../ao/runPrecisionOptimize';

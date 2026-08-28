@@ -1,4 +1,4 @@
-import { cached, TTL } from '../cache/fileCache';
+import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import { getDomainLocale } from '../domainLanguage';
 import Domain from '../../database/models/domain';
 import {

@@ -12,7 +12,7 @@ import {
   promptTemplatesForLocale,
 } from '../../../../lib/domainLanguage';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
-import { queryOne } from '../../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { parseJsonish } from '../../../../lib/types/json';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

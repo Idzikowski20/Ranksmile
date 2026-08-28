@@ -8,13 +8,13 @@ jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolv
 jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(true) }));
 jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
-jest.mock('../../lib/db/query', () => ({ queryOne: jest.fn() }));
+jest.mock('@/src/infrastructure/db/query', () => ({ queryOne: jest.fn() }));
 jest.mock('../../lib/sidecar', () => ({ callSidecar: jest.fn() }));
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../database/database';
 import handler from '../../pages/api/articles/ai-readability';
-import { queryOne } from '../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { callSidecar } from '../../lib/sidecar';
 import { buildSnapshot, parseSnapshot } from '../../lib/coverageStore';
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';

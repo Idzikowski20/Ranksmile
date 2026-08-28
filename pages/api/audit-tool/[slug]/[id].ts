@@ -4,7 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
-import { queryOne, AuditRunRow } from '../../../../lib/db/query';
+import { queryOne, AuditRunRow } from '@/src/infrastructure/db/query';
 import type { AuditResult } from '@/src/core/domain/audit/types';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

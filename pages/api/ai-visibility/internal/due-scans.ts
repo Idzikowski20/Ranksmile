@@ -5,7 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { findDueConfigIds, enqueueAiVisScan } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
-import { queryRows } from '../../../../lib/db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '../../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

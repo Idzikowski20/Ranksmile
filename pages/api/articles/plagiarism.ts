@@ -5,7 +5,7 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { callSidecar } from '../../../lib/sidecar';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryOne } from '../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { resolveContentLocale } from '../../../lib/domainLanguage';

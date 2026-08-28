@@ -1,7 +1,7 @@
 /**
  * WIE Performance Loop — sync GSC 30d page metrics → Outcome Learning.
  */
-import { queryOne, queryRows } from '../db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { readLocalSCData } from '../../utils/searchConsole';
 import {

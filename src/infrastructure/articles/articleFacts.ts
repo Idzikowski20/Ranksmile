@@ -4,7 +4,7 @@
  */
 import { getPeopleAlsoAsk, isDataForSeoConfigured } from '@/lib/dataforseo';
 import { hashId, type CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
-import { cached, TTL } from '@/lib/cache/fileCache';
+import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import { resolveFactKeyword } from '@/lib/resolveFactKeyword';
 import { isKeywordOnTopic, seedTokens } from '@/src/core/domain/relevance/topicRelevance';

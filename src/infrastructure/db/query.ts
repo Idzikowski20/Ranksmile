@@ -1,4 +1,4 @@
-import db from '../../database/database';
+import db from '@/database/database';
 
 /**
  * Typed raw-SQL helpers. Articles (and several other tables) are read via raw `db.query`, so call

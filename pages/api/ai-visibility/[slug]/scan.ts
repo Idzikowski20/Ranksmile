@@ -5,7 +5,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
-import { queryOne } from '../../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { callSidecar } from '../../../../lib/sidecar';
 import { getErrorMessage } from '../../../../lib/errors';
 import { manualRefreshCooldownDays, refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';

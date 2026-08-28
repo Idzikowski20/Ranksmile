@@ -4,7 +4,7 @@
  * reused from keywordResearchCompute.computeKeywordResearch (identical result shape).
  */
 import db from '../database/database';
-import { queryOne } from './db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from './errors';
 import { isQueueRunnerEnabled } from './featureFlags';
 import {

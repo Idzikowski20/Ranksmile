@@ -2,7 +2,7 @@
  * Ranksmile-style Content Score for every page_audit row after domain setup.
  * One score per page: NLP term coverage + word/structure vs top-10 SERP peers.
  */
-import { queryRows } from './db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { readLocalSCData } from '../utils/searchConsole';
 import { buildGscUrlKeywordStrings } from '../utils/gsc';
 import { getCompetitors, scanCompetitors, setSelection } from './competitorScan';

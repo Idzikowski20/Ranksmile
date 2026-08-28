@@ -1,5 +1,5 @@
 import { fetchAuthSession } from '../../hooks/useAuthSession';
-import { signInEmail, signOut } from '../../lib/auth/fetchAuth';
+import { signInEmail, signOut } from '@/src/infrastructure/auth/fetchAuth';
 
 describe('fetchAuth', () => {
   beforeEach(() => {

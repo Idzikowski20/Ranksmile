@@ -1,5 +1,5 @@
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { queryOne, queryRows, type ArticleRow } from '@/lib/db/query';
+import { queryOne, queryRows, type ArticleRow } from '@/src/infrastructure/db/query';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { parseJsonish } from '@/lib/types/json';
 import { getDomainLocale } from '@/lib/domainLanguage';

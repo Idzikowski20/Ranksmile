@@ -6,7 +6,7 @@
  */
 import { generateText } from 'ai';
 import { deepseek } from '@/src/infrastructure/ai/deepseek';
-import { queryOne, queryRows } from '@/lib/db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import db from '@/database/database';
 import { buildBrandPrompt, parseBrandResponse, RawBrand } from '@/src/core/domain/aiVisibility/brands';
 

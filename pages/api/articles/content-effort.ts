@@ -9,7 +9,7 @@ import { callSidecar } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryOne, ArticleRow } from '../../../lib/db/query';
+import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { heuristicContentEffort, type ContentEffortInsight } from '@/src/core/domain/terms/contentEffort';
 import { safeJsonParse } from '../../../lib/safeJson';
 import type { ScoreData } from '../../../lib/contentScore';

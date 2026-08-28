@@ -9,7 +9,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
+import { queryOne, queryRows, ArticleRow } from '@/src/infrastructure/db/query';
 import { runArticleAiPipeline } from '@/src/infrastructure/articles/articleAiPipeline';
 import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
 import { computeContentScore } from '../../../lib/contentScore';

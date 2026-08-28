@@ -2,7 +2,7 @@ import { locationCodeFor } from '../dataforseo';
 import { AUDIT_COUNTRIES, langForCountry } from '@/src/core/domain/audit/country';
 import type { RankDevices, RankTrackingConfigRow, ScheduleInterval } from '../types/rankTracking';
 import { createConfig, listConfigs } from './repository';
-import { queryOne } from '../db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 
 export type DefaultConfigInput = {
   countryCode: string;

@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import db from '../database/database';
-import { queryOne } from './db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 
 const isPostgres = !!process.env.DATABASE_URL;
 

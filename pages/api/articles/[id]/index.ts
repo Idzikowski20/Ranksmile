@@ -9,8 +9,8 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../lib/errors';
-import { queryOne, queryRows } from '../../../../lib/db/query';
-import type { ArticleRow } from '../../../../lib/db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
+import type { ArticleRow } from '@/src/infrastructure/db/query';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { computeAiSearchScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import {
