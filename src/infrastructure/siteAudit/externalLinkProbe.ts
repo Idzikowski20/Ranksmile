@@ -1,11 +1,11 @@
 import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { parseJsonish } from '../types/json';
-import { RANKSMILE_UA } from '../httpConstants';
-import { assertPublicUrl } from '../ssrfGuard';
-import type { AuditRow } from './issues';
-import type { External403Instance, PageAuditSignals } from './types';
+import { parseJsonish } from '@/lib/types/json';
+import { RANKSMILE_UA } from '@/lib/httpConstants';
+import { assertPublicUrl } from '@/lib/ssrfGuard';
+import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';
+import type { External403Instance, PageAuditSignals } from '@/src/infrastructure/siteAudit/types';
 
 const CACHE_DIR = path.join(process.cwd(), 'data/cache/site-audit-external');
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;

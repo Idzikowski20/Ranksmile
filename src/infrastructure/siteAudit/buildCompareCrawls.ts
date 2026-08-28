@@ -1,11 +1,11 @@
-import { getIssueRule } from './issues';
+import { getIssueRule } from '@/src/infrastructure/siteAudit/issues';
 import {
   ensureCrawlSnapshot,
   getCrawlSnapshot,
   listCrawlSnapshots,
   type CrawlSnapshotMetrics,
-} from './crawlSnapshot';
-import type { CompareCrawlsReport, CompareCrawlsRow, CrawlSnapshotOption } from './types';
+} from '@/src/infrastructure/siteAudit/crawlSnapshot';
+import type { CompareCrawlsReport, CompareCrawlsRow, CrawlSnapshotOption } from '@/src/infrastructure/siteAudit/types';
 
 const GENERAL_ROWS: Array<{
   id: string;

@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
-import db from '../../database/database';
-import { queryOne, queryRows } from '../db/query';
-import { parseJsonish } from '../types/json';
+import db from '@/database/database';
+import { queryOne, queryRows } from '@/lib/db/query';
+import { parseJsonish } from '@/lib/types/json';
 import {
   buildIssuesReport,
   collectMalformedLinks,
@@ -11,11 +11,11 @@ import {
   loadSiteAuditContext,
   siteHealthScore,
   type AuditRow,
-} from './issues';
-import { pagesWithSingleIncoming } from './incomingLinkGraph';
-import type { PageAuditSignals } from './types';
-import { normalizeForIncoming } from './redirectScan';
-import type { IssueSeverity } from './types';
+} from '@/src/infrastructure/siteAudit/issues';
+import { pagesWithSingleIncoming } from '@/src/infrastructure/siteAudit/incomingLinkGraph';
+import type { PageAuditSignals } from '@/src/infrastructure/siteAudit/types';
+import { normalizeForIncoming } from '@/src/infrastructure/siteAudit/redirectScan';
+import type { IssueSeverity } from '@/src/infrastructure/siteAudit/types';
 
 export type CrawlSnapshotMetrics = {
   pagesCrawled: number;
@@ -166,7 +166,7 @@ export async function saveCrawlSnapshot(domainId: number, domainHint?: string): 
   );
 
   try {
-    const { emitObservations, observationsFromAuditIssues } = await import('../emitObservations');
+    const { emitObservations, observationsFromAuditIssues } = await import('@/lib/emitObservations');
     const issues = Object.entries(metrics.issueCounts)
       .filter(([, count]) => count > 0)
       .map(([issueId, count]) => ({

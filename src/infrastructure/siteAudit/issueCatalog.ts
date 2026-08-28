@@ -1,4 +1,4 @@
-import type { IssueCategory, IssueHelpContent, IssueSeverity } from './types';
+import type { IssueCategory, IssueHelpContent, IssueSeverity } from '@/src/infrastructure/siteAudit/types';
 
 export type IssueCatalogEntry = {
   id: string;

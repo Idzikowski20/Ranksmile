@@ -4,10 +4,10 @@ import { getCurrentUserId } from '../../../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../../../utils/verifyDomainOwnership';
 import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
 import { queryRows, queryOne } from '../../../../../../lib/db/query';
-import { buildIssueDetail } from '../../../../../../lib/siteAudit/buildIssueDetail';
-import { loadSiteAuditContext } from '../../../../../../lib/siteAudit/issues';
-import type { AuditRow } from '../../../../../../lib/siteAudit/issues';
-import type { SiteAuditIssueDetailPayload } from '../../../../../../lib/siteAudit/types';
+import { buildIssueDetail } from '@/src/infrastructure/siteAudit/buildIssueDetail';
+import { loadSiteAuditContext } from '@/src/infrastructure/siteAudit/issues';
+import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';
+import type { SiteAuditIssueDetailPayload } from '@/src/infrastructure/siteAudit/types';
 import { withOrgPaymentAccess } from '../../../../../../lib/requireOrgPaymentAccess';
 
 async function handler(

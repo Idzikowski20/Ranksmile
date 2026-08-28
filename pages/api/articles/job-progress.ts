@@ -209,7 +209,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           await materializeDomainSetup(Number(domainId), result || {});
           const { closeSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
           await closeSiteAuditRun(Number(domainId), jobId).catch(() => {});
-          void import('../../../lib/siteAudit/crawlSnapshot')
+          void import('@/src/infrastructure/siteAudit/crawlSnapshot')
             .then((m) => m.saveCrawlSnapshot(Number(domainId)))
             .catch((err) => { console.warn('[job-progress] crawl snapshot failed (non-fatal):', err); });
           // Fire-and-forget: pre-scan the shared Organic Competitors store for the

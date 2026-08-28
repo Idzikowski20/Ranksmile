@@ -3,8 +3,8 @@ import verifyUser from '../../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../../utils/verifyDomainOwnership';
 import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
-import { buildCompareCrawlsReport } from '../../../../../lib/siteAudit/buildCompareCrawls';
-import type { CompareCrawlsReport } from '../../../../../lib/siteAudit/types';
+import { buildCompareCrawlsReport } from '@/src/infrastructure/siteAudit/buildCompareCrawls';
+import type { CompareCrawlsReport } from '@/src/infrastructure/siteAudit/types';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
 async function handler(

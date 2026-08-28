@@ -1,7 +1,7 @@
-import { parseJsonish } from '../types/json';
-import type { AuditRow } from './issues';
-import type { PageAuditSignals } from './types';
-import { normalizeForIncoming } from './redirectScan';
+import { parseJsonish } from '@/lib/types/json';
+import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';
+import type { PageAuditSignals } from '@/src/infrastructure/siteAudit/types';
+import { normalizeForIncoming } from '@/src/infrastructure/siteAudit/redirectScan';
 
 function signalsOf(row: AuditRow): PageAuditSignals {
   return parseJsonish<PageAuditSignals>(row.signals_json) ?? {};

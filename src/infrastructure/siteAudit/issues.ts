@@ -1,14 +1,14 @@
-import { parseJsonish } from '../types/json';
-import { getCatalogEntry, formatIssueTitle, formatIssueLinkText } from '@/lib/siteAudit/issueCatalog';
-import { probeExternal403Links } from './externalLinkProbe';
-import { checkHstsMissing } from './hstsCheck';
-import { buildIncomingLinkCounts, pagesWithSingleIncoming } from './incomingLinkGraph';
+import { parseJsonish } from '@/lib/types/json';
+import { getCatalogEntry, formatIssueTitle, formatIssueLinkText } from '@/src/infrastructure/siteAudit/issueCatalog';
+import { probeExternal403Links } from '@/src/infrastructure/siteAudit/externalLinkProbe';
+import { checkHstsMissing } from '@/src/infrastructure/siteAudit/hstsCheck';
+import { buildIncomingLinkCounts, pagesWithSingleIncoming } from '@/src/infrastructure/siteAudit/incomingLinkGraph';
 import {
   collectPermanentRedirects,
   countRedirectUrlsChecked,
   normalizeForIncoming,
-} from './redirectScan';
-import { validateSitemapIssues } from './sitemapValidation';
+} from '@/src/infrastructure/siteAudit/redirectScan';
+import { validateSitemapIssues } from '@/src/infrastructure/siteAudit/sitemapValidation';
 import type {
   IssueCategory,
   IssueInstance,
@@ -22,7 +22,7 @@ import type {
   SiteAuditIssueSummary,
   SiteAuditIssuesReport,
   SitemapIssueInstance,
-} from './types';
+} from '@/src/infrastructure/siteAudit/types';
 
 export type AuditRow = {
   url: string;
