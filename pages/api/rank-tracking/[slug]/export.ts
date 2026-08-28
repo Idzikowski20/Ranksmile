@@ -5,7 +5,7 @@ import { exportRankRows } from '@/src/infrastructure/rankTracking/exporter';
 import { getConfig, getResults } from '@/src/infrastructure/rankTracking/service';
 import type { ComparePeriod, ExportFormat } from '../../../../lib/types/rankTracking';
 import { devicesList } from '../../../../lib/types/rankTracking';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);

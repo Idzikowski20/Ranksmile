@@ -3,7 +3,7 @@
  * Full Stripe network E2E is gated in docs/stripe-event-matrix.md TEST GATE.
  */
 import { shouldSendAbandonedForSubscription } from '@/src/infrastructure/billing/billingAbandoned';
-import { isCheckoutAttemptId, newCheckoutAttemptId } from '../../lib/checkoutAttemptId';
+import { isCheckoutAttemptId, newCheckoutAttemptId } from '@/src/infrastructure/checkoutAttemptId';
 import type Stripe from 'stripe';
 
 describe('checkoutAttemptId', () => {

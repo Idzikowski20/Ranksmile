@@ -3,7 +3,7 @@ import { getErrorMessage } from '@/src/core/shared/errors';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { getAnalytics, getAnalyticsChart } from '@/src/infrastructure/rankTracking/service';
 import type { ComparePeriod } from '../../../../lib/types/rankTracking';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);

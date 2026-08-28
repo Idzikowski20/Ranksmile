@@ -3,7 +3,7 @@ import {
   buildAiRankingSources,
   buildRankingSourcesPayload,
   parseRankingSources,
-} from '../../lib/rankingSources';
+} from '@/src/infrastructure/rankingSources';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
 describe('rankingSources', () => {

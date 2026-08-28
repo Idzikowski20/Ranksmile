@@ -1,7 +1,7 @@
 // POST /api/cron/wie-eval — WIE Evaluation Suite orchestrator
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { withCronWatchdog } from '../../../lib/cronWatchdog';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withCronWatchdog } from '@/src/infrastructure/cronWatchdog';
 import { runWieEvalSuite } from '@/src/infrastructure/wie/eval/runEvalSuite';
 import { writeTrendsFile, readHistory } from '@/src/infrastructure/wie/eval/history';
 import { getErrorMessage } from '@/src/core/shared/errors';

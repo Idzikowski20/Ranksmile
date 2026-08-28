@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
-import { isRankTrackingRunnerEnabled } from '../../../../lib/featureFlags';
+import { isRankTrackingRunnerEnabled } from '@/src/infrastructure/featureFlags';
 import { addKeywords, getConfig, listKeywords, removeKeywords, triggerManualCheck } from '@/src/infrastructure/rankTracking/service';
 import { MAX_KEYWORDS_PER_CONFIG } from '@/src/infrastructure/rankTracking/cost';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);

@@ -2,16 +2,16 @@
  * Integration smoke: Observation → Action → Feature delta → Strategy
  * (no live DB / DeepSeek — exercises the growth loop contracts end-to-end in-memory).
  */
-import { createMemoryFeatureStore, setFeatureStore, persistFeatureRun } from '../../lib/featureStoreCore';
+import { createMemoryFeatureStore, setFeatureStore, persistFeatureRun } from '@/src/infrastructure/featureStoreCore';
 import {
   observationsFromGscLowCtr,
   observationsFromAuditIssues,
   observationsFromVisibilityDelta,
-} from '../../lib/emitObservations';
+} from '@/src/infrastructure/emitObservations';
 import { actionsFromObservations } from '@/src/infrastructure/observations/actionsFromObservations';
 import { scopeFromAction, auditIssueIdFromAction } from '@/src/infrastructure/observations/optimizeActionScope';
 import { applyStrategy, prioritizeActions } from '../../lib/primitives/prioritizeActions';
-import { persistCoverageFeatureRun } from '../../lib/persistCoverageFeatureRun';
+import { persistCoverageFeatureRun } from '@/src/infrastructure/persistCoverageFeatureRun';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 function stubSnapshot(overall = 40): CoverageSnapshot {

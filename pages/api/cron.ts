@@ -6,12 +6,12 @@ import Domain from '../../database/models/domain';
 import { getAppSettings } from './settings';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getCallerRole } from '../../lib/members';
-import { ensureUserTenancy } from '../../lib/tenancy';
+import { getCallerRole } from '@/src/infrastructure/members';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import refreshAndUpdateKeywords from '../../utils/refresh';
 import { queryRows } from '@/src/infrastructure/db/query';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
-import { assertCronSecret } from '../../lib/cronAuth';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { assertCronSecret } from '@/src/infrastructure/cronAuth';
 
 type CRONRefreshRes = {
    started: boolean

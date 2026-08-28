@@ -4,15 +4,15 @@ jest.mock('../../utils/getUser', () => ({
   getCurrentUserId: jest.fn(),
 }));
 
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/tenancy', () => ({
   ensureUserTenancy: jest.fn(),
 }));
 
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/orgBilling', () => ({
   getOrgBillingState: jest.fn(),
 }));
 
-jest.mock('../../lib/wpConnection', () => ({
+jest.mock('@/src/infrastructure/wpConnection', () => ({
   resolveByApiKey: jest.fn(),
 }));
 
@@ -21,11 +21,11 @@ jest.mock('../../database/database', () => ({
   default: { query: jest.fn() },
 }));
 
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { getCurrentUserId } from '../../utils/getUser';
-import { ensureUserTenancy } from '../../lib/tenancy';
-import { getOrgBillingState } from '../../lib/orgBilling';
-import { resolveByApiKey } from '../../lib/wpConnection';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
+import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
+import { resolveByApiKey } from '@/src/infrastructure/wpConnection';
 import db from '../../database/database';
 
 type TestResponse = NextApiResponse & { statusCode?: number; body?: unknown };

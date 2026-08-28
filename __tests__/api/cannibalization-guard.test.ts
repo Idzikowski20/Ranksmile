@@ -1,4 +1,4 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' } }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('intruder') }));
 jest.mock('../../utils/verifyDomainOwnership', () => ({ verifyDomainOwnershipBySlug: jest.fn().mockResolvedValue(false) }));

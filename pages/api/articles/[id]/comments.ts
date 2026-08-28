@@ -8,11 +8,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes } from 'crypto';
 import db from '../../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { emitCommentChange } from '../../../../lib/commentBus';
-import { getCommentAccessKind } from '../../../../lib/commentAccess';
+import { emitCommentChange } from '@/src/infrastructure/commentBus';
+import { getCommentAccessKind } from '@/src/infrastructure/commentAccess';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne } from '@/src/infrastructure/db/query';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 type Row = {
    id: string; quote: string; body: string; images_json: string; author: string; color: string;

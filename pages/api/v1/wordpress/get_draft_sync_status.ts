@@ -1,8 +1,8 @@
 // POST /api/v1/wordpress/get_draft_sync_status — last-edit timestamps for a draft.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authPluginRequest } from '../../../../lib/wpConnection';
-import { getArticleRow } from '../../../../lib/wpDraft';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { authPluginRequest } from '@/src/infrastructure/wpConnection';
+import { getArticleRow } from '@/src/infrastructure/wpDraft';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);

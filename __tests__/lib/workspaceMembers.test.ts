@@ -1,7 +1,7 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
-jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5 }) }));
+jest.mock('@/src/infrastructure/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5 }) }));
 import db from '../../database/database';
-import { listWorkspaceAccess, setWorkspaceAccess } from '../../lib/workspaceMembers';
+import { listWorkspaceAccess, setWorkspaceAccess } from '@/src/infrastructure/workspaceMembers';
 
 const mockQuery = db.query as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];

@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { activateTrialFromSetupIntent } from '@/src/infrastructure/billing/billingActivateTrial';
 import { BillingSource } from '@/src/infrastructure/billing/billingAudit';
 import { mintBillingConfirmationToken } from '@/src/infrastructure/billing/billingConfirmationToken';
-import { assertCanManage } from '../../../lib/members';
-import { getStripe } from '../../../lib/stripe';
-import { assertStripeModeOrThrow } from '../../../lib/stripeMode';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { assertCanManage } from '@/src/infrastructure/members';
+import { getStripe } from '@/src/infrastructure/stripe';
+import { assertStripeModeOrThrow } from '@/src/infrastructure/stripeMode';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 const schema = z.object({
   setupIntentId: z.string().min(1),

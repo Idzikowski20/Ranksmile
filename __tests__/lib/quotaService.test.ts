@@ -5,7 +5,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensurePlanQuotaTables', () =>
   ensurePlanQuotaTables: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/orgBilling', () => ({
   getOrgBillingState: jest.fn().mockResolvedValue({
     planSlug: 'starter',
     subscriptionStatus: 'active',

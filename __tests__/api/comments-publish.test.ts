@@ -1,5 +1,5 @@
 // Comments API no longer fan-outs via Ably — create still persists the thread.
-jest.mock('../../lib/commentAccess', () => ({
+jest.mock('@/src/infrastructure/commentAccess', () => ({
   getCommentAccessKind: jest.fn().mockResolvedValue('owner'),
   isOwnerComment: jest.fn().mockResolvedValue(false),
 }));

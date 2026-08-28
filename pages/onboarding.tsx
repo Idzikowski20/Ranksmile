@@ -4,7 +4,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import OnboardingShell from '../components/onboarding/OnboardingShell';
 import OnboardingSurvey from '../components/onboarding/OnboardingSurvey';
-import { useMarkOnboardingComplete } from '../lib/onboardingStatus';
+import { useMarkOnboardingComplete } from '@/src/infrastructure/onboardingStatus';
 
 const OnboardingPage: NextPage = () => {
    const router = useRouter();

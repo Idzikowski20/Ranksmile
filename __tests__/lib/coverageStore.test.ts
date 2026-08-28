@@ -1,7 +1,7 @@
 // __tests__/lib/coverageStore.test.ts
 import {
   mergeCoverageItems, buildSnapshot, parseSnapshot, coverageQuestionsForPlanner,
-} from '../../lib/coverageStore';
+} from '@/src/infrastructure/coverageStore';
 import { CoverageItem, CoverageResult } from '@/src/core/domain/coverage/aiCoverage';
 
 const item = (id: string, type: CoverageItem['type'] = 'paa', category: CoverageItem['category'] = 'knowledge'): CoverageItem =>

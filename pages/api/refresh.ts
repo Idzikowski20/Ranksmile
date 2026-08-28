@@ -8,10 +8,10 @@ import { getAppSettings } from './settings';
 import verifyUser from '../../utils/verifyUser';
 import parseKeywords from '../../utils/parseKeywords';
 import { scrapeKeywordFromGoogle } from '../../utils/scraper';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
-import { assertCronSecret } from '../../lib/cronAuth';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { assertCronSecret } from '@/src/infrastructure/cronAuth';
 import { getCurrentUserId } from '../../utils/getUser';
-import { ensureUserTenancy, getAccessibleWorkspaceIds } from '../../lib/tenancy';
+import { ensureUserTenancy, getAccessibleWorkspaceIds } from '@/src/infrastructure/tenancy';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 
 type KeywordsRefreshRes = {

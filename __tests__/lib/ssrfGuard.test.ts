@@ -1,4 +1,4 @@
-import { isPrivateAddress, assertPublicUrl, ssrfSafeFetch } from '../../lib/ssrfGuard';
+import { isPrivateAddress, assertPublicUrl, ssrfSafeFetch } from '@/src/infrastructure/ssrfGuard';
 
 describe('isPrivateAddress', () => {
   it.each(['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.1.1', '169.254.169.254', '0.0.0.0', '100.64.0.1'])(

@@ -4,7 +4,7 @@
  * Wywołuj na początku każdego API route artykułów.
  */
 import db from '@/database/database';
-import { ensureUserOnboardingTable } from '@/lib/onboardingState';
+import { ensureUserOnboardingTable } from '@/src/infrastructure/onboardingState';
 
 let tablesChecked = false;
 

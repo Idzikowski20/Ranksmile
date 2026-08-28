@@ -1,4 +1,4 @@
-import { ACTIVE_PERIOD_KEY, type MeterKind, type QuotaMeter, getMeterKind } from '@/lib/planLimits';
+import { ACTIVE_PERIOD_KEY, type MeterKind, type QuotaMeter, getMeterKind } from '@/src/infrastructure/planLimits';
 
 /** UTC calendar month key `YYYY-MM` for period_usage meters. */
 export function calendarPeriodKey(date: Date = new Date()): string {

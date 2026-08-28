@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { hasNonTerminalStripeSubscription } from '../../lib/orgBilling';
+import { hasNonTerminalStripeSubscription } from '@/src/infrastructure/orgBilling';
 import {
   isOrgInStarterNudgeAgeWindow,
   runStarterNudgeCron,
@@ -15,8 +15,8 @@ jest.mock('@/src/infrastructure/db/query', () => ({
   queryRows: jest.fn(),
 }));
 
-jest.mock('../../lib/orgBilling', () => {
-  const actual = jest.requireActual('../../lib/orgBilling') as typeof import('../../lib/orgBilling');
+jest.mock('@/src/infrastructure/orgBilling', () => {
+  const actual = jest.requireActual('@/src/infrastructure/orgBilling') as typeof import('@/src/infrastructure/orgBilling');
   return {
     ...actual,
     getOrgBillingState: jest.fn(),
@@ -34,7 +34,7 @@ jest.mock('../../database/database', () => ({
 }));
 
 import { queryRows } from '@/src/infrastructure/db/query';
-import { getOrgBillingState, updateOrgBillingState } from '../../lib/orgBilling';
+import { getOrgBillingState, updateOrgBillingState } from '@/src/infrastructure/orgBilling';
 import { sendStarterNudgeEmail } from '@/src/infrastructure/email/sendStarterNudgeEmail';
 import db from '../../database/database';
 

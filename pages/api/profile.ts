@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../utils/getUser';
-import { readProfile, writeProfile } from '../../lib/userProfile';
-import { parseDataUrl, uploadImageBuffer } from '../../lib/uploadToBlob';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { readProfile, writeProfile } from '@/src/infrastructure/userProfile';
+import { parseDataUrl, uploadImageBuffer } from '@/src/infrastructure/uploadToBlob';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 // Avatar data URLs can be a few MB — raise the JSON body limit above the 1mb default.
 export const config = { api: { bodyParser: { sizeLimit: '6mb' } } };

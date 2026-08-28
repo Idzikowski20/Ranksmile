@@ -5,7 +5,7 @@ jest.mock('../../database/models/gscAccount', () => ({ __esModule: true, default
 jest.mock('@/src/infrastructure/gsc/gscAccounts', () => ({ buildOAuthClientFromAccount: jest.fn() }));
 jest.mock('@googleapis/searchconsole', () => ({ searchconsole_v1: { Searchconsole: jest.fn() } }));
 import db from '../../database/database';
-import { deriveStages, enqueueDomainSetup, claimJob, materializeDomainSetup } from '../../lib/domainPipeline';
+import { deriveStages, enqueueDomainSetup, claimJob, materializeDomainSetup } from '@/src/infrastructure/domainPipeline';
 const mockQuery = db.query as jest.Mock;
 const sel = (r: unknown[]) => r;            // SELECT returns rows directly
 beforeEach(() => { mockQuery.mockReset(); });

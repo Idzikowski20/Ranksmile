@@ -1,8 +1,8 @@
 // POST /api/v1/wordpress/disconnect_draft — drop the draft↔post link (no persistent
 // link is stored on our side yet, so just acknowledge).
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authPluginRequest } from '../../../../lib/wpConnection';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { authPluginRequest } from '@/src/infrastructure/wpConnection';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);

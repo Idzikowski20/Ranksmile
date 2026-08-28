@@ -4,7 +4,7 @@ import { countryAlphaTwoCodes, getCountryCodeFromAlphaThree } from './countries'
 import GscAccount from '../database/models/gscAccount';
 import db from '../database/database';
 import { ensureGscDataTable } from '@/src/infrastructure/persistence/schema/ensureGscDataTable';
-import { readSettingsBlob } from '../lib/appSettingsStore';
+import { readSettingsBlob } from '@/src/infrastructure/appSettingsStore';
 
 export type SCDomainFetchError = {
    error: boolean,

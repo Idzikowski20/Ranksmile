@@ -1,4 +1,4 @@
-import { analyzeIntroduction, introCoverageItems, IntroductionJudge, IntroVerdict } from '../../lib/introductionAnalyzer';
+import { analyzeIntroduction, introCoverageItems, IntroductionJudge, IntroVerdict } from '@/src/infrastructure/introductionAnalyzer';
 
 const judge = (run: IntroductionJudge['run']): IntroductionJudge => ({ version: 'test-intro-v1', run });
 

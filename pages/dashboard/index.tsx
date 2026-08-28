@@ -27,7 +27,7 @@ import LearnSection from '../../components/dashboard/LearnSection';
 import SetupPipeline from '../../components/dashboard/SetupPipeline';
 import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
 import { useAiVisHistory } from '../../services/aiVisibility';
-import fetchJson from '../../lib/fetchJson';
+import fetchJson from '@/src/infrastructure/fetchJson';
 import { isActionableRecommendation } from '@/src/core/domain/recommendations/actionable';
 
 const formatShortDate = (dateStr: string): string => {

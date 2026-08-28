@@ -8,7 +8,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { getUserDomainIds } from '../articles/index';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

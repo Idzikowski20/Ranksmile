@@ -1,7 +1,7 @@
 /**
  * WIE Brand DNA onboarding — curated URLs → Quality Judge → brand-layer patterns.
  */
-import { fetchPage } from '@/lib/auditCompute';
+import { fetchPage } from '@/src/infrastructure/auditCompute';
 import { judgeArticleQuality, QUALITY_DNA_THRESHOLD } from '@/src/core/domain/wie/qualityJudge';
 import { discoverAndAcceptPattern } from '@/src/infrastructure/wie/patternDiscovery';
 import { bumpDnaVersion, readPatternStore, type PatternStoreSnapshot } from '@/src/infrastructure/wie/patternStore';

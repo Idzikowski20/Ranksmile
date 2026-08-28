@@ -1,9 +1,9 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import type * as cheerio from 'cheerio';
-import { countOccurrences } from '@/lib/contentScore';
+import { countOccurrences } from '@/src/infrastructure/contentScore';
 import { scoreContent, type RankingSignal } from '@/src/infrastructure/seo/scoreContentClient';
-import { callSidecar } from '@/lib/sidecar';
+import { callSidecar } from '@/src/infrastructure/sidecar';
 import { computeAiSearchScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { reindexSids, buildOutline, sanitizeFragment, stripSids, makeWorkingDoc } from '@/src/infrastructure/ai/workingDoc';

@@ -2,7 +2,7 @@
  * Free trial policy: Growth only, once per organization.
  * Scale / Agency are always pay-upfront (monthly or yearly).
  */
-import type { OrgBillingState } from '@/lib/orgBilling';
+import type { OrgBillingState } from '@/src/infrastructure/orgBilling';
 
 export const TRIAL_PLAN_SLUG = 'growth' as const;
 export const TRIAL_PERIOD_DAYS = 7;

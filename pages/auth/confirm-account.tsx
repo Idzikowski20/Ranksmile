@@ -6,7 +6,7 @@ import AuthPageLayout from '../../components/auth/AuthPageLayout';
 import AuthShell from '../../components/auth/AuthShell';
 import { authSubtitleStyle, authTitleStyle } from '../../components/auth/authStyles';
 import { signOut } from '@/src/infrastructure/auth/fetchAuth';
-import { useMarkEmailConfirmed } from '../../lib/emailConfirmedStatus';
+import { useMarkEmailConfirmed } from '@/src/infrastructure/emailConfirmedStatus';
 import { Card } from '../../components/koala/product';
 import Button from '../../components/koala/primitives/Button';
 import { LoadingState } from '../../components/koala/feedback';

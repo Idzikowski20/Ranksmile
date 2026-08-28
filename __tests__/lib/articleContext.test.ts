@@ -2,14 +2,14 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
 jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn(async () => 'id') }));
 jest.mock('@/src/infrastructure/articles/articleTerms', () => ({ readArticleTerms: jest.fn(async () => []) }));
-jest.mock('../../lib/contentSettings', () => ({ readContentSettings: jest.fn(async () => ({ brandName: '', brandKnowledge: '', voices: [] })) }));
-jest.mock('../../lib/domainVoices', () => ({ getDomainVoices: jest.fn(async () => []) }));
+jest.mock('@/src/infrastructure/contentSettings', () => ({ readContentSettings: jest.fn(async () => ({ brandName: '', brandKnowledge: '', voices: [] })) }));
+jest.mock('@/src/infrastructure/domainVoices', () => ({ getDomainVoices: jest.fn(async () => []) }));
 
 import db from '../../database/database';
 import { buildArticleContext } from '@/src/infrastructure/articles/articleContext';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
-import { readContentSettings } from '../../lib/contentSettings';
-import { getDomainVoices } from '../../lib/domainVoices';
+import { readContentSettings } from '@/src/infrastructure/contentSettings';
+import { getDomainVoices } from '@/src/infrastructure/domainVoices';
 
 const mockQuery = (db as unknown as { query: jest.Mock }).query;
 

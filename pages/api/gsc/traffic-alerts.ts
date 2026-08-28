@@ -3,10 +3,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/tenancy';
 import { getWeeklyDrops } from '../../../src/composition/gsc';
 import type { DropResult } from '../../../src/core/domain/gsc/drops';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

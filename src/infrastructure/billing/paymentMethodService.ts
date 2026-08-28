@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import type { SubscriptionStatus } from '@/lib/orgBilling';
+import type { SubscriptionStatus } from '@/src/infrastructure/orgBilling';
 import { BillingPolicy } from '@/src/infrastructure/billing/billingPolicy';
 import { billingError, type BillingErrorBody } from '@/src/core/domain/billing/errors';
 import { chooseReplacement } from '@/src/infrastructure/billing/chooseReplacement';

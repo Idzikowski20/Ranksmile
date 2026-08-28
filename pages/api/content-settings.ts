@@ -1,12 +1,12 @@
 // GET/PUT /api/content-settings — shared Brand Knowledge (global file) + per-domain Custom Voices.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../utils/verifyUser';
-import { readContentSettings, writeContentSettings } from '../../lib/contentSettings';
-import { getDomainVoices, setDomainVoices } from '../../lib/domainVoices';
+import { readContentSettings, writeContentSettings } from '@/src/infrastructure/contentSettings';
+import { getDomainVoices, setDomainVoices } from '@/src/infrastructure/domainVoices';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getActiveWorkspaceId } from '../../lib/tenancy';
+import { getActiveWorkspaceId } from '@/src/infrastructure/tenancy';
 import db from '../../database/database';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 type Row = Record<string, any>;
 

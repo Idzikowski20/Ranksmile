@@ -1,6 +1,6 @@
 /** Shared Koala UI transactional email shell — Light tokens, email-safe inline hex. */
 
-import { PRODUCTION_APP_URL, isLocalServiceUrl } from '@/lib/serviceUrls';
+import { PRODUCTION_APP_URL, isLocalServiceUrl } from '@/src/infrastructure/serviceUrls';
 
 /** DM Sans + system fallbacks (web font loaded in wrapEmail for clients that allow it). */
 export const EMAIL_FONT = "'DM Sans',Helvetica,Arial,sans-serif";

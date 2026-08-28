@@ -2,9 +2,9 @@ import React from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
 import { optimizeStore } from './optimizeStore';
-import { sanitizeArticleHtml } from '../../lib/sanitizeHtml';
-import { WHOLE_ARTICLE_ID } from '../../lib/optimizeWholeArticle';
-import { renderStructuredDiffHtml } from '../../lib/optimizeWordDiff';
+import { sanitizeArticleHtml } from '@/src/infrastructure/sanitizeHtml';
+import { WHOLE_ARTICLE_ID } from '@/src/infrastructure/optimizeWholeArticle';
+import { renderStructuredDiffHtml } from '@/src/infrastructure/optimizeWordDiff';
 import { useEntrance } from '../../lib/motion/useEntrance';
 
 // React node-view for the contentOptimizer TipTap node.

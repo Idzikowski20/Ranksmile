@@ -3,7 +3,7 @@ import { auth } from '@googleapis/searchconsole';
 import db from '@/database/database';
 import GscAccount from '@/database/models/gscAccount';
 
-export { GOOGLE_OAUTH_SCOPES } from '@/lib/googleOAuthScopes';
+export { GOOGLE_OAUTH_SCOPES } from '@/src/infrastructure/googleOAuthScopes';
 
 let gscIndexesFixed = false;
 /**

@@ -1,4 +1,4 @@
-import { wordDiffSegments, renderDiffHtml, renderStructuredDiffHtml } from '../../lib/optimizeWordDiff';
+import { wordDiffSegments, renderDiffHtml, renderStructuredDiffHtml } from '@/src/infrastructure/optimizeWordDiff';
 
 describe('wordDiffSegments', () => {
   it('marks removed + added words between two strings', () => {

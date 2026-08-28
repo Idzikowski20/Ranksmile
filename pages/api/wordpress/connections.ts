@@ -3,10 +3,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUser } from '../../../utils/getUser';
-import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
-import { listConnectionsForWorkspace, deleteConnection } from '../../../lib/wpConnection';
-import { wpRestFetch } from '../../../lib/wpRest';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/tenancy';
+import { listConnectionsForWorkspace, deleteConnection } from '@/src/infrastructure/wpConnection';
+import { wpRestFetch } from '@/src/infrastructure/wpRest';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

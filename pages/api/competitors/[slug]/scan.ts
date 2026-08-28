@@ -4,8 +4,8 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureCompetitorsTables } from '@/src/infrastructure/persistence/schema/ensureCompetitorsTables';
-import { scanCompetitors } from '../../../../lib/competitorScan';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { scanCompetitors } from '@/src/infrastructure/competitorScan';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

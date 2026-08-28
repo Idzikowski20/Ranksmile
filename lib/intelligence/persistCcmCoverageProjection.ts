@@ -4,7 +4,7 @@
  */
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import type { CanonicalContentModel } from '../ccm/types/ccm';
-import { parseSnapshot } from '../coverageStore';
+import { parseSnapshot } from '@/src/infrastructure/coverageStore';
 import { projectCcmToCoverageSnapshot } from './ccmToCoverageSnapshot';
 
 export async function persistCcmCoverageProjection(opts: {

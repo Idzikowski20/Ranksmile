@@ -8,7 +8,7 @@ import {
   mergeVisibilitySummaries,
   type ArticleFact,
 } from '@/src/infrastructure/articles/articleFacts';
-import { resolveFactKeyword } from '@/lib/resolveFactKeyword';
+import { resolveFactKeyword } from '@/src/infrastructure/resolveFactKeyword';
 import { getAiSearchInfo } from '@/src/infrastructure/seo/keywordData';
 import {
   resolveAiScore,

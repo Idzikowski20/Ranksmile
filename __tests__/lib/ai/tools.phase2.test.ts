@@ -1,6 +1,6 @@
 import { makeWorkingDoc } from '@/src/infrastructure/ai/workingDoc';
 import { buildTools } from '@/src/infrastructure/ai/tools';
-import { callSidecar } from '../../../lib/sidecar';
+import { callSidecar } from '@/src/infrastructure/sidecar';
 import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
 // scoreContentClient is unused by the Phase-2 tools but pulled in by buildTools;
@@ -10,7 +10,7 @@ jest.mock('@/src/infrastructure/seo/scoreContentClient', () => ({
 }));
 
 // Sidecar returns a fixture keyed on the request PATH.
-jest.mock('../../../lib/sidecar', () => ({
+jest.mock('@/src/infrastructure/sidecar', () => ({
   callSidecar: jest.fn(async (path: string) => {
     if (path === '/ai-visibility') {
       return { prompts_total: 5, prompts_cited: 2, competitor_citations: 1, extractability_score: 60, citations: [] };

@@ -6,7 +6,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensureTenancyTables', () => (
 jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 
 import db from '../../database/database';
-import { ensureUserTenancy, getAccessibleWorkspaceIds, getActiveWorkspaceId, assertArticleAccess } from '../../lib/tenancy';
+import { ensureUserTenancy, getAccessibleWorkspaceIds, getActiveWorkspaceId, assertArticleAccess } from '@/src/infrastructure/tenancy';
 
 const mockQuery = db.query as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];

@@ -11,10 +11,10 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { sidecarUrl } from '../../../lib/serviceUrls';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { resolveContentLocale } from '@/src/infrastructure/domainLanguage';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { sidecarUrl } from '@/src/infrastructure/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

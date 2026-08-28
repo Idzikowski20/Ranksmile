@@ -1,18 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type Stripe from 'stripe';
-import { getStripe, getStripeWebhookSecret } from '../../../lib/stripe';
-import { readRawBody } from '../../../lib/readRawBody';
-import { claimStripeEvent, releaseStripeEvent } from '../../../lib/stripeWebhookEvents';
+import { getStripe, getStripeWebhookSecret } from '@/src/infrastructure/stripe';
+import { readRawBody } from '@/src/infrastructure/readRawBody';
+import { claimStripeEvent, releaseStripeEvent } from '@/src/infrastructure/stripeWebhookEvents';
 import {
   orgIdFromMetadata,
   syncCheckoutSessionToOrg,
   syncSubscriptionToOrg,
-} from '../../../lib/stripeBillingSync';
-import { getOrgBillingState, getOrgIdByStripeCustomerId, updateOrgBillingState } from '../../../lib/orgBilling';
+} from '@/src/infrastructure/stripeBillingSync';
+import { getOrgBillingState, getOrgIdByStripeCustomerId, updateOrgBillingState } from '@/src/infrastructure/orgBilling';
 import { BillingSource, ensureCorrelationId } from '@/src/infrastructure/billing/billingAudit';
 import db from '../../../database/database';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
-import { getAppOrigin } from '../../../lib/appOrigin';
+import { getAppOrigin } from '@/src/infrastructure/appOrigin';
 import { claimBillingEmailAndEnqueue } from '@/src/infrastructure/billing/billingEmailClaim';
 import { shouldSendAbandonedForSubscription } from '@/src/infrastructure/billing/billingAbandoned';
 import {

@@ -1,4 +1,4 @@
-import { sanitizeArticleHtml } from '../../lib/sanitizeHtml';
+import { sanitizeArticleHtml } from '@/src/infrastructure/sanitizeHtml';
 
 describe('sanitizeArticleHtml', () => {
   it('removes <script> tags', () => {

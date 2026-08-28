@@ -1,7 +1,7 @@
 // POST /api/v1/wordpress/check_draft_status — our drafts are always ready (no SERP scrape step).
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authPluginRequest } from '../../../../lib/wpConnection';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { authPluginRequest } from '@/src/infrastructure/wpConnection';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);

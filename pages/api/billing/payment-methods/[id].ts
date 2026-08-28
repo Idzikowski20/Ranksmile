@@ -4,11 +4,11 @@ import {
   appendBillingDomainEvent,
 } from '@/src/infrastructure/billing/domainEvents';
 import { deletePaymentMethod } from '@/src/infrastructure/billing/paymentMethodService';
-import { assertCanManage } from '../../../../lib/members';
-import { getOrgBillingState } from '../../../../lib/orgBilling';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
-import { getStripe, isStripeConfigured } from '../../../../lib/stripe';
-import { ensureUserTenancy } from '../../../../lib/tenancy';
+import { assertCanManage } from '@/src/infrastructure/members';
+import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { getStripe, isStripeConfigured } from '@/src/infrastructure/stripe';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getCurrentUserId } from '../../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

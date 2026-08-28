@@ -6,11 +6,11 @@ import Keyword from '../../database/models/keyword';
 import getdomainStats from '../../utils/domains';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getAccessibleWorkspaceIds, getActiveWorkspaceId, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '../../lib/tenancy';
+import { getAccessibleWorkspaceIds, getActiveWorkspaceId, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/tenancy';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import { checkSerchConsoleIntegration, removeLocalSCData } from '../../utils/searchConsole';
 import { removeFromRetryQueue } from '../../utils/scraper';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 type DomainsGetRes = {
    domains: DomainType[]

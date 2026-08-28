@@ -6,7 +6,7 @@ import type { QueueName } from '@/src/core/domain/pipeline/queuePriorities';
 import { QUEUE_PRIORITY } from '@/src/core/domain/pipeline/queuePriorities';
 import { isQueueEnabled } from '@/src/infrastructure/workers/registry';
 import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 /**
  * POST /api/pipeline/enqueue

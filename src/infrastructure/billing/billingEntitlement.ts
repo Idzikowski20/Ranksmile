@@ -1,4 +1,4 @@
-import type { OrgBillingState, SubscriptionStatus } from '@/lib/orgBilling';
+import type { OrgBillingState, SubscriptionStatus } from '@/src/infrastructure/orgBilling';
 
 // trialEndsAt is required, not optional: an omitted date reads as "no end recorded",
 // which silently re-opens the forever-trial hole at whichever call site forgot it.

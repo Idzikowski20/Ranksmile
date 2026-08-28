@@ -59,7 +59,7 @@ export const visibilityWorker: PipelineWorker = {
       actions,
     };
 
-    const { getFeatureStore } = await import('@/lib/featureStore');
+    const { getFeatureStore } = await import('@/src/infrastructure/featureStore');
     await getFeatureStore().appendFeature(feature, {
       articleId: ctx.payload.articleId != null ? Number(ctx.payload.articleId) : undefined,
       domainId: ctx.payload.domainId != null ? Number(ctx.payload.domainId) : undefined,

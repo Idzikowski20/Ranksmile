@@ -1,7 +1,7 @@
 // GET /api/favicon?domain=example.com
 // Generuje SVG placeholder z pierwszą literą domeny + próbuje pobrać prawdziwe favicon
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { ssrfSafeFetch } from '../../lib/ssrfGuard';
+import { ssrfSafeFetch } from '@/src/infrastructure/ssrfGuard';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6'];
 

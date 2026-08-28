@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { ensureUserTenancy, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
+import { ensureUserTenancy, getAccessibleWorkspaceIds } from '@/src/infrastructure/tenancy';
 import { listInboxForUser } from '@/src/infrastructure/notifications/inboxService';
 import { syncOptimizationInbox } from '@/src/infrastructure/notifications/syncOptimizationInbox';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

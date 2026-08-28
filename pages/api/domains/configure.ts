@@ -7,11 +7,11 @@ import Domain from '../../../database/models/domain';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
-import { getWorkspace } from '../../../lib/workspaces';
+import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '@/src/infrastructure/tenancy';
+import { getWorkspace } from '@/src/infrastructure/workspaces';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { mergeGscProperty } from '@/src/core/domain/gsc/gscProperty';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

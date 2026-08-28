@@ -9,8 +9,8 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAutomationTables } from '@/src/infrastructure/persistence/schema/ensureAutomationTables';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { getConnectionForWorkspace } from '../../../../lib/wpConnection';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { getConnectionForWorkspace } from '@/src/infrastructure/wpConnection';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { mapAutomationEvent, type AutomationEventRow, type AutomationPublishMode } from '../../../../lib/types/automations';
 

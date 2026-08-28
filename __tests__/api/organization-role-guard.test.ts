@@ -1,17 +1,17 @@
 import type { NextApiRequest } from 'next';
 import { makeRes, callHandler, type MockRes } from '../../test-utils/apiHandler';
-import { assertCanManage } from '../../lib/members';
-import { writeOrganization } from '../../lib/organization';
+import { assertCanManage } from '@/src/infrastructure/members';
+import { writeOrganization } from '@/src/infrastructure/organization';
 import handler from '../../pages/api/organization';
 
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('u1') }));
-jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn() }));
-jest.mock('../../lib/organization', () => ({
+jest.mock('@/src/infrastructure/members', () => ({ assertCanManage: jest.fn() }));
+jest.mock('@/src/infrastructure/organization', () => ({
   readOrganization: jest.fn().mockResolvedValue({ name: 'Acme', logoUrl: null }),
   writeOrganization: jest.fn().mockResolvedValue({ name: 'Renamed', logoUrl: null }),
 }));
-jest.mock('../../lib/uploadToBlob', () => ({ parseDataUrl: jest.fn(), uploadImageBuffer: jest.fn() }));
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/uploadToBlob', () => ({ parseDataUrl: jest.fn(), uploadImageBuffer: jest.fn() }));
+jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 const mockAssert = assertCanManage as jest.Mock;
 const mockWrite = writeOrganization as jest.Mock;

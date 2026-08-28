@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { assertCronSecret } from '../../../lib/cronAuth';
-import { latestCronRuns } from '../../../lib/cronWatchdog';
+import { assertCronSecret } from '@/src/infrastructure/cronAuth';
+import { latestCronRuns } from '@/src/infrastructure/cronWatchdog';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getCallerRole } from '../../../lib/members';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { getCallerRole } from '@/src/infrastructure/members';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { getErrorMessage } from '@/src/core/shared/errors';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

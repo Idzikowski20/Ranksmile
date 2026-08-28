@@ -1,5 +1,5 @@
 import type * as cheerio from 'cheerio';
-import type { ScoreData } from '@/lib/contentScore';
+import type { ScoreData } from '@/src/infrastructure/contentScore';
 import type { ArticleSeoMeta } from '@/src/infrastructure/ai/articleMeta';
 
 export interface InternalArticleRef {

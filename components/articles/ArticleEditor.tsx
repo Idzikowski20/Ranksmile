@@ -14,10 +14,10 @@ import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
 import Placeholder from '@tiptap/extension-placeholder';
-import type { ScoreData, NlpTerm } from '../../lib/contentScore';
+import type { ScoreData, NlpTerm } from '@/src/infrastructure/contentScore';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
-import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
+import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '@/src/infrastructure/highlightColors';
 import { EC } from './editorChrome';
 import RanksmileImageNode from './RanksmileImageNode';
 import ContentOptimizer from './contentOptimizerNode';
@@ -50,7 +50,7 @@ import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
 import { revealHtmlInEditor, editorCanCommand } from '../../lib/editor/revealHtmlProgressive';
 import clearEditorHistory from '../../lib/editor/clearEditorHistory';
 import { normalizeListHtml } from '@/src/core/domain/editor/normalizeListHtml';
-import { clearWizardState } from '../../lib/wizardState';
+import { clearWizardState } from '@/src/infrastructure/wizardState';
 import {
   collectApprovedOutline,
   outlineForReview,

@@ -3,15 +3,15 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { runActionExecution } from '../../../../lib/runActionExecution';
+import { runActionExecution } from '@/src/infrastructure/runActionExecution';
 import type { Action } from '../../../../lib/primitives/types';
 import {
   ensureDomainEventTables,
   ensureKnowledgeLayerTables,
 } from '@/src/infrastructure/persistence/schema/ensureGrowthMetaTables';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();

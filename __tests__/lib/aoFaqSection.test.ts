@@ -5,7 +5,7 @@ import {
   faqBudgetForWordCount,
   selectFaqQuestions,
   validateFaqHtmlStructure,
-} from '../../lib/aoFaqSection';
+} from '@/src/infrastructure/aoFaqSection';
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 

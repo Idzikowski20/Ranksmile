@@ -6,15 +6,15 @@ import {
   applySubscriptionUpgrade,
   resolveUpgradePriceId,
 } from '@/src/infrastructure/billing/billingUpgrade';
-import { assertCanManage } from '../../../lib/members';
-import { getOrgBillingState } from '../../../lib/orgBilling';
-import { getStripe } from '../../../lib/stripe';
-import { syncSubscriptionToOrg } from '../../../lib/stripeBillingSync';
-import { assertStripeModeOrThrow } from '../../../lib/stripeMode';
+import { assertCanManage } from '@/src/infrastructure/members';
+import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
+import { getStripe } from '@/src/infrastructure/stripe';
+import { syncSubscriptionToOrg } from '@/src/infrastructure/stripeBillingSync';
+import { assertStripeModeOrThrow } from '@/src/infrastructure/stripeMode';
 import type { PlanSlug } from '@/src/core/domain/billing/prices';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 const schema = z.object({
   planSlug: z.string().min(1),

@@ -6,11 +6,11 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 import { queryOne } from '@/src/infrastructure/db/query';
-import { callSidecar } from '../../../../lib/sidecar';
+import { callSidecar } from '@/src/infrastructure/sidecar';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { manualRefreshCooldownDays, refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
-import { nextjsUrl } from '../../../../lib/serviceUrls';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { nextjsUrl } from '@/src/infrastructure/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

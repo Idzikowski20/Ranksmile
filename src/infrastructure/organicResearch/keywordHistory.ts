@@ -1,5 +1,5 @@
 import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
-import { getDomainLocale } from '@/lib/domainLanguage';
+import { getDomainLocale } from '@/src/infrastructure/domainLanguage';
 import Domain from '@/database/models/domain';
 import {
   fetchKeywordPositionHistory,

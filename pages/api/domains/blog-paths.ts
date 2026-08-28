@@ -6,7 +6,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../utils/verifyDomainOwnership';
 import { normalizeBlogPaths } from '@/src/core/domain/blog/blogPaths';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

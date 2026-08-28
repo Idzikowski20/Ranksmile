@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { mintBillingConfirmationToken } from '@/src/infrastructure/billing/billingConfirmationToken';
-import { assertCanManage } from '../../../lib/members';
-import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { assertCanManage } from '@/src/infrastructure/members';
+import { getOrgBillingState, hasNonTerminalStripeSubscription } from '@/src/infrastructure/orgBilling';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
 
 const schema = z.object({

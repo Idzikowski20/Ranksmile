@@ -1,7 +1,7 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
-jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5 }) }));
+jest.mock('@/src/infrastructure/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5 }) }));
 import db from '../../database/database';
-import { listMembers, assertCanManage, changeMemberRole, removeMember, setMemberWorkspaces } from '../../lib/members';
+import { listMembers, assertCanManage, changeMemberRole, removeMember, setMemberWorkspaces } from '@/src/infrastructure/members';
 const mockQuery = db.query as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];
 const lastSql = () => String(mockQuery.mock.calls[mockQuery.mock.calls.length - 1][0]);

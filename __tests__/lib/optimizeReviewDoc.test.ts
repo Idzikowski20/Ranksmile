@@ -1,6 +1,6 @@
-import { buildReviewDoc, buildStreamingDoc } from '../../lib/optimizeReviewDoc';
+import { buildReviewDoc, buildStreamingDoc } from '@/src/infrastructure/optimizeReviewDoc';
 import { splitSections } from '@/src/infrastructure/articles/articleSections';
-import type { SectionEvent } from '../../lib/optimizeSectionEvents';
+import type { SectionEvent } from '@/src/infrastructure/optimizeSectionEvents';
 
 const ev = (over: Partial<SectionEvent>): SectionEvent => ({
   sectionId: 'x',

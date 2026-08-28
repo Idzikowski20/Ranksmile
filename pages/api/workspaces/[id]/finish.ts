@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { finishWorkspaceSetup } from '../../../../lib/workspaces';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { finishWorkspaceSetup } from '@/src/infrastructure/workspaces';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);
@@ -29,7 +29,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
       const domainId = drows[0]?.id;
       if (domainId) {
-         const { enqueueDomainSetup, kickDomainSetup } = await import('../../../../lib/domainPipeline');
+         const { enqueueDomainSetup, kickDomainSetup } = await import('@/src/infrastructure/domainPipeline');
          const jobId = await enqueueDomainSetup(Number(domainId));
          void kickDomainSetup(jobId);
          // Warm Performance cache — domain.search_console is set during configure when GSC site was picked.

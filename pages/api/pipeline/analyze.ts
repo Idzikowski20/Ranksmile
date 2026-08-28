@@ -6,7 +6,7 @@ import {
   FlowProducerStageError,
 } from '@/src/infrastructure/pipeline/flowProducer';
 import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 /**
  * POST /api/pipeline/analyze — Etap 2+ FlowProducer DAG (or sequential fallback).

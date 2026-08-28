@@ -3,13 +3,13 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { callSidecar } from '../../../lib/sidecar';
+import { callSidecar } from '@/src/infrastructure/sidecar';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { resolveContentLocale } from '@/src/infrastructure/domainLanguage';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

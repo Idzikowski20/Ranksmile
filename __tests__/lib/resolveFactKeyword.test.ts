@@ -1,4 +1,4 @@
-import { resolveFactKeyword } from '../../lib/resolveFactKeyword';
+import { resolveFactKeyword } from '@/src/infrastructure/resolveFactKeyword';
 
 describe('resolveFactKeyword', () => {
   it('rejects domain GSC noise when article is about detektyw', () => {

@@ -14,7 +14,7 @@ import type { CanonicalContentModel } from '../ccm/types/ccm';
 import { graphQuery } from '../ccm/graphQuery';
 import type { CoverageStatus } from '../ccm/types/status';
 import { normalizeFactKey } from '../ccm/builders/factEngine';
-import { compactCoverageSnapshotItems, AI_COVERAGE_MAX } from '../curateCoverageItems';
+import { compactCoverageSnapshotItems, AI_COVERAGE_MAX } from '@/src/infrastructure/curateCoverageItems';
 
 function statusToQuality(status: CoverageStatus): number {
   switch (status) {

@@ -5,16 +5,16 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { affectedRows } from '../../../lib/queueRunner';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { affectedRows } from '@/src/infrastructure/queueRunner';
 import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { MAX_STREAM_CHARS } from '@/src/core/shared/streamText';
-import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
-import { staleFinalizationSql } from '../../../lib/staleFinalization';
+import { sanitizeArticleHtml } from '@/src/infrastructure/sanitizeHtml';
+import { staleFinalizationSql } from '@/src/infrastructure/staleFinalization';
 
 import {
   mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
@@ -83,7 +83,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       && typeof internalToken === 'string'
       && internalToken === process.env.INTERNAL_PIPELINE_TOKEN,
   );
-  const { assertCronSecret } = await import('../../../lib/cronAuth');
+  const { assertCronSecret } = await import('@/src/infrastructure/cronAuth');
   const isCron = assertCronSecret(req);
 
   if (!isInternal && !isCron) {
@@ -204,7 +204,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const domainId = jrows[0]?.domain_id;
       const genArticleId = jrows[0]?.article_id;
       if (status === 'done' && jt === 'domain_setup' && domainId) {
-        const { materializeDomainSetup } = await import('../../../lib/domainPipeline');
+        const { materializeDomainSetup } = await import('@/src/infrastructure/domainPipeline');
         try {
           await materializeDomainSetup(Number(domainId), result || {});
           const { closeSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
@@ -214,9 +214,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             .catch((err) => { console.warn('[job-progress] crawl snapshot failed (non-fatal):', err); });
           // Fire-and-forget: pre-scan the shared Organic Competitors store for the
           // domain's top keywords so they're ready in the audit/editor modal.
-          void import('../../../lib/competitorPrescan')
+          void import('@/src/infrastructure/competitorPrescan')
             .then((m) => m.prescanDomainCompetitors(Number(domainId)))
-            .then(() => import('../../../lib/scoreDomainPages').then((m) => m.scoreDomainPages(Number(domainId))))
+            .then(() => import('@/src/infrastructure/scoreDomainPages').then((m) => m.scoreDomainPages(Number(domainId))))
             .catch((err) => { console.warn('[job-progress] domain page scoring failed (non-fatal):', err); });
         } catch (e) {
           // Materialization (delete+insert tx) failed — DON'T leave the job 'running'
@@ -259,9 +259,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           }
           const plain = stripHtmlToPlain(html);
           const wordCount = plain.split(/\s+/).filter(Boolean).length;
-          const { reconcilePostGenerateArticle } = await import('../../../lib/reconcilePostGenerateArticle');
+          const { reconcilePostGenerateArticle } = await import('@/src/infrastructure/reconcilePostGenerateArticle');
           const sidecarScore = (result?.score_data && typeof result.score_data === 'object')
-            ? result.score_data as import('../../../lib/contentScore').ScoreData
+            ? result.score_data as import('@/src/infrastructure/contentScore').ScoreData
             : { terms: [], words_target: 2000, words_min: 1500, words_max: 2500, headings_target: 15, headings_min: 10, headings_max: 20 };
           const reconciled = await reconcilePostGenerateArticle({
             articleId: Number(genArticleId),

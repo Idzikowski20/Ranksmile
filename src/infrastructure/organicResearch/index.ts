@@ -1,5 +1,5 @@
 import Domain from '@/database/models/domain';
-import { getDomainLocale } from '@/lib/domainLanguage';
+import { getDomainLocale } from '@/src/infrastructure/domainLanguage';
 import { loadCachedDataset } from '@/src/infrastructure/organicResearch/cache';
 import { dataforseoOrganicProvider, defaultProviderContext } from '@/src/infrastructure/organicResearch/dataforseoProvider';
 import { isDataForSeoConfigured } from '@/providers/dataforseo/organic';

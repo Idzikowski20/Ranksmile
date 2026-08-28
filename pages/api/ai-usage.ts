@@ -2,9 +2,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { ensureUserTenancy } from '../../lib/tenancy';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getOrgUsage5h, AI_TOKEN_LIMIT_5H, AI_WINDOW_MS, windowStart } from '@/src/infrastructure/ai/aiTokenUsage';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

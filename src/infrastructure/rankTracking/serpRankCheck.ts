@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { getKeywordOverview, isDataForSeoConfigured } from '@/lib/dataforseo';
-import { serpCrawlBudget } from '@/lib/dataforseoBudget';
+import { getKeywordOverview, isDataForSeoConfigured } from '@/src/infrastructure/dataforseo';
+import { serpCrawlBudget } from '@/src/infrastructure/dataforseoBudget';
 import type { RankDevice } from '@/lib/types/rankTracking';
 import { withDfsRateLimit } from '@/src/infrastructure/rankTracking/dfsRateLimiter';
 

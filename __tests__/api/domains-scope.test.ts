@@ -2,7 +2,7 @@ jest.mock('sequelize', () => ({ Op: { in: 'Op.in', notIn: 'Op.notIn', or: 'Op.or
 jest.mock('../../database/database', () => ({ __esModule: true, default: { sync: jest.fn(), query: jest.fn() } }));
 jest.mock('../../database/models/domain', () => ({ __esModule: true, default: { findAll: jest.fn(), bulkCreate: jest.fn(), findOne: jest.fn() } }));
 jest.mock('../../database/models/keyword', () => ({ __esModule: true, default: { findAll: jest.fn(), destroy: jest.fn() } }));
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/tenancy', () => ({
   getAccessibleWorkspaceIds: jest.fn(),
   getActiveWorkspaceId: jest.fn(),
   getScopedWorkspaceIds: jest.fn(),
@@ -17,7 +17,7 @@ jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn(
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn(async () => 'user-a') }));
 
 import Domain from '../../database/models/domain';
-import { getActiveWorkspaceId, getScopedWorkspaceIds } from '../../lib/tenancy';
+import { getActiveWorkspaceId, getScopedWorkspaceIds } from '@/src/infrastructure/tenancy';
 import { getDomains, addDomain } from '../../pages/api/domains';
 
 const findAll = Domain.findAll as jest.Mock;

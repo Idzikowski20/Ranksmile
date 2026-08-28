@@ -1,4 +1,4 @@
-import { buildImportKeywordList } from '../../lib/buildImportKeywordList';
+import { buildImportKeywordList } from '@/src/infrastructure/buildImportKeywordList';
 
 describe('buildImportKeywordList', () => {
   it('merges GSC page queries with inferred primary keyword', () => {

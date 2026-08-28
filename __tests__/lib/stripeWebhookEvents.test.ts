@@ -3,7 +3,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => (
 
 import type Stripe from 'stripe';
 import db from '../../database/database';
-import { claimStripeEvent, releaseStripeEvent } from '../../lib/stripeWebhookEvents';
+import { claimStripeEvent, releaseStripeEvent } from '@/src/infrastructure/stripeWebhookEvents';
 
 const mockQuery = db.query as jest.MockedFunction<typeof db.query>;
 

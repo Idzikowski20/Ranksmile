@@ -4,10 +4,10 @@ import Cryptr from 'cryptr';
 import getConfig from 'next/config';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { assertCanManage } from '../../lib/members';
+import { assertCanManage } from '@/src/infrastructure/members';
 import allScrapers from '../../scrapers/index';
-import { readSettingsBlob, writeSettingsBlob } from '../../lib/appSettingsStore';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { readSettingsBlob, writeSettingsBlob } from '@/src/infrastructure/appSettingsStore';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 type SettingsGetResponse = {
    settings?: object | null,

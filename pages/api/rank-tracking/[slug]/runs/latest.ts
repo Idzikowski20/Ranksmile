@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { getActiveRun } from '@/src/infrastructure/rankTracking/repository';
 import { getConfig } from '@/src/infrastructure/rankTracking/service';
-import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);

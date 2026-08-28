@@ -1,5 +1,5 @@
-import { assignGuidelinesToSections } from '../../lib/optimizeGuidelineRouting';
-import type { Guideline } from '../../lib/recommendationEngine';
+import { assignGuidelinesToSections } from '@/src/infrastructure/optimizeGuidelineRouting';
+import type { Guideline } from '@/src/infrastructure/recommendationEngine';
 import type { Section } from '@/src/infrastructure/articles/articleSections';
 
 const g = (over: Partial<Guideline>): Guideline => ({
