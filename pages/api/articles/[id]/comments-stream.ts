@@ -3,7 +3,7 @@
 // in-process bus pushes an event and the client refetches. No polling.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { onCommentChange } from '../../../../lib/commentBus';
 import { assertCommentAccess } from '../../../../lib/commentAccess';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';

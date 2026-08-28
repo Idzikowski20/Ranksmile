@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { QueryTypes, type Transaction } from 'sequelize';
 import db from '../database/database';
-import { ensurePipelineTables } from './ensurePipelineTables';
+import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
 import { gatherBlogUrls } from './gatherBlogUrls';
 import { getSiteAuditPageLimit, resolvePlanSlug } from './planLimits';
 import { getOrgBillingState } from './orgBilling';

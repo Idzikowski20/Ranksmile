@@ -7,7 +7,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
 import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';

@@ -12,7 +12,7 @@ jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolv
 jest.mock('../../utils/verifyDomainOwnership', () => ({
   verifyDomainOwnershipBySlug: jest.fn().mockResolvedValue({ ID: 7 }),
 }));
-jest.mock('../../lib/ensureAiVisibilityTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureAiVisibilityTables', () => ({
   ensureAiVisibilityTables: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../../lib/domainLanguage', () => ({

@@ -1,6 +1,6 @@
 import { queryRows } from './db/query';
 import { scanCompetitors } from './competitorScan';
-import { ensureCompetitorsTables } from './ensureCompetitorsTables';
+import { ensureCompetitorsTables } from '@/src/infrastructure/persistence/schema/ensureCompetitorsTables';
 
 // Pre-scan competitors for at most this many of the domain's top keywords at setup.
 // Each scan is a sidecar /competitor-outlines call (+ DataForSEO rank), so this is

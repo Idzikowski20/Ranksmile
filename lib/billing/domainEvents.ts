@@ -2,7 +2,7 @@
  * Billing domain events — SoT for “what happened”. Timeline is a projection.
  */
 import db from '../../database/database';
-import { ensureBillingTables } from '../ensureBillingTables';
+import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ensureBillingTables';
 
 export type BillingDomainEventType =
   | 'TRIAL_STARTED'

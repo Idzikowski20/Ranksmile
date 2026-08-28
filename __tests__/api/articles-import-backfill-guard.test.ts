@@ -7,7 +7,7 @@ jest.mock('../../utils/verifyDomainOwnership', () => ({
    verifyDomainOwnershipById: jest.fn(),
    firstAccessibleDomainId: jest.fn(),
 }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 jest.mock('../../utils/searchConsole', () => ({ readLocalSCData: jest.fn() }));
 jest.mock('../../utils/gsc', () => ({

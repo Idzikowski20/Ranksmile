@@ -6,8 +6,8 @@ import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../../lib/errors';
-import { ensureArticlesTables } from '../../../../../lib/ensureArticlesTables';
-import { ensureCcmTables } from '../../../../../lib/ensureCcmTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
 import { getArticleIdSql } from '../../../../../lib/articles/articleSql';
 import { queryOne } from '../../../../../lib/db/query';
 import type { ArticleRow } from '../../../../../lib/db/query';

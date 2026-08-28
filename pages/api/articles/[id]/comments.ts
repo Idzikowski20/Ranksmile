@@ -7,7 +7,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes } from 'crypto';
 import db from '../../../../database/database';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { emitCommentChange } from '../../../../lib/commentBus';
 import { getCommentAccessKind } from '../../../../lib/commentAccess';
 import { getErrorMessage } from '../../../../lib/errors';

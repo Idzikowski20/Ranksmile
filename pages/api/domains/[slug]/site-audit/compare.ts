@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../../utils/verifyDomainOwnership';
-import { ensurePipelineTables } from '../../../../../lib/ensurePipelineTables';
+import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
 import { buildCompareCrawlsReport } from '../../../../../lib/siteAudit/buildCompareCrawls';
 import type { CompareCrawlsReport } from '../../../../../lib/siteAudit/types';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';

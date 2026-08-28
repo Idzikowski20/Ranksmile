@@ -4,7 +4,7 @@ import db from '../../../database/database';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { getOrgBillingState } from '../../../lib/orgBilling';
 import { countActionableRecommendations, type RecFilterable } from '@/src/core/domain/recommendations/actionable';
-import { ensurePipelineTables } from '../../../lib/ensurePipelineTables';
+import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getUserDomainIds } from '../articles/index';

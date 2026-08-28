@@ -3,8 +3,8 @@
  * Obsługuje zarówno PostgreSQL (Neon) jak i SQLite (fallback dev).
  * Wywołuj na początku każdego API route artykułów.
  */
-import db from '../database/database';
-import { ensureUserOnboardingTable } from './onboardingState';
+import db from '@/database/database';
+import { ensureUserOnboardingTable } from '@/lib/onboardingState';
 
 let tablesChecked = false;
 

@@ -3,7 +3,7 @@
 // that still has un-analysed answers. One chunk per config per call → drained over ticks.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { findConfigsNeedingBrands, runBrandChunk } from '../../../../lib/aiVisibility/aiVisibilityBrands';
 import { getErrorMessage } from '../../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';

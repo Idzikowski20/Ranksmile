@@ -8,7 +8,7 @@ jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolv
 jest.mock('../../utils/verifyDomainOwnership', () => ({
   verifyDomainOwnershipBySlug: jest.fn().mockResolvedValue({ ID: 42 }),
 }));
-jest.mock('../../lib/ensureRankTrackingTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureRankTrackingTables', () => ({
   ensureRankTrackingTables: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../../lib/organicResearch', () => ({

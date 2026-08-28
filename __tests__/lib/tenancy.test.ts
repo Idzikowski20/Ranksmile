@@ -2,7 +2,7 @@ jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { query: jest.fn(), transaction: jest.fn(async (cb: any) => cb('TX')) },
 }));
-jest.mock('../../lib/ensureTenancyTables', () => ({ ensureTenancyTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureTenancyTables', () => ({ ensureTenancyTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 
 import db from '../../database/database';

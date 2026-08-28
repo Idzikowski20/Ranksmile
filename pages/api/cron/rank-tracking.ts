@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { ensureRankTrackingTables } from '../../../lib/ensureRankTrackingTables';
+import { ensureRankTrackingTables } from '@/src/infrastructure/persistence/schema/ensureRankTrackingTables';
 import { isRankTrackingRunnerEnabled } from '../../../lib/featureFlags';
 import { enqueueScheduledChecks } from '../../../lib/rankTracking/service';
 import { ensureSnapshotPartitionsAhead } from '../../../lib/rankTracking/partitions';

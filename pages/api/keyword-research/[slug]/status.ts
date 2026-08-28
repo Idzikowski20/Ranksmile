@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
+import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
 import { queryRows } from '../../../../lib/db/query';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

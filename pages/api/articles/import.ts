@@ -7,7 +7,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { firstAccessibleDomainId, verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import type { ScoreData, NlpTerm } from '../../../lib/contentScore';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';

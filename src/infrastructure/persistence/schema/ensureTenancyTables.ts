@@ -1,4 +1,4 @@
-import db from '../database/database';
+import db from '@/database/database';
 
 let ready: Promise<void> | null = null;
 const isPostgres = !!process.env.DATABASE_URL;

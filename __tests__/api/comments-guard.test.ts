@@ -1,5 +1,5 @@
 jest.mock('../../lib/commentAccess', () => ({ assertCommentAccess: jest.fn(), getCommentAccessKind: jest.fn() }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/commentBus', () => ({ emitCommentChange: jest.fn(), onCommentChange: jest.fn(() => () => {}) }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 

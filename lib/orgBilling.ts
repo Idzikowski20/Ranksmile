@@ -9,7 +9,7 @@ import {
   isEntitledStatus,
   type BillingAuditContext,
 } from './billing/billingAudit';
-import { ensureBillingTables } from './ensureBillingTables';
+import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ensureBillingTables';
 import { queryOne } from './db/query';
 import type { LegacyPlanSlug } from '@/src/core/domain/billing/prices';
 

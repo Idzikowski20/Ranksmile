@@ -8,7 +8,7 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { flushHeaders, flushSse } from '../../../../lib/types/api';
 import { streamDelta } from '../../../../lib/streamDelta';
 import { staleFinalizationSql } from '../../../../lib/staleFinalization';

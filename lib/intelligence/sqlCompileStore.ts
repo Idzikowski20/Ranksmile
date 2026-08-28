@@ -1,7 +1,7 @@
 import { queryOne, queryRows } from '../db/query';
 import type { CanonicalContentModel } from '../ccm/types/ccm';
 import type { ActionGraph } from '../ccm/types/actionGraph';
-import { ensureCcmTables } from '../ensureCcmTables';
+import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
 import type { CompileEvent } from './consumerContext';
 import {
   ccmFromBlob,

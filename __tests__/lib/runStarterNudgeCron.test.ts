@@ -7,7 +7,7 @@ import {
   runStarterNudgeCron,
 } from '../../lib/emails/runStarterNudgeCron';
 
-jest.mock('../../lib/ensureBillingTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => ({
   ensureBillingTables: jest.fn(async () => undefined),
 }));
 

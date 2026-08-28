@@ -4,7 +4,7 @@ jest.mock('../../database/models/domain', () => ({ __esModule: true, default: { 
 jest.mock('../../lib/tenancy', () => ({ getAccessibleWorkspaceIds: jest.fn() }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn() }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn() }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn() }));
 jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn() }));
 
 import Domain from '../../database/models/domain';

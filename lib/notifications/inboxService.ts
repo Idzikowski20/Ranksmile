@@ -1,6 +1,6 @@
 import type { Transaction } from 'sequelize';
 import db from '../../database/database';
-import { ensureNotificationTables } from '../ensureNotificationTables';
+import { ensureNotificationTables } from '@/src/infrastructure/persistence/schema/ensureNotificationTables';
 import { ensureUserTenancy, getAccessibleWorkspaceIds } from '../tenancy';
 import { acquireInboxOrgLock } from './orgLock';
 import type { InboxItem, InboxListResponse, MarkInboxReadInput } from './types';

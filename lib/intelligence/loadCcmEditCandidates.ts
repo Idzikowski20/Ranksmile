@@ -21,7 +21,7 @@ export async function loadCcmEditCandidatesForArticle(
   opts: LoadCcmEditCandidatesOpts,
 ): Promise<readonly EditCandidate[]> {
   try {
-    const { ensureCcmTables } = await import('../ensureCcmTables');
+    const { ensureCcmTables } = await import('@/src/infrastructure/persistence/schema/ensureCcmTables');
     const { SqlCompileStore } = await import('./sqlCompileStore');
     const { applyLivePresence } = await import('./livePresence');
     const { buildActionGraph } = await import('../planner/actionGraphBuilder');

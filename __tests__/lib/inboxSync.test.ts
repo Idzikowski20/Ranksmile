@@ -1,7 +1,7 @@
 /**
  * Stateful in-memory mock — sync revision / archive without live Postgres.
  */
-jest.mock('../../lib/ensureNotificationTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureNotificationTables', () => ({
   ensureNotificationTables: jest.fn().mockResolvedValue(undefined),
 }));
 

@@ -9,7 +9,7 @@ import type { RichTerm } from '@/src/core/domain/competitors/contentScore';
 import { getSearchVolumes } from './dataforseo';
 import { callSidecar } from './sidecar';
 import { isContentCompetitor } from '@/src/core/domain/competitors/relevance';
-import { ensureCompetitorsTables } from './ensureCompetitorsTables';
+import { ensureCompetitorsTables } from '@/src/infrastructure/persistence/schema/ensureCompetitorsTables';
 
 const PL_DIACRITICS = /[ąćęłńóśźż]/i;
 const langOf = (kw: string): string => (PL_DIACRITICS.test(kw) ? 'pl' : 'en');

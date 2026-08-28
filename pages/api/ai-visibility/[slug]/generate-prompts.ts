@@ -11,7 +11,7 @@ import {
   looksLikeLanguage,
   promptTemplatesForLocale,
 } from '../../../../lib/domainLanguage';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { queryOne } from '../../../../lib/db/query';
 import { parseJsonish } from '../../../../lib/types/json';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';

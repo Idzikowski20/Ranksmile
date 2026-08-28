@@ -3,7 +3,7 @@ import Cryptr from 'cryptr';
 import { countryAlphaTwoCodes, getCountryCodeFromAlphaThree } from './countries';
 import GscAccount from '../database/models/gscAccount';
 import db from '../database/database';
-import { ensureGscDataTable } from '../lib/ensureGscDataTable';
+import { ensureGscDataTable } from '@/src/infrastructure/persistence/schema/ensureGscDataTable';
 import { readSettingsBlob } from '../lib/appSettingsStore';
 
 export type SCDomainFetchError = {

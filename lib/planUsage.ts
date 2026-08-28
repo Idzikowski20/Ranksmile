@@ -1,5 +1,5 @@
-import { ensureAiVisibilityTables } from './ensureAiVisibilityTables';
-import { ensureKeywordResearchTables } from './ensureKeywordResearchTables';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
+import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
 import { queryOne } from './db/query';
 
 export interface OrgPlanUsage {

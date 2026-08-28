@@ -5,7 +5,7 @@ import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../../lib/errors';
-import { ensureCcmTables } from '../../../../../lib/ensureCcmTables';
+import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
 import { SqlCompileStore } from '../../../../../lib/intelligence/sqlCompileStore';
 import { getCcm, projectArticleIntelligence } from '../../../../../lib/intelligence/runtimeApi';
 import { applyLivePresence } from '../../../../../lib/intelligence/livePresence';

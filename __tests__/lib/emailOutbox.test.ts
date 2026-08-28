@@ -1,7 +1,7 @@
 /**
  * Stateful in-memory mock — email outbox claim / retry / poller without live Postgres.
  */
-jest.mock('../../lib/ensureNotificationEmailTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureNotificationEmailTables', () => ({
   ensureNotificationEmailTables: jest.fn().mockResolvedValue(undefined),
 }));
 

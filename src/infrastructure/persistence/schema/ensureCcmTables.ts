@@ -1,7 +1,7 @@
 /**
  * Ensures CIA CCM snapshot / event tables exist (Postgres or SQLite).
  */
-import db from '../database/database';
+import db from '@/database/database';
 
 let tablesChecked = false;
 

@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import ArticleBlogPreview from '../../../components/articles/ArticleBlogPreview';
 import { Icon } from '../../../components/koala/icons';
 import db from '../../../database/database';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { queryOne } from '../../../lib/db/query';
 import type { ArticleRow } from '../../../lib/db/query';

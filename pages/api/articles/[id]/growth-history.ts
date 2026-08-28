@@ -4,7 +4,7 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
-import { ensureFeatureStoreTables } from '../../../../lib/ensureFeatureStoreTables';
+import { ensureFeatureStoreTables } from '@/src/infrastructure/persistence/schema/ensureFeatureStoreTables';
 import { getFeatureStore } from '../../../../lib/featureStore';
 import { getErrorMessage } from '../../../../lib/errors';
 import { getArticleIdSql } from '../../../../lib/articles/articleSql';
