@@ -1,0 +1,75 @@
+src/infrastructure/siteAudit/redirectScan.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-40
+src/infrastructure/siteAudit/buildPageReport.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-107
+components/siteAudit/HowToFixPopper.tsx
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 3-4
+src/infrastructure/siteAudit/hstsCheck.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-62
+components/siteAudit/IssueHelpContent.tsx
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 3-4
+pages/api/domains/[slug]/site-audit/pages.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 6-8
+src/infrastructure/siteAudit/crawlSnapshot.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-252
+src/infrastructure/siteAudit/issues.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-581
+src/infrastructure/siteAudit/pageLimit.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-34
+components/siteAudit/SiteAuditIssueDetail.tsx
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 27
+components/siteAudit/SiteAuditOverview.tsx
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 16
+src/infrastructure/siteAudit/externalLinkProbe.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-130
+src/infrastructure/siteAudit/issueCatalog.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-352
+components/siteAudit/SiteAuditCompareCrawls.tsx
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 6-7,12
+services/siteAudit.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 7
+src/infrastructure/siteAudit/incomingLinkGraph.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-39
+components/siteAudit/SiteAuditIssues.tsx
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 11,17
+pages/api/domains/[slug]/site-audit/compare.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 6-7
+pages/sites/[domain]/site-audit.tsx
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 24
+src/infrastructure/siteAudit/previousCrawlRepository.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 3
+src/infrastructure/siteAudit/buildCompareCrawls.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-196
+__tests__/lib/siteAudit/issues.test.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 8-9
+pages/api/domains/[slug]/site-audit.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 6-8
+src/infrastructure/siteAudit/buildOverview.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-237
+pages/api/domains/[slug]/site-audit/issues/[issueId].ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 7-10
+pages/api/articles/job-progress.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 212
+components/siteAudit/SiteAuditCrawledPages.tsx
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 29
+src/infrastructure/siteAudit/buildIssueDetail.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-207
+src/infrastructure/siteAudit/sitemapValidation.ts
+  s_e3556ba0769b4b::t_b20f75fcc2fe6f 1-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "fe60fb96b98a98d6e7343ae780db4eba830ca534",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
