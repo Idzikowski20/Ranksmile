@@ -45,13 +45,13 @@ import {
   buildStructuralBenchmark,
   benchmarkDocsFromCompetitors,
   toPlannerTargets,
-} from '../../../../lib/benchmarkIntelligence';
+} from '@/src/infrastructure/benchmarkIntelligence/index';
 import {
   runKnowledgeEngine,
   shouldUseKnowledgePlanner,
 } from '../../../../lib/knowledgeEngine';
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
-import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchmarkIntelligence';
+import type { StructuralBenchmark, PlannerTargets } from '@/src/infrastructure/benchmarkIntelligence/index';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';

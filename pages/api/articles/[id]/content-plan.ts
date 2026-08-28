@@ -33,7 +33,7 @@ import {
   benchmarkDocsFromCompetitors,
   buildStructuralBenchmark,
   toPlannerTargets,
-} from '../../../../lib/benchmarkIntelligence';
+} from '@/src/infrastructure/benchmarkIntelligence/index';
 import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 import type { PlannerTargets, StructuralBenchmark } from '@/src/core/domain/benchmark/types';
 

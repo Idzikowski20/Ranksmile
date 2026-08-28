@@ -14,7 +14,7 @@ export const embeddingsWorker: PipelineWorker = {
       '@/src/core/domain/semantic/embeddings'
     );
     const { extractKeybertTerms } = await import('@/src/core/domain/semantic/keybert');
-    const { storeHashEmbeddings } = await import('../../semantic/embeddingStore');
+    const { storeHashEmbeddings } = await import('@/src/infrastructure/semantic/embeddingStore');
 
     const articleText = String(ctx.payload.plainText || ctx.payload.html || '').replace(
       /<[^>]+>/g,
