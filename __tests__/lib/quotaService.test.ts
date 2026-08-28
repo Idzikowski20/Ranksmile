@@ -200,8 +200,8 @@ import {
   commitReservation,
   releaseReservation,
   reserveQuota,
-} from '../../lib/quota/quotaService';
-import { PlanLimitError } from '../../lib/quota/errors';
+} from '@/src/infrastructure/quota/quotaService';
+import { PlanLimitError } from '@/src/infrastructure/quota/errors';
 
 beforeAll(() => {
   if (!process.env.DATABASE_URL) process.env.DATABASE_URL = 'postgres://test';

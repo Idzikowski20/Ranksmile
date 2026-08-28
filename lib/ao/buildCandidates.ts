@@ -6,7 +6,7 @@ import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { AI_SEARCH_CHECKPOINT_TYPES } from '@/src/core/domain/coverage/aiCoverage';
 import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_TARGET } from '@/src/core/domain/optimize/coverageState';
 import type { TermUsageGap } from '../optimizeSectionEdit';
-import type { Section } from '../articles/articleSections';
+import type { Section } from '@/src/infrastructure/articles/articleSections';
 import type { OptimizationStrategy } from './optimizationPolicy';
 
 export type BuildCandidatesInput = {

@@ -5,7 +5,7 @@
  */
 import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import type { EditCandidate } from '@/src/core/domain/optimize/editCandidate';
-import type { Section } from '../articles/articleSections';
+import type { Section } from '@/src/infrastructure/articles/articleSections';
 
 export type SectionTargetScore = {
   sectionId: string;

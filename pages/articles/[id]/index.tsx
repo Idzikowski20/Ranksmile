@@ -34,7 +34,7 @@ import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { liveCoverageItems, scoreDeltaGate } from '../../../lib/liveCoverage';
 import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 import { filterSyntheticCitationTemplates } from '../../../lib/citationPrompts';
-import { buildDeveloperReport, downloadDeveloperReport } from '../../../lib/articles/buildDeveloperReport';
+import { buildDeveloperReport, downloadDeveloperReport } from '@/src/infrastructure/articles/buildDeveloperReport';
 import AoScoreFloat from '../../../components/articles/AoScoreFloat';
 import { substituteOptimizerPlaceholders } from '../../../lib/optimizePostHtml';
 import { collectOptimizerPositions } from '@/src/core/domain/optimize/resolveAll';

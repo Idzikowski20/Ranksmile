@@ -1,5 +1,5 @@
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
-import type { ArticleContext } from '@/lib/articles/articleContext';
+import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
 import { buildGuidelines } from '@/lib/recommendationEngine';
 import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 import type { Action, Feature, Observation, ScoreVector } from '@/lib/primitives/types';

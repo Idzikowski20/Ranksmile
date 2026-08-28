@@ -5,7 +5,7 @@ import {
   resolveAiScore,
   contentScoreSplit,
 } from '@/src/core/domain/aiScore/aiSearchScore';
-import type { ArticleFact } from '../../lib/articles/articleFacts';
+import type { ArticleFact } from '@/src/infrastructure/articles/articleFacts';
 
 const sampleFacts: ArticleFact[] = [
   { id: 'f1', text: 'Prywatny detektyw oferuje uslugi detektywistyczne w Warszawie.', sourceFrequency: 2, sources: [{ kind: 'serp' }] },

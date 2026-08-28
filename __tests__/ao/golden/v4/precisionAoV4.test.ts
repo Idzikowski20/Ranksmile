@@ -8,7 +8,7 @@ import {
 import { buildCriticalContentMap, unitSemanticallyPresent } from '@/src/core/domain/optimize/criticalContentMap';
 import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { selectSectionTarget } from '../../../../lib/ao/sectionTargeting';
-import { splitSections } from '../../../../lib/articles/articleSections';
+import { splitSections } from '@/src/infrastructure/articles/articleSections';
 import {
   runSemanticPreservationGate,
   runFinalScoreGate,

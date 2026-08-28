@@ -7,7 +7,7 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
 import { buildGradedCoverageSnapshot } from '../../../lib/buildCoverageSnapshot';
 import { dedupePaaQuestions } from '../../../lib/curateCoverageItems';
@@ -21,9 +21,9 @@ import {
   hasMinCompetitorDomains,
   scaleTermRangesToWordCount,
 } from '@/src/core/domain/competitors/termCalibration';
-import { runArticleAiPipeline } from '../../../lib/articles/articleAiPipeline';
+import { runArticleAiPipeline } from '@/src/infrastructure/articles/articleAiPipeline';
 import { computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
-import type { ArticleFact } from '../../../lib/articles/articleFacts';
+import type { ArticleFact } from '@/src/infrastructure/articles/articleFacts';
 import { safeJsonParse } from '../../../lib/safeJson';
 import { carriedScoreData } from '@/src/core/domain/articles/carriedScoreData';
 
@@ -34,7 +34,7 @@ import {
   hostFromUrl,
   mergeNlpTerms,
   saveArticleKeywords,
-} from '../../../lib/articles/articleKeywordDiscovery';
+} from '@/src/infrastructure/articles/articleKeywordDiscovery';
 import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPageKeyword';
 import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
 import { persistAiVisibilityRun } from '@/src/infrastructure/aiVisibility/aiVisibilityStore';
@@ -56,7 +56,7 @@ import { computeSeoScoreFromAudit } from '@/src/core/domain/audit/seoScore';
 import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articles/articleAnalysisStorage';
+import { replaceArticleTerms, replaceCompetitors } from '@/src/infrastructure/articles/articleAnalysisStorage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
 

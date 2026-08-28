@@ -7,7 +7,7 @@ import { assertArticleAccess } from '../../../../lib/tenancy';
 import { ensureFeatureStoreTables } from '@/src/infrastructure/persistence/schema/ensureFeatureStoreTables';
 import { getFeatureStore } from '../../../../lib/featureStore';
 import { getErrorMessage } from '../../../../lib/errors';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { queryOne } from '../../../../lib/db/query';
 import type { Observation } from '../../../../lib/primitives/types';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';

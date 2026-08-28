@@ -7,7 +7,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getConnectionForWorkspace } from '../../../lib/wpConnection';
 import { wpRestFetch } from '../../../lib/wpRest';
 import { permalinkHash } from '../../../lib/wpDraft';

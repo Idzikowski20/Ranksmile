@@ -5,9 +5,9 @@ import {
   getOrgIdForDomain,
   releaseReservation,
   reserveQuota,
-} from './index';
-import { getOrgBillingState } from '../orgBilling';
-import { getSiteAuditPageLimit, resolvePlanSlug } from '../planLimits';
+} from '@/src/infrastructure/quota/index';
+import { getOrgBillingState } from '@/lib/orgBilling';
+import { getSiteAuditPageLimit, resolvePlanSlug } from '@/lib/planLimits';
 
 const EXPIRE_MS = 6 * 60 * 60 * 1000;
 

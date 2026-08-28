@@ -7,7 +7,7 @@ jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn(
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
 jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(true) }));
 jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 jest.mock('../../lib/db/query', () => ({ queryOne: jest.fn() }));
 jest.mock('../../lib/sidecar', () => ({ callSidecar: jest.fn() }));
 

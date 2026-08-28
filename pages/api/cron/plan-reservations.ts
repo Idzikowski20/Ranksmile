@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ensurePlanQuotaTables } from '@/src/infrastructure/persistence/schema/ensurePlanQuotaTables';
-import { sweepExpiredReservations } from '../../../lib/quota';
+import { sweepExpiredReservations } from '@/src/infrastructure/quota/index';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';

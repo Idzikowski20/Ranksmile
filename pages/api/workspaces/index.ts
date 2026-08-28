@@ -25,7 +25,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       try {
          return res.status(201).json(await createWorkspace(userId, name));
       } catch (e) {
-         const { isPlanLimitError, planLimitBody } = await import('../../../lib/quota');
+         const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
          if (isPlanLimitError(e)) return res.status(402).json(planLimitBody(e));
          throw e;
       }

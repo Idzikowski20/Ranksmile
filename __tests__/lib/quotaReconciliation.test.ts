@@ -1,5 +1,5 @@
 import { ACTIVE_PERIOD_KEY } from '../../lib/planLimits';
-import type { ReconciliationMismatch } from '../../lib/quota/reconciliation';
+import type { ReconciliationMismatch } from '@/src/infrastructure/quota/reconciliation';
 
 jest.mock('@/src/infrastructure/persistence/schema/ensurePlanQuotaTables', () => ({
   ensurePlanQuotaTables: jest.fn().mockResolvedValue(undefined),
@@ -34,7 +34,7 @@ jest.mock('../../database/database', () => ({
   },
 }));
 
-import { reconcileOrgQuotas } from '../../lib/quota/reconciliation';
+import { reconcileOrgQuotas } from '@/src/infrastructure/quota/reconciliation';
 
 describe('reconcileOrgQuotas', () => {
   it('reports COUNT vs used mismatches for active meters', async () => {

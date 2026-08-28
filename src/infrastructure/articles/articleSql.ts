@@ -1,5 +1,5 @@
 import { QueryTypes } from 'sequelize';
-import db from '../../database/database';
+import db from '@/database/database';
 
 const isPostgres = !!process.env.DATABASE_URL;
 

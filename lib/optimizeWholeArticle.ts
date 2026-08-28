@@ -1,4 +1,4 @@
-import type { ArticleContext } from './articles/articleContext';
+import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
 import type { Guideline } from './recommendationEngine';
 import {
   computeTermUsageGaps,

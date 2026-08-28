@@ -2,7 +2,7 @@ import type { NextApiRequest } from 'next';
 import type { Transaction } from 'sequelize';
 import db from '../database/database';
 import { ensureTenancyTables } from '@/src/infrastructure/persistence/schema/ensureTenancyTables';
-import { getArticleIdSql } from './articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 
 import type { DbRow, SqlReplacements } from './types/db';
 
@@ -85,7 +85,7 @@ export async function ensureUserTenancy(userId: string): Promise<{ orgId: number
             const [orgs] = await db.query('SELECT id FROM organizations WHERE owner_user_id = ? ORDER BY id DESC LIMIT 1', opt([userId])) as unknown as [Row[], unknown];
             const newOrgId = Number(orgs[0].id);
             await db.query("INSERT INTO organization_members (org_id, user_id, role, status) VALUES (?, ?, 'owner', 'active')", opt([newOrgId, userId]));
-            const { ensureOrgQuotaBalances } = await import('./quota/ensureBalances');
+            const { ensureOrgQuotaBalances } = await import('@/src/infrastructure/quota/ensureBalances');
             await ensureOrgQuotaBalances(newOrgId, { transaction: t, seedFromCounts: false });
          });
       } catch { /* concurrent winner — re-read below */ }

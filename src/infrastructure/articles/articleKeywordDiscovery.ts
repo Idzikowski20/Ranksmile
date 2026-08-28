@@ -3,18 +3,18 @@
  * Primary source: DataForSEO ranked keywords from SERP competitors.
  * GSC is validation-only (page queries that match the URL anchor).
  */
-import db from '../../database/database';
-import { cached, TTL } from '../cache/fileCache';
-import { enrichTerms, getOwnVisibleKeywords } from '../seo/keywordData';
-import { getRankedKeywords, isDataForSeoConfigured } from '../dataforseo';
-import { DFS_DEFAULT_RANKED_LIMIT } from '../dataforseoBudget';
+import db from '@/database/database';
+import { cached, TTL } from '@/lib/cache/fileCache';
+import { enrichTerms, getOwnVisibleKeywords } from '@/lib/seo/keywordData';
+import { getRankedKeywords, isDataForSeoConfigured } from '@/lib/dataforseo';
+import { DFS_DEFAULT_RANKED_LIMIT } from '@/lib/dataforseoBudget';
 import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
-import type { NlpTerm } from '../contentScore';
+import type { NlpTerm } from '@/lib/contentScore';
 import { isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
 import { filterOnTopicTerms, isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
 import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
-import { keywordFromUrl, urlAnchorSeed } from '../inferPageKeyword';
-import { kwScore } from '../../utils/gsc';
+import { keywordFromUrl, urlAnchorSeed } from '@/lib/inferPageKeyword';
+import { kwScore } from '@/utils/gsc';
 
 export type DiscoveredKeyword = {
   keyword: string;

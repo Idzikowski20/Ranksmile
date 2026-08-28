@@ -3,9 +3,9 @@ import {
   introMayExpand, buildStepPromptForMode, userInstructionForMode,
 } from '../../lib/optimizationPlanner';
 import type { PlanInput, PlanStep } from '../../lib/optimizationPlanner';
-import type { Section } from '../../lib/articles/articleSections';
+import type { Section } from '@/src/infrastructure/articles/articleSections';
 import type { Guideline } from '../../lib/recommendationEngine';
-import type { ArticleContext } from '../../lib/articles/articleContext';
+import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
 import type { RoutedGuideline } from '../../lib/optimizeGuidelineRouting';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 

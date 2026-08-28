@@ -1,4 +1,4 @@
-import { getArticleIdSql } from '@/lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { queryOne, queryRows, type ArticleRow } from '@/lib/db/query';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { parseJsonish } from '@/lib/types/json';

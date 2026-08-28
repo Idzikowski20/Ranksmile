@@ -5,8 +5,8 @@ import {
   isQuotaMeter,
   METER_KIND,
 } from '../../lib/planLimits';
-import { calendarPeriodKey, periodKeyForMeter } from '../../lib/quota/period';
-import { PlanLimitError, isPlanLimitError } from '../../lib/quota/errors';
+import { calendarPeriodKey, periodKeyForMeter } from '@/src/infrastructure/quota/period';
+import { PlanLimitError, isPlanLimitError } from '@/src/infrastructure/quota/errors';
 
 describe('plan quota meter semantics', () => {
   it('classifies meters by kind', () => {

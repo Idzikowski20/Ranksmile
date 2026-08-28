@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { QueryTypes } from 'sequelize';
 import db from '../database/database';
-import { getArticleIdSql } from './articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import type { DbRow, SqlReplacements } from './types/db';
 
 /** Stable per-article hash the plugin stores alongside the post (Ranksmile's permalink_hash). */

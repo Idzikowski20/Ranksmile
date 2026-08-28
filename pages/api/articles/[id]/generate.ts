@@ -8,7 +8,7 @@ import axios from 'axios';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { readContentSettings } from '../../../../lib/contentSettings';
 import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
@@ -53,7 +53,7 @@ import {
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
 import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchmarkIntelligence';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
-import { readArticleTerms } from '../../../../lib/articles/articleTerms';
+import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 
 /** Bounds the brief LLM call: nothing else force-kills this request, so an unbounded

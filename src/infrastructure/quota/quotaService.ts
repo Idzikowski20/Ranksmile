@@ -1,8 +1,8 @@
 import type { Transaction } from 'sequelize';
-import db from '../../database/database';
+import db from '@/database/database';
 import { ensurePlanQuotaTables } from '@/src/infrastructure/persistence/schema/ensurePlanQuotaTables';
-import { hasActiveBillingEntitlement } from '../billing/billingEntitlement';
-import { getOrgBillingState } from '../orgBilling';
+import { hasActiveBillingEntitlement } from '@/lib/billing/billingEntitlement';
+import { getOrgBillingState } from '@/lib/orgBilling';
 import {
   ACTIVE_PERIOD_KEY,
   DEFAULT_PLAN_SLUG,
@@ -10,16 +10,16 @@ import {
   getPlanMeterLimit,
   resolvePlanSlug,
   type QuotaMeter,
-} from '../planLimits';
-import { PlanLimitError } from './errors';
-import { periodKeyForMeter } from './period';
+} from '@/lib/planLimits';
+import { PlanLimitError } from '@/src/infrastructure/quota/errors';
+import { periodKeyForMeter } from '@/src/infrastructure/quota/period';
 import type {
   AdjustActiveParams,
   QuotaBalanceRow,
   QuotaReservationRow,
   ReserveQuotaParams,
   UsageEventType,
-} from './types';
+} from '@/src/infrastructure/quota/types';
 
 type TxOpt = { transaction?: Transaction };
 

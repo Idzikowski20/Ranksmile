@@ -1,4 +1,4 @@
-import type { QuotaMeter } from '../planLimits';
+import type { QuotaMeter } from '@/lib/planLimits';
 
 export type UsageEventType =
   | 'reserve'

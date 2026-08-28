@@ -1,5 +1,5 @@
-import type { QuotaMeter } from '../planLimits';
-import type { PlanLimitPayload } from './types';
+import type { QuotaMeter } from '@/lib/planLimits';
+import type { PlanLimitPayload } from '@/src/infrastructure/quota/types';
 
 export class PlanLimitError extends Error {
   readonly code = 'plan_limit' as const;

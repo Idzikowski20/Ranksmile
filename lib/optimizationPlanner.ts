@@ -1,6 +1,6 @@
-import type { Section } from './articles/articleSections';
+import type { Section } from '@/src/infrastructure/articles/articleSections';
 import type { Guideline } from './recommendationEngine';
-import type { ArticleContext } from './articles/articleContext';
+import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
 import type { RoutedGuideline } from './optimizeGuidelineRouting';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { assignGuidelinesToSections } from './optimizeGuidelineRouting';

@@ -34,7 +34,7 @@ jest.mock('../../database/models/domain', () => ({
   },
 }));
 
-jest.mock('../../lib/articles/articleSql', () => ({
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({
   getArticleIdSql: jest.fn().mockResolvedValue('id'),
 }));
 
