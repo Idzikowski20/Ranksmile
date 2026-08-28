@@ -1,0 +1,31 @@
+lib/wie/eval/competitorBenchmark.ts
+  s_e3556ba0769b4b::t_d5c788bea59bdf 4
+lib/wie/qualityJudge.ts
+  s_e3556ba0769b4b::t_2c0c9bbb021e2c 1
+lib/wie/rxQualityGate.ts
+  s_e3556ba0769b4b::t_2c0c9bbb021e2c 6
+__tests__/lib/wie/writerEeat.test.ts
+  s_e3556ba0769b4b::t_2c0c9bbb021e2c 1
+lib/wie/abWrite.ts
+  s_e3556ba0769b4b::t_2c0c9bbb021e2c 7
+lib/wie/writer.ts
+  s_e3556ba0769b4b::t_2c0c9bbb021e2c 8
+lib/wie/eval/runEvalSuite.ts
+  s_e3556ba0769b4b::t_d5c788bea59bdf 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "fd5306ee516f68a0e9cf2e5385cbfe011d327bce",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
