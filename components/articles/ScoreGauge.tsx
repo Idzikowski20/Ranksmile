@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { animate, motion, useReducedMotion } from 'motion/react';
-import { scoreColor } from '@/src/infrastructure/scoreColor';
+import { scoreColor } from '@/src/infrastructure/config/scoreColor';
 
 interface Props {
   score: number;

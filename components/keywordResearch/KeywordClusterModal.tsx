@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Checkbox } from '../koala/core';
 import { KeywordIntentBadge } from '../koala/product/helpers/KeywordIntentBadge';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
-import { fmtNum, kwIntentToSearchIntent, type KwCluster } from '@/src/infrastructure/keywordResearchView';
+import { fmtNum, kwIntentToSearchIntent, type KwCluster } from '@/src/infrastructure/keywords/keywordResearchView';
 
 const FONT = 'var(--font-family-primary)';
 const TEXT = 'var(--koala-text-primary)';

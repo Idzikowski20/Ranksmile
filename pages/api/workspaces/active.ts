@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getAccessibleWorkspaceIds } from '@/src/infrastructure/tenancy';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getAppSettings } from './settings';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import {
@@ -10,8 +10,8 @@ import {
   type DomainNotifyCandidate,
 } from '@/src/infrastructure/notifications/emailQueue';
 import type { EnqueueNotifyResult } from '@/src/infrastructure/notifications/emailTypes';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
-import { assertCronSecret } from '@/src/infrastructure/cronAuth';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { assertCronSecret } from '@/src/infrastructure/cron/cronAuth';
 
 type NotifyResponse = EnqueueNotifyResult | { success?: boolean; error?: string | null };
 

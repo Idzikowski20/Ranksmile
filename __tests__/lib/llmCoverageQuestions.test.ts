@@ -1,8 +1,8 @@
 import {
   coverageQuestionPrompt,
   extractQuestionsFromText,
-} from '@/src/infrastructure/llmCoverageQuestions';
-import { curateAiCoverageItems } from '@/src/infrastructure/curateCoverageItems';
+} from '@/src/infrastructure/coverage/llmCoverageQuestions';
+import { curateAiCoverageItems } from '@/src/infrastructure/coverage/curateCoverageItems';
 
 describe('extractQuestionsFromText', () => {
   it('pulls question lines from ChatGPT-style answers without fan_out', () => {

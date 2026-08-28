@@ -6,14 +6,14 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { getConnectionForWorkspace } from '@/src/infrastructure/wpConnection';
-import { wpRestFetch } from '@/src/infrastructure/wpRest';
-import { permalinkHash } from '@/src/infrastructure/wpDraft';
-import { cleanHtmlForWordPress } from '@/src/infrastructure/wpContentClean';
-import { logRun } from '@/src/infrastructure/optimizeLog';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
+import { wpRestFetch } from '@/src/infrastructure/wordpress/wpRest';
+import { permalinkHash } from '@/src/infrastructure/wordpress/wpDraft';
+import { cleanHtmlForWordPress } from '@/src/infrastructure/wordpress/wpContentClean';
+import { logRun } from '@/src/infrastructure/ao/optimizeLog';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type ArticleRow = {
    id: number; domain_id: number; title: string | null; content: string | null;

@@ -1,11 +1,11 @@
-import { ACTIVE_PERIOD_KEY } from '@/src/infrastructure/planLimits';
+import { ACTIVE_PERIOD_KEY } from '@/src/infrastructure/billing/planLimits';
 import type { ReconciliationMismatch } from '@/src/infrastructure/quota/reconciliation';
 
 jest.mock('@/src/infrastructure/persistence/schema/ensurePlanQuotaTables', () => ({
   ensurePlanQuotaTables: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('@/src/infrastructure/planUsage', () => ({
+jest.mock('@/src/infrastructure/billing/planUsage', () => ({
   getOrgPlanUsage: jest.fn().mockResolvedValue({
     documents: 5,
     brandSpaces: 1,

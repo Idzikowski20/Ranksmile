@@ -6,14 +6,14 @@
 import db from '@/database/database';
 import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import { enrichTerms, getOwnVisibleKeywords } from '@/src/infrastructure/seo/keywordData';
-import { getRankedKeywords, isDataForSeoConfigured } from '@/src/infrastructure/dataforseo';
-import { DFS_DEFAULT_RANKED_LIMIT } from '@/src/infrastructure/dataforseoBudget';
+import { getRankedKeywords, isDataForSeoConfigured } from '@/src/infrastructure/dataforseo/dataforseo';
+import { DFS_DEFAULT_RANKED_LIMIT } from '@/src/infrastructure/dataforseo/dataforseoBudget';
 import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
-import type { NlpTerm } from '@/src/infrastructure/contentScore';
+import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import { isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
 import { filterOnTopicTerms, isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
 import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
-import { keywordFromUrl, urlAnchorSeed } from '@/src/infrastructure/inferPageKeyword';
+import { keywordFromUrl, urlAnchorSeed } from '@/src/infrastructure/keywords/inferPageKeyword';
 import { kwScore } from '@/utils/gsc';
 
 export type DiscoveredKeyword = {

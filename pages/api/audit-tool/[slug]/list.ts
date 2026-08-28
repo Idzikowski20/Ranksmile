@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
 import { queryRows } from '@/src/infrastructure/db/query';
 import type { AuditCardDTO, AuditStatus } from '@/src/core/domain/audit/types';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type ListRow = {
    id: number, url: string, keyword: string, status: string,

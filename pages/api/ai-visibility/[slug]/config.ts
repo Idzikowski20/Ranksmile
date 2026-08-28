@@ -7,7 +7,7 @@ import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schem
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { AiVisConfig, AiVisTopic, AI_VIS_DEFAULT_MODELS, AI_VIS_PROMPT_LIMIT, sanitizeModels, normalizeAiVisPriority, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type ConfigRow = { id: number, brand_name: string, prompt_limit: number, models: string | null, completed_at: string | null, priority: string | null };
 type PromptRow = { id: number, topic: string, text: string, provenance: string | null, selected: number };

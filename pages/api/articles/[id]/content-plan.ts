@@ -8,9 +8,9 @@ import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import {
   aiIntelFromScoreData,
@@ -23,11 +23,11 @@ import {
 } from '@/src/infrastructure/contentPlanner/fromArticleInputs';
 import { runContentPlanner } from '@/src/infrastructure/contentPlanner/runContentPlanner';
 import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
-import { importantTermsFromScoreData } from '@/src/infrastructure/mergeArticleTerms';
-import { readContentSettings } from '@/src/infrastructure/contentSettings';
+import { importantTermsFromScoreData } from '@/src/infrastructure/articles/mergeArticleTerms';
+import { readContentSettings } from '@/src/infrastructure/stores/contentSettings';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
-import { mergedPlannerQuestions } from '@/src/infrastructure/coverageStore';
+import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageStore';
 import { parseApprovedOutline } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
 import {
   benchmarkDocsFromCompetitors,

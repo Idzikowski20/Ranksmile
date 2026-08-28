@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
 import { useWorkspaces } from '../../../services/workspaces';
 import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
-import fetchJson from '@/src/infrastructure/fetchJson';
+import fetchJson from '@/src/infrastructure/http/fetchJson';
 import { countActionableRecommendations, type RecFilterable } from '@/src/core/domain/recommendations/actionable';
 import { AI_VISIBILITY_NAV, resolveSiteNav, SEO_NAV, TOOLS_NAV } from '@/src/infrastructure/navigation/index';
 import { SidebarItem, SidebarBlock } from './SidebarItem';

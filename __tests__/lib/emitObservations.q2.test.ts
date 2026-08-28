@@ -2,8 +2,8 @@ import {
   observationsFromGscLowCtr,
   observationsFromAuditIssues,
   observationsFromVisibilityDelta,
-} from '@/src/infrastructure/emitObservations';
-import { runActionExecution } from '@/src/infrastructure/runActionExecution';
+} from '@/src/infrastructure/observations/emitObservations';
+import { runActionExecution } from '@/src/infrastructure/ao/runActionExecution';
 import type { Action } from '@/src/core/primitives/types';
 
 describe('observationsFromGscLowCtr', () => {

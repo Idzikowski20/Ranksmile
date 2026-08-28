@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
-import { assertCanManage } from '@/src/infrastructure/members';
-import { getStripe } from '@/src/infrastructure/stripe';
-import { getAppOrigin } from '@/src/infrastructure/appOrigin';
-import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
+import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { getStripe } from '@/src/infrastructure/billing/stripe';
+import { getAppOrigin } from '@/src/infrastructure/config/appOrigin';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

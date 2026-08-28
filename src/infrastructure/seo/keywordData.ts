@@ -14,8 +14,8 @@ import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import {
    isDataForSeoConfigured, getKeywordIdeas as dfsKeywordIdeas,
    getKeywordSuggestions as dfsKeywordSuggestions, getRankedKeywords, getPeopleAlsoAsk, DfsKeyword,
-} from '@/src/infrastructure/dataforseo';
-import { DFS_DEFAULT_KEYWORD_LIMIT, DFS_DEFAULT_RANKED_LIMIT } from '@/src/infrastructure/dataforseoBudget';
+} from '@/src/infrastructure/dataforseo/dataforseo';
+import { DFS_DEFAULT_KEYWORD_LIMIT, DFS_DEFAULT_RANKED_LIMIT } from '@/src/infrastructure/dataforseo/dataforseoBudget';
 import { readLocalSCData } from '@/utils/searchConsole';
 import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { CoverageItem, hashId } from '@/src/core/domain/coverage/aiCoverage';

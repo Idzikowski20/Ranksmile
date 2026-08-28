@@ -33,7 +33,7 @@ export async function captureWeeklySnapshot(domain: string, domainId: number, we
    }
 
    try {
-      const { emitObservations, observationsFromGscLowCtr } = await import('@/src/infrastructure/emitObservations');
+      const { emitObservations, observationsFromGscLowCtr } = await import('@/src/infrastructure/observations/emitObservations');
       const pageRows = rows.map(([page, s]) => ({
          page,
          impressions: Math.round(s.impressions),

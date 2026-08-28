@@ -12,7 +12,7 @@ import {
   CheckoutStripePayment,
   type CompanyState,
 } from './CheckoutStripeProvider';
-import type { CheckoutFieldErrors } from '@/src/infrastructure/checkoutValidation';
+import type { CheckoutFieldErrors } from '@/src/infrastructure/billing/checkoutValidation';
 import type { BillingPeriod, CheckoutPlan } from '@/src/core/domain/billing/plans';
 import type { UpgradePreview } from '@/src/infrastructure/billing/billingUpgrade';
 import {

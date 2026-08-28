@@ -1,4 +1,4 @@
-import type { Guideline, GuidelineEffort } from '@/src/infrastructure/recommendationEngine';
+import type { Guideline, GuidelineEffort } from '@/src/infrastructure/engines/recommendationEngine';
 import type { Action, ActionCost, ActionType } from '@/src/core/primitives/types';
 
 function effortToCost(effort: GuidelineEffort): ActionCost {

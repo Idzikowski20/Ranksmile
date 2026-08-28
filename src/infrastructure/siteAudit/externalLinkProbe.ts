@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { parseJsonish } from '@/src/core/shared/types/json';
 import { RANKSMILE_UA } from '@/src/core/shared/httpConstants';
-import { assertPublicUrl } from '@/src/infrastructure/ssrfGuard';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';
 import type { External403Instance, PageAuditSignals } from '@/src/infrastructure/siteAudit/types';
 

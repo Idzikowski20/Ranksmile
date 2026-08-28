@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { renameWorkspace, deleteWorkspace } from '@/src/infrastructure/workspaces';
+import { renameWorkspace, deleteWorkspace } from '@/src/infrastructure/identity/workspaces';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const ERR_STATUS: Record<string, number> = {
    WORKSPACE_NOT_FOUND: 404,

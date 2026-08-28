@@ -1,4 +1,4 @@
-import type { NlpTerm } from '@/src/infrastructure/contentScore';
+import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
 export type SerpCompetitor = {

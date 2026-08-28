@@ -1,6 +1,6 @@
 import { STOP_SLOP_RULES, withStopSlop } from '@/src/core/domain/optimize/stopSlopPrompt';
-import { buildStepPrompt } from '@/src/infrastructure/optimizationPlanner';
-import type { PlanStep } from '@/src/infrastructure/optimizationPlanner';
+import { buildStepPrompt } from '@/src/infrastructure/ao/optimizationPlanner';
+import type { PlanStep } from '@/src/infrastructure/ao/optimizationPlanner';
 import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
 
 describe('stopSlopPrompt', () => {

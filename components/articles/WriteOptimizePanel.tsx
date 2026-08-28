@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, type BadgeAppearance } from '../koala/core/badge/badge';
 import { useOpenReveal } from '@/components/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
-import { NlpTerm, Coverage, termCoverage, termUsageHint } from '@/src/infrastructure/contentScore';
+import { NlpTerm, Coverage, termCoverage, termUsageHint } from '@/src/infrastructure/articles/contentScore';
 import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicGroup } from '@/src/core/domain/coverage/infoToCoverTopics';

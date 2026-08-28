@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import type { PlanSummaryData } from '@/src/infrastructure/planLimits';
+import type { PlanSummaryData } from '@/src/infrastructure/billing/planLimits';
 
 const fetchJson = jest.fn();
-jest.mock('@/src/infrastructure/fetchJson', () => ({
+jest.mock('@/src/infrastructure/http/fetchJson', () => ({
   __esModule: true,
   default: (...args: unknown[]) => fetchJson(...args),
 }));

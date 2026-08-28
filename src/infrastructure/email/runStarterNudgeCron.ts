@@ -5,7 +5,7 @@ import {
   getOrgBillingState,
   hasNonTerminalStripeSubscription,
   updateOrgBillingState,
-} from '@/src/infrastructure/orgBilling';
+} from '@/src/infrastructure/billing/orgBilling';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { sendStarterNudgeEmail } from './sendStarterNudgeEmail';
 

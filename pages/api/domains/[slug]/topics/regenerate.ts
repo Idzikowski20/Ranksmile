@@ -3,8 +3,8 @@ import verifyUser from '../../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../../utils/verifyDomainOwnership';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { regenerateDomainTopics } from '@/src/infrastructure/regenerateDomainTopics';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { regenerateDomainTopics } from '@/src/infrastructure/cron/regenerateDomainTopics';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

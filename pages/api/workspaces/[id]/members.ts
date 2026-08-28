@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { getCallerRole } from '@/src/infrastructure/members';
-import { listWorkspaceAccess, setWorkspaceAccess } from '@/src/infrastructure/workspaceMembers';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { getCallerRole } from '@/src/infrastructure/identity/members';
+import { listWorkspaceAccess, setWorkspaceAccess } from '@/src/infrastructure/identity/workspaceMembers';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 function mapError(res: NextApiResponse, e: unknown): void {
    const m = e instanceof Error ? e.message : String(e);

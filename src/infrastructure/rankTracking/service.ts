@@ -1,4 +1,4 @@
-import { isRankTrackingRunnerEnabled } from '@/src/infrastructure/featureFlags';
+import { isRankTrackingRunnerEnabled } from '@/src/infrastructure/config/featureFlags';
 import type { ComparePeriod, RankRunTrigger, ScheduleInterval } from '@/src/core/shared/types/rankTracking';
 import { ensureDefaultConfigForDomain } from '@/src/infrastructure/rankTracking/defaultConfig';
 import { estimateRankCheckCostUsd } from '@/src/infrastructure/rankTracking/cost';

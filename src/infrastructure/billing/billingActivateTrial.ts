@@ -11,9 +11,9 @@ import {
   type BillingDomainEventSource,
 } from '@/src/infrastructure/billing/domainEvents';
 import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from '@/src/infrastructure/billing/billingTrial';
-import { claimTrialActivation, getOrgBillingState, updateOrgBillingState } from '@/src/infrastructure/orgBilling';
+import { claimTrialActivation, getOrgBillingState, updateOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { getStripePriceId, type PlanSlug } from '@/src/core/domain/billing/prices';
-import { syncSubscriptionToOrg } from '@/src/infrastructure/stripeBillingSync';
+import { syncSubscriptionToOrg } from '@/src/infrastructure/billing/stripeBillingSync';
 
 export type ActivateTrialResult =
   | { ok: true; subscriptionId: string }

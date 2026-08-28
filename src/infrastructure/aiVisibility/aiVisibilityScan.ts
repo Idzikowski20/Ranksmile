@@ -12,8 +12,8 @@
  */
 import db from '@/database/database';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
-import { runModelPrompt, AiModel } from '@/src/infrastructure/dataforseoLlm';
-import { getDomainLocale } from '@/src/infrastructure/domainLanguage';
+import { runModelPrompt, AiModel } from '@/src/infrastructure/dataforseo/dataforseoLlm';
+import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
 import { ownDomainPosition } from '@/src/core/domain/aiVisibility/metrics';
 import { sanitizeModels, AI_VIS_CONCURRENCY, AI_VIS_HARD_CAP_PAIRS, AI_VIS_SCAN_STALE_MS, AI_VIS_SETTINGS } from '@/src/core/domain/aiVisibility/config';
 
@@ -297,7 +297,7 @@ export async function kickAiVisScan(scanId: number, ownDomain: string): Promise<
          const { finished } = await runScanChunk(scanId, ownDomain);
          if (finished) {
             await runBrandsForScan(scanId);
-            const { emitAiVisibilityScanObservations } = await import('@/src/infrastructure/emitObservations');
+            const { emitAiVisibilityScanObservations } = await import('@/src/infrastructure/observations/emitObservations');
             await emitAiVisibilityScanObservations(scanId, ownDomain).catch(() => {});
             return;
          }

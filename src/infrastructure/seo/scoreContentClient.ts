@@ -1,5 +1,5 @@
-import type { ScoreData } from '@/src/infrastructure/contentScore';
-import { sidecarUrl } from '@/src/infrastructure/serviceUrls';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
+import { sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
 
 export type RankingSignal = { name: string; score: number; recommendation?: string };
 export type RankingSignalsPayload = { signals?: RankingSignal[] };

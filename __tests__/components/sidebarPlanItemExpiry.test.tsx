@@ -3,7 +3,7 @@ import { act, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 
 const fetchJson = jest.fn();
-jest.mock('@/src/infrastructure/fetchJson', () => ({
+jest.mock('@/src/infrastructure/http/fetchJson', () => ({
   __esModule: true,
   default: (...args: unknown[]) => fetchJson(...args),
 }));

@@ -7,7 +7,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import type { ArticleRow } from '@/src/infrastructure/db/query';
@@ -17,8 +17,8 @@ import {
   buildAiRankingSources,
   buildGoogleRankingSourcesFromRows,
   parseRankingSources,
-} from '@/src/infrastructure/rankingSources';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+} from '@/src/infrastructure/articles/rankingSources';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

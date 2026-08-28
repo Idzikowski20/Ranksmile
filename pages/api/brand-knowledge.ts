@@ -2,10 +2,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 import verifyUser from '../../utils/verifyUser';
-import { sidecarUrl } from '@/src/infrastructure/serviceUrls';
-import { assertPublicUrl } from '@/src/infrastructure/ssrfGuard';
+import { sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

@@ -1,34 +1,34 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import membersHandler from '../../pages/api/members/index';
 import acceptHandler from '../../pages/api/invitations/[token]/accept';
-import { assertCanManage } from '@/src/infrastructure/members';
-import { sendMail } from '@/src/infrastructure/sendMail';
-import { acceptInvitation } from '@/src/infrastructure/invitations';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { sendMail } from '@/src/infrastructure/email/sendMail';
+import { acceptInvitation } from '@/src/infrastructure/identity/invitations';
 
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' } }));
 jest.mock('../../utils/getUser', () => ({
   getCurrentUserId: jest.fn().mockResolvedValue('u1'),
   getCurrentUser: jest.fn().mockResolvedValue({ id: 'u1', email: 'a@b.com' }),
 }));
-jest.mock('@/src/infrastructure/members', () => ({
+jest.mock('@/src/infrastructure/identity/members', () => ({
   listMembers: jest.fn().mockResolvedValue([]),
   assertCanManage: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/src/infrastructure/invitations', () => ({
+jest.mock('@/src/infrastructure/identity/invitations', () => ({
   listInvitations: jest.fn().mockResolvedValue([]),
   createInvitation: jest.fn().mockResolvedValue({
     token: 'tok', email: 'a@b.com', role: 'admin', expires_at: '2026-07-03T00:00:00.000Z',
   }),
   acceptInvitation: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/src/infrastructure/organization', () => ({
+jest.mock('@/src/infrastructure/identity/organization', () => ({
   readOrganization: jest.fn().mockResolvedValue({ name: 'Acme', logoUrl: null }),
 }));
-jest.mock('@/src/infrastructure/sendMail', () => ({ sendMail: jest.fn().mockResolvedValue({ sent: true }) }));
-jest.mock('@/src/infrastructure/inviteEmail', () => ({ inviteEmailHtml: jest.fn().mockReturnValue('<html>') }));
+jest.mock('@/src/infrastructure/email/sendMail', () => ({ sendMail: jest.fn().mockResolvedValue({ sent: true }) }));
+jest.mock('@/src/infrastructure/email/inviteEmail', () => ({ inviteEmailHtml: jest.fn().mockReturnValue('<html>') }));
 // The access-policy wrapper has its own coverage; unmocked it resolves real tenancy
 // and turns every case below into a 503.
-jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 type Handler = (req: NextApiRequest, res: NextApiResponse) => unknown;
 

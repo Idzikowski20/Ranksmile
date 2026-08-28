@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { getCurrentUser } from '../../../../utils/getUser';
-import { getInvitationByToken } from '@/src/infrastructure/invitations';
+import { getInvitationByToken } from '@/src/infrastructure/identity/invitations';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const user = await getCurrentUser(req, res);

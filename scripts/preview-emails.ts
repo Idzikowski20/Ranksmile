@@ -1,7 +1,7 @@
 import { writeFileSync } from 'fs';
 import { join } from 'path';
-import { buildConfirmEmailHtml, CONFIRM_EMAIL_SUBJECT } from '@/src/infrastructure/confirmEmail';
-import { inviteEmailHtml } from '@/src/infrastructure/inviteEmail';
+import { buildConfirmEmailHtml, CONFIRM_EMAIL_SUBJECT } from '@/src/infrastructure/email/confirmEmail';
+import { inviteEmailHtml } from '@/src/infrastructure/email/inviteEmail';
 import { paymentFailedEmailHtml, paymentFailedEmailSubject } from '@/src/infrastructure/email/paymentFailedEmail';
 import { abandonedCheckoutEmailHtml, ABANDONED_CHECKOUT_SUBJECT } from '@/src/infrastructure/email/abandonedCheckoutEmail';
 import { starterNudgeEmailHtml, STARTER_NUDGE_SUBJECT } from '@/src/infrastructure/email/starterNudgeEmail';

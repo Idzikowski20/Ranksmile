@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { PlanExpired } from '../../components/billing/PlanExpired';
 
 const fetchJson = jest.fn();
-jest.mock('@/src/infrastructure/fetchJson', () => ({
+jest.mock('@/src/infrastructure/http/fetchJson', () => ({
   __esModule: true,
   default: (...args: unknown[]) => fetchJson(...args),
 }));

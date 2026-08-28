@@ -9,7 +9,7 @@ import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schem
 import { runScanChunk, AI_VIS_CHUNK_PAIRS } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 // Cap a caller-supplied chunk size so it can never blow the serverless timeout.
 const AI_VIS_HARD_LIMIT = 60;

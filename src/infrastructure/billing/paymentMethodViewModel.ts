@@ -1,4 +1,4 @@
-import type { SubscriptionStatus } from '@/src/infrastructure/orgBilling';
+import type { SubscriptionStatus } from '@/src/infrastructure/billing/orgBilling';
 
 /** UI-facing payment method roles (snapshot). */
 export type PaymentMethodRole =

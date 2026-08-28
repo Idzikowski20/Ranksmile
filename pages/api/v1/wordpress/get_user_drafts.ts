@@ -1,9 +1,9 @@
 // POST /api/v1/wordpress/get_user_drafts — list this workspace's drafts (articles)
 // in the Ranksmile draft shape the plugin consumes.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authPluginRequest } from '@/src/infrastructure/wpConnection';
-import { getDomainIdForWorkspace, listArticlesForDomain, articleToDraft } from '@/src/infrastructure/wpDraft';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { authPluginRequest } from '@/src/infrastructure/wordpress/wpConnection';
+import { getDomainIdForWorkspace, listArticlesForDomain, articleToDraft } from '@/src/infrastructure/wordpress/wpDraft';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);

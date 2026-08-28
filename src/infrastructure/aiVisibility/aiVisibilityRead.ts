@@ -4,7 +4,7 @@
  *  topic/text so snapshotForDomain can compose prompts/topics without re-querying. */
 import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import { ResultRow, BrandMention } from '@/src/core/domain/aiVisibility/metrics';
-import type { LlmCitation } from '@/src/infrastructure/dataforseoLlm';
+import type { LlmCitation } from '@/src/infrastructure/dataforseo/dataforseoLlm';
 import { filterCitations } from '@/src/core/domain/aiVisibility/blockedDomains';
 
 export type DbResultRow = {

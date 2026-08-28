@@ -7,10 +7,10 @@ import {
   type CheckoutPlan,
 } from '@/src/core/domain/billing/plans';
 import { blocksNewPaidCheckout } from '@/src/core/domain/billing/planLock';
-import type { OrgBillingState } from '@/src/infrastructure/orgBilling';
+import type { OrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import type { LegacyPlanSlug, PlanSlug } from '@/src/core/domain/billing/prices';
 import { getStripePriceId } from '@/src/core/domain/billing/prices';
-import { clientSecretFromSubscriptionInvoice } from '@/src/infrastructure/stripeInvoiceClientSecret';
+import { clientSecretFromSubscriptionInvoice } from '@/src/infrastructure/billing/stripeInvoiceClientSecret';
 
 const PLAN_RANK: Record<string, number> = {
   starter: 0, // legacy — still below Growth for upgrade checks

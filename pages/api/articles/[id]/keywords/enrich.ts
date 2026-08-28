@@ -5,10 +5,10 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import { getAdwordsCredentials, getKeywordsVolume } from '../../../../../utils/adwords';
 import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';
-import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { queryOne } from '@/src/infrastructure/db/query';
 import type { ArticleRow } from '@/src/infrastructure/db/query';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const isPostgres = !!process.env.DATABASE_URL;
 

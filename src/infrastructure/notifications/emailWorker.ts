@@ -2,7 +2,7 @@ import Keyword from '@/database/models/keyword';
 import generateEmail from '@/utils/generateEmail';
 import parseKeywords from '@/utils/parseKeywords';
 import { getAppSettings } from '@/pages/api/settings';
-import { sendMail } from '@/src/infrastructure/sendMail';
+import { sendMail } from '@/src/infrastructure/email/sendMail';
 import {
   claimEmailJob,
   getEmailJobById,

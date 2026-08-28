@@ -1,7 +1,7 @@
 import verifyUser from '../../utils/verifyUser';
-import { logLegacyApiKeyUse } from '@/src/infrastructure/legacyApiKeyLog';
+import { logLegacyApiKeyUse } from '@/src/infrastructure/config/legacyApiKeyLog';
 
-jest.mock('@/src/infrastructure/legacyApiKeyLog', () => ({
+jest.mock('@/src/infrastructure/config/legacyApiKeyLog', () => ({
   logLegacyApiKeyUse: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../../utils/getUser', () => ({

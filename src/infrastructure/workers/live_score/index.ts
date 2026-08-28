@@ -15,7 +15,7 @@ export const liveScoreWorker: PipelineWorker = {
     const scoreData = (ctx.payload.score_data || ctx.payload.scoreData || {}) as Record<string, unknown>;
     if (!html) return { ok: false, error: 'html required' };
 
-    const { scoreArticleHtml } = await import('@/src/infrastructure/scoreArticleHtml');
+    const { scoreArticleHtml } = await import('@/src/infrastructure/articles/scoreArticleHtml');
     const { computeMultiScore } = await import('@/src/core/domain/engines/multiScore');
     const { computeGeoCues } = await import('@/src/core/domain/geo/geoCues');
     const { cacheGetOrLoad } = await import('@/src/infrastructure/pipeline/cacheLayers');

@@ -21,7 +21,7 @@ jest.mock('@/src/infrastructure/db/query', () => ({
   queryOne: jest.fn(),
 }));
 
-jest.mock('@/src/infrastructure/serviceUrls', () => ({
+jest.mock('@/src/infrastructure/config/serviceUrls', () => ({
   logResolvedSidecarUrl: jest.fn(),
 }));
 

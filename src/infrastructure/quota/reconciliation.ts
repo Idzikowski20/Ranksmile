@@ -1,7 +1,7 @@
 import db from '@/database/database';
 import { ensurePlanQuotaTables } from '@/src/infrastructure/persistence/schema/ensurePlanQuotaTables';
-import { ACTIVE_PERIOD_KEY, type QuotaMeter } from '@/src/infrastructure/planLimits';
-import { getOrgPlanUsage } from '@/src/infrastructure/planUsage';
+import { ACTIVE_PERIOD_KEY, type QuotaMeter } from '@/src/infrastructure/billing/planLimits';
+import { getOrgPlanUsage } from '@/src/infrastructure/billing/planUsage';
 import { calendarPeriodKey } from '@/src/infrastructure/quota/period';
 
 export interface ReconciliationMismatch {

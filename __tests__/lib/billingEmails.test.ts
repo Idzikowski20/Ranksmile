@@ -1,7 +1,7 @@
 import { paymentFailedEmailHtml, paymentFailedEmailSubject } from '@/src/infrastructure/email/paymentFailedEmail';
 import { abandonedCheckoutEmailHtml, ABANDONED_CHECKOUT_SUBJECT } from '@/src/infrastructure/email/abandonedCheckoutEmail';
 import { starterNudgeEmailHtml, STARTER_NUDGE_SUBJECT } from '@/src/infrastructure/email/starterNudgeEmail';
-import { inviteEmailHtml } from '@/src/infrastructure/inviteEmail';
+import { inviteEmailHtml } from '@/src/infrastructure/email/inviteEmail';
 import {
   EMAIL_BG_PAGE,
   EMAIL_CTA_BG,

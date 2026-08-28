@@ -5,7 +5,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensureNotificationTables', ()
   ensureNotificationTables: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('@/src/infrastructure/tenancy', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 1 }),
   getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([9]),
 }));

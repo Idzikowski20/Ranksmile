@@ -3,7 +3,7 @@ import {
   menuAnchorPoint,
   clampMenuPosition,
   ranksmilePresetVoice,
-} from '@/src/infrastructure/ranksmileContextMenu';
+} from '@/src/infrastructure/config/ranksmileContextMenu';
 import { getBlockFormatLabel } from '../../components/articles/RanksmileBubbleMenu';
 
 describe('getBlockFormatLabel', () => {

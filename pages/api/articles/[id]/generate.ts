@@ -9,19 +9,19 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { readContentSettings } from '@/src/infrastructure/contentSettings';
-import { getDomainVoices } from '@/src/infrastructure/domainVoices';
+import { readContentSettings } from '@/src/infrastructure/stores/contentSettings';
+import { getDomainVoices } from '@/src/infrastructure/seo/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
-import { mergedPlannerQuestions } from '@/src/infrastructure/coverageStore';
-import { resolveContentLocale } from '@/src/infrastructure/domainLanguage';
+import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageStore';
+import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/serviceUrls';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
-import { llmGateway } from '@/src/infrastructure/llmGateway';
-import { gatherBlogUrls } from '@/src/infrastructure/gatherBlogUrls';
+import { llmGateway } from '@/src/infrastructure/ai/llmGateway';
+import { gatherBlogUrls } from '@/src/infrastructure/seo/gatherBlogUrls';
 import { pickLinkTargets } from '@/src/core/domain/seo/sitemapLinkTargets';
 import { pipelineVersionTag } from '@/src/core/domain/pipeline/pipelineVersion';
 import {
@@ -52,7 +52,7 @@ import {
 } from '@/src/infrastructure/knowledgeEngine/index';
 import type { KnowledgeGraph } from '@/src/infrastructure/knowledgeEngine/index';
 import type { StructuralBenchmark, PlannerTargets } from '@/src/infrastructure/benchmarkIntelligence/index';
-import { importantTermsFromScoreData } from '@/src/infrastructure/mergeArticleTerms';
+import { importantTermsFromScoreData } from '@/src/infrastructure/articles/mergeArticleTerms';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
 
@@ -76,7 +76,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   await ensureArticlesTables();
 
-  const { assertCronSecret } = await import('@/src/infrastructure/cronAuth');
+  const { assertCronSecret } = await import('@/src/infrastructure/cron/cronAuth');
   const isCron = assertCronSecret(req);
   if (!isCron) {
     const authorized = await verifyUser(req, res);

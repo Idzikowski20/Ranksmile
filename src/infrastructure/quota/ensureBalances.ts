@@ -5,8 +5,8 @@ import {
   ACTIVE_PERIOD_KEY,
   METER_KIND,
   type QuotaMeter,
-} from '@/src/infrastructure/planLimits';
-import { getOrgPlanUsage, type OrgPlanUsage } from '@/src/infrastructure/planUsage';
+} from '@/src/infrastructure/billing/planLimits';
+import { getOrgPlanUsage, type OrgPlanUsage } from '@/src/infrastructure/billing/planUsage';
 import { calendarPeriodKey } from '@/src/infrastructure/quota/period';
 
 const ACTIVE_METERS: Array<keyof OrgPlanUsage & QuotaMeter> = ['documents', 'aiPrompts', 'brandSpaces'];

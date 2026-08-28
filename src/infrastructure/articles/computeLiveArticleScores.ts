@@ -1,0 +1,151 @@
+import { computeContentScore, countOccurrences, type ScoreData } from '@/src/infrastructure/articles/contentScore';
+import { liveCoverageItems, remainingOpportunities } from '@/src/infrastructure/coverage/liveCoverage';
+import { computeCoverageScores, type BucketScore, type CoverageItem, type CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
+import { computeOverallContentScore, resolveAiScore, type AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
+import { paragraphCountFromHtml, scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
+
+export interface LiveArticleScoresInput {
+  plainText: string;
+  wordCount: number;
+  headingCount: number;
+  html: string;
+  scoreData: ScoreData | null;
+  keyword: string;
+  keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>;
+  coverageItems: CoverageItem[];
+  coverageSnapshot: CoverageSnapshot | null;
+  aiVisibilitySummary: AiVisibilitySummary | null;
+  internalLinksCount: number;
+  htmlForScoring?: string;
+  fallbackScore?: number | null;
+}
+
+export interface LiveArticleScores {
+  seo: number;
+  ai: number;
+  overall: number;
+  hasAi: boolean;
+}
+
+export { paragraphCountFromHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
+
+export interface OptimizeLiveSnapshot {
+  postHtml: string;
+  postText: string;
+  seo: number;
+  ai: number;
+  overall: number;
+  liveItems: CoverageItem[];
+  buckets: BucketScore[];
+  remainingRows: Array<{ label: string; count: number }>;
+}
+
+/** Single synchronous pass for Auto-Optimize — keeps SEO, AI, and overall in sync. */
+export function computeOptimizeLiveSnapshot(opts: {
+  editorHtml: string;
+  scoreData: ScoreData;
+  keyword: string;
+  coverageItems: CoverageItem[];
+  coverageSnapshot: CoverageSnapshot | null;
+  /** Citation readiness — same blend as idle gauges (avoids AO review AI=0). */
+  aiVisibilitySummary?: AiVisibilitySummary | null;
+  substitutePlaceholders: (html: string) => string;
+}): OptimizeLiveSnapshot {
+  const postHtml = opts.substitutePlaceholders(opts.editorHtml);
+  const scored = scoreArticleHtml({
+    html: postHtml,
+    scoreData: opts.scoreData,
+    keyword: opts.keyword,
+    coverageItems: opts.coverageItems,
+    answersMainQuestionEarly: opts.coverageSnapshot?.answersMainQuestionEarly,
+  });
+  const { buckets } = computeCoverageScores(
+    scored.liveItems,
+    !!opts.coverageSnapshot?.answersMainQuestionEarly,
+  );
+  const intentScore = buckets.find((b) => b.key === 'intent')?.score;
+  // Match ContentScorePanel idle path: never let a live-coverage miss mask a healthy summary.
+  const ai = Math.max(
+    opts.scoreData.ai_score ?? 0,
+    resolveAiScore({
+      summary: opts.aiVisibilitySummary,
+      articleText: scored.plainText,
+      intentScore,
+      answersMainQuestionEarly: opts.coverageSnapshot?.answersMainQuestionEarly,
+      coverageOverall: scored.liveItems.length > 0 ? scored.ai : null,
+    }),
+  );
+  const overall = computeOverallContentScore(scored.seo, ai);
+
+  return {
+    postHtml,
+    postText: scored.plainText,
+    seo: scored.seo,
+    ai,
+    overall,
+    liveItems: scored.liveItems,
+    buckets,
+    remainingRows: remainingOpportunities(scored.liveItems),
+  };
+}
+
+export function computeLiveArticleScores(input: LiveArticleScoresInput): LiveArticleScores {
+  const scoringHtml = input.htmlForScoring ?? input.html;
+  const scoringText = scoringHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+  const paraCount = paragraphCountFromHtml(scoringHtml);
+
+  if (!input.scoreData) {
+    const fb = input.fallbackScore ?? 0;
+    return { seo: fb, ai: 0, overall: fb, hasAi: false };
+  }
+
+  const updatedTerms = input.scoreData.terms?.map((t) => ({
+    ...t,
+    current_count: countOccurrences(scoringText, t.term, t.term_words_regexps),
+  }));
+
+  const liveItems = input.coverageSnapshot?.items?.length
+    ? liveCoverageItems(input.coverageSnapshot.items, scoringText, scoringHtml)
+    : input.coverageItems;
+
+  const seo = computeContentScore(
+    scoringText,
+    input.wordCount,
+    input.headingCount,
+    { ...input.scoreData, terms: updatedTerms ?? input.scoreData.terms },
+    paraCount,
+    input.internalLinksCount,
+    scoringHtml,
+    input.keyword,
+    input.keywordCoverage,
+    liveItems,
+  );
+
+  const intentScore = input.coverageSnapshot
+    ? computeCoverageScores(liveItems, !!input.coverageSnapshot.answersMainQuestionEarly).buckets
+      .find((b) => b.key === 'intent')?.score
+    : undefined;
+
+  const coverageOverall = input.coverageSnapshot?.items?.length
+    ? computeCoverageScores(liveItems, !!input.coverageSnapshot.answersMainQuestionEarly).overall
+    : null;
+
+  const hasAi = coverageOverall != null
+    || !!(input.aiVisibilitySummary && input.aiVisibilitySummary.prompts_total > 0);
+
+  const ai = hasAi
+    ? (coverageOverall != null && coverageOverall > 0
+      ? coverageOverall
+      : resolveAiScore({
+        summary: input.aiVisibilitySummary,
+        articleText: scoringText,
+        intentScore,
+        answersMainQuestionEarly: input.coverageSnapshot?.answersMainQuestionEarly,
+        coverageOverall,
+      }))
+    : 0;
+
+  const overall = hasAi ? computeOverallContentScore(seo, ai) : seo;
+
+  return { seo, ai, overall, hasAi };
+}

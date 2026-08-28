@@ -9,19 +9,19 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { firstAccessibleDomainId, verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import type { ScoreData, NlpTerm } from '@/src/infrastructure/contentScore';
-import { uploadImageFromUrl } from '@/src/infrastructure/uploadToBlob';
+import type { ScoreData, NlpTerm } from '@/src/infrastructure/articles/contentScore';
+import { uploadImageFromUrl } from '@/src/infrastructure/http/uploadToBlob';
 import { renderPage } from '../../../utils/spaScraper';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { countOccurrences } from '@/src/infrastructure/contentScore';
-import { assertPublicUrl } from '@/src/infrastructure/ssrfGuard';
-import { isSidecarConfigured } from '@/src/infrastructure/sidecar';
+import { countOccurrences } from '@/src/infrastructure/articles/contentScore';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
+import { isSidecarConfigured } from '@/src/infrastructure/http/sidecar';
 // cheerio .text() DECODES entities — a page whose text contains "&lt;img onerror=…&gt;"
 // comes back as a live tag; re-escape before interpolating into contentHtml, which the
 // app later renders via dangerouslySetInnerHTML (stored XSS otherwise).
 import { escapeHtml } from '@/src/infrastructure/email/layout';
-import { publicAppUrl } from '@/src/infrastructure/serviceUrls';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { publicAppUrl } from '@/src/infrastructure/config/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 class BlockedUrlError extends Error {}
 

@@ -4,7 +4,7 @@ import {
   getPlanMeterLimit,
   isQuotaMeter,
   METER_KIND,
-} from '@/src/infrastructure/planLimits';
+} from '@/src/infrastructure/billing/planLimits';
 import { calendarPeriodKey, periodKeyForMeter } from '@/src/infrastructure/quota/period';
 import { PlanLimitError, isPlanLimitError } from '@/src/infrastructure/quota/errors';
 

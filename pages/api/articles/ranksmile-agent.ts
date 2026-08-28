@@ -13,12 +13,12 @@ import { sseEvent } from '@/src/infrastructure/ai/sse';
 import { extractJsonObject, isRanksmileReplyShape } from '@/src/infrastructure/ai/extractJson';
 import { splitRanksmileThinkingAndMessage, stripEmoji } from '@/src/infrastructure/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/tenancy';
+import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 import type { ToolCtx } from '@/src/infrastructure/ai/types';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { flushSse } from '@/src/core/shared/types/api';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 export const config = { api: { responseLimit: '10mb' } };
 

@@ -27,10 +27,10 @@ import {
   buildVerdictJson,
 } from '@/src/infrastructure/wie/eval/reports';
 import { appendHistory, writeTrendsFile, evalRootDir } from '@/src/infrastructure/wie/eval/history';
-import { cronBearerHeader } from '@/src/infrastructure/cronAuth';
-import { nextjsUrl } from '@/src/infrastructure/serviceUrls';
-import { scoreArticleHtml } from '@/src/infrastructure/scoreArticleHtml';
-import type { ScoreData } from '@/src/infrastructure/contentScore';
+import { cronBearerHeader } from '@/src/infrastructure/cron/cronAuth';
+import { nextjsUrl } from '@/src/infrastructure/config/serviceUrls';
+import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 import { evaluatePublishGate, scoreRootIntentCoverage } from '@/src/infrastructure/wie/eval/publishGate';
 import { reconcileBeatsTop5 } from '@/src/core/domain/wie/verdictAlign';
 import { evaluatePolicyCompliance } from '@/src/infrastructure/wie/eval/policyCompliance';

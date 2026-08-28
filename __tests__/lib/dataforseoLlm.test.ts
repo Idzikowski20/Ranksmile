@@ -1,4 +1,4 @@
-import { parseLlmItems, parseAiModeItems, parseAiOverview, extractFanOut, isRetryable } from '@/src/infrastructure/dataforseoLlm';
+import { parseLlmItems, parseAiModeItems, parseAiOverview, extractFanOut, isRetryable } from '@/src/infrastructure/dataforseo/dataforseoLlm';
 
 describe('extractFanOut', () => {
    it('reads llm_responses fan_out_queries (string[])', () => {

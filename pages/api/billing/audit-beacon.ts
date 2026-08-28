@@ -7,9 +7,9 @@ import {
   type BillingDecision,
   type BillingEventKind,
 } from '@/src/infrastructure/billing/billingAudit';
-import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const schema = z.object({
   kind: z.enum(['ONBOARDING_REDIRECT', 'BILLING_EVENT']),

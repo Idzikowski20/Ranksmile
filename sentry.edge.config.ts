@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
-import { isSentryEnabled, sentryEnvironment, sentryRelease } from '@/src/infrastructure/sentryEnv';
+import { isSentryEnabled, sentryEnvironment, sentryRelease } from '@/src/infrastructure/config/sentryEnv';
 
 const isProd = process.env.NODE_ENV === 'production';
 

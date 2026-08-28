@@ -1,9 +1,9 @@
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' }, QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT' } }));
-jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
-jest.mock('@/src/infrastructure/cronAuth', () => ({ assertCronSecret: jest.fn().mockReturnValue(false) }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/cron/cronAuth', () => ({ assertCronSecret: jest.fn().mockReturnValue(false) }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
-jest.mock('@/src/infrastructure/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(true) }));
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(true) }));
 jest.mock('@/src/infrastructure/ai/aiBudget', () => ({
   resolveOrgId: jest.fn().mockResolvedValue(1),
   orgBudgetBlocked: jest.fn().mockResolvedValue(null),

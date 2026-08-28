@@ -15,7 +15,7 @@ import {
   medianQuestionCount,
 } from '@/src/infrastructure/harvest/enforceBudget';
 import { computeQuestionScore, SOURCE_WEIGHT, PAA_SOURCE_WEIGHT } from '@/src/infrastructure/harvest/questionScore';
-import { harvestAiCoverage } from '@/src/infrastructure/harvestAiCoverage';
+import { harvestAiCoverage } from '@/src/infrastructure/coverage/harvestAiCoverage';
 import type { CoverageProvider } from '@/src/infrastructure/harvest/providers';
 import type { HarvestedQuestion } from '@/src/infrastructure/harvest/canonicalizeQuestion';
 

@@ -6,7 +6,7 @@ import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/en
 import { buildCrawledPagesReport } from '@/src/infrastructure/siteAudit/buildPageReport';
 import { resolveSiteAuditPageLimit } from '@/src/infrastructure/siteAudit/pageLimit';
 import type { CrawledPagesReport } from '@/src/infrastructure/siteAudit/types';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(
   req: NextApiRequest,

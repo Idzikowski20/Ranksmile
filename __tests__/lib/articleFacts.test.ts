@@ -1,4 +1,4 @@
-jest.mock('@/src/infrastructure/dataforseo', () => ({
+jest.mock('@/src/infrastructure/dataforseo/dataforseo', () => ({
   getPeopleAlsoAsk: jest.fn(),
   isDataForSeoConfigured: jest.fn().mockReturnValue(true),
 }));
@@ -7,7 +7,7 @@ jest.mock('@/src/infrastructure/cache/fileCache', () => ({
   TTL: { SERP: 1 },
 }));
 
-import { getPeopleAlsoAsk } from '@/src/infrastructure/dataforseo';
+import { getPeopleAlsoAsk } from '@/src/infrastructure/dataforseo/dataforseo';
 import { cached } from '@/src/infrastructure/cache/fileCache';
 import {
   factsToCoverageItems,

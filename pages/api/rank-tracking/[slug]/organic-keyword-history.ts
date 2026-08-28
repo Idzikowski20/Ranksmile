@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { loadOrganicKeywordPositionHistory } from '@/src/infrastructure/organicResearch/keywordHistory';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res, { requireUi: false });

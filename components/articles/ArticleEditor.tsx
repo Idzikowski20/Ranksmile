@@ -14,7 +14,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
 import Placeholder from '@tiptap/extension-placeholder';
-import type { ScoreData, NlpTerm } from '@/src/infrastructure/contentScore';
+import type { ScoreData, NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '@/src/infrastructure/highlightColors';
@@ -50,7 +50,7 @@ import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
 import { revealHtmlInEditor, editorCanCommand } from '@/components/editor/revealHtmlProgressive';
 import clearEditorHistory from '@/components/editor/clearEditorHistory';
 import { normalizeListHtml } from '@/src/core/domain/editor/normalizeListHtml';
-import { clearWizardState } from '@/src/infrastructure/wizardState';
+import { clearWizardState } from '@/src/infrastructure/articles/wizardState';
 import {
   collectApprovedOutline,
   outlineForReview,

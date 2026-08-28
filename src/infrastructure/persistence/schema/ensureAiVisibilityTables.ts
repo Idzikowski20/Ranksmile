@@ -1,5 +1,5 @@
 import db from '@/database/database';
-import { isDuplicateColumn } from '@/src/infrastructure/onboardingState';
+import { isDuplicateColumn } from '@/src/infrastructure/identity/onboardingState';
 
 const isPostgres = !!process.env.DATABASE_URL;
 const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';

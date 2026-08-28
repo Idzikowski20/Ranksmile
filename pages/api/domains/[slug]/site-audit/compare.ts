@@ -5,7 +5,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../../utils/verifyDomainOw
 import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
 import { buildCompareCrawlsReport } from '@/src/infrastructure/siteAudit/buildCompareCrawls';
 import type { CompareCrawlsReport } from '@/src/infrastructure/siteAudit/types';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(
   req: NextApiRequest,

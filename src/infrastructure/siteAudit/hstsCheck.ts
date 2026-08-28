@@ -1,5 +1,5 @@
 import { RANKSMILE_UA } from '@/src/core/shared/httpConstants';
-import { assertPublicUrl } from '@/src/infrastructure/ssrfGuard';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 import type { HstsMissingInstance } from '@/src/infrastructure/siteAudit/types';
 
 const PROBE_TIMEOUT_MS = 10_000;

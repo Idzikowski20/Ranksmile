@@ -2,7 +2,7 @@
 // Mirrors the plugin's own hardcoded fallback format (semicolon-separated) so the
 // stored option stays valid.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const LOCATIONS = 'Argentina;Australia;Austria;Belgium;Brazil;Bulgaria;Canada - EN;Canada - FR;Chile;China;Colombia;Croatia;Czech Republic;Denmark;Egypt;Estonia;Finland;France;Paris;Germany;Berlin;Hamburg;München;Greece;Hong Kong;Hungary;India;Indonesia;Ireland;Israel;Italy;Rome;Japan;Latvia;Lithuania;Malaysia;Mexico;Morocco;Netherlands;New Zealand;Nigeria;Norway;Pakistan;Peru;Philippines;Poland;Kraków;Warszawa;Wrocław;Portugal;Lisbon;Romania;Russia;Saudi Arabia;Serbia;Singapore;Slovakia;Slovenia;South Africa;South Korea;Spain;Sweden;Switzerland - DE;Switzerland - FR;Taiwan;Thailand;Turkey;Ukraine;United Arab Emirates;United Kingdom;London;United States;New York;Los Angeles;Chicago;Vietnam';
 

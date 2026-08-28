@@ -5,17 +5,17 @@ import { cancelDanglingCheckouts } from '@/src/infrastructure/billing/billingAct
 import { BillingSource, emitBillingEvent } from '@/src/infrastructure/billing/billingAudit';
 import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '@/src/core/domain/billing/planLock';
 import { assertTrialAllowed } from '@/src/infrastructure/billing/billingTrial';
-import { getOrgBillingState, updateOrgBillingState } from '@/src/infrastructure/orgBilling';
-import { assertCanManage } from '@/src/infrastructure/members';
-import { getStripe } from '@/src/infrastructure/stripe';
-import { assertStripeModeOrThrow } from '@/src/infrastructure/stripeMode';
-import { ensureStripeCustomer } from '@/src/infrastructure/stripeCustomer';
-import { clientSecretFromSubscriptionInvoice } from '@/src/infrastructure/stripeInvoiceClientSecret';
+import { getOrgBillingState, updateOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { getStripe } from '@/src/infrastructure/billing/stripe';
+import { assertStripeModeOrThrow } from '@/src/infrastructure/billing/stripeMode';
+import { ensureStripeCustomer } from '@/src/infrastructure/billing/stripeCustomer';
+import { clientSecretFromSubscriptionInvoice } from '@/src/infrastructure/billing/stripeInvoiceClientSecret';
 import { getStripePriceId, type PlanSlug } from '@/src/core/domain/billing/prices';
-import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
-import { isCheckoutAttemptId } from '@/src/infrastructure/checkoutAttemptId';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { isCheckoutAttemptId } from '@/src/infrastructure/billing/checkoutAttemptId';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const createSubscriptionSchema = z.object({
   planSlug: z.string().min(1),

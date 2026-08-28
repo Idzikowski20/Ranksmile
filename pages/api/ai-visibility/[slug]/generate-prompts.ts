@@ -4,17 +4,17 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { getPeopleAlsoAsk, isDataForSeoConfigured } from '@/src/infrastructure/dataforseo';
+import { getPeopleAlsoAsk, isDataForSeoConfigured } from '@/src/infrastructure/dataforseo/dataforseo';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import {
   getDomainLocale,
   looksLikeLanguage,
   promptTemplatesForLocale,
-} from '@/src/infrastructure/domainLanguage';
+} from '@/src/infrastructure/config/domainLanguage';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { parseJsonish } from '@/src/core/shared/types/json';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 /** Provenance tag from where Google surfaced the question. */
 const provenanceFor = (domain: string): string[] => {

@@ -11,7 +11,7 @@ import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership'
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { queryAffected } from '@/src/core/shared/types/db';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
