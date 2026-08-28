@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { getCheckoutPlan } from './billingPlans';
+import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { formatPaymentMethodLabel } from '@/src/infrastructure/billing/stripe/stripeInvoiceMapper';
 import { getOrgBillingState } from '../orgBilling';
 import { getStripe, isStripeConfigured } from '../stripe';

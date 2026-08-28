@@ -1,5 +1,5 @@
-import type { BillingPeriod } from './billing/billingPlans';
-import { getCheckoutPlan, getLegacyCheckoutPlan, getPlanPeriodPrice } from './billing/billingPlans';
+import type { BillingPeriod } from '@/src/core/domain/billing/plans';
+import { getCheckoutPlan, getLegacyCheckoutPlan, getPlanPeriodPrice } from '@/src/core/domain/billing/plans';
 import { hasActiveBillingEntitlement } from './billing/billingEntitlement';
 import { getLockedCheckoutPlanSlug } from './billing/billingPlanLock';
 import { isTrialEligible } from './billing/billingTrial';

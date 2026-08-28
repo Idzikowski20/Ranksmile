@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getCheckoutPlan } from '../../../lib/billing/billingPlans';
+import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { hasActiveBillingEntitlement } from '../../../lib/billing/billingEntitlement';
 import { getOrgBillingState } from '../../../lib/orgBilling';
 import {

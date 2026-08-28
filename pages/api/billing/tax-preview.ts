@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { getCheckoutPlan, getPlanPeriodPrice } from '../../../lib/billing/billingPlans';
+import { getCheckoutPlan, getPlanPeriodPrice } from '@/src/core/domain/billing/plans';
 import {
   calculateStripeTaxPreview,
   type TaxPreviewResult,

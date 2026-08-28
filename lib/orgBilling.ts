@@ -1,4 +1,4 @@
-import type { BillingPeriod } from './billing/billingPlans';
+import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import db from '../database/database';
 import {
   BillingSource,

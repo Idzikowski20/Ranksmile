@@ -1,4 +1,4 @@
-import type { BillingPeriod } from './billing/billingPlans';
+import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import type { PlanSlug } from './stripePrices';
 import type { OrgPlanUsage } from './planUsage';
 

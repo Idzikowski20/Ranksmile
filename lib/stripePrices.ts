@@ -1,4 +1,4 @@
-import type { BillingPeriod } from './billing/billingPlans';
+import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 
 /** Sellable plan slugs (Starter removed). */
 export type PlanSlug = 'growth' | 'scale' | 'agency';

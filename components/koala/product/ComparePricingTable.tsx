@@ -14,7 +14,7 @@ import {
   planDisplayPrice,
   trackPricingEvent,
 } from '../../../lib/pricing/planDefinition';
-import type { BillingPeriod } from '../../../lib/billing/billingPlans';
+import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import type { PricingCardAction } from './PricingCard';
 import { semantic } from '../tokens/semantic';
 import { typeface, textScale, fontWeight } from '../tokens/typography';

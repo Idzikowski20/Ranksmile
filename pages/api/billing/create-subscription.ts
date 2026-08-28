@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { getCheckoutPlan } from '../../../lib/billing/billingPlans';
+import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { cancelDanglingCheckouts } from '../../../lib/billing/billingActivateTrial';
 import { BillingSource, emitBillingEvent } from '../../../lib/billing/billingAudit';
 import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billing/billingPlanLock';

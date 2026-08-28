@@ -21,7 +21,7 @@ import {
   CheckoutPlan,
   getCheckoutPlan,
   getTrialEndDateLabel,
-} from '../../../lib/billing/billingPlans';
+} from '@/src/core/domain/billing/plans';
 import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billing/billingPlanLock';
 import { resolveCheckoutMode } from '../../../lib/billing/billingTrial';
 import { isAllowedSubscriptionChange, type UpgradePreview } from '../../../lib/billing/billingUpgrade';
