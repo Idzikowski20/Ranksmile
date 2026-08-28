@@ -20,7 +20,7 @@ jest.mock('../../../lib/billing/billingInvoices', () => ({
   listOrgBillingInvoices: jest.fn(async () => []),
 }));
 
-import { billingError } from '../../../lib/billing/billingErrors';
+import { billingError } from '@/src/core/domain/billing/errors';
 import { projectTimeline, type BillingDomainEvent } from '../../../lib/billing/domainEvents';
 import { BILLING_SNAPSHOT_SCHEMA_VERSION } from '../../../lib/billing/buildBillingSnapshot';
 import { enrichPaymentMethodViewModels } from '../../../lib/billing/paymentMethodService';

@@ -1,7 +1,7 @@
 import type Stripe from 'stripe';
 import type { SubscriptionStatus } from '../orgBilling';
 import { BillingPolicy } from './billingPolicy';
-import { billingError, type BillingErrorBody } from './billingErrors';
+import { billingError, type BillingErrorBody } from '@/src/core/domain/billing/errors';
 import { chooseReplacement } from './chooseReplacement';
 import type {
   PaymentMethodRole,

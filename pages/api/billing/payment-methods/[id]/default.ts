@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { billingError } from '../../../../../lib/billing/billingErrors';
+import { billingError } from '@/src/core/domain/billing/errors';
 import { appendBillingDomainEvent } from '../../../../../lib/billing/domainEvents';
 import {
   listPaymentMethods,
