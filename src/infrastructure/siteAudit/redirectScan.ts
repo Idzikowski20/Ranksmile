@@ -1,6 +1,6 @@
-import { parseJsonish } from '../types/json';
-import type { AuditRow } from './issues';
-import type { PageAuditSignals, PermanentRedirectInstance } from './types';
+import { parseJsonish } from '@/lib/types/json';
+import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';
+import type { PageAuditSignals, PermanentRedirectInstance } from '@/src/infrastructure/siteAudit/types';
 
 function normalizeUrl(url: string): string {
   return url.split('#')[0].split('?')[0].replace(/\/$/, '') || url;

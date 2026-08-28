@@ -1,4 +1,4 @@
-import { parseJsonish } from '../types/json';
+import { parseJsonish } from '@/lib/types/json';
 import {
   buildIssuesReport,
   buildLinkIssueInstances,
@@ -12,15 +12,15 @@ import {
   getMatchingRows,
   totalLinksScanned,
   type AuditRow,
-} from './issues';
-import { normalizeForIncoming } from './redirectScan';
+} from '@/src/infrastructure/siteAudit/issues';
+import { normalizeForIncoming } from '@/src/infrastructure/siteAudit/redirectScan';
 import type {
   IssueDetailLayout,
   IssueInstance,
   PageAuditSignals,
   SiteAuditContext,
   SiteAuditIssueDetailPayload,
-} from './types';
+} from '@/src/infrastructure/siteAudit/types';
 
 type AuditRowWithDate = AuditRow & { last_audited_at: string | null };
 

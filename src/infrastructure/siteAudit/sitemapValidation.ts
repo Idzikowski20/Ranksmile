@@ -1,10 +1,10 @@
 import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { fetchSitemapEntries } from '../fetchSitemapUrls';
-import { RANKSMILE_UA } from '../httpConstants';
-import { assertPublicUrl } from '../ssrfGuard';
-import type { SitemapIssueInstance } from './types';
+import { fetchSitemapEntries } from '@/lib/fetchSitemapUrls';
+import { RANKSMILE_UA } from '@/lib/httpConstants';
+import { assertPublicUrl } from '@/lib/ssrfGuard';
+import type { SitemapIssueInstance } from '@/src/infrastructure/siteAudit/types';
 
 const CACHE_DIR = path.join(process.cwd(), 'data/cache/site-audit-sitemap');
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;

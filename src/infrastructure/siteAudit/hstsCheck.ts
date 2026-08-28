@@ -1,6 +1,6 @@
-import { RANKSMILE_UA } from '../httpConstants';
-import { assertPublicUrl } from '../ssrfGuard';
-import type { HstsMissingInstance } from './types';
+import { RANKSMILE_UA } from '@/lib/httpConstants';
+import { assertPublicUrl } from '@/lib/ssrfGuard';
+import type { HstsMissingInstance } from '@/src/infrastructure/siteAudit/types';
 
 const PROBE_TIMEOUT_MS = 10_000;
 

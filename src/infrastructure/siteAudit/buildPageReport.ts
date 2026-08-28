@@ -1,13 +1,13 @@
-import { queryRows, queryOne } from '../db/query';
-import { parseJsonish } from '../types/json';
+import { queryRows, queryOne } from '@/lib/db/query';
+import { parseJsonish } from '@/lib/types/json';
 import {
   classifyPage,
   countIssuesForPage,
   loadSiteAuditContext,
   type AuditRow,
-} from './issues';
-import type { CrawledPageRow, CrawledPagesReport, PageBucket } from './types';
-import type { SiteAuditLimitInfo } from './pageLimit';
+} from '@/src/infrastructure/siteAudit/issues';
+import type { CrawledPageRow, CrawledPagesReport, PageBucket } from '@/src/infrastructure/siteAudit/types';
+import type { SiteAuditLimitInfo } from '@/src/infrastructure/siteAudit/pageLimit';
 
 type DomainRow = { domain: string };
 

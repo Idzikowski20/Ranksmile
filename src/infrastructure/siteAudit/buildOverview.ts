@@ -1,5 +1,5 @@
-import { queryRows, queryOne } from '../db/query';
-import { parseJsonish } from '../types/json';
+import { queryRows, queryOne } from '@/lib/db/query';
+import { parseJsonish } from '@/lib/types/json';
 import {
   aiSearchHealthScore,
   buildIssuesReport,
@@ -9,9 +9,9 @@ import {
   loadSiteAuditContext,
   siteHealthScore,
   type AuditRow,
-} from './issues';
-import type { PageBucket, SiteAuditOverviewPayload, ThematicReport } from './types';
-import type { SiteAuditLimitInfo } from './pageLimit';
+} from '@/src/infrastructure/siteAudit/issues';
+import type { PageBucket, SiteAuditOverviewPayload, ThematicReport } from '@/src/infrastructure/siteAudit/types';
+import type { SiteAuditLimitInfo } from '@/src/infrastructure/siteAudit/pageLimit';
 import { computeCrawlDeltas } from '@/src/composition/siteAudit';
 
 const BENCHMARK_HEALTH = 92;
