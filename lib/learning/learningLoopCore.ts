@@ -7,7 +7,7 @@ import {
   extractFeatureVector,
   predictCalibrated,
   type CalibrationModel,
-} from '../engines/calibration';
+} from '@/src/infrastructure/engines/calibration';
 import type { PlannerSignal } from '@/src/core/domain/engines/corpusDiff';
 
 export type LearningUpdate = {

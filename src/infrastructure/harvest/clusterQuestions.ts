@@ -1,6 +1,6 @@
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 import { tokensShareStem } from '@/src/core/domain/relevance/topicRelevance';
-import type { HarvestedQuestion } from './canonicalizeQuestion';
+import type { HarvestedQuestion } from '@/src/infrastructure/harvest/canonicalizeQuestion';
 
 export const PLACEHOLDER_THRESHOLD = 0.25;
 export const PLACEHOLDER_TOPIC_ID = 'topic-placeholder';

@@ -2,7 +2,7 @@
  * Recommendation Engine (v7 path) — gaps → prioritized Actions.
  * Sits after Gap Engine; does not re-judge coverage.
  */
-import type { Action } from '../primitives/types';
+import type { Action } from '@/lib/primitives/types';
 import type { CoverageGap } from '@/src/core/domain/engines/gapEngine';
 
 export type RecoEngineResult = {

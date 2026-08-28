@@ -10,9 +10,9 @@ export const plannerWorker: PipelineWorker = {
   consumes: ['features', 'actions'],
   async execute(ctx) {
     const actions = Array.isArray(ctx.payload.actions)
-      ? (ctx.payload.actions as Parameters<typeof import('../../engines/planner').planActions>[0]['actions'])
+      ? (ctx.payload.actions as Parameters<typeof import('@/src/infrastructure/engines/planner').planActions>[0]['actions'])
       : [];
-    const { planActions } = await import('../../engines/planner');
+    const { planActions } = await import('@/src/infrastructure/engines/planner');
     const { getFeatureStore } = await import('../../featureStore');
 
     let features: Parameters<typeof planActions>[0]['features'] = [];

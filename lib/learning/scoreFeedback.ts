@@ -3,7 +3,7 @@
  */
 import type { Feature } from '../primitives/types';
 import { recordOptimization } from '../learning/learningLoop';
-import { calibrateAndPersist, extractFeatureVector } from '../engines/calibration';
+import { calibrateAndPersist, extractFeatureVector } from '@/src/infrastructure/engines/calibration';
 import { getErrorMessage } from '../errors';
 
 export async function recordScoreFeedback(opts: {

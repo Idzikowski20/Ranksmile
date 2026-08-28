@@ -1,8 +1,8 @@
 /**
  * Persist calibration models (Feature Store vectors, no LLM ranking).
  */
-import db from '../../database/database';
-import type { CalibrationModel } from '../engines/calibration';
+import db from '@/database/database';
+import type { CalibrationModel } from '@/src/infrastructure/engines/calibration';
 
 let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;
