@@ -1,6 +1,6 @@
 import type { OrgBillingState } from '../../lib/orgBilling';
 import type { BillingPeriod } from '@/src/core/domain/billing/plans';
-import type { PlanSlug } from '../../lib/stripePrices';
+import type { PlanSlug } from '@/src/core/domain/billing/prices';
 import {
   isApiRouteAllowedDuringPaymentLock,
   isFrontendRouteAllowedDuringPaymentLock,

@@ -1,6 +1,6 @@
 import { calibrateTermRangesFromCorpus, filterUsefulNlpTerms, isWeakTermList, scaleTermRangesToWordCount, hasMinCompetitorDomains } from '@/src/core/domain/competitors/termCalibration';
 import type { NlpTerm } from '../../lib/contentScore';
-import { computeAiSearchScore } from '../../lib/ai/aiSearchScore';
+import { computeAiSearchScore } from '@/src/core/domain/aiScore/aiSearchScore';
 
 describe('competitorTermCalibration', () => {
   /**

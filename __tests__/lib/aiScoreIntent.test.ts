@@ -1,4 +1,4 @@
-import { computeAiSearchScoreV2 } from '../../lib/ai/aiSearchScore';
+import { computeAiSearchScoreV2 } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { ScoreFactor } from '@/src/core/domain/aiScore/factors';
 import type { ArticleFact } from '../../lib/articles/articleFacts';
 

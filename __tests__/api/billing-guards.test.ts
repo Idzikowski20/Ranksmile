@@ -38,7 +38,7 @@ jest.mock('../../lib/stripeMode', () => ({
 }));
 jest.mock('../../lib/stripeBillingSync', () => ({ syncSubscriptionToOrg: jest.fn() }));
 jest.mock('../../lib/stripeCustomer', () => ({ ensureStripeCustomer: jest.fn() }));
-jest.mock('../../lib/stripePrices', () => ({ getStripePriceId: jest.fn().mockReturnValue('price_growth') }));
+jest.mock('@/src/core/domain/billing/prices', () => ({ getStripePriceId: jest.fn().mockReturnValue('price_growth') }));
 jest.mock('@/src/core/domain/billing/plans', () => ({
   getCheckoutPlan: jest.fn().mockReturnValue({ slug: 'growth', name: 'Growth', priceMonthly: 59 }),
 }));

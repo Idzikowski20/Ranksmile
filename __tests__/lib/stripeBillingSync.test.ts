@@ -25,7 +25,7 @@ jest.mock('../../lib/quota/ensureBalances', () => ({
   ensureOrgQuotaBalances: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/stripePrices', () => ({
+jest.mock('@/src/core/domain/billing/prices', () => ({
   getPlanFromPriceId: jest.fn((priceId: string) => {
     if (priceId === 'price_scale_m') return { slug: 'scale', billing: 'monthly' };
     if (priceId === 'price_growth_m') return { slug: 'growth', billing: 'monthly' };

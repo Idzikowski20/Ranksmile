@@ -6,7 +6,7 @@ import {
   isSeoMetaHeading,
   namesAnotherBrand,
 } from '@/src/core/domain/contentPlanner/sectionLabels';
-import { buildAdaptiveOutline } from '../../../lib/contentPlanner/outlineBuilder';
+import { buildAdaptiveOutline } from '@/src/core/domain/contentPlanner/outlineBuilder';
 import { buildIntentBlueprint } from '@/src/core/domain/contentPlanner/intentBlueprint';
 import { buildReaderModel } from '@/src/core/domain/contentPlanner/readerModel';
 import { buildArticleBlueprint } from '@/src/core/domain/contentPlanner/budgetEngine';

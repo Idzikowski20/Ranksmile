@@ -16,7 +16,7 @@ import {
   STRICT_SCORE_GATE_POLICY,
 } from '@/src/core/domain/optimize/aoScoreDelta';
 import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
-import { TARGET_AI, TARGET_SEO } from '../optimizeMode';
+import { TARGET_AI, TARGET_SEO } from '@/src/core/domain/optimize/optimizeMode';
 import { countWordsFromHtml } from './aoBaseline';
 
 export type OptimizationStrategy =

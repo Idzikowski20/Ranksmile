@@ -1,4 +1,4 @@
-import { buildAdaptiveOutline, improveOutline } from '../../../lib/contentPlanner/outlineBuilder';
+import { buildAdaptiveOutline, improveOutline } from '@/src/core/domain/contentPlanner/outlineBuilder';
 import { buildIntentBlueprint } from '@/src/core/domain/contentPlanner/intentBlueprint';
 import { buildReaderModel } from '@/src/core/domain/contentPlanner/readerModel';
 import { buildArticleBlueprint } from '@/src/core/domain/contentPlanner/budgetEngine';

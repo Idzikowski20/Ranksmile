@@ -23,7 +23,7 @@ import { safeJsonParse } from '../../../../lib/safeJson';
 import { llmGateway } from '../../../../lib/llmGateway';
 import { gatherBlogUrls } from '../../../../lib/gatherBlogUrls';
 import { pickLinkTargets } from '@/src/core/domain/seo/sitemapLinkTargets';
-import { pipelineVersionTag } from '../../../../lib/pipelineVersion';
+import { pipelineVersionTag } from '@/src/core/domain/pipeline/pipelineVersion';
 import {
   aiIntelFromScoreData,
   competitorsFromScoreData,

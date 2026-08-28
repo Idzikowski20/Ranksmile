@@ -4,7 +4,7 @@ import {
   computeOverallContentScore,
   resolveAiScore,
   contentScoreSplit,
-} from '../../lib/ai/aiSearchScore';
+} from '@/src/core/domain/aiScore/aiSearchScore';
 import type { ArticleFact } from '../../lib/articles/articleFacts';
 
 const sampleFacts: ArticleFact[] = [

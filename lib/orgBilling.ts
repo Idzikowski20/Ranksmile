@@ -11,7 +11,7 @@ import {
 } from './billing/billingAudit';
 import { ensureBillingTables } from './ensureBillingTables';
 import { queryOne } from './db/query';
-import type { LegacyPlanSlug } from './stripePrices';
+import type { LegacyPlanSlug } from '@/src/core/domain/billing/prices';
 
 export type SubscriptionStatus =
   | 'trialing'

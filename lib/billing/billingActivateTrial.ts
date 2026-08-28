@@ -12,7 +12,7 @@ import {
 } from './domainEvents';
 import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from './billingTrial';
 import { claimTrialActivation, getOrgBillingState, updateOrgBillingState } from '../orgBilling';
-import { getStripePriceId, type PlanSlug } from '../stripePrices';
+import { getStripePriceId, type PlanSlug } from '@/src/core/domain/billing/prices';
 import { syncSubscriptionToOrg } from '../stripeBillingSync';
 
 export type ActivateTrialResult =

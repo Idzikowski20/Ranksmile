@@ -6,7 +6,7 @@ import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from '../../../lib/billing/bill
 import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
 import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
-import { getStripePriceId, type PlanSlug } from '../../../lib/stripePrices';
+import { getStripePriceId, type PlanSlug } from '@/src/core/domain/billing/prices';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getAppOrigin } from '../../../lib/appOrigin';
 import { getCurrentUser } from '../../../utils/getUser';

@@ -16,7 +16,7 @@ import {
    computeTermUsageGaps,
 } from '../../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../../lib/contentScore';
-import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '../../../lib/ai/aiSearchScore';
+import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { buildArticleContext } from '../../../lib/articles/articleContext';
 import type { ArticleContext } from '../../../lib/articles/articleContext';
 import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articles/articleKeywordDiscovery';
@@ -45,7 +45,7 @@ import {
    shouldSkipOptimize,
    TARGET_AI,
    TARGET_SEO,
-} from '../../../lib/optimizeMode';
+} from '@/src/core/domain/optimize/optimizeMode';
 import {
    maxRoundsForPhase,
    resolveOptimizePhase,

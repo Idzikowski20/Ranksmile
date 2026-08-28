@@ -8,8 +8,8 @@ import {
 } from '@/src/core/domain/billing/plans';
 import { blocksNewPaidCheckout } from './billingPlanLock';
 import type { OrgBillingState } from '../orgBilling';
-import type { LegacyPlanSlug, PlanSlug } from '../stripePrices';
-import { getStripePriceId } from '../stripePrices';
+import type { LegacyPlanSlug, PlanSlug } from '@/src/core/domain/billing/prices';
+import { getStripePriceId } from '@/src/core/domain/billing/prices';
 import { clientSecretFromSubscriptionInvoice } from '../stripeInvoiceClientSecret';
 
 const PLAN_RANK: Record<string, number> = {

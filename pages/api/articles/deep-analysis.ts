@@ -22,7 +22,7 @@ import {
   scaleTermRangesToWordCount,
 } from '@/src/core/domain/competitors/termCalibration';
 import { runArticleAiPipeline } from '../../../lib/articles/articleAiPipeline';
-import { computeOverallContentScore, resolveAiScore } from '../../../lib/ai/aiSearchScore';
+import { computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { ArticleFact } from '../../../lib/articles/articleFacts';
 import { safeJsonParse } from '../../../lib/safeJson';
 import { carriedScoreData } from '@/src/core/domain/articles/carriedScoreData';
@@ -39,7 +39,7 @@ import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPa
 import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibility/aiVisibilityStore';
 import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
-import { AiVisibilitySummary } from '../../../lib/ai/aiSearchScore';
+import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { sidecarBase, nextjsUrl } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';

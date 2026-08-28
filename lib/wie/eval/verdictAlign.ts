@@ -2,7 +2,7 @@
  * Single reconciliation model: heuristic benchmark + Judge → one beats_top5.
  * Benchmark winners are always deterministic (argmax). Judge may comment, not override.
  */
-import type { BenchmarkFeature, CompetitorBenchmarkResult } from './competitorBenchmark';
+import type { BenchmarkFeature, CompetitorBenchmarkResult } from '@/src/core/domain/wie/evalCompetitorBenchmark';
 
 export type BeatsTop5 = 'wins' | 'ties' | 'loses';
 

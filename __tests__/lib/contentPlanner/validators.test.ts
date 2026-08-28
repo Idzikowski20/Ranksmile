@@ -7,7 +7,7 @@ import {
   validateBlueprint,
   validateBrief,
   validateOutline,
-} from '../../../lib/contentPlanner/validators/planValidators';
+} from '@/src/core/domain/contentPlanner/planValidators';
 import {
   validateFlow,
   validateClaims,

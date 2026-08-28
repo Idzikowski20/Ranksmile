@@ -3,7 +3,7 @@
 // so the editor's "AI Search — Info to cover" list is populated either way.
 import { QueryTypes } from 'sequelize';
 import db from '../../database/database';
-import { computeAiSearchScore, type AiVisibilitySummary } from '../ai/aiSearchScore';
+import { computeAiSearchScore, type AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
 /** Insert one ai_visibility_runs row (+ citations) and return the run id. */
 export async function persistAiVisibilityRun(
