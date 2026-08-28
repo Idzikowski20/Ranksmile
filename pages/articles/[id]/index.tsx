@@ -49,7 +49,7 @@ import type { AiVisibilitySummary } from '../../../lib/ai/aiSearchScore';
 import { computeOverallContentScore } from '../../../lib/ai/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { parseSnapshot } from '../../../lib/coverageStore';
-import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '../../../lib/deepAnalysisProgress';
+import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '@/src/core/domain/articles/deepAnalysisProgress';
 import { getErrorMessage } from '../../../lib/errors';
 import { isAbortError } from '../../../lib/abortSignal';
 import type { SectionEvent } from '../../../lib/optimizeSectionEvents';

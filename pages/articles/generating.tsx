@@ -6,7 +6,7 @@ import WizardShell from '../../components/articles/WizardShell';
 import GeneratingStage from '../../components/articles/GeneratingStage';
 import { clearWizardState } from '../../lib/wizardState';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
-import { shouldSkipFreshGenerate } from '../../lib/generateResume';
+import { shouldSkipFreshGenerate } from '@/src/core/domain/articles/generateResume';
 import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
 
 async function fetchArticleContent(articleId: string): Promise<{

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { buildArticleWorkspaceLinks } from '../../lib/articles/articleWorkspaceLinks';
+import { buildArticleWorkspaceLinks } from '@/src/core/domain/articles/articleWorkspaceLinks';
 
 describe('buildArticleWorkspaceLinks', () => {
   it('scopes article creation and import to the active workspace URL', () => {

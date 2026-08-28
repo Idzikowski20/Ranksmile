@@ -38,7 +38,7 @@ import type {
 } from '@/src/core/domain/contentPlanner/types';
 import { KNOWLEDGE_COVERAGE_MIN_PCT } from '@/src/core/domain/contentPlanner/types';
 import type { KnowledgeGraph, TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
-import { knowledgeGraphToTargetKg } from '../knowledgeEngine/toTargetKg';
+import { knowledgeGraphToTargetKg } from '@/src/core/domain/knowledgeEngine/toTargetKg';
 import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
 
 export type RunContentPlannerInput = {

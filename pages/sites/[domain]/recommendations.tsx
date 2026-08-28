@@ -10,7 +10,7 @@ import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
 import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
-import { writeAnalyzeSession } from '../../../lib/deepAnalysisProgress';
+import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProgress';
 import { buildImportKeywordList } from '../../../lib/buildImportKeywordList';
 import { normalizeUrlForMatch, kwScore, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';

@@ -15,7 +15,7 @@ export const coverageWorker: PipelineWorker = {
     const corpusId = ctx.payload.corpusId != null ? String(ctx.payload.corpusId) : '';
     const plainText = String(ctx.payload.plainText || ctx.payload.html || '');
     const { getCorpusById } = await import('../../corpus/corpusService');
-    const { runCoverageEngine } = await import('../../engines/coverageEngine');
+    const { runCoverageEngine } = await import('@/src/core/domain/engines/coverageEngine');
     const { runGapEngine } = await import('@/src/core/domain/engines/gapEngine');
     const { runRecommendationEngine } = await import('../../engines/gapToReco');
     const { upsertSerpCoverageFeatures } = await import('../../features/serpCoverageFeatures');
