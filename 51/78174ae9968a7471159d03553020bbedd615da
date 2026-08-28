@@ -1,0 +1,33 @@
+services/team.ts
+  s_e3556ba0769b4b::t_bac6f02881699c 2
+src/infrastructure/adapters/feedbackAdapter.ts
+  s_e3556ba0769b4b::t_09f0f0aac9eb1e 1-19
+src/infrastructure/adapters/index.ts
+  s_e3556ba0769b4b::t_09f0f0aac9eb1e 1-9
+services/feedback.ts
+  s_e3556ba0769b4b::t_bac6f02881699c 3
+src/infrastructure/adapters/accountAdapter.ts
+  s_e3556ba0769b4b::t_09f0f0aac9eb1e 1-8
+services/accountSecurity.ts
+  s_e3556ba0769b4b::t_76f38120de2ed5 2
+src/infrastructure/adapters/mfaAdapter.ts
+  s_e3556ba0769b4b::t_09f0f0aac9eb1e 1-19
+src/infrastructure/adapters/teamAdapter.ts
+  s_e3556ba0769b4b::t_09f0f0aac9eb1e 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5178174ae9968a7471159d03553020bbedd615da",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
