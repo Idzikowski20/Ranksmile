@@ -1,0 +1,307 @@
+src/core/intelligence/applyContradictHeuristics.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-83
+__tests__/lib/primitives.prioritizeActions.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-3
+src/core/intelligence/applyDaFactEnrichment.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-71
+src/core/compiler/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-45
+pages/api/articles/[id]/ccm/live.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 9-12
+__tests__/lib/projections/visibility.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-3
+src/infrastructure/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 244
+src/infrastructure/engines/planner.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 4
+pages/api/cron/ccm-compile.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 6
+__tests__/lib/compiler/replay.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1,8-9
+__tests__/lib/optimizeActionScope.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 2
+src/core/intelligence/ccmRecommendations.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-56
+components/articles/ContentScorePanel.tsx
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 70
+src/core/intelligence/judge.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-161
+__tests__/lib/intelligence/ccmToInfoToCover.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 3,7-8
+__tests__/lib/ccm/emptyCcm.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-4
+src/core/intelligence/modelDiff.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-134
+__tests__/lib/intelligence/ccmRecommendations.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-2,6-7
+__tests__/lib/growthPipeline.integration.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 13
+__tests__/lib/ccm/serialize.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-3
+src/core/ccm/ids.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-13
+src/core/planner/actionGraphBuilder.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-181
+src/core/intelligence/sqlCompileStore.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-141
+src/core/compiler/contentHash.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-11
+src/core/intelligence/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-125
+__tests__/lib/primitives.platformModel.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-5
+__tests__/lib/intelligence/consumers14.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1,12-13
+pages/api/articles/[id]/debug-export.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 20
+src/core/ccm/serialize.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-149
+src/infrastructure/harvestAiCoverage.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 4
+src/core/primitives/knowledgeLayer.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-116
+__tests__/lib/ccm/builders.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-4
+__tests__/lib/compiler/compile.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-4
+src/core/intelligence/runtimeApi.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-182
+src/infrastructure/runActionExecution.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-2
+src/core/compiler/compile.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-168
+src/core/ccm/types/ccm.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-48
+src/core/planner/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-14
+src/core/projections/visibilityView.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-99
+src/infrastructure/engines/calibration.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 5
+__tests__/lib/intelligence/livePresence.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-3
+__tests__/lib/compiler/evidence.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-4
+pages/api/articles/[id]/execute-action.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 9
+src/core/compiler/lexer.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-121
+pages/api/articles/[id]/growth-history.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 12
+src/core/planner/planActions.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-88
+src/core/intelligence/ccmToInfoToCover.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-100
+components/articles/WriteOptimizePanel.tsx
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 16
+src/core/compiler/normalizer.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-12
+src/core/intelligence/consumerContext.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-135
+src/core/ccm/deterministicHash.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-28
+src/infrastructure/featureStore.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 4
+src/core/primitives/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-68
+__tests__/lib/intelligence/hardening2930.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-3,8-10
+src/core/ccm/graphQuery.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-263
+src/infrastructure/growthMetaStore.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 4-5
+src/core/compiler/irBuilder.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-147
+src/core/compiler/passes/intentPass.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-69
+__tests__/lib/intelligence/enrichCcmWithDaFacts.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-5
+__tests__/lib/ccm/actionGraph.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-3
+src/core/intelligence/benchmark.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-163
+src/core/primitives/experiments.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-69
+__tests__/lib/intelligence/ccmToCoverageSnapshot.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-2
+__tests__/lib/intelligence/ccmToEditCandidates.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-4
+src/infrastructure/learning/scoreFeedback.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 4
+pages/api/articles/[id]/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 236
+__tests__/lib/featureStore.q2.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 7-10
+src/core/ccm/builders/entityBuilder.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-40
+src/core/ccm/types/compilerMeta.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-62
+src/core/compiler/passes/entityPass.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-16
+__tests__/lib/ccm/ir.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1
+src/core/compiler/passes/factPass.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-38
+src/core/primitives/capabilities.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-78
+src/infrastructure/observations/optimizeActionScope.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1
+__tests__/lib/ccm/envelope.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-3
+src/infrastructure/emitObservations.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-2
+__tests__/lib/ccm/astStatus.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-2
+src/core/ccm/builders/factBuilder.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-52
+src/core/intelligence/writingIntelligence.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-245
+src/core/intelligence/consumers.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-107
+src/core/ccm/types/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-72
+src/core/intelligence/ccmStaleCron.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-102
+src/core/intelligence/ccmToEditCandidates.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-41
+src/infrastructure/persistCoverageFeatureRun.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 13-15,121
+src/core/intelligence/livePresence.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-111
+src/core/primitives/events.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-29
+src/core/intelligence/compileAfterArticleChange.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-254
+src/core/primitives/prioritizeActions.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-40
+src/infrastructure/features/fingerprintFeatures.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 4
+__tests__/lib/intelligence/cias002to008.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 3-5
+src/infrastructure/features/serpCoverageFeatures.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1
+src/core/compiler/passManager.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-100
+src/core/compiler/passes/evidencePass.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-34
+src/core/compiler/assemble.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-70
+lib/cia/zones.ts
+  s_e3556ba0769b4b::t_49adbb42cea2ae 5,13,18,33,46,58
+src/core/ccm/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-40
+src/core/projections/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-9
+src/core/intelligence/applyLlmGapEvidence.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-84
+__tests__/lib/intelligence/cias001.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 3-7
+src/core/intelligence/ccmToCoverageSnapshot.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-175
+__tests__/lib/planner/actionGraphBuilder.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-2
+src/infrastructure/organicResearch/observations.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 4
+src/core/ccm/builders/intentBuilder.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-29
+src/infrastructure/engines/gapToReco.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 5
+src/core/compiler/incremental.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-138
+src/core/projections/coverageView.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-54
+src/core/primitives/actionExecutor.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-96
+__tests__/lib/compiler/incremental.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-2,6
+services/organicResearch.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 4
+src/infrastructure/workers/visibility/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 2
+__tests__/lib/ccm/factEngine.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 5-7
+__tests__/lib/intelligence/writingIntelligence.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1,15-16
+src/core/ccm/buildIndexes.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-118
+src/core/ccm/builders/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-8
+src/core/ccm/types/actionGraph.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-45
+src/infrastructure/learning/learningLoopCore.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 4
+src/infrastructure/featureStoreCore.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-2
+src/core/compiler/parser.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-27
+pages/api/articles/[id]/ccm/index.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 14,19-20,60,113,127
+src/core/compiler/semantic.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-57
+src/core/compiler/types.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-44
+__tests__/lib/emitObservations.q2.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 7
+__tests__/lib/intelligence/ccmStaleCron.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-2
+__tests__/lib/intelligence/compileAfterArticleChange.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 5-6
+__tests__/lib/intelligence/judge.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-5
+__tests__/lib/intelligence/runtimeApi.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 8-9
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1209
+src/core/ccm/builders/evidenceBuilder.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-133
+__tests__/lib/priorityActions.smoke.test.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 2,4
+src/core/ccm/constraintEngine.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-220
+src/core/intelligence/compileStore.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-139
+src/core/intelligence/enrichCcmWithDaFacts.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-173
+src/core/intelligence/persistCcmCoverageProjection.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-35
+scripts/smoke-ccm-coverage.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 5
+src/infrastructure/features/featureEngine.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 5-7,13
+src/infrastructure/observations/actionsFromObservations.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1
+src/core/ccm/types/recommendationDsl.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-53
+src/core/intelligence/loadCcmEditCandidates.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-43
+src/core/primitives/guidelineToAction.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-59
+src/core/primitives/featureRegistry.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-83
+src/core/ccm/types/graph.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-182
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 448,864
+pages/api/articles/publish.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 46
+src/core/ccm/emptyCcm.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-134
+src/core/compiler/replay.ts
+  s_e3556ba0769b4b::t_9f9371f57ffc7c 1-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "86df3d5883ae161887ee08d3fa16ef1c570e8a84",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
