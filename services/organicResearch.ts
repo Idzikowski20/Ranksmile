@@ -2,17 +2,7 @@ import { useQuery, UseQueryResult } from 'react-query';
 import type { KeywordPositionPoint } from '@/src/infrastructure/organicResearch/keywordHistory';
 import type { OrganicDataset } from '@/src/infrastructure/organicResearch/types';
 import type { Observation } from '@/src/core/primitives/types';
-
-async function fetchJson<T>(url: string): Promise<T> {
-  const r = await fetch(url);
-  let body: unknown = null;
-  try { body = await r.json(); } catch { /* empty */ }
-  if (!r.ok) {
-    const msg = (body as { error?: string } | null)?.error || `Request failed (${r.status})`;
-    throw new Error(msg);
-  }
-  return body as T;
-}
+import { fetchJson } from './http';
 
 export type OrganicKeywordHistoryResponse = {
   points: KeywordPositionPoint[];

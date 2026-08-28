@@ -1,17 +1,12 @@
-const IMPORT_RE = /(?:import\s+(?:type\s+)?(?:[\s\S]*?)\s+from\s*|import\s*|export\s+[\s\S]*?\s+from\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
+import ts from 'typescript';
 
 /** Bump when the static import grammar changes. */
-export const SCAN_IMPORTS_VERSION = 1;
+export const SCAN_IMPORTS_VERSION = 2;
 
-/** Extract module specifiers from TS/JS source (best-effort static scan). */
+/** Extract module specifiers via the TypeScript scanner (AST-accurate — handles
+ *  every import/export/require/dynamic-import form; replaced the old regex). */
 export function extractImportSpecifiers(source: string): string[] {
   const out = new Set<string>();
-  const stripped = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-  const re = new RegExp(IMPORT_RE.source, 'g');
-  let m = re.exec(stripped);
-  while (m !== null) {
-    out.add(m[1]);
-    m = re.exec(stripped);
-  }
+  for (const f of ts.preProcessFile(source, true, true).importedFiles) out.add(f.fileName);
   return [...out];
 }

@@ -1,7 +1,7 @@
 import type Stripe from 'stripe';
 import type { IInvoiceRepository } from '../../../core/domain/billing/invoiceRepository';
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
-import { getStripeClient, isStripeConfigured } from './stripeBillingClient';
+import { getStripe, isStripeConfigured } from '@/src/infrastructure/billing/stripe';
 import { formatPaymentMethodLabel, mapStripeInvoice } from './stripeInvoiceMapper';
 
 /**
@@ -19,7 +19,7 @@ export function createStripeInvoiceRepository(): IInvoiceRepository {
     },
 
     async listInvoices(customerId, limit) {
-      const stripe = getStripeClient();
+      const stripe = getStripe();
       const [result, customer] = await Promise.all([
         stripe.invoices.list({
           customer: customerId,

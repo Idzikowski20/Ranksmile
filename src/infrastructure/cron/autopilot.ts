@@ -6,6 +6,7 @@
  * and a later sweep picks up whatever finished. A killed or failed analysis is retried
  * by the same sweep, so an interrupted request costs a tick, not the article.
  */
+import { sleep } from '@/src/core/shared/sleep';
 import db from '@/database/database';
 import { queryRows } from '@/src/infrastructure/db/query';
 
@@ -90,9 +91,7 @@ type TriggerArgs = { baseUrl: string; cronSecret: string };
 const JOB_CONFIRM_ATTEMPTS = 4;
 const JOB_CONFIRM_DELAY_MS = 500;
 
-function sleep(ms: number): Promise<void> {
-   return new Promise((resolve) => { setTimeout(resolve, ms); });
-}
+
 
 /** Deep-analysis creates its job row after the SSE 200 has already been flushed (a plain
  * JSON error would arrive as an SSE error frame past that point instead) — so a successful

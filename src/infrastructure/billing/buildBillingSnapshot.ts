@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import type Stripe from 'stripe';
-import { listOrgBillingInvoices, type BillingInvoice } from '@/src/infrastructure/billing/billingInvoices';
+import { listOrgBillingInvoices } from '@/src/composition/billing';
+import type { BillingInvoice } from '@/src/core/domain/billing/invoice';
 import { getOrgBillingState, type SubscriptionStatus } from '@/src/infrastructure/billing/orgBilling';
 import { getStripe, isStripeConfigured } from '@/src/infrastructure/billing/stripe';
 import {
