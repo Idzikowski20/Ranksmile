@@ -52,11 +52,11 @@ import {
    targetContentForPhase,
    type AoMeta,
 } from '@/src/core/domain/optimize/runPhase';
-import { getErrorMessage } from '../../../lib/errors';
-import { throwIfAborted } from '../../../lib/abortSignal';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { throwIfAborted } from '@/src/core/shared/abortSignal';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { flushSse, flushHeaders } from '../../../lib/types/api';
-import { safeJsonParse } from '../../../lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import {
    buildProfileFromContext,
    resolveOptimizationStrategy,

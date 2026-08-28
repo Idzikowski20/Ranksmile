@@ -9,7 +9,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { getWorkspace } from '../../../lib/workspaces';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { mergeGscProperty } from '@/src/core/domain/gsc/gscProperty';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

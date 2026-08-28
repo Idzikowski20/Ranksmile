@@ -3,7 +3,7 @@
 // This bypasses hotlink protection (Referer checks) on source websites.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ssrfSafeFetch } from '../../lib/ssrfGuard';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 // SVG intentionally excluded: served same-origin it is a script-execution vector on direct navigation.

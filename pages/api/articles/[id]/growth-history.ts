@@ -6,7 +6,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { ensureFeatureStoreTables } from '@/src/infrastructure/persistence/schema/ensureFeatureStoreTables';
 import { getFeatureStore } from '../../../../lib/featureStore';
-import { getErrorMessage } from '../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { queryOne } from '@/src/infrastructure/db/query';
 import type { Observation } from '../../../../lib/primitives/types';

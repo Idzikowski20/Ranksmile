@@ -5,7 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUser } from '../../utils/getUser';
 import { getConfirmationStatus, issueConfirmationToken, confirmEmailToken } from '../../lib/emailConfirmation';
 import { sendConfirmationEmail } from '../../lib/confirmEmail';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 function buildOrigin(req: NextApiRequest): string {
   // Prefer the server-configured base URL so confirmation links can't be pointed

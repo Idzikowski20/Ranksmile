@@ -5,7 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { findConfigsNeedingBrands, runBrandChunk } from '@/src/infrastructure/aiVisibility/aiVisibilityBrands';
-import { getErrorMessage } from '../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

@@ -1,5 +1,5 @@
 import Keyword from '../database/models/keyword';
-import { safeJsonParse } from '../lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 
 /**
  * Parses the SQL Keyword Model object to frontend consumable object.

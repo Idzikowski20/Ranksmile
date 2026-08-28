@@ -4,7 +4,7 @@
  */
 import { enqueueJob } from '@/src/infrastructure/pipeline/pipelineQueue';
 import type { EnqueueResult } from '@/src/infrastructure/pipeline/pipelineQueue';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 export type DeepAnalysisCompetitor = {
   url?: string;

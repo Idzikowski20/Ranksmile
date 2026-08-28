@@ -1,4 +1,4 @@
-import { safeJsonParse } from '@/lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import type { CompetitorDocument } from '@/src/core/domain/knowledgeEngine/types';
 
 type OutlineHeading = { level?: number; text?: string };

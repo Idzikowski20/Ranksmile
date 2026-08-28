@@ -24,7 +24,7 @@ import {
 import { runArticleAiPipeline } from '@/src/infrastructure/articles/articleAiPipeline';
 import { computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { ArticleFact } from '@/src/infrastructure/articles/articleFacts';
-import { safeJsonParse } from '../../../lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { carriedScoreData } from '@/src/core/domain/articles/carriedScoreData';
 
 type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: number };
@@ -46,7 +46,7 @@ import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
 import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
 import { buildRankingSourcesPayload } from '../../../lib/rankingSources';
 import { enrichTermsWithSalience } from '../../../lib/termSalience';

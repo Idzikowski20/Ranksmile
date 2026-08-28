@@ -6,7 +6,7 @@ import db from '../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { runAutopilotSweep } from '../../../lib/autopilot';
 import { cronSecrets } from '../../../lib/cronAuth';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
 import { nextjsUrl } from '../../../lib/serviceUrls';

@@ -7,7 +7,7 @@ import { persistAiVisibilityRun } from '@/src/infrastructure/aiVisibility/aiVisi
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
 import { queryOne, queryRows, ArticleRow } from '@/src/infrastructure/db/query';
 import { runArticleAiPipeline } from '@/src/infrastructure/articles/articleAiPipeline';

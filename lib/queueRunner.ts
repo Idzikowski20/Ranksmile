@@ -1,6 +1,6 @@
 import db from '../database/database';
 import { queryOne } from '@/src/infrastructure/db/query';
-import { getErrorMessage } from './errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { isQueueRunnerEnabled } from './featureFlags';
 import { queryAffected } from './types/db';
 

@@ -4,7 +4,7 @@ import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
 import { runWieEvalSuite } from '@/src/infrastructure/wie/eval/runEvalSuite';
 import { writeTrendsFile, readHistory } from '@/src/infrastructure/wie/eval/history';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET' && req.query.trends === '1') {

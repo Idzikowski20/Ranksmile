@@ -1,6 +1,6 @@
 import db from '@/database/database';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { safeJsonParse } from '@/lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { parseSnapshot } from '@/lib/coverageStore';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import type { ScoreData } from '@/lib/contentScore';

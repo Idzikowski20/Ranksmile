@@ -11,7 +11,7 @@ import { queryOne } from '@/src/infrastructure/db/query';
 import { computeAudit } from './auditCompute';
 import { enrichAudit } from './auditEnrich';
 import { findInternalLinkOpportunities } from './auditInternalLinks';
-import { getErrorMessage } from './errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 const isPg = !!process.env.DATABASE_URL;
 // A `running` row older than this is treated as a crashed compute and re-queued.

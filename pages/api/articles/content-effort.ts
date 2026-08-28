@@ -8,10 +8,10 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { callSidecar } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { heuristicContentEffort, type ContentEffortInsight } from '@/src/core/domain/terms/contentEffort';
-import { safeJsonParse } from '../../../lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import type { ScoreData } from '../../../lib/contentScore';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

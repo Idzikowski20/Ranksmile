@@ -16,7 +16,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 import type { ToolCtx } from '@/src/infrastructure/ai/types';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { flushSse } from '../../../lib/types/api';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

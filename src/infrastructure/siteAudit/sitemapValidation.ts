@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fetchSitemapEntries } from '@/lib/fetchSitemapUrls';
-import { RANKSMILE_UA } from '@/lib/httpConstants';
+import { RANKSMILE_UA } from '@/src/core/shared/httpConstants';
 import { assertPublicUrl } from '@/lib/ssrfGuard';
 import type { SitemapIssueInstance } from '@/src/infrastructure/siteAudit/types';
 

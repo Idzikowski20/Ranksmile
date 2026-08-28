@@ -1,6 +1,6 @@
 import type { Observation } from './primitives/types';
 import { makeDomainEvent } from './primitives/events';
-import { getErrorMessage } from './errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 /** Append observations; never throws to callers (logs warn). */
 export async function emitObservations(

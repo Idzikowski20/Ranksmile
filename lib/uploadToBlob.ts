@@ -10,7 +10,7 @@
 //                           or "https://pub-xxxx.r2.dev" from R2 dev subdomain)
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getErrorMessage } from './errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { assertPublicUrl } from './ssrfGuard';
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];

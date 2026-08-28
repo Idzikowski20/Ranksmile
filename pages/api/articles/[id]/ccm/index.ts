@@ -5,7 +5,7 @@ import verifyUser from '../../../../../utils/verifyUser';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
-import { getErrorMessage } from '../../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';

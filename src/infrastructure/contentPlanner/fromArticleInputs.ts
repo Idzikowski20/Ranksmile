@@ -1,7 +1,7 @@
 /**
  * Adapt article / score_data competitor blobs into CompetitorRawInput[].
  */
-import { safeJsonParse } from '@/lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import type { CompetitorRawInput } from '@/src/core/domain/contentPlanner/competitorIntelligence';
 import type { AiSearchIntelInput } from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
 

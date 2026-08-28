@@ -9,7 +9,7 @@ import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
 import { readLocalSCData, getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../utils/searchConsole';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type GSCSite = {

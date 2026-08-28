@@ -1,5 +1,5 @@
 import { CoverageItem, intentItems } from '@/src/core/domain/coverage/aiCoverage';
-import { safeJsonParse } from './safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
 export interface IntroVerdict {

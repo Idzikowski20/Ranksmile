@@ -20,7 +20,7 @@ import { sidecarUrl } from './serviceUrls';
 import { parseJsonish } from './types/json';
 import { countryForLanguage } from './langCountry';
 import axios from 'axios';
-import { getErrorMessage } from './errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 type ArticleRow = {
   score_data: string | null;

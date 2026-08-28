@@ -13,7 +13,7 @@ import { stripEmoji } from '@/src/infrastructure/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 

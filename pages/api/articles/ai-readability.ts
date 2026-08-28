@@ -9,12 +9,12 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { callSidecar } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { mergeCoverageItems, parseSnapshot, buildSnapshot } from '../../../lib/coverageStore';
 import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
-import { safeJsonParse } from '../../../lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

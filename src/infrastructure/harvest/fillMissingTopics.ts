@@ -1,6 +1,6 @@
 import { languageInstructionForLlm } from '@/src/core/shared/language';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
-import { safeJsonParse } from '@/lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 import type { TopicBucket } from '@/src/infrastructure/harvest/clusterQuestions';
 import { PLACEHOLDER_TOPIC_ID, PLACEHOLDER_TOPIC_TITLE, tokenizeForHarvest } from '@/src/infrastructure/harvest/clusterQuestions';

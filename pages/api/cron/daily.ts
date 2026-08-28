@@ -10,7 +10,7 @@ import { getWeeklyDrops } from '../../../src/composition/gsc';
 import { buildGscDigest, type DomainDigest } from '@/src/infrastructure/gsc/gscDigestEmail';
 import { sendMail } from '../../../lib/sendMail';
 import { queryRows, type ArticleRow } from '@/src/infrastructure/db/query';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
 import { cronSecrets } from '../../../lib/cronAuth';

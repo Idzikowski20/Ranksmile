@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../../utils/verifyDomainOwnership';
-import { getErrorMessage } from '../../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { regenerateDomainTopics } from '../../../../../lib/regenerateDomainTopics';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 

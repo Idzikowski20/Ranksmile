@@ -61,7 +61,7 @@ jest.mock('@/src/infrastructure/notifications/syncOptimizationInbox', () => ({
   syncOptimizationInbox: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../lib/errors', () => ({
+jest.mock('@/src/core/shared/errors', () => ({
   getErrorMessage: jest.fn(() => 'DB error'),
 }));
 

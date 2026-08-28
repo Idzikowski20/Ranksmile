@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { parseJsonish } from '@/lib/types/json';
-import { RANKSMILE_UA } from '@/lib/httpConstants';
+import { RANKSMILE_UA } from '@/src/core/shared/httpConstants';
 import { assertPublicUrl } from '@/lib/ssrfGuard';
 import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';
 import type { External403Instance, PageAuditSignals } from '@/src/infrastructure/siteAudit/types';

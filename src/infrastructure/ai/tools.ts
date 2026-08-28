@@ -8,7 +8,7 @@ import { computeAiSearchScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { reindexSids, buildOutline, sanitizeFragment, stripSids, makeWorkingDoc } from '@/src/infrastructure/ai/workingDoc';
 import { resolveArticleSeoMeta } from '@/src/infrastructure/ai/articleMeta';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
 type SocialPostsResponse = { variants?: unknown[]; posts?: unknown[] };

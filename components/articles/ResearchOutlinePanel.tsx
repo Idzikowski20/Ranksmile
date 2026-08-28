@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { computeSerpInsights, classifyHeadingStatus, isPaaCovered } from '../../lib/researchUtils';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { Gauge, Badge } from '../koala/core';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
