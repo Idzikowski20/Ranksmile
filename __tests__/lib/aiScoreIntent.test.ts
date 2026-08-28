@@ -1,5 +1,5 @@
 import { computeAiSearchScoreV2 } from '../../lib/ai/aiSearchScore';
-import type { ScoreFactor } from '../../lib/aiScore/factors';
+import type { ScoreFactor } from '@/src/core/domain/aiScore/factors';
 import type { ArticleFact } from '../../lib/articles/articleFacts';
 
 const facts = [

@@ -9,7 +9,7 @@ import { computeCoverageScores } from './ai/aiCoverage';
 import { computeOverallContentScore } from './ai/aiSearchScore';
 import { filterUsefulNlpTerms, isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
 import { countOccurrences, computeContentScore, type NlpTerm, type ScoreData } from './contentScore';
-import { factsCoverageFactor } from './aiScore/factors';
+import { factsCoverageFactor } from '@/src/core/domain/aiScore/factors';
 import { scoreIntroduction } from './aiScore/introductionFactors';
 import { parseSnapshot } from './coverageStore';
 import { liveCoverageItems } from './liveCoverage';

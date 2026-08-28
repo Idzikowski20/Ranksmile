@@ -1,5 +1,5 @@
 import { scoreIntroduction } from '../../../lib/aiScore/introductionFactors';
-import { aioScore, factsCoverageFactor, type ScoreFactor } from '../../../lib/aiScore/factors';
+import { aioScore, factsCoverageFactor, type ScoreFactor } from '@/src/core/domain/aiScore/factors';
 
 const html = `
   <h1>Detektywi Kraków</h1>
