@@ -1,14 +1,14 @@
-import { makeCandidate } from '../../../lib/ao/editCandidate';
-import { buildIntentProfile } from '../../../lib/ao/intentProfile';
+import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { filterCandidatesByIntent, validatePlanStepAction } from '../../../lib/ao/intentGuard';
 import { buildPrecisionEditPlan } from '../../../lib/ao/editPlan';
-import { DEFAULT_EDIT_BUDGET } from '../../../lib/ao/editBudget';
+import { DEFAULT_EDIT_BUDGET } from '@/src/core/domain/optimize/editBudget';
 import { runEditSafetyGate, countWords } from '../../../lib/ao/editSafetyGate';
 import {
   coverageStateFromQuality,
   isAdequatelyCovered,
   livePresenceQualityCap,
-} from '../../../lib/ao/coverageState';
+} from '@/src/core/domain/optimize/coverageState';
 import { faqBudgetForWordCount, selectFaqQuestions } from '../../../lib/aoFaqSection';
 import { shouldSkipOptimize, TARGET_AI, TARGET_SEO } from '../../../lib/optimizeMode';
 import { resolveOptimizationStrategy } from '../../../lib/ao/runPrecisionOptimize';

@@ -3,7 +3,7 @@
 // current editor text/HTML between LLM judge passes, without mutating the graded snapshot.
 import type { CoverageItem, CoverageType, BucketScore } from '@/src/core/domain/coverage/aiCoverage';
 import { countOccurrences } from './contentScore';
-import { livePresenceQualityCap } from './ao/coverageState';
+import { livePresenceQualityCap } from '@/src/core/domain/optimize/coverageState';
 
 // `question` is what coverageEngine emits for PAA rows — must live-check like `paa`
 // or the UI shows Covered (judge) while live score never floors quality → AI gauge stuck at 0.

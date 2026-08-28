@@ -1,7 +1,7 @@
-import type { EditCandidate } from './editCandidate';
-import { clamp01 } from './editCandidate';
-import type { ArticleIntentProfile } from './intentProfile';
-import { textHitsForbidden } from './intentProfile';
+import type { EditCandidate } from '@/src/core/domain/optimize/editCandidate';
+import { clamp01 } from '@/src/core/domain/optimize/editCandidate';
+import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
+import { textHitsForbidden } from '@/src/core/domain/optimize/intentProfile';
 import type { PrecisionPlanStep } from './editPlan';
 
 export const INTENT_FIT_MIN = 0.45;

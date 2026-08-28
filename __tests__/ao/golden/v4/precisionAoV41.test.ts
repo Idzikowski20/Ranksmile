@@ -4,18 +4,18 @@ import {
   ENRICHMENT_SCORE_GATE_POLICY,
   DEEP_SCORE_GATE_POLICY,
   STRICT_SCORE_GATE_POLICY,
-} from '../../../../lib/ao/aoScoreDelta';
+} from '@/src/core/domain/optimize/aoScoreDelta';
 import { classifySectionQuality, buildEditCandidates } from '../../../../lib/ao/buildCandidates';
-import { sortCandidatesByPriority, makeCandidate } from '../../../../lib/ao/editCandidate';
+import { sortCandidatesByPriority, makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 import {
   chooseStrategyFromDiagnosis,
   resolveOptimizationPolicy,
   assessStructuralHealth,
 } from '../../../../lib/ao/optimizationPolicy';
-import { budgetForAction, DEEP_EDIT_BUDGET, DEFAULT_EDIT_BUDGET } from '../../../../lib/ao/editBudget';
+import { budgetForAction, DEEP_EDIT_BUDGET, DEFAULT_EDIT_BUDGET } from '@/src/core/domain/optimize/editBudget';
 import { shouldSkipOptimize, TARGET_AI, TARGET_SEO } from '../../../../lib/optimizeMode';
 import type { Section } from '../../../../lib/articles/articleSections';
-import { buildIntentProfile } from '../../../../lib/ao/intentProfile';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 
 const scores = (seo: number, content: number, ai: number) => ({ seo, content, ai });
 

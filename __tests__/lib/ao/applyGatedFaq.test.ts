@@ -1,8 +1,8 @@
 import { applyGatedFaqMerge } from '../../../lib/ao/applyGatedFaq';
 import { buildCriticalContentMap } from '../../../lib/ao/criticalContentMap';
-import { buildIntentProfile } from '../../../lib/ao/intentProfile';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { countWordsFromHtml } from '../../../lib/ao/aoBaseline';
-import type { AoScores } from '../../../lib/ao/aoScoreDelta';
+import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 
 const BODY =
   '<p>Zespół prowokowanej zdrady (ang. cuckolding) to zaburzenie natury psychoseksualnej.</p>'

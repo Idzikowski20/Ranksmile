@@ -6,8 +6,8 @@ import {
 import { evaluateRxQualityGate } from '../../../lib/wie/rxQualityGate';
 import { buildHeuristicReaderBrief, formatReaderBriefForPrompt } from '@/src/core/domain/wie/readerBrief';
 import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '../../../lib/ao/editPlan';
-import { makeCandidate } from '../../../lib/ao/editCandidate';
-import { buildIntentProfile } from '../../../lib/ao/intentProfile';
+import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 
 describe('WIE competitorSynthesis', () => {
   it('parses valid synthesis and rejects empty', () => {

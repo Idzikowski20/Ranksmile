@@ -2,20 +2,20 @@
  * v4.1 OptimizationPolicy — strategy + gate + budgets in one place.
  * Strategies change policy only; all use runPrecisionOptimizeV4.
  */
-import type { EditBudget } from './editBudget';
+import type { EditBudget } from '@/src/core/domain/optimize/editBudget';
 import {
   DEFAULT_EDIT_BUDGET,
   DEEP_EDIT_BUDGET,
   ENRICHMENT_EDIT_BUDGET,
   PRECISION_SECTION_BUDGET,
-} from './editBudget';
-import type { ScoreGatePolicy } from './aoScoreDelta';
+} from '@/src/core/domain/optimize/editBudget';
+import type { ScoreGatePolicy } from '@/src/core/domain/optimize/aoScoreDelta';
 import {
   DEEP_SCORE_GATE_POLICY,
   ENRICHMENT_SCORE_GATE_POLICY,
   STRICT_SCORE_GATE_POLICY,
-} from './aoScoreDelta';
-import type { AoScores } from './aoScoreDelta';
+} from '@/src/core/domain/optimize/aoScoreDelta';
+import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 import { TARGET_AI, TARGET_SEO } from '../optimizeMode';
 import { countWordsFromHtml } from './aoBaseline';
 

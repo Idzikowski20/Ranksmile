@@ -2,7 +2,7 @@
  * Load CCM for an article, apply live presence to current HTML, rebuild ActionGraph,
  * return AO EditCandidates. Non-fatal — empty array on miss/error.
  */
-import type { EditCandidate } from '../ao/editCandidate';
+import type { EditCandidate } from '@/src/core/domain/optimize/editCandidate';
 import { ccmRecommendationsToEditCandidates } from './ccmToEditCandidates';
 import { summarizeRecommendations } from './ccmRecommendations';
 

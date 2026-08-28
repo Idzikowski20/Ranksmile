@@ -1,10 +1,10 @@
-import type { EditCandidate } from './editCandidate';
-import { makeCandidate, sortCandidatesByPriority } from './editCandidate';
-import type { ArticleIntentProfile } from './intentProfile';
-import { textHitsForbidden } from './intentProfile';
+import type { EditCandidate } from '@/src/core/domain/optimize/editCandidate';
+import { makeCandidate, sortCandidatesByPriority } from '@/src/core/domain/optimize/editCandidate';
+import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
+import { textHitsForbidden } from '@/src/core/domain/optimize/intentProfile';
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { AI_SEARCH_CHECKPOINT_TYPES } from '@/src/core/domain/coverage/aiCoverage';
-import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_TARGET } from './coverageState';
+import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_TARGET } from '@/src/core/domain/optimize/coverageState';
 import type { TermUsageGap } from '../optimizeSectionEdit';
 import type { Section } from '../articles/articleSections';
 import type { OptimizationStrategy } from './optimizationPolicy';

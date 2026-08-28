@@ -2,7 +2,7 @@
  * Map CCM ActionGraph recommendations → AO EditCandidate (backend AO wire).
  * Uses source `ai_coverage` so existing planner/gates stay unchanged.
  */
-import { makeCandidate, type EditCandidate } from '../ao/editCandidate';
+import { makeCandidate, type EditCandidate } from '@/src/core/domain/optimize/editCandidate';
 import type { CcmRecommendation } from './ccmRecommendations';
 
 export type CcmToEditCandidatesOpts = {

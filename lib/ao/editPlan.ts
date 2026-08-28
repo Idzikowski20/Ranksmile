@@ -1,10 +1,10 @@
-import type { EditCandidate } from './editCandidate';
-import type { ArticleIntentProfile } from './intentProfile';
+import type { EditCandidate } from '@/src/core/domain/optimize/editCandidate';
+import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import {
   DEFAULT_EDIT_BUDGET,
   budgetForAction,
   type EditBudget,
-} from './editBudget';
+} from '@/src/core/domain/optimize/editBudget';
 import type { CompetitorSynthesis } from '../wie/competitorSynthesis';
 import { formatCompetitorSynthesisForPrompt } from '../wie/competitorSynthesis';
 import type { ReaderBrief } from '@/src/core/domain/wie/readerBrief';

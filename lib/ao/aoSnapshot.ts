@@ -1,5 +1,5 @@
 import { hashDocument } from './aoBaseline';
-import type { AoScores } from './aoScoreDelta';
+import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 
 export type AoDocumentSnapshot = {
   html: string;

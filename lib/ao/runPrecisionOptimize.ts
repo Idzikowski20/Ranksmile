@@ -9,15 +9,15 @@ import { liveCoverageItems } from '../liveCoverage';
 import { scoreArticleHtml } from '../scoreArticleHtml';
 import { computeOverallContentScore } from '../ai/aiSearchScore';
 import type { ScoreData } from '../contentScore';
-import { buildIntentProfile, type ArticleIntentProfile } from './intentProfile';
+import { buildIntentProfile, type ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { filterCandidatesByIntent, filterPlanStepsByAction } from './intentGuard';
 import { buildEditCandidates } from './buildCandidates';
 import { buildPrecisionEditPlan, buildPrecisionStepPrompt, type PrecisionPlanStep } from './editPlan';
-import type { EditCandidate } from './editCandidate';
+import type { EditCandidate } from '@/src/core/domain/optimize/editCandidate';
 import { captureAoBaseline, htmlMatchesNormalized, type AoBaseline } from './aoBaseline';
 import { makeSnapshot, type AoDocumentSnapshot } from './aoSnapshot';
-import type { AoScores, ScoreAvailability, ScoreGatePolicy } from './aoScoreDelta';
-import { makeScoreDeltaSet, isOverallFlat, OVERALL_FLAT_EPSILON } from './aoScoreDelta';
+import type { AoScores, ScoreAvailability, ScoreGatePolicy } from '@/src/core/domain/optimize/aoScoreDelta';
+import { makeScoreDeltaSet, isOverallFlat, OVERALL_FLAT_EPSILON } from '@/src/core/domain/optimize/aoScoreDelta';
 import { createAoTrace, type AoTrace } from './aoTrace';
 import { buildCriticalContentMap, type CriticalContentMap } from './criticalContentMap';
 import { selectSectionTarget } from './sectionTargeting';
@@ -156,7 +156,7 @@ export function planPrecisionStepsV4(opts: {
   critical: CriticalContentMap;
   html: string;
   maxSteps?: number;
-  baseBudget?: import('./editBudget').EditBudget;
+  baseBudget?: import('@/src/core/domain/optimize/editBudget').EditBudget;
 }): PlanPrecisionResult {
   const sections = splitSections(opts.html);
   const guarded = filterCandidatesByIntent(opts.candidates, opts.profile);

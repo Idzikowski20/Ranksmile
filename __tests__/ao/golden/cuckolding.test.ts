@@ -5,15 +5,15 @@
  * P1.3 regression: AO must do the intended class of work (body SEO first),
  * not “FAQ wall → AI score ↑ → Article optimized”.
  */
-import { buildIntentProfile, textHitsForbidden } from '../../../lib/ao/intentProfile';
+import { buildIntentProfile, textHitsForbidden } from '@/src/core/domain/optimize/intentProfile';
 import { filterCandidatesByIntent } from '../../../lib/ao/intentGuard';
-import { makeCandidate } from '../../../lib/ao/editCandidate';
+import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 import { buildPrecisionEditPlan } from '../../../lib/ao/editPlan';
 import { runEditSafetyGate } from '../../../lib/ao/editSafetyGate';
-import { DEFAULT_EDIT_BUDGET } from '../../../lib/ao/editBudget';
+import { DEFAULT_EDIT_BUDGET } from '@/src/core/domain/optimize/editBudget';
 import { selectFaqQuestions, validateFaqHtmlStructure } from '../../../lib/aoFaqSection';
 import { chooseStrategyFromDiagnosis } from '../../../lib/ao/optimizationPolicy';
-import { resolveAoWorkOutcome, aoOutcomeUserMessage } from '../../../lib/ao/aoRunOutcome';
+import { resolveAoWorkOutcome, aoOutcomeUserMessage } from '@/src/core/domain/optimize/aoRunOutcome';
 import { selectSectionTarget } from '../../../lib/ao/sectionTargeting';
 import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
 import type { CriticalContentMap } from '../../../lib/ao/criticalContentMap';

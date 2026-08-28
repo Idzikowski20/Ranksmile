@@ -14,8 +14,8 @@ import {
 } from '../../../lib/wie/policyResolver';
 import { buildHeuristicReaderBrief } from '@/src/core/domain/wie/readerBrief';
 import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '../../../lib/ao/editPlan';
-import { makeCandidate } from '../../../lib/ao/editCandidate';
-import { buildIntentProfile } from '../../../lib/ao/intentProfile';
+import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 
 describe('WIE principles', () => {
   it('has durable answer_user_problem_first principle', () => {
