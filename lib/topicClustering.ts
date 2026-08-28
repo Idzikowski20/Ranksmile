@@ -3,7 +3,7 @@
  * Uses DeepSeek for cluster naming; deterministic logic for idea grouping and stats.
  */
 import { generateText } from 'ai';
-import { chatLlm, deepseek } from './ai/deepseek';
+import { chatLlm, deepseek } from '@/src/infrastructure/ai/deepseek';
 import { languageInstructionForLlm } from '@/src/core/shared/language';
 import { computeTopicalCohesion } from '@/src/core/domain/terms/contentEffort';
 import type {

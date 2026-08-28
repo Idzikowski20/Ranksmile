@@ -13,7 +13,7 @@ import { readContentSettings } from '../../../../lib/contentSettings';
 import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
-import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/ai/aiBudget';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { mergedPlannerQuestions } from '../../../../lib/coverageStore';
 import { resolveContentLocale } from '../../../../lib/domainLanguage';
 import { getErrorMessage } from '../../../../lib/errors';

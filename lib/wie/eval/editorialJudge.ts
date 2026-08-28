@@ -266,7 +266,7 @@ export async function runEditorialJudge(opts: {
       text = r.text;
       tokens = r.tokens;
     } else {
-      const { chatLlm } = await import('../../ai/deepseek');
+      const { chatLlm } = await import('@/src/infrastructure/ai/deepseek');
       type Llm = ReturnType<typeof chatLlm>;
       const tryOnce = async (llm: Llm) => {
         if (!llm.apiKey) return { ok: false as const, status: 0, reason: `${llm.keyEnv}_missing` };

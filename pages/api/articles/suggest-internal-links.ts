@@ -7,7 +7,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
-import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/ai/aiBudget';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
@@ -15,7 +15,7 @@ import { queryOne } from '../../../lib/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { chatLlm } from '../../../lib/ai/deepseek';
+import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
 export interface LinkSuggestion {
   anchorText: string;

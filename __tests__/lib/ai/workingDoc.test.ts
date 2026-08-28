@@ -1,6 +1,6 @@
 import {
   stripDataImages, restoreDataImages, stripSids, makeWorkingDoc, reindexSids, buildOutline, sanitizeFragment,
-} from '../../../lib/ai/workingDoc';
+} from '@/src/infrastructure/ai/workingDoc';
 
 describe('stripDataImages / restoreDataImages', () => {
   it('round-trips base64 image sources through placeholders', () => {

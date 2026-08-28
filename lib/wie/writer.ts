@@ -117,7 +117,7 @@ export async function wieLlmComplete(opts: {
     return opts.llmEdit(opts.userPrompt, system);
   }
 
-  const { chatLlm } = await import('../ai/deepseek');
+  const { chatLlm } = await import('@/src/infrastructure/ai/deepseek');
   const llm = chatLlm();
   if (!llm.apiKey) {
     throw new Error(`${llm.keyEnv} not configured`);

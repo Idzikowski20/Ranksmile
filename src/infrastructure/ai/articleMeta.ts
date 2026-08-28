@@ -1,8 +1,8 @@
-import { getArticleIdSql } from '../articles/articleSql';
-import { queryOne, queryRows, type ArticleRow } from '../db/query';
+import { getArticleIdSql } from '@/lib/articles/articleSql';
+import { queryOne, queryRows, type ArticleRow } from '@/lib/db/query';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
-import { parseJsonish } from '../types/json';
-import { getDomainLocale } from '../domainLanguage';
+import { parseJsonish } from '@/lib/types/json';
+import { getDomainLocale } from '@/lib/domainLanguage';
 
 export interface ArticleSeoMeta {
   domain: string;

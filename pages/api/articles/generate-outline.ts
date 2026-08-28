@@ -2,7 +2,7 @@
 // Generates a ready-to-use brief from competitor structures + brand + AI gaps.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
-import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/ai/aiBudget';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import type { CompetitorOutline } from '../../../components/articles/ResearchOutlinePanel';
 import { getErrorMessage } from '../../../lib/errors';
 import db from '../../../database/database';
@@ -17,7 +17,7 @@ import { safeJsonParse } from '../../../lib/safeJson';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { resolveContentLocale, languageDisplayName } from '../../../lib/domainLanguage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { chatLlm } from '../../../lib/ai/deepseek';
+import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
 type CachedOutlines = { competitors?: CompetitorOutline[] };
 

@@ -3,7 +3,7 @@
  * Never invents facts — only quotes from the article body.
  */
 import { generateText } from 'ai';
-import { deepseek, chatLlm } from '../ai/deepseek';
+import { deepseek, chatLlm } from '@/src/infrastructure/ai/deepseek';
 import { parseJsonish } from '../types/json';
 
 export type GapLocateInput = {

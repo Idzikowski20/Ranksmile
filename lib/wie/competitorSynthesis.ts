@@ -198,7 +198,7 @@ export async function buildCompetitorSynthesisFromCorpus(opts: {
     corpusTexts: excerpts,
   });
 
-  const { chatLlm } = await import('../ai/deepseek');
+  const { chatLlm } = await import('@/src/infrastructure/ai/deepseek');
   const llm = chatLlm();
   if (!llm.apiKey) return fallback;
 

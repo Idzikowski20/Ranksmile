@@ -6,7 +6,7 @@ import {
   type CoverageSnapshot,
   type CoverageTopicGroup,
 } from '@/src/core/domain/coverage/aiCoverage';
-import { deepseekJudge } from './ai/aiCoverageJudge';
+import { deepseekJudge } from '@/src/infrastructure/ai/aiCoverageJudge';
 import { analyzeIntroduction, deepseekIntroJudge } from './introductionAnalyzer';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 import { citationIntentItems } from './citationPrompts';

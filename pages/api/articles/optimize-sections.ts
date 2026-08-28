@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { chatLlm } from '../../../lib/ai/deepseek';
+import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
-import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '../../../lib/ai/aiTokenUsage';
+import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '@/src/infrastructure/ai/aiTokenUsage';
 import { splitSections, normalizeHtmlForDiff } from '../../../lib/articles/articleSections';
 import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
 import { buildWholeArticlePrompt } from '../../../lib/optimizeWholeArticle';
