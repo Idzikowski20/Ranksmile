@@ -88,7 +88,7 @@ describe('discoverRankingKeywords', () => {
   });
 
   it('prefers URL anchor as primary over off-topic GSC', async () => {
-    const { getOwnVisibleKeywords } = jest.requireMock('../../lib/seo/keywordData') as {
+    const { getOwnVisibleKeywords } = jest.requireMock('@/src/infrastructure/seo/keywordData') as {
       getOwnVisibleKeywords: jest.Mock;
     };
     getOwnVisibleKeywords.mockResolvedValueOnce({
