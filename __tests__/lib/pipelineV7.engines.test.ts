@@ -36,7 +36,7 @@ describe('pipeline v7 foundation', () => {
   it('registers all workers by default (PIPELINE_STAGE=5)', async () => {
     const prev = process.env.PIPELINE_STAGE;
     delete process.env.PIPELINE_STAGE;
-    const { listWorkers, getWorker, resetWorkerRegistry } = await import('../../lib/workers/registry');
+    const { listWorkers, getWorker, resetWorkerRegistry } = await import('@/src/infrastructure/workers/registry');
     resetWorkerRegistry();
     const ids = listWorkers().map((w) => w.id);
     expect(ids).toEqual(
@@ -52,7 +52,7 @@ describe('pipeline v7 foundation', () => {
   it('registers only Etap 0 workers when PIPELINE_STAGE=0', async () => {
     const prev = process.env.PIPELINE_STAGE;
     process.env.PIPELINE_STAGE = '0';
-    const { listWorkers, getWorker, resetWorkerRegistry } = await import('../../lib/workers/registry');
+    const { listWorkers, getWorker, resetWorkerRegistry } = await import('@/src/infrastructure/workers/registry');
     resetWorkerRegistry();
     const ids = listWorkers().map((w) => w.id).sort();
     expect(ids).toEqual(['coverage', 'live_score', 'serp']);

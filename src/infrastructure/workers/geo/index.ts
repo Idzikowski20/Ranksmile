@@ -1,4 +1,4 @@
-import type { PipelineWorker } from '../types';
+import type { PipelineWorker } from '@/src/infrastructure/workers/types';
 
 export const geoWorker: PipelineWorker = {
   id: 'geo',

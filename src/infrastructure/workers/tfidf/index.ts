@@ -1,4 +1,4 @@
-import type { PipelineWorker } from '../types';
+import type { PipelineWorker } from '@/src/infrastructure/workers/types';
 
 /** Lightweight TF-IDF term extraction from competitor texts (Node-side stub). */
 export const tfidfWorker: PipelineWorker = {

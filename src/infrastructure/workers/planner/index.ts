@@ -1,4 +1,4 @@
-import type { PipelineWorker } from '../types';
+import type { PipelineWorker } from '@/src/infrastructure/workers/types';
 
 export const plannerWorker: PipelineWorker = {
   id: 'planner',
@@ -13,7 +13,7 @@ export const plannerWorker: PipelineWorker = {
       ? (ctx.payload.actions as Parameters<typeof import('@/src/infrastructure/engines/planner').planActions>[0]['actions'])
       : [];
     const { planActions } = await import('@/src/infrastructure/engines/planner');
-    const { getFeatureStore } = await import('../../featureStore');
+    const { getFeatureStore } = await import('@/lib/featureStore');
 
     let features: Parameters<typeof planActions>[0]['features'] = [];
     try {

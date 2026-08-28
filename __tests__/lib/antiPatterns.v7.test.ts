@@ -6,7 +6,7 @@ import {
   isWorkerAllowedAtStage,
   parsePipelineStage,
 } from '@/src/infrastructure/pipeline/pipelineStage';
-import { resetWorkerRegistry, listWorkers, getWorker } from '../../lib/workers/registry';
+import { resetWorkerRegistry, listWorkers, getWorker } from '@/src/infrastructure/workers/registry';
 
 jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables', () => ({
   ensurePipelineJobsTables: jest.fn(async () => undefined),
@@ -137,7 +137,7 @@ describe('v7 anti-pattern guards', () => {
   describe('Corpus API — workers must not touch corpus tables directly', () => {
     it('workers and pipelineQueue do not SQL serp_corpora', () => {
       const files = [
-        ...walkTsFiles(path.join(ROOT, 'lib/workers')),
+        ...walkTsFiles(path.join(ROOT, 'src/infrastructure/workers')),
         path.join(ROOT, 'src/infrastructure/pipeline/pipelineQueue.ts'),
       ];
       const banned = [/serp_corpora/i, /INSERT\s+INTO\s+serp_/i, /FROM\s+serp_fingerprints/i];
@@ -154,7 +154,7 @@ describe('v7 anti-pattern guards', () => {
 
   describe('Worker → LLM only via Gateway', () => {
     it('workers do not call OpenAI/Anthropic/DeepSeek directly', () => {
-      const files = walkTsFiles(path.join(ROOT, 'lib/workers'));
+      const files = walkTsFiles(path.join(ROOT, 'src/infrastructure/workers'));
       const banned = [
         /api\.openai\.com/,
         /api\.deepseek\.com/,

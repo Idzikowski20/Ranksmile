@@ -1,4 +1,4 @@
-import type { PipelineWorker } from '../types';
+import type { PipelineWorker } from '@/src/infrastructure/workers/types';
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 
 /** Async NER worker — ENTITY coverage only; never from TF-IDF. */
@@ -33,7 +33,7 @@ export const nerWorker: PipelineWorker = {
 
     if (!raw.length) {
       try {
-        const { callSidecar } = await import('../../sidecar');
+        const { callSidecar } = await import('@/lib/sidecar');
         const resp = await callSidecar<{
           spans?: Array<{ text: string; label?: string; start?: number; end?: number; score?: number }>;
         }>(
