@@ -1,7 +1,7 @@
 /**
  * Topic Graph → Adaptive Outline + Section Budgets + Evidence/Freshness/Blocks.
  */
-import { h2FromWords } from './competitorBenchmark';
+import { h2FromWords } from '@/src/core/domain/contentPlanner/competitorBenchmark';
 import type {
   AdaptiveOutline,
   ArticleBlueprint,
@@ -23,7 +23,7 @@ import {
   orderSectionsFaqLast,
   titleizeH1,
   type OutlineLang,
-} from './sectionLabels';
+} from '@/src/core/domain/contentPlanner/sectionLabels';
 
 type TopicSeed = { role: string; heading: string; importance: number; reasonSummary?: string };
 

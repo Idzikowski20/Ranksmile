@@ -1,9 +1,9 @@
 /**
  * Budget Engine + Article Blueprint from Competitor Benchmark + Target KG.
  */
-import { h2FromWords } from './competitorBenchmark';
+import { h2FromWords } from '@/src/core/domain/contentPlanner/competitorBenchmark';
 import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
-import { localizedRequiredSections, type OutlineLang } from './sectionLabels';
+import { localizedRequiredSections, type OutlineLang } from '@/src/core/domain/contentPlanner/sectionLabels';
 import type {
   ArticleBlueprint,
   ArticleBudget,

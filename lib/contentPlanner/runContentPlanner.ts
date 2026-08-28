@@ -1,12 +1,12 @@
-import { buildIntentBlueprint } from './intentBlueprint';
-import { buildReaderModel } from './readerModel';
-import { buildCompetitorProfiles, type CompetitorRawInput } from './competitorIntelligence';
-import { buildCompetitorBenchmark, synthesizeCompetitors } from './competitorBenchmark';
+import { buildIntentBlueprint } from '@/src/core/domain/contentPlanner/intentBlueprint';
+import { buildReaderModel } from '@/src/core/domain/contentPlanner/readerModel';
+import { buildCompetitorProfiles, type CompetitorRawInput } from '@/src/core/domain/contentPlanner/competitorIntelligence';
+import { buildCompetitorBenchmark, synthesizeCompetitors } from '@/src/core/domain/contentPlanner/competitorBenchmark';
 import {
   applyPriorityOrder,
   buildTargetKnowledgeGraph,
   type AiSearchIntelInput,
-} from './knowledgeIntelligence';
+} from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
 import { buildArticleBlueprint } from './budgetEngine';
 import {
   assertBlueprintGate,
@@ -18,7 +18,7 @@ import {
   assembleArticle,
   buildSectionMemory,
   stubWriteSection,
-} from './sectionWriter';
+} from '@/src/core/domain/contentPlanner/sectionWriter';
 import {
   requiredCoverageRate,
   validateClaims,
@@ -26,13 +26,13 @@ import {
   validatePlanConformity,
   validateQuestions,
   validateSeoAgainstBlueprint,
-} from './validators/postWriteValidators';
+} from '@/src/core/domain/contentPlanner/postWriteValidators';
 import { buildRewritePlan, runKnowledgeCompletion } from './knowledgeCompletion';
 import { computeKnowledgeCoverage } from './knowledgeCoverage';
 import { buildArticleExecutionPlan } from './executionPlan';
 import { generateQuickAnswer } from './quickAnswer';
 import { validatePlanForWrite } from './validators/planValidators';
-import { titleizeH1 } from './sectionLabels';
+import { titleizeH1 } from '@/src/core/domain/contentPlanner/sectionLabels';
 import type {
   CompetitorBenchmark, ContentPlannerBundle, ValidationIssue, ValidationResult,
 } from '@/src/core/domain/contentPlanner/types';

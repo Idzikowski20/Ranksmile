@@ -4,7 +4,7 @@
  */
 import type { TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
 import type { IntentBlueprint } from '@/src/core/domain/contentPlanner/types';
-import { headingFillersFromCompetitors, isSeoMetaHeading } from './sectionLabels';
+import { headingFillersFromCompetitors, isSeoMetaHeading } from '@/src/core/domain/contentPlanner/sectionLabels';
 
 export type NarrativeSeed = {
   role: string;

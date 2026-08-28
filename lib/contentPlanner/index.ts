@@ -6,21 +6,21 @@ export { validateSemantic } from './knowledgePack/validateSemantic';
 export { validateRuntime } from './knowledgePack/validateRuntime';
 export { validateCompiledWritePlan } from './knowledgePack/validateCompiledWritePlan';
 export { compileWritePlan, compileAndValidateWritePlan } from './knowledgePack/compileWritePlan';
-export { buildIntentBlueprint } from './intentBlueprint';
-export { buildReaderModel } from './readerModel';
-export { buildCompetitorProfile, buildCompetitorProfiles } from './competitorIntelligence';
-export type { CompetitorRawInput } from './competitorIntelligence';
+export { buildIntentBlueprint } from '@/src/core/domain/contentPlanner/intentBlueprint';
+export { buildReaderModel } from '@/src/core/domain/contentPlanner/readerModel';
+export { buildCompetitorProfile, buildCompetitorProfiles } from '@/src/core/domain/contentPlanner/competitorIntelligence';
+export type { CompetitorRawInput } from '@/src/core/domain/contentPlanner/competitorIntelligence';
 export {
   synthesizeCompetitors,
   buildCompetitorBenchmark,
   h2FromWords,
-} from './competitorBenchmark';
+} from '@/src/core/domain/contentPlanner/competitorBenchmark';
 export {
   buildTargetKnowledgeGraph,
   applyPriorityOrder,
   classifyGain,
-} from './knowledgeIntelligence';
-export type { AiSearchIntelInput } from './knowledgeIntelligence';
+} from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
+export type { AiSearchIntelInput } from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
 export { buildArticleBudget, buildArticleBlueprint, inferFreshness } from './budgetEngine';
 export {
   validateBlueprint,
@@ -42,7 +42,7 @@ export {
   validateSeoAgainstBlueprint,
   validatePlanConformity,
   requiredCoverageRate,
-} from './validators/postWriteValidators';
+} from '@/src/core/domain/contentPlanner/postWriteValidators';
 export {
   buildAdaptiveOutline,
   improveOutline,
@@ -63,7 +63,7 @@ export {
   localizedRequiredSections,
   orderSectionsFaqLast,
   isSeoMetaHeading,
-} from './sectionLabels';
+} from '@/src/core/domain/contentPlanner/sectionLabels';
 export { validatePlannerPlan } from './plannerValidator';
 export type { PlannerValidateInput, PlannerValidateResult } from './plannerValidator';
 export {
@@ -72,7 +72,7 @@ export {
   humanizeSectionHtml,
   assembleArticle,
   stubWriteSection,
-} from './sectionWriter';
+} from '@/src/core/domain/contentPlanner/sectionWriter';
 export { buildRewritePlan, runKnowledgeCompletion } from './knowledgeCompletion';
 export { computeKnowledgeCoverage } from './knowledgeCoverage';
 export { buildArticleExecutionPlan, toSidecarExecutionPlan, hashExecutionPlanPayload } from './executionPlan';
@@ -89,4 +89,4 @@ export {
   aiIntelFromScoreData,
   parseCompetitorCacheJson,
 } from './fromArticleInputs';
-export { formatContentPlannerForPrompt } from './formatPrompt';
+export { formatContentPlannerForPrompt } from '@/src/core/domain/contentPlanner/formatPrompt';

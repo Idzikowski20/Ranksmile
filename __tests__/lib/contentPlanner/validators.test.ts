@@ -2,7 +2,7 @@ import {
   classifyGain,
   importanceFromGain,
   priorityFromGainAndImportance,
-} from '../../../lib/contentPlanner/knowledgeIntelligence';
+} from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
 import {
   validateBlueprint,
   validateBrief,
@@ -12,7 +12,7 @@ import {
   validateFlow,
   validateClaims,
   validateQuestions,
-} from '../../../lib/contentPlanner/validators/postWriteValidators';
+} from '@/src/core/domain/contentPlanner/postWriteValidators';
 import { buildRewritePlan } from '../../../lib/contentPlanner/knowledgeCompletion';
 import type { AdaptiveOutline, ArticleBlueprint, TargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/types';
 
