@@ -1,5 +1,5 @@
-import { optimizeNarrative } from '../../../lib/contentPlanner/narrativeOptimizer';
-import { validatePlannerPlan } from '../../../lib/contentPlanner/plannerValidator';
+import { optimizeNarrative } from '@/src/core/domain/contentPlanner/narrativeOptimizer';
+import { validatePlannerPlan } from '@/src/core/domain/contentPlanner/plannerValidator';
 import { runPlannerImproveLoop } from '../../../lib/contentPlanner/planningLoop';
 import type { IntentBlueprint, AdaptiveOutline, SectionBrief, TargetKnowledgeGraph, ArticleBlueprint } from '@/src/core/domain/contentPlanner/types';
 import type { TopicBlock } from '@/src/core/domain/knowledgeEngine/types';

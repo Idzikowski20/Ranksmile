@@ -7,7 +7,7 @@ import {
 import { buildCompetitorProfiles } from '@/src/core/domain/contentPlanner/competitorIntelligence';
 import { buildCompetitorBenchmark, synthesizeCompetitors } from '@/src/core/domain/contentPlanner/competitorBenchmark';
 import { buildTargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
-import { buildArticleBlueprint } from '../../../lib/contentPlanner/budgetEngine';
+import { buildArticleBlueprint } from '@/src/core/domain/contentPlanner/budgetEngine';
 import { buildIntentBlueprint } from '@/src/core/domain/contentPlanner/intentBlueprint';
 import { buildReaderModel } from '@/src/core/domain/contentPlanner/readerModel';
 import { heuristicCompetitorSynthesis } from '../../../lib/wie/competitorSynthesis';

@@ -21,7 +21,7 @@ export {
   classifyGain,
 } from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
 export type { AiSearchIntelInput } from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
-export { buildArticleBudget, buildArticleBlueprint, inferFreshness } from './budgetEngine';
+export { buildArticleBudget, buildArticleBlueprint, inferFreshness } from '@/src/core/domain/contentPlanner/budgetEngine';
 export {
   validateBlueprint,
   validateOutline,
@@ -56,16 +56,16 @@ export {
   assertBlueprintGate,
   runPlannerImproveLoop,
 } from './planningLoop';
-export { optimizeNarrative } from './narrativeOptimizer';
-export type { NarrativeSeed } from './narrativeOptimizer';
+export { optimizeNarrative } from '@/src/core/domain/contentPlanner/narrativeOptimizer';
+export type { NarrativeSeed } from '@/src/core/domain/contentPlanner/narrativeOptimizer';
 export {
   titleizeH1,
   localizedRequiredSections,
   orderSectionsFaqLast,
   isSeoMetaHeading,
 } from '@/src/core/domain/contentPlanner/sectionLabels';
-export { validatePlannerPlan } from './plannerValidator';
-export type { PlannerValidateInput, PlannerValidateResult } from './plannerValidator';
+export { validatePlannerPlan } from '@/src/core/domain/contentPlanner/plannerValidator';
+export type { PlannerValidateInput, PlannerValidateResult } from '@/src/core/domain/contentPlanner/plannerValidator';
 export {
   buildSectionMemory,
   formatSectionWriterPrompt,
@@ -73,8 +73,8 @@ export {
   assembleArticle,
   stubWriteSection,
 } from '@/src/core/domain/contentPlanner/sectionWriter';
-export { buildRewritePlan, runKnowledgeCompletion } from './knowledgeCompletion';
-export { computeKnowledgeCoverage } from './knowledgeCoverage';
+export { buildRewritePlan, runKnowledgeCompletion } from '@/src/core/domain/contentPlanner/knowledgeCompletion';
+export { computeKnowledgeCoverage } from '@/src/core/domain/contentPlanner/knowledgeCoverage';
 export { buildArticleExecutionPlan, toSidecarExecutionPlan, hashExecutionPlanPayload } from './executionPlan';
 export { applyApprovedOutlineToPlan, approvedOutlineWarnings, parseApprovedOutline } from './applyApprovedOutline';
 export type { ApprovedOutlineHeading } from './applyApprovedOutline';

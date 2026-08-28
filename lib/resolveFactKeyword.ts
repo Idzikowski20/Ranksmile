@@ -1,5 +1,5 @@
 import { keywordFromUrl } from './inferPageKeyword';
-import { factReadinessScore } from './factReadiness';
+import { factReadinessScore } from '@/src/core/domain/articles/factReadiness';
 import { seedTokens } from '@/src/core/domain/relevance/topicRelevance';
 
 /**

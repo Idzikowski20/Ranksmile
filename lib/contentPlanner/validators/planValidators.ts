@@ -1,7 +1,7 @@
 /**
  * Blueprint / Outline / Brief / Execution Plan validators — compiler gates.
  */
-import { computeKnowledgeCoverage } from '../knowledgeCoverage';
+import { computeKnowledgeCoverage } from '@/src/core/domain/contentPlanner/knowledgeCoverage';
 import type {
   AdaptiveOutline,
   ArticleBlueprint,

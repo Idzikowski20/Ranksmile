@@ -1,5 +1,5 @@
 import type { ArticleFact } from '@/src/core/domain/articles/factTypes';
-import { factReadinessScore } from '../factReadiness';
+import { factReadinessScore } from '@/src/core/domain/articles/factReadiness';
 import { DEFAULT_WEIGHTS, type ScoreFactor } from '@/src/core/domain/aiScore/factors';
 
 export type AiCitation = {
