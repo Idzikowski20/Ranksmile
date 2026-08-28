@@ -1,0 +1,43 @@
+lib/ao/editPlan.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 10-11
+__tests__/lib/wie/competitorSynthesis.test.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 7
+lib/wie/narrativePlanner.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 6
+lib/ao/runPrecisionOptimize.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 44
+__tests__/lib/wie/policyResolver.test.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 1,15
+lib/wie/patternDiscovery.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 10
+lib/articles/articleContext.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 15
+lib/wie/policyResolver.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 12-13
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 898
+lib/wie/brandDnaOnboarding.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 9
+lib/wie/patternStore.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 8
+lib/wie/eval/runEvalSuite.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 15
+lib/wie/writerContext.ts
+  s_e3556ba0769b4b::t_90bd164f1b8cd2 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8f3354e1d3f82df73e087ee0f21683e6e667215f",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
