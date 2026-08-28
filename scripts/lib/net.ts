@@ -79,12 +79,17 @@ export async function pgReady(url: string, timeoutMs = 3000): Promise<boolean> {
   }
 }
 
-/** Poll `check` until it passes; throws once `maxMs` elapses. */
+/**
+ * Poll `check` until it passes; throws once `maxMs` elapses.
+ * Default is generous: a cold `npm run dev` compiles every pane through npx/tsx at
+ * once and Next chews 16k modules, so sibling services can need minutes to appear —
+ * a 60s cap killed the auth pane before dev-postgres even launched its binary.
+ */
 export async function waitUntilReady(
   label: string,
   what: string,
   check: () => Promise<boolean>,
-  maxMs = 60_000,
+  maxMs = 300_000,
 ): Promise<void> {
   const started = Date.now();
   for (;;) {
