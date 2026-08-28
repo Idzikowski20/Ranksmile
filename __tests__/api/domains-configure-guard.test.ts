@@ -17,7 +17,7 @@ jest.mock('../../lib/tenancy', () => ({
 jest.mock('../../lib/workspaces', () => ({
   getWorkspace: jest.fn().mockResolvedValue({ id: 123, status: 'setup' }),
 }));
-jest.mock('../../lib/gsc/gscProperty', () => ({ mergeGscProperty: jest.fn() }));
+jest.mock('@/src/core/domain/gsc/gscProperty', () => ({ mergeGscProperty: jest.fn() }));
 
 import db from '../../database/database';
 import Domain from '../../database/models/domain';

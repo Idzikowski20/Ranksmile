@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import type { BillingSnapshot } from '../../lib/billing/buildBillingSnapshot';
-import type { BillingErrorBody } from '../../lib/billing/billingErrors';
+import type { BillingErrorBody } from '@/src/core/domain/billing/errors';
 import type {
   PaymentMethodRole,
   PaymentMethodViewModel,
