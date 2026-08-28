@@ -8,7 +8,7 @@ import {
   predictCalibrated,
   type CalibrationModel,
 } from '../engines/calibration';
-import type { PlannerSignal } from '../engines/corpusDiff';
+import type { PlannerSignal } from '@/src/core/domain/engines/corpusDiff';
 
 export type LearningUpdate = {
   calibration: CalibrationModel;

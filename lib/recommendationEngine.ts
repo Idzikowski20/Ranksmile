@@ -3,7 +3,7 @@
 // buildInstruction (checklist-style instruction synthesis), and effortOf (effort heuristic).
 import type { CoverageItem, CoverageSnapshot, CoverageType, Importance } from '@/src/core/domain/coverage/aiCoverage';
 import type { ArticleContext } from './articles/articleContext';
-import { scoreContribution } from './coverage/derived/scoreContribution';
+import { scoreContribution } from '@/src/core/domain/coverage/scoreContribution';
 import { isNewRecommendationsEnabled } from './featureFlags';
 
 export type GuidelineGroupKey = 'intent' | 'knowledge' | 'authority' | 'quality' | 'structure';

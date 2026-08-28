@@ -8,7 +8,7 @@ import type {
   TargetKnowledgeGraph,
   TargetQuestion,
 } from '@/src/core/domain/contentPlanner/types';
-import { KNOWLEDGE_CONSENSUS_MIN } from './constants';
+import { KNOWLEDGE_CONSENSUS_MIN } from '@/src/core/domain/knowledgeEngine/constants';
 import type { CanonicalClaim, KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 
 function gainFromConsensus(c: number): GainClass {

@@ -3,11 +3,11 @@ import { QUEUE_PRIORITY, PIPELINE_VERSION } from '@/src/core/domain/pipeline/que
 import { termWeight, weightedTermCoverageRatio } from '@/src/core/domain/terms/termWeight';
 import { computeMultiScore } from '@/src/core/domain/engines/multiScore';
 import { runCoverageEngine } from '../../lib/engines/coverageEngine';
-import { runGapEngine } from '../../lib/engines/gapEngine';
+import { runGapEngine } from '@/src/core/domain/engines/gapEngine';
 import { runRecommendationEngine } from '../../lib/engines/gapToReco';
 import { planActions } from '../../lib/engines/planner';
 import { fitCalibration, predictCalibrated, extractFeatureVector } from '../../lib/engines/calibration';
-import { diffCorpora } from '../../lib/engines/corpusDiff';
+import { diffCorpora } from '@/src/core/domain/engines/corpusDiff';
 import { serpChangeRatio, shouldForceRefresh } from '@/src/core/domain/corpus/serpChange';
 import { resolveEntities, heuristicNerExtract } from '../../lib/entities/entityResolver';
 import { bm25Rank, assignHarvestToSections } from '@/src/core/domain/search/bm25';
@@ -15,7 +15,7 @@ import { extractKeybertTerms } from '@/src/core/domain/semantic/keybert';
 import { hashEmbed, cosineSim, findEmbeddingGaps } from '@/src/core/domain/semantic/embeddings';
 import { computeGeoCues, geoPromptBlock } from '@/src/core/domain/geo/geoCues';
 import { runLearningLoop } from '../../lib/learning/learningLoopCore';
-import { curateConceptsFromTerms } from '../../lib/coverage/curateConcepts';
+import { curateConceptsFromTerms } from '@/src/core/domain/coverage/curateConcepts';
 import { informationGain } from '@/src/core/domain/engines/evidence';
 import { detectResearchGaps } from '../../lib/engines/gapDetection';
 

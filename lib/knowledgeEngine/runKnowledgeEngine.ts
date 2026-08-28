@@ -2,7 +2,7 @@ import { buildCompetitorDocuments } from './competitorDocument';
 import { extractRawKnowledge, isNonClaimSentence, normalizeCandidates } from './extract';
 import { canonicalizeClaims, sentencesToCanonicalizeInputs } from './canonicalize';
 import { normalizeClaims, type ClaimCompletion } from './normalizeClaims';
-import { dropCompetitorBrandClaims } from './competitorBrands';
+import { dropCompetitorBrandClaims } from '@/src/core/domain/knowledgeEngine/competitorBrands';
 import { voteClaims } from './vote';
 import { buildTopicBlocks, discoverGaps } from './cluster';
 import { buildKnowledgeGraph, voteEntities } from './buildGraph';

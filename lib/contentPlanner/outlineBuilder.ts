@@ -16,7 +16,7 @@ import type {
   TargetKnowledgeGraph,
 } from '@/src/core/domain/contentPlanner/types';
 import type { NarrativeSeed } from './narrativeOptimizer';
-import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
+import { MAX_CLAIMS_PER_SECTION } from '@/src/core/domain/knowledgeEngine/constants';
 import {
   headingFillersFromCompetitors,
   isTailSectionRole,

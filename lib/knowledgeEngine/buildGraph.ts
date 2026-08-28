@@ -1,4 +1,4 @@
-import { KNOWLEDGE_SCHEMA_VERSION } from './constants';
+import { KNOWLEDGE_SCHEMA_VERSION } from '@/src/core/domain/knowledgeEngine/constants';
 import type {
   CanonicalClaim,
   KnowledgeEntityVote,
