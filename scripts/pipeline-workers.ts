@@ -22,7 +22,7 @@ dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env.development' });
 dotenv.config({ path: '.env' });
 
-async function waitForRedis(url: string, maxMs = 60_000): Promise<void> {
+async function waitForRedis(url: string, maxMs = 300_000): Promise<void> {
   const { host, port } = parseRedisUrl(url);
   await waitUntilReady('pipeline-workers', `Redis ${host}:${port}`, () => tcpOpen(host, port), maxMs);
 }
@@ -32,7 +32,7 @@ async function waitForRedis(url: string, maxMs = 60_000): Promise<void> {
  * foreign listener on 5432) accepts connections long before it can serve queries,
  * and workers that proceed then die on their first Sequelize call.
  */
-async function waitForPostgres(url: string, maxMs = 60_000): Promise<void> {
+async function waitForPostgres(url: string, maxMs = 300_000): Promise<void> {
   const { host, port } = parsePgUrl(url);
   await waitUntilReady('pipeline-workers', `Postgres ${host}:${port}`, () => pgReady(url), maxMs);
 }
