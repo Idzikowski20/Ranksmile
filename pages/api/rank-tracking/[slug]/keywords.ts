@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '../../../../lib/errors';
-import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { isRankTrackingRunnerEnabled } from '../../../../lib/featureFlags';
-import { addKeywords, getConfig, listKeywords, removeKeywords, triggerManualCheck } from '../../../../lib/rankTracking/service';
-import { MAX_KEYWORDS_PER_CONFIG } from '../../../../lib/rankTracking/cost';
+import { addKeywords, getConfig, listKeywords, removeKeywords, triggerManualCheck } from '@/src/infrastructure/rankTracking/service';
+import { MAX_KEYWORDS_PER_CONFIG } from '@/src/infrastructure/rankTracking/cost';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

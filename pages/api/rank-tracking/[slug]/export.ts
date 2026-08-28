@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '../../../../lib/errors';
-import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
-import { exportRankRows } from '../../../../lib/rankTracking/exporter';
-import { getConfig, getResults } from '../../../../lib/rankTracking/service';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
+import { exportRankRows } from '@/src/infrastructure/rankTracking/exporter';
+import { getConfig, getResults } from '@/src/infrastructure/rankTracking/service';
 import type { ComparePeriod, ExportFormat } from '../../../../lib/types/rankTracking';
 import { devicesList } from '../../../../lib/types/rankTracking';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';

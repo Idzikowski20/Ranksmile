@@ -1,4 +1,4 @@
-import db from '../../database/database';
+import db from '@/database/database';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import type {
   RankCheckRunRow,
@@ -7,12 +7,12 @@ import type {
   RankTrackingConfigRow,
   RankTrackingKeywordRow,
   ScheduleInterval,
-} from '../types/rankTracking';
-import { devicesList, normalizeKeyword } from '../types/rankTracking';
-import { MAX_KEYWORDS_PER_CONFIG, STALE_RUN_SECS } from './cost';
-import { SERP_PROVIDER, SERP_PROVIDER_VERSION } from './constants';
-import { computeNextCheckAt, isScheduledInterval } from './schedule';
-import { providerResponseHash } from './providerHash';
+} from '@/lib/types/rankTracking';
+import { devicesList, normalizeKeyword } from '@/lib/types/rankTracking';
+import { MAX_KEYWORDS_PER_CONFIG, STALE_RUN_SECS } from '@/src/infrastructure/rankTracking/cost';
+import { SERP_PROVIDER, SERP_PROVIDER_VERSION } from '@/src/infrastructure/rankTracking/constants';
+import { computeNextCheckAt, isScheduledInterval } from '@/src/infrastructure/rankTracking/schedule';
+import { providerResponseHash } from '@/src/infrastructure/rankTracking/providerHash';
 
 const isPg = !!process.env.DATABASE_URL;
 

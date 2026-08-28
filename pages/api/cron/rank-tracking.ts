@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ensureRankTrackingTables } from '@/src/infrastructure/persistence/schema/ensureRankTrackingTables';
 import { isRankTrackingRunnerEnabled } from '../../../lib/featureFlags';
-import { enqueueScheduledChecks } from '../../../lib/rankTracking/service';
-import { ensureSnapshotPartitionsAhead } from '../../../lib/rankTracking/partitions';
-import { reclaimStaleRuns } from '../../../lib/rankTracking/repository';
+import { enqueueScheduledChecks } from '@/src/infrastructure/rankTracking/service';
+import { ensureSnapshotPartitionsAhead } from '@/src/infrastructure/rankTracking/partitions';
+import { reclaimStaleRuns } from '@/src/infrastructure/rankTracking/repository';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';

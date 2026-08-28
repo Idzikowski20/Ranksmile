@@ -1,4 +1,4 @@
-import type { ScheduleInterval } from '../types/rankTracking';
+import type { ScheduleInterval } from '@/lib/types/rankTracking';
 
 type ScheduledInterval = Exclude<ScheduleInterval, 'manual'>;
 

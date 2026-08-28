@@ -1,7 +1,7 @@
-import type { ComparePeriod, RankAnalyticsSummary, RankTrackingRow } from '../types/rankTracking';
-import { buildRankResultsPage } from './results';
-import type { RankTrackingConfigRow } from '../types/rankTracking';
-import { ANALYTICS_VERSION } from './constants';
+import type { ComparePeriod, RankAnalyticsSummary, RankTrackingRow } from '@/lib/types/rankTracking';
+import { buildRankResultsPage } from '@/src/infrastructure/rankTracking/results';
+import type { RankTrackingConfigRow } from '@/lib/types/rankTracking';
+import { ANALYTICS_VERSION } from '@/src/infrastructure/rankTracking/constants';
 import {
   activeRankDevice,
   exclusiveVisibilityPercents,
@@ -13,7 +13,7 @@ import {
   getLatestSummary,
   listSummaryChartPoints,
   summaryRowToAnalytics,
-} from './summaryStore';
+} from '@/src/infrastructure/rankTracking/summaryStore';
 
 function primaryDelta(row: RankTrackingRow, device: 'desktop' | 'mobile'): number {
   const r = pickDeviceResult(row, device);

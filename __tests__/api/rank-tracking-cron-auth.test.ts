@@ -1,11 +1,11 @@
 jest.mock('@/src/infrastructure/persistence/schema/ensureRankTrackingTables', () => ({ ensureRankTrackingTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/featureFlags', () => ({ isRankTrackingRunnerEnabled: jest.fn().mockReturnValue(true) }));
-jest.mock('../../lib/rankTracking/service', () => ({ enqueueScheduledChecks: jest.fn().mockResolvedValue(0) }));
-jest.mock('../../lib/rankTracking/partitions', () => ({
+jest.mock('@/src/infrastructure/rankTracking/service', () => ({ enqueueScheduledChecks: jest.fn().mockResolvedValue(0) }));
+jest.mock('@/src/infrastructure/rankTracking/partitions', () => ({
   ensureSnapshotPartitionsAhead: jest.fn().mockResolvedValue(undefined),
   pruneOldSnapshotPartitions: jest.fn().mockResolvedValue(0),
 }));
-jest.mock('../../lib/rankTracking/repository', () => ({ reclaimStaleRuns: jest.fn().mockResolvedValue(0) }));
+jest.mock('@/src/infrastructure/rankTracking/repository', () => ({ reclaimStaleRuns: jest.fn().mockResolvedValue(0) }));
 jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { query: jest.fn().mockResolvedValue([[], null]), sync: jest.fn() },

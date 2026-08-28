@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '../../../../lib/errors';
 import { loadOrganicKeywordPositionHistory } from '@/src/infrastructure/organicResearch/keywordHistory';
-import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
