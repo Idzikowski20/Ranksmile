@@ -6,7 +6,7 @@ import WizardShell, { WizardNextButton, WizardBackButton } from '../../component
 import { Switch } from '../../components/koala/core';
 import { saveWizardState, clearWizardState } from '../../lib/wizardState';
 import { useArticle } from '../../services/article';
-import { articleOutlineReviewHref } from '../../lib/articles/articleFlow';
+import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
 
 const WritingModePage: NextPage = () => {
   const router = useRouter();

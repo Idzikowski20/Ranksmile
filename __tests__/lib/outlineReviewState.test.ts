@@ -1,6 +1,6 @@
 import { isOutlineAwaitingReview } from '../../lib/outlineReviewState';
 import { reviewOutlineToHtml } from '../../lib/contentPlanner/reviewOutline';
-import { resolveArticleEntry } from '../../lib/articles/articleFlow';
+import { resolveArticleEntry } from '@/src/core/domain/articles/articleFlow';
 
 const OUTLINE = reviewOutlineToHtml([
   { level: 1, text: 'Prywatny detektyw Warszawa – licencjonowana agencja' },
