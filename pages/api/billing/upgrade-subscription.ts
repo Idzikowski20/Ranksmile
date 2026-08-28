@@ -5,7 +5,7 @@ import {
   assertCanUpgradeSubscription,
   applySubscriptionUpgrade,
   resolveUpgradePriceId,
-} from '../../../lib/billing/billingUpgrade';
+} from '@/src/infrastructure/billing/billingUpgrade';
 import { assertCanManage } from '../../../lib/members';
 import { getOrgBillingState } from '../../../lib/orgBilling';
 import { getStripe } from '../../../lib/stripe';

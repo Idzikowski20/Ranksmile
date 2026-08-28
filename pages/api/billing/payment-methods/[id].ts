@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { billingError } from '@/src/core/domain/billing/errors';
 import {
   appendBillingDomainEvent,
-} from '../../../../lib/billing/domainEvents';
-import { deletePaymentMethod } from '../../../../lib/billing/paymentMethodService';
+} from '@/src/infrastructure/billing/domainEvents';
+import { deletePaymentMethod } from '@/src/infrastructure/billing/paymentMethodService';
 import { assertCanManage } from '../../../../lib/members';
 import { getOrgBillingState } from '../../../../lib/orgBilling';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';

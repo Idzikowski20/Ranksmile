@@ -24,11 +24,11 @@ jest.mock('../../../lib/orgBilling', () => ({
   })),
 }));
 
-jest.mock('../../../lib/billing/billingInvoices', () => ({
+jest.mock('@/src/infrastructure/billing/billingInvoices', () => ({
   listOrgBillingInvoices: jest.fn(async () => []),
 }));
 
-import { buildBillingSnapshot, BILLING_SNAPSHOT_SCHEMA_VERSION } from '../../../lib/billing/buildBillingSnapshot';
+import { buildBillingSnapshot, BILLING_SNAPSHOT_SCHEMA_VERSION } from '@/src/infrastructure/billing/buildBillingSnapshot';
 
 describe('buildBillingSnapshot envelope', () => {
   it('returns schemaVersion, generatedAt, etag, payment_method_count', async () => {

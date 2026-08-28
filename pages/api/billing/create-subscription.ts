@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
-import { cancelDanglingCheckouts } from '../../../lib/billing/billingActivateTrial';
-import { BillingSource, emitBillingEvent } from '../../../lib/billing/billingAudit';
+import { cancelDanglingCheckouts } from '@/src/infrastructure/billing/billingActivateTrial';
+import { BillingSource, emitBillingEvent } from '@/src/infrastructure/billing/billingAudit';
 import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '@/src/core/domain/billing/planLock';
-import { assertTrialAllowed } from '../../../lib/billing/billingTrial';
+import { assertTrialAllowed } from '@/src/infrastructure/billing/billingTrial';
 import { getOrgBillingState, updateOrgBillingState } from '../../../lib/orgBilling';
 import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';

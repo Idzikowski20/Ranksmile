@@ -1,4 +1,4 @@
-import type { SubscriptionStatus } from '../orgBilling';
+import type { SubscriptionStatus } from '@/lib/orgBilling';
 
 /** Statuses that require at least one usable payment method. */
 export const BILLING_PM_LOCKED_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([

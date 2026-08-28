@@ -1,5 +1,5 @@
 import type { Transaction } from 'sequelize';
-import db from '../../database/database';
+import db from '@/database/database';
 import { ensureBillingEmailTables } from '@/src/infrastructure/persistence/schema/ensureBillingEmailTables';
 import { ensureNotificationEmailTables } from '@/src/infrastructure/persistence/schema/ensureNotificationEmailTables';
 import {

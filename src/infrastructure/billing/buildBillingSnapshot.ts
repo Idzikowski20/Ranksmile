@@ -1,15 +1,15 @@
 import { createHash } from 'crypto';
 import type Stripe from 'stripe';
-import { listOrgBillingInvoices, type BillingInvoice } from './billingInvoices';
-import { getOrgBillingState, type SubscriptionStatus } from '../orgBilling';
-import { getStripe, isStripeConfigured } from '../stripe';
+import { listOrgBillingInvoices, type BillingInvoice } from '@/src/infrastructure/billing/billingInvoices';
+import { getOrgBillingState, type SubscriptionStatus } from '@/lib/orgBilling';
+import { getStripe, isStripeConfigured } from '@/lib/stripe';
 import {
   listBillingDomainEvents,
   projectTimeline,
   type TimelineItem,
-} from './domainEvents';
-import { listPaymentMethods } from './paymentMethodService';
-import type { PaymentMethodViewModel } from './paymentMethodViewModel';
+} from '@/src/infrastructure/billing/domainEvents';
+import { listPaymentMethods } from '@/src/infrastructure/billing/paymentMethodService';
+import type { PaymentMethodViewModel } from '@/src/infrastructure/billing/paymentMethodViewModel';
 
 export const BILLING_SNAPSHOT_SCHEMA_VERSION = 1;
 

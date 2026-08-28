@@ -1,12 +1,12 @@
 import type Stripe from 'stripe';
-import type { SubscriptionStatus } from '../orgBilling';
-import { BillingPolicy } from './billingPolicy';
+import type { SubscriptionStatus } from '@/lib/orgBilling';
+import { BillingPolicy } from '@/src/infrastructure/billing/billingPolicy';
 import { billingError, type BillingErrorBody } from '@/src/core/domain/billing/errors';
-import { chooseReplacement } from './chooseReplacement';
+import { chooseReplacement } from '@/src/infrastructure/billing/chooseReplacement';
 import type {
   PaymentMethodRole,
   PaymentMethodViewModel,
-} from './paymentMethodViewModel';
+} from '@/src/infrastructure/billing/paymentMethodViewModel';
 
 function pmId(ref: string | Stripe.PaymentMethod | null | undefined): string | null {
   if (!ref) return null;

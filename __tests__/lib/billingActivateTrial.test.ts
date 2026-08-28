@@ -1,8 +1,8 @@
 import type Stripe from 'stripe';
-import { activateTrialFromSetupIntent } from '../../lib/billing/billingActivateTrial';
+import { activateTrialFromSetupIntent } from '@/src/infrastructure/billing/billingActivateTrial';
 import { syncSubscriptionToOrg } from '../../lib/stripeBillingSync';
 import { claimTrialActivation, updateOrgBillingState } from '../../lib/orgBilling';
-import { appendBillingDomainEvent } from '../../lib/billing/domainEvents';
+import { appendBillingDomainEvent } from '@/src/infrastructure/billing/domainEvents';
 
 jest.mock('../../lib/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => ({ trialConsumedAt: null })),
@@ -10,7 +10,7 @@ jest.mock('../../lib/orgBilling', () => ({
   updateOrgBillingState: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/billing/billingAudit', () => ({
+jest.mock('@/src/infrastructure/billing/billingAudit', () => ({
   BillingSource: {
     ACTIVATE_TRIAL: 'ACTIVATE_TRIAL',
     WEBHOOK_SETUP: 'WEBHOOK_SETUP',
@@ -26,7 +26,7 @@ jest.mock('../../lib/stripeBillingSync', () => ({
   syncSubscriptionToOrg: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/billing/domainEvents', () => ({
+jest.mock('@/src/infrastructure/billing/domainEvents', () => ({
   appendBillingDomainEvent: jest.fn(async () => undefined),
 }));
 

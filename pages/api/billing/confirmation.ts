@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getBillingConfirmation } from '../../../lib/billing/billingConfirmation';
-import { verifyBillingConfirmationToken } from '../../../lib/billing/billingConfirmationToken';
+import { getBillingConfirmation } from '@/src/infrastructure/billing/billingConfirmation';
+import { verifyBillingConfirmationToken } from '@/src/infrastructure/billing/billingConfirmationToken';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';

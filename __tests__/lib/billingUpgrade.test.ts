@@ -5,7 +5,7 @@ import {
   isAllowedSubscriptionChange,
   isPaidPlanUpgrade,
   planRank,
-} from '../../lib/billing/billingUpgrade';
+} from '@/src/infrastructure/billing/billingUpgrade';
 import type { OrgBillingState } from '../../lib/orgBilling';
 
 describe('billingUpgrade helpers', () => {

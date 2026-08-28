@@ -1,5 +1,5 @@
 import db from '@/database/database';
-import { BillingSource } from '@/lib/billing/billingAudit';
+import { BillingSource } from '@/src/infrastructure/billing/billingAudit';
 import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ensureBillingTables';
 import {
   getOrgBillingState,

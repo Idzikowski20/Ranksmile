@@ -10,7 +10,7 @@ export type {
   BillingInvoiceLine,
   BillingInvoiceStatus,
   InvoiceDateGroup,
-} from '../../src/core/domain/billing/invoice';
-export { groupInvoicesByDate, mapInvoiceStatus } from '../../src/core/domain/billing/invoice';
-export { mapStripeInvoice, formatPaymentMethodLabel } from '../../src/infrastructure/billing/stripe/stripeInvoiceMapper';
-export { listOrgBillingInvoices } from '../../src/composition/billing';
+} from '@/src/core/domain/billing/invoice';
+export { groupInvoicesByDate, mapInvoiceStatus } from '@/src/core/domain/billing/invoice';
+export { mapStripeInvoice, formatPaymentMethodLabel } from '@/src/infrastructure/billing/stripe/stripeInvoiceMapper';
+export { listOrgBillingInvoices } from '@/src/composition/billing';

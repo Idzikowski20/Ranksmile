@@ -5,15 +5,15 @@ import {
   BillingSource,
   emitBillingEvent,
   ensureCorrelationId,
-} from './billingAudit';
+} from '@/src/infrastructure/billing/billingAudit';
 import {
   appendBillingDomainEvent,
   type BillingDomainEventSource,
-} from './domainEvents';
-import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from './billingTrial';
-import { claimTrialActivation, getOrgBillingState, updateOrgBillingState } from '../orgBilling';
+} from '@/src/infrastructure/billing/domainEvents';
+import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from '@/src/infrastructure/billing/billingTrial';
+import { claimTrialActivation, getOrgBillingState, updateOrgBillingState } from '@/lib/orgBilling';
 import { getStripePriceId, type PlanSlug } from '@/src/core/domain/billing/prices';
-import { syncSubscriptionToOrg } from '../stripeBillingSync';
+import { syncSubscriptionToOrg } from '@/lib/stripeBillingSync';
 
 export type ActivateTrialResult =
   | { ok: true; subscriptionId: string }
