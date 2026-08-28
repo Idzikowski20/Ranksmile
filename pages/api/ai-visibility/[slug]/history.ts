@@ -9,7 +9,7 @@ import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTabl
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows } from '../../../../lib/db/query';
 import { loadScanCitationRowsForScans } from '../../../../lib/aiVisibility/aiVisibilityRead';
-import { overviewForDomain } from '../../../../lib/aiVisibility/aiVisibilityMetrics';
+import { overviewForDomain } from '@/src/core/domain/aiVisibility/metrics';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 const HISTORY_LIMIT = 24;
