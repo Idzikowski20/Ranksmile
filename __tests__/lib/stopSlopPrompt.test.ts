@@ -1,4 +1,4 @@
-import { STOP_SLOP_RULES, withStopSlop } from '../../lib/stopSlopPrompt';
+import { STOP_SLOP_RULES, withStopSlop } from '@/src/core/domain/optimize/stopSlopPrompt';
 import { buildStepPrompt } from '../../lib/optimizationPlanner';
 import type { PlanStep } from '../../lib/optimizationPlanner';
 import type { ArticleContext } from '../../lib/articles/articleContext';

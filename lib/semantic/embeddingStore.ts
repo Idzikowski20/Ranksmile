@@ -2,7 +2,7 @@
  * Persist embedding vectors (JSON fallback when pgvector unavailable).
  */
 import db from '../../database/database';
-import { hashEmbed, pgvectorResearchNotes } from '../semantic/embeddings';
+import { hashEmbed, pgvectorResearchNotes } from '@/src/core/domain/semantic/embeddings';
 
 let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;

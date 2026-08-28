@@ -7,7 +7,7 @@ import { assignGuidelinesToSections } from './optimizeGuidelineRouting';
 import { countOccurrences } from './contentScore';
 import { selectOptimizeMode, type OptimizeMode, SEO_READY, AI_GAP } from './optimizeMode';
 import type { OptimizePhase } from '@/src/core/domain/optimize/runPhase';
-import { STOP_SLOP_RULES } from './stopSlopPrompt';
+import { STOP_SLOP_RULES } from '@/src/core/domain/optimize/stopSlopPrompt';
 
 export type { RoutedGuideline } from './optimizeGuidelineRouting';
 

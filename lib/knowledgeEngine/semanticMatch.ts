@@ -1,4 +1,4 @@
-import { cosineSim } from '../semantic/embeddings';
+import { cosineSim } from '@/src/core/domain/semantic/embeddings';
 import type { EmbeddingProvider } from './embeddingProvider';
 import { getEmbeddingProvider } from './embeddingProvider';
 

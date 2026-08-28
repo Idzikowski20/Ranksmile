@@ -10,7 +10,7 @@ import type { EditMode, StepFocus } from './optimizationPlanner';
 import { buildEffortOptimizeGuidance } from '@/src/core/domain/terms/contentEffort';
 import { buildWhatsMissingOptimizeGuidance } from './contentScore';
 import { countOccurrences } from '@/src/core/domain/terms/termMatch';
-import { STOP_SLOP_RULES } from './stopSlopPrompt';
+import { STOP_SLOP_RULES } from '@/src/core/domain/optimize/stopSlopPrompt';
 import { isUncoveredAiSearchItem } from '@/src/core/domain/coverage/aiCoverage';
 
 export { computeMissingTerms, computeOverusedTerms } from './optimizeSectionEdit';
