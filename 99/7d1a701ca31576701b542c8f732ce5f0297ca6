@@ -1,0 +1,277 @@
+lib/organicResearch/gscProvider.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+lib/auditRunner.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 10
+pages/api/articles/[id]/ccm/index.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12-13
+pages/api/audit.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+pages/api/keyword-research/[slug]/status.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 6
+pages/api/articles/content-effort.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+components/articles/RanksmileChatPanel.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+pages/api/site-context/[id].ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 9
+src/infrastructure/siteAudit/buildPageReport.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+src/infrastructure/aiVisibility/aiVisibilityBrands.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 9
+components/auth/EmailSignInForm.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 4
+pages/api/ai-visibility/[slug]/scan.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 8
+components/auth/EmailOtpForm.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+pages/api/ai-visibility/internal/run-chunk.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 10
+lib/autopilot.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 10
+pages/api/articles/backfill.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+__tests__/api/ai-vis-generate-prompts-singleflight.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 9,30
+pages/api/articles/index.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 14
+components/auth/ResetPasswordForm.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 4
+src/infrastructure/aiVisibility/aiVisibilityScan.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 14
+pages/api/keyword-research/[slug]/[id].ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+__tests__/api/article-helper-guards.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 10,25
+lib/rankTracking/results.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+pages/api/articles/social-posts.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+__tests__/api/articles-ai-readability-coverage.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 11,17
+lib/llmCoverageQuestions.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 8
+src/infrastructure/siteAudit/crawlSnapshot.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 3
+components/dashboard/RecentlyEdited.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 10
+lib/stripeBillingReconcile.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 8
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 57
+__tests__/lib/articleKeywordDiscovery.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 10
+pages/wordpress/connect.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 18
+pages/api/cron.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+lib/orgBilling.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 13
+pages/api/articles/ai-visibility.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+__tests__/lib/growthPipeline.integration.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 11-12
+__tests__/lib/runStarterNudgeCron.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 14,36
+components/koala/shell/SidebarUserFooter.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 4
+src/infrastructure/email/runStarterNudgeCron.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 9
+lib/queueRunner.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+lib/competitorScan.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+lib/rankTracking/keywordMetricsCache.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+pages/api/ai-visibility/[slug]/history.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 10
+pages/api/articles/[id]/comments.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 14
+src/infrastructure/db/query.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1-93
+lib/intelligence/compileAfterArticleChange.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 60
+lib/rankTracking/snapshotQueries.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+lib/intelligence/sqlCompileStore.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+lib/rankTracking/summaryStore.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 3
+lib/wie/gscOutcomeSync.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 4
+__tests__/api/health-ready.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 20,45
+pages/api/articles/plagiarism.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 8
+__tests__/lib/optimizeActionScope.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+pages/api/domains/[slug]/cannibalization.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 6
+pages/auth/sign-out.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 4
+__tests__/lib/priorityActions.smoke.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+components/settings/ProfileSettings.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 3-4
+pages/articles/[id]/index.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 42
+src/infrastructure/auth/client.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1-10
+pages/api/articles/[id]/keywords/enrich.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 9-10
+src/infrastructure/quota/keywordResearch.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+lib/planUsage.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 3
+__tests__/lib/fetchAuth.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+pages/api/articles/suggest-internal-links.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 14
+lib/scoreDomainPages.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 5
+pages/api/ready.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+lib/regenerateDomainTopics.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 3
+pages/api/ai-visibility/[slug]/data.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 8
+pages/api/rank-tracking/[slug]/runs/[id].ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+__tests__/components/ProfileSettings.passwordFocus.test.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 8-9
+src/infrastructure/ai/articleMeta.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+pages/api/audit-tool/[slug]/[id].ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+components/auth/EmailSignUpForm.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 3
+lib/keywordResearchRunner.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+pages/api/audit-tool/[slug]/rerun.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+pages/api/articles/[id]/growth-history.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 11
+pages/api/articles/publish-targets.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 10
+pages/auth/confirm-account.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 8
+__tests__/lib/articleFacts.test.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 5,11
+src/infrastructure/articles/articleFacts.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+pages/api/ai-visibility/[slug]/scan-status.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+pages/api/articles/competitor-outlines.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+pages/api/cron/daily.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+components/auth/ForgotPasswordForm.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 3
+pages/articles/[id]/preview.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 10-11
+pages/api/system/check.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 6
+pages/api/keyword-research/[slug]/list.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 6
+pages/sites/[domain]/activity-log.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 14
+pages/api/articles/[id]/keywords/gap.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7-8
+lib/intelligence/ccmStaleCron.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 49
+lib/emitObservations.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 149
+pages/api/audit-tool/[slug]/list.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+pages/api/articles/analyze-batch.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 13
+pages/api/domains/[slug]/site-audit/issues/[issueId].ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 6
+pages/api/articles/[id]/debug-export.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 15-16
+src/infrastructure/observations/optimizeActionScope.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1-29
+components/dashboard/DashboardGreeting.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 6
+lib/rankTracking/partitions.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+lib/competitorPrescan.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+lib/domainLanguage.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+pages/api/audit-tool/[slug]/status.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+pages/api/articles/generate-outline.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 11,139
+scripts/smoke-ccm-coverage.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 6
+pages/api/articles/[id]/versions.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 11
+__tests__/components/sidebarUserFooter.test.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 5
+lib/emailConfirmation.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 3
+src/infrastructure/aiVisibility/aiVisibilityRead.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 5
+lib/organicResearch/keywordHistory.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+src/infrastructure/ai/aiTokenUsage.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+lib/intelligence/loadDaFactSeeds.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 66
+pages/api/ai-visibility/[slug]/config.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 8
+lib/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+lib/organicResearch/cache.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+pages/api/articles/[id]/keywords/suggest.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 9
+pages/invite/[token].tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 5
+pages/api/articles/apply-readability.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 14
+pages/api/articles/ai-readability.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 13
+lib/rankTracking/repository.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 2
+lib/intelligence/persistCcmCoverageProjection.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 15
+pages/api/ai-visibility/internal/due-scans.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 8
+pages/api/articles/[id]/index.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12-13
+pages/api/articles/publish.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 12
+lib/rankTracking/defaultConfig.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 5
+src/infrastructure/siteAudit/buildOverview.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1
+lib/wie/eval/runEvalSuite.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 6
+components/auth/TwoFactorForm.tsx
+  s_e3556ba0769b4b::t_3a6a345f481b51 3
+src/infrastructure/articles/articleKeywordDiscovery.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 7
+src/infrastructure/observations/actionsFromObservations.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 1-115
+pages/api/ai-visibility/[slug]/generate-prompts.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 15
+lib/seo/keywordData.ts
+  s_e3556ba0769b4b::t_3a6a345f481b51 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "997d1a701ca31576701b542c8f732ce5f0297ca6",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
