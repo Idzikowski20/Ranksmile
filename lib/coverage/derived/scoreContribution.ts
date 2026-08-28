@@ -1,4 +1,4 @@
-import { CoverageItem, CoverageSnapshot, computeCoverageScores } from '../../ai/aiCoverage';
+import { CoverageItem, CoverageSnapshot, computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 
 /** Marginal `overall` gain if `item` went to fully-covered (covered:true, quality:5), all else fixed.
  *  Pure — reuses A's scorer on a hypothetical graded-items array; NO judge round-trip. Integer. */

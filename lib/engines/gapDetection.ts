@@ -1,7 +1,7 @@
 /**
  * Gap Detection — high-level research gaps from coverage + BM25 + organic mapping.
  */
-import type { CoverageItem } from '../ai/aiCoverage';
+import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { runGapEngine, type CoverageGap } from '../engines/gapEngine';
 import { bm25Rank } from '@/src/core/domain/search/bm25';
 

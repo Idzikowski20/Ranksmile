@@ -4,7 +4,7 @@ import {
   computeOverallContentScore,
   type AiVisibilitySummary,
 } from '../../lib/ai/aiSearchScore';
-import type { CoverageItem } from '../../lib/ai/aiCoverage';
+import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import type { ScoreData } from '../../lib/contentScore';
 
 const coverageItems: CoverageItem[] = [

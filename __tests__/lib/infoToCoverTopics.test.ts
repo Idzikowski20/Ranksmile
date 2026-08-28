@@ -1,5 +1,5 @@
 import { buildInfoToCoverTopics } from '../../lib/infoToCoverTopics';
-import type { CoverageItem } from '../../lib/ai/aiCoverage';
+import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import type { AiVisibilitySummary } from '../../lib/ai/aiSearchScore';
 
 describe('buildInfoToCoverTopics', () => {

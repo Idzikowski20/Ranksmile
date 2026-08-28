@@ -4,7 +4,7 @@ import { useOpenReveal } from '../../lib/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/contentScore';
 import { AiVisibilitySummary } from '../../lib/ai/aiSearchScore';
-import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/ai/aiCoverage';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicGroup } from '../../lib/infoToCoverTopics';
 import { faviconUrl } from '../../lib/faviconUrl';
 import DomainFavicon from '../common/DomainFavicon';

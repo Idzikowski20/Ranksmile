@@ -6,7 +6,7 @@ import {
   selectFaqQuestions,
   validateFaqHtmlStructure,
 } from '../../lib/aoFaqSection';
-import type { CoverageItem } from '../../lib/ai/aiCoverage';
+import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { buildIntentProfile } from '../../lib/ao/intentProfile';
 
 const items: CoverageItem[] = [

@@ -1,5 +1,5 @@
 import db from '../../database/database';
-import { CoverageItem, CoverageSource, hashId } from '../ai/aiCoverage';
+import { CoverageItem, CoverageSource, hashId } from '@/src/core/domain/coverage/aiCoverage';
 
 export { isUsefulTerm, normalizeTerm, dedupeUsefulTerms } from '@/src/core/domain/terms/termUtils';
 

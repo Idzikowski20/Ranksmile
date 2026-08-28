@@ -32,7 +32,7 @@ import { emptyPhases, type AnalysisPhases } from '@/src/core/domain/articles/ana
 import { computeOptimizeLiveSnapshot } from '../../../lib/computeLiveArticleScores';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { liveCoverageItems, scoreDeltaGate } from '../../../lib/liveCoverage';
-import { computeCoverageScores } from '../../../lib/ai/aiCoverage';
+import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 import { filterSyntheticCitationTemplates } from '../../../lib/citationPrompts';
 import { buildDeveloperReport, downloadDeveloperReport } from '../../../lib/articles/buildDeveloperReport';
 import AoScoreFloat from '../../../components/articles/AoScoreFloat';
@@ -47,7 +47,7 @@ import { useArticleKeywords } from '../../../services/articleKeywords';
 import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/ai/aiSearchScore';
 import { computeOverallContentScore } from '../../../lib/ai/aiSearchScore';
-import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../../lib/ai/aiCoverage';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { parseSnapshot } from '../../../lib/coverageStore';
 import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '../../../lib/deepAnalysisProgress';
 import { getErrorMessage } from '../../../lib/errors';

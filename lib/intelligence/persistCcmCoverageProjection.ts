@@ -2,7 +2,7 @@
  * Persist CCM → CoverageSnapshot into articles.ai_info_to_cover (Etap 27).
  * Non-fatal when DB unavailable (unit tests with injected CompileStore).
  */
-import type { CoverageSnapshot } from '../ai/aiCoverage';
+import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import type { CanonicalContentModel } from '../ccm/types/ccm';
 import { parseSnapshot } from '../coverageStore';
 import { projectCcmToCoverageSnapshot } from './ccmToCoverageSnapshot';

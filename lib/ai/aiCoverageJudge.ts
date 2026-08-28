@@ -7,7 +7,7 @@ import {
   sanitizeVerdict,
   type CoverageJudge,
   type CoverageVerdict,
-} from './aiCoverage';
+} from '@/src/core/domain/coverage/aiCoverage';
 import { safeJsonParse } from '../safeJson';
 import { llmGateway } from '../llmGateway';
 

@@ -11,7 +11,7 @@ import { buildEffortOptimizeGuidance } from '@/src/core/domain/terms/contentEffo
 import { buildWhatsMissingOptimizeGuidance } from './contentScore';
 import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 import { STOP_SLOP_RULES } from './stopSlopPrompt';
-import { isUncoveredAiSearchItem } from './ai/aiCoverage';
+import { isUncoveredAiSearchItem } from '@/src/core/domain/coverage/aiCoverage';
 
 export { computeMissingTerms, computeOverusedTerms } from './optimizeSectionEdit';
 export const WHOLE_ARTICLE_ID = 'article-whole';

@@ -3,7 +3,7 @@
  * coverage items, and competitor outline headings.
  */
 import type { AiVisibilitySummary } from './ai/aiSearchScore';
-import type { CoverageItem, CoverageTopicGroup, LlmCoverageSource } from './ai/aiCoverage';
+import type { CoverageItem, CoverageTopicGroup, LlmCoverageSource } from '@/src/core/domain/coverage/aiCoverage';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 export type InfoSource = {

@@ -1,7 +1,7 @@
 /**
  * Gap Engine — uncovered / shallow items → gaps with information-gain estimate.
  */
-import type { CoverageItem, Importance } from '../ai/aiCoverage';
+import type { CoverageItem, Importance } from '@/src/core/domain/coverage/aiCoverage';
 import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 
 export type CoverageGap = {

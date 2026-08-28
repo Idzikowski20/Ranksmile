@@ -1,4 +1,4 @@
-import type { CoverageItem, LlmCoverageSource } from './ai/aiCoverage';
+import type { CoverageItem, LlmCoverageSource } from '@/src/core/domain/coverage/aiCoverage';
 import type { ArticleFact } from '@/src/core/domain/articles/factTypes';
 import {
   citationIntentItems,

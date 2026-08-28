@@ -11,7 +11,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, ArticleRow } from '../../../lib/db/query';
-import { CoverageItem } from '../../../lib/ai/aiCoverage';
+import { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { mergeCoverageItems, parseSnapshot, buildSnapshot } from '../../../lib/coverageStore';
 import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
 import { safeJsonParse } from '../../../lib/safeJson';

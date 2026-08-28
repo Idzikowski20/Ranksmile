@@ -1,7 +1,7 @@
 // lib/liveCoverage.ts
 // Pure client-side re-score core. Re-derives presence-checkable CoverageItem.covered from the
 // current editor text/HTML between LLM judge passes, without mutating the graded snapshot.
-import type { CoverageItem, CoverageType, BucketScore } from './ai/aiCoverage';
+import type { CoverageItem, CoverageType, BucketScore } from '@/src/core/domain/coverage/aiCoverage';
 import { countOccurrences } from './contentScore';
 import { livePresenceQualityCap } from './ao/coverageState';
 

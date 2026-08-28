@@ -5,7 +5,7 @@ import { readArticleTerms } from './articles/articleTerms';
 import { enrichNlpTermsIfNeeded } from './articles/articleKeywordDiscovery';
 import { pickTermsForGeneratedArticle, mergeNlpTerms } from './pickArticleTerms';
 import { termsForOptimize } from './mergeArticleTerms';
-import { computeCoverageScores } from './ai/aiCoverage';
+import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 import { computeOverallContentScore } from './ai/aiSearchScore';
 import { filterUsefulNlpTerms, isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
 import { countOccurrences, computeContentScore, type NlpTerm, type ScoreData } from './contentScore';
