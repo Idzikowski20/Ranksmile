@@ -2,17 +2,17 @@
  * Hybrid OrganicDataset: DataForSEO Labs (Semrush-like chart/keywords/ETV/cost)
  * + optional GSC enrich (real clicks).
  */
-import Domain from '../../database/models/domain';
-import { getDomainLocale } from '../domainLanguage';
-import { isDataForSeoConfigured } from '../../providers/dataforseo/organic';
-import { loadCachedDataset } from './cache';
-import { dataforseoOrganicProvider, defaultProviderContext } from './dataforseoProvider';
-import { loadOrganicDatasetFromGsc } from './gscProvider';
+import Domain from '@/database/models/domain';
+import { getDomainLocale } from '@/lib/domainLanguage';
+import { isDataForSeoConfigured } from '@/providers/dataforseo/organic';
+import { loadCachedDataset } from '@/src/infrastructure/organicResearch/cache';
+import { dataforseoOrganicProvider, defaultProviderContext } from '@/src/infrastructure/organicResearch/dataforseoProvider';
+import { loadOrganicDatasetFromGsc } from '@/src/infrastructure/organicResearch/gscProvider';
 import {
   DATASET_VERSION,
   PROVIDER_VERSION_HYBRID,
   type OrganicDataset,
-} from './types';
+} from '@/src/infrastructure/organicResearch/types';
 
 export type HybridLoadResult =
   | { ok: true; dataset: OrganicDataset; gscConnected: boolean }

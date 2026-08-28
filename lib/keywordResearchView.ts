@@ -6,7 +6,7 @@
  */
 import type { KeywordResearchResult } from '@/src/core/domain/keywords/types';
 
-import type { SearchIntent } from './organicResearch/types';
+import type { SearchIntent } from '@/src/infrastructure/organicResearch/types';
 
 export type KwIntent = 'Informational' | 'Local' | 'Shopping' | 'Customer Investigation' | 'Not detected';
 

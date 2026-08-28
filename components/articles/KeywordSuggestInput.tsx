@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { KeywordIntentBadge } from '../koala/product/helpers/KeywordIntentBadge';
-import type { SearchIntent } from '../../lib/organicResearch/types';
+import type { SearchIntent } from '@/src/infrastructure/organicResearch/types';
 
 interface Suggestion {
    keyword: string;

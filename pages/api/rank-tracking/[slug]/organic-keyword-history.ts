@@ -1,7 +1,7 @@
 // GET /api/rank-tracking/:slug/organic-keyword-history?keyword=
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '../../../../lib/errors';
-import { loadOrganicKeywordPositionHistory } from '../../../../lib/organicResearch/keywordHistory';
+import { loadOrganicKeywordPositionHistory } from '@/src/infrastructure/organicResearch/keywordHistory';
 import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

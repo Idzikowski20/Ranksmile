@@ -1,12 +1,12 @@
 import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
-import { getDomainLocale } from '../domainLanguage';
-import Domain from '../../database/models/domain';
+import { getDomainLocale } from '@/lib/domainLanguage';
+import Domain from '@/database/models/domain';
 import {
   fetchKeywordPositionHistory,
   type KeywordPositionPoint,
-} from '../../providers/dataforseo/historicalSerps';
-import { isDataForSeoConfigured } from '../../providers/dataforseo/client';
-import { synthesizePositionHistory } from './synthesizePositionHistory';
+} from '@/providers/dataforseo/historicalSerps';
+import { isDataForSeoConfigured } from '@/providers/dataforseo/client';
+import { synthesizePositionHistory } from '@/src/infrastructure/organicResearch/synthesizePositionHistory';
 
 export type { KeywordPositionPoint };
 export { synthesizePositionHistory };

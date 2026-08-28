@@ -3,7 +3,7 @@ import { Chart } from '../../koala/charts';
 import type { ChartPreparedData, ChartStackSeries } from '../../koala/charts';
 import { chartBucketColors } from '../../koala/tokens/chart';
 import { Checkbox } from '../../koala/core';
-import type { ChartPoint } from '../../../lib/organicResearch/types';
+import type { ChartPoint } from '@/src/infrastructure/organicResearch/types';
 
 const FONT = 'var(--font-family-primary)';
 

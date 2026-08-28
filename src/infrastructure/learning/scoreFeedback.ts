@@ -1,10 +1,10 @@
 /**
  * Closed-loop learning: score deltas → optimization_history + calibration persist.
  */
-import type { Feature } from '../primitives/types';
-import { recordOptimization } from '../learning/learningLoop';
+import type { Feature } from '@/lib/primitives/types';
+import { recordOptimization } from '@/src/infrastructure/learning/learningLoop';
 import { calibrateAndPersist, extractFeatureVector } from '@/src/infrastructure/engines/calibration';
-import { getErrorMessage } from '../errors';
+import { getErrorMessage } from '@/lib/errors';
 
 export async function recordScoreFeedback(opts: {
   workspaceId: string;

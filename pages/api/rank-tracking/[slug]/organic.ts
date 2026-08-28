@@ -9,9 +9,9 @@ import {
   type OrganicFilters,
   type OrganicSortKey,
   type OrganicTab,
-} from '../../../../lib/organicResearch';
-import type { ExportFormat } from '../../../../lib/organicResearch/export';
-import type { KeywordState, SearchIntent } from '../../../../lib/organicResearch/types';
+} from '@/src/infrastructure/organicResearch/index';
+import type { ExportFormat } from '@/src/infrastructure/organicResearch/export';
+import type { KeywordState, SearchIntent } from '@/src/infrastructure/organicResearch/types';
 import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

@@ -1,25 +1,25 @@
-import Domain from '../../database/models/domain';
-import { getDomainLocale } from '../domainLanguage';
-import { loadCachedDataset } from './cache';
-import { dataforseoOrganicProvider, defaultProviderContext } from './dataforseoProvider';
-import { isDataForSeoConfigured } from '../../providers/dataforseo/organic';
-import { loadHybridOrganicDataset, type HybridLoadResult } from './hybrid';
+import Domain from '@/database/models/domain';
+import { getDomainLocale } from '@/lib/domainLanguage';
+import { loadCachedDataset } from '@/src/infrastructure/organicResearch/cache';
+import { dataforseoOrganicProvider, defaultProviderContext } from '@/src/infrastructure/organicResearch/dataforseoProvider';
+import { isDataForSeoConfigured } from '@/providers/dataforseo/organic';
+import { loadHybridOrganicDataset, type HybridLoadResult } from '@/src/infrastructure/organicResearch/hybrid';
 import {
   filterKeywords,
   paginateKeywords,
   sortKeywords,
   type OrganicFilters,
   type OrganicSortKey,
-} from './filter';
-import { keywordsToObservations } from './observations';
-import type { OrganicDataset, OrganicKeyword } from './types';
-import { runExport, type ExportFormat } from './export';
+} from '@/src/infrastructure/organicResearch/filter';
+import { keywordsToObservations } from '@/src/infrastructure/organicResearch/observations';
+import type { OrganicDataset, OrganicKeyword } from '@/src/infrastructure/organicResearch/types';
+import { runExport, type ExportFormat } from '@/src/infrastructure/organicResearch/export';
 
-export type { OrganicDataset, OrganicKeyword } from './types';
-export type { OrganicFilters, OrganicSortKey, OrganicTab } from './filter';
-export { exportProviders, runExport } from './export';
-export { keywordsToObservations } from './observations';
-export type { HybridLoadResult } from './hybrid';
+export type { OrganicDataset, OrganicKeyword } from '@/src/infrastructure/organicResearch/types';
+export type { OrganicFilters, OrganicSortKey, OrganicTab } from '@/src/infrastructure/organicResearch/filter';
+export { exportProviders, runExport } from '@/src/infrastructure/organicResearch/export';
+export { keywordsToObservations } from '@/src/infrastructure/organicResearch/observations';
+export type { HybridLoadResult } from '@/src/infrastructure/organicResearch/hybrid';
 
 export async function loadOrganicDataset(opts: {
   domainId: number;

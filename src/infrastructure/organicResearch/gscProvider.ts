@@ -1,14 +1,14 @@
 /**
  * GSC → OrganicDataset for Search Intelligence (daily truth for owned property).
  */
-import Domain from '../../database/models/domain';
+import Domain from '@/database/models/domain';
 import {
   buildChart,
   buildPages,
   buildUncategorizedTopic,
   emptyBuckets,
   mapKeywords,
-} from './derive';
+} from '@/src/infrastructure/organicResearch/derive';
 import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import {
   DATASET_VERSION,
@@ -20,13 +20,13 @@ import {
   type PositionBucketKey,
   type ProviderKeywordRow,
   type ProviderOverviewPoint,
-} from './types';
+} from '@/src/infrastructure/organicResearch/types';
 import {
   fetchDomainSCData,
   fetchSearchConsoleData,
   getSearchConsoleApiInfo,
   hasValidSCAuth,
-} from '../../utils/searchConsole';
+} from '@/utils/searchConsole';
 
 export type GscLoadResult =
   | { ok: true; dataset: OrganicDataset }

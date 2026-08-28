@@ -14,7 +14,7 @@ import { bm25Rank, assignHarvestToSections } from '@/src/core/domain/search/bm25
 import { extractKeybertTerms } from '@/src/core/domain/semantic/keybert';
 import { hashEmbed, cosineSim, findEmbeddingGaps } from '@/src/core/domain/semantic/embeddings';
 import { computeGeoCues, geoPromptBlock } from '@/src/core/domain/geo/geoCues';
-import { runLearningLoop } from '../../lib/learning/learningLoopCore';
+import { runLearningLoop } from '@/src/infrastructure/learning/learningLoopCore';
 import { curateConceptsFromTerms } from '@/src/core/domain/coverage/curateConcepts';
 import { informationGain } from '@/src/core/domain/engines/evidence';
 import { detectResearchGaps } from '@/src/core/domain/engines/gapDetection';

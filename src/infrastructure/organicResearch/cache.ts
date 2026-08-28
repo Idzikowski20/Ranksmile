@@ -1,12 +1,12 @@
 import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
-import type { DatasetCacheMeta, OrganicDataset } from './types';
+import type { DatasetCacheMeta, OrganicDataset } from '@/src/infrastructure/organicResearch/types';
 import {
   DATASET_VERSION,
   ORGANIC_CACHE_TTL_MS,
   PROVIDER_VERSION_DATAFORSEO,
   PROVIDER_VERSION_GSC,
   PROVIDER_VERSION_HYBRID,
-} from './types';
+} from '@/src/infrastructure/organicResearch/types';
 
 export type CachedOrganicEnvelope = {
   meta: DatasetCacheMeta;

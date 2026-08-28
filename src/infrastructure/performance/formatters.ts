@@ -6,7 +6,7 @@ import {
   type Delta,
   type KeywordMode,
   type KeywordRule,
-} from './types';
+} from '@/src/infrastructure/performance/types';
 
 export function compactNumber(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;

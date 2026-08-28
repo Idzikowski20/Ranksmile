@@ -204,7 +204,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
       if (content && scoreDataJson) {
          try {
             const { enqueueLiveScoreOnSave } = await import('@/src/infrastructure/pipeline/enqueueFromDeepAnalysis');
-            const { recordScoreFeedback } = await import('../../../../lib/learning/scoreFeedback');
+            const { recordScoreFeedback } = await import('@/src/infrastructure/learning/scoreFeedback');
             const userId = await getCurrentUserId(req, res);
             const sd = scoreDataObj || {};
             const after = Number(
