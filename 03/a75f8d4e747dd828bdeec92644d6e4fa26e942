@@ -1,0 +1,35 @@
+lib/optimizeWholeArticle.ts
+  s_e3556ba0769b4b::t_798015e2545bc1 13
+__tests__/lib/pipelineV7.engines.test.ts
+  s_e3556ba0769b4b::t_798015e2545bc1 15,19
+lib/aoFaqSection.ts
+  s_e3556ba0769b4b::t_798015e2545bc1 3
+lib/semantic/embeddingStore.ts
+  s_e3556ba0769b4b::t_798015e2545bc1 5
+__tests__/lib/stopSlopPrompt.test.ts
+  s_e3556ba0769b4b::t_798015e2545bc1 1
+lib/ai/systemPrompt.ts
+  s_e3556ba0769b4b::t_798015e2545bc1 2
+lib/knowledgeEngine/semanticMatch.ts
+  s_e3556ba0769b4b::t_798015e2545bc1 1
+lib/workers/embeddings/index.ts
+  s_e3556ba0769b4b::t_798015e2545bc1 14
+lib/optimizationPlanner.ts
+  s_e3556ba0769b4b::t_798015e2545bc1 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "03a75f8d4e747dd828bdeec92644d6e4fa26e942",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
