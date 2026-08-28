@@ -4,7 +4,7 @@
  * API allowlist kept for transitional callers; prefer allowsApi(appState, route).
  */
 import type { OrgBillingState } from './orgBilling';
-import { allowsFrontend } from './appAccess';
+import { allowsFrontend } from '@/src/infrastructure/appAccess/index';
 
 export function isPaymentFailedLocked(billing: OrgBillingState | null | undefined): boolean {
   return billing?.paymentFailedLockedAt != null;

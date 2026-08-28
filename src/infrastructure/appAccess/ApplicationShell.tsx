@@ -5,21 +5,21 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
-import { fetchBootstrapOrNull } from '../fetchBootstrap';
-import { isPublicRoute } from '../isPublicPath';
-import { PlanExpired } from '../../components/billing/PlanExpired';
-import { showsPlanExpired } from './isPlanExpired';
+import { fetchBootstrapOrNull } from '@/lib/fetchBootstrap';
+import { isPublicRoute } from '@/lib/isPublicPath';
+import { PlanExpired } from '@/components/billing/PlanExpired';
+import { showsPlanExpired } from '@/src/infrastructure/appAccess/isPlanExpired';
 import {
   allowsFrontend,
   emitAccessTimeline,
   redirectLoopKey,
   type AccessSnapshot,
   type AppState,
-} from './index';
-import { OnboardingStatusContext } from '../onboardingStatus';
-import { EmailConfirmedStatusContext } from '../emailConfirmedStatus';
-import { logOnboardingRedirect } from '../billing/billingAuditShared';
-import AppLoading from '../../components/common/AppLoading';
+} from '@/src/infrastructure/appAccess/index';
+import { OnboardingStatusContext } from '@/lib/onboardingStatus';
+import { EmailConfirmedStatusContext } from '@/lib/emailConfirmedStatus';
+import { logOnboardingRedirect } from '@/lib/billing/billingAuditShared';
+import AppLoading from '@/components/common/AppLoading';
 
 const BOOTSTRAP_STALE_MS = 5 * 60_000;
 

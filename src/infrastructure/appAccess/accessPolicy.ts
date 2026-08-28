@@ -1,5 +1,5 @@
-import type { AppState, RouteCapability } from './types';
-import { ACCESS_POLICY_VERSION } from './types';
+import type { AppState, RouteCapability } from '@/src/infrastructure/appAccess/types';
+import { ACCESS_POLICY_VERSION } from '@/src/infrastructure/appAccess/types';
 
 export { ACCESS_POLICY_VERSION };
 
