@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { hasActiveBillingEntitlement } from '@/src/infrastructure/billing/billingEntitlement';
-import { getOrgBillingState } from '../../../lib/orgBilling';
+import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
 import {
   buildPlanMetrics,
   DEFAULT_PLAN_SLUG,
@@ -9,11 +9,11 @@ import {
   overallUsagePct,
   resolvePlanSlug,
   type PlanSummaryData,
-} from '../../../lib/planLimits';
-import { getOrgPlanUsage } from '../../../lib/planUsage';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+} from '@/src/infrastructure/planLimits';
+import { getOrgPlanUsage } from '@/src/infrastructure/planUsage';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

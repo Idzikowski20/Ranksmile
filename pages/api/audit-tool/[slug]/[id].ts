@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
 import { queryOne, AuditRunRow } from '@/src/infrastructure/db/query';
 import type { AuditResult } from '@/src/core/domain/audit/types';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

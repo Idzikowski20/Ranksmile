@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { formatTaxIdForStripe, stripeTaxIdType } from '@/lib/checkoutValidation';
+import { formatTaxIdForStripe, stripeTaxIdType } from '@/src/infrastructure/checkoutValidation';
 
 /** Ranksmile is a business-use SaaS; override only for a deliberately different product classification. */
 export const DEFAULT_STRIPE_TAX_CODE = 'txcd_10103001';

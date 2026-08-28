@@ -4,10 +4,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { getConnectionForWorkspace } from '../../../lib/wpConnection';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { getConnectionForWorkspace } from '@/src/infrastructure/wpConnection';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

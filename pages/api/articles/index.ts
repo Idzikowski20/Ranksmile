@@ -5,7 +5,7 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '../../../lib/tenancy';
+import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/tenancy';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
@@ -13,7 +13,7 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, type ArticleRow } from '@/src/infrastructure/db/query';
 import type { SqlReplacements } from '../../../lib/types/db';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

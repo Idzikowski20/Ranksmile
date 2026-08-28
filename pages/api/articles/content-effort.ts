@@ -5,15 +5,15 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { callSidecar } from '../../../lib/sidecar';
+import { callSidecar } from '@/src/infrastructure/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { heuristicContentEffort, type ContentEffortInsight } from '@/src/core/domain/terms/contentEffort';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
-import type { ScoreData } from '../../../lib/contentScore';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import type { ScoreData } from '@/src/infrastructure/contentScore';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 type EffortBody = { score?: unknown; reasons?: unknown; source?: unknown };
 

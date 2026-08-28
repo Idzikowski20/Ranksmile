@@ -1,11 +1,11 @@
-import { computeOptimizeLiveSnapshot } from '../../lib/computeLiveArticleScores';
+import { computeOptimizeLiveSnapshot } from '@/src/infrastructure/computeLiveArticleScores';
 import {
   computeAiSearchScore,
   computeOverallContentScore,
   type AiVisibilitySummary,
 } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
-import type { ScoreData } from '../../lib/contentScore';
+import type { ScoreData } from '@/src/infrastructure/contentScore';
 
 const coverageItems: CoverageItem[] = [
   {

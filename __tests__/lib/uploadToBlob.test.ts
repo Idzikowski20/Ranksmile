@@ -2,7 +2,7 @@
 // is pure and never touches S3, so stub the client.
 jest.mock('@aws-sdk/client-s3', () => ({ S3Client: class {}, PutObjectCommand: class {} }));
 
-import { parseDataUrl } from '../../lib/uploadToBlob';
+import { parseDataUrl } from '@/src/infrastructure/uploadToBlob';
 
 describe('parseDataUrl', () => {
   it('decodes a valid base64 image data URL', () => {

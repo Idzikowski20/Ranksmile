@@ -8,14 +8,14 @@ import { ensureGscSnapshotTables } from '@/src/infrastructure/persistence/schema
 import { captureWeeklySnapshot, weekStartFor } from '@/src/infrastructure/gsc/gscSnapshots';
 import { getWeeklyDrops } from '../../../src/composition/gsc';
 import { buildGscDigest, type DomainDigest } from '@/src/infrastructure/gsc/gscDigestEmail';
-import { sendMail } from '../../../lib/sendMail';
+import { sendMail } from '@/src/infrastructure/sendMail';
 import { queryRows, type ArticleRow } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { withCronWatchdog } from '../../../lib/cronWatchdog';
-import { cronSecrets } from '../../../lib/cronAuth';
-import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '../../../lib/autopilot';
-import { nextjsUrl } from '../../../lib/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withCronWatchdog } from '@/src/infrastructure/cronWatchdog';
+import { cronSecrets } from '@/src/infrastructure/cronAuth';
+import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '@/src/infrastructure/autopilot';
+import { nextjsUrl } from '@/src/infrastructure/serviceUrls';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

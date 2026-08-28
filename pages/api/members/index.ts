@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUser } from '../../../utils/getUser';
-import { listMembers, assertCanManage, getCallerRole, backfillCallerEmail } from '../../../lib/members';
-import { listInvitations, createInvitation } from '../../../lib/invitations';
-import { readOrganization } from '../../../lib/organization';
-import { sendMail } from '../../../lib/sendMail';
-import { inviteEmailHtml } from '../../../lib/inviteEmail';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { listMembers, assertCanManage, getCallerRole, backfillCallerEmail } from '@/src/infrastructure/members';
+import { listInvitations, createInvitation } from '@/src/infrastructure/invitations';
+import { readOrganization } from '@/src/infrastructure/organization';
+import { sendMail } from '@/src/infrastructure/sendMail';
+import { inviteEmailHtml } from '@/src/infrastructure/inviteEmail';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const user = await getCurrentUser(req, res);

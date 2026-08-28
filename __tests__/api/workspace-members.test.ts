@@ -2,18 +2,18 @@ import type { NextApiRequest } from 'next';
 import { makeRes, callHandler, type MockRes } from '../../test-utils/apiHandler';
 import handler from '../../pages/api/workspaces/[id]/members';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getCallerRole } from '../../lib/members';
-import { listWorkspaceAccess, setWorkspaceAccess } from '../../lib/workspaceMembers';
+import { getCallerRole } from '@/src/infrastructure/members';
+import { listWorkspaceAccess, setWorkspaceAccess } from '@/src/infrastructure/workspaceMembers';
 
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('u1') }));
-jest.mock('../../lib/members', () => ({ getCallerRole: jest.fn().mockResolvedValue('owner') }));
-jest.mock('../../lib/workspaceMembers', () => ({
+jest.mock('@/src/infrastructure/members', () => ({ getCallerRole: jest.fn().mockResolvedValue('owner') }));
+jest.mock('@/src/infrastructure/workspaceMembers', () => ({
   listWorkspaceAccess: jest.fn().mockResolvedValue([]),
   setWorkspaceAccess: jest.fn().mockResolvedValue(undefined),
 }));
 // The access-policy wrapper has its own coverage; unmocked it resolves real tenancy
 // and turns every case below into a 503.
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 const call = (req: Partial<NextApiRequest>, res: MockRes) => callHandler(handler, req, res);
 

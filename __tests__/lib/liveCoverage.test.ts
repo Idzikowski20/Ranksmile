@@ -1,7 +1,7 @@
 // __tests__/lib/liveCoverage.test.ts
 import {
   liveCoverageItems, scoreAttribution, remainingOpportunities, scoreDeltaGate,
-} from '../../lib/liveCoverage';
+} from '@/src/infrastructure/liveCoverage';
 import { computeCoverageScores, type CoverageItem, type BucketScore } from '@/src/core/domain/coverage/aiCoverage';
 
 // Item factory — mirrors __tests__/lib/aiCoverage.test.ts `gi` helper.

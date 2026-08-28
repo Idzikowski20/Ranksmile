@@ -13,7 +13,7 @@ export const plannerWorker: PipelineWorker = {
       ? (ctx.payload.actions as Parameters<typeof import('@/src/infrastructure/engines/planner').planActions>[0]['actions'])
       : [];
     const { planActions } = await import('@/src/infrastructure/engines/planner');
-    const { getFeatureStore } = await import('@/lib/featureStore');
+    const { getFeatureStore } = await import('@/src/infrastructure/featureStore');
 
     let features: Parameters<typeof planActions>[0]['features'] = [];
     try {

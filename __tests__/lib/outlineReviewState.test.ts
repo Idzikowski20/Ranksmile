@@ -1,4 +1,4 @@
-import { isOutlineAwaitingReview } from '../../lib/outlineReviewState';
+import { isOutlineAwaitingReview } from '@/src/infrastructure/outlineReviewState';
 import { reviewOutlineToHtml } from '@/src/infrastructure/contentPlanner/reviewOutline';
 import { resolveArticleEntry } from '@/src/core/domain/articles/articleFlow';
 

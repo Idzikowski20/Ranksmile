@@ -1,4 +1,4 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('sequelize', () => ({ QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT' } }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
@@ -15,15 +15,15 @@ jest.mock('../../utils/gsc', () => ({
    normalizeUrlForMatch: jest.fn((url: string) => url),
 }));
 jest.mock('../../database/models/domain', () => ({ __esModule: true, default: { findByPk: jest.fn() } }));
-jest.mock('../../lib/uploadToBlob', () => ({ uploadImageFromUrl: jest.fn() }));
+jest.mock('@/src/infrastructure/uploadToBlob', () => ({ uploadImageFromUrl: jest.fn() }));
 jest.mock('../../utils/spaScraper', () => ({ renderPage: jest.fn() }));
-jest.mock('../../lib/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://safe.example/post')) }));
+jest.mock('@/src/infrastructure/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://safe.example/post')) }));
 
 import db from '../../database/database';
 import backfillHandler from '../../pages/api/articles/backfill';
 import importHandler from '../../pages/api/articles/import';
 import { firstAccessibleDomainId, verifyDomainOwnershipById } from '../../utils/verifyDomainOwnership';
-import { assertPublicUrl } from '../../lib/ssrfGuard';
+import { assertPublicUrl } from '@/src/infrastructure/ssrfGuard';
 
 const mockAssertPublicUrl = assertPublicUrl as jest.MockedFunction<typeof assertPublicUrl>;
 

@@ -3,16 +3,16 @@ jest.mock('../../database/database', () => ({
   default: { query: jest.fn(async () => [[], undefined]) },
 }));
 
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => null),
 }));
 
-jest.mock('../../lib/stripe', () => ({
+jest.mock('@/src/infrastructure/stripe', () => ({
   getStripe: jest.fn(),
   isStripeConfigured: jest.fn(() => false),
 }));
 
-jest.mock('../../lib/stripeBillingSync', () => ({
+jest.mock('@/src/infrastructure/stripeBillingSync', () => ({
   syncSubscriptionToOrg: jest.fn(),
 }));
 

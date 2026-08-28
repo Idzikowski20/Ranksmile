@@ -13,7 +13,7 @@ import { useKeywordResearchRun } from '../../../../services/keywordResearch';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
-import { buildKwClusters, fmtNum, INTENTS, kwIntentToSearchIntent, type KwCluster, type KwIntent } from '../../../../lib/keywordResearchView';
+import { buildKwClusters, fmtNum, INTENTS, kwIntentToSearchIntent, type KwCluster, type KwIntent } from '@/src/infrastructure/keywordResearchView';
 
 const FONT = 'var(--font-family-primary)';
 const TEXT = '#18181B';

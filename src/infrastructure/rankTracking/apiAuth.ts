@@ -3,7 +3,7 @@ import verifyUser from '@/utils/verifyUser';
 import { getCurrentUserId } from '@/utils/getUser';
 import { verifyDomainOwnershipBySlug } from '@/utils/verifyDomainOwnership';
 import { ensureRankTrackingTables } from '@/src/infrastructure/persistence/schema/ensureRankTrackingTables';
-import { isRankTrackingRunnerEnabled, isRankTrackingUiEnabled } from '@/lib/featureFlags';
+import { isRankTrackingRunnerEnabled, isRankTrackingUiEnabled } from '@/src/infrastructure/featureFlags';
 
 export type RankTrackingApiContext = {
   domainId: number;

@@ -5,8 +5,8 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
-import { fetchBootstrapOrNull } from '@/lib/fetchBootstrap';
-import { isPublicRoute } from '@/lib/isPublicPath';
+import { fetchBootstrapOrNull } from '@/src/infrastructure/fetchBootstrap';
+import { isPublicRoute } from '@/src/infrastructure/isPublicPath';
 import { PlanExpired } from '@/components/billing/PlanExpired';
 import { showsPlanExpired } from '@/src/infrastructure/appAccess/isPlanExpired';
 import {
@@ -16,8 +16,8 @@ import {
   type AccessSnapshot,
   type AppState,
 } from '@/src/infrastructure/appAccess/index';
-import { OnboardingStatusContext } from '@/lib/onboardingStatus';
-import { EmailConfirmedStatusContext } from '@/lib/emailConfirmedStatus';
+import { OnboardingStatusContext } from '@/src/infrastructure/onboardingStatus';
+import { EmailConfirmedStatusContext } from '@/src/infrastructure/emailConfirmedStatus';
 import { logOnboardingRedirect } from '@/src/infrastructure/billing/billingAuditShared';
 import AppLoading from '@/components/common/AppLoading';
 

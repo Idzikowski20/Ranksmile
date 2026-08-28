@@ -5,12 +5,12 @@ import toast from 'react-hot-toast';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
 import { Button, CompactSelect, SegmentedControl, Switch, Textarea } from '../../components/koala/core';
 import type { SelectOption } from '../../components/koala/core';
-import { saveWizardState } from '../../lib/wizardState';
+import { saveWizardState } from '@/src/infrastructure/wizardState';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
 import { useArticle } from '../../services/article';
 import DomainFavicon from '../../components/common/DomainFavicon';
 import SidePanel from '../../components/common/SidePanel';
-import { parseRankingSources, buildAiRankingSources } from '../../lib/rankingSources';
+import { parseRankingSources, buildAiRankingSources } from '@/src/infrastructure/rankingSources';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
 interface Voice { id: string; name: string; description: string; isDefault: boolean; }

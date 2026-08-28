@@ -1,5 +1,5 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn().mockResolvedValue([[], {}]) } }));
-import { compactText } from '../../lib/optimizeLog';
+import { compactText } from '@/src/infrastructure/optimizeLog';
 
 describe('compactText', () => {
   it('keeps short text whole and reports its length', () => {

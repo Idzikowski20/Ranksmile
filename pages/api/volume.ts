@@ -5,7 +5,7 @@ import Keyword from '../../database/models/keyword';
 import verifyUser from '../../utils/verifyUser';
 import parseKeywords from '../../utils/parseKeywords';
 import { getKeywordsVolume, updateKeywordsVolumeData } from '../../utils/adwords';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 type KeywordsRefreshRes = {
    keywords?: KeywordType[]

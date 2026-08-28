@@ -4,8 +4,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getCallerRole } from '../../lib/members';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { getCallerRole } from '@/src/infrastructure/members';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 type MigrationGetResponse = {
    hasMigrations: boolean,

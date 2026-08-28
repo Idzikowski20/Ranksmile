@@ -7,12 +7,12 @@ jest.mock('../../database/models/domain', () => ({
   __esModule: true,
   default: { findOne: jest.fn() },
 }));
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/tenancy', () => ({
   getAccessibleWorkspaceIds: jest.fn(),
 }));
 
 import Domain from '../../database/models/domain';
-import { getAccessibleWorkspaceIds } from '../../lib/tenancy';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/tenancy';
 import { verifyDomainOwnership, verifyDomainOwnershipById, firstAccessibleDomainId } from '../../utils/verifyDomainOwnership';
 
 const findOne = Domain.findOne as jest.Mock;

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useMutation } from 'react-query';
 import { feedbackAdapter, type FeedbackPayload, isAdapterError } from '@/src/infrastructure/adapters';
-import { showToast } from '../lib/toast';
+import { showToast } from '@/src/infrastructure/toast';
 
 export function useSubmitFeedback() {
   return useMutation((payload: FeedbackPayload) => feedbackAdapter.submit(payload), {

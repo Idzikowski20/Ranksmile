@@ -9,7 +9,7 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { queryOne } from '@/src/infrastructure/db/query';
 import type { ArticleRow } from '@/src/infrastructure/db/query';
-import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
+import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
 
 type PreviewArticle = {

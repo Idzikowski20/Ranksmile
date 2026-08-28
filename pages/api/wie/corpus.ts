@@ -1,7 +1,7 @@
 // GET/POST/DELETE /api/wie/corpus — GOLD / BAD curated exemplars
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import {
   addCorpusEntry,
   listCorpus,

@@ -1,5 +1,5 @@
 jest.mock('@/src/infrastructure/persistence/schema/ensureRankTrackingTables', () => ({ ensureRankTrackingTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/featureFlags', () => ({ isRankTrackingRunnerEnabled: jest.fn().mockReturnValue(true) }));
+jest.mock('@/src/infrastructure/featureFlags', () => ({ isRankTrackingRunnerEnabled: jest.fn().mockReturnValue(true) }));
 jest.mock('@/src/infrastructure/rankTracking/service', () => ({ enqueueScheduledChecks: jest.fn().mockResolvedValue(0) }));
 jest.mock('@/src/infrastructure/rankTracking/partitions', () => ({
   ensureSnapshotPartitionsAhead: jest.fn().mockResolvedValue(undefined),

@@ -4,9 +4,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 import verifyUser from '../../../utils/verifyUser';
 import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
-import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
-import { sidecarUrl } from '../../../lib/serviceUrls';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { uploadImageFromUrl } from '@/src/infrastructure/uploadToBlob';
+import { sidecarUrl } from '@/src/infrastructure/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 // Obraz jako base64 może mieć 500KB+ — zwiększ limit odpowiedzi
 export const config = {

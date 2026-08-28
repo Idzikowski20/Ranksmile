@@ -1,5 +1,5 @@
 import React from 'react';
-import { scoreColor } from '../../lib/scoreColor';
+import { scoreColor } from '@/src/infrastructure/scoreColor';
 
 // Tiny split dual-arc gauge (no ticks) — used in the editor sub-panel headers.
 const ARC = 111.70107212763709;

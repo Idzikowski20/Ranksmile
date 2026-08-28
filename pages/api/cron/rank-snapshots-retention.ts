@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { ensureRankTrackingTables } from '@/src/infrastructure/persistence/schema/ensureRankTrackingTables';
 import { pruneOldSnapshotPartitions } from '@/src/infrastructure/rankTracking/partitions';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { withCronWatchdog } from '../../../lib/cronWatchdog';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withCronWatchdog } from '@/src/infrastructure/cronWatchdog';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {

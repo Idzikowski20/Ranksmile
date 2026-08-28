@@ -2,11 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
+import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '@/src/infrastructure/ai/aiTokenUsage';
 import { splitSections, normalizeHtmlForDiff } from '@/src/infrastructure/articles/articleSections';
-import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
-import { buildWholeArticlePrompt } from '../../../lib/optimizeWholeArticle';
+import { buildArticleSectionDiffEvents } from '@/src/infrastructure/optimizeSectionEvents';
+import { buildWholeArticlePrompt } from '@/src/infrastructure/optimizeWholeArticle';
 import {
    stripFences,
    isUsableEdit,
@@ -14,31 +14,31 @@ import {
    shouldChargeCredit,
    resolveOptimizeDoneOutcome,
    computeTermUsageGaps,
-} from '../../../lib/optimizeSectionEdit';
-import type { ScoreData } from '../../../lib/contentScore';
+} from '@/src/infrastructure/optimizeSectionEdit';
+import type { ScoreData } from '@/src/infrastructure/contentScore';
 import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { buildArticleContext } from '@/src/infrastructure/articles/articleContext';
 import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
 import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '@/src/infrastructure/articles/articleKeywordDiscovery';
 import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
-import { termsForOptimize } from '../../../lib/mergeArticleTerms';
-import { liveCoverageItems } from '../../../lib/liveCoverage';
+import { termsForOptimize } from '@/src/infrastructure/mergeArticleTerms';
+import { liveCoverageItems } from '@/src/infrastructure/liveCoverage';
 import {
    collectUncoveredAiQuestions,
    buildFaqSectionPrompt,
    selectFaqQuestions,
    validateFaqHtmlStructure,
-} from '../../../lib/aoFaqSection';
+} from '@/src/infrastructure/aoFaqSection';
 import { applyGatedFaqMerge } from '@/src/infrastructure/ao/applyGatedFaq';
 import { buildCriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import { countWordsFromHtml } from '@/src/infrastructure/ao/aoBaseline';
 import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '@/src/core/domain/optimize/aoRunOutcome';
 import { structureIssues } from '@/src/core/domain/articles/validateStructure';
-import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
+import { scoreArticleHtml } from '@/src/infrastructure/scoreArticleHtml';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import db from '../../../database/database';
-import { buildGuidelines } from '../../../lib/recommendationEngine';
+import { buildGuidelines } from '@/src/infrastructure/recommendationEngine';
 import {
    DEFAULT_MAX_ROUNDS,
    selectOptimizeMode,
@@ -63,7 +63,7 @@ import {
    resolveOptimizationPolicy,
    runPrecisionOptimizeV4,
 } from '@/src/infrastructure/ao/runPrecisionOptimize';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 export const config = { api: { responseLimit: '10mb' } };
 

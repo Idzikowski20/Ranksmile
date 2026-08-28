@@ -3,18 +3,18 @@
 // Supports: selection mode (bubble menu), article mode (top toolbar), slash commands, and scoring.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
-import type { ScoreData } from '../../../lib/contentScore';
-import { countOccurrences } from '../../../lib/contentScore';
+import type { ScoreData } from '@/src/infrastructure/contentScore';
+import { countOccurrences } from '@/src/infrastructure/contentScore';
 import { SIGNAL_TACTICS } from '@/src/core/domain/seo/signalTactics';
 import { ANTI_HALLUCINATION_RULES } from '@/src/core/domain/seo/antiHallucinationRules';
 import { scoreContent, type RankingSignal } from '@/src/infrastructure/seo/scoreContentClient';
 import { extractJsonObject, isRanksmileReplyShape, stripCodeFence } from '@/src/infrastructure/ai/extractJson';
 import { stripEmoji } from '@/src/infrastructure/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
 export const config = { api: { responseLimit: '10mb' } };

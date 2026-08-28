@@ -11,12 +11,12 @@ import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
 import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProgress';
-import { buildImportKeywordList } from '../../../lib/buildImportKeywordList';
+import { buildImportKeywordList } from '@/src/infrastructure/buildImportKeywordList';
 import { normalizeUrlForMatch, kwScore, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import toast from 'react-hot-toast';
 import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
-import { useSortState } from '../../../lib/useSortState';
+import { useSortState } from '@/src/infrastructure/useSortState';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
 
 function compactNum(n: number): string {

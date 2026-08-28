@@ -1,10 +1,10 @@
-jest.mock('../../lib/commentAccess', () => ({ assertCommentAccess: jest.fn(), getCommentAccessKind: jest.fn() }));
+jest.mock('@/src/infrastructure/commentAccess', () => ({ assertCommentAccess: jest.fn(), getCommentAccessKind: jest.fn() }));
 jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/commentBus', () => ({ emitCommentChange: jest.fn(), onCommentChange: jest.fn(() => () => {}) }));
+jest.mock('@/src/infrastructure/commentBus', () => ({ emitCommentChange: jest.fn(), onCommentChange: jest.fn(() => () => {}) }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 
 import db from '../../database/database';
-import { assertCommentAccess, getCommentAccessKind } from '../../lib/commentAccess';
+import { assertCommentAccess, getCommentAccessKind } from '@/src/infrastructure/commentAccess';
 import handler from '../../pages/api/articles/[id]/comments';
 import streamHandler from '../../pages/api/articles/[id]/comments-stream';
 

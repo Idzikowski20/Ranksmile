@@ -6,7 +6,7 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { findTermRangesBatch, termCoverage, termUsageHint } from '../../lib/contentScore';
+import { findTermRangesBatch, termCoverage, termUsageHint } from '@/src/infrastructure/contentScore';
 
 export type HlTerm = {
   term: string;

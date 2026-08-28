@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { getOrgBillingState } from '../../../lib/orgBilling';
-import { formatTaxIdForStripe, stripeTaxIdType } from '../../../lib/checkoutValidation';
-import { assertCanManage } from '../../../lib/members';
-import { getStripe } from '../../../lib/stripe';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
+import { formatTaxIdForStripe, stripeTaxIdType } from '@/src/infrastructure/checkoutValidation';
+import { assertCanManage } from '@/src/infrastructure/members';
+import { getStripe } from '@/src/infrastructure/stripe';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 const addressSchema = z.object({
   name: z.string().max(120).optional(),

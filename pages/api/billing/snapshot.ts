@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { buildBillingSnapshot } from '@/src/infrastructure/billing/buildBillingSnapshot';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

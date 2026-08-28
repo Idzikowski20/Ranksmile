@@ -10,7 +10,7 @@ import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { loadScanCitationRowsForScans } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import { overviewForDomain } from '@/src/core/domain/aiVisibility/metrics';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 const HISTORY_LIMIT = 24;
 

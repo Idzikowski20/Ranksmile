@@ -1,9 +1,9 @@
 // GET /api/v1/wordpress/workspaces — the user's workspaces (for the plugin's picker).
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
-import { authPluginRequest } from '../../../../lib/wpConnection';
-import { getAccessibleWorkspaceIds } from '../../../../lib/tenancy';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { authPluginRequest } from '@/src/infrastructure/wpConnection';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/tenancy';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);

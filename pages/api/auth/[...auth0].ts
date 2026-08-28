@@ -7,7 +7,7 @@
  * re-emit ACAO for known app origins (defense in depth vs credentialed XSS).
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getAppOrigin } from '../../../lib/appOrigin';
+import { getAppOrigin } from '@/src/infrastructure/appOrigin';
 
 const BASE_URL = process.env.NEON_AUTH_BASE_URL;
 

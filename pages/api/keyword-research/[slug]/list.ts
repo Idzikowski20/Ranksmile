@@ -5,7 +5,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
 import { queryRows } from '@/src/infrastructure/db/query';
 import type { KeywordResearchCardDTO, KeywordResearchStats, KeywordResearchStatus } from '@/src/core/domain/keywords/types';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 type ListRow = {
    id: number;

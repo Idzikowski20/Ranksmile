@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from 'react-query';
-import fetchJson from '../../lib/fetchJson';
+import fetchJson from '@/src/infrastructure/fetchJson';
 import {
   formatTrialCountdown,
   type PlanLimitMetric,
   type PlanSummaryData,
-} from '../../lib/planLimits';
+} from '@/src/infrastructure/planLimits';
 import { Icon } from '../koala/icons/Icon';
 import { Card, CardHeader } from '../koala/product/Card';
 import { brandMain } from '../koala/tokens/colors';

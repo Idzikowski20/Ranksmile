@@ -15,7 +15,7 @@ import {
 } from '../../../components/billing/CheckoutStripeProvider';
 import CheckoutKoalaBody from '../../../components/billing/CheckoutKoalaBody';
 import { CheckoutPageSkeleton } from '../../../components/billing/CheckoutPageSkeleton';
-import type { CheckoutFieldErrors } from '../../../lib/checkoutValidation';
+import type { CheckoutFieldErrors } from '@/src/infrastructure/checkoutValidation';
 import {
   BillingPeriod,
   CheckoutPlan,
@@ -25,9 +25,9 @@ import {
 import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '@/src/core/domain/billing/planLock';
 import { resolveCheckoutMode } from '@/src/infrastructure/billing/billingTrial';
 import { isAllowedSubscriptionChange, type UpgradePreview } from '@/src/infrastructure/billing/billingUpgrade';
-import { getOrgBillingState } from '../../../lib/orgBilling';
-import type { SubscriptionDetails } from '../../../lib/subscriptionDetails';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
+import type { SubscriptionDetails } from '@/src/infrastructure/subscriptionDetails';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
 import { isStripeCheckoutConfigured, type PlanSlug } from '@/src/core/domain/billing/prices';
 

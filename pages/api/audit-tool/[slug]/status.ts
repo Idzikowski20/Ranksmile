@@ -5,7 +5,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
 import { queryRows } from '@/src/infrastructure/db/query';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 type CountRow = { status: string, n: number };
 type InFlightRow = { id: number, status: string, progress_done: number | null, progress_total: number | null };

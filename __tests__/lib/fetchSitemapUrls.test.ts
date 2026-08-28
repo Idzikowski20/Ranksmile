@@ -1,12 +1,12 @@
-jest.mock('../../lib/ssrfGuard', () => ({
+jest.mock('@/src/infrastructure/ssrfGuard', () => ({
   assertPublicUrl: jest.fn(async (rawUrl: string) => {
     if (rawUrl.includes('169.254.169.254')) throw new Error('Blocked private address');
     return new URL(rawUrl);
   }),
 }));
 
-import { fetchSitemapUrls } from '../../lib/fetchSitemapUrls';
-import { assertPublicUrl } from '../../lib/ssrfGuard';
+import { fetchSitemapUrls } from '@/src/infrastructure/fetchSitemapUrls';
+import { assertPublicUrl } from '@/src/infrastructure/ssrfGuard';
 
 type MockFetchResponse = {
   ok: boolean;

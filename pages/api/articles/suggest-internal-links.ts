@@ -13,8 +13,8 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
 export interface LinkSuggestion {

@@ -1,9 +1,9 @@
 // POST /api/articles/[id]/ccm/live — live presence overlay (no persist, no new facts)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../../utils/verifyUser';
-import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { getCurrentUserId } from '../../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
 import { SqlCompileStore } from '../../../../../lib/intelligence/sqlCompileStore';

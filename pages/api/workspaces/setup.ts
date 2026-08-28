@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { createSetupWorkspace } from '../../../lib/workspaces';
+import { createSetupWorkspace } from '@/src/infrastructure/workspaces';
 import { BillingSource, emitBillingEvent, ensureCorrelationId } from '@/src/infrastructure/billing/billingAudit';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);

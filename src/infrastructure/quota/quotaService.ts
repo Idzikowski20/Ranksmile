@@ -2,7 +2,7 @@ import type { Transaction } from 'sequelize';
 import db from '@/database/database';
 import { ensurePlanQuotaTables } from '@/src/infrastructure/persistence/schema/ensurePlanQuotaTables';
 import { hasActiveBillingEntitlement } from '@/src/infrastructure/billing/billingEntitlement';
-import { getOrgBillingState } from '@/lib/orgBilling';
+import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
 import {
   ACTIVE_PERIOD_KEY,
   DEFAULT_PLAN_SLUG,
@@ -10,7 +10,7 @@ import {
   getPlanMeterLimit,
   resolvePlanSlug,
   type QuotaMeter,
-} from '@/lib/planLimits';
+} from '@/src/infrastructure/planLimits';
 import { PlanLimitError } from '@/src/infrastructure/quota/errors';
 import { periodKeyForMeter } from '@/src/infrastructure/quota/period';
 import type {

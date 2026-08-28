@@ -1,4 +1,4 @@
-import { cleanHtmlForWordPress } from '../../lib/wpContentClean';
+import { cleanHtmlForWordPress } from '@/src/infrastructure/wpContentClean';
 
 const clean = (s: string) => cleanHtmlForWordPress(s);
 

@@ -1,7 +1,7 @@
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
-import { getOrgBillingState } from '@/lib/orgBilling';
-import { getSiteAuditPageLimit, resolvePlanSlug } from '@/lib/planLimits';
-import { ensureUserTenancy } from '@/lib/tenancy';
+import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
+import { getSiteAuditPageLimit, resolvePlanSlug } from '@/src/infrastructure/planLimits';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 
 export type SiteAuditLimitInfo = {
   pagesLimit: number;

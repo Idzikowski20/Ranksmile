@@ -6,16 +6,16 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { callSidecar } from '../../../lib/sidecar';
+import { callSidecar } from '@/src/infrastructure/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
-import { mergeCoverageItems, parseSnapshot, buildSnapshot } from '../../../lib/coverageStore';
-import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
+import { mergeCoverageItems, parseSnapshot, buildSnapshot } from '@/src/infrastructure/coverageStore';
+import { persistCoverageFeatureRun } from '@/src/infrastructure/persistCoverageFeatureRun';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

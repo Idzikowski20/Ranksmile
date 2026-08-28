@@ -3,7 +3,7 @@ import {
   classifyHeadingStatus,
   isPaaCovered,
   computeSerpInsights,
-} from '../../lib/researchUtils';
+} from '@/src/infrastructure/researchUtils';
 
 describe('jaccardSimilarity', () => {
   it('returns 0 for completely different strings', () => {

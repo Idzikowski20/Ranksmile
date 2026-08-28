@@ -6,14 +6,14 @@ import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchSc
 import { persistAiVisibilityRun } from '@/src/infrastructure/aiVisibility/aiVisibilityStore';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { resolveContentLocale } from '../../../lib/domainLanguage';
+import { resolveContentLocale } from '@/src/infrastructure/domainLanguage';
 import { queryOne, queryRows, ArticleRow } from '@/src/infrastructure/db/query';
 import { runArticleAiPipeline } from '@/src/infrastructure/articles/articleAiPipeline';
-import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
-import { computeContentScore } from '../../../lib/contentScore';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { buildCompetitorBenchmarks } from '@/src/infrastructure/competitorAuditScore';
+import { computeContentScore } from '@/src/infrastructure/contentScore';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 function domainFromUrl(url: string): string {
    try {
@@ -99,7 +99,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          await persistAiVisibilityRun(articleId, keyword, summary, aiScore);
       }
 
-      let scoreData: import('../../../lib/contentScore').ScoreData | null = null;
+      let scoreData: import('@/src/infrastructure/contentScore').ScoreData | null = null;
       try {
          scoreData = article.score_data ? JSON.parse(article.score_data) : null;
       } catch { scoreData = null; }

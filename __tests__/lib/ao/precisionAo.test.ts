@@ -9,7 +9,7 @@ import {
   isAdequatelyCovered,
   livePresenceQualityCap,
 } from '@/src/core/domain/optimize/coverageState';
-import { faqBudgetForWordCount, selectFaqQuestions } from '../../../lib/aoFaqSection';
+import { faqBudgetForWordCount, selectFaqQuestions } from '@/src/infrastructure/aoFaqSection';
 import { shouldSkipOptimize, TARGET_AI, TARGET_SEO } from '@/src/core/domain/optimize/optimizeMode';
 import { resolveOptimizationStrategy } from '@/src/infrastructure/ao/runPrecisionOptimize';
 import { buildEditCandidates } from '@/src/infrastructure/ao/buildCandidates';

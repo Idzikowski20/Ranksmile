@@ -5,7 +5,7 @@ import {
   formatPlanStatus,
   formatTrialCountdown,
   planEndLine,
-} from '../../lib/planLimits';
+} from '@/src/infrastructure/planLimits';
 
 describe('planLimits', () => {
   it('resolvePlanSlug falls back to growth', () => {

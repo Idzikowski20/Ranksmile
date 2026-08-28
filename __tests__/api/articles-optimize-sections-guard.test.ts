@@ -1,11 +1,11 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 // Tenancy / auth guards + Precision AO contracts for optimize-sections.
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' } }));
 jest.mock('cheerio', () => jest.requireActual('cheerio'));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
-jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn(), ensureUserTenancy: jest.fn() }));
+jest.mock('@/src/infrastructure/tenancy', () => ({ assertArticleAccess: jest.fn(), ensureUserTenancy: jest.fn() }));
 // Opening-policy enforcement rewrites the lead independently of term coverage and
 // consumes LLM calls, which breaks this suite's precision-guard assertions. It has
 // its own suite (__tests__/lib/wie/openingPolicyEnforce.test.ts) — no-op it here.
@@ -46,7 +46,7 @@ jest.mock('@/src/infrastructure/articles/articleSql', () => ({
 import handler from '../../pages/api/articles/optimize-sections';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { assertArticleAccess, ensureUserTenancy } from '../../lib/tenancy';
+import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getOrgUsage5h } from '@/src/infrastructure/ai/aiTokenUsage';
 import { buildArticleContext } from '@/src/infrastructure/articles/articleContext';
 import { needsTermEnrichment } from '@/src/infrastructure/articles/articleKeywordDiscovery';

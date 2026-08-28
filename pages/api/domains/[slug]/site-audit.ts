@@ -6,7 +6,7 @@ import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/en
 import { buildSiteAuditOverview } from '@/src/infrastructure/siteAudit/buildOverview';
 import { resolveSiteAuditPageLimit } from '@/src/infrastructure/siteAudit/pageLimit';
 import type { SiteAuditOverviewPayload } from '@/src/infrastructure/siteAudit/types';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(
   req: NextApiRequest,

@@ -166,7 +166,7 @@ export async function saveCrawlSnapshot(domainId: number, domainHint?: string): 
   );
 
   try {
-    const { emitObservations, observationsFromAuditIssues } = await import('@/lib/emitObservations');
+    const { emitObservations, observationsFromAuditIssues } = await import('@/src/infrastructure/emitObservations');
     const issues = Object.entries(metrics.issueCounts)
       .filter(([, count]) => count > 0)
       .map(([issueId, count]) => ({

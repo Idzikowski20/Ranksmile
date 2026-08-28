@@ -3,7 +3,7 @@ jest.mock('@/src/infrastructure/seo/keywordData', () => ({
   enrichTerms: jest.fn(),
   getOwnVisibleKeywords: jest.fn().mockResolvedValue({ keywords: [] }),
 }));
-jest.mock('../../lib/dataforseo', () => ({
+jest.mock('@/src/infrastructure/dataforseo', () => ({
   getRankedKeywords: jest.fn(),
   isDataForSeoConfigured: jest.fn().mockReturnValue(true),
 }));
@@ -12,9 +12,9 @@ jest.mock('@/src/infrastructure/cache/fileCache', () => ({
   TTL: { RANKED_KEYWORDS: 1 },
 }));
 
-import { getRankedKeywords } from '../../lib/dataforseo';
+import { getRankedKeywords } from '@/src/infrastructure/dataforseo';
 import { needsTermEnrichment, mergeNlpTerms, discoverRankingKeywords } from '@/src/infrastructure/articles/articleKeywordDiscovery';
-import type { NlpTerm } from '../../lib/contentScore';
+import type { NlpTerm } from '@/src/infrastructure/contentScore';
 
 const mockGetRankedKeywords = getRankedKeywords as jest.MockedFunction<typeof getRankedKeywords>;
 

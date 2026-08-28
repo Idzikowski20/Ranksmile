@@ -7,12 +7,12 @@ jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => (
   ensureBillingTables: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../../lib/stripe', () => ({
+jest.mock('@/src/infrastructure/stripe', () => ({
   getStripe: jest.fn(),
   isStripeConfigured: jest.fn(() => false),
 }));
 
-jest.mock('../../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => ({
     stripeCustomerId: null,
     stripeSubscriptionId: null,

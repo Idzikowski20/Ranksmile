@@ -7,7 +7,7 @@ import { KoalaPanel, KoalaPanelBody } from '../koala/layout';
 import { overlayZ, ShellPortal } from '../koala/overlay/ShellPortal';
 import PricingPlansSettings from './PricingPlansSettings';
 import { resolveSubscriptionBadge, SubscriptionStatusRow } from './SubscriptionStatusBadge';
-import type { SubscriptionDetails } from '../../lib/subscriptionDetails';
+import type { SubscriptionDetails } from '@/src/infrastructure/subscriptionDetails';
 import type { UpcomingPaymentDetails } from '@/src/core/shared/money';
 import { formatMoney, formatUpcomingTotal } from '@/src/core/shared/money';
 import { Icon } from '../koala/icons/Icon';

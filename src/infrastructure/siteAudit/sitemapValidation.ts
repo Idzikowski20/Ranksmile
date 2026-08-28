@@ -1,9 +1,9 @@
 import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { fetchSitemapEntries } from '@/lib/fetchSitemapUrls';
+import { fetchSitemapEntries } from '@/src/infrastructure/fetchSitemapUrls';
 import { RANKSMILE_UA } from '@/src/core/shared/httpConstants';
-import { assertPublicUrl } from '@/lib/ssrfGuard';
+import { assertPublicUrl } from '@/src/infrastructure/ssrfGuard';
 import type { SitemapIssueInstance } from '@/src/infrastructure/siteAudit/types';
 
 const CACHE_DIR = path.join(process.cwd(), 'data/cache/site-audit-sitemap');

@@ -2,7 +2,7 @@
  * Thin Feature Store wiring stub for Etap 0.5 — serp/coverage/fingerprint producers.
  */
 import type { Feature, ScoreVector, Signal } from '@/lib/primitives/types';
-import { getFeatureStore } from '@/lib/featureStore';
+import { getFeatureStore } from '@/src/infrastructure/featureStore';
 import type { FingerprintMetrics } from '@/src/infrastructure/corpus/corpusService';
 
 export async function wireFingerprintFeatures(opts: {

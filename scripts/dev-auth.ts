@@ -13,7 +13,7 @@ import { betterAuth } from 'better-auth';
 import { toNodeHandler } from 'better-auth/node';
 // eslint-disable-next-line import/no-unresolved
 import { getMigrations } from 'better-auth/db/migration';
-import { sendMail } from '../lib/sendMail';
+import { sendMail } from '@/src/infrastructure/sendMail';
 import { isLocalPostgresUrl } from '../database/isLocalHost';
 import { parsePgUrl, pgReady, waitUntilReady } from './lib/net';
 

@@ -6,7 +6,7 @@ import {
   cronRefreshSearchConsoleData,
   getDomainSearchConsoleData,
 } from '@/src/infrastructure/gsc/domainSearchData';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 /** Custom date ranges can return up to 25k×2 query/page rows — above Next's 4mb default. */
 export const config = {

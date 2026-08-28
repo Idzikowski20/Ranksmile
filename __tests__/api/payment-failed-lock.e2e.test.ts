@@ -2,20 +2,20 @@
 // the real access-enforcement wrapper (402 on payment-failed lock) end to end.
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-import type { OrgBillingState } from '../../lib/orgBilling';
+import type { OrgBillingState } from '@/src/infrastructure/orgBilling';
 
 jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { query: jest.fn() },
 }));
 
-jest.mock('../../lib/stripe', () => ({
+jest.mock('@/src/infrastructure/stripe', () => ({
   getStripe: jest.fn(),
   getStripeWebhookSecret: jest.fn(),
   isStripeConfigured: jest.fn(() => false),
 }));
 
-jest.mock('../../lib/readRawBody', () => ({
+jest.mock('@/src/infrastructure/readRawBody', () => ({
   readRawBody: jest.fn(),
 }));
 
@@ -23,8 +23,8 @@ jest.mock('@/src/infrastructure/billing/billingEmailClaim', () => ({
   claimBillingEmailAndEnqueue: jest.fn(),
 }));
 
-jest.mock('../../lib/stripeBillingSync', () => {
-  const actual = jest.requireActual('../../lib/stripeBillingSync') as typeof import('../../lib/stripeBillingSync');
+jest.mock('@/src/infrastructure/stripeBillingSync', () => {
+  const actual = jest.requireActual('@/src/infrastructure/stripeBillingSync') as typeof import('@/src/infrastructure/stripeBillingSync');
   return {
     ...actual,
     syncSubscriptionToOrg: jest.fn(),
@@ -32,7 +32,7 @@ jest.mock('../../lib/stripeBillingSync', () => {
   };
 });
 
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/orgBilling', () => ({
   getOrgBillingState: jest.fn(),
   getOrgIdByStripeCustomerId: jest.fn(),
   updateOrgBillingState: jest.fn(),
@@ -48,7 +48,7 @@ jest.mock('../../utils/verifyUser', () => ({
   default: jest.fn().mockResolvedValue('authorized'),
 }));
 
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/tenancy', () => ({
   ensureUserTenancy: jest.fn(),
   getAccessibleWorkspaceIds: jest.fn(),
 }));
@@ -69,7 +69,7 @@ jest.mock('@/src/core/shared/errors', () => ({
 // [rows, meta] which the bare db mock can't satisfy). A Set mirrors the real
 // semantics: first claim of an event id wins, replays are deduped, release re-arms.
 const claimedEvents = new Set<string>();
-jest.mock('../../lib/stripeWebhookEvents', () => ({
+jest.mock('@/src/infrastructure/stripeWebhookEvents', () => ({
   claimStripeEvent: jest.fn(async (event: { id: string }) => {
     if (claimedEvents.has(event.id)) return false;
     claimedEvents.add(event.id);
@@ -83,12 +83,12 @@ import stripeWebhookHandler from '../../pages/api/webhooks/stripe';
 import inboxHandler from '../../pages/api/inbox';
 import billingSubscriptionHandler from '../../pages/api/billing/subscription';
 import db from '../../database/database';
-import { getStripe, getStripeWebhookSecret } from '../../lib/stripe';
-import { readRawBody } from '../../lib/readRawBody';
+import { getStripe, getStripeWebhookSecret } from '@/src/infrastructure/stripe';
+import { readRawBody } from '@/src/infrastructure/readRawBody';
 import { claimBillingEmailAndEnqueue } from '@/src/infrastructure/billing/billingEmailClaim';
-import { syncSubscriptionToOrg } from '../../lib/stripeBillingSync';
-import { getOrgBillingState } from '../../lib/orgBilling';
-import { ensureUserTenancy, getAccessibleWorkspaceIds } from '../../lib/tenancy';
+import { syncSubscriptionToOrg } from '@/src/infrastructure/stripeBillingSync';
+import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
+import { ensureUserTenancy, getAccessibleWorkspaceIds } from '@/src/infrastructure/tenancy';
 import { getCurrentUserId } from '../../utils/getUser';
 import { listInboxForUser } from '@/src/infrastructure/notifications/inboxService';
 

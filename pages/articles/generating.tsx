@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import WizardShell from '../../components/articles/WizardShell';
 import GeneratingStage from '../../components/articles/GeneratingStage';
-import { clearWizardState } from '../../lib/wizardState';
+import { clearWizardState } from '@/src/infrastructure/wizardState';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 import { shouldSkipFreshGenerate } from '@/src/core/domain/articles/generateResume';
 import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';

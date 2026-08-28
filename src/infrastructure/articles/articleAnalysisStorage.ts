@@ -1,6 +1,6 @@
 import db from '@/database/database';
-import { countOccurrences } from '@/lib/contentScore';
-import type { NlpTerm } from '@/lib/contentScore';
+import { countOccurrences } from '@/src/infrastructure/contentScore';
+import type { NlpTerm } from '@/src/infrastructure/contentScore';
 import type { SerpCompetitor } from '@/lib/types/sidecar';
 
 /** Replace an article's stored SERP terms atomically. */

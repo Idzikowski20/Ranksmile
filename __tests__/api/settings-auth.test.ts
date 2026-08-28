@@ -1,15 +1,15 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 import type { NextApiRequest, NextApiResponse } from 'next';
 import settingsHandler from '../../pages/api/settings';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { assertCanManage } from '../../lib/members';
-import { readSettingsBlob } from '../../lib/appSettingsStore';
+import { assertCanManage } from '@/src/infrastructure/members';
+import { readSettingsBlob } from '@/src/infrastructure/appSettingsStore';
 
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('owner') }));
-jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/appSettingsStore', () => ({ readSettingsBlob: jest.fn().mockResolvedValue(null), writeSettingsBlob: jest.fn() }));
+jest.mock('@/src/infrastructure/members', () => ({ assertCanManage: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/appSettingsStore', () => ({ readSettingsBlob: jest.fn().mockResolvedValue(null), writeSettingsBlob: jest.fn() }));
 jest.mock('../../scrapers/index', () => ({ __esModule: true, default: [] }));
 jest.mock('next/config', () => () => ({ publicRuntimeConfig: { version: 'test' } }));
 jest.mock('fs/promises', () => ({

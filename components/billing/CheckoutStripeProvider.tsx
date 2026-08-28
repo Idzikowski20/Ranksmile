@@ -18,7 +18,7 @@ import {
   validateCompanyFields,
   type CheckoutAddressValue,
   type CheckoutFieldErrors,
-} from '../../lib/checkoutValidation';
+} from '@/src/infrastructure/checkoutValidation';
 import { Field } from '../koala/forms';
 import { Icon } from '../koala/icons';
 import Input from '../koala/primitives/Input';

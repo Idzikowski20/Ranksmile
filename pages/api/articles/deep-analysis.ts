@@ -8,13 +8,13 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
-import { buildGradedCoverageSnapshot } from '../../../lib/buildCoverageSnapshot';
-import { dedupePaaQuestions } from '../../../lib/curateCoverageItems';
-import { harvestAiCoverage } from '../../../lib/harvestAiCoverage';
+import { computeContentScore, countOccurrences } from '@/src/infrastructure/contentScore';
+import { buildGradedCoverageSnapshot } from '@/src/infrastructure/buildCoverageSnapshot';
+import { dedupePaaQuestions } from '@/src/infrastructure/curateCoverageItems';
+import { harvestAiCoverage } from '@/src/infrastructure/harvestAiCoverage';
 import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult } from '../../../lib/types/sidecar';
 import { flushHeaders, flushSse } from '../../../lib/types/api';
-import type { NlpTerm, ScoreData } from '../../../lib/contentScore';
+import type { NlpTerm, ScoreData } from '@/src/infrastructure/contentScore';
 import {
   calibrateTermRangesFromCorpus,
   filterUsefulNlpTerms,
@@ -35,29 +35,29 @@ import {
   mergeNlpTerms,
   saveArticleKeywords,
 } from '@/src/infrastructure/articles/articleKeywordDiscovery';
-import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPageKeyword';
-import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
+import { keywordFromUrl, resolveAnalysisSeedKeyword } from '@/src/infrastructure/inferPageKeyword';
+import { resolveFactKeyword } from '@/src/infrastructure/resolveFactKeyword';
 import { persistAiVisibilityRun } from '@/src/infrastructure/aiVisibility/aiVisibilityStore';
-import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
+import { persistCoverageFeatureRun } from '@/src/infrastructure/persistCoverageFeatureRun';
 import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
-import { sidecarBase, nextjsUrl } from '../../../lib/sidecar';
+import { sidecarBase, nextjsUrl } from '@/src/infrastructure/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
 import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
-import { buildRankingSourcesPayload } from '../../../lib/rankingSources';
-import { enrichTermsWithSalience } from '../../../lib/termSalience';
+import { buildCompetitorBenchmarks } from '@/src/infrastructure/competitorAuditScore';
+import { buildRankingSourcesPayload } from '@/src/infrastructure/rankingSources';
+import { enrichTermsWithSalience } from '@/src/infrastructure/termSalience';
 import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
-import { buildAuditResult } from '../../../lib/auditCompute';
+import { buildAuditResult } from '@/src/infrastructure/auditCompute';
 import { computeSeoScoreFromAudit } from '@/src/core/domain/audit/seoScore';
-import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
-import { assertPublicUrl } from '../../../lib/ssrfGuard';
-import { resolveContentLocale } from '../../../lib/domainLanguage';
+import { findInternalLinkOpportunities } from '@/src/infrastructure/auditInternalLinks';
+import { assertPublicUrl } from '@/src/infrastructure/ssrfGuard';
+import { resolveContentLocale } from '@/src/infrastructure/domainLanguage';
 import { replaceArticleTerms, replaceCompetitors } from '@/src/infrastructure/articles/articleAnalysisStorage';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
 
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
@@ -207,7 +207,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   await ensureArticlesTables();
 
-  const { assertCronSecret } = await import('../../../lib/cronAuth');
+  const { assertCronSecret } = await import('@/src/infrastructure/cronAuth');
   const isCron = assertCronSecret(req);
   if (!isCron) {
     const authorized = await verifyUser(req, res);

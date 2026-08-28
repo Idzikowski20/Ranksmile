@@ -1,4 +1,4 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 /** @jest-environment node */
 import type { NextApiRequest, NextApiResponse } from 'next';
 
@@ -20,7 +20,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => 
   ensureArticlesTables: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/tenancy', () => ({
   getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([1]),
   getScopedWorkspaceIds: jest.fn().mockResolvedValue([1]),
   ForbiddenWorkspaceError: class ForbiddenWorkspaceError extends Error {},

@@ -1,4 +1,4 @@
-import { clearWizardState } from '../../lib/wizardState';
+import { clearWizardState } from '@/src/infrastructure/wizardState';
 
 describe('clearWizardState', () => {
   afterEach(() => jest.restoreAllMocks());

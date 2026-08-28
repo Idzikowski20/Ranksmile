@@ -1,4 +1,4 @@
-import { assertCronSecret, cronSecrets } from '../../lib/cronAuth';
+import { assertCronSecret, cronSecrets } from '@/src/infrastructure/cronAuth';
 
 describe('cronAuth', () => {
   const OLD = {

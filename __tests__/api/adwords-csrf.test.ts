@@ -20,7 +20,7 @@ jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { sync: jest.fn().mockResolvedValue(undefined) },
 }));
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({
+jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({
   withOrgPaymentAccess: (h: unknown) => h,
 }));
 jest.mock('next/config', () => () => ({ serverRuntimeConfig: {} }));

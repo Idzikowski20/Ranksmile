@@ -3,9 +3,9 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
-import { enqueueKeywordResearch } from '../../../../lib/keywordResearchRunner';
+import { enqueueKeywordResearch } from '@/src/infrastructure/keywordResearchRunner';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await ensureKeywordResearchTables();

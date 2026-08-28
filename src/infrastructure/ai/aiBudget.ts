@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '@/utils/getUser';
-import { ensureUserTenancy } from '@/lib/tenancy';
+import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 
 export { recordAiTokens };

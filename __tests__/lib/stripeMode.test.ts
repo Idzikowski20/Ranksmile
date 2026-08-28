@@ -1,4 +1,4 @@
-import { detectStripeKeyMode, stripeModeMismatchError } from '../../lib/stripeMode';
+import { detectStripeKeyMode, stripeModeMismatchError } from '@/src/infrastructure/stripeMode';
 
 describe('stripeMode', () => {
   const prevKey = process.env.STRIPE_SECRET_KEY;

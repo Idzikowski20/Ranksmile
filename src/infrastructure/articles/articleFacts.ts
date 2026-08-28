@@ -2,11 +2,11 @@
  * Ranksmile-style Facts pipeline — factual statements from DataForSEO People Also Ask.
  * No synthetic citation templates ("X czy warto?") — only real SERP questions + answers.
  */
-import { getPeopleAlsoAsk, isDataForSeoConfigured } from '@/lib/dataforseo';
+import { getPeopleAlsoAsk, isDataForSeoConfigured } from '@/src/infrastructure/dataforseo';
 import { hashId, type CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
-import { resolveFactKeyword } from '@/lib/resolveFactKeyword';
+import { resolveFactKeyword } from '@/src/infrastructure/resolveFactKeyword';
 import { isKeywordOnTopic, seedTokens } from '@/src/core/domain/relevance/topicRelevance';
 import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
 import { factReadinessScore } from '@/src/core/domain/articles/factReadiness';

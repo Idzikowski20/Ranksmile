@@ -1,6 +1,6 @@
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
-import { buildGuidelines } from '@/lib/recommendationEngine';
+import { buildGuidelines } from '@/src/infrastructure/recommendationEngine';
 import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 import type { Action, Feature, Observation, ScoreVector } from '@/lib/primitives/types';
 import { guidelinesToActions } from '@/lib/primitives/guidelineToAction';
@@ -11,7 +11,7 @@ import {
   type FeatureProducer,
   type FeatureRegistration,
 } from '@/lib/primitives/featureRegistry';
-import { persistFeatureRun, type FeatureStoreScope } from '@/lib/featureStoreCore';
+import { persistFeatureRun, type FeatureStoreScope } from '@/src/infrastructure/featureStoreCore';
 
 export type { FeatureContext, FeatureProducer };
 

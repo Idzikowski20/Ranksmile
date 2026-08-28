@@ -1,4 +1,4 @@
-import { isPublicPath, isPublicRoute } from '../../lib/isPublicPath';
+import { isPublicPath, isPublicRoute } from '@/src/infrastructure/isPublicPath';
 
 describe('isPublicPath', () => {
   it.each(['/auth/sign-in', '/login', '/drafts/abc', '/invite/x', '/legal/terms', '/dev/tools', '/', '/404', '/no-access'])(

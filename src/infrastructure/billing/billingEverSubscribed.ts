@@ -12,7 +12,7 @@
  * history. Its own file because `lib/orgBilling` imports the database at module load,
  * which a unit test cannot.
  */
-import type { OrgBillingState, SubscriptionStatus } from '@/lib/orgBilling';
+import type { OrgBillingState, SubscriptionStatus } from '@/src/infrastructure/orgBilling';
 
 /** Statuses under which the subscription never granted anything. */
 const PRE_PAYMENT_STATUSES = new Set<SubscriptionStatus>(['incomplete', 'incomplete_expired']);

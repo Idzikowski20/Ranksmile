@@ -1,9 +1,9 @@
 // POST /api/wie/outcome/sync-gsc — GSC 30d page metrics → Outcome Learning
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../utils/verifyUser';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { syncArticleOutcomeFromGsc } from '@/src/infrastructure/wie/gscOutcomeSync';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

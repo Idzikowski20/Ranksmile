@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Editor } from '@tiptap/core';
-import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
+import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '@/src/infrastructure/highlightColors';
 import {
   shouldOpenCustomContextMenu,
   menuAnchorPoint,
@@ -10,7 +10,7 @@ import {
   RANKSMILE_PRESET_EXPAND,
   RANKSMILE_VOICE_OPTIONS,
   ranksmilePresetVoice,
-} from '../../lib/ranksmileContextMenu';
+} from '@/src/infrastructure/ranksmileContextMenu';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import IconSmily from './IconSmily';
 

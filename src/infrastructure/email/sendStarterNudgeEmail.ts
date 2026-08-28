@@ -1,5 +1,5 @@
-import { getAppOrigin } from '@/lib/appOrigin';
-import { sendMail } from '@/lib/sendMail';
+import { getAppOrigin } from '@/src/infrastructure/appOrigin';
+import { sendMail } from '@/src/infrastructure/sendMail';
 import { STARTER_NUDGE_SUBJECT, starterNudgeEmailHtml } from './starterNudgeEmail';
 
 /** One-shot free→paid Growth pitch (cron). Uses shared sendMail (Resend/SMTP). */
