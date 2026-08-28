@@ -2,8 +2,6 @@ import crypto from 'crypto';
 import db from '../database/database';
 import { queryOne } from './db/query';
 
-const isPostgres = !!process.env.DATABASE_URL;
-
 // App-owned email verification. Kept out of NextAuth's user table since email confirmation is a
 // Ranksmile-specific gate (not every auth provider needs it), and this way it can be added/removed
 // without touching the NextAuth schema. token_hash/expires_ms/confirmed_ms mirror the aiTokenUsage
@@ -83,24 +81,17 @@ export async function issueConfirmationToken(userId: string, email: string, now:
   // Atomic upsert on the user_id PRIMARY KEY so concurrent resend/initial-send requests can't both
   // pass a SELECT and then race into duplicate INSERTs (PK violation → server error). Unconfirmed
   // users only reach here (confirmed → early-returned above), so overwriting confirmed_ms=NULL is safe.
-  if (isPostgres) {
-    await db.query(
-      `INSERT INTO email_confirmations (user_id, email, token_hash, expires_ms, last_sent_ms, confirmed_ms)
-       VALUES (?, ?, ?, ?, ?, NULL)
-       ON CONFLICT (user_id) DO UPDATE SET
-         email = EXCLUDED.email,
-         token_hash = EXCLUDED.token_hash,
-         expires_ms = EXCLUDED.expires_ms,
-         last_sent_ms = EXCLUDED.last_sent_ms`,
-      { replacements: [userId, email, tokenHash, expiresMs, now] },
-    );
-  } else {
-    await db.query(
-      `INSERT OR REPLACE INTO email_confirmations (user_id, email, token_hash, expires_ms, last_sent_ms, confirmed_ms)
-       VALUES (?, ?, ?, ?, ?, NULL)`,
-      { replacements: [userId, email, tokenHash, expiresMs, now] },
-    );
-  }
+  // Same SQL on both dialects: SQLite supports ON CONFLICT DO UPDATE since 3.24.
+  await db.query(
+    `INSERT INTO email_confirmations (user_id, email, token_hash, expires_ms, last_sent_ms, confirmed_ms)
+     VALUES (?, ?, ?, ?, ?, NULL)
+     ON CONFLICT (user_id) DO UPDATE SET
+       email = EXCLUDED.email,
+       token_hash = EXCLUDED.token_hash,
+       expires_ms = EXCLUDED.expires_ms,
+       last_sent_ms = EXCLUDED.last_sent_ms`,
+    { replacements: [userId, email, tokenHash, expiresMs, now] },
+  );
 
   return { token };
 }

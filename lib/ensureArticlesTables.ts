@@ -276,6 +276,8 @@ export async function ensureArticlesTables() {
 
    // Indeksy
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_articles_domain ON articles(domain_id)`); } catch {}
+   // Covers the main listing: WHERE domain_id IN (...) ORDER BY updated_at DESC LIMIT/OFFSET.
+   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_articles_domain_updated ON articles(domain_id, updated_at DESC)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_competitors_article ON article_competitors(article_id)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_terms_article ON article_terms(article_id)`); } catch {}
