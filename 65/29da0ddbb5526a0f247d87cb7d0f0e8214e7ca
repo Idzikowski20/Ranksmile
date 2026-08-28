@@ -1,0 +1,1183 @@
+lib/types/sidecar.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/lib/billingActivateTrial.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4,7,25
+pages/api/articles/[id]/ccm/live.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,6
+__tests__/api/organization-role-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4,8-9,13-14
+pages/api/rank-tracking/[slug]/cost.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+src/infrastructure/optimizeWholeArticle.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-273
+pages/api/articles/[id]/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10,20-21
+pages/api/articles/[id]/keywords/suggest.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8,10
+pages/api/audit-tool/[slug]/list.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+pages/api/wie/corpus.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+__tests__/api/notify-enqueue.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,11,58
+pages/api/domains/[slug]/setup-status.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-6
+pages/api/ready.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+__tests__/lib/fetchSitemapUrls.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,8-9
+pages/api/v1/wordpress/check_gsc_connection.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,9
+pages/api/v1/wordpress/import_content.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-6
+__tests__/lib/dataforseoLlm.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/wordpress/status.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,9-10
+pages/api/rank-tracking/[slug]/run.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+src/infrastructure/appSettingsStore.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-45
+__tests__/lib/optimizeGuidelineRouting.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2
+__tests__/lib/growthPipeline.integration.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,10,14
+pages/articles/writing-mode.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+src/infrastructure/scoreArticleHtml.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-95
+src/infrastructure/fetchSitemapUrls.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-114
+src/infrastructure/stripe.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-29
+src/infrastructure/harvestAiCoverage.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-361
+src/infrastructure/ao/applyGatedFaq.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+__tests__/lib/featureStore.q2.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+src/infrastructure/stripeWebhookEvents.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-45
+components/articles/WriteOptimizePanel.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+src/infrastructure/billing/billingLockedStatuses.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+src/infrastructure/harvest/questionScore.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/api/confirm-account.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2,7,11-12
+pages/api/articles/generate-image.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7-9
+pages/api/articles/[id]/versions.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,12
+pages/api/domains/detect-blog-paths.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-6,9
+pages/api/billing/confirmation.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5
+__tests__/lib/aoFaqSection.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+pages/api/rank-tracking/[slug]/check.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+__tests__/api/adwords-csrf.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 23
+__tests__/lib/billing/buildBillingSnapshot.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10,15
+__tests__/lib/resolveFactKeyword.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+lib/intelligence/ccmToCoverageSnapshot.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 17
+src/infrastructure/features/featureEngine.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3,14
+src/infrastructure/wpDraft.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-85
+__tests__/lib/llmCoverageQuestions.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5
+pages/api/domains.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,13
+pages/api/rank-tracking/[slug]/configs.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+src/infrastructure/competitorScan.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-150
+pages/api/refresh.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11-12,14
+__tests__/lib/invitations.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,7
+__tests__/pages/index.test.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 15
+components/articles/RanksmileBubbleMenu.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,13
+pages/api/ai-visibility/internal/run-chunk.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12
+src/infrastructure/dataforseo.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-292
+src/infrastructure/domainPipeline.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-283
+src/infrastructure/quota/siteAudit.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9-10
+scripts/smoke-ccm-coverage.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+src/infrastructure/computeLiveArticleScores.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-151
+lib/primitives/guidelineToAction.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+src/infrastructure/optimizeWordDiff.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-48
+src/infrastructure/seo/scoreContentClient.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2
+__tests__/api/accept-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,4
+pages/api/members/[id]/workspaces.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+services/team.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+utils/spaScraper.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+src/infrastructure/notifications/emailWorker.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+pages/api/gsc/traffic-alerts.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,9
+pages/api/notify.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,13-14
+pages/api/billing/invoices.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+__tests__/api/brand-knowledge-ssrf.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-3,9
+__tests__/lib/ai/tools.phase2.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3,13
+__tests__/lib/requireOrgPaymentAccess.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,11,15,24,26-28
+pages/articles/context.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8,13
+pages/api/articles/[id]/generate-stream.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,10,14
+src/infrastructure/paymentFailedLock.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-51
+services/feedback.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+pages/api/articles/apply-readability.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10,12,15
+scripts/dev-auth.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 16
+pages/api/domains/[slug]/topics.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,9
+__tests__/lib/billingConfirmation.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,10,15
+src/infrastructure/competitorPrescan.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-30
+src/infrastructure/emailConfirmation.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-131
+pages/api/ai-usage.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,7
+pages/api/articles/ai-visibility.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,11,14-16,102
+pages/api/billing/create-subscription.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8-13,15,17-18
+pages/api/system/check.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2,4-5,7-9
+pages/api/cron/ccm-compile.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+__tests__/lib/wpContentClean.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/onboarding/page-tour.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2,4
+pages/api/members/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-8
+pages/articles/generating.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+__tests__/lib/auditCompute.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+components/billing/PlanExpired.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+pages/api/rank-tracking/[slug]/keywords.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,7
+__tests__/lib/competitorTermCalibration.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+pages/api/billing/portal.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-6,8
+__tests__/lib/articleFacts.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,10
+utils/searchConsole.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+src/infrastructure/articles/articleAnalysisStorage.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-3
+src/infrastructure/siteAudit/crawlSnapshot.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 169
+src/infrastructure/llmCoverageQuestions.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-198
+src/infrastructure/organicResearch/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+__tests__/api/rank-tracking-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2
+pages/api/rank-tracking/[slug]/history/summary.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+lib/intelligence/persistCcmCoverageProjection.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+src/infrastructure/optimizationPlanner.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-335
+pages/articles/[id]/preview.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12
+__tests__/lib/inboxService.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+pages/api/domain.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+pages/billing/confirmation/success.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10-11
+pages/api/v1/wordpress/import_content_update.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-6
+components/domains/AddPagesModal.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+pages/api/articles/job-progress.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8,11-12,16-17,86,207,217,219,262,264
+pages/api/gsc/search-data.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+__tests__/api/workspace-finish.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,8,11
+__tests__/api/articles-accept-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,4
+__tests__/lib/optimizeReviewDoc.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,3
+__tests__/lib/workspaceMembers.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2,4
+pages/api/articles/[id]/generate.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12-13,15,17-18,20-21,23-24,55,79
+src/infrastructure/billing/billingTrial.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+__tests__/api/articles-scope.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,11
+pages/api/ai-visibility/[slug]/generate-prompts.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,13,17
+src/infrastructure/articles/articleAiPipeline.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11
+src/infrastructure/stripeCustomer.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-22
+__tests__/components/planExpired.test.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+pages/api/ai-visibility/internal/due-scans.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10
+scripts/preview-emails.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+pages/api/billing/expired-summary.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,8
+__tests__/lib/emailConfirmation.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 13
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11-14,17,38-39,41,43,45,50-52,54,56-58,60,210
+__tests__/api/settings-auth.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,6-7,11-12
+__tests__/lib/optimizationPlanner.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5,7,9
+__tests__/lib/uploadToBlob.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+pages/api/brand-knowledge.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-6,8
+src/infrastructure/articles/articleFacts.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,9
+components/siteAudit/SiteAuditScoreGauge.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+src/infrastructure/articles/articleKeywordDiscovery.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9-10,12,16
+src/infrastructure/seo/keywordData.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 17-18
+pages/api/pipeline/jobs.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+components/settings/UsageSettings.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3,8
+__tests__/lib/ssrfGuard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/gsc/pages.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+pages/api/organization.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3,5-7
+src/infrastructure/articles/articleContext.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,6,8-10
+src/infrastructure/auditCompute.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-436
+pages/api/articles/social-posts.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8,10,13
+__tests__/lib/persistCoverageFeatureRun.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2
+pages/api/domains/[slug]/run-setup.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,9,27
+pages/api/billing/checkout-session.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6-8,10-11,13
+src/infrastructure/keywordResearchRunner.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-141
+src/infrastructure/siteAudit/sitemapValidation.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,6
+pages/api/favicon.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+__tests__/api/articles-generate-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-3,6
+pages/api/v1/wordpress/update_last_sync_date.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+__tests__/api/article-keywords-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,4
+src/infrastructure/commentAccess.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-18
+pages/api/cron.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9-10,13-14
+components/settings/PricingPlansSettings.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+components/billing/CheckoutStripeProvider.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 21
+pages/api/articles/publish-targets.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 13
+src/infrastructure/planLimits.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-190
+pages/api/members/invitations/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-5
+src/infrastructure/email/sendStarterNudgeEmail.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2
+pages/api/articles/accept.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,11
+src/infrastructure/orgBilling.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-303
+src/infrastructure/runActionExecution.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-115
+pages/api/content-settings.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5,7,9
+src/infrastructure/stripeBillingReconcile.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-139
+src/infrastructure/wpConnection.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-89
+pages/api/articles/[id]/wizard-state.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12,14
+pages/api/gsc/accounts.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12
+src/infrastructure/persistence/schema/ensureAiVisibilityTables.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+__tests__/api/inbox.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,25
+__tests__/lib/priorityActions.smoke.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+pages/api/articles/[id]/ccm/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,7
+pages/api/articles/import.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12-13,16-18,23-24
+pages/api/keyword-research/[slug]/run.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,8
+pages/api/system/cron-health.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-3,5-6
+__tests__/api/health-ready.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 24
+__tests__/api/comments-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,3,7
+src/infrastructure/auditEnrich.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-105
+src/infrastructure/rankTracking/service.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+src/infrastructure/ai/articleMeta.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+src/infrastructure/aiVisibility/aiVisibilityRead.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+src/infrastructure/pickArticleTerms.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-36
+pages/api/articles/ranksmile-agent.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 16,21
+src/infrastructure/wie/brandDnaOnboarding.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+__tests__/lib/dataforseoBudget.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/lib/isPublicPath.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/lib/billingEmails.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+__tests__/lib/members.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2,4
+pages/api/cron/stripe-billing-reconcile.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4,6-7
+pages/api/articles/fetch-site-links.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8,10
+pages/api/billing/upgrade-preview.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9-13,15
+__tests__/api/workspaces.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,3,7,19
+__tests__/lib/articleKeywordDiscovery.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,15,17
+__tests__/api/invitations.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-6,13,17,24,27-28,31
+pages/api/inbox/mark-read.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+pages/api/wordpress/post-options.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,11-13
+pages/onboarding.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+src/infrastructure/deepAnalysis.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-76
+pages/api/workspaces/[id]/finish.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4,32
+src/infrastructure/rankTracking/serpRankCheck.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-3
+src/infrastructure/competitorAuditScore.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-122
+src/infrastructure/featureStoreCore.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-137
+pages/api/rank-tracking/[slug]/configs/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+src/infrastructure/notifications/inboxService.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+__tests__/lib/confirmEmail.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/lib/optimizeLog.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+src/infrastructure/growthMetaStore.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-100
+src/infrastructure/mergeArticleTerms.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-69
+src/infrastructure/persistCoverageFeatureRun.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-146
+utils/verifyUser.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+src/infrastructure/quota/reconciliation.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+src/infrastructure/regradeCoverageSnapshot.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-73
+components/settings/SubscriptionStatusBadge.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+src/infrastructure/siteAudit/hstsCheck.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+__tests__/api/articles-ai-visibility-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,5,9
+pages/api/members/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+src/infrastructure/quota/errors.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/lib/recommendationEngine.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,107
+src/infrastructure/billing/stripe/stripeBillingClient.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+pages/api/invitations/[token]/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+pages/api/wie/brand-dna.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+src/infrastructure/resolveFactKeyword.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-47
+components/billing/CheckoutKoalaBody.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 15
+pages/api/site-context/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11
+__tests__/lib/mergeArticleTerms.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2
+__tests__/api/articles-publish-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,4,6
+pages/api/rank-tracking/[slug]/export.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+sentry-client-init.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+src/infrastructure/optimizeSectionEdit.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-103
+src/infrastructure/requireOrgPaymentAccess.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-233
+pages/api/workspaces/settings.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8-9,11
+components/ranksmile/Gauge.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+src/infrastructure/safeUrl.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-22
+src/infrastructure/userProfile.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-57
+pages/api/articles/backfill.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 14
+src/infrastructure/quota/ensureBalances.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8-9
+pages/api/cron/starter-nudge.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5
+src/infrastructure/auditRunner.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-116
+components/koala/product/PlanUsageMetricRow.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+pages/sites/[domain]/keyword-research/[id].tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 16
+pages/api/settings.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,9-10
+src/infrastructure/email/runStarterNudgeCron.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+src/infrastructure/rankingSources.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-94
+pages/api/pixabay/search.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+__tests__/lib/liveCoverage.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+src/infrastructure/buildCoverageSnapshot.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-202
+pages/api/audit-tool/[slug]/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+pages/articles/[id]/index.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,32-34,36,39,47,51,55-56
+src/infrastructure/fetchBootstrap.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-16
+pages/api/automations/[slug]/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+utils/verifyDomainOwnership.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+src/infrastructure/features/serpCoverageFeatures.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+pages/api/articles/[id]/content-plan.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11,13,26-27,30
+src/infrastructure/ai/tools.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,6
+__tests__/lib/cronAuth.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/lib/tenancy.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+pages/api/inbox/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,8
+pages/auth/confirm-account.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+__tests__/lib/optimizeSectionEdit.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10-11
+pages/api/workspaces/[id]/members.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-5
+src/infrastructure/sendMail.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-186
+src/infrastructure/stripeBillingSync.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-223
+pages/api/billing/activate-trial.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6-9,11
+__tests__/lib/stripeInvoiceClientSecret.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/v1/wordpress/track_event.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+src/infrastructure/billing/stripe/stripeInvoiceRepository.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+__tests__/lib/wizardState.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/adwords.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11
+__tests__/lib/checkoutValidation.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+pages/api/rank-tracking/[slug]/runs/latest.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+pages/api/workspaces/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-5
+pages/api/billing/audit-beacon.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10,12
+pages/api/rank-tracking/[slug]/results.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+src/infrastructure/workers/live_score/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 18
+src/infrastructure/features/fingerprintFeatures.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+__tests__/lib/ao/precisionAo.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12
+pages/api/articles/ask-ranksmile.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6-7,14,17
+__tests__/lib/runStarterNudgeCron.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,18-19,37
+__tests__/lib/organization.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2,5
+components/koala/shell/Sidebar.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+pages/api/v1/wordpress/disconnect_draft.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5
+pages/api/ai-visibility/[slug]/config.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10
+src/infrastructure/aiVisibility/aiVisibilityScan.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 15-16,300
+src/infrastructure/quota/period.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/articles/[id]/growth-history.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,8,13
+src/infrastructure/appAccess/ApplicationShell.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8-9,19-20
+src/infrastructure/optimizePostHtml.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-26
+components/settings/SubscriptionSettings.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10
+src/infrastructure/invitations.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-88
+src/infrastructure/researchUtils.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-86
+__tests__/components/sidebarPlanItemPaid.test.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,7
+pages/api/billing/subscription.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-3,5
+pages/api/competitors/[slug]/list.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7-8
+pages/api/rank-tracking/[slug]/runs/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+__tests__/lib/billingAbandoned.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+__tests__/lib/quotaSemantics.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+pages/api/billing/status.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-4,6
+__tests__/lib/pageTourState.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 17,82,93,105
+pages/api/rank-tracking/[slug]/metrics/refresh.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+__tests__/lib/optimizeWordDiff.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/api/articles-pagination.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,23
+__tests__/lib/billing/billingSnapshotDomain.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10,15
+pages/api/workspaces/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3,5
+src/infrastructure/organicResearch/hybrid.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+pages/api/articles/generate-outline.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12-14,18-19
+pages/api/insight.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+src/infrastructure/uploadToBlob.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-156
+__tests__/api/article-id-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,4
+pages/api/domains/blog-paths.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+pages/api/articles/analyze-batch.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 15
+__tests__/api/articles-optimize-sections-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,8,49
+__tests__/lib/sanitizeHtml.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/clearfailed.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+components/koala/shell/SidebarPlanItem.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-6,8
+pages/api/keywords.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,16
+components/articles/MiniGauge.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+pages/auth/confirm-email.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+pages/api/articles/plagiarism.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,10-12
+src/infrastructure/optimizeMessaging.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-42
+src/infrastructure/workers/ner/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 36
+__tests__/api/rank-tracking-cron-auth.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+__tests__/api/keywords-bulk-scope.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 15,28
+__tests__/lib/commentAccess.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2,7-8
+__tests__/lib/reconcilePostGenerateArticle.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2
+pages/api/domains/[slug]/site-audit/compare.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+__tests__/src/infrastructure/billing/stripeInvoiceRepository.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,5,10-11
+__tests__/lib/termSalience.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+pages/api/searchconsole.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9-10
+pages/api/pipeline/analyze.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+src/infrastructure/billing/billingEntitlement.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+components/keywordResearch/KeywordClusterModal.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+src/infrastructure/billing/billingActivateTrial.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 14,16
+__tests__/lib/sanitizeHtmlSchemes.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+src/infrastructure/wie/eval/runEvalSuite.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 30-33
+src/infrastructure/harvest/canonicalizeQuestion.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+pages/billing/checkout/[plan].tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 18,28-30
+pages/api/gsc/connect.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10
+pages/api/webhooks/stripe.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-5,10-11,15
+__tests__/lib/safeUrl.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/rank-tracking/[slug]/history/[keywordId].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+pages/api/articles/[id]/debug-export.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11,13,19
+src/infrastructure/featureStore.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-256
+__tests__/lib/rankingSources.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+src/infrastructure/dataforseoLlm.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-285
+__tests__/api/articles-job-progress-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8,11,20
+pages/api/v1/wordpress/track_environment.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+src/infrastructure/billing/stripeTaxPreview.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+pages/api/billing/update-customer.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-7,9
+pages/api/cron/plan-reservations.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-6
+pages/api/rank-tracking/[slug]/organic-keyword-history.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+pages/api/v1/wordpress/get_traffic_from_gsc.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,8
+pages/api/workspaces/active.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+pages/api/articles/[id]/execute-action.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,8,14
+__tests__/components/ResearchUtils.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+src/infrastructure/auditInternalLinks.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-108
+src/infrastructure/subscriptionDetails.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-197
+src/infrastructure/siteAudit/pageLimit.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-4
+src/infrastructure/ao/runPrecisionOptimize.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7-9,11,33-34
+__tests__/lib/stopSlopPrompt.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-3
+pages/api/ai-visibility/[slug]/scan-status.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+__tests__/lib/inviteEmail.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/articles/[id]/comments.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11-12,15
+__tests__/lib/billingUpgrade.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+__tests__/lib/circuitBreaker.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/v1/wordpress/get_user_drafts.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-6
+pages/api/wie/outcome.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,6
+pages/api/ai-visibility/[slug]/history.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 13
+__tests__/api/payment-failed-lock.e2e.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,12,18,26-27,35,51,72,86-87,89-91
+__tests__/api/organization.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5,10,19,25,28
+pages/api/ai-visibility/[slug]/data.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12
+components/articles/ArticleEditor.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 17,20,53
+pages/api/competitors/[slug]/scan.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7-8
+pages/api/v1/wordpress/workspaces.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-6
+components/articles/CompareVersionsModal.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+src/infrastructure/autopilot.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-294
+pages/api/wordpress/publish.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,11-16
+src/infrastructure/domainVoices.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-29
+__tests__/api/workspace-members.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-6,9-10,16
+src/infrastructure/emitObservations.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-194
+src/infrastructure/keywordResearchCompute.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-93
+src/infrastructure/email/layout.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+__tests__/lib/optimizeMessaging.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2
+src/infrastructure/rankTracking/defaultConfig.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/billing/snapshot.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+pages/api/v1/wordpress/disconnect.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5
+components/dashboard/GetStartedCard.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+src/infrastructure/gsc/gscAccounts.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+pages/api/keyword.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+src/infrastructure/ai/types.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+pages/api/wordpress/connections.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6-9
+__tests__/lib/subscriptionStatusBadge.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+pages/api/domains/[slug]/page-audit-deep.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12-14
+pages/api/confirm-account.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6-7
+src/infrastructure/inferPageKeyword.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-103
+__tests__/lib/termMatch.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+__tests__/api/ai-vis-generate-prompts-singleflight.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 18,23,27,31
+__tests__/api/articles-import-backfill-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,18,20,26
+__tests__/lib/emitObservations.q2.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-6
+pages/api/domains/[slug]/site-audit/issues/[issueId].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11
+pages/api/dbmigrate.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7-8
+pages/api/gsc/sites.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+pages/api/v1/wordpress/get_draft_sync_status.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-5
+__tests__/lib/coverageStore.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+pages/api/render-page.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,9
+pages/api/volume.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+__tests__/components/sidebarPlanItemExpiry.test.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+__tests__/lib/optimizeSectionEvents.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/index.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10-11
+pages/api/domains/[slug]/recommendations.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+pages/api/cron/rank-snapshots-retention.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-6
+pages/api/v1/wordpress/get_organization_credits.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+src/infrastructure/ai/aiBudget.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+src/infrastructure/curateCoverageItems.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-207
+src/infrastructure/rankTracking/keywordMetricsCache.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+src/infrastructure/billing/billingConfirmation.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5,7
+src/infrastructure/billing/paymentMethodService.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+__tests__/lib/planLimits.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,8-9,17-18,24-25,31,38,41,66
+pages/api/audit-tool/[slug]/rerun.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+src/infrastructure/articles/buildDeveloperReport.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,9
+pages/api/cron/rank-tracking.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3,8-9
+pages/api/articles/content-effort.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8,10,15-16
+pages/api/cron/wie-eval.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+src/infrastructure/billing/paymentMethodViewModel.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/domains/[slug]/site-audit/pages.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+__tests__/api/comments-publish.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+__tests__/api/articles-import-ssrf.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+src/infrastructure/organization.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-38
+src/infrastructure/workspaceMembers.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-64
+pages/api/automations/[slug]/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12-13
+pages/api/audit-tool/[slug]/run.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,9
+pages/api/onboarding.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2,4
+__tests__/lib/stripeBillingSync.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-3,5
+__tests__/lib/inferPageKeyword.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+components/articles/ResearchOutlinePanel.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+pages/api/keyword-research/[slug]/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+src/infrastructure/onboardingState.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-145
+src/infrastructure/regenerateDomainTopics.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-55
+__tests__/lib/serviceUrls.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 15,24,31,38
+pages/api/domains/[slug]/site-audit.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+pages/api/keyword-research/[slug]/list.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+pages/api/audit.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 13
+src/infrastructure/billing/buildBillingSnapshot.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5
+src/infrastructure/gatherBlogUrls.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-40
+src/infrastructure/gsc/gscSnapshots.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 36
+pages/api/articles/competitor-outlines.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 14-17
+src/infrastructure/ai/aiCoverageJudge.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12
+src/infrastructure/workers/visibility/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 62
+src/infrastructure/termSalience.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-52
+__tests__/api/cannibalization-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/lib/domainPipeline.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+__tests__/lib/orgBilling.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+pages/api/billing/payment-methods/[id].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7-11
+src/infrastructure/quota/quotaService.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,13
+__tests__/lib/keywordHelpers.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+src/infrastructure/buildImportKeywordList.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-70
+pages/api/articles/suggest-internal-links.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 16-17
+__tests__/ao/golden/cuckolding.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 14,18
+pages/api/wordpress/connect.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8-12
+pages/api/audit-tool/[slug]/status.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+pages/api/v1/wordpress/check_draft_status.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+src/infrastructure/optimizeLog.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-59
+src/infrastructure/scoreDomainPages.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-199
+pages/api/keyword-research/[slug]/status.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+src/infrastructure/useOnboardingChecklist.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-121
+pages/api/rank-tracking/[slug]/organic.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 16
+__tests__/lib/buildImportKeywordList.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/domains/configure.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10-11,14
+pages/api/billing/cancel.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-6,8
+pages/api/workspaces/setup.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3,5
+pages/api/articles/publish.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,10,13
+pages/api/audit-tool/[slug]/create.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,10
+__tests__/lib/computeOptimizeLiveSnapshot.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,8
+pages/api/billing/upgrade-subscription.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9-13,15,17
+pages/api/rank-tracking/[slug]/analytics.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+pages/api/image-proxy.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,7
+pages/api/sites.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,13
+src/infrastructure/queueRunner.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-144
+pages/articles/content-type.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+__tests__/lib/curateCoverageItems.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7,15
+pages/auth/callback.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+components/articles/termHighlightExtension.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+sentry.server.config.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+__tests__/utils/verifyDomainOwnership.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10,15
+src/infrastructure/billing/billingEverSubscribed.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 15
+__tests__/lib/introductionAnalyzer.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+components/articles/ContentScorePanel.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-5
+pages/api/competitors/[slug]/select.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7-8
+pages/api/billing/tax-preview.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8-9
+__tests__/api/domains-scope.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5,20
+pages/api/billing/payment-methods/[id]/default.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9-13
+pages/api/articles/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8,16
+src/infrastructure/cronWatchdog.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-131
+pages/sites/[domain]/content-audit.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12,16
+pages/api/invitations/[token]/accept.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+pages/api/profile.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-5
+src/infrastructure/rankTracking/apiAuth.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+__tests__/lib/workspaces.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2-3,10-11
+components/aiVisibility/AiVisPageShell.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12
+pages/api/articles/[id]/keywords/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6-7
+pages/api/keyword-research/[slug]/create.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,8
+__tests__/utils/verifyUser.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2,4
+__tests__/api/articles-deep-analysis-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,3,6,10,19,23-24,30-32
+src/infrastructure/persistence/schema/ensureArticlesTables.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7
+src/infrastructure/harvest/providers.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2,4
+__tests__/api/keyword-single-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/auth/[...auth0].ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10
+pages/api/domains/[slug]/cannibalization.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+src/infrastructure/appAccess/resolveAppState.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+src/infrastructure/optimizeSectionEvents.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-130
+src/infrastructure/workspaces.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-178
+components/ranksmile/SortableHeader.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+pages/api/v1/locations.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5
+__tests__/lib/ai/tools.phase3.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3,10
+__tests__/api/domains-configure-guard.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,13,17
+src/infrastructure/billing/billingUpgrade.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 10,13
+src/infrastructure/tenancy.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-159
+src/infrastructure/workers/planner/index.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 16
+__tests__/api/rank-tracking-organic-ui-flag.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-2,27
+pages/api/domains/[slug]/topics/regenerate.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6-7
+__tests__/api/article-helper-guards.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,6,11,23,26
+__tests__/components/RanksmileBubbleMenu.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+__tests__/lib/quotaReconciliation.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,8
+__tests__/lib/quotaService.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+src/infrastructure/ao/buildCandidates.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8
+pages/api/articles/[id]/comments-stream.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7-9
+pages/api/pipeline/enqueue.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+src/infrastructure/organicResearch/keywordHistory.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+pages/api/session/bootstrap.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3-4
+__tests__/api/billing-guards.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,6-7,21,32,36,39-40,45,67-70
+__tests__/lib/contentEffort.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 12
+components/siteAudit/SiteAuditCrawledPages.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 28
+src/infrastructure/optimizeGuidelineRouting.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-119
+components/articles/ScoreGauge.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+pages/api/articles/ai-readability.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,11,15-16,18
+__tests__/lib/optimizeWholeArticle.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,4
+pages/api/billing/issue-confirmation.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4-7
+pages/api/cron/autopilot.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 7-8,10-12
+src/infrastructure/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-413
+components/articles/optimizeStore.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/ai-visibility/[slug]/scan.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9,12-13
+__tests__/api/render-page-auth.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3,8
+components/audit/TermsTable.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+__tests__/api/setup-status.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,5,17
+__tests__/api/members-mutations.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,12,19
+__tests__/lib/harvestAiCoverage.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 18
+pages/api/ai-visibility/internal/analyze-brands.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 9
+pages/api/articles/[id]/keywords/gap.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6,9
+pages/api/articles/[id]/keywords/enrich.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 8,11
+__tests__/api/articles-ai-readability-coverage.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,8,12,18-19
+pages/api/billing/plan-summary.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,12-14,16
+src/infrastructure/quota/types.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+src/infrastructure/llmGateway.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-212
+pages/api/articles/keyword-suggest.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+src/infrastructure/siteAudit/externalLinkProbe.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+__tests__/api/auth-unavailable-503.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11
+__tests__/lib/autopilot.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/dashboard/index.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 30
+__tests__/lib/outlineReviewState.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+__tests__/lib/contentScore-coverage-slot.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+pages/api/cron/daily.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 11,14-18
+pages/api/wie/outcome/sync-gsc.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4,6
+__tests__/lib/articleContext.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-6,11-12
+__tests__/lib/stripeWebhookEvents.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 6
+pages/api/wie/write.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 4
+src/infrastructure/citationPrompts.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-181
+src/infrastructure/getBootstrap.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-152
+src/infrastructure/liveCoverage.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-202
+src/infrastructure/members.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-71
+src/infrastructure/optimizeReviewDoc.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-51
+src/infrastructure/recommendationEngine.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-235
+components/articles/ContentOptimizerNodeView.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 5-7
+pages/sites/[domain]/recommendations.tsx
+  s_e3556ba0769b4b::t_186c14cfdfaff3 14,19
+__tests__/lib/stripeMode.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1
+sentry.edge.config.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 2
+src/infrastructure/sidecar.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1-35
+__tests__/lib/paymentFailedLock.test.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 1,8
+services/accountSecurity.ts
+  s_e3556ba0769b4b::t_186c14cfdfaff3 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6529da0ddbb5526a0f247d87cb7d0f0e8214e7ca",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
