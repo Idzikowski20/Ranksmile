@@ -16,7 +16,7 @@ import {
   validateRequiredAssignments,
 } from '../../../lib/contentPlanner';
 import { competitorsFromScoreData } from '../../../lib/contentPlanner/fromArticleInputs';
-import { benchmarkDocsFromCompetitors } from '../../../lib/benchmarkIntelligence/fromCompetitors';
+import { benchmarkDocsFromCompetitors } from '@/src/core/domain/benchmark/fromCompetitors';
 import {
   extractRawKnowledge,
   sentencesToCanonicalizeInputs,

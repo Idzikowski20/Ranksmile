@@ -1,4 +1,4 @@
-import { buildArticleBudget } from '../../../lib/contentPlanner/budgetEngine';
+import { buildArticleBudget } from '@/src/core/domain/contentPlanner/budgetEngine';
 import { MAX_CLAIMS_PER_SECTION } from '@/src/core/domain/knowledgeEngine/constants';
 import type { CompetitorBenchmark, TargetClaim, TargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/types';
 

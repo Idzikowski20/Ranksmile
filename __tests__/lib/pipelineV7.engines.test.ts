@@ -17,7 +17,7 @@ import { computeGeoCues, geoPromptBlock } from '@/src/core/domain/geo/geoCues';
 import { runLearningLoop } from '../../lib/learning/learningLoopCore';
 import { curateConceptsFromTerms } from '@/src/core/domain/coverage/curateConcepts';
 import { informationGain } from '@/src/core/domain/engines/evidence';
-import { detectResearchGaps } from '../../lib/engines/gapDetection';
+import { detectResearchGaps } from '@/src/core/domain/engines/gapDetection';
 
 describe('pipeline v7 foundation', () => {
   it('builds stable job keys', () => {

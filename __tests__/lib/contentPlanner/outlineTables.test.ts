@@ -1,7 +1,7 @@
 import { buildAdaptiveOutline, improveOutline } from '../../../lib/contentPlanner/outlineBuilder';
 import { buildIntentBlueprint } from '@/src/core/domain/contentPlanner/intentBlueprint';
 import { buildReaderModel } from '@/src/core/domain/contentPlanner/readerModel';
-import { buildArticleBlueprint } from '../../../lib/contentPlanner/budgetEngine';
+import { buildArticleBlueprint } from '@/src/core/domain/contentPlanner/budgetEngine';
 import type {
   AdaptiveOutline,
   ArticleBlueprint,

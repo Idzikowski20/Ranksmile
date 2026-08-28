@@ -7,7 +7,7 @@ import {
   buildTargetKnowledgeGraph,
   type AiSearchIntelInput,
 } from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
-import { buildArticleBlueprint } from './budgetEngine';
+import { buildArticleBlueprint } from '@/src/core/domain/contentPlanner/budgetEngine';
 import {
   assertBlueprintGate,
   runBriefPlanningLoop,
@@ -27,8 +27,8 @@ import {
   validateQuestions,
   validateSeoAgainstBlueprint,
 } from '@/src/core/domain/contentPlanner/postWriteValidators';
-import { buildRewritePlan, runKnowledgeCompletion } from './knowledgeCompletion';
-import { computeKnowledgeCoverage } from './knowledgeCoverage';
+import { buildRewritePlan, runKnowledgeCompletion } from '@/src/core/domain/contentPlanner/knowledgeCompletion';
+import { computeKnowledgeCoverage } from '@/src/core/domain/contentPlanner/knowledgeCoverage';
 import { buildArticleExecutionPlan } from './executionPlan';
 import { generateQuickAnswer } from './quickAnswer';
 import { validatePlanForWrite } from './validators/planValidators';

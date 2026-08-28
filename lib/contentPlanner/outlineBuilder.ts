@@ -15,7 +15,7 @@ import type {
   SectionBrief,
   TargetKnowledgeGraph,
 } from '@/src/core/domain/contentPlanner/types';
-import type { NarrativeSeed } from './narrativeOptimizer';
+import type { NarrativeSeed } from '@/src/core/domain/contentPlanner/narrativeOptimizer';
 import { MAX_CLAIMS_PER_SECTION } from '@/src/core/domain/knowledgeEngine/constants';
 import {
   headingFillersFromCompetitors,

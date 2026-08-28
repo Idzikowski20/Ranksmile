@@ -10,8 +10,8 @@ import {
   validateBlueprint,
   validateOutline,
 } from './validators/planValidators';
-import { validatePlannerPlan } from './plannerValidator';
-import { optimizeNarrative } from './narrativeOptimizer';
+import { validatePlannerPlan } from '@/src/core/domain/contentPlanner/plannerValidator';
+import { optimizeNarrative } from '@/src/core/domain/contentPlanner/narrativeOptimizer';
 import {
   MAX_BRIEF_IMPROVE_ITERS,
   MAX_OUTLINE_IMPROVE_ITERS,
