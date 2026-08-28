@@ -1,0 +1,149 @@
+src/infrastructure/billing/billingEmailClaim.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-80
+__tests__/lib/billingConfirmationToken.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 4
+pages/api/billing/upgrade-preview.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 8
+src/infrastructure/billing/billingTrial.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-68
+src/infrastructure/billing/domainEvents.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-141
+__tests__/lib/billing/buildBillingSnapshot.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 27,31
+lib/getBootstrap.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 12
+src/infrastructure/billing/buildBillingSnapshot.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-158
+__tests__/lib/billingEntitlement.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1
+src/infrastructure/billing/billingAudit.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-82
+src/infrastructure/billing/paymentMethodService.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-242
+__tests__/api/payment-failed-lock.e2e.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 22,88
+__tests__/lib/grantedAccessAtSomePoint.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-2
+src/infrastructure/billing/paymentMethodViewModel.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-44
+pages/api/billing/audit-beacon.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 9
+__tests__/lib/billing/billingSnapshotDomain.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 19,24-26
+components/settings/BillingDetailsSettings.tsx
+  s_e3556ba0769b4b::t_f9b5a6f666665f 3,8
+pages/billing/checkout/[plan].tsx
+  s_e3556ba0769b4b::t_f9b5a6f666665f 26-27
+src/infrastructure/billing/billingUpgrade.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-245
+pages/api/billing/tax-preview.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 7
+pages/api/billing/payment-methods/[id]/default.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 3,7-8
+src/infrastructure/billing/chooseReplacement.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-32
+src/infrastructure/billing/billingLockedStatuses.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-13
+__tests__/lib/billingUpgrade.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 8
+__tests__/lib/stripeBillingSync.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 11
+pages/api/billing/upgrade-subscription.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 8
+src/infrastructure/billing/billingEntitlement.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-58
+src/infrastructure/quota/quotaService.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 4
+__tests__/lib/billing/chooseReplacement.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-2
+src/infrastructure/billing/billingPolicy.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-62
+src/infrastructure/billing/billingConfirmation.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-361
+pages/api/workspaces/setup.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 4
+__tests__/lib/billingConfirmation.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 24
+pages/billing/confirmation/success.tsx
+  s_e3556ba0769b4b::t_f9b5a6f666665f 9
+pages/api/billing/checkout-session.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 5
+pages/api/webhooks/stripe.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 12,16-17,203
+src/infrastructure/appAccess/resolveAppState.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 7
+__tests__/lib/billing/billingPolicy.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-2
+components/billing/OrderConfirmationBody.tsx
+  s_e3556ba0769b4b::t_f9b5a6f666665f 8
+__tests__/lib/billing/stripeTaxPreview.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 4
+__tests__/lib/billingAbandoned.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 5
+src/infrastructure/appAccess/ApplicationShell.tsx
+  s_e3556ba0769b4b::t_f9b5a6f666665f 21
+src/infrastructure/billing/stripeTaxPreview.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-140
+src/infrastructure/email/runStarterNudgeCron.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 2
+lib/stripeCustomer.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 2
+src/infrastructure/billing/billingActivateTrial.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-288
+__tests__/lib/billingTrial.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 6
+components/koala/shell/SidebarPlanItem.tsx
+  s_e3556ba0769b4b::t_f9b5a6f666665f 7
+lib/stripeBillingReconcile.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 3
+scripts/seed-stripe-products.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 8
+src/infrastructure/billing/billingEverSubscribed.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-47
+__tests__/lib/billingAudit.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 6
+components/billing/CheckoutKoalaBody.tsx
+  s_e3556ba0769b4b::t_f9b5a6f666665f 17
+pages/api/billing/issue-confirmation.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 3
+__tests__/lib/billingInvoices.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 8
+lib/orgBilling.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 11
+pages/api/billing/plan-summary.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 3
+lib/subscriptionDetails.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 3,5
+lib/stripeBillingSync.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 3,9
+pages/api/billing/payment-methods/[id].ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 5-6
+src/infrastructure/billing/billingInvoices.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 1-16
+pages/api/billing/activate-trial.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 3-5
+__tests__/lib/billingActivateTrial.test.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 2,5,13,29
+pages/api/billing/create-subscription.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 4-5,7
+pages/api/billing/confirmation.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 2-3
+pages/api/billing/snapshot.ts
+  s_e3556ba0769b4b::t_f9b5a6f666665f 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a6574f5f929de00eafd56268552a69b42cb24ef5",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
