@@ -1,0 +1,82 @@
+__tests__/lib/inboxSync.test.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 147-148
+src/infrastructure/email/sendStarterNudgeEmail.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-14
+__tests__/api/inbox.test.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 16,20
+lib/billing/billingEmailClaim.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 9
+src/infrastructure/email/layout.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-152
+__tests__/api/notify-enqueue.test.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 23
+__tests__/lib/emailOutbox.test.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 47,201-203
+__tests__/api/payment-failed-lock.e2e.test.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 56,60,93
+pages/api/cron/starter-nudge.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 2
+src/infrastructure/notifications/inboxService.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-149
+__tests__/lib/inboxService.test.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 132
+__tests__/lib/billingEmails.test.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-3,11
+services/inbox.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 2
+lib/confirmEmail.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 11
+scripts/preview-emails.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 5-7
+lib/sendMail.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 3
+lib/gsc/gscDigestEmail.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 14
+scripts/pipeline-workers.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 174
+pages/api/inbox/mark-read.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 4
+src/infrastructure/notifications/orgLock.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-17
+pages/api/webhooks/stripe.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 21-23
+__tests__/lib/runStarterNudgeCron.test.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 8,27,38
+__tests__/lib/emailPeriodKey.test.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 6
+src/infrastructure/notifications/emailJobState.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-150
+src/infrastructure/notifications/syncOptimizationInbox.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-173
+src/infrastructure/notifications/emailWorker.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-20,24-115
+  s_e3556ba0769b4b::t_e45e32c6d8527c 21-23
+src/infrastructure/email/runStarterNudgeCron.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-90
+pages/api/inbox/index.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 5-6
+src/infrastructure/notifications/emailQueue.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 1-97
+lib/inviteEmail.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 10
+pages/api/notify.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 11-12
+pages/api/articles/import.ts
+  s_e3556ba0769b4b::t_e786de0f14c624 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7110cd1535246c8a1ed22bdd31877c81f2f0e0a5",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
