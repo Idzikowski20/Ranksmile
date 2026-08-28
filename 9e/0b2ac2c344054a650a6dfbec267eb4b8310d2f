@@ -1,0 +1,25 @@
+lib/navigation/index.ts
+  s_e3556ba0769b4b::t_269c1897257672 3-4
+lib/navigation/siteNavigation.ts
+  s_e3556ba0769b4b::t_269c1897257672 1
+__tests__/lib/editor/normalizeListHtml.test.ts
+  s_e3556ba0769b4b::t_269c1897257672 4
+components/articles/ArticleEditor.tsx
+  s_e3556ba0769b4b::t_269c1897257672 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9e0b2ac2c344054a650a6dfbec267eb4b8310d2f",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
