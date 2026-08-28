@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '../../../../../lib/errors';
-import { resolveRankTrackingApi } from '../../../../../lib/rankTracking/apiAuth';
-import { getConfig } from '../../../../../lib/rankTracking/service';
-import { getKeywordHistory } from '../../../../../lib/rankTracking/snapshotQueries';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
+import { getConfig } from '@/src/infrastructure/rankTracking/service';
+import { getKeywordHistory } from '@/src/infrastructure/rankTracking/snapshotQueries';
 import type { RankDevice } from '../../../../../lib/types/rankTracking';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 

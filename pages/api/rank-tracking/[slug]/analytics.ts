@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '../../../../lib/errors';
-import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
-import { getAnalytics, getAnalyticsChart } from '../../../../lib/rankTracking/service';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
+import { getAnalytics, getAnalyticsChart } from '@/src/infrastructure/rankTracking/service';
 import type { ComparePeriod } from '../../../../lib/types/rankTracking';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

@@ -1,4 +1,4 @@
-import db from '../../database/database';
+import db from '@/database/database';
 import { queryRows } from '@/src/infrastructure/db/query';
 
 const isPostgres = !!process.env.DATABASE_URL;

@@ -1,17 +1,17 @@
-import { buildAnalyticsSummary } from '../../../lib/rankTracking/analytics';
+import { buildAnalyticsSummary } from '@/src/infrastructure/rankTracking/analytics';
 import type { RankTrackingConfigRow, RankTrackingRow } from '../../../lib/types/rankTracking';
 
-jest.mock('../../../lib/rankTracking/results', () => ({
+jest.mock('@/src/infrastructure/rankTracking/results', () => ({
   buildRankResultsPage: jest.fn(),
 }));
 
-jest.mock('../../../lib/rankTracking/summaryStore', () => ({
+jest.mock('@/src/infrastructure/rankTracking/summaryStore', () => ({
   getLatestSummary: jest.fn().mockResolvedValue(undefined),
   listSummaryChartPoints: jest.fn().mockResolvedValue([]),
   summaryRowToAnalytics: jest.fn(),
 }));
 
-import { buildRankResultsPage } from '../../../lib/rankTracking/results';
+import { buildRankResultsPage } from '@/src/infrastructure/rankTracking/results';
 
 const emptyDev = {
   position: null as number | null,

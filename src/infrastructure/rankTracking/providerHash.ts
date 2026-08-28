@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { SERP_PROVIDER } from './constants';
+import { SERP_PROVIDER } from '@/src/infrastructure/rankTracking/constants';
 
 /** Stable JSON for hashing — sorted keys, no undefined. */
 export function canonicalJson(value: unknown): string {

@@ -1,7 +1,7 @@
-import { isRankTrackingRunnerEnabled } from '../featureFlags';
-import type { ComparePeriod, RankRunTrigger, ScheduleInterval } from '../types/rankTracking';
-import { ensureDefaultConfigForDomain } from './defaultConfig';
-import { estimateRankCheckCostUsd } from './cost';
+import { isRankTrackingRunnerEnabled } from '@/lib/featureFlags';
+import type { ComparePeriod, RankRunTrigger, ScheduleInterval } from '@/lib/types/rankTracking';
+import { ensureDefaultConfigForDomain } from '@/src/infrastructure/rankTracking/defaultConfig';
+import { estimateRankCheckCostUsd } from '@/src/infrastructure/rankTracking/cost';
 import {
   addKeywords,
   advanceNextCheck,
@@ -19,10 +19,10 @@ import {
   removeKeywords,
   updateConfig,
   updateRun,
-} from './repository';
-import { processRankCheckChunk } from './runner';
-import { buildRankResultsPage } from './results';
-import { buildAnalyticsSummary, listSummaryChartPoints } from './analytics';
+} from '@/src/infrastructure/rankTracking/repository';
+import { processRankCheckChunk } from '@/src/infrastructure/rankTracking/runner';
+import { buildRankResultsPage } from '@/src/infrastructure/rankTracking/results';
+import { buildAnalyticsSummary, listSummaryChartPoints } from '@/src/infrastructure/rankTracking/analytics';
 
 export async function getConfigsForDomain(domainId: number) {
   return ensureDefaultConfigForDomain(domainId);

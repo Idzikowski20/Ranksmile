@@ -1,5 +1,5 @@
 import db from '@/database/database';
-import { ensureSnapshotPartitionsAhead } from '@/lib/rankTracking/partitions';
+import { ensureSnapshotPartitionsAhead } from '@/src/infrastructure/rankTracking/partitions';
 
 let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;

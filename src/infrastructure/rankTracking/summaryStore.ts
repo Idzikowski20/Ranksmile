@@ -1,5 +1,5 @@
 import type { Transaction } from 'sequelize';
-import db from '../../database/database';
+import db from '@/database/database';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import type {
   RankAnalyticsSummary,
@@ -7,8 +7,8 @@ import type {
   RankSummaryChartPoint,
   RankTrackingConfigRow,
   RankTrackingSummaryRow,
-} from '../types/rankTracking';
-import { ANALYTICS_VERSION } from './constants';
+} from '@/lib/types/rankTracking';
+import { ANALYTICS_VERSION } from '@/src/infrastructure/rankTracking/constants';
 import {
   activeRankDevice,
   exclusiveVisibilityPercents,
@@ -16,7 +16,7 @@ import {
   summarizeExclusiveBuckets,
   summarizeUiBuckets,
 } from '@/src/core/domain/rankTracking/buckets';
-import { buildRankResultsPage } from './results';
+import { buildRankResultsPage } from '@/src/infrastructure/rankTracking/results';
 
 const isPg = !!process.env.DATABASE_URL;
 

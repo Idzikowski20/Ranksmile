@@ -8,10 +8,10 @@ import type {
   RankTrackingDeviceResult,
   RankTrackingKeywordRow,
   RankTrackingRow,
-} from '../types/rankTracking';
-import { devicesList, normalizeKeyword } from '../types/rankTracking';
-import { metricsForKeyword, getLatestMetrics } from './keywordMetricsCache';
-import { baselineDate, getLatestSnapshots, getSnapshotsBeforeDate } from './snapshotQueries';
+} from '@/lib/types/rankTracking';
+import { devicesList, normalizeKeyword } from '@/lib/types/rankTracking';
+import { metricsForKeyword, getLatestMetrics } from '@/src/infrastructure/rankTracking/keywordMetricsCache';
+import { baselineDate, getLatestSnapshots, getSnapshotsBeforeDate } from '@/src/infrastructure/rankTracking/snapshotQueries';
 
 function parseSerpFeatures(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.filter((x): x is string => typeof x === 'string');

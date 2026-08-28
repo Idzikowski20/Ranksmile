@@ -12,7 +12,7 @@ import {
 } from '@/src/infrastructure/organicResearch/index';
 import type { ExportFormat } from '@/src/infrastructure/organicResearch/export';
 import type { KeywordState, SearchIntent } from '@/src/infrastructure/organicResearch/types';
-import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 function numOrNull(v: string | string[] | undefined): number | null {

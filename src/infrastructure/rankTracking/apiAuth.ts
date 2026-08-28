@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../utils/verifyUser';
-import { getCurrentUserId } from '../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
+import verifyUser from '@/utils/verifyUser';
+import { getCurrentUserId } from '@/utils/getUser';
+import { verifyDomainOwnershipBySlug } from '@/utils/verifyDomainOwnership';
 import { ensureRankTrackingTables } from '@/src/infrastructure/persistence/schema/ensureRankTrackingTables';
-import { isRankTrackingRunnerEnabled, isRankTrackingUiEnabled } from '../featureFlags';
+import { isRankTrackingRunnerEnabled, isRankTrackingUiEnabled } from '@/lib/featureFlags';
 
 export type RankTrackingApiContext = {
   domainId: number;

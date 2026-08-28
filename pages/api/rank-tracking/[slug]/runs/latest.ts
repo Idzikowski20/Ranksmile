@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { resolveRankTrackingApi } from '../../../../../lib/rankTracking/apiAuth';
-import { getActiveRun } from '../../../../../lib/rankTracking/repository';
-import { getConfig } from '../../../../../lib/rankTracking/service';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
+import { getActiveRun } from '@/src/infrastructure/rankTracking/repository';
+import { getConfig } from '@/src/infrastructure/rankTracking/service';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

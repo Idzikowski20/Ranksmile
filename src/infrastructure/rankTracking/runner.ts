@@ -1,8 +1,8 @@
-import { getErrorMessage } from '../errors';
-import type { RankTrackingConfigRow, RankTrackingKeywordRow } from '../types/rankTracking';
-import { KEYWORDS_PER_BATCH, MAX_RUN_ATTEMPTS } from './cost';
-import { KEYWORD_MAX_ATTEMPTS } from './constants';
-import { tryAcquireConfigLock, releaseConfigLock } from './advisoryLock';
+import { getErrorMessage } from '@/lib/errors';
+import type { RankTrackingConfigRow, RankTrackingKeywordRow } from '@/lib/types/rankTracking';
+import { KEYWORDS_PER_BATCH, MAX_RUN_ATTEMPTS } from '@/src/infrastructure/rankTracking/cost';
+import { KEYWORD_MAX_ATTEMPTS } from '@/src/infrastructure/rankTracking/constants';
+import { tryAcquireConfigLock, releaseConfigLock } from '@/src/infrastructure/rankTracking/advisoryLock';
 import {
   claimRun,
   countSnapshotsForRun,
@@ -13,10 +13,10 @@ import {
   updateKeywordStatus,
   updateRun,
   upsertSnapshot,
-} from './repository';
-import { fetchRankCheckSerpLive } from './serpRankCheck';
-import { refreshMetricsForKeys } from './keywordMetricsCache';
-import { completeRunWithSummary } from './summaryStore';
+} from '@/src/infrastructure/rankTracking/repository';
+import { fetchRankCheckSerpLive } from '@/src/infrastructure/rankTracking/serpRankCheck';
+import { refreshMetricsForKeys } from '@/src/infrastructure/rankTracking/keywordMetricsCache';
+import { completeRunWithSummary } from '@/src/infrastructure/rankTracking/summaryStore';
 
 function isRetryableError(e: unknown): boolean {
   const m = getErrorMessage(e).toLowerCase();

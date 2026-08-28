@@ -1,9 +1,9 @@
-import db from '../../database/database';
+import db from '@/database/database';
 import { queryOne } from '@/src/infrastructure/db/query';
-import type { KeywordMetricsRow } from '../types/rankTracking';
-import { normalizeKeyword } from '../types/rankTracking';
-import { getKeywordOverview } from '../dataforseo';
-import { METRICS_CACHE_TTL_DAYS } from './cost';
+import type { KeywordMetricsRow } from '@/lib/types/rankTracking';
+import { normalizeKeyword } from '@/lib/types/rankTracking';
+import { getKeywordOverview } from '@/lib/dataforseo';
+import { METRICS_CACHE_TTL_DAYS } from '@/src/infrastructure/rankTracking/cost';
 
 export type MetricsLookupKey = {
   keyword: string;

@@ -1,6 +1,6 @@
-import { buildRankCheckResult } from '../../../lib/rankTracking/serpRankCheck';
-import { estimateRankCheckCostUsd } from '../../../lib/rankTracking/cost';
-import { exportRankRows } from '../../../lib/rankTracking/exporter';
+import { buildRankCheckResult } from '@/src/infrastructure/rankTracking/serpRankCheck';
+import { estimateRankCheckCostUsd } from '@/src/infrastructure/rankTracking/cost';
+import { exportRankRows } from '@/src/infrastructure/rankTracking/exporter';
 import type { RankTrackingRow } from '../../../lib/types/rankTracking';
 
 describe('buildRankCheckResult', () => {

@@ -1,7 +1,7 @@
-import { locationCodeFor } from '../dataforseo';
+import { locationCodeFor } from '@/lib/dataforseo';
 import { AUDIT_COUNTRIES, langForCountry } from '@/src/core/domain/audit/country';
-import type { RankDevices, RankTrackingConfigRow, ScheduleInterval } from '../types/rankTracking';
-import { createConfig, listConfigs } from './repository';
+import type { RankDevices, RankTrackingConfigRow, ScheduleInterval } from '@/lib/types/rankTracking';
+import { createConfig, listConfigs } from '@/src/infrastructure/rankTracking/repository';
 import { queryOne } from '@/src/infrastructure/db/query';
 
 export type DefaultConfigInput = {

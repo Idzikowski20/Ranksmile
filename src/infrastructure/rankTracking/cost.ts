@@ -1,5 +1,5 @@
-import type { RankDevices } from '../types/rankTracking';
-import { devicesCount } from '../types/rankTracking';
+import type { RankDevices } from '@/lib/types/rankTracking';
+import { devicesCount } from '@/lib/types/rankTracking';
 
 const LIVE_BASE_PAGE_COST_USD = 0.002;
 const LIVE_EXTRA_PAGE_COST_USD = 0.0015;
