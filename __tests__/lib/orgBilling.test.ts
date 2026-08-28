@@ -1,5 +1,5 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
-jest.mock('../../lib/ensureBillingTables', () => ({ ensureBillingTables: jest.fn() }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => ({ ensureBillingTables: jest.fn() }));
 
 import { hasNonTerminalStripeSubscription, type OrgBillingState } from '../../lib/orgBilling';
 

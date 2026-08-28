@@ -1,5 +1,5 @@
-import db from '../database/database';
-import { ensureArticlesTables } from './ensureArticlesTables';
+import db from '@/database/database';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 
 let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;

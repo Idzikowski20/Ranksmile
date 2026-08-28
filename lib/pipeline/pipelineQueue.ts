@@ -6,7 +6,7 @@ import {
   insertPipelineJob,
   moveJobToDlq,
   updatePipelineJob,
-} from '../ensurePipelineJobsTables';
+} from '@/src/infrastructure/persistence/schema/ensurePipelineJobsTables';
 import { getWorker } from '../workers/registry';
 import { getPipelineStage } from './pipelineStage';
 

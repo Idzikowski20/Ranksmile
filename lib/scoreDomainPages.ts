@@ -9,7 +9,7 @@ import { getCompetitors, scanCompetitors, setSelection } from './competitorScan'
 import { enrichAudit } from './auditEnrich';
 import { computeCompetitorContentScore, type CompetitorScoreTargets, type RichTerm } from '@/src/core/domain/competitors/contentScore';
 import { inferPageKeyword, langFromKeyword, pickBenchmarkKeyword } from './inferPageKeyword';
-import { ensureCompetitorsTables } from './ensureCompetitorsTables';
+import { ensureCompetitorsTables } from '@/src/infrastructure/persistence/schema/ensureCompetitorsTables';
 import db from '../database/database';
 
 export const OPTIMIZE_THRESHOLD = 70;

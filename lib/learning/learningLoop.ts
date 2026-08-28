@@ -2,7 +2,7 @@
  * Learning loop persistence + re-exports pure core.
  */
 import db from '../../database/database';
-import { ensureCorpusTables } from '../ensureCorpusTables';
+import { ensureCorpusTables } from '@/src/infrastructure/persistence/schema/ensureCorpusTables';
 
 export { runLearningLoop, type LearningUpdate } from './learningLoopCore';
 

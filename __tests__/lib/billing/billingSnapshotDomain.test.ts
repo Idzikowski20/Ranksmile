@@ -3,7 +3,7 @@ jest.mock('../../../database/database', () => ({
   default: { query: jest.fn(async () => [[], undefined]) },
 }));
 
-jest.mock('../../../lib/ensureBillingTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => ({
   ensureBillingTables: jest.fn(async () => undefined),
 }));
 

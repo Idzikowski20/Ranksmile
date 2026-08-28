@@ -40,7 +40,7 @@ async function waitForPostgres(url: string, maxMs = 60_000): Promise<void> {
 /** After Redis wipe, DB may still have queued rows — push them back onto BullMQ. */
 async function reclaimQueuedJobs(url: string): Promise<void> {
   const { expireStaleQueuedJobs, listQueuedPipelineJobs } = await import(
-    '../lib/ensurePipelineJobsTables'
+    '@/src/infrastructure/persistence/schema/ensurePipelineJobsTables'
   );
   const { QUEUE_PRIORITY } = await import('@/src/core/domain/pipeline/queuePriorities');
   type QueueName = import('@/src/core/domain/pipeline/queuePriorities').QueueName;
@@ -102,7 +102,7 @@ async function main(): Promise<void> {
 
   // Dynamic imports AFTER dotenv so database/database.ts sees DATABASE_URL (Neon), not SQLite.
   const { listWorkers, resetWorkerRegistry } = await import('../lib/workers/registry');
-  const { findActiveJobByKey, insertPipelineJob } = await import('../lib/ensurePipelineJobsTables');
+  const { findActiveJobByKey, insertPipelineJob } = await import('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables');
   const { processJobInline } = await import('../lib/pipeline/pipelineQueue');
   const { PIPELINE_VERSION } = await import('@/src/core/domain/pipeline/queuePriorities');
   const { getPipelineStage } = await import('../lib/pipeline/pipelineStage');
@@ -170,7 +170,7 @@ async function main(): Promise<void> {
   }
 
   // Email outbox — DB poll (no BullMQ); claim/retry owned by notification_email_jobs.
-  const { ensureNotificationEmailTables } = await import('../lib/ensureNotificationEmailTables');
+  const { ensureNotificationEmailTables } = await import('@/src/infrastructure/persistence/schema/ensureNotificationEmailTables');
   const { startEmailOutboxReconciler } = await import('../lib/notifications/emailOutboxReconciler');
   await ensureNotificationEmailTables();
   const reconcilerTimer = startEmailOutboxReconciler(60_000);

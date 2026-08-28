@@ -1,6 +1,6 @@
 import db from '../../database/database';
 import { readLocalSCData } from '../../utils/searchConsole';
-import { ensureGscSnapshotTables } from '../ensureGscSnapshotTables';
+import { ensureGscSnapshotTables } from '@/src/infrastructure/persistence/schema/ensureGscSnapshotTables';
 import { aggregateSevenDays } from '@/src/core/domain/gsc/week';
 import type { SnapMap } from '@/src/core/domain/gsc/drops';
 

@@ -1,6 +1,6 @@
 import type { Transaction } from 'sequelize';
 import db from '../../database/database';
-import { ensureNotificationTables } from '../ensureNotificationTables';
+import { ensureNotificationTables } from '@/src/infrastructure/persistence/schema/ensureNotificationTables';
 import { OPTIMIZATION_TYPE, optimizationCopy, optimizationEventId } from './copy';
 import { acquireInboxOrgLock } from './orgLock';
 import type { DomainSnapshotRow } from './types';

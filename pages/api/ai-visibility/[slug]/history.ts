@@ -5,7 +5,7 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows } from '../../../../lib/db/query';
 import { loadScanCitationRowsForScans } from '../../../../lib/aiVisibility/aiVisibilityRead';

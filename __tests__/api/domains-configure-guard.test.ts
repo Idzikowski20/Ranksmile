@@ -9,7 +9,7 @@ jest.mock('../../database/models/domain', () => ({
 }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/tenancy', () => ({
   getActiveWorkspaceId: jest.fn().mockResolvedValue(123),
   getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([123]),

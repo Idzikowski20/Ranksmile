@@ -1,7 +1,7 @@
 import { enqueueJob } from '../../lib/pipeline/pipelineQueue';
 import { buildJobKey } from '../../lib/pipeline/jobKey';
 
-jest.mock('../../lib/ensurePipelineJobsTables', () => {
+jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables', () => {
   const jobs = new Map<string, { id: number; status: string; finished_at?: string }>();
   let seq = 1;
   return {

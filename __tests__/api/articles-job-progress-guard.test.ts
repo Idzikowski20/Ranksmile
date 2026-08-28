@@ -7,7 +7,7 @@ jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn(
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
 jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn() }));
 jest.mock('../../utils/verifyDomainOwnership', () => ({ verifyDomainOwnershipById: jest.fn() }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/requireOrgPaymentAccess', () => ({
   withOrgPaymentAccess: (handler: import('next').NextApiHandler) => handler,
 }));

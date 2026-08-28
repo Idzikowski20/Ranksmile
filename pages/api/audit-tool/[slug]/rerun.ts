@@ -3,7 +3,7 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
+import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
 import { queryOne } from '../../../../lib/db/query';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

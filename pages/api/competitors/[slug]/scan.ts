@@ -3,7 +3,7 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureCompetitorsTables } from '../../../../lib/ensureCompetitorsTables';
+import { ensureCompetitorsTables } from '@/src/infrastructure/persistence/schema/ensureCompetitorsTables';
 import { scanCompetitors } from '../../../../lib/competitorScan';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

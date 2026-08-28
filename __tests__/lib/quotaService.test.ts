@@ -1,7 +1,7 @@
 /**
  * Stateful in-memory mock of quota tables — concurrency / idempotency without live Postgres.
  */
-jest.mock('../../lib/ensurePlanQuotaTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensurePlanQuotaTables', () => ({
   ensurePlanQuotaTables: jest.fn().mockResolvedValue(undefined),
 }));
 

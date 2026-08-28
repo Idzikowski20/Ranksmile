@@ -14,7 +14,7 @@ jest.mock('../../utils/verifyDomainOwnership', () => ({
   verifyDomainOwnershipById: jest.fn().mockResolvedValue(false),
   firstAccessibleDomainId: jest.fn().mockResolvedValue(null),
 }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 jest.mock('../../lib/contentScore', () => ({ computeContentScore: jest.fn() }));
 jest.mock('../../lib/seo/keywordData', () => ({ getAiSearchInfo: jest.fn() }));

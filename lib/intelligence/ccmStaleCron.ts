@@ -44,7 +44,7 @@ type ArticleContentRow = {
  * Recently updated articles with non-trivial HTML (hash checked in compileIfStale).
  */
 export async function listCcmCompileCandidates(limit: number): Promise<CcmCronCandidate[]> {
-  const { ensureCcmTables } = await import('../ensureCcmTables');
+  const { ensureCcmTables } = await import('@/src/infrastructure/persistence/schema/ensureCcmTables');
   const { getArticleIdSql } = await import('../articles/articleSql');
   const { queryRows } = await import('../db/query');
   await ensureCcmTables();

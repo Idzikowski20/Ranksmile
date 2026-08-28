@@ -8,7 +8,7 @@ jest.mock('../../lib/ai/aiBudget', () => ({
   resolveOrgId: jest.fn().mockResolvedValue(1),
   orgBudgetBlocked: jest.fn().mockResolvedValue(null),
 }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 

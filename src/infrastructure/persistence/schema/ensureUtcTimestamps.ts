@@ -1,4 +1,4 @@
-import db from '../database/database';
+import db from '@/database/database';
 
 /**
  * Convert every naive `TIMESTAMP` column to `TIMESTAMPTZ`.

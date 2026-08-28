@@ -1,4 +1,4 @@
-jest.mock('../../lib/ensureRankTrackingTables', () => ({ ensureRankTrackingTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureRankTrackingTables', () => ({ ensureRankTrackingTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/featureFlags', () => ({ isRankTrackingRunnerEnabled: jest.fn().mockReturnValue(true) }));
 jest.mock('../../lib/rankTracking/service', () => ({ enqueueScheduledChecks: jest.fn().mockResolvedValue(0) }));
 jest.mock('../../lib/rankTracking/partitions', () => ({
@@ -11,7 +11,7 @@ jest.mock('../../database/database', () => ({
   default: { query: jest.fn().mockResolvedValue([[], null]), sync: jest.fn() },
 }));
 
-import { ensureRankTrackingTables } from '../../lib/ensureRankTrackingTables';
+import { ensureRankTrackingTables } from '@/src/infrastructure/persistence/schema/ensureRankTrackingTables';
 import rankCronHandler from '../../pages/api/cron/rank-tracking';
 import retentionCronHandler from '../../pages/api/cron/rank-snapshots-retention';
 

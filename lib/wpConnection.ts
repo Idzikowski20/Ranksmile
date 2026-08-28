@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import type { NextApiRequest } from 'next';
 import db from '../database/database';
-import { ensureWpTables } from './ensureWpTables';
+import { ensureWpTables } from '@/src/infrastructure/persistence/schema/ensureWpTables';
 
 export type WpConnection = {
    id: number;

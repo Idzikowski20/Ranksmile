@@ -8,7 +8,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { resolveOrgId, orgBudgetBlocked } from '../../../lib/ai/aiBudget';
 import { getArticleIdSql } from '../../../lib/articles/articleSql';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryRows } from '../../../lib/db/query';
 import { mapPool } from '../../../lib/mapPool';

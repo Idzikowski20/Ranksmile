@@ -3,7 +3,7 @@
 // restarts analyses that failed or stalled. Seeding lives in /api/cron/daily.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { runAutopilotSweep } from '../../../lib/autopilot';
 import { cronSecrets } from '../../../lib/cronAuth';
 import { getErrorMessage } from '../../../lib/errors';

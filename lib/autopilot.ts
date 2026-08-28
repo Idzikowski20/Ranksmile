@@ -47,7 +47,7 @@ export async function createAutopilotDraft(domainId: number, keyword: string): P
    // Sequelize is imported lazily: a top-level `sequelize` import in lib/* breaks every
    // Jest suite that touches this module (uuid ESM is not transformed).
    const { QueryTypes } = await import('sequelize');
-   const { ensureArticlesTables } = await import('./ensureArticlesTables');
+   const { ensureArticlesTables } = await import('@/src/infrastructure/persistence/schema/ensureArticlesTables');
    const { getArticleIdSql } = await import('./articles/articleSql');
    const { getDomainLocale } = await import('./domainLanguage');
    await ensureArticlesTables();

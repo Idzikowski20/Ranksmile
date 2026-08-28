@@ -1,4 +1,4 @@
-import db from '../database/database';
+import db from '@/database/database';
 
 const isPostgres = !!process.env.DATABASE_URL;
 const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';

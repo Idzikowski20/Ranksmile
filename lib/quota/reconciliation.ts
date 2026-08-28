@@ -1,5 +1,5 @@
 import db from '../../database/database';
-import { ensurePlanQuotaTables } from '../ensurePlanQuotaTables';
+import { ensurePlanQuotaTables } from '@/src/infrastructure/persistence/schema/ensurePlanQuotaTables';
 import { ACTIVE_PERIOD_KEY, type QuotaMeter } from '../planLimits';
 import { getOrgPlanUsage } from '../planUsage';
 import { calendarPeriodKey } from './period';

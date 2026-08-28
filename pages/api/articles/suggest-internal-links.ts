@@ -8,7 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/ai/aiBudget';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne } from '../../../lib/db/query';

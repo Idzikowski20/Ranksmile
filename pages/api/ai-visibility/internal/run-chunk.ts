@@ -5,7 +5,7 @@
 // to loop again. Resolves ownDomain from the scan so the payload is just { scanId }.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { runScanChunk, AI_VIS_CHUNK_PAIRS } from '../../../../lib/aiVisibility/aiVisibilityScan';
 import { queryOne } from '../../../../lib/db/query';
 import { getErrorMessage } from '../../../../lib/errors';

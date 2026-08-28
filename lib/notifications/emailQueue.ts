@@ -1,5 +1,5 @@
 import db from '../../database/database';
-import { ensureNotificationEmailTables } from '../ensureNotificationEmailTables';
+import { ensureNotificationEmailTables } from '@/src/infrastructure/persistence/schema/ensureNotificationEmailTables';
 import {
   EMAIL_JOB_TYPE_KEYWORD_POSITIONS,
   EMAIL_MAX_ATTEMPTS,

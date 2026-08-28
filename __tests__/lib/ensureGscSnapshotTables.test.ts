@@ -1,6 +1,6 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn().mockResolvedValue([[], {}]) } }));
 import db from '../../database/database';
-import { ensureGscSnapshotTables } from '../../lib/ensureGscSnapshotTables';
+import { ensureGscSnapshotTables } from '@/src/infrastructure/persistence/schema/ensureGscSnapshotTables';
 
 const mockQuery = db.query as jest.Mock;
 

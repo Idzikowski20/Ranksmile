@@ -1,7 +1,7 @@
 /**
  * mark-read / unreadCount / no-downgrade — stateful in-memory mock.
  */
-jest.mock('../../lib/ensureNotificationTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureNotificationTables', () => ({
   ensureNotificationTables: jest.fn().mockResolvedValue(undefined),
 }));
 

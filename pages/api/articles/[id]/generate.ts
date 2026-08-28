@@ -7,7 +7,7 @@ import { QueryTypes } from 'sequelize';
 import axios from 'axios';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '../../../../lib/articles/articleSql';
 import { readContentSettings } from '../../../../lib/contentSettings';
 import { getDomainVoices } from '../../../../lib/domainVoices';

@@ -10,7 +10,7 @@ import type { Action } from '../../../../lib/primitives/types';
 import {
   ensureDomainEventTables,
   ensureKnowledgeLayerTables,
-} from '../../../../lib/ensureGrowthMetaTables';
+} from '@/src/infrastructure/persistence/schema/ensureGrowthMetaTables';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

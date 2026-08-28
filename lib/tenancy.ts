@@ -1,7 +1,7 @@
 import type { NextApiRequest } from 'next';
 import type { Transaction } from 'sequelize';
 import db from '../database/database';
-import { ensureTenancyTables } from './ensureTenancyTables';
+import { ensureTenancyTables } from '@/src/infrastructure/persistence/schema/ensureTenancyTables';
 import { getArticleIdSql } from './articles/articleSql';
 
 import type { DbRow, SqlReplacements } from './types/db';

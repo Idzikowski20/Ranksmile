@@ -46,7 +46,7 @@ export type CompileAfterOpts = {
 
 async function resolveStore(explicit?: CompileStore): Promise<CompileStore> {
   if (explicit) return explicit;
-  const { ensureCcmTables } = await import('../ensureCcmTables');
+  const { ensureCcmTables } = await import('@/src/infrastructure/persistence/schema/ensureCcmTables');
   const { SqlCompileStore } = await import('./sqlCompileStore');
   await ensureCcmTables();
   return new SqlCompileStore();

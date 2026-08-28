@@ -3,7 +3,7 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
 import { AiVisConfig, AiVisTopic, AI_VIS_DEFAULT_MODELS, AI_VIS_PROMPT_LIMIT, sanitizeModels, normalizeAiVisPriority, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';

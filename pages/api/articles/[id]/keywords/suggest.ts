@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../../database/database';
 import verifyUser from '../../../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../../../utils/adwords';
 import { computeRelevanceScore } from '@/src/core/domain/keywords/enrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';

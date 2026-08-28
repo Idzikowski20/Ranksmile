@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import Domain from '../../../database/models/domain';
 import { getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../../utils/searchConsole';
-import { ensureGscSnapshotTables } from '../../../lib/ensureGscSnapshotTables';
+import { ensureGscSnapshotTables } from '@/src/infrastructure/persistence/schema/ensureGscSnapshotTables';
 import { captureWeeklySnapshot, weekStartFor } from '../../../lib/gsc/gscSnapshots';
 import { getWeeklyDrops } from '../../../src/composition/gsc';
 import { buildGscDigest, type DomainDigest } from '../../../lib/gsc/gscDigestEmail';

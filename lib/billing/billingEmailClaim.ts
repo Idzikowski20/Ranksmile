@@ -1,7 +1,7 @@
 import type { Transaction } from 'sequelize';
 import db from '../../database/database';
-import { ensureBillingEmailTables } from '../ensureBillingEmailTables';
-import { ensureNotificationEmailTables } from '../ensureNotificationEmailTables';
+import { ensureBillingEmailTables } from '@/src/infrastructure/persistence/schema/ensureBillingEmailTables';
+import { ensureNotificationEmailTables } from '@/src/infrastructure/persistence/schema/ensureNotificationEmailTables';
 import {
   EMAIL_MAX_ATTEMPTS,
   billingEmailIdempotencyKey,

@@ -1,5 +1,5 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), transaction: jest.fn() } }));
-jest.mock('../../lib/ensurePipelineTables', () => ({ ensurePipelineTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineTables', () => ({ ensurePipelineTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('sequelize', () => ({ QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT', UPDATE: 'UPDATE' } }));
 jest.mock('../../database/models/gscAccount', () => ({ __esModule: true, default: { findAll: jest.fn().mockResolvedValue([]) } }));
 jest.mock('../../lib/gsc/gscAccounts', () => ({ buildOAuthClientFromAccount: jest.fn() }));

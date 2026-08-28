@@ -8,7 +8,7 @@ import {
 } from '../../lib/pipeline/pipelineStage';
 import { resetWorkerRegistry, listWorkers, getWorker } from '../../lib/workers/registry';
 
-jest.mock('../../lib/ensurePipelineJobsTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables', () => ({
   ensurePipelineJobsTables: jest.fn(async () => undefined),
   insertPipelineJob: jest.fn(async () => 1),
   findActiveJobByKey: jest.fn(async () => null),

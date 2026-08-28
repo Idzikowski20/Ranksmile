@@ -1,6 +1,6 @@
 import db from '../../database/database';
 import { BillingSource } from '../billing/billingAudit';
-import { ensureBillingTables } from '../ensureBillingTables';
+import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ensureBillingTables';
 import {
   getOrgBillingState,
   hasNonTerminalStripeSubscription,

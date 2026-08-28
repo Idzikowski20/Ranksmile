@@ -3,7 +3,7 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '../../../../lib/aiVisibility/aiVisibilityScan';
 import { queryOne } from '../../../../lib/db/query';
 import { callSidecar } from '../../../../lib/sidecar';

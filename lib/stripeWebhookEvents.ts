@@ -5,7 +5,7 @@
  */
 import type Stripe from 'stripe';
 import db from '../database/database';
-import { ensureBillingTables } from './ensureBillingTables';
+import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ensureBillingTables';
 
 /** False when the event was already processed — caller must ack and do nothing. */
 export async function claimStripeEvent(event: Stripe.Event): Promise<boolean> {

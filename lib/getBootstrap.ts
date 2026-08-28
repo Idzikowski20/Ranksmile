@@ -1,5 +1,5 @@
 import db from '../database/database';
-import { ensureArticlesTables } from './ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getConfirmationStatus } from './emailConfirmation';
 import { getCallerRole } from './members';
 import {

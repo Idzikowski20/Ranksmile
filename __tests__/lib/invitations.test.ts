@@ -7,7 +7,7 @@ jest.mock('../../database/database', () => ({ __esModule: true, default: { query
 jest.mock('../../lib/tenancy', () => ({
   ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }),
 }));
-jest.mock('../../lib/ensureArticlesTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({
   ensureArticlesTables: jest.fn().mockResolvedValue(undefined),
 }));
 

@@ -16,7 +16,7 @@ jest.mock('../../utils/getUser', () => ({
   getCurrentUserId: jest.fn().mockResolvedValue('user-1'),
 }));
 
-jest.mock('../../lib/ensureArticlesTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({
   ensureArticlesTables: jest.fn().mockResolvedValue(undefined),
 }));
 

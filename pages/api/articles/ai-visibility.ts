@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibility/aiVisibilityStore';
 import { getArticleIdSql } from '../../../lib/articles/articleSql';

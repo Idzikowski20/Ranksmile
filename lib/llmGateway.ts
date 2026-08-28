@@ -2,7 +2,7 @@
  * LLM Gateway — single entry for provider calls (retry, fallback, cost telemetry).
  * Workers MUST NOT call OpenAI/Anthropic/DeepSeek directly.
  */
-import { ensurePipelineJobsTables } from './ensurePipelineJobsTables';
+import { ensurePipelineJobsTables } from '@/src/infrastructure/persistence/schema/ensurePipelineJobsTables';
 import db from '../database/database';
 import { chatLlmFor } from './ai/deepseek';
 

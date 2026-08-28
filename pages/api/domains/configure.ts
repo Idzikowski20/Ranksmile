@@ -6,7 +6,7 @@ import db from '../../../database/database';
 import Domain from '../../../database/models/domain';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { getWorkspace } from '../../../lib/workspaces';
 import { getErrorMessage } from '../../../lib/errors';

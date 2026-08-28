@@ -1,7 +1,7 @@
 import { ACTIVE_PERIOD_KEY } from '../../lib/planLimits';
 import type { ReconciliationMismatch } from '../../lib/quota/reconciliation';
 
-jest.mock('../../lib/ensurePlanQuotaTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensurePlanQuotaTables', () => ({
   ensurePlanQuotaTables: jest.fn().mockResolvedValue(undefined),
 }));
 

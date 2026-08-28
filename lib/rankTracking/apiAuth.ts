@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
-import { ensureRankTrackingTables } from '../ensureRankTrackingTables';
+import { ensureRankTrackingTables } from '@/src/infrastructure/persistence/schema/ensureRankTrackingTables';
 import { isRankTrackingRunnerEnabled, isRankTrackingUiEnabled } from '../featureFlags';
 
 export type RankTrackingApiContext = {

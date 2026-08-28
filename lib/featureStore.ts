@@ -1,6 +1,6 @@
 import { QueryTypes } from 'sequelize';
 import db from '../database/database';
-import { ensureFeatureStoreTables } from './ensureFeatureStoreTables';
+import { ensureFeatureStoreTables } from '@/src/infrastructure/persistence/schema/ensureFeatureStoreTables';
 import type { Action, Feature, Observation, ScoreVector, Signal } from './primitives/types';
 import {
   computeFeatureScoreDelta,

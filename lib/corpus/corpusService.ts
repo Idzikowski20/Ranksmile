@@ -4,7 +4,7 @@
  */
 import { createHash, randomUUID } from 'crypto';
 import db from '../../database/database';
-import { ensureCorpusTables } from '../ensureCorpusTables';
+import { ensureCorpusTables } from '@/src/infrastructure/persistence/schema/ensureCorpusTables';
 import { PIPELINE_VERSION } from '@/src/core/domain/pipeline/queuePriorities';
 
 export type VolatilityClass = 'high' | 'medium' | 'low' | 'stable';
