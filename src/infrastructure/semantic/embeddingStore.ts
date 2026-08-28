@@ -1,7 +1,7 @@
 /**
  * Persist embedding vectors (JSON fallback when pgvector unavailable).
  */
-import db from '../../database/database';
+import db from '@/database/database';
 import { hashEmbed, pgvectorResearchNotes } from '@/src/core/domain/semantic/embeddings';
 
 let checked = false;
