@@ -3,7 +3,7 @@ import {
   isoWeekPeriodKey,
   keywordPositionsIdempotencyKey,
   periodKeyFromInterval,
-} from '../../lib/notifications/emailTypes';
+} from '@/src/infrastructure/notifications/emailTypes';
 
 describe('email periodKey helpers', () => {
   it('daily uses UTC YYYY-MM-DD', () => {

@@ -129,7 +129,7 @@ jest.mock('../../database/database', () => ({
   },
 }));
 
-import { listInboxForUser, markInboxRead } from '../../lib/notifications/inboxService';
+import { listInboxForUser, markInboxRead } from '@/src/infrastructure/notifications/inboxService';
 
 const E1 = 'optimization_recommendation:domain:1';
 

@@ -18,9 +18,9 @@ import { shouldSendAbandonedForSubscription } from '../../../lib/billing/billing
 import {
   EMAIL_JOB_TYPE_ABANDONED_CHECKOUT,
   EMAIL_JOB_TYPE_PAYMENT_FAILED,
-} from '../../../lib/notifications/emailTypes';
-import { ABANDONED_CHECKOUT_SUBJECT } from '../../../lib/emails/abandonedCheckoutEmail';
-import { paymentFailedEmailSubject } from '../../../lib/emails/paymentFailedEmail';
+} from '@/src/infrastructure/notifications/emailTypes';
+import { ABANDONED_CHECKOUT_SUBJECT } from '@/src/infrastructure/email/abandonedCheckoutEmail';
+import { paymentFailedEmailSubject } from '@/src/infrastructure/email/paymentFailedEmail';
 
 export const config = {
   api: { bodyParser: false },

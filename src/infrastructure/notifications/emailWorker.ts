@@ -1,8 +1,8 @@
-import Keyword from '../../database/models/keyword';
-import generateEmail from '../../utils/generateEmail';
-import parseKeywords from '../../utils/parseKeywords';
-import { getAppSettings } from '../../pages/api/settings';
-import { sendMail } from '../sendMail';
+import Keyword from '@/database/models/keyword';
+import generateEmail from '@/utils/generateEmail';
+import parseKeywords from '@/utils/parseKeywords';
+import { getAppSettings } from '@/pages/api/settings';
+import { sendMail } from '@/lib/sendMail';
 import {
   claimEmailJob,
   getEmailJobById,
@@ -18,9 +18,9 @@ import {
   EMAIL_JOB_TYPE_STARTER_NUDGE,
   type EmailJobRow,
 } from './emailTypes';
-import { paymentFailedEmailHtml } from '../emails/paymentFailedEmail';
-import { abandonedCheckoutEmailHtml } from '../emails/abandonedCheckoutEmail';
-import { starterNudgeEmailHtml } from '../emails/starterNudgeEmail';
+import { paymentFailedEmailHtml } from '@/src/infrastructure/email/paymentFailedEmail';
+import { abandonedCheckoutEmailHtml } from '@/src/infrastructure/email/abandonedCheckoutEmail';
+import { starterNudgeEmailHtml } from '@/src/infrastructure/email/starterNudgeEmail';
 
 function parsePayload(raw: string | null): Record<string, unknown> {
   if (!raw) return {};

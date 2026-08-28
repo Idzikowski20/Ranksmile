@@ -8,7 +8,7 @@ import {
   emailRow,
   emailSupportLine,
   wrapEmail,
-} from './emails/layout';
+} from '@/src/infrastructure/email/layout';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const DEFAULT_FROM = 'Ranksmile <noreply@ranksmile.pl>';

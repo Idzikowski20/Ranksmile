@@ -1,6 +1,6 @@
 import nodeMailer from 'nodemailer';
 import { getAppSettings } from '../pages/api/settings';
-import { EMAIL_SEND_TIMEOUT_MS } from './notifications/emailTypes';
+import { EMAIL_SEND_TIMEOUT_MS } from '@/src/infrastructure/notifications/emailTypes';
 
 export type SendMailResult = {
   sent: boolean;

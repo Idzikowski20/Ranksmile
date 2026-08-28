@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { runStarterNudgeCron } from '../../../lib/emails/runStarterNudgeCron';
+import { runStarterNudgeCron } from '@/src/infrastructure/email/runStarterNudgeCron';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';

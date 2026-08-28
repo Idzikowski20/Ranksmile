@@ -1,5 +1,5 @@
 import type { Transaction } from 'sequelize';
-import db from '../../database/database';
+import db from '@/database/database';
 
 const INBOX_LOCK_NAMESPACE = 'inbox-sync';
 

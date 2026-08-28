@@ -1,12 +1,12 @@
-import db from '../../database/database';
-import { BillingSource } from '../billing/billingAudit';
+import db from '@/database/database';
+import { BillingSource } from '@/lib/billing/billingAudit';
 import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ensureBillingTables';
 import {
   getOrgBillingState,
   hasNonTerminalStripeSubscription,
   updateOrgBillingState,
-} from '../orgBilling';
-import { queryRows } from '../db/query';
+} from '@/lib/orgBilling';
+import { queryRows } from '@/lib/db/query';
 import { sendStarterNudgeEmail } from './sendStarterNudgeEmail';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

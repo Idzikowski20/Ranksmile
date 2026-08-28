@@ -13,11 +13,11 @@ const mockSync = jest.fn().mockResolvedValue(undefined);
 const mockList = jest.fn();
 const mockMark = jest.fn().mockResolvedValue(undefined);
 
-jest.mock('../../lib/notifications/syncOptimizationInbox', () => ({
+jest.mock('@/src/infrastructure/notifications/syncOptimizationInbox', () => ({
   syncOptimizationInbox: (...args: unknown[]) => mockSync(...args),
 }));
 
-jest.mock('../../lib/notifications/inboxService', () => ({
+jest.mock('@/src/infrastructure/notifications/inboxService', () => ({
   listInboxForUser: (...args: unknown[]) => mockList(...args),
   markInboxRead: (...args: unknown[]) => mockMark(...args),
 }));

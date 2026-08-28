@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureUserTenancy, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
-import { listInboxForUser } from '../../../lib/notifications/inboxService';
-import { syncOptimizationInbox } from '../../../lib/notifications/syncOptimizationInbox';
+import { listInboxForUser } from '@/src/infrastructure/notifications/inboxService';
+import { syncOptimizationInbox } from '@/src/infrastructure/notifications/syncOptimizationInbox';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
