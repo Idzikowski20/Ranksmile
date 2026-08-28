@@ -1,7 +1,7 @@
 /**
  * Knowledge Coverage % — Plan Validator aggregate (≥ 95% gate).
  */
-import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
+import { MAX_CLAIMS_PER_SECTION } from '@/src/core/domain/knowledgeEngine/constants';
 import type {
   AdaptiveOutline,
   KnowledgeCoverageReport,

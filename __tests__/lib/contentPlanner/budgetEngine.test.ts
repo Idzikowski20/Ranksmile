@@ -1,5 +1,5 @@
 import { buildArticleBudget } from '../../../lib/contentPlanner/budgetEngine';
-import { MAX_CLAIMS_PER_SECTION } from '../../../lib/knowledgeEngine/constants';
+import { MAX_CLAIMS_PER_SECTION } from '@/src/core/domain/knowledgeEngine/constants';
 import type { CompetitorBenchmark, TargetClaim, TargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/types';
 
 const benchmark = (targetH2: number): CompetitorBenchmark => ({

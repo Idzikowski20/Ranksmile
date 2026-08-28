@@ -1,5 +1,5 @@
 // __tests__/lib/scoreContribution.test.ts
-import { scoreContribution } from '../../lib/coverage/derived/scoreContribution';
+import { scoreContribution } from '@/src/core/domain/coverage/scoreContribution';
 import type { CoverageItem, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 const item = (id: string, category: CoverageItem['category'], importance: CoverageItem['importance'],

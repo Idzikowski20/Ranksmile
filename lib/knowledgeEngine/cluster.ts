@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import type { EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 import { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 import { semanticMatchScore } from './semanticMatch';
-import { CANONICALIZE_SIM_MIN } from './constants';
+import { CANONICALIZE_SIM_MIN } from '@/src/core/domain/knowledgeEngine/constants';
 import { tokensShareStem } from '@/src/core/domain/relevance/topicRelevance';
 import type { CanonicalClaim, KnowledgeGap, TopicBlock, TopicBlockRole } from '@/src/core/domain/knowledgeEngine/types';
 

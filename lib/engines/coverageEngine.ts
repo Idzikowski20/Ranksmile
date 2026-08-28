@@ -3,7 +3,7 @@
  * Does not invent ENTITY (NER only).
  */
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
-import { curateConceptsFromTerms, type TermLike } from '../coverage/curateConcepts';
+import { curateConceptsFromTerms, type TermLike } from '@/src/core/domain/coverage/curateConcepts';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 export type CoverageEngineInput = {

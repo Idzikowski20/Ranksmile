@@ -29,7 +29,7 @@ import type { TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
 import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
 import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 import type { PlannerQualityMetrics } from '@/src/core/domain/knowledgeEngine/types';
-import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
+import { MAX_CLAIMS_PER_SECTION } from '@/src/core/domain/knowledgeEngine/constants';
 
 export type OutlineLoopResult = {
   outline: AdaptiveOutline;

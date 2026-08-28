@@ -1,4 +1,4 @@
-import { distributionFrom, flattenLengths } from './distributions';
+import { distributionFrom, flattenLengths } from '@/src/core/domain/benchmark/distributions';
 import type { BenchmarkDocInput, StructuralBenchmark } from '@/src/core/domain/benchmark/types';
 
 export function buildStructuralBenchmark(docs: BenchmarkDocInput[]): StructuralBenchmark {

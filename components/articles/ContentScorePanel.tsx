@@ -16,7 +16,7 @@ import type { PlagiarismResult } from './PlagiarismPanel';
 import ScoreTrio from './ScoreTrio';
 import ScoreFactorList from './ScoreFactorList';
 import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '../../lib/ai/aiSearchScore';
-import { introFactorsFromScoreData } from '../../lib/aiScore/liveFactors';
+import { introFactorsFromScoreData } from '@/src/core/domain/aiScore/liveFactors';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { useCompetitors } from '../../services/competitors';
 import { Gauge } from '../koala/core';

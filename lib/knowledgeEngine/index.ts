@@ -1,7 +1,7 @@
 import {
   KNOWLEDGE_CONSENSUS_MIN,
   PLANNER_CLAIMS_FLOOR,
-} from './constants';
+} from '@/src/core/domain/knowledgeEngine/constants';
 import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 
 export type {
@@ -37,7 +37,7 @@ export {
   SOURCE_TIER_WEIGHTS,
   OFFICIAL_DOMAINS,
   MAX_CLAIMS_PER_SECTION,
-} from './constants';
+} from '@/src/core/domain/knowledgeEngine/constants';
 
 export { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 export type { EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';

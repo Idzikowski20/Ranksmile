@@ -3,7 +3,7 @@
  * Sits after Gap Engine; does not re-judge coverage.
  */
 import type { Action } from '../primitives/types';
-import type { CoverageGap } from './gapEngine';
+import type { CoverageGap } from '@/src/core/domain/engines/gapEngine';
 
 export type RecoEngineResult = {
   actions: Action[];
