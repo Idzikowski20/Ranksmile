@@ -1,5 +1,5 @@
 import { ANTI_HALLUCINATION_RULES } from '@/src/core/domain/seo/antiHallucinationRules';
-import { STOP_SLOP_RULES } from '../stopSlopPrompt';
+import { STOP_SLOP_RULES } from '@/src/core/domain/optimize/stopSlopPrompt';
 import type { ToolCtx } from './types';
 
 export function buildSystemPrompt(

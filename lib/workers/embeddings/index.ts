@@ -11,7 +11,7 @@ export const embeddingsWorker: PipelineWorker = {
   consumes: ['corpus'],
   async execute(ctx) {
     const { hashEmbed, findEmbeddingGaps, pgvectorResearchNotes } = await import(
-      '../../semantic/embeddings'
+      '@/src/core/domain/semantic/embeddings'
     );
     const { extractKeybertTerms } = await import('@/src/core/domain/semantic/keybert');
     const { storeHashEmbeddings } = await import('../../semantic/embeddingStore');

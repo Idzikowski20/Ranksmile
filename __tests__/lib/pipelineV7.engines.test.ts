@@ -12,11 +12,11 @@ import { serpChangeRatio, shouldForceRefresh } from '@/src/core/domain/corpus/se
 import { resolveEntities, heuristicNerExtract } from '../../lib/entities/entityResolver';
 import { bm25Rank, assignHarvestToSections } from '@/src/core/domain/search/bm25';
 import { extractKeybertTerms } from '@/src/core/domain/semantic/keybert';
-import { hashEmbed, cosineSim, findEmbeddingGaps } from '../../lib/semantic/embeddings';
+import { hashEmbed, cosineSim, findEmbeddingGaps } from '@/src/core/domain/semantic/embeddings';
 import { computeGeoCues, geoPromptBlock } from '@/src/core/domain/geo/geoCues';
 import { runLearningLoop } from '../../lib/learning/learningLoopCore';
 import { curateConceptsFromTerms } from '../../lib/coverage/curateConcepts';
-import { informationGain } from '../../lib/engines/evidence';
+import { informationGain } from '@/src/core/domain/engines/evidence';
 import { detectResearchGaps } from '../../lib/engines/gapDetection';
 
 describe('pipeline v7 foundation', () => {

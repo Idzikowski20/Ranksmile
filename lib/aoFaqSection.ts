@@ -1,6 +1,6 @@
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { isUncoveredAiSearchItem } from '@/src/core/domain/coverage/aiCoverage';
-import { STOP_SLOP_RULES } from './stopSlopPrompt';
+import { STOP_SLOP_RULES } from '@/src/core/domain/optimize/stopSlopPrompt';
 import type { ArticleIntentProfile } from './ao/intentProfile';
 import { textHitsForbidden } from './ao/intentProfile';
 import { scoreCandidateAgainstProfile } from './ao/intentGuard';
