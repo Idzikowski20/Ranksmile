@@ -5,7 +5,7 @@ import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
 // scoreContentClient is unused by the Phase-2 tools but pulled in by buildTools;
 // stub it so the registry imports cleanly (mirrors tools.read.test).
-jest.mock('../../../lib/seo/scoreContentClient', () => ({
+jest.mock('@/src/infrastructure/seo/scoreContentClient', () => ({
   scoreContent: jest.fn(),
 }));
 

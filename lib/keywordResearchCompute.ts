@@ -9,7 +9,7 @@
  * queued jobs nothing drains.
  */
 import { isDataForSeoConfigured } from './dataforseo';
-import { getKeywordIdeas, getKeywordSuggestions } from './seo/keywordData';
+import { getKeywordIdeas, getKeywordSuggestions } from '@/src/infrastructure/seo/keywordData';
 import { getRankedKeywords } from './dataforseo';
 import { langForCountry } from '@/src/core/domain/audit/country';
 import {

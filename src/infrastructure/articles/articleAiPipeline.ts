@@ -9,7 +9,7 @@ import {
   type ArticleFact,
 } from '@/src/infrastructure/articles/articleFacts';
 import { resolveFactKeyword } from '@/lib/resolveFactKeyword';
-import { getAiSearchInfo } from '@/lib/seo/keywordData';
+import { getAiSearchInfo } from '@/src/infrastructure/seo/keywordData';
 import {
   resolveAiScore,
   type AiVisibilitySummary,

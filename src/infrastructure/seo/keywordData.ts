@@ -14,15 +14,15 @@ import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import {
    isDataForSeoConfigured, getKeywordIdeas as dfsKeywordIdeas,
    getKeywordSuggestions as dfsKeywordSuggestions, getRankedKeywords, getPeopleAlsoAsk, DfsKeyword,
-} from '../dataforseo';
-import { DFS_DEFAULT_KEYWORD_LIMIT, DFS_DEFAULT_RANKED_LIMIT } from '../dataforseoBudget';
-import { readLocalSCData } from '../../utils/searchConsole';
+} from '@/lib/dataforseo';
+import { DFS_DEFAULT_KEYWORD_LIMIT, DFS_DEFAULT_RANKED_LIMIT } from '@/lib/dataforseoBudget';
+import { readLocalSCData } from '@/utils/searchConsole';
 import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { CoverageItem, hashId } from '@/src/core/domain/coverage/aiCoverage';
 import { normalizePl, tokenize } from '@/src/core/domain/terms/termMatch';
 import { isUsefulTerm, isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
 import { filterOnTopicTerms, isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
-import { throwIfAborted } from '../abortSignal';
+import { throwIfAborted } from '@/lib/abortSignal';
 
 export type KeywordSource = 'dataforseo' | 'gsc' | 'none';
 

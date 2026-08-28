@@ -5,7 +5,7 @@ import { useWorkspaces } from '../../../services/workspaces';
 import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import fetchJson from '../../../lib/fetchJson';
 import { countActionableRecommendations, type RecFilterable } from '@/src/core/domain/recommendations/actionable';
-import { AI_VISIBILITY_NAV, resolveSiteNav, SEO_NAV, TOOLS_NAV } from '../../../lib/navigation';
+import { AI_VISIBILITY_NAV, resolveSiteNav, SEO_NAV, TOOLS_NAV } from '@/src/infrastructure/navigation/index';
 import { SidebarItem, SidebarBlock } from './SidebarItem';
 import WorkspaceSelect from './WorkspaceSelect';
 import SidebarPlanItem from './SidebarPlanItem';

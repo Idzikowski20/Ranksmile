@@ -7,7 +7,7 @@ import type { ToolCtx } from '@/src/infrastructure/ai/types';
 // (and its DB import) is never loaded.
 jest.mock('@/src/infrastructure/ai/articleMeta', () => ({ resolveArticleSeoMeta: jest.fn() }));
 
-jest.mock('../../../lib/seo/scoreContentClient', () => ({
+jest.mock('@/src/infrastructure/seo/scoreContentClient', () => ({
   scoreContent: jest.fn(async () => ({
     ranking_score: 70,
     ranking_signals: { signals: [

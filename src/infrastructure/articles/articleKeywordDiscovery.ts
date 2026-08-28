@@ -5,7 +5,7 @@
  */
 import db from '@/database/database';
 import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
-import { enrichTerms, getOwnVisibleKeywords } from '@/lib/seo/keywordData';
+import { enrichTerms, getOwnVisibleKeywords } from '@/src/infrastructure/seo/keywordData';
 import { getRankedKeywords, isDataForSeoConfigured } from '@/lib/dataforseo';
 import { DFS_DEFAULT_RANKED_LIMIT } from '@/lib/dataforseoBudget';
 import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';

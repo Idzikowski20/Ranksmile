@@ -2,7 +2,7 @@ import { makeWorkingDoc } from '@/src/infrastructure/ai/workingDoc';
 import { buildTools } from '@/src/infrastructure/ai/tools';
 import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
-jest.mock('../../../lib/seo/scoreContentClient', () => ({ scoreContent: jest.fn() }));
+jest.mock('@/src/infrastructure/seo/scoreContentClient', () => ({ scoreContent: jest.fn() }));
 jest.mock('@/src/infrastructure/ai/articleMeta', () => ({ resolveArticleSeoMeta: jest.fn() }));
 
 function ctxFor(html: string): ToolCtx {

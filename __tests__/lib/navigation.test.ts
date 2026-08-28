@@ -6,7 +6,7 @@ import {
   buildSiteSegmentRedirects,
   resolveSiteNav,
   siteNavigation,
-} from '../../lib/navigation';
+} from '@/src/infrastructure/navigation/index';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const routeAliasesCjs = require('../../lib/navigation/routeAliases.cjs') as {

@@ -12,7 +12,7 @@ import {
   computeCoverageScores, computeBucketScore, blendBuckets, earlyAnswerBonus,
   CoverageItem,
 } from '@/src/core/domain/coverage/aiCoverage';
-import { paaCoverageItems } from '../../lib/seo/keywordData';
+import { paaCoverageItems } from '@/src/infrastructure/seo/keywordData';
 
 // GRADED item factory — the scorer works on graded items (covered/quality baked in), NOT CoverageResult.
 const gi = (
