@@ -1,0 +1,53 @@
+pages/api/pipeline/enqueue.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 4,8
+pages/api/pipeline/analyze.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 7-8
+src/infrastructure/pipeline/flowProducer.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 1-147
+__tests__/lib/enqueueFromDeepAnalysis.test.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 4,6
+__tests__/lib/pipelineV7.engines.test.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 1
+lib/workers/live_score/index.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 21
+__tests__/lib/pipelineQueue.test.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 1-2
+src/infrastructure/pipeline/pipelineQueue.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 1-354
+__tests__/lib/coverageWorker.wire.test.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 9
+src/infrastructure/pipeline/enqueueFromDeepAnalysis.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 1-165
+lib/workers/coverage/index.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 23-24
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 1306
+pages/api/articles/[id]/index.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 206
+lib/workers/serp/index.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 24-28,36
+scripts/pipeline-workers.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 106,108
+lib/workers/registry.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 17
+src/infrastructure/pipeline/costTelemetry.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 1-80
+__tests__/lib/antiPatterns.v7.test.ts
+  s_e3556ba0769b4b::t_7e73ebab9fad2f 8,19,129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1ced5c11d0acacda7ed4b1e57b2a9c546f50255a",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
