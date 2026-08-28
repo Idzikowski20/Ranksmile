@@ -6,7 +6,7 @@ import { buildHeuristicReaderBrief, formatReaderBriefForPrompt, type ReaderBrief
 import { buildPolicyContext, resolvePolicyBundle, formatPolicyBundleForPrompt, type PolicyBundle, type PolicyContext } from './policyResolver';
 import { buildNarrativePlan, formatNarrativePlanForPrompt, type NarrativePlan } from './narrativePlanner';
 import { bundleToExplainability, type ExplainabilityRecord } from './explainability';
-import { formatContentPlannerForPrompt } from '../contentPlanner/formatPrompt';
+import { formatContentPlannerForPrompt } from '@/src/core/domain/contentPlanner/formatPrompt';
 import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
 
 export type WieWriteContext = {

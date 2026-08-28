@@ -4,12 +4,12 @@ import {
   enrichWithWieSynthesis,
   diagnosePlannerInputs,
 } from '../../../lib/contentPlanner/fromArticleInputs';
-import { buildCompetitorProfiles } from '../../../lib/contentPlanner/competitorIntelligence';
-import { buildCompetitorBenchmark, synthesizeCompetitors } from '../../../lib/contentPlanner/competitorBenchmark';
-import { buildTargetKnowledgeGraph } from '../../../lib/contentPlanner/knowledgeIntelligence';
+import { buildCompetitorProfiles } from '@/src/core/domain/contentPlanner/competitorIntelligence';
+import { buildCompetitorBenchmark, synthesizeCompetitors } from '@/src/core/domain/contentPlanner/competitorBenchmark';
+import { buildTargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
 import { buildArticleBlueprint } from '../../../lib/contentPlanner/budgetEngine';
-import { buildIntentBlueprint } from '../../../lib/contentPlanner/intentBlueprint';
-import { buildReaderModel } from '../../../lib/contentPlanner/readerModel';
+import { buildIntentBlueprint } from '@/src/core/domain/contentPlanner/intentBlueprint';
+import { buildReaderModel } from '@/src/core/domain/contentPlanner/readerModel';
 import { heuristicCompetitorSynthesis } from '../../../lib/wie/competitorSynthesis';
 
 const SHARED = 'Licencja detektywistyczna jest wymagana przez ustawe z 2001 roku.';

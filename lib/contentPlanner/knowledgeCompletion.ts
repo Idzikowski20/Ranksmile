@@ -8,8 +8,8 @@ import type {
   TargetKnowledgeGraph,
   ValidationResult,
 } from '@/src/core/domain/contentPlanner/types';
-import type { ClaimValidationItem } from './validators/postWriteValidators';
-import { stubWriteSection } from './sectionWriter';
+import type { ClaimValidationItem } from '@/src/core/domain/contentPlanner/postWriteValidators';
+import { stubWriteSection } from '@/src/core/domain/contentPlanner/sectionWriter';
 import type { SectionBrief } from '@/src/core/domain/contentPlanner/types';
 
 export function buildRewritePlan(opts: {

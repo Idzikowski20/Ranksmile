@@ -5,10 +5,10 @@ import {
   isTailSectionRole,
   isSeoMetaHeading,
   namesAnotherBrand,
-} from '../../../lib/contentPlanner/sectionLabels';
+} from '@/src/core/domain/contentPlanner/sectionLabels';
 import { buildAdaptiveOutline } from '../../../lib/contentPlanner/outlineBuilder';
-import { buildIntentBlueprint } from '../../../lib/contentPlanner/intentBlueprint';
-import { buildReaderModel } from '../../../lib/contentPlanner/readerModel';
+import { buildIntentBlueprint } from '@/src/core/domain/contentPlanner/intentBlueprint';
+import { buildReaderModel } from '@/src/core/domain/contentPlanner/readerModel';
 import { buildArticleBlueprint } from '../../../lib/contentPlanner/budgetEngine';
 import type { TargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/types';
 

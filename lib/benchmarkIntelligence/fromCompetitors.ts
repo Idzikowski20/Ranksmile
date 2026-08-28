@@ -1,4 +1,4 @@
-import type { CompetitorRawInput } from '../contentPlanner/competitorIntelligence';
+import type { CompetitorRawInput } from '@/src/core/domain/contentPlanner/competitorIntelligence';
 import type { BenchmarkDocInput } from '@/src/core/domain/benchmark/types';
 
 /** Map planner competitor rows → Benchmark Intelligence docs. */
