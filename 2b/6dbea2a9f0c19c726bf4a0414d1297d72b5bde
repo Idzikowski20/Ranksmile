@@ -1,0 +1,67 @@
+__tests__/lib/deepAnalysisProgress-stale.test.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 1
+__tests__/hooks/useBackgroundDeepAnalysis.test.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 4
+lib/knowledgeEngine/coverage.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 7
+pages/articles/index.tsx
+  s_e3556ba0769b4b::t_2d3778ada097ee 19
+lib/knowledgeEngine/runKnowledgeEngine.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 2,6,8-9
+lib/workers/ner/index.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 29
+__tests__/lib/deepAnalysisProgress.reconcile.test.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 4
+__tests__/lib/articleWorkspaceLinks.test.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 3
+lib/knowledgeEngine/canonicalize.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 4,14
+pages/articles/import.tsx
+  s_e3556ba0769b4b::t_2d3778ada097ee 8
+lib/ao/runPrecisionOptimize.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 21
+lib/curateCoverageItems.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 14
+__tests__/lib/generateResume.test.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 1
+lib/knowledgeEngine/cluster.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 4
+hooks/useBackgroundDeepAnalysis.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 10
+pages/articles/[id]/index.tsx
+  s_e3556ba0769b4b::t_2d3778ada097ee 52
+__tests__/lib/knowledgeEngine/pipeline.test.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 251
+__tests__/lib/knowledgeEngine/extract.test.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 1
+lib/contentPlanner/runContentPlanner.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 41
+__tests__/lib/pipelineV7.engines.test.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 5,12
+pages/sites/[domain]/recommendations.tsx
+  s_e3556ba0769b4b::t_2d3778ada097ee 13
+components/ranksmile/AnalysisCircuitBoard.tsx
+  s_e3556ba0769b4b::t_2d3778ada097ee 9
+lib/knowledgeEngine/index.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 44,46,48,50-51,54
+pages/articles/generating.tsx
+  s_e3556ba0769b4b::t_2d3778ada097ee 9
+lib/workers/coverage/index.ts
+  s_e3556ba0769b4b::t_2d3778ada097ee 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2b6dbea2a9f0c19c726bf4a0414d1297d72b5bde",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
