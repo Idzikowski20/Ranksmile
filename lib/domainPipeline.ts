@@ -248,7 +248,7 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
             const { orgId } = await ensureUserTenancy(ownerId);
             const billing = await getOrgBillingState(orgId);
             siteAuditPages = getSiteAuditPageLimit(resolvePlanSlug(billing?.planSlug));
-            const { findReservationByIdempotency } = await import('./quota');
+            const { findReservationByIdempotency } = await import('@/src/infrastructure/quota/index');
             const existing = await findReservationByIdempotency(orgId, `site-audit:${jobId}`);
             if (existing) siteAuditPages = Number(existing.quantity);
          }

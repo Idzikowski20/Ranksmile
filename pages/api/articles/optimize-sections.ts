@@ -4,7 +4,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '@/src/infrastructure/ai/aiTokenUsage';
-import { splitSections, normalizeHtmlForDiff } from '../../../lib/articles/articleSections';
+import { splitSections, normalizeHtmlForDiff } from '@/src/infrastructure/articles/articleSections';
 import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
 import { buildWholeArticlePrompt } from '../../../lib/optimizeWholeArticle';
 import {
@@ -17,9 +17,9 @@ import {
 } from '../../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../../lib/contentScore';
 import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
-import { buildArticleContext } from '../../../lib/articles/articleContext';
-import type { ArticleContext } from '../../../lib/articles/articleContext';
-import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articles/articleKeywordDiscovery';
+import { buildArticleContext } from '@/src/infrastructure/articles/articleContext';
+import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
+import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '@/src/infrastructure/articles/articleKeywordDiscovery';
 import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
 import { termsForOptimize } from '../../../lib/mergeArticleTerms';
 import { liveCoverageItems } from '../../../lib/liveCoverage';
@@ -36,7 +36,7 @@ import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '@/src/core/domain/optimize/aoRunOutcome';
 import { structureIssues } from '@/src/core/domain/articles/validateStructure';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import db from '../../../database/database';
 import { buildGuidelines } from '../../../lib/recommendationEngine';
 import {

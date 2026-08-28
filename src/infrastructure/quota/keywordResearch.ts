@@ -1,4 +1,4 @@
-import { queryOne } from '../db/query';
+import { queryOne } from '@/lib/db/query';
 import {
   commitReservation,
   ensureOrgQuotaBalances,
@@ -6,8 +6,8 @@ import {
   getOrgIdForDomain,
   releaseReservation,
   reserveQuota,
-} from './index';
-import { calendarPeriodKey } from './period';
+} from '@/src/infrastructure/quota/index';
+import { calendarPeriodKey } from '@/src/infrastructure/quota/period';
 
 const REF_TYPE = 'keyword_research';
 const EXPIRE_MS = 2 * 60 * 60 * 1000;

@@ -1,17 +1,17 @@
-import db from '../../database/database';
-import { getArticleIdSql } from './articleSql';
-import { safeJsonParse } from '../safeJson';
-import { parseSnapshot } from '../coverageStore';
+import db from '@/database/database';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { safeJsonParse } from '@/lib/safeJson';
+import { parseSnapshot } from '@/lib/coverageStore';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
-import type { ScoreData } from '../contentScore';
-import { readArticleTerms, type ArticleTermRow } from './articleTerms';
-import { readContentSettings } from '../contentSettings';
-import { getDomainLocale } from '../domainLanguage';
-import { getDomainVoices } from '../domainVoices';
+import type { ScoreData } from '@/lib/contentScore';
+import { readArticleTerms, type ArticleTermRow } from '@/src/infrastructure/articles/articleTerms';
+import { readContentSettings } from '@/lib/contentSettings';
+import { getDomainLocale } from '@/lib/domainLanguage';
+import { getDomainVoices } from '@/lib/domainVoices';
 import {
   parseCompetitorSynthesis,
   type CompetitorSynthesis,
-} from '../wie/competitorSynthesis';
+} from '@/lib/wie/competitorSynthesis';
 import { buildHeuristicReaderBrief, type ReaderBrief } from '@/src/core/domain/wie/readerBrief';
 
 export interface CompetitorContext {
@@ -105,7 +105,7 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
 
   let wiePromptBlock: string | undefined;
   try {
-    const { buildWieWriteContext, formatWieWriteBlocks } = await import('../wie/writerContext');
+    const { buildWieWriteContext, formatWieWriteBlocks } = await import('@/lib/wie/writerContext');
     const wie = await buildWieWriteContext({
       keyword,
       paa,

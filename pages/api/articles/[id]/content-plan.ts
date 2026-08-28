@@ -6,7 +6,7 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../lib/errors';
@@ -25,7 +25,7 @@ import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlan
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readContentSettings } from '../../../../lib/contentSettings';
-import { readArticleTerms } from '../../../../lib/articles/articleTerms';
+import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { mergedPlannerQuestions } from '../../../../lib/coverageStore';
 import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';

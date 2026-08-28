@@ -5,7 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../lib/errors';
@@ -264,7 +264,7 @@ async function deleteArticle(id: string, res: NextApiResponse, userId: string | 
          [id],
       );
       if (!article) return res.status(404).json({ error: 'Article not found' });
-      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('../../../../lib/quota');
+      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
       const orgId = await getOrgIdForDomain(article.domain_id);
       await db.transaction(async (tx) => {
          await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id], transaction: tx });

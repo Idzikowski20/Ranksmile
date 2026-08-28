@@ -9,7 +9,7 @@ jest.mock('../../database/database', () => ({
 }));
 
 import db from '../../database/database';
-import { replaceArticleTerms, replaceCompetitors } from '../../lib/articles/articleAnalysisStorage';
+import { replaceArticleTerms, replaceCompetitors } from '@/src/infrastructure/articles/articleAnalysisStorage';
 
 type QueryRunner = (
   sql: string,

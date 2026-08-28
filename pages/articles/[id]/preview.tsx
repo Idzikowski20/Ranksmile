@@ -6,7 +6,7 @@ import ArticleBlogPreview from '../../../components/articles/ArticleBlogPreview'
 import { Icon } from '../../../components/koala/icons';
 import db from '../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { queryOne } from '../../../lib/db/query';
 import type { ArticleRow } from '../../../lib/db/query';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';

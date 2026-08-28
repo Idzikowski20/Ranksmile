@@ -69,7 +69,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             adjustActiveUsage,
             isPlanLimitError,
             planLimitBody,
-         } = await import('../../../../lib/quota');
+         } = await import('@/src/infrastructure/quota/index');
          const orgId = await getOrgIdForDomain(domain.ID);
          if (!orgId) return res.status(400).json({ error: 'Domain has no organization' });
          await ensureOrgQuotaBalances(orgId);

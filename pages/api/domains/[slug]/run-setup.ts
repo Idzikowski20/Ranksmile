@@ -29,8 +29,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             .catch((err) => { console.warn('[run-setup] rescore failed:', err); });
          return res.status(202).json({ jobId, rescoring: true });
       }
-      const { reserveSiteAuditRun } = await import('../../../../lib/quota/siteAudit');
-      const { isPlanLimitError, planLimitBody } = await import('../../../../lib/quota');
+      const { reserveSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
+      const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
       try {
          await reserveSiteAuditRun(domainId, jobId, userId);
       } catch (e) {

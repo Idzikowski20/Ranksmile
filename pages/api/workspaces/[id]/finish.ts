@@ -15,7 +15,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       await finishWorkspaceSetup(userId, wsId, brandName, brandKnowledge || '');
    } catch (e) {
       if ((e as { message?: string }).message === 'WORKSPACE_NOT_FOUND') return res.status(404).json({ error: 'Workspace not found' });
-      const { isPlanLimitError, planLimitBody } = await import('../../../../lib/quota');
+      const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
       if (isPlanLimitError(e)) return res.status(402).json(planLimitBody(e));
       throw e;
    }

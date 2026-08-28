@@ -13,7 +13,7 @@ import { citationIntentItems } from './citationPrompts';
 import { curateAiCoverageItems, dedupePaaQuestions } from './curateCoverageItems';
 import { mergeCoverageItems, buildSnapshot } from './coverageStore';
 import { liveCoverageItems } from './liveCoverage';
-import { splitSections } from './articles/articleSections';
+import { splitSections } from '@/src/infrastructure/articles/articleSections';
 
 export type PaaQuestion = { question: string; answer?: string };
 

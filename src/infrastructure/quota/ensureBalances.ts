@@ -1,13 +1,13 @@
 import type { Transaction } from 'sequelize';
-import db from '../../database/database';
+import db from '@/database/database';
 import { ensurePlanQuotaTables } from '@/src/infrastructure/persistence/schema/ensurePlanQuotaTables';
 import {
   ACTIVE_PERIOD_KEY,
   METER_KIND,
   type QuotaMeter,
-} from '../planLimits';
-import { getOrgPlanUsage, type OrgPlanUsage } from '../planUsage';
-import { calendarPeriodKey } from './period';
+} from '@/lib/planLimits';
+import { getOrgPlanUsage, type OrgPlanUsage } from '@/lib/planUsage';
+import { calendarPeriodKey } from '@/src/infrastructure/quota/period';
 
 const ACTIVE_METERS: Array<keyof OrgPlanUsage & QuotaMeter> = ['documents', 'aiPrompts', 'brandSpaces'];
 

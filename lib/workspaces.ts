@@ -65,7 +65,7 @@ export async function markWorkspaceReady(userId: string, wsId: number, name: str
    const clean = (name || '').trim().slice(0, 60) || 'Untitled';
    const prior = await select('SELECT status FROM workspaces WHERE id = ? AND org_id = ? LIMIT 1', [wsId, orgId]);
    const wasReady = String(prior[0]?.status ?? '') === 'ready';
-   const { ensureOrgQuotaBalances, adjustActiveUsage } = await import('./quota');
+   const { ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
    await ensureOrgQuotaBalances(orgId);
    await db.transaction(async (tx: import('sequelize').Transaction) => {
       await db.query("UPDATE workspaces SET name = ?, status = 'ready' WHERE id = ? AND org_id = ?", {
@@ -99,7 +99,7 @@ export async function finishWorkspaceSetup(userId: string, wsId: number, brandNa
 export async function createWorkspace(userId: string, name: string): Promise<Workspace> {
    const { orgId } = await ensureUserTenancy(userId);
    const clean = (name || '').trim().slice(0, 60) || 'Untitled';
-   const { ensureOrgQuotaBalances, adjustActiveUsage } = await import('./quota');
+   const { ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
    await ensureOrgQuotaBalances(orgId);
    let wsId = 0;
    await db.transaction(async (tx: import('sequelize').Transaction) => {
@@ -150,7 +150,7 @@ export async function deleteWorkspace(userId: string, wsId: number): Promise<voi
    const statusRows = await select('SELECT status FROM workspaces WHERE id = ? AND org_id = ? LIMIT 1', [wsId, orgId]);
    const wasReady = String(statusRows[0]?.status ?? '') === 'ready';
    const domains = await select('SELECT "ID" AS id, domain FROM domain WHERE workspace_id = ?', [wsId]) as Array<{ id: number; domain: string }>;
-   const { ensureOrgQuotaBalances, adjustActiveUsage } = await import('./quota');
+   const { ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
    if (wasReady) await ensureOrgQuotaBalances(orgId);
    await db.transaction(async (tx: import('sequelize').Transaction) => {
       const q = (sql: string, repl: unknown[]) => db.query(sql, { replacements: repl, transaction: tx });

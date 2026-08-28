@@ -1,7 +1,7 @@
 import { selectSectionTarget, TARGET_CONFIDENCE_MIN } from '../../../lib/ao/sectionTargeting';
 import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
-import type { Section } from '../../../lib/articles/articleSections';
+import type { Section } from '@/src/infrastructure/articles/articleSections';
 
 const sections: Section[] = [
   { id: 'sec_0', index: 0, headingText: 'Intro', html: '<h2>Intro</h2><p>Ogólny wstęp o praktykach w związku.</p>' },

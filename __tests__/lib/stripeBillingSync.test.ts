@@ -21,7 +21,7 @@ jest.mock('../../lib/billing/billingAudit', () => ({
   ensureCorrelationId: (id?: string | null) => (typeof id === 'string' && id.trim() ? id.trim() : 'corr-test'),
 }));
 
-jest.mock('../../lib/quota/ensureBalances', () => ({
+jest.mock('@/src/infrastructure/quota/ensureBalances', () => ({
   ensureOrgQuotaBalances: jest.fn(async () => undefined),
 }));
 

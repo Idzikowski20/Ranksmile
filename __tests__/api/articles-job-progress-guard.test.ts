@@ -11,7 +11,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => 
 jest.mock('../../lib/requireOrgPaymentAccess', () => ({
   withOrgPaymentAccess: (handler: import('next').NextApiHandler) => handler,
 }));
-jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import handler from '../../pages/api/articles/job-progress';

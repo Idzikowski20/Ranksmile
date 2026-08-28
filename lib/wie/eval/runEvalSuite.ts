@@ -4,8 +4,8 @@
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { queryOne, queryRows } from '../../db/query';
-import { getArticleIdSql } from '../../articles/articleSql';
-import { buildArticleContext } from '../../articles/articleContext';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { buildArticleContext } from '@/src/infrastructure/articles/articleContext';
 import { runPrecisionOptimizeV4 } from '../../ao/runPrecisionOptimize';
 import { wieLlmComplete, wieWriterSystemPrompt } from '../writer';
 import { scoreEeat } from '@/src/core/domain/wie/eeatScore';

@@ -1,7 +1,7 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), transaction: jest.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb({})) } }));
 jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }) }));
 jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/quota', () => ({
+jest.mock('@/src/infrastructure/quota/index', () => ({
   ensureOrgQuotaBalances: jest.fn().mockResolvedValue(undefined),
   adjustActiveUsage: jest.fn().mockResolvedValue({ used: 1 }),
 }));
@@ -9,7 +9,7 @@ jest.mock('../../lib/quota', () => ({
 import db from '../../database/database';
 import { listWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace, createSetupWorkspace, markWorkspaceReady, finishWorkspaceSetup } from '../../lib/workspaces';
 import { assertCanManage } from '../../lib/members';
-import { adjustActiveUsage } from '../../lib/quota';
+import { adjustActiveUsage } from '@/src/infrastructure/quota/index';
 
 const mockQuery = db.query as jest.Mock;
 const mockAssertCanManage = assertCanManage as jest.MockedFunction<typeof assertCanManage>;

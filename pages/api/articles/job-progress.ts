@@ -57,7 +57,7 @@ async function failStaleFinalization(job: JobAccessRow): Promise<boolean> {
     );
     if (affectedRows(claim) === 0) return false;
     if (job.article_id) {
-      const { getArticleIdSql } = await import('../../../lib/articles/articleSql');
+      const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
       const articleIdSql = await getArticleIdSql();
       await db.query(
         `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
@@ -67,7 +67,7 @@ async function failStaleFinalization(job: JobAccessRow): Promise<boolean> {
     return true;
   });
   if (recovered && job.job_type === 'domain_setup' && job.domain_id) {
-    const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+    const { releaseSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
     await releaseSiteAuditRun(Number(job.domain_id), job.id).catch(() => {});
   }
   return recovered;
@@ -207,7 +207,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const { materializeDomainSetup } = await import('../../../lib/domainPipeline');
         try {
           await materializeDomainSetup(Number(domainId), result || {});
-          const { closeSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+          const { closeSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
           await closeSiteAuditRun(Number(domainId), jobId).catch(() => {});
           void import('../../../lib/siteAudit/crawlSnapshot')
             .then((m) => m.saveCrawlSnapshot(Number(domainId)))
@@ -228,16 +228,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
              WHERE id = ? AND status = 'finalizing'`,
             { replacements: [`materialize failed: ${msg}`, jobId] },
           );
-          const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+          const { releaseSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
           await releaseSiteAuditRun(Number(domainId), jobId).catch(() => {});
           return res.status(500).json({ error: 'materialization failed' });
         }
       } else if (status === 'failed' && jt === 'domain_setup' && domainId) {
-        const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+        const { releaseSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
         await releaseSiteAuditRun(Number(domainId), jobId).catch(() => {});
       }
       if (jt === 'article_generate' && genArticleId) {
-        const { getArticleIdSql } = await import('../../../lib/articles/articleSql');
+        const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
         const articleIdSql = await getArticleIdSql();
         if (status === 'done') {
           // articles.content is the canonical body rendered by the editor, preview and

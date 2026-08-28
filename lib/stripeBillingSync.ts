@@ -181,7 +181,7 @@ export async function syncSubscriptionToOrg(
 
   await updateOrgBillingState(orgId, patch, resolvedAudit);
 
-  const { ensureOrgQuotaBalances } = await import('./quota/ensureBalances');
+  const { ensureOrgQuotaBalances } = await import('@/src/infrastructure/quota/ensureBalances');
   await ensureOrgQuotaBalances(orgId, { seedFromCounts: true });
 }
 

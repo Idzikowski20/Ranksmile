@@ -125,7 +125,7 @@ export async function processQueueForDomain(
         { replacements: [resultJson, statsJson, candidate.id] },
       );
       if (config.table === 'keyword_research_runs') {
-        const { settleKeywordResearchQuota } = await import('./quota/keywordResearch');
+        const { settleKeywordResearchQuota } = await import('@/src/infrastructure/quota/keywordResearch');
         await settleKeywordResearchQuota(domainId, candidate.id, 'commit').catch(() => {});
       }
     } catch (e) {
@@ -134,7 +134,7 @@ export async function processQueueForDomain(
         { replacements: [getErrorMessage(e), candidate.id] },
       ).catch(() => { /* best effort */ });
       if (config.table === 'keyword_research_runs') {
-        const { settleKeywordResearchQuota } = await import('./quota/keywordResearch');
+        const { settleKeywordResearchQuota } = await import('@/src/infrastructure/quota/keywordResearch');
         await settleKeywordResearchQuota(domainId, candidate.id, 'release').catch(() => {});
       }
     }

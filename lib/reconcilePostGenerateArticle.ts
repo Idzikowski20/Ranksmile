@@ -1,8 +1,8 @@
 import db from '../database/database';
 import { queryOne, queryRows } from './db/query';
-import { getArticleIdSql } from './articles/articleSql';
-import { readArticleTerms } from './articles/articleTerms';
-import { enrichNlpTermsIfNeeded } from './articles/articleKeywordDiscovery';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
+import { enrichNlpTermsIfNeeded } from '@/src/infrastructure/articles/articleKeywordDiscovery';
 import { pickTermsForGeneratedArticle, mergeNlpTerms } from './pickArticleTerms';
 import { termsForOptimize } from './mergeArticleTerms';
 import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
