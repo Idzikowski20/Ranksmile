@@ -1,4 +1,4 @@
-import db from '../../database/database';
+import db from '@/database/database';
 import type { EmailJobRow, EmailJobSkipReason } from './emailTypes';
 import { EMAIL_STALE_RUNNING_MS } from './emailTypes';
 

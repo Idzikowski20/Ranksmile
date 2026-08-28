@@ -171,7 +171,7 @@ async function main(): Promise<void> {
 
   // Email outbox — DB poll (no BullMQ); claim/retry owned by notification_email_jobs.
   const { ensureNotificationEmailTables } = await import('@/src/infrastructure/persistence/schema/ensureNotificationEmailTables');
-  const { startEmailOutboxReconciler } = await import('../lib/notifications/emailOutboxReconciler');
+  const { startEmailOutboxReconciler } = await import('@/src/infrastructure/notifications/emailOutboxReconciler');
   await ensureNotificationEmailTables();
   const reconcilerTimer = startEmailOutboxReconciler(60_000);
   console.log('[pipeline-workers] notification_email DB poller registered');

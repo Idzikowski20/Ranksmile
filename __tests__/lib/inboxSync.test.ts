@@ -144,8 +144,8 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-import { optimizationEventId } from '../../lib/notifications/copy';
-import { syncOptimizationInbox } from '../../lib/notifications/syncOptimizationInbox';
+import { optimizationEventId } from '@/src/infrastructure/notifications/copy';
+import { syncOptimizationInbox } from '@/src/infrastructure/notifications/syncOptimizationInbox';
 
 const ORG = 1;
 const WS = 9;

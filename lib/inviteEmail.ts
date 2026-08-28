@@ -7,7 +7,7 @@ import {
   emailSupportLine,
   escapeHtml,
   wrapEmail,
-} from './emails/layout';
+} from '@/src/infrastructure/email/layout';
 
 export function inviteEmailHtml(p: {
   orgName: string;

@@ -19,7 +19,7 @@ import { isSidecarConfigured } from '../../../lib/sidecar';
 // cheerio .text() DECODES entities — a page whose text contains "&lt;img onerror=…&gt;"
 // comes back as a live tag; re-escape before interpolating into contentHtml, which the
 // app later renders via dangerouslySetInnerHTML (stored XSS otherwise).
-import { escapeHtml } from '../../../lib/emails/layout';
+import { escapeHtml } from '@/src/infrastructure/email/layout';
 import { publicAppUrl } from '../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

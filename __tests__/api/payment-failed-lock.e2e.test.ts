@@ -53,11 +53,11 @@ jest.mock('../../lib/tenancy', () => ({
   getAccessibleWorkspaceIds: jest.fn(),
 }));
 
-jest.mock('../../lib/notifications/inboxService', () => ({
+jest.mock('@/src/infrastructure/notifications/inboxService', () => ({
   listInboxForUser: jest.fn(),
 }));
 
-jest.mock('../../lib/notifications/syncOptimizationInbox', () => ({
+jest.mock('@/src/infrastructure/notifications/syncOptimizationInbox', () => ({
   syncOptimizationInbox: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -90,7 +90,7 @@ import { syncSubscriptionToOrg } from '../../lib/stripeBillingSync';
 import { getOrgBillingState } from '../../lib/orgBilling';
 import { ensureUserTenancy, getAccessibleWorkspaceIds } from '../../lib/tenancy';
 import { getCurrentUserId } from '../../utils/getUser';
-import { listInboxForUser } from '../../lib/notifications/inboxService';
+import { listInboxForUser } from '@/src/infrastructure/notifications/inboxService';
 
 type TestResponse = NextApiResponse & { statusCode?: number; body?: unknown };
 

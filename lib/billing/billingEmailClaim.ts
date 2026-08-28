@@ -6,7 +6,7 @@ import {
   EMAIL_MAX_ATTEMPTS,
   billingEmailIdempotencyKey,
   type BillingEmailEventType,
-} from '../notifications/emailTypes';
+} from '@/src/infrastructure/notifications/emailTypes';
 
 export type ClaimBillingEmailResult =
   | { claimed: true; dbJobId: number; idempotencyKey: string }

@@ -20,7 +20,7 @@ jest.mock('../../pages/api/settings', () => ({
 }));
 
 const mockEnqueue = jest.fn();
-jest.mock('../../lib/notifications/emailQueue', () => ({
+jest.mock('@/src/infrastructure/notifications/emailQueue', () => ({
   enqueueKeywordPositionEmails: (...args: unknown[]) => mockEnqueue(...args),
 }));
 

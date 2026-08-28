@@ -8,8 +8,8 @@ import { getErrorMessage } from '../../lib/errors';
 import {
   enqueueKeywordPositionEmails,
   type DomainNotifyCandidate,
-} from '../../lib/notifications/emailQueue';
-import type { EnqueueNotifyResult } from '../../lib/notifications/emailTypes';
+} from '@/src/infrastructure/notifications/emailQueue';
+import type { EnqueueNotifyResult } from '@/src/infrastructure/notifications/emailTypes';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 import { assertCronSecret } from '../../lib/cronAuth';
 

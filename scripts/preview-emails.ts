@@ -2,9 +2,9 @@ import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { buildConfirmEmailHtml, CONFIRM_EMAIL_SUBJECT } from '../lib/confirmEmail';
 import { inviteEmailHtml } from '../lib/inviteEmail';
-import { paymentFailedEmailHtml, paymentFailedEmailSubject } from '../lib/emails/paymentFailedEmail';
-import { abandonedCheckoutEmailHtml, ABANDONED_CHECKOUT_SUBJECT } from '../lib/emails/abandonedCheckoutEmail';
-import { starterNudgeEmailHtml, STARTER_NUDGE_SUBJECT } from '../lib/emails/starterNudgeEmail';
+import { paymentFailedEmailHtml, paymentFailedEmailSubject } from '@/src/infrastructure/email/paymentFailedEmail';
+import { abandonedCheckoutEmailHtml, ABANDONED_CHECKOUT_SUBJECT } from '@/src/infrastructure/email/abandonedCheckoutEmail';
+import { starterNudgeEmailHtml, STARTER_NUDGE_SUBJECT } from '@/src/infrastructure/email/starterNudgeEmail';
 import { buildGscDigest } from '../lib/gsc/gscDigestEmail';
 
 function escAttr(s: string): string {
