@@ -19,7 +19,7 @@ export const coverageWorker: PipelineWorker = {
     const { runGapEngine } = await import('../../engines/gapEngine');
     const { runRecommendationEngine } = await import('../../engines/gapToReco');
     const { upsertSerpCoverageFeatures } = await import('../../features/serpCoverageFeatures');
-    const { computeMultiScore } = await import('../../engines/multiScore');
+    const { computeMultiScore } = await import('@/src/core/domain/engines/multiScore');
     const { cachePut } = await import('../../pipeline/cacheLayers');
     const { isWorkerAllowedAtStage } = await import('../../pipeline/pipelineStage');
 
