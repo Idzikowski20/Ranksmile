@@ -3,9 +3,9 @@ import type {
   ResolveAppStateInput,
   ResolvedAppState,
   WorkspaceState,
-} from './types';
-import { hasActiveBillingEntitlement } from '../billing/billingEntitlement';
-import type { SubscriptionStatus } from '../orgBilling';
+} from '@/src/infrastructure/appAccess/types';
+import { hasActiveBillingEntitlement } from '@/lib/billing/billingEntitlement';
+import type { SubscriptionStatus } from '@/lib/orgBilling';
 
 /**
  * Priority: LOCKED → EMAIL → ONBOARDING → PAYMENT_FAILED → BILLING → WORKSPACE → READY

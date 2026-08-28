@@ -12,7 +12,7 @@ import { IconDefaultsProvider } from '../components/koala/core/IconDefaultsProvi
 import { KoalaThemeProvider } from '../components/koala/theme';
 import AppToaster from '../components/common/AppToaster';
 import TopProgressBar from '../components/common/TopProgressBar';
-import { ApplicationShell } from '../lib/appAccess/ApplicationShell';
+import { ApplicationShell } from '@/src/infrastructure/appAccess/ApplicationShell';
 import { AppBannerProvider } from '../components/koala/shell';
 
 const GlobalSmoothCaret = dynamic(

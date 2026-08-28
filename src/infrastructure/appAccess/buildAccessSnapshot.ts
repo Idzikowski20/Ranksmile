@@ -4,9 +4,9 @@ import {
   type AccessSnapshot,
   type BillingState,
   type WorkspaceState,
-} from './types';
-import { resolveAppState } from './resolveAppState';
-import { resolveRedirect } from './resolveRedirect';
+} from '@/src/infrastructure/appAccess/types';
+import { resolveAppState } from '@/src/infrastructure/appAccess/resolveAppState';
+import { resolveRedirect } from '@/src/infrastructure/appAccess/resolveRedirect';
 
 export type BuildAccessSnapshotInput = {
   emailConfirmed: boolean;

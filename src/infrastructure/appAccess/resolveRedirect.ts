@@ -1,4 +1,4 @@
-import type { AccessRedirect, AppState, AppStateReason, ResolvedAppState } from './types';
+import type { AccessRedirect, AppState, AppStateReason, ResolvedAppState } from '@/src/infrastructure/appAccess/types';
 
 export type ResolveRedirectContext = {
   activeWorkspaceId?: number | null;

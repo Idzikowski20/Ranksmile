@@ -17,7 +17,7 @@ import {
   projectBillingState,
   projectWorkspaceState,
   type AccessSnapshot,
-} from './appAccess';
+} from '@/src/infrastructure/appAccess/index';
 
 export type BootstrapData = {
   onboarding: { completed: boolean };

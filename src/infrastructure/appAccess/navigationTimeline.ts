@@ -1,4 +1,4 @@
-import type { AppState, AppStateReason } from './types';
+import type { AppState, AppStateReason } from '@/src/infrastructure/appAccess/types';
 
 export type AccessTimelineEvent =
   | {

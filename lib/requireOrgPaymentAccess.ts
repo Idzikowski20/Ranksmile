@@ -8,7 +8,7 @@ import {
   projectBillingState,
   projectWorkspaceState,
   type AccessSnapshot,
-} from './appAccess';
+} from '@/src/infrastructure/appAccess/index';
 import { isPaymentFailedLocked } from './paymentFailedLock';
 
 const UNAVAILABLE_BODY = {

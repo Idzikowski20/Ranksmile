@@ -1,5 +1,5 @@
-import { allowsFrontend } from './accessPolicy';
-import type { AccessSnapshot } from './types';
+import { allowsFrontend } from '@/src/infrastructure/appAccess/accessPolicy';
+import type { AccessSnapshot } from '@/src/infrastructure/appAccess/types';
 
 /**
  * Should the app be replaced by the "your plan has expired" block?
