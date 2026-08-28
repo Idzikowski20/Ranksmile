@@ -203,7 +203,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
       // v7 live_score queue on content save (fire-and-forget)
       if (content && scoreDataJson) {
          try {
-            const { enqueueLiveScoreOnSave } = await import('../../../../lib/pipeline/enqueueFromDeepAnalysis');
+            const { enqueueLiveScoreOnSave } = await import('@/src/infrastructure/pipeline/enqueueFromDeepAnalysis');
             const { recordScoreFeedback } = await import('../../../../lib/learning/scoreFeedback');
             const userId = await getCurrentUserId(req, res);
             const sd = scoreDataObj || {};

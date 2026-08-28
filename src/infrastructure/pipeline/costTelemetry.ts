@@ -1,7 +1,7 @@
 /**
  * Cost telemetry helpers — estimated_cost before, actual_cost after.
  */
-import db from '../../database/database';
+import db from '@/database/database';
 import { ensurePipelineJobsTables } from '@/src/infrastructure/persistence/schema/ensurePipelineJobsTables';
 
 export async function recordJobCostEstimate(opts: {

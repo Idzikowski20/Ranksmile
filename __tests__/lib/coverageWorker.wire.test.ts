@@ -6,7 +6,7 @@ jest.mock('@/src/infrastructure/features/serpCoverageFeatures', () => ({
   upsertSerpCoverageFeatures: jest.fn(async () => ({})),
 }));
 
-jest.mock('../../lib/pipeline/cacheLayers', () => ({
+jest.mock('@/src/infrastructure/pipeline/cacheLayers', () => ({
   cachePut: jest.fn(async () => undefined),
 }));
 

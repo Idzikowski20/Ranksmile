@@ -1303,7 +1303,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // v7 pipeline bridge (fire-and-forget; after competitors + AI visibility settled)
     try {
       const { enqueueFromDeepAnalysis, enqueueVisibilityFromDeepAnalysis } = await import(
-        '../../../lib/pipeline/enqueueFromDeepAnalysis'
+        '@/src/infrastructure/pipeline/enqueueFromDeepAnalysis'
       );
       const bridgeUserId = await getCurrentUserId(req, res);
       const workspaceId = String(bridgeUserId || resolvedDomainId || '0');

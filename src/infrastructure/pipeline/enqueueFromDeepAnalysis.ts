@@ -2,9 +2,9 @@
  * Fire-and-forget bridge: deep-analysis sidecar result → v7 pipeline queue.
  * Does not block SSE / sidecar path.
  */
-import { enqueueJob } from './pipelineQueue';
-import type { EnqueueResult } from './pipelineQueue';
-import { getErrorMessage } from '../errors';
+import { enqueueJob } from '@/src/infrastructure/pipeline/pipelineQueue';
+import type { EnqueueResult } from '@/src/infrastructure/pipeline/pipelineQueue';
+import { getErrorMessage } from '@/lib/errors';
 
 export type DeepAnalysisCompetitor = {
   url?: string;
@@ -114,7 +114,7 @@ export async function enqueueVisibilityFromDeepAnalysis(
   const keyword = (opts.keyword || '').trim();
   if (!keyword) return null;
   try {
-    const { isWorkerAllowedAtStage } = await import('./pipelineStage');
+    const { isWorkerAllowedAtStage } = await import('@/src/infrastructure/pipeline/pipelineStage');
     if (!isWorkerAllowedAtStage('visibility')) return null;
     return await enqueueJob({
       workspaceId: opts.workspaceId,

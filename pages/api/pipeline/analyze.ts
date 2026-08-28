@@ -4,8 +4,8 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import {
   enqueueAnalyzeDag,
   FlowProducerStageError,
-} from '../../../lib/pipeline/flowProducer';
-import { getPipelineStage } from '../../../lib/pipeline/pipelineStage';
+} from '@/src/infrastructure/pipeline/flowProducer';
+import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 /**

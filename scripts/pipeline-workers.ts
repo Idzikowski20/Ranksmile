@@ -103,9 +103,9 @@ async function main(): Promise<void> {
   // Dynamic imports AFTER dotenv so database/database.ts sees DATABASE_URL (Neon), not SQLite.
   const { listWorkers, resetWorkerRegistry } = await import('../lib/workers/registry');
   const { findActiveJobByKey, insertPipelineJob } = await import('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables');
-  const { processJobInline } = await import('../lib/pipeline/pipelineQueue');
+  const { processJobInline } = await import('@/src/infrastructure/pipeline/pipelineQueue');
   const { PIPELINE_VERSION } = await import('@/src/core/domain/pipeline/queuePriorities');
-  const { getPipelineStage } = await import('../lib/pipeline/pipelineStage');
+  const { getPipelineStage } = await import('@/src/infrastructure/pipeline/pipelineStage');
 
   resetWorkerRegistry();
   const workers = listWorkers();
