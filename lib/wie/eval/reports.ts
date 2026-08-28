@@ -1,7 +1,7 @@
 /**
  * Dual reports: technical.md + editorial.md + verdict.json
  */
-import type { ScorecardResult } from './scorecard';
+import type { ScorecardResult } from '@/src/core/domain/wie/scorecard';
 import type { EditorialJudgeResult, EditorialJudgeStatus } from './editorialJudge';
 import {
   formatEditorialReviewMarkdown,

@@ -25,7 +25,7 @@ import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
 import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
 import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
-import { resolveArticleEntry, articleEntryHref } from '../../../lib/articles/articleFlow';
+import { resolveArticleEntry, articleEntryHref } from '@/src/core/domain/articles/articleFlow';
 import AnalysisProgressPanel from '../../../components/articles/AnalysisProgressPanel';
 import CompetitorOutlinesPanel from '../../../components/articles/CompetitorOutlinesPanel';
 import { emptyPhases, type AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';

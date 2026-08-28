@@ -3,7 +3,7 @@ import {
   scale10to100,
   patternUsageScore,
   coverageScoreFromSnapshot,
-} from '../../../lib/wie/eval/scorecard';
+} from '@/src/core/domain/wie/scorecard';
 import {
   scoreDocFeatures,
   buildCompetitorBenchmark,

@@ -7,7 +7,7 @@ import GeneratingStage from '../../components/articles/GeneratingStage';
 import { clearWizardState } from '../../lib/wizardState';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 import { shouldSkipFreshGenerate } from '../../lib/generateResume';
-import { articleOutlineReviewHref } from '../../lib/articles/articleFlow';
+import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
 
 async function fetchArticleContent(articleId: string): Promise<{
   content: string;

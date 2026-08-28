@@ -6,7 +6,7 @@
  * quotes. Shares the landing's header, footer, primitives, motion and dashboard mock.
  */
 import { PLAN_DEFINITIONS, PLAN_HIERARCHY } from '../../lib/pricing/planDefinition';
-import { LEGAL_COMPANY } from '../../lib/legal/company';
+import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || LEGAL_COMPANY.website).replace(/\/$/, '');
 export const SUPPORT_EMAIL = LEGAL_COMPANY.supportEmail;
