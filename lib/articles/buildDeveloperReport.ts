@@ -5,7 +5,7 @@
 import { countOccurrences, termCoverage, type ScoreData } from '../contentScore';
 import type { AiVisibilitySummary } from '../ai/aiSearchScore';
 import { computeOverallContentScore } from '../ai/aiSearchScore';
-import type { BucketScore, CoverageItem, CoverageSnapshot } from '../ai/aiCoverage';
+import type { BucketScore, CoverageItem, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { scoreArticleHtml } from '../scoreArticleHtml';
 
 export type DeveloperReportArticleMeta = {

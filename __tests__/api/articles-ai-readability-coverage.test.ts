@@ -17,7 +17,7 @@ import handler from '../../pages/api/articles/ai-readability';
 import { queryOne } from '../../lib/db/query';
 import { callSidecar } from '../../lib/sidecar';
 import { buildSnapshot, parseSnapshot } from '../../lib/coverageStore';
-import type { CoverageItem } from '../../lib/ai/aiCoverage';
+import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 
 const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;
 const mockQueryOne = queryOne as jest.MockedFunction<typeof queryOne>;

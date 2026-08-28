@@ -5,7 +5,7 @@ import {
   type CoverageResult,
   type CoverageSnapshot,
   type CoverageTopicGroup,
-} from './ai/aiCoverage';
+} from '@/src/core/domain/coverage/aiCoverage';
 import { deepseekJudge } from './ai/aiCoverageJudge';
 import { analyzeIntroduction, deepseekIntroJudge } from './introductionAnalyzer';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
@@ -33,7 +33,7 @@ export function introPlainTextFromHtml(html: string, plainTextFallback = ''): st
 export async function assembleCoverageItems(opts: {
   keyword: string;
   paaQuestions?: PaaQuestion[];
-  llmQuestions?: Array<{ question: string; sources: import('./ai/aiCoverage').LlmCoverageSource[] }>;
+  llmQuestions?: Array<{ question: string; sources: import('@/src/core/domain/coverage/aiCoverage').LlmCoverageSource[] }>;
   introPlain: string;
   languageCode?: string;
 }): Promise<{ items: CoverageItem[]; answersMainQuestionEarly: boolean }> {
@@ -136,7 +136,7 @@ export async function buildGradedCoverageSnapshot(opts: {
   plainText: string;
   html: string;
   paaQuestions?: PaaQuestion[];
-  llmQuestions?: Array<{ question: string; sources: import('./ai/aiCoverage').LlmCoverageSource[] }>;
+  llmQuestions?: Array<{ question: string; sources: import('@/src/core/domain/coverage/aiCoverage').LlmCoverageSource[] }>;
   languageCode?: string;
   /** Optional harvested topic buckets (titles + questions) for snapshot.topics */
   harvestTopics?: Array<{ title: string; questions: Array<{ question: string }> }>;

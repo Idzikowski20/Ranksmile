@@ -2,7 +2,7 @@ import db from '../../database/database';
 import { getArticleIdSql } from './articleSql';
 import { safeJsonParse } from '../safeJson';
 import { parseSnapshot } from '../coverageStore';
-import type { CoverageSnapshot } from '../ai/aiCoverage';
+import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import type { ScoreData } from '../contentScore';
 import { readArticleTerms, type ArticleTermRow } from './articleTerms';
 import { readContentSettings } from '../contentSettings';

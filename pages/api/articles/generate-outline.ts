@@ -14,7 +14,7 @@ import { getDomainVoices } from '../../../lib/domainVoices';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { safeJsonParse } from '../../../lib/safeJson';
-import type { CoverageSnapshot } from '../../../lib/ai/aiCoverage';
+import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { resolveContentLocale, languageDisplayName } from '../../../lib/domainLanguage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { chatLlm } from '../../../lib/ai/deepseek';

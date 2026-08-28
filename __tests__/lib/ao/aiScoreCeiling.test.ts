@@ -1,4 +1,4 @@
-import { computeCoverageScores, type CoverageItem } from '../../../lib/ai/aiCoverage';
+import { computeCoverageScores, type CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { buildEditCandidates } from '../../../lib/ao/buildCandidates';
 import { buildIntentProfile } from '../../../lib/ao/intentProfile';
 import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_TARGET } from '../../../lib/ao/coverageState';

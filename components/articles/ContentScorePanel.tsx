@@ -17,7 +17,7 @@ import ScoreTrio from './ScoreTrio';
 import ScoreFactorList from './ScoreFactorList';
 import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '../../lib/ai/aiSearchScore';
 import { introFactorsFromScoreData } from '../../lib/aiScore/liveFactors';
-import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/ai/aiCoverage';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { useCompetitors } from '../../services/competitors';
 import { Gauge } from '../koala/core';
 import { useCoverageHistoryDelta } from '../../hooks/articles/useCoverageHistoryDelta';

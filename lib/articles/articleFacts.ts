@@ -3,7 +3,7 @@
  * No synthetic citation templates ("X czy warto?") — only real SERP questions + answers.
  */
 import { getPeopleAlsoAsk, isDataForSeoConfigured } from '../dataforseo';
-import { hashId, type CoverageItem } from '../ai/aiCoverage';
+import { hashId, type CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { cached, TTL } from '../cache/fileCache';
 import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
 import { resolveFactKeyword } from '../resolveFactKeyword';

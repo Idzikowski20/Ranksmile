@@ -1,4 +1,4 @@
-import type { CoverageSnapshot } from '../ai/aiCoverage';
+import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import type { ArticleContext } from '../articles/articleContext';
 import type { Feature, Observation } from './types';
 

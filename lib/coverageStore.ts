@@ -1,4 +1,4 @@
-import { CoverageItem, CoverageResult, CoverageSnapshot, computeCoverageScores } from './ai/aiCoverage';
+import { CoverageItem, CoverageResult, CoverageSnapshot, computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 import { safeJsonParse } from './safeJson';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 

@@ -7,7 +7,7 @@ import { hashCompileSource } from '../compiler/contentHash';
 import { compileArticle, resolveCompileSource } from './runtimeApi';
 import type { CompileStore } from './compileStore';
 import { recordCcmCompileMetric, type CcmCompileOutcome } from './ccmCompileMetrics';
-import type { CoverageSnapshot } from '../ai/aiCoverage';
+import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 export type CompileAfterResult =
   | {

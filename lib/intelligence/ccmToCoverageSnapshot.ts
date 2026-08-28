@@ -9,7 +9,7 @@ import {
   type CoverageTopicGroup,
   type CoverageType,
   type Importance,
-} from '../ai/aiCoverage';
+} from '@/src/core/domain/coverage/aiCoverage';
 import type { CanonicalContentModel } from '../ccm/types/ccm';
 import { graphQuery } from '../ccm/graphQuery';
 import type { CoverageStatus } from '../ccm/types/status';

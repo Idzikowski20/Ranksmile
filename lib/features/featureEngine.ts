@@ -1,7 +1,7 @@
-import type { CoverageSnapshot } from '../ai/aiCoverage';
+import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import type { ArticleContext } from '../articles/articleContext';
 import { buildGuidelines } from '../recommendationEngine';
-import { computeCoverageScores } from '../ai/aiCoverage';
+import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 import type { Action, Feature, Observation, ScoreVector } from '../primitives/types';
 import { guidelinesToActions } from '../primitives/guidelineToAction';
 import { prioritizeActions } from '../primitives/prioritizeActions';

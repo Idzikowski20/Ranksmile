@@ -1,4 +1,4 @@
-import type { CoverageItem } from './ai/aiCoverage';
+import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { computeCompetitorContentScore } from '@/src/core/domain/competitors/contentScore';
 import {
    aiExtractabilityScore,
