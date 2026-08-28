@@ -49,7 +49,7 @@ import OutlineGenerateBar from './OutlineGenerateBar';
 import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
 import { revealHtmlInEditor, editorCanCommand } from '../../lib/editor/revealHtmlProgressive';
 import clearEditorHistory from '../../lib/editor/clearEditorHistory';
-import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
+import { normalizeListHtml } from '@/src/core/domain/editor/normalizeListHtml';
 import { clearWizardState } from '../../lib/wizardState';
 import {
   collectApprovedOutline,
