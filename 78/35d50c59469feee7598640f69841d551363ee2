@@ -1,0 +1,81 @@
+lib/billing/billingActivateTrial.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 2-3
+pages/billing/checkout/[plan].tsx
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 24
+components/billing/PlanExpired.tsx
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 8
+__tests__/api/billing-guards.test.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 42
+pages/api/billing/upgrade-preview.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 3
+lib/orgBilling.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 1
+pages/api/billing/tax-preview.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 3
+lib/siteAudit/pageLimit.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 1
+components/settings/PricingPlansSettings.tsx
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 5
+__tests__/lib/paymentFailedLock.test.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 2
+__tests__/lib/billingPlans.test.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 7
+lib/pricing/planDefinition.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 7-8
+components/billing/CheckoutKoalaBody.tsx
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 16,23
+pages/api/billing/checkout-session.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 2-3
+pages/api/billing/plan-summary.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 2
+components/koala/product/ComparePricingTable.tsx
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 17
+lib/billing/billingConfirmation.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 2
+pages/api/billing/expired-summary.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 4
+scripts/seed-stripe-products.ts
+  s_e3556ba0769b4b::t_5e9ea22416c152 7
+__tests__/lib/billingActivateTrial.test.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 33
+lib/subscriptionDetails.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 1-2
+pages/api/billing/create-subscription.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 3
+pages/api/webhooks/stripe.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 14
+pages/api/billing/upgrade-subscription.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 3
+lib/planLimits.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 1
+lib/billing/billingUpgrade.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 8
+lib/stripeBillingSync.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 2
+lib/stripePrices.ts
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 1
+components/koala/product/PricingCard.tsx
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 11
+components/koala/shell/SidebarPlanItem.tsx
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 4
+components/siteAudit/crawlLimitContent.tsx
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 4
+components/billing/CheckoutStripeProvider.tsx
+  s_e3556ba0769b4b::t_d03b7d21eb01b7 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7835d50c59469feee7598640f69841d551363ee2",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
