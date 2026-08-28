@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { cancelDanglingCheckouts } from '../../../lib/billing/billingActivateTrial';
 import { BillingSource, emitBillingEvent } from '../../../lib/billing/billingAudit';
-import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billing/billingPlanLock';
+import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '@/src/core/domain/billing/planLock';
 import { assertTrialAllowed } from '../../../lib/billing/billingTrial';
 import { getOrgBillingState, updateOrgBillingState } from '../../../lib/orgBilling';
 import { assertCanManage } from '../../../lib/members';

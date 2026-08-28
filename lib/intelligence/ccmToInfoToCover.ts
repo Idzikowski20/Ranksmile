@@ -6,7 +6,7 @@ import type { CanonicalContentModel } from '../ccm/types/ccm';
 import { graphQuery } from '../ccm/graphQuery';
 import { isFactNode } from '../ccm/types/graph';
 import type { CoverageStatus } from '../ccm/types/status';
-import type { InfoFact, InfoTopicGroup } from '../infoToCoverTopics';
+import type { InfoFact, InfoTopicGroup } from '@/src/core/domain/coverage/infoToCoverTopics';
 
 function isCoveredStatus(status: CoverageStatus): boolean {
   return status === 'covered' || status === 'partial';

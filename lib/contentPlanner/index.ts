@@ -55,7 +55,7 @@ export {
   runBriefPlanningLoop,
   assertBlueprintGate,
   runPlannerImproveLoop,
-} from './planningLoop';
+} from '@/src/core/domain/contentPlanner/planningLoop';
 export { optimizeNarrative } from '@/src/core/domain/contentPlanner/narrativeOptimizer';
 export type { NarrativeSeed } from '@/src/core/domain/contentPlanner/narrativeOptimizer';
 export {

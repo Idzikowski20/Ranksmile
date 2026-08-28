@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/contentScore';
 import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
-import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicGroup } from '../../lib/infoToCoverTopics';
+import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicGroup } from '@/src/core/domain/coverage/infoToCoverTopics';
 import { faviconUrl } from '../../lib/faviconUrl';
 import DomainFavicon from '../common/DomainFavicon';
 import ScoreTrio from './ScoreTrio';
