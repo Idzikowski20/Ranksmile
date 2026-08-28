@@ -1,4 +1,4 @@
-import type { SiteNavItem } from './navigationTypes';
+import type { SiteNavItem } from '@/src/core/domain/navigation/navigationTypes';
 
 /** Canonical SEO secondary links (primary nav + mobile sheet + command palette). */
 export const SEO_NAV: SiteNavItem[] = [
