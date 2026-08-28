@@ -1,4 +1,4 @@
-import { notImplemented } from './types';
+import { notImplemented } from '@/src/infrastructure/adapters/types';
 
 export type FeedbackPayload = {
   score: number;

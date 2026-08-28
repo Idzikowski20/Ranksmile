@@ -1,5 +1,5 @@
 import { useMutation } from 'react-query';
-import { mfaAdapter, accountAdapter, isAdapterError } from '../lib/adapters';
+import { mfaAdapter, accountAdapter, isAdapterError } from '@/src/infrastructure/adapters';
 import { showToast } from '../lib/toast';
 
 export function useEnrollMfa() {

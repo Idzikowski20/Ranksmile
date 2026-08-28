@@ -1,4 +1,4 @@
-import { notImplemented } from './types';
+import { notImplemented } from '@/src/infrastructure/adapters/types';
 
 /** Delete current user account — stub (do not call GSC deleteAccount). */
 export async function deleteAccount(): Promise<{ ok: true }> {
