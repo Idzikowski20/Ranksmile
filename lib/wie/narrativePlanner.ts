@@ -3,7 +3,7 @@
  * Arc: problem → explain → example → action (+ optional FAQ).
  */
 import type { CompetitorSynthesis } from './competitorSynthesis';
-import type { ReaderBrief } from './readerBrief';
+import type { ReaderBrief } from '@/src/core/domain/wie/readerBrief';
 import type { PolicyBundle } from './policyResolver';
 
 export type NarrativeBeat = {

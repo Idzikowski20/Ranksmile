@@ -12,7 +12,7 @@ import {
   parseCompetitorSynthesis,
   type CompetitorSynthesis,
 } from '../wie/competitorSynthesis';
-import { buildHeuristicReaderBrief, type ReaderBrief } from '../wie/readerBrief';
+import { buildHeuristicReaderBrief, type ReaderBrief } from '@/src/core/domain/wie/readerBrief';
 
 export interface CompetitorContext {
   domain: string;

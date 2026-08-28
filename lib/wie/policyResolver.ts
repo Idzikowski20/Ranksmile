@@ -9,8 +9,8 @@ import {
   persistConfidenceDecay,
   type WritingPattern,
 } from './patternStore';
-import { WRITING_PRINCIPLES } from './principles';
-import type { ReaderBrief } from './readerBrief';
+import { WRITING_PRINCIPLES } from '@/src/core/domain/wie/principles';
+import type { ReaderBrief } from '@/src/core/domain/wie/readerBrief';
 import type { CompetitorSynthesis } from './competitorSynthesis';
 import { pickDnaAbPattern } from './dnaAb';
 

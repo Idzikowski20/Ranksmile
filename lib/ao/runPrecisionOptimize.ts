@@ -41,7 +41,7 @@ import {
 import { TARGET_AI, TARGET_SEO } from '../optimizeMode';
 import { evaluateRxQualityGate } from '../wie/rxQualityGate';
 import { parseCompetitorSynthesis, type CompetitorSynthesis } from '../wie/competitorSynthesis';
-import type { ReaderBrief } from '../wie/readerBrief';
+import type { ReaderBrief } from '@/src/core/domain/wie/readerBrief';
 import { buildPolicyContext, resolvePolicyBundle, type PolicyBundle } from '../wie/policyResolver';
 import { recordPatternOutcome } from '../wie/patternStore';
 import { buildNarrativePlan, type NarrativePlan } from '../wie/narrativePlanner';

@@ -4,7 +4,7 @@ import {
   parseCompetitorSynthesis,
 } from '../../../lib/wie/competitorSynthesis';
 import { evaluateRxQualityGate } from '../../../lib/wie/rxQualityGate';
-import { buildHeuristicReaderBrief, formatReaderBriefForPrompt } from '../../../lib/wie/readerBrief';
+import { buildHeuristicReaderBrief, formatReaderBriefForPrompt } from '@/src/core/domain/wie/readerBrief';
 import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '../../../lib/ao/editPlan';
 import { makeCandidate } from '../../../lib/ao/editCandidate';
 import { buildIntentProfile } from '../../../lib/ao/intentProfile';

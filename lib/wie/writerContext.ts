@@ -2,7 +2,7 @@
  * Shared WIE Think→Write context for AO, Brief, whole-article, coverage.
  */
 import { parseCompetitorSynthesis, formatCompetitorSynthesisForPrompt, type CompetitorSynthesis } from './competitorSynthesis';
-import { buildHeuristicReaderBrief, formatReaderBriefForPrompt, type ReaderBrief } from './readerBrief';
+import { buildHeuristicReaderBrief, formatReaderBriefForPrompt, type ReaderBrief } from '@/src/core/domain/wie/readerBrief';
 import { buildPolicyContext, resolvePolicyBundle, formatPolicyBundleForPrompt, type PolicyBundle, type PolicyContext } from './policyResolver';
 import { buildNarrativePlan, formatNarrativePlanForPrompt, type NarrativePlan } from './narrativePlanner';
 import { bundleToExplainability, type ExplainabilityRecord } from './explainability';

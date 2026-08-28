@@ -1,4 +1,4 @@
-import { WRITING_PRINCIPLES, getPrinciple } from '../../../lib/wie/principles';
+import { WRITING_PRINCIPLES, getPrinciple } from '@/src/core/domain/wie/principles';
 import {
   applyConfidenceDecay,
   scorePatternForContext,
@@ -12,7 +12,7 @@ import {
   inferIndustry,
   resolvePolicyBundle,
 } from '../../../lib/wie/policyResolver';
-import { buildHeuristicReaderBrief } from '../../../lib/wie/readerBrief';
+import { buildHeuristicReaderBrief } from '@/src/core/domain/wie/readerBrief';
 import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '../../../lib/ao/editPlan';
 import { makeCandidate } from '../../../lib/ao/editCandidate';
 import { buildIntentProfile } from '../../../lib/ao/intentProfile';

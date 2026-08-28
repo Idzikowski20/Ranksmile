@@ -5,7 +5,7 @@
  */
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
-import { WRITING_PRINCIPLES } from './principles';
+import { WRITING_PRINCIPLES } from '@/src/core/domain/wie/principles';
 
 export type PatternLayer = 'global' | 'industry' | 'brand';
 
