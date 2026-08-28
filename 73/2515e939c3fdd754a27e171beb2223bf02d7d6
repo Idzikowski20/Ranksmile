@@ -1,0 +1,81 @@
+components/koala/product/ComparePricingTable.tsx
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 9,16
+lib/articles/articleKeywordDiscovery.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 14
+lib/harvest/clusterQuestions.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 2
+lib/seo/keywordData.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 24
+__tests__/lib/topicRelevance.test.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 1
+components/siteAudit/SiteAuditCompareCrawls.tsx
+  s_e3556ba0769b4b::t_3192b1ba010d34 6-7
+lib/resolveFactKeyword.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 3
+lib/wie/corpusClaims.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 15
+components/koala/product/PricingCard.tsx
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 9-10
+lib/inferPageKeyword.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 4
+lib/buildImportKeywordList.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 8
+components/siteAudit/IssueHelpContent.tsx
+  s_e3556ba0769b4b::t_3192b1ba010d34 3
+components/siteAudit/HowToFixPopper.tsx
+  s_e3556ba0769b4b::t_3192b1ba010d34 3
+lib/knowledgeEngine/cluster.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 6
+lib/contentPlanner/sectionLabels.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 5
+components/koala/product/BenefitItem.tsx
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 4
+lib/pickArticleTerms.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 3
+components/landing/content.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 8
+__tests__/lib/pricing/planDefinition.test.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 8
+components/settings/PricingPlansSettings.tsx
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 19
+lib/knowledgeEngine/competitorBrands.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 14
+__tests__/lib/topicRelevance.noise.test.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 1
+components/aiTracking/content.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 8
+lib/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 16
+lib/siteAudit/issues.ts
+  s_e3556ba0769b4b::t_3192b1ba010d34 2
+lib/harvest/providers.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 3
+lib/articles/articleFacts.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 10
+lib/citationPrompts.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 5
+components/siteAudit/SiteAuditIssues.tsx
+  s_e3556ba0769b4b::t_3192b1ba010d34 11
+lib/llmCoverageQuestions.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 12
+lib/curateCoverageItems.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 12
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_eb9a222ff2d68f 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "732515e939c3fdd754a27e171beb2223bf02d7d6",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
