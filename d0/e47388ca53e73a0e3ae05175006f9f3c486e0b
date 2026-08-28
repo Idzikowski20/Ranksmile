@@ -1,0 +1,265 @@
+__tests__/lib/contentPlanner/validateSemantic.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 9-10
+pages/api/articles/generate-outline.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 136
+src/infrastructure/wie/competitorSynthesis.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-252
+src/infrastructure/contentPlanner/briefWriter.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-587
+__tests__/lib/knowledgeEngine/coverage.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 8,10,192
+pages/api/cron/wie-eval.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 5-6
+__tests__/lib/knowledgeEngine/types.smoke.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 2,7
+src/infrastructure/wie/autoLearnBrandDna.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-93
+__tests__/lib/wie/gapsClosed.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-9
+src/infrastructure/contentPlanner/knowledgePack/flowPlanner.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-126
+__tests__/lib/contentPlanner/outlineForReview.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1
+src/infrastructure/wie/abWrite.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-125
+components/articles/ArticleEditor.tsx
+  s_e3556ba0769b4b::t_f3ec5347c572d4 58,60
+src/infrastructure/articles/articleContext.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 14,108
+__tests__/lib/contentPlanner/compileWritePlan.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 5
+__tests__/lib/ao/strategyRoutingWeak.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 4
+src/infrastructure/contentPlanner/quickAnswer.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-51
+src/infrastructure/contentPlanner/knowledgePack/toSidecarCompiledPlan.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-25
+src/infrastructure/contentPlanner/runContentPlanner.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-514
+src/infrastructure/ao/aoQualityGates.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-157
+__tests__/lib/wie/openingPolicyEnforce.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 6-9
+src/infrastructure/contentPlanner/reviewOutline.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-164
+src/infrastructure/knowledgeEngine/competitorDocument.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-69
+__tests__/lib/contentPlanner/flowPlanner.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1,5
+src/infrastructure/ao/applyGatedFaq.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-168
+__tests__/lib/wie/outcomeLearning.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 8
+__tests__/lib/ao/aiScoreCeiling.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 2
+__tests__/lib/autoLearnBrandDna.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 10,17
+src/infrastructure/knowledgeEngine/normalizeClaims.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-196
+src/infrastructure/wie/patternDiscovery.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-144
+__tests__/lib/outlineReviewState.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 2
+src/infrastructure/contentPlanner/index.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-92
+__tests__/ao/golden/cuckolding.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 9,11,15,17
+__tests__/lib/contentPlanner/executionPlan.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 16
+src/infrastructure/contentPlanner/knowledgePack/compileDiagnostics.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-162
+__tests__/lib/contentPlanner/reviewFixes.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 17-18,28
+src/infrastructure/contentPlanner/fromArticleInputs.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-307
+src/infrastructure/wie/eval/editorialJudge.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-376
+__tests__/ao/golden/v4/precisionAoV41.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 8,14
+lib/contentScore.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 69
+src/infrastructure/wie/dnaAb.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-46
+__tests__/lib/contentPlanner/validateRuntime.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 7-8
+__tests__/lib/wie/policyResolver.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 7-8,14,16
+__tests__/lib/contentPlanner/applyApprovedOutline.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1,6
+__tests__/lib/contentPlanner/reviewOutline.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 4
+__tests__/lib/knowledgeEngine/canonicalize.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1
+__tests__/lib/knowledgeEngine/normalizeClaims.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 3
+pages/api/articles/[id]/index.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 127
+src/infrastructure/wie/rxQualityGate.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-123
+src/infrastructure/wie/writer.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-196
+src/infrastructure/harvest/fillMissingTopics.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 118-120
+__tests__/lib/briefPhraseTerms.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 8
+__tests__/lib/contentPlanner/validateStructural.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 8-9
+src/infrastructure/knowledgeEngine/runKnowledgeEngine.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-150
+src/infrastructure/wie/outcomeLearning.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-248
+src/infrastructure/wie/brandDnaOnboarding.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-215
+src/infrastructure/wie/writerContext.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-88
+__tests__/lib/contentPlanner/paragraphPlanner.blocks.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1
+__tests__/lib/wie/evalSuite.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 16,21-22,24,28
+src/infrastructure/contentPlanner/knowledgePack/validateCompiledWritePlan.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-15
+src/infrastructure/wie/eval/policyCompliance.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-211
+__tests__/lib/contentPlanner/toSidecarCompiledPlan.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 4
+pages/api/wie/corpus.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 10
+pages/api/wie/outcome/sync-gsc.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 7
+src/infrastructure/contentPlanner/knowledgePack/compileWritePlan.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-280
+src/infrastructure/contentPlanner/knowledgePack/validateSemantic.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-252
+src/infrastructure/wie/policyResolver.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-238
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 32,34,65,471,509,571
+pages/api/articles/[id]/generate.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 34,43,52-53,57
+__tests__/lib/wie/gscOutcomeSync.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1
+__tests__/lib/contentPlanner/compileDiagnostics.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-2,9
+src/infrastructure/wie/gscPageMetrics.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-51
+pages/api/wie/write.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 5
+lib/aoFaqSection.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 6
+__tests__/lib/contentPlanner/reviewOutlineDetect.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1
+pages/api/wie/brand-dna.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 5-6
+__tests__/lib/ao/sectionTargetFallback.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1
+src/infrastructure/wie/explainability.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-55
+src/infrastructure/wie/evolutionLoop.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-152
+__tests__/ao/golden/v4/precisionAoV4.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 10,16,18
+src/infrastructure/contentPlanner/applyApprovedOutline.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-254
+__tests__/api/articles-optimize-sections-guard.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 12
+src/infrastructure/ao/runPrecisionOptimize.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-860
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 852,885,896-897,911,925
+pages/api/wie/outcome.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 12
+__tests__/lib/contentPlanner/corpusClaimsPlanning.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 6,13
+src/infrastructure/ao/optimizationPolicy.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-228
+__tests__/lib/knowledgeEngine/pipeline.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 15-16
+src/infrastructure/knowledgeEngine/index.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-73
+src/infrastructure/wie/eval/reports.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-275
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1
+__tests__/lib/wie/writerEeat.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 2
+src/infrastructure/knowledgeEngine/aoPlanPatch.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-106
+__tests__/lib/wie/competitorSynthesis.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 5-6,8
+lib/outlineReviewState.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 12
+src/infrastructure/contentPlanner/knowledgePack/termAllocator.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-37
+__tests__/lib/ao/applyGatedFaq.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1,4
+__tests__/lib/intelligence/ccmToEditCandidates.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 5-6
+src/infrastructure/ao/buildCandidates.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-217
+src/infrastructure/contentPlanner/knowledgePack/validateRuntime.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-95
+__tests__/lib/contentPlanner/fromArticleInputs.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 4
+pages/api/articles/[id]/content-plan.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 23-25,31
+__tests__/lib/ao/precisionAo.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 3-4,14-15
+__tests__/lib/knowledgeEngine/cluster.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1
+__tests__/lib/wie/dnaRollback.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 7-9
+src/infrastructure/contentPlanner/knowledgePack/constraintAllocator.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-29
+src/infrastructure/wie/eval/runEvalSuite.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-623
+src/infrastructure/ao/intentGuard.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-93
+__tests__/lib/contentPlanner/knowledgePack.types.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-2,5,12
+__tests__/lib/contentPlanner/buildFactSheet.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1
+src/infrastructure/contentPlanner/knowledgePack/validateStructural.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-169
+src/infrastructure/contentPlanner/knowledgePack/sectionPlanner.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-31
+src/infrastructure/ao/editPlan.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-214
+__tests__/lib/contentPlanner/contentPlanner.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 10
+__tests__/lib/wie/abWrite.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 7
+src/infrastructure/wie/eval/publishGate.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-176
+pages/api/cron/daily.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 40,51
+src/infrastructure/knowledgeEngine/coverage.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-211
+src/infrastructure/wie/narrativePlanner.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-117
+__tests__/lib/wie/brandDna.test.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 2-3
+src/infrastructure/ao/aoSnapshot.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-24
+src/infrastructure/contentPlanner/knowledgePack/paragraphPlanner.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-147
+src/infrastructure/wie/enforceOpeningPolicy.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-152
+src/infrastructure/wie/gscOutcomeSync.ts
+  s_e3556ba0769b4b::t_f3ec5347c572d4 1-129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d0e47388ca53e73a0e3ae05175006f9f3c486e0b",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
