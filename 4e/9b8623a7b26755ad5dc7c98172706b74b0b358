@@ -1,0 +1,139 @@
+lib/optimizeWholeArticle.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 14
+lib/ai/aiCoverageJudge.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 10
+lib/engines/coverageEngine.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 5
+lib/optimizationPlanner.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 5
+lib/recommendationEngine.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 4
+lib/articles/articleFacts.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 6
+lib/primitives/featureRegistry.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1
+pages/api/articles/ai-readability.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 14
+__tests__/lib/featureEngine.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 2
+__tests__/lib/scoreContribution.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 3
+__tests__/lib/aiCoverage.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 14,126
+lib/seo/keywordData.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 21
+__tests__/api/articles-ai-readability-coverage.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 20
+lib/liveCoverage.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 4
+lib/coverage/curateConcepts.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1
+__tests__/lib/coverageStore.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 5
+lib/intelligence/compileAfterArticleChange.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 10
+lib/contentScore.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1
+lib/infoToCoverTopics.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 6
+lib/coverage/derived/scoreContribution.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1
+lib/intelligence/persistCcmCoverageProjection.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 5
+pages/api/articles/generate-outline.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 17
+lib/intelligence/loadDaFactSeeds.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 4
+lib/articles/articleTerms.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 2
+lib/curateCoverageItems.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1
+lib/engines/gapEngine.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 4
+components/articles/ContentScorePanel.tsx
+  s_e3556ba0769b4b::t_7230aa1e87f26e 20
+__tests__/lib/ao/aiScoreCeiling.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1
+lib/workers/ner/index.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 2
+lib/articles/articleContext.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 5
+lib/regradeCoverageSnapshot.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 4
+lib/features/featureEngine.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1,4
+lib/computeLiveArticleScores.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 3
+lib/intelligence/ccmToCoverageSnapshot.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 12
+__tests__/lib/contentScore-coverage-slot.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 2
+pages/articles/[id]/index.tsx
+  s_e3556ba0769b4b::t_7230aa1e87f26e 35,50
+lib/introductionAnalyzer.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1
+lib/ao/buildCandidates.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 5-6
+__tests__/lib/curateCoverageItems.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 16
+__tests__/lib/growthPipeline.integration.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 15
+__tests__/lib/recommendationEngine.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 2
+lib/optimizeGuidelineRouting.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 3
+__tests__/lib/liveCoverage.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 5
+__tests__/lib/primitives.platformModel.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 10
+__tests__/lib/aoFaqSection.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 9
+lib/buildCoverageSnapshot.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 8,36,139
+lib/citationPrompts.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1-2
+lib/coverageStore.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1
+lib/persistCoverageFeatureRun.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1
+components/articles/WriteOptimizePanel.tsx
+  s_e3556ba0769b4b::t_7230aa1e87f26e 7
+__tests__/lib/computeOptimizeLiveSnapshot.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 7
+lib/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 8
+__tests__/lib/infoToCoverTopics.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 2
+lib/scoreArticleHtml.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 7
+lib/articles/buildDeveloperReport.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 8
+lib/workers/coverage/index.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 2
+__tests__/lib/persistCoverageFeatureRun.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 3
+__tests__/lib/optimizationPlanner.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 10
+lib/aoFaqSection.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 1-2
+lib/engines/gapDetection.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 4
+__tests__/lib/intelligence/ccmToCoverageSnapshot.test.ts
+  s_e3556ba0769b4b::t_7230aa1e87f26e 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4e9b8623a7b26755ad5dc7c98172706b74b0b358",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
