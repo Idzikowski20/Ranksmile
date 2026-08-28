@@ -3,7 +3,7 @@ import { queryOne } from '@/src/infrastructure/db/query';
 import type { RankCheckRunRow } from '@/src/core/shared/types/rankTracking';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { getConfig } from '@/src/infrastructure/rankTracking/service';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);

@@ -7,8 +7,8 @@ import {
   isUsableWholeArticleEdit,
   shouldChargeCredit,
   resolveOptimizeDoneOutcome,
-} from '@/src/infrastructure/optimizeSectionEdit';
-import type { ScoreData } from '@/src/infrastructure/contentScore';
+} from '@/src/infrastructure/ao/optimizeSectionEdit';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 
 const baseScore = (terms: ScoreData['terms']): ScoreData => ({
   terms,

@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId, wasAuthUnavailable } from './getUser';
-import { logLegacyApiKeyUse } from '@/src/infrastructure/legacyApiKeyLog';
+import { logLegacyApiKeyUse } from '@/src/infrastructure/config/legacyApiKeyLog';
 
 const ALLOWED_APIKEY_ROUTES = [
   'GET:/api/keyword',

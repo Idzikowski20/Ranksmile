@@ -11,11 +11,11 @@ import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 import { buildPrecisionEditPlan } from '@/src/infrastructure/ao/editPlan';
 import { runEditSafetyGate } from '@/src/core/domain/optimize/editSafetyGate';
 import { DEFAULT_EDIT_BUDGET } from '@/src/core/domain/optimize/editBudget';
-import { selectFaqQuestions, validateFaqHtmlStructure } from '@/src/infrastructure/aoFaqSection';
+import { selectFaqQuestions, validateFaqHtmlStructure } from '@/src/infrastructure/ao/aoFaqSection';
 import { chooseStrategyFromDiagnosis } from '@/src/infrastructure/ao/optimizationPolicy';
 import { resolveAoWorkOutcome, aoOutcomeUserMessage } from '@/src/core/domain/optimize/aoRunOutcome';
 import { selectSectionTarget } from '@/src/infrastructure/ao/sectionTargeting';
-import { buildArticleSectionDiffEvents } from '@/src/infrastructure/optimizeSectionEvents';
+import { buildArticleSectionDiffEvents } from '@/src/infrastructure/ao/optimizeSectionEvents';
 import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import type { Section } from '@/src/infrastructure/articles/articleSections';
 

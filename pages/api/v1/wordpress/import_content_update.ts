@@ -1,9 +1,9 @@
 // POST /api/v1/wordpress/import_content_update — plugin pushes edited WP content
 // back into the existing draft article.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authPluginRequest } from '@/src/infrastructure/wpConnection';
-import { updateArticleContent, permalinkHash } from '@/src/infrastructure/wpDraft';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { authPluginRequest } from '@/src/infrastructure/wordpress/wpConnection';
+import { updateArticleContent, permalinkHash } from '@/src/infrastructure/wordpress/wpDraft';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });

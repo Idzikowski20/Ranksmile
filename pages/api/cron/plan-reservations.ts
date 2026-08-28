@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { ensurePlanQuotaTables } from '@/src/infrastructure/persistence/schema/ensurePlanQuotaTables';
 import { sweepExpiredReservations } from '@/src/infrastructure/quota/index';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
-import { withCronWatchdog } from '@/src/infrastructure/cronWatchdog';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { withCronWatchdog } from '@/src/infrastructure/cron/cronWatchdog';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {

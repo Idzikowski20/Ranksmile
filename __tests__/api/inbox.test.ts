@@ -1,4 +1,4 @@
-jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 jest.mock('../../utils/verifyUser', () => ({
   __esModule: true,
@@ -22,7 +22,7 @@ jest.mock('@/src/infrastructure/notifications/inboxService', () => ({
   markInboxRead: (...args: unknown[]) => mockMark(...args),
 }));
 
-jest.mock('@/src/infrastructure/tenancy', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5 }),
   getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([9, 10]),
 }));

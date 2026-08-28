@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '../koala/core';
 import { KoalaPanelHeader } from '../koala/layout';
-import { ScoreData, NlpTerm, countOccurrences } from '@/src/infrastructure/contentScore';
-import { scoreArticleHtml } from '@/src/infrastructure/scoreArticleHtml';
+import { ScoreData, NlpTerm, countOccurrences } from '@/src/infrastructure/articles/contentScore';
+import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
 import { computeOpportunityScore } from '@/src/core/domain/keywords/enrichment';
 import { useArticleKeywords } from '../../services/articleKeywords';
 import type { KeywordItem } from './KeywordResearchSection';

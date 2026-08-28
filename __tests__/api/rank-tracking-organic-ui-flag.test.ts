@@ -1,5 +1,5 @@
-jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
-jest.mock('@/src/infrastructure/featureFlags', () => ({
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/config/featureFlags', () => ({
   isRankTrackingUiEnabled: jest.fn().mockReturnValue(false),
   isRankTrackingRunnerEnabled: jest.fn().mockReturnValue(false),
 }));
@@ -24,7 +24,7 @@ jest.mock('@/src/infrastructure/organicResearch/index', () => ({
 }));
 
 import handler from '../../pages/api/rank-tracking/[slug]/organic';
-import { isRankTrackingUiEnabled } from '@/src/infrastructure/featureFlags';
+import { isRankTrackingUiEnabled } from '@/src/infrastructure/config/featureFlags';
 import { loadOrganicDatasetForDomainId } from '@/src/infrastructure/organicResearch/index';
 
 const makeRes = () => {

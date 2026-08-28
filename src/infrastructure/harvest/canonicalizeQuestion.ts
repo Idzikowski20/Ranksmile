@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
-import type { LlmCoverageSource } from '@/src/infrastructure/llmCoverageQuestions';
+import type { LlmCoverageSource } from '@/src/infrastructure/coverage/llmCoverageQuestions';
 import { computeQuestionScore, maxSourceWeight } from '@/src/infrastructure/harvest/questionScore';
 
 const QUESTION_PREFIX_RE =

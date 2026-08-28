@@ -1,6 +1,6 @@
 import { actionsFromObservations, isLlmAction } from '@/src/infrastructure/observations/actionsFromObservations';
 import { applyStrategy, prioritizeActions } from '@/src/core/primitives/prioritizeActions';
-import { computeFeatureScoreDelta } from '@/src/infrastructure/featureStoreCore';
+import { computeFeatureScoreDelta } from '@/src/infrastructure/stores/featureStoreCore';
 import type { Action, Feature, Observation } from '@/src/core/primitives/types';
 
 const obs = (partial: Partial<Observation> & Pick<Observation, 'id' | 'kind' | 'source' | 'title'>): Observation => ({

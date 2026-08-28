@@ -2,7 +2,7 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { queryOne, queryRows, type ArticleRow } from '@/src/infrastructure/db/query';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { parseJsonish } from '@/src/core/shared/types/json';
-import { getDomainLocale } from '@/src/infrastructure/domainLanguage';
+import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
 
 export interface ArticleSeoMeta {
   domain: string;

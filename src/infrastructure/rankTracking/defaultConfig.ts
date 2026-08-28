@@ -1,4 +1,4 @@
-import { locationCodeFor } from '@/src/infrastructure/dataforseo';
+import { locationCodeFor } from '@/src/infrastructure/dataforseo/dataforseo';
 import { AUDIT_COUNTRIES, langForCountry } from '@/src/core/domain/audit/country';
 import type { RankDevices, RankTrackingConfigRow, ScheduleInterval } from '@/src/core/shared/types/rankTracking';
 import { createConfig, listConfigs } from '@/src/infrastructure/rankTracking/repository';

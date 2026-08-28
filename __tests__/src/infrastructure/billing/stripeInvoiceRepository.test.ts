@@ -1,14 +1,14 @@
-jest.mock('@/src/infrastructure/stripe', () => ({
+jest.mock('@/src/infrastructure/billing/stripe', () => ({
   getStripe: jest.fn(),
   isStripeConfigured: jest.fn(() => true),
 }));
-jest.mock('@/src/infrastructure/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => ({ stripeCustomerId: 'cus_1' })),
 }));
 
 import { createStripeInvoiceRepository } from '../../../../src/infrastructure/billing/stripe/stripeInvoiceRepository';
-import { isStripeConfigured } from '@/src/infrastructure/stripe';
-import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
+import { isStripeConfigured } from '@/src/infrastructure/billing/stripe';
+import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 
 describe('stripeInvoiceRepository', () => {
   it('reports configuration from the stripe client', () => {

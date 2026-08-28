@@ -1,5 +1,5 @@
-jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
-jest.mock('@/src/infrastructure/featureFlags', () => ({
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/config/featureFlags', () => ({
   isRankTrackingUiEnabled: jest.fn().mockReturnValue(true),
   isRankTrackingRunnerEnabled: jest.fn().mockReturnValue(true),
 }));

@@ -1,8 +1,8 @@
 import type Stripe from 'stripe';
-import { syncSubscriptionToOrg } from '@/src/infrastructure/stripeBillingSync';
-import { getOrgBillingState, updateOrgBillingState, type OrgBillingState } from '@/src/infrastructure/orgBilling';
+import { syncSubscriptionToOrg } from '@/src/infrastructure/billing/stripeBillingSync';
+import { getOrgBillingState, updateOrgBillingState, type OrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 
-jest.mock('@/src/infrastructure/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   updateOrgBillingState: jest.fn(async () => undefined),
   getOrgBillingState: jest.fn(async () => null),
   isTerminalSubscriptionStatus: (status: string | null | undefined) => status === 'canceled' || status === 'incomplete_expired',

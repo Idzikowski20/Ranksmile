@@ -1,13 +1,13 @@
 import db from '@/database/database';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
-import { parseSnapshot } from '@/src/infrastructure/coverageStore';
+import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
-import type { ScoreData } from '@/src/infrastructure/contentScore';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 import { readArticleTerms, type ArticleTermRow } from '@/src/infrastructure/articles/articleTerms';
-import { readContentSettings } from '@/src/infrastructure/contentSettings';
-import { getDomainLocale } from '@/src/infrastructure/domainLanguage';
-import { getDomainVoices } from '@/src/infrastructure/domainVoices';
+import { readContentSettings } from '@/src/infrastructure/stores/contentSettings';
+import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
+import { getDomainVoices } from '@/src/infrastructure/seo/domainVoices';
 import {
   parseCompetitorSynthesis,
   type CompetitorSynthesis,

@@ -6,7 +6,7 @@ import db from '../../../database/database';
 import GscAccount from '../../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type GscPage = {
    url: string;

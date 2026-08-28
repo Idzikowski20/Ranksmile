@@ -4,9 +4,9 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { enqueueDomainSetup, kickDomainSetup } from '@/src/infrastructure/domainPipeline';
+import { enqueueDomainSetup, kickDomainSetup } from '@/src/infrastructure/cron/domainPipeline';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
@@ -24,7 +24,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          { replacements: [jobId], type: QueryTypes.SELECT },
       );
       if (statusRows[0]?.status === 'done') {
-         void import('@/src/infrastructure/scoreDomainPages')
+         void import('@/src/infrastructure/cron/scoreDomainPages')
             .then((m) => m.scoreDomainPages(domainId))
             .catch((err) => { console.warn('[run-setup] rescore failed:', err); });
          return res.status(202).json({ jobId, rescoring: true });

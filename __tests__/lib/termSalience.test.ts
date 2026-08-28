@@ -4,7 +4,7 @@ import {
   termSalienceWeight,
   type SalienceZones,
 } from '@/src/core/domain/terms/salienceCore';
-import { extractSalienceZones } from '@/src/infrastructure/termSalience';
+import { extractSalienceZones } from '@/src/infrastructure/competitors/termSalience';
 
 describe('termSalience', () => {
   const competitorHtml = `

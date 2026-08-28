@@ -33,7 +33,7 @@ export const nerWorker: PipelineWorker = {
 
     if (!raw.length) {
       try {
-        const { callSidecar } = await import('@/src/infrastructure/sidecar');
+        const { callSidecar } = await import('@/src/infrastructure/http/sidecar');
         const resp = await callSidecar<{
           spans?: Array<{ text: string; label?: string; start?: number; end?: number; score?: number }>;
         }>(

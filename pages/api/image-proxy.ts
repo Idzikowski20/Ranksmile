@@ -2,9 +2,9 @@
 // Fetches an external image server-side and streams it back to the browser.
 // This bypasses hotlink protection (Referer checks) on source websites.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { ssrfSafeFetch } from '@/src/infrastructure/ssrfGuard';
+import { ssrfSafeFetch } from '@/src/infrastructure/http/ssrfGuard';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 // SVG intentionally excluded: served same-origin it is a script-execution vector on direct navigation.
 const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];

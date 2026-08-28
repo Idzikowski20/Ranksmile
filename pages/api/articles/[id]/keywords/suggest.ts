@@ -5,9 +5,9 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../../../utils/adwords';
 import { computeRelevanceScore } from '@/src/core/domain/keywords/enrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';
-import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { queryRows, queryOne } from '@/src/infrastructure/db/query';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();

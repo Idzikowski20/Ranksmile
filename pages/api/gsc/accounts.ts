@@ -9,7 +9,7 @@ import {
   verifyAccountToken,
   type GscAccountRecord,
 } from '@/src/infrastructure/gsc/gscAccounts';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type GscAccountsResponse = {
   accounts?: ReturnType<typeof normalizeAccount>[];

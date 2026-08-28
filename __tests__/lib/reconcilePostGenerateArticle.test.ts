@@ -1,5 +1,5 @@
-import { pickTermsForGeneratedArticle } from '@/src/infrastructure/pickArticleTerms';
-import type { NlpTerm } from '@/src/infrastructure/contentScore';
+import { pickTermsForGeneratedArticle } from '@/src/infrastructure/articles/pickArticleTerms';
+import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 
 describe('pickTermsForGeneratedArticle', () => {
   const rich: NlpTerm[] = Array.from({ length: 20 }, (_, i) => ({

@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
 import { Switch } from '../../components/koala/core';
-import { saveWizardState, clearWizardState } from '@/src/infrastructure/wizardState';
+import { saveWizardState, clearWizardState } from '@/src/infrastructure/articles/wizardState';
 import { useArticle } from '../../services/article';
 import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
 

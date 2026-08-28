@@ -4,9 +4,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { onCommentChange } from '@/src/infrastructure/commentBus';
-import { assertCommentAccess } from '@/src/infrastructure/commentAccess';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { onCommentChange } from '@/src/infrastructure/http/commentBus';
+import { assertCommentAccess } from '@/src/infrastructure/identity/commentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const { id } = req.query;

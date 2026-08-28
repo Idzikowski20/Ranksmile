@@ -7,8 +7,8 @@ import AppShell from '../../../components/common/AppShell';
 import OrderConfirmationBody from '../../../components/billing/OrderConfirmationBody';
 import Button from '../../../components/koala/primitives/Button';
 import type { BillingConfirmation } from '@/src/infrastructure/billing/billingConfirmation';
-import { fetchBootstrapOrNull } from '@/src/infrastructure/fetchBootstrap';
-import type { BootstrapData } from '@/src/infrastructure/getBootstrap';
+import { fetchBootstrapOrNull } from '@/src/infrastructure/http/fetchBootstrap';
+import type { BootstrapData } from '@/src/infrastructure/http/getBootstrap';
 
 const F = 'var(--font-family-primary)';
 

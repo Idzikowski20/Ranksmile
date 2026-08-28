@@ -10,7 +10,7 @@ import {
   RANKSMILE_PRESET_EXPAND,
   RANKSMILE_VOICE_OPTIONS,
   ranksmilePresetVoice,
-} from '@/src/infrastructure/ranksmileContextMenu';
+} from '@/src/infrastructure/config/ranksmileContextMenu';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import IconSmily from './IconSmily';
 

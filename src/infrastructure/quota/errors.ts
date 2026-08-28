@@ -1,4 +1,4 @@
-import type { QuotaMeter } from '@/src/infrastructure/planLimits';
+import type { QuotaMeter } from '@/src/infrastructure/billing/planLimits';
 import type { PlanLimitPayload } from '@/src/infrastructure/quota/types';
 
 export class PlanLimitError extends Error {

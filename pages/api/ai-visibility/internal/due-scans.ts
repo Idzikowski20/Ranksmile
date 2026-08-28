@@ -7,7 +7,7 @@ import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schem
 import { findDueConfigIds, enqueueAiVisScan } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const token = req.headers['x-internal-token'];

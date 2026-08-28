@@ -12,7 +12,7 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { mapPool } from '@/src/core/shared/mapPool';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const ANALYZE_BATCH_CONCURRENCY = 3;
 

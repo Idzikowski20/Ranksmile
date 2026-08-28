@@ -3,7 +3,7 @@ import {
   computeFeatureScoreDelta,
   persistFeatureRun,
   setFeatureStore,
-} from '@/src/infrastructure/featureStoreCore';
+} from '@/src/infrastructure/stores/featureStoreCore';
 import type { Feature, Observation } from '@/src/core/primitives/types';
 import { buildKnowledgeLayer } from '@/src/core/primitives/knowledgeLayer';
 import { executeAction, pickExecutor } from '@/src/core/primitives/actionExecutor';

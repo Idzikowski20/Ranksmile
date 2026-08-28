@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { findTermRangesBatch } from '@/src/infrastructure/contentScore';
+import { findTermRangesBatch } from '@/src/infrastructure/articles/contentScore';
 import { AuditTerm } from '@/src/core/domain/audit/types';
 
 const FONT = 'var(--font-family-primary)';

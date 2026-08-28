@@ -3,7 +3,7 @@
  * Candidate: TEMP (working+FAQ) vs WORKING
  * Final: re-score(working) vs BASELINE → FAIL = full rollback to original
  */
-import { mergeFaqHtml } from '@/src/infrastructure/aoFaqSection';
+import { mergeFaqHtml } from '@/src/infrastructure/ao/aoFaqSection';
 import { htmlMatchesNormalized } from '@/src/infrastructure/ao/aoBaseline';
 import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import type { AoRejectionReason } from '@/src/core/domain/optimize/aoRejectionReason';

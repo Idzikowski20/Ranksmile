@@ -13,7 +13,7 @@ import {
 import type { ExportFormat } from '@/src/infrastructure/organicResearch/export';
 import type { KeywordState, SearchIntent } from '@/src/infrastructure/organicResearch/types';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 function numOrNull(v: string | string[] | undefined): number | null {
   if (v == null || Array.isArray(v)) return null;

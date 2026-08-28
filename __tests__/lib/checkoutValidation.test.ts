@@ -5,7 +5,7 @@ import {
   hasFieldErrors,
   hasRequiredBillingAddressFields,
   stripeTaxIdType,
-} from '@/src/infrastructure/checkoutValidation';
+} from '@/src/infrastructure/billing/checkoutValidation';
 
 describe('checkoutValidation', () => {
   it('validates billing email format', () => {

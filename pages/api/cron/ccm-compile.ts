@@ -1,7 +1,7 @@
 // GET|POST /api/cron/ccm-compile — refresh stale/missing CCM snapshots (07-runtime Cron)
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
-import { withCronWatchdog } from '@/src/infrastructure/cronWatchdog';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { withCronWatchdog } from '@/src/infrastructure/cron/cronWatchdog';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { runCcmCompileCron } from '@/src/core/intelligence/ccmStaleCron';
 

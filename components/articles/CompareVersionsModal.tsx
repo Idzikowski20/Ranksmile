@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { diffBlocks, DiffBlock, WordSeg } from '@/src/infrastructure/wordDiff';
+import { diffBlocks, DiffBlock, WordSeg } from '@/src/infrastructure/ao/wordDiff';
 import { overlayZ } from '../koala/overlay/ShellPortal';
 
 const F = 'var(--font-family-primary)';

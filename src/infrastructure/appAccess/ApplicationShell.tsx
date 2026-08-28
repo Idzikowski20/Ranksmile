@@ -5,8 +5,8 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
-import { fetchBootstrapOrNull } from '@/src/infrastructure/fetchBootstrap';
-import { isPublicRoute } from '@/src/infrastructure/isPublicPath';
+import { fetchBootstrapOrNull } from '@/src/infrastructure/http/fetchBootstrap';
+import { isPublicRoute } from '@/src/infrastructure/config/isPublicPath';
 import { PlanExpired } from '@/components/billing/PlanExpired';
 import { showsPlanExpired } from '@/src/infrastructure/appAccess/isPlanExpired';
 import {

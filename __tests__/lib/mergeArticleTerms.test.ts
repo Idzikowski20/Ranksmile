@@ -1,5 +1,5 @@
-import { importantTermsFromScoreData, mergeArticleTermSources } from '@/src/infrastructure/mergeArticleTerms';
-import type { NlpTerm } from '@/src/infrastructure/contentScore';
+import { importantTermsFromScoreData, mergeArticleTermSources } from '@/src/infrastructure/articles/mergeArticleTerms';
+import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 
 describe('mergeArticleTermSources', () => {
   it('keeps corpus terms that strict topic filter would drop', () => {

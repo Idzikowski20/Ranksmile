@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { isPageTourSeen, markPageTourSeen } from '@/src/infrastructure/onboardingState';
+import { isPageTourSeen, markPageTourSeen } from '@/src/infrastructure/identity/onboardingState';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 /**
  * Page-tour state for the logged-in user.

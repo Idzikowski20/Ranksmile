@@ -1,5 +1,5 @@
 import type { Feature, ScoreVector, Signal, Action } from '@/src/core/primitives/types';
-import { getFeatureStore } from '@/src/infrastructure/featureStore';
+import { getFeatureStore } from '@/src/infrastructure/stores/featureStore';
 
 /** Persist lightweight serp/coverage features for planner consumption. */
 export async function upsertSerpCoverageFeatures(opts: {

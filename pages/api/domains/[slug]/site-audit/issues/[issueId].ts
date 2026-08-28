@@ -8,7 +8,7 @@ import { buildIssueDetail } from '@/src/infrastructure/siteAudit/buildIssueDetai
 import { loadSiteAuditContext } from '@/src/infrastructure/siteAudit/issues';
 import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';
 import type { SiteAuditIssueDetailPayload } from '@/src/infrastructure/siteAudit/types';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(
   req: NextApiRequest,

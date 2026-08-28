@@ -5,7 +5,7 @@ import {
   expireStaleQueuedJobs,
 } from '@/src/infrastructure/persistence/schema/ensurePipelineJobsTables';
 import db from '../../../database/database';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type JobPublic = {
   id: number;

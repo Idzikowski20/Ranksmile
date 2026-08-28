@@ -4,7 +4,7 @@ import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAut
 import { getConfig } from '@/src/infrastructure/rankTracking/service';
 import { getKeywordHistory } from '@/src/infrastructure/rankTracking/snapshotQueries';
 import type { RankDevice } from '@/src/core/shared/types/rankTracking';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);

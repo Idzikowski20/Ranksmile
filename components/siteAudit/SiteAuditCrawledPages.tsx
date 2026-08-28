@@ -25,7 +25,7 @@ import CrawledPagesManageColumns, {
 } from './CrawledPagesManageColumns';
 import { UrlCell } from './AuditUrlCell';
 import { BotIcon, PRIMARY_BOTS } from './aiSearchBots';
-import { scoreColor } from '@/src/infrastructure/scoreColor';
+import { scoreColor } from '@/src/infrastructure/config/scoreColor';
 import type { CrawledPageRow, CrawledPagesReport } from '@/src/infrastructure/siteAudit/types';
 
 type SortKey = 'score' | 'url' | 'title' | 'statusCode' | 'issues' | 'depth';

@@ -6,15 +6,15 @@ import {
   applySubscriptionUpgrade,
   resolveUpgradePriceId,
 } from '@/src/infrastructure/billing/billingUpgrade';
-import { assertCanManage } from '@/src/infrastructure/members';
-import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
-import { getStripe } from '@/src/infrastructure/stripe';
-import { syncSubscriptionToOrg } from '@/src/infrastructure/stripeBillingSync';
-import { assertStripeModeOrThrow } from '@/src/infrastructure/stripeMode';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { getStripe } from '@/src/infrastructure/billing/stripe';
+import { syncSubscriptionToOrg } from '@/src/infrastructure/billing/stripeBillingSync';
+import { assertStripeModeOrThrow } from '@/src/infrastructure/billing/stripeMode';
 import type { PlanSlug } from '@/src/core/domain/billing/prices';
-import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const schema = z.object({
   planSlug: z.string().min(1),

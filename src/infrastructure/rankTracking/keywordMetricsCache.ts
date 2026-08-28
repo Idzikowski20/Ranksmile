@@ -2,7 +2,7 @@ import db from '@/database/database';
 import { queryOne } from '@/src/infrastructure/db/query';
 import type { KeywordMetricsRow } from '@/src/core/shared/types/rankTracking';
 import { normalizeKeyword } from '@/src/core/shared/types/rankTracking';
-import { getKeywordOverview } from '@/src/infrastructure/dataforseo';
+import { getKeywordOverview } from '@/src/infrastructure/dataforseo/dataforseo';
 import { METRICS_CACHE_TTL_DAYS } from '@/src/infrastructure/rankTracking/cost';
 
 export type MetricsLookupKey = {

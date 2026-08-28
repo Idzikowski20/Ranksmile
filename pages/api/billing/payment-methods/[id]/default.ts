@@ -6,11 +6,11 @@ import {
   setDefaultPaymentMethod,
 } from '@/src/infrastructure/billing/paymentMethodService';
 import { BillingPolicy } from '@/src/infrastructure/billing/billingPolicy';
-import { assertCanManage } from '@/src/infrastructure/members';
-import { getOrgBillingState } from '@/src/infrastructure/orgBilling';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
-import { getStripe, isStripeConfigured } from '@/src/infrastructure/stripe';
-import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getStripe, isStripeConfigured } from '@/src/infrastructure/billing/stripe';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

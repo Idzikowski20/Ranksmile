@@ -5,15 +5,15 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { callSidecar } from '@/src/infrastructure/sidecar';
+import { callSidecar } from '@/src/infrastructure/http/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { heuristicContentEffort, type ContentEffortInsight } from '@/src/core/domain/terms/contentEffort';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
-import type { ScoreData } from '@/src/infrastructure/contentScore';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type EffortBody = { score?: unknown; reasons?: unknown; source?: unknown };
 

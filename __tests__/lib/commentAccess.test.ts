@@ -1,11 +1,11 @@
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn() }));
-jest.mock('@/src/infrastructure/tenancy', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   assertArticleAccess: jest.fn(),
 }));
 
 import { getCurrentUserId } from '../../utils/getUser';
-import { assertArticleAccess } from '@/src/infrastructure/tenancy';
-import { assertCommentAccess } from '@/src/infrastructure/commentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { assertCommentAccess } from '@/src/infrastructure/identity/commentAccess';
 
 const mockUser = getCurrentUserId as jest.Mock;
 const mockOwner = assertArticleAccess as jest.Mock;

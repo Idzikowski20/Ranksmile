@@ -4,11 +4,11 @@
  */
 import { splitSections } from '@/src/infrastructure/articles/articleSections';
 import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
-import { computeTermUsageGaps } from '@/src/infrastructure/optimizeSectionEdit';
-import { liveCoverageItems } from '@/src/infrastructure/liveCoverage';
-import { scoreArticleHtml } from '@/src/infrastructure/scoreArticleHtml';
+import { computeTermUsageGaps } from '@/src/infrastructure/ao/optimizeSectionEdit';
+import { liveCoverageItems } from '@/src/infrastructure/coverage/liveCoverage';
+import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
-import type { ScoreData } from '@/src/infrastructure/contentScore';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 import { buildIntentProfile, type ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { filterCandidatesByIntent, filterPlanStepsByAction } from '@/src/infrastructure/ao/intentGuard';
 import { buildEditCandidates } from '@/src/infrastructure/ao/buildCandidates';
@@ -30,8 +30,8 @@ import {
   runLocalSafetyGate,
   runSemanticPreservationGate,
 } from '@/src/infrastructure/ao/aoQualityGates';
-import { buildArticleSectionDiffEvents } from '@/src/infrastructure/optimizeSectionEvents';
-import type { SectionEvent } from '@/src/infrastructure/optimizeSectionEvents';
+import { buildArticleSectionDiffEvents } from '@/src/infrastructure/ao/optimizeSectionEvents';
+import type { SectionEvent } from '@/src/infrastructure/ao/optimizeSectionEvents';
 import {
   resolveOptimizationPolicy,
   resolveOptimizationStrategy,

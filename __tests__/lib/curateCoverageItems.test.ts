@@ -4,7 +4,7 @@ import {
   isLikelySyntheticCitationTemplate,
   isUsefulCitationPrompt,
   scoreCitationPrompt,
-} from '@/src/infrastructure/citationPrompts';
+} from '@/src/infrastructure/articles/citationPrompts';
 import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import {
   AI_COVERAGE_MAX,
@@ -12,7 +12,7 @@ import {
   compactCoverageSnapshotItems,
   dedupePaaQuestions,
   scorePaaQuestion,
-} from '@/src/infrastructure/curateCoverageItems';
+} from '@/src/infrastructure/coverage/curateCoverageItems';
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 
 describe('citationPrompts', () => {

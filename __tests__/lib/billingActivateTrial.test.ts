@@ -1,10 +1,10 @@
 import type Stripe from 'stripe';
 import { activateTrialFromSetupIntent } from '@/src/infrastructure/billing/billingActivateTrial';
-import { syncSubscriptionToOrg } from '@/src/infrastructure/stripeBillingSync';
-import { claimTrialActivation, updateOrgBillingState } from '@/src/infrastructure/orgBilling';
+import { syncSubscriptionToOrg } from '@/src/infrastructure/billing/stripeBillingSync';
+import { claimTrialActivation, updateOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { appendBillingDomainEvent } from '@/src/infrastructure/billing/domainEvents';
 
-jest.mock('@/src/infrastructure/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => ({ trialConsumedAt: null })),
   claimTrialActivation: jest.fn(async () => true),
   updateOrgBillingState: jest.fn(async () => undefined),
@@ -22,7 +22,7 @@ jest.mock('@/src/infrastructure/billing/billingAudit', () => ({
   ensureCorrelationId: (id?: string | null) => (typeof id === 'string' && id.trim() ? id.trim() : 'corr-test'),
 }));
 
-jest.mock('@/src/infrastructure/stripeBillingSync', () => ({
+jest.mock('@/src/infrastructure/billing/stripeBillingSync', () => ({
   syncSubscriptionToOrg: jest.fn(async () => undefined),
 }));
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { PlanLimitMetric } from '@/src/infrastructure/planLimits';
+import type { PlanLimitMetric } from '@/src/infrastructure/billing/planLimits';
 
 function formatCount(n: number): string {
   return n.toLocaleString('en-US');

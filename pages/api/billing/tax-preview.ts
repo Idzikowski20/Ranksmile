@@ -5,8 +5,8 @@ import {
   calculateStripeTaxPreview,
   type TaxPreviewResult,
 } from '@/src/infrastructure/billing/stripeTaxPreview';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
-import { getStripe, isStripeConfigured } from '@/src/infrastructure/stripe';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getStripe, isStripeConfigured } from '@/src/infrastructure/billing/stripe';
 import { getCurrentUserId } from '../../../utils/getUser';
 
 const addressSchema = z.object({

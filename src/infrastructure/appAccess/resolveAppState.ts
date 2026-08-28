@@ -5,7 +5,7 @@ import type {
   WorkspaceState,
 } from '@/src/infrastructure/appAccess/types';
 import { hasActiveBillingEntitlement } from '@/src/infrastructure/billing/billingEntitlement';
-import type { SubscriptionStatus } from '@/src/infrastructure/orgBilling';
+import type { SubscriptionStatus } from '@/src/infrastructure/billing/orgBilling';
 
 /**
  * Priority: LOCKED → EMAIL → ONBOARDING → PAYMENT_FAILED → BILLING → WORKSPACE → READY

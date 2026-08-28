@@ -1,4 +1,4 @@
-import { clientSecretFromSubscriptionInvoice } from '@/src/infrastructure/stripeInvoiceClientSecret';
+import { clientSecretFromSubscriptionInvoice } from '@/src/infrastructure/billing/stripeInvoiceClientSecret';
 
 describe('clientSecretFromSubscriptionInvoice', () => {
   it('reads basil+ confirmation_secret', () => {

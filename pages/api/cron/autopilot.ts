@@ -4,12 +4,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { runAutopilotSweep } from '@/src/infrastructure/autopilot';
-import { cronSecrets } from '@/src/infrastructure/cronAuth';
+import { runAutopilotSweep } from '@/src/infrastructure/cron/autopilot';
+import { cronSecrets } from '@/src/infrastructure/cron/cronAuth';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
-import { withCronWatchdog } from '@/src/infrastructure/cronWatchdog';
-import { nextjsUrl } from '@/src/infrastructure/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { withCronWatchdog } from '@/src/infrastructure/cron/cronWatchdog';
+import { nextjsUrl } from '@/src/infrastructure/config/serviceUrls';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {

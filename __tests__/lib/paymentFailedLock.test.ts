@@ -1,11 +1,11 @@
-import type { OrgBillingState } from '@/src/infrastructure/orgBilling';
+import type { OrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import type { PlanSlug } from '@/src/core/domain/billing/prices';
 import {
   isApiRouteAllowedDuringPaymentLock,
   isFrontendRouteAllowedDuringPaymentLock,
   isPaymentFailedLocked,
-} from '@/src/infrastructure/paymentFailedLock';
+} from '@/src/infrastructure/billing/paymentFailedLock';
 
 function makeBillingState(overrides: Partial<OrgBillingState> = {}): OrgBillingState {
   const billingPeriod: BillingPeriod = 'monthly';

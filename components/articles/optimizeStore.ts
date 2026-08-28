@@ -1,4 +1,4 @@
-import type { StepFocus, EditMode } from '@/src/infrastructure/optimizationPlanner';
+import type { StepFocus, EditMode } from '@/src/infrastructure/ao/optimizationPlanner';
 
 export type SectionResult = {
    oldHtml: string;

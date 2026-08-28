@@ -2,7 +2,7 @@
 // Keeps a single browser instance alive across requests.
 // Supports both local dev (puppeteer with bundled Chromium) and serverless (puppeteer-core + @sparticuz/chromium-min).
 import type { Browser, HTTPRequest, Page } from 'puppeteer-core';
-import { assertPublicUrl } from '@/src/infrastructure/ssrfGuard';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 
 let browserPromise: Promise<Browser> | null = null;
 let renderMutex: Promise<void> = Promise.resolve();

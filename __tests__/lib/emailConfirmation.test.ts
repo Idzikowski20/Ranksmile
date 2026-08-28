@@ -10,7 +10,7 @@ import {
   issueConfirmationToken,
   confirmEmailToken,
   RESEND_COOLDOWN_MS,
-} from '@/src/infrastructure/emailConfirmation';
+} from '@/src/infrastructure/email/emailConfirmation';
 
 const mockQuery = db.query as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];

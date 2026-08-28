@@ -2,16 +2,16 @@
 // channels Surfer splits across AiArticleStatusStreaming and AiArticleContentStreaming.
 // The browser polls nothing; this handler tails the job row and pushes deltas.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { QueryTypes } from 'sequelize';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '@/src/infrastructure/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { flushHeaders, flushSse } from '@/src/core/shared/types/api';
 import { streamDelta } from '@/src/core/shared/streamDelta';
-import { staleFinalizationSql } from '@/src/infrastructure/staleFinalization';
+import { staleFinalizationSql } from '@/src/infrastructure/articles/staleFinalization';
 
 const TICK_MS = 700;
 

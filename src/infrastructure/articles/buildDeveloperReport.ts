@@ -2,11 +2,11 @@
  * Developer dump of a live article editor state — JSON download for debugging
  * scores / terms / AI Search coverage.
  */
-import { countOccurrences, termCoverage, type ScoreData } from '@/src/infrastructure/contentScore';
+import { countOccurrences, termCoverage, type ScoreData } from '@/src/infrastructure/articles/contentScore';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { BucketScore, CoverageItem, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
-import { scoreArticleHtml } from '@/src/infrastructure/scoreArticleHtml';
+import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
 
 export type DeveloperReportArticleMeta = {
   id: number;

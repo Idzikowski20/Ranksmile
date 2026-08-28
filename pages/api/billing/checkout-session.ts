@@ -3,14 +3,14 @@ import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { getLockedCheckoutPlanSlug } from '@/src/core/domain/billing/planLock';
 import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from '@/src/infrastructure/billing/billingTrial';
-import { getOrgBillingState, hasNonTerminalStripeSubscription } from '@/src/infrastructure/orgBilling';
-import { assertCanManage } from '@/src/infrastructure/members';
-import { getStripe } from '@/src/infrastructure/stripe';
+import { getOrgBillingState, hasNonTerminalStripeSubscription } from '@/src/infrastructure/billing/orgBilling';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { getStripe } from '@/src/infrastructure/billing/stripe';
 import { getStripePriceId, type PlanSlug } from '@/src/core/domain/billing/prices';
-import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
-import { getAppOrigin } from '@/src/infrastructure/appOrigin';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
+import { getAppOrigin } from '@/src/infrastructure/config/appOrigin';
 import { getCurrentUser } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type CheckoutMode = 'trial' | 'upfront';
 

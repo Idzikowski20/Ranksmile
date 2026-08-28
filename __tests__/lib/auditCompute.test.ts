@@ -1,4 +1,4 @@
-import { buildAuditResult, auditContentScore, termCoverageFraction } from '@/src/infrastructure/auditCompute';
+import { buildAuditResult, auditContentScore, termCoverageFraction } from '@/src/infrastructure/siteAudit/auditCompute';
 
 const HTML = `<!doctype html><html><head>
   <title>Jak sprawdzić czy ktoś mnie śledzi — poradnik</title>

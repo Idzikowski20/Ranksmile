@@ -6,7 +6,7 @@ import {
   isPaidPlanUpgrade,
   planRank,
 } from '@/src/infrastructure/billing/billingUpgrade';
-import type { OrgBillingState } from '@/src/infrastructure/orgBilling';
+import type { OrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 
 describe('billingUpgrade helpers', () => {
   it('ranks plans starter < growth < scale < agency', () => {

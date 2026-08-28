@@ -1,4 +1,4 @@
-jest.mock('@/src/infrastructure/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../utils/verifyUser', () => ({
   __esModule: true,
   default: jest.fn().mockResolvedValue('authorized'),
@@ -8,7 +8,7 @@ jest.mock('../../utils/getUser', () => ({
   getCurrentUserId: jest.fn().mockResolvedValue('user-1'),
 }));
 
-jest.mock('@/src/infrastructure/tenancy', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 9 }),
 }));
 
@@ -55,7 +55,7 @@ jest.mock('../../database/database', () => ({
 
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import db from '../../database/database';
 import notifyHandler from '../../pages/api/notify';
 

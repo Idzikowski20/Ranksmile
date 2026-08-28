@@ -12,7 +12,7 @@ jest.mock('next/router', () => ({
    }),
 }));
 
-jest.mock('@/src/infrastructure/getBootstrap', () => ({
+jest.mock('@/src/infrastructure/http/getBootstrap', () => ({
    getBootstrap: jest.fn(),
 }));
 
