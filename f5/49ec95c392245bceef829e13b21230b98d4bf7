@@ -1,0 +1,95 @@
+providers/dataforseo/overview.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 5
+components/performance/KeywordFilterModal.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 2
+components/searchIntelligence/organic/OrganicKeywordExpand.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 5
+__tests__/lib/organicResearch/deriveFilter.test.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 4,9-10
+src/infrastructure/organicResearch/keywordHistory.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-64
+src/infrastructure/organicResearch/observations.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-79
+__tests__/lib/organicResearch/keywordHistory.test.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1
+pages/sites/[domain]/performance.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 35,51
+components/performance/PerformanceLineChart.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 7
+components/searchIntelligence/organic/OrganicPositionChart.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 6
+src/infrastructure/learning/learningLoop.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-40
+__tests__/api/rank-tracking-organic-ui-flag.test.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 14,28
+pages/sites/[domain]/keyword-list.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 27-28
+src/infrastructure/organicResearch/export.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-91
+pages/api/rank-tracking/[slug]/organic.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 12-14
+src/infrastructure/organicResearch/filter.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-202
+__tests__/lib/pipelineV7.engines.test.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 17
+components/articles/KeywordSuggestInput.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 3
+src/infrastructure/organicResearch/synthesizePositionHistory.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-32
+components/searchIntelligence/organic/OrganicKeywordsTable.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 10
+pages/api/articles/[id]/index.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 207
+src/infrastructure/organicResearch/gscProvider.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-356
+src/infrastructure/organicResearch/hybrid.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-83
+lib/keywordResearchView.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 9
+components/searchIntelligence/organic/OrganicKpiRow.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 3
+src/infrastructure/organicResearch/index.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-93
+src/infrastructure/organicResearch/derive.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-262
+services/organicResearch.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 2-3
+src/infrastructure/performance/formatters.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-182
+src/infrastructure/organicResearch/provider.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-22
+providers/dataforseo/organic.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 10-11
+components/searchIntelligence/organic/OrganicFilterBar.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 10,18-19
+src/infrastructure/learning/learningLoopCore.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-44
+src/infrastructure/learning/scoreFeedback.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-61
+src/infrastructure/organicResearch/dataforseoProvider.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-92
+components/koala/product/helpers/KeywordIntentBadge.tsx
+  s_e3556ba0769b4b::t_4f13e3304f06b5 2
+pages/api/rank-tracking/[slug]/organic-keyword-history.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 4
+lib/runActionExecution.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 74,95
+src/infrastructure/organicResearch/cache.ts
+  s_e3556ba0769b4b::t_4f13e3304f06b5 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f549ec95c392245bceef829e13b21230b98d4bf7",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
