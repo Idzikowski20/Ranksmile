@@ -1,0 +1,22 @@
+scripts/lib/net.ts
+  s_23332a01e90b98::t_0aa087427a5f91 82-87,92
+scripts/pipeline-workers.ts
+  s_23332a01e90b98::t_b43d7ac231e84c 25
+  s_23332a01e90b98::t_6567bfffbdfcab 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7169e812ede9304ef6bf026f57e190fedfcfffdc",
+  "prompts": {},
+  "sessions": {
+    "s_23332a01e90b98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31289b00-8714-4778-ba20-25a2c7f7b884",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
