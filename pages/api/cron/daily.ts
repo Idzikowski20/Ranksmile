@@ -9,7 +9,7 @@ import { captureWeeklySnapshot, weekStartFor } from '@/src/infrastructure/gsc/gs
 import { getWeeklyDrops } from '../../../src/composition/gsc';
 import { buildGscDigest, type DomainDigest } from '@/src/infrastructure/gsc/gscDigestEmail';
 import { sendMail } from '../../../lib/sendMail';
-import { queryRows, type ArticleRow } from '../../../lib/db/query';
+import { queryRows, type ArticleRow } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';

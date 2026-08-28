@@ -7,7 +7,7 @@
  * by the same sweep, so an interrupted request costs a tick, not the article.
  */
 import db from '../database/database';
-import { queryRows } from './db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 
 /** Analysis is considered stuck after this long without a job-row update. */
 const STALE_ANALYSIS_MINUTES = 15;

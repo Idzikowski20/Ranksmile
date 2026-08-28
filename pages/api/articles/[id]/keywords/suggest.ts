@@ -6,7 +6,7 @@ import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../../../ut
 import { computeRelevanceScore } from '@/src/core/domain/keywords/enrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
-import { queryRows, queryOne } from '../../../../../lib/db/query';
+import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

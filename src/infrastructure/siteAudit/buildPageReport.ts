@@ -1,4 +1,4 @@
-import { queryRows, queryOne } from '@/lib/db/query';
+import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import { parseJsonish } from '@/lib/types/json';
 import {
   classifyPage,

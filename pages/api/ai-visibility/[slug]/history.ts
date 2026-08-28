@@ -7,7 +7,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
-import { queryRows } from '../../../../lib/db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { loadScanCitationRowsForScans } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import { overviewForDomain } from '@/src/core/domain/aiVisibility/metrics';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';

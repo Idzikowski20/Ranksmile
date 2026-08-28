@@ -11,7 +11,7 @@ import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryOne, type ArticleRow } from '../../../lib/db/query';
+import { queryOne, type ArticleRow } from '@/src/infrastructure/db/query';
 import type { SqlReplacements } from '../../../lib/types/db';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

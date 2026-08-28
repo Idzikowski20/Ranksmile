@@ -9,7 +9,7 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
+import { queryOne, queryRows, ArticleRow } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

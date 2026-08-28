@@ -54,7 +54,7 @@ import {
 } from '@/src/core/domain/optimize/runPhase';
 import { getErrorMessage } from '../../../lib/errors';
 import { throwIfAborted } from '../../../lib/abortSignal';
-import { queryOne } from '../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { flushSse, flushHeaders } from '../../../lib/types/api';
 import { safeJsonParse } from '../../../lib/safeJson';
 import {

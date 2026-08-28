@@ -1,4 +1,4 @@
-import { queryOne, queryRows } from '../db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import type { CanonicalContentModel } from '../ccm/types/ccm';
 import type { ActionGraph } from '../ccm/types/actionGraph';
 import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';

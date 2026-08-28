@@ -3,7 +3,7 @@ import { assertCronSecret } from '../../../lib/cronAuth';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getCallerRole } from '../../../lib/members';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { queryOne } from '../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { isStripeConfigured } from '../../../lib/stripe';
 import { sidecarUrl, isLocalServiceUrl } from '../../../lib/serviceUrls';
 import { isSentryEnabled } from '../../../lib/sentryEnv';

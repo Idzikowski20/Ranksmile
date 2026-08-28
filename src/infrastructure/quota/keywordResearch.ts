@@ -1,4 +1,4 @@
-import { queryOne } from '@/lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import {
   commitReservation,
   ensureOrgQuotaBalances,

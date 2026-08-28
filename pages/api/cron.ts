@@ -9,7 +9,7 @@ import { getCurrentUserId } from '../../utils/getUser';
 import { getCallerRole } from '../../lib/members';
 import { ensureUserTenancy } from '../../lib/tenancy';
 import refreshAndUpdateKeywords from '../../utils/refresh';
-import { queryRows } from '../../lib/db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 import { assertCronSecret } from '../../lib/cronAuth';
 

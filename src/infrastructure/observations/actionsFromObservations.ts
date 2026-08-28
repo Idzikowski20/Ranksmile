@@ -1,4 +1,4 @@
-import type { Action, Observation } from '../primitives/types';
+import type { Action, Observation } from '@/lib/primitives/types';
 
 function liftFromSeverity(severity?: Observation['severity']): number {
   if (severity === 'high') return 12;

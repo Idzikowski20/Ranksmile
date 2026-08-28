@@ -11,7 +11,7 @@
  * recorded on its own row so one bad prompt never fails the whole scan.
  */
 import db from '@/database/database';
-import { queryOne, queryRows } from '@/lib/db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { runModelPrompt, AiModel } from '@/lib/dataforseoLlm';
 import { getDomainLocale } from '@/lib/domainLanguage';
 import { ownDomainPosition } from '@/src/core/domain/aiVisibility/metrics';

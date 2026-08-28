@@ -6,8 +6,8 @@ import { getAdwordsCredentials, getKeywordsVolume } from '../../../../../utils/a
 import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
-import { queryOne } from '../../../../../lib/db/query';
-import type { ArticleRow } from '../../../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
+import type { ArticleRow } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
 const isPostgres = !!process.env.DATABASE_URL;

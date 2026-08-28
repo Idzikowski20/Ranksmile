@@ -5,7 +5,7 @@ import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ens
 import { getStripe, isStripeConfigured } from './stripe';
 import { orgIdFromMetadata, syncSubscriptionToOrg } from './stripeBillingSync';
 import { getOrgIdByStripeCustomerId, updateOrgBillingState } from './orgBilling';
-import { queryRows } from './db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 
 export type BillingReconcileResult = {
   scannedDb: number;

@@ -5,7 +5,7 @@
  * Claude / Facebook are out of scope: DataForSEO has no Claude engine; Facebook
  * is filtered as corpus noise (not an LLM citation source).
  */
-import { cached, TTL } from './cache/fileCache';
+import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import { getPeopleAlsoAsk, isDataForSeoConfigured } from './dataforseo';
 import { runModelPrompt, type AiModel } from './dataforseoLlm';
 import { isUsefulCitationPrompt } from './citationPrompts';

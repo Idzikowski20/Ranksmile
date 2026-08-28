@@ -3,7 +3,7 @@ import Link from 'next/link';
 import {Stack} from '../koala/core/layout';
 import {Text, Heading} from '../koala/core/text';
 import Skeleton from './Skeleton';
-import {authClient} from '../../lib/auth/client';
+import {authClient} from '@/src/infrastructure/auth/client';
 
 const timeGreeting = (hour: number | null): string => {
   if (hour === null) return 'Welcome back';

@@ -2,7 +2,7 @@
  *  all load a scan's rows the same way. Pure mapping helpers (parseCitations,
  *  mapDbRowsToResultRows) are exported for unit tests. Rows carry the prompt's
  *  topic/text so snapshotForDomain can compose prompts/topics without re-querying. */
-import { queryRows, queryOne } from '@/lib/db/query';
+import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import { ResultRow, BrandMention } from '@/src/core/domain/aiVisibility/metrics';
 import type { LlmCitation } from '@/lib/dataforseoLlm';
 import { filterCitations } from '@/src/core/domain/aiVisibility/blockedDomains';

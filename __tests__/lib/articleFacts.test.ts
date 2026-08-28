@@ -2,13 +2,13 @@ jest.mock('../../lib/dataforseo', () => ({
   getPeopleAlsoAsk: jest.fn(),
   isDataForSeoConfigured: jest.fn().mockReturnValue(true),
 }));
-jest.mock('../../lib/cache/fileCache', () => ({
+jest.mock('@/src/infrastructure/cache/fileCache', () => ({
   cached: jest.fn(({ producer }: { producer: () => Promise<unknown> }) => producer()),
   TTL: { SERP: 1 },
 }));
 
 import { getPeopleAlsoAsk } from '../../lib/dataforseo';
-import { cached } from '../../lib/cache/fileCache';
+import { cached } from '@/src/infrastructure/cache/fileCache';
 import {
   factsToCoverageItems,
   factsToVisibilitySummary,

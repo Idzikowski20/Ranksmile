@@ -11,7 +11,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => (
   ensureBillingTables: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/db/query', () => ({
+jest.mock('@/src/infrastructure/db/query', () => ({
   queryRows: jest.fn(),
 }));
 
@@ -33,7 +33,7 @@ jest.mock('../../database/database', () => ({
   default: { query: jest.fn() },
 }));
 
-import { queryRows } from '../../lib/db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { getOrgBillingState, updateOrgBillingState } from '../../lib/orgBilling';
 import { sendStarterNudgeEmail } from '@/src/infrastructure/email/sendStarterNudgeEmail';
 import db from '../../database/database';

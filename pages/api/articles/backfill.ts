@@ -9,7 +9,7 @@ import { buildGscUrlKeywordMap, normalizeUrlForMatch } from '../../../utils/gsc'
 import Domain from '../../../database/models/domain';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryRows } from '../../../lib/db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { queryAffected } from '../../../lib/types/db';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

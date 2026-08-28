@@ -10,7 +10,7 @@
  * `{ source: 'none', keywords: [] }` and the caller falls back to the free stack
  * (serper / autocomplete / pytrends in the sidecar).
  */
-import { cached, TTL } from '../cache/fileCache';
+import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import {
    isDataForSeoConfigured, getKeywordIdeas as dfsKeywordIdeas,
    getKeywordSuggestions as dfsKeywordSuggestions, getRankedKeywords, getPeopleAlsoAsk, DfsKeyword,

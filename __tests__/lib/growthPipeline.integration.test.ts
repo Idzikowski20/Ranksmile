@@ -8,8 +8,8 @@ import {
   observationsFromAuditIssues,
   observationsFromVisibilityDelta,
 } from '../../lib/emitObservations';
-import { actionsFromObservations } from '../../lib/observations/actionsFromObservations';
-import { scopeFromAction, auditIssueIdFromAction } from '../../lib/observations/optimizeActionScope';
+import { actionsFromObservations } from '@/src/infrastructure/observations/actionsFromObservations';
+import { scopeFromAction, auditIssueIdFromAction } from '@/src/infrastructure/observations/optimizeActionScope';
 import { applyStrategy, prioritizeActions } from '../../lib/primitives/prioritizeActions';
 import { persistCoverageFeatureRun } from '../../lib/persistCoverageFeatureRun';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';

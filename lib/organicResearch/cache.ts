@@ -1,4 +1,4 @@
-import { cached, TTL } from '../cache/fileCache';
+import { cached, TTL } from '@/src/infrastructure/cache/fileCache';
 import type { DatasetCacheMeta, OrganicDataset } from './types';
 import {
   DATASET_VERSION,

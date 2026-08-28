@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { queryOne } from '../../../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import type { RankCheckRunRow } from '../../../../../lib/types/rankTracking';
 import { resolveRankTrackingApi } from '../../../../../lib/rankTracking/apiAuth';
 import { getConfig } from '../../../../../lib/rankTracking/service';

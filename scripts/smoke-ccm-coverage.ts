@@ -3,7 +3,7 @@
  * Usage: npx tsx --env-file=.env.local scripts/smoke-ccm-coverage.ts [articleId]
  */
 import { compileIfStale } from '../lib/intelligence/compileAfterArticleChange';
-import { queryOne } from '../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { parseSnapshot } from '../lib/coverageStore';
 

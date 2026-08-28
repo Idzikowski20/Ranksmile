@@ -1,5 +1,5 @@
 import db from '../database/database';
-import { queryOne, queryRows } from './db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { enrichNlpTermsIfNeeded } from '@/src/infrastructure/articles/articleKeywordDiscovery';

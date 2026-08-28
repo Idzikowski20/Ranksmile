@@ -1,5 +1,5 @@
 import db from '../../database/database';
-import { queryOne } from '../db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import type { KeywordMetricsRow } from '../types/rankTracking';
 import { normalizeKeyword } from '../types/rankTracking';
 import { getKeywordOverview } from '../dataforseo';

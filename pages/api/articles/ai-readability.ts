@@ -10,7 +10,7 @@ import { callSidecar } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryOne, ArticleRow } from '../../../lib/db/query';
+import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { mergeCoverageItems, parseSnapshot, buildSnapshot } from '../../../lib/coverageStore';
 import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';

@@ -4,7 +4,7 @@
 // upserts into domain_serp_competitors WITHOUT clobbering the user's `selected` toggle.
 // Used by both the Audit tool and the Content Editor via the shared modal.
 import db from '../database/database';
-import { queryRows } from './db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { callSidecar } from './sidecar';
 import { isContentCompetitor } from '@/src/core/domain/competitors/relevance';
 import type { CompetitorDTO } from '@/src/core/domain/competitors/competitor';

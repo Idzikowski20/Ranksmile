@@ -1,4 +1,4 @@
-import { queryRows } from './db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { scanCompetitors } from './competitorScan';
 import { ensureCompetitorsTables } from '@/src/infrastructure/persistence/schema/ensureCompetitorsTables';
 

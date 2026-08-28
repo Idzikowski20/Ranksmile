@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { queryOne } from '../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { logResolvedSidecarUrl } from '../../lib/serviceUrls';
 
 function redisRequired(): boolean {

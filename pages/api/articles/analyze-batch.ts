@@ -10,7 +10,7 @@ import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryRows } from '../../../lib/db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { mapPool } from '../../../lib/mapPool';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

@@ -7,7 +7,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { queryOne } from '../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';

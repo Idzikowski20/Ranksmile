@@ -4,7 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
-import { queryRows } from '../../../../lib/db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type CountRow = { status: string, n: number };

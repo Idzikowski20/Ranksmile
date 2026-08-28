@@ -1,6 +1,6 @@
 import { QueryTypes, type Transaction } from 'sequelize';
 import db from '../database/database';
-import { queryOne, queryRows } from './db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { getDomainLocale } from './domainLanguage';
 import { clusterKeywords, type EnrichedKeyword } from './topicClustering';
 

@@ -3,7 +3,7 @@ import verifyUser from '../../../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../../../utils/verifyDomainOwnership';
 import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
-import { queryRows, queryOne } from '../../../../../../lib/db/query';
+import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import { buildIssueDetail } from '@/src/infrastructure/siteAudit/buildIssueDetail';
 import { loadSiteAuditContext } from '@/src/infrastructure/siteAudit/issues';
 import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';

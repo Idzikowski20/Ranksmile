@@ -1,6 +1,6 @@
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
-import { queryOne } from './db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 
 export interface OrgPlanUsage {
   documents: number;

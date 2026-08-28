@@ -1,5 +1,5 @@
-import type { Action } from '../primitives/types';
-import { isLlmAction } from './actionsFromObservations';
+import type { Action } from '@/lib/primitives/types';
+import { isLlmAction } from '@/src/infrastructure/observations/actionsFromObservations';
 
 export type OptimizeActionScope = {
   mode: 'full' | 'faq_only' | 'action';

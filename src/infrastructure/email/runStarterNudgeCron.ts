@@ -6,7 +6,7 @@ import {
   hasNonTerminalStripeSubscription,
   updateOrgBillingState,
 } from '@/lib/orgBilling';
-import { queryRows } from '@/lib/db/query';
+import { queryRows } from '@/src/infrastructure/db/query';
 import { sendStarterNudgeEmail } from './sendStarterNudgeEmail';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

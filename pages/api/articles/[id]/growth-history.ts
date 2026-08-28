@@ -8,7 +8,7 @@ import { ensureFeatureStoreTables } from '@/src/infrastructure/persistence/schem
 import { getFeatureStore } from '../../../../lib/featureStore';
 import { getErrorMessage } from '../../../../lib/errors';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { queryOne } from '../../../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 import type { Observation } from '../../../../lib/primitives/types';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
