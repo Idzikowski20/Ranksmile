@@ -1,0 +1,269 @@
+__tests__/lib/aiSearchScore.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8
+lib/buildCoverageSnapshot.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 16
+__tests__/lib/articleTerms.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10
+__tests__/lib/optimizationPlanner.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 6,8
+lib/intelligence/ccmStaleCron.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 48
+lib/optimizeWholeArticle.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1
+pages/api/articles/[id]/ccm/index.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 11
+pages/api/articles/ai-visibility.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 7,13
+lib/persistCoverageFeatureRun.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 2
+pages/api/wordpress/status.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8
+lib/wie/eval/runEvalSuite.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 7-8
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10,24,26,37,59
+lib/workspaces.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 68,102,153
+__tests__/api/articles-accept-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8
+__tests__/lib/stripeBillingSync.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 24
+__tests__/lib/articleSections.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1
+pages/api/articles/plagiarism.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 5
+__tests__/ao/golden/v4/precisionAoV4.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 11
+lib/wpDraft.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 4
+pages/api/articles/ai-readability.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8
+pages/api/articles/job-progress.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 60,70,210,231,236,240
+lib/queueRunner.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 128,137
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 7,20-22,39
+__tests__/ao/golden/cuckolding.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 20
+src/infrastructure/articles/articleTerms.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-64
+pages/api/articles/[id]/versions.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 7
+__tests__/lib/tenancy.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 6
+pages/api/articles/[id]/debug-export.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10
+pages/api/articles/[id]/wizard-state.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10
+pages/api/articles/[id]/growth-history.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10
+src/infrastructure/quota/errors.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-38
+__tests__/lib/optimizeReviewDoc.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 2
+__tests__/lib/quotaService.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 203-204
+__tests__/api/article-id-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8
+lib/optimizationPlanner.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1,3
+lib/recommendationEngine.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 5
+lib/intelligence/persistCcmCoverageProjection.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 16
+__tests__/lib/articleFacts.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 20
+lib/keywordResearchRunner.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 127,134
+src/infrastructure/articles/articleFacts.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-209
+__tests__/lib/optimizeWholeArticle.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 3
+__tests__/api/articles-ai-readability-coverage.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10
+pages/api/articles/suggest-internal-links.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 12
+lib/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 3-5
+__tests__/api/articles-pagination.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 37
+pages/api/articles/analyze-batch.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10
+pages/api/articles/social-posts.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 7
+src/infrastructure/articles/articleSql.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-40
+__tests__/lib/ao/sectionTargetFallback.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 4
+lib/wie/gscOutcomeSync.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 5
+pages/api/cron/plan-reservations.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 3
+pages/api/domains/[slug]/run-setup.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 32-33
+__tests__/api/articles-generate-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 12
+__tests__/lib/articleContext.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 3-4,9-10
+lib/stripeBillingSync.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 184
+src/infrastructure/ai/articleMeta.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1
+lib/ao/sectionTargeting.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8
+src/infrastructure/quota/quotaService.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-679
+src/infrastructure/articles/articleKeywordDiscovery.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-282
+src/infrastructure/quota/period.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-14
+lib/domainPipeline.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 251
+pages/api/wordpress/publish.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10
+pages/api/articles/accept.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 7
+pages/api/workspaces/[id]/finish.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 18
+lib/ao/runPrecisionOptimize.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 5-6
+pages/api/articles/generate-outline.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10,140
+__tests__/lib/stopSlopPrompt.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 4
+lib/autopilot.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 51,79,192
+lib/optimizeReviewDoc.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1
+pages/api/articles/import.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 11
+pages/api/wordpress/post-options.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10
+scripts/smoke-ccm-coverage.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 7
+src/infrastructure/articles/articleAiPipeline.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-96
+__tests__/api/accept-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8
+src/infrastructure/articles/articleContext.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-144
+src/infrastructure/articles/buildDeveloperReport.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-208
+pages/api/articles/content-effort.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 7
+pages/api/articles/publish.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8
+pages/api/automations/[slug]/index.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 11,103,208
+pages/api/ai-visibility/[slug]/config.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 72
+__tests__/ao/golden/v4/precisionAoV41.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 17
+__tests__/lib/quotaReconciliation.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 2,37
+lib/mergeArticleTerms.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 4
+lib/primitives/featureRegistry.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 2
+pages/api/articles/[id]/content-plan.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 9,28
+lib/intelligence/compileAfterArticleChange.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 61
+pages/api/articles/backfill.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 6
+pages/articles/[id]/index.tsx
+  s_e3556ba0769b4b::t_bebf15e7552717 37
+pages/api/articles/[id]/generate.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 11,56
+src/infrastructure/quota/index.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-23
+__tests__/api/articles-job-progress-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 14
+__tests__/lib/aiScoreIntent.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 3
+src/infrastructure/quota/reconciliation.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-69
+__tests__/api/articles-scope.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8
+__tests__/lib/workspaces.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 4,12
+pages/api/articles/apply-readability.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 9
+__tests__/api/article-helper-guards.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 9
+__tests__/api/articles-optimize-sections-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 19,36,42,51-52
+__tests__/api/articles-publish-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 9
+__tests__/lib/quotaSemantics.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8-9
+pages/api/articles/competitor-outlines.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 10
+pages/api/keyword-research/[slug]/create.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 30,33,42
+pages/api/workspaces/index.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 28
+lib/optimizeSectionEvents.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-2
+lib/wie/enforceOpeningPolicy.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 5
+__tests__/api/articles-import-backfill-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 11
+__tests__/api/articles-deep-analysis-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 18
+pages/api/articles/index.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 12,172,211,239
+__tests__/lib/ai/articleMeta.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 5
+lib/tenancy.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 5,88
+src/infrastructure/quota/keywordResearch.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-54
+pages/api/articles/[id]/index.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 8,267
+src/infrastructure/features/featureEngine.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 2
+__tests__/lib/articleAnalysisStorage.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 12
+__tests__/api/articles-ai-visibility-guard.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 2,12
+__tests__/lib/optimizeGuidelineRouting.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 3
+lib/optimizeGuidelineRouting.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 2
+lib/ao/buildCandidates.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 9
+pages/api/articles/[id]/generate-stream.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 44
+src/infrastructure/articles/articleAnalysisStorage.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-57
+lib/ao/aoBaseline.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 2
+src/infrastructure/quota/ensureBalances.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-82
+src/infrastructure/quota/types.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-77
+src/infrastructure/quota/siteAudit.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 1-60
+pages/articles/[id]/preview.tsx
+  s_e3556ba0769b4b::t_bebf15e7552717 9
+__tests__/lib/articleKeywordDiscovery.test.ts
+  s_e3556ba0769b4b::t_bebf15e7552717 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0b7414e5d762c4d6ee060d8e269da2f854641173",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
