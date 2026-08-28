@@ -21,11 +21,11 @@ export const serpWorker: PipelineWorker = {
       createCorpusFromSerpUrls,
       upsertCompetitorDocuments,
     } = await import('@/src/infrastructure/corpus/corpusService');
-    const { decideCorpusRefresh, volatilityFromKeywordHints } = await import('../../pipeline/scheduler');
-    const { cacheGetOrLoad, cachePut } = await import('../../pipeline/cacheLayers');
-    const { recordJobCostActual } = await import('../../pipeline/costTelemetry');
-    const { isWorkerAllowedAtStage } = await import('../../pipeline/pipelineStage');
-    const { enqueueJob } = await import('../../pipeline/pipelineQueue');
+    const { decideCorpusRefresh, volatilityFromKeywordHints } = await import('@/src/infrastructure/pipeline/scheduler');
+    const { cacheGetOrLoad, cachePut } = await import('@/src/infrastructure/pipeline/cacheLayers');
+    const { recordJobCostActual } = await import('@/src/infrastructure/pipeline/costTelemetry');
+    const { isWorkerAllowedAtStage } = await import('@/src/infrastructure/pipeline/pipelineStage');
+    const { enqueueJob } = await import('@/src/infrastructure/pipeline/pipelineQueue');
 
     let urls = Array.isArray(ctx.payload.serpUrls)
       ? (ctx.payload.serpUrls as string[]).filter((u) => typeof u === 'string')
@@ -33,7 +33,7 @@ export const serpWorker: PipelineWorker = {
     let paaFromSerper: Array<{ question: string }> = [];
 
     if (!urls.length) {
-      const { fetchSerperUrls } = await import('../../pipeline/fetchSerperUrls');
+      const { fetchSerperUrls } = await import('@/src/infrastructure/pipeline/fetchSerperUrls');
       const fetched = await fetchSerperUrls({ keyword, language });
       urls = fetched.urls;
       paaFromSerper = fetched.paaQuestions;

@@ -14,7 +14,7 @@ import {
   getPipelineStage,
   isWorkerAllowedAtStage,
   type PipelineStageId,
-} from '../pipeline/pipelineStage';
+} from '@/src/infrastructure/pipeline/pipelineStage';
 
 const registry = new Map<string, PipelineWorker>();
 let seededForStage: PipelineStageId | null = null;

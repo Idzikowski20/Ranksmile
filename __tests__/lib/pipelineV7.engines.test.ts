@@ -1,4 +1,4 @@
-import { buildJobKey } from '../../lib/pipeline/jobKey';
+import { buildJobKey } from '@/src/infrastructure/pipeline/jobKey';
 import { QUEUE_PRIORITY, PIPELINE_VERSION } from '@/src/core/domain/pipeline/queuePriorities';
 import { termWeight, weightedTermCoverageRatio } from '@/src/core/domain/terms/termWeight';
 import { computeMultiScore } from '@/src/core/domain/engines/multiScore';

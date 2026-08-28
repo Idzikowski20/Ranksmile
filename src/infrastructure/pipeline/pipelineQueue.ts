@@ -1,14 +1,14 @@
 import type { QueueName } from '@/src/core/domain/pipeline/queuePriorities';
 import { PIPELINE_VERSION, QUEUE_PRIORITY } from '@/src/core/domain/pipeline/queuePriorities';
-import { buildJobKey } from './jobKey';
+import { buildJobKey } from '@/src/infrastructure/pipeline/jobKey';
 import {
   findActiveJobByKey,
   insertPipelineJob,
   moveJobToDlq,
   updatePipelineJob,
 } from '@/src/infrastructure/persistence/schema/ensurePipelineJobsTables';
-import { getWorker } from '../workers/registry';
-import { getPipelineStage } from './pipelineStage';
+import { getWorker } from '@/lib/workers/registry';
+import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
 
 export class PipelineQueueDisabledError extends Error {
   readonly queue: string;

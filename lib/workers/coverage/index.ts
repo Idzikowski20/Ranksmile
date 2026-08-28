@@ -20,8 +20,8 @@ export const coverageWorker: PipelineWorker = {
     const { runRecommendationEngine } = await import('@/src/infrastructure/engines/gapToReco');
     const { upsertSerpCoverageFeatures } = await import('@/src/infrastructure/features/serpCoverageFeatures');
     const { computeMultiScore } = await import('@/src/core/domain/engines/multiScore');
-    const { cachePut } = await import('../../pipeline/cacheLayers');
-    const { isWorkerAllowedAtStage } = await import('../../pipeline/pipelineStage');
+    const { cachePut } = await import('@/src/infrastructure/pipeline/cacheLayers');
+    const { isWorkerAllowedAtStage } = await import('@/src/infrastructure/pipeline/pipelineStage');
 
     const corpus = corpusId ? await getCorpusById(corpusId) : null;
     const terms = Array.isArray(ctx.payload.terms)

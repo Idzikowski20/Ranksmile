@@ -18,7 +18,7 @@ export const liveScoreWorker: PipelineWorker = {
     const { scoreArticleHtml } = await import('../../scoreArticleHtml');
     const { computeMultiScore } = await import('@/src/core/domain/engines/multiScore');
     const { computeGeoCues } = await import('@/src/core/domain/geo/geoCues');
-    const { cacheGetOrLoad } = await import('../../pipeline/cacheLayers');
+    const { cacheGetOrLoad } = await import('@/src/infrastructure/pipeline/cacheLayers');
 
     const coverageItems = Array.isArray(ctx.payload.coverageItems)
       ? ctx.payload.coverageItems

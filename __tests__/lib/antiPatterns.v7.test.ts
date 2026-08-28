@@ -5,7 +5,7 @@ import {
   isFlowProducerAllowed,
   isWorkerAllowedAtStage,
   parsePipelineStage,
-} from '../../lib/pipeline/pipelineStage';
+} from '@/src/infrastructure/pipeline/pipelineStage';
 import { resetWorkerRegistry, listWorkers, getWorker } from '../../lib/workers/registry';
 
 jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables', () => ({
@@ -16,7 +16,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables', ()
   moveJobToDlq: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/pipeline/pipelineQueue', () => {
+jest.mock('@/src/infrastructure/pipeline/pipelineQueue', () => {
   class PipelineQueueDisabledError extends Error {
     queue: string;
     stage: string;
@@ -126,7 +126,7 @@ describe('v7 anti-pattern guards', () => {
       process.env.PIPELINE_STAGE = '0';
       resetWorkerRegistry();
       const { enqueueAnalyzeDag, FlowProducerStageError } = await import(
-        '../../lib/pipeline/flowProducer'
+        '@/src/infrastructure/pipeline/flowProducer'
       );
       await expect(
         enqueueAnalyzeDag({ workspaceId: '1', keyword: 'test' }),

@@ -13,12 +13,12 @@
  */
 import type { QueueName } from '@/src/core/domain/pipeline/queuePriorities';
 import { QUEUE_PRIORITY, PIPELINE_VERSION } from '@/src/core/domain/pipeline/queuePriorities';
-import { buildJobKey } from '../pipeline/jobKey';
-import { enqueueJob } from '../pipeline/pipelineQueue';
+import { buildJobKey } from '@/src/infrastructure/pipeline/jobKey';
+import { enqueueJob } from '@/src/infrastructure/pipeline/pipelineQueue';
 import {
   getPipelineStage,
   isFlowProducerAllowed,
-} from '../pipeline/pipelineStage';
+} from '@/src/infrastructure/pipeline/pipelineStage';
 
 export class FlowProducerStageError extends Error {
   readonly stage: string;
