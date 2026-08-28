@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
-import type { EmbeddingProvider } from './embeddingProvider';
-import { getEmbeddingProvider } from './embeddingProvider';
+import type { EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
+import { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 import { semanticMatchScore } from './semanticMatch';
 import { CANONICALIZE_SIM_MIN, OFFICIAL_DOMAINS, SOURCE_TIER_WEIGHTS } from './constants';
 import type {

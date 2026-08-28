@@ -10,7 +10,7 @@ import { FeedbackPopover, Card, AnalyticsMetricItem } from '../../components/koa
 import { Button } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
-import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../lib/activeWorkspace';
+import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { useStaggerReveal } from '../../lib/motion/useStaggerReveal';
 import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSection';
 import Settings from '../../components/settings/Settings';

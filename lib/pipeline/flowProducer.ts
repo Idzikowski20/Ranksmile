@@ -11,8 +11,8 @@
  * sequential pre-enqueue of serp, then FlowProducer for parallel→coverage.
  * When FlowProducer unavailable: serp enqueue (chains coverage) + parallel force enqueue.
  */
-import type { QueueName } from '../pipeline/queuePriorities';
-import { QUEUE_PRIORITY, PIPELINE_VERSION } from '../pipeline/queuePriorities';
+import type { QueueName } from '@/src/core/domain/pipeline/queuePriorities';
+import { QUEUE_PRIORITY, PIPELINE_VERSION } from '@/src/core/domain/pipeline/queuePriorities';
 import { buildJobKey } from '../pipeline/jobKey';
 import { enqueueJob } from '../pipeline/pipelineQueue';
 import {

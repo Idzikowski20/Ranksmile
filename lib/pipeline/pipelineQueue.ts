@@ -1,5 +1,5 @@
-import type { QueueName } from './queuePriorities';
-import { PIPELINE_VERSION, QUEUE_PRIORITY } from './queuePriorities';
+import type { QueueName } from '@/src/core/domain/pipeline/queuePriorities';
+import { PIPELINE_VERSION, QUEUE_PRIORITY } from '@/src/core/domain/pipeline/queuePriorities';
 import { buildJobKey } from './jobKey';
 import {
   findActiveJobByKey,

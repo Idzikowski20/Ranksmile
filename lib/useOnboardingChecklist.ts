@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
 import { useWorkspaces } from '../services/workspaces';
 import { useFetchDomains } from '../services/domains';
-import { deriveActiveId, workspaceHref } from './activeWorkspace';
+import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 
 export interface OnboardingStep {
    key: string;

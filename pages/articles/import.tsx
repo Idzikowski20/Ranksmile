@@ -6,7 +6,7 @@ import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Flag } from '../../components/koala';
 import { writeAnalyzeSession } from '../../lib/deepAnalysisProgress';
-import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import toast from 'react-hot-toast';
 
 const COUNTRIES: Record<string, string> = {

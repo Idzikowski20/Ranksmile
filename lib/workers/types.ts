@@ -1,4 +1,4 @@
-import type { QueueName } from '../pipeline/queuePriorities';
+import type { QueueName } from '@/src/core/domain/pipeline/queuePriorities';
 
 /**
  * Pipeline worker contract.

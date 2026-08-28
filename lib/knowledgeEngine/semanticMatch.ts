@@ -1,6 +1,6 @@
 import { cosineSim } from '@/src/core/domain/semantic/embeddings';
-import type { EmbeddingProvider } from './embeddingProvider';
-import { getEmbeddingProvider } from './embeddingProvider';
+import type { EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
+import { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 
 /** Sole similarity entrypoint for Canonicalize + Coverage. */
 export async function semanticMatchScore(
