@@ -1,5 +1,5 @@
 import { useMutation } from 'react-query';
-import { teamAdapter, type CreateTeamInput, isAdapterError } from '../lib/adapters';
+import { teamAdapter, type CreateTeamInput, isAdapterError } from '@/src/infrastructure/adapters';
 import { showToast } from '../lib/toast';
 
 export function useCreateTeam() {
