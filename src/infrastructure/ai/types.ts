@@ -1,6 +1,6 @@
 import type * as cheerio from 'cheerio';
-import type { ScoreData } from '../contentScore';
-import type { ArticleSeoMeta } from './articleMeta';
+import type { ScoreData } from '@/lib/contentScore';
+import type { ArticleSeoMeta } from '@/src/infrastructure/ai/articleMeta';
 
 export interface InternalArticleRef {
   id?: number;

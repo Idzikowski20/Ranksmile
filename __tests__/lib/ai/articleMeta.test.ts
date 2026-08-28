@@ -8,7 +8,7 @@ jest.mock('../../../lib/articles/articleSql', () => ({
 }));
 
 import db from '../../../database/database';
-import { resolveArticleSeoMeta } from '../../../lib/ai/articleMeta';
+import { resolveArticleSeoMeta } from '@/src/infrastructure/ai/articleMeta';
 
 const mockedQuery = (db as any).query as jest.Mock;
 

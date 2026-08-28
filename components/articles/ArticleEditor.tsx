@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import type { Editor, JSONContent } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import type { PendingAction } from '../../lib/ai/types';
+import type { PendingAction } from '@/src/infrastructure/ai/types';
 import type { ArticleEditorHandle } from '../../lib/types/editor';
 import { ArrowUp01Icon, ArrowDown01Icon } from 'hugeicons-react';
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';

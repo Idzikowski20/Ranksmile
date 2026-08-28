@@ -4,7 +4,7 @@ jest.mock('../../lib/cronAuth', () => ({ assertCronSecret: jest.fn().mockReturnV
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
 jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(true) }));
-jest.mock('../../lib/ai/aiBudget', () => ({
+jest.mock('@/src/infrastructure/ai/aiBudget', () => ({
   resolveOrgId: jest.fn().mockResolvedValue(1),
   orgBudgetBlocked: jest.fn().mockResolvedValue(null),
 }));

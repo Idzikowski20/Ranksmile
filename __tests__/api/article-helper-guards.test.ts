@@ -9,7 +9,7 @@ jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => 
 jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 jest.mock('../../lib/db/query', () => ({ queryOne: jest.fn() }));
 jest.mock('../../lib/sidecar', () => ({ callSidecar: jest.fn() }));
-jest.mock('../../lib/ai/aiBudget', () => ({ resolveOrgId: jest.fn(), orgBudgetBlocked: jest.fn(), recordAiTokens: jest.fn() }));
+jest.mock('@/src/infrastructure/ai/aiBudget', () => ({ resolveOrgId: jest.fn(), orgBudgetBlocked: jest.fn(), recordAiTokens: jest.fn() }));
 jest.mock('axios', () => ({ __esModule: true, default: { post: jest.fn() } }));
 
 import type { NextApiRequest, NextApiResponse } from 'next';

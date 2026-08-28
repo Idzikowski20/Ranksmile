@@ -1,6 +1,6 @@
 import { ANTI_HALLUCINATION_RULES } from '@/src/core/domain/seo/antiHallucinationRules';
 import { STOP_SLOP_RULES } from '@/src/core/domain/optimize/stopSlopPrompt';
-import type { ToolCtx } from './types';
+import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
 export function buildSystemPrompt(
   ctx: ToolCtx,

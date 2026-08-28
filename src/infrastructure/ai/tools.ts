@@ -1,15 +1,15 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import type * as cheerio from 'cheerio';
-import { countOccurrences } from '../contentScore';
-import { scoreContent, type RankingSignal } from '../seo/scoreContentClient';
-import { callSidecar } from '../sidecar';
+import { countOccurrences } from '@/lib/contentScore';
+import { scoreContent, type RankingSignal } from '@/lib/seo/scoreContentClient';
+import { callSidecar } from '@/lib/sidecar';
 import { computeAiSearchScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
-import { reindexSids, buildOutline, sanitizeFragment, stripSids, makeWorkingDoc } from './workingDoc';
-import { resolveArticleSeoMeta } from './articleMeta';
-import { getErrorMessage } from '../errors';
-import type { ToolCtx } from './types';
+import { reindexSids, buildOutline, sanitizeFragment, stripSids, makeWorkingDoc } from '@/src/infrastructure/ai/workingDoc';
+import { resolveArticleSeoMeta } from '@/src/infrastructure/ai/articleMeta';
+import { getErrorMessage } from '@/lib/errors';
+import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
 type SocialPostsResponse = { variants?: unknown[]; posts?: unknown[] };
 type PlagiarismMatch = { text?: string; domain?: string; url?: string };

@@ -2,7 +2,7 @@ import {
   splitRanksmileThinkingAndMessage,
   shouldShowRanksmileAnswerStream,
   shouldShowRanksmileThinkingDisclosure,
-} from '../../../lib/ai/text';
+} from '@/src/infrastructure/ai/text';
 
 describe('splitRanksmileThinkingAndMessage', () => {
   it('splits thinking vs answer at thinkingLen', () => {

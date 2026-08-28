@@ -8,14 +8,14 @@ import { countOccurrences } from '../../../lib/contentScore';
 import { SIGNAL_TACTICS } from '@/src/core/domain/seo/signalTactics';
 import { ANTI_HALLUCINATION_RULES } from '@/src/core/domain/seo/antiHallucinationRules';
 import { scoreContent, type RankingSignal } from '../../../lib/seo/scoreContentClient';
-import { extractJsonObject, isRanksmileReplyShape, stripCodeFence } from '../../../lib/ai/extractJson';
-import { stripEmoji } from '../../../lib/ai/text';
+import { extractJsonObject, isRanksmileReplyShape, stripCodeFence } from '@/src/infrastructure/ai/extractJson';
+import { stripEmoji } from '@/src/infrastructure/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureUserTenancy } from '../../../lib/tenancy';
-import { getOrgUsage5h, recordAiTokens } from '../../../lib/ai/aiTokenUsage';
+import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { chatLlm } from '../../../lib/ai/deepseek';
+import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
 export const config = { api: { responseLimit: '10mb' } };
 

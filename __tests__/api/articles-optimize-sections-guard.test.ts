@@ -25,7 +25,7 @@ jest.mock('../../lib/articles/articleContext', () => ({
   })),
 }));
 const recordAiTokens = jest.fn(async (_orgId: number | null | undefined, _tokens: number) => {});
-jest.mock('../../lib/ai/aiTokenUsage', () => ({
+jest.mock('@/src/infrastructure/ai/aiTokenUsage', () => ({
   __esModule: true,
   AI_TOKEN_LIMIT_5H: 500000,
   getOrgUsage5h: jest.fn(async () => ({ used: 0, limit: 500000, resetsAt: 0, over: false })),
@@ -47,7 +47,7 @@ import handler from '../../pages/api/articles/optimize-sections';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../lib/tenancy';
-import { getOrgUsage5h } from '../../lib/ai/aiTokenUsage';
+import { getOrgUsage5h } from '@/src/infrastructure/ai/aiTokenUsage';
 import { buildArticleContext } from '../../lib/articles/articleContext';
 import { needsTermEnrichment } from '../../lib/articles/articleKeywordDiscovery';
 

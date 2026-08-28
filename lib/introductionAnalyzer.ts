@@ -1,6 +1,6 @@
 import { CoverageItem, intentItems } from '@/src/core/domain/coverage/aiCoverage';
 import { safeJsonParse } from './safeJson';
-import { chatLlm } from './ai/deepseek';
+import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
 export interface IntroVerdict {
   intentConfirmed: boolean;

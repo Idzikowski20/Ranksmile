@@ -1,6 +1,6 @@
-import { makeWorkingDoc } from '../../../lib/ai/workingDoc';
-import { buildSystemPrompt } from '../../../lib/ai/systemPrompt';
-import type { ToolCtx } from '../../../lib/ai/types';
+import { makeWorkingDoc } from '@/src/infrastructure/ai/workingDoc';
+import { buildSystemPrompt } from '@/src/infrastructure/ai/systemPrompt';
+import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
 it('embeds the keyword, the outline, and tool guidance', () => {
   const { $, outline } = makeWorkingDoc('<h1>Hello</h1><p>World</p>');

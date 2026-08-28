@@ -1,5 +1,5 @@
-import db from '../../database/database';
-import { queryOne } from '../db/query';
+import db from '@/database/database';
+import { queryOne } from '@/lib/db/query';
 
 // Org-wide AI token budget. Ranksmile/Auto-Optimize draw from a single per-organization pool that
 // refills every 5 hours (fixed buckets). created_ms is stored as epoch milliseconds so the window

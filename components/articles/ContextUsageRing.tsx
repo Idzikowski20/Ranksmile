@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { CONTEXT_WINDOW_TOKENS, contextUsageColor, contextUsagePct } from '../../lib/ai/contextWindow';
+import { CONTEXT_WINDOW_TOKENS, contextUsageColor, contextUsagePct } from '@/src/infrastructure/ai/contextWindow';
 
 const abbr = (n: number) => {
   if (!Number.isFinite(n) || n <= 0) return '0';

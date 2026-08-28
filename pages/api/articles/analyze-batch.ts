@@ -6,7 +6,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
-import { resolveOrgId, orgBudgetBlocked } from '../../../lib/ai/aiBudget';
+import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
 import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getErrorMessage } from '../../../lib/errors';

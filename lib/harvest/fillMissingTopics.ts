@@ -1,7 +1,7 @@
 import { languageInstructionForLlm } from '@/src/core/shared/language';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 import { safeJsonParse } from '../safeJson';
-import { chatLlm } from '../ai/deepseek';
+import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 import type { TopicBucket } from './clusterQuestions';
 import { PLACEHOLDER_TOPIC_ID, PLACEHOLDER_TOPIC_TITLE, tokenizeForHarvest } from './clusterQuestions';
 import { MIN_TOPICS, medianQuestionCount } from './enforceBudget';
@@ -129,7 +129,7 @@ Return ONLY a JSON array of strings (topic titles). No markdown.`;
     // Dynamic import — keeps ESM @ai-sdk/deepseek out of Jest's static graph.
     const [{ generateText }, { deepseek }] = await Promise.all([
       import('ai'),
-      import('../ai/deepseek'),
+      import('@/src/infrastructure/ai/deepseek'),
     ]);
     const { text } = await generateText({
       model: deepseek('deepseek-chat'),

@@ -10,7 +10,7 @@ import {
   buildRegradedCoverageSnapshot,
   introPlainTextFromHtml,
 } from './buildCoverageSnapshot';
-import { chatLlm } from './ai/deepseek';
+import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
 export function needsCoverageRegrade(snap: CoverageSnapshot, plainText: string): boolean {
   if (!plainText.trim() || plainText.length < 200) return false;

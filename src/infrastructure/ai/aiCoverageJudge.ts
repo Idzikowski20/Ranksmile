@@ -8,8 +8,8 @@ import {
   type CoverageJudge,
   type CoverageVerdict,
 } from '@/src/core/domain/coverage/aiCoverage';
-import { safeJsonParse } from '../safeJson';
-import { llmGateway } from '../llmGateway';
+import { safeJsonParse } from '@/lib/safeJson';
+import { llmGateway } from '@/lib/llmGateway';
 
 const COVERAGE_MODEL = 'deepseek-chat';
 const COVERAGE_TEMPERATURE = 0;

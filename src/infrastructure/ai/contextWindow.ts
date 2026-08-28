@@ -1,6 +1,6 @@
 // Context-window usage for the Ranksmile chat ring (Twenty-style: conversation tokens vs the model's
 // context window, NOT an arbitrary budget). deepseek-chat has a 64K context window.
-import { formatTokens } from './sse';
+import { formatTokens } from '@/src/infrastructure/ai/sse';
 
 export const CONTEXT_WINDOW_TOKENS = 500_000;
 

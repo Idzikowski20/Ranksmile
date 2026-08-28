@@ -1,7 +1,7 @@
-import { makeWorkingDoc } from '../../../lib/ai/workingDoc';
-import { buildTools } from '../../../lib/ai/tools';
+import { makeWorkingDoc } from '@/src/infrastructure/ai/workingDoc';
+import { buildTools } from '@/src/infrastructure/ai/tools';
 import { callSidecar } from '../../../lib/sidecar';
-import type { ToolCtx } from '../../../lib/ai/types';
+import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
 // scoreContentClient is unused by the Phase-2 tools but pulled in by buildTools;
 // stub it so the registry imports cleanly (mirrors tools.read.test).
@@ -26,7 +26,7 @@ jest.mock('../../../lib/sidecar', () => ({
 }));
 
 // Real computeAiSearchScore runs; only the DB resolver is mocked.
-jest.mock('../../../lib/ai/articleMeta', () => ({
+jest.mock('@/src/infrastructure/ai/articleMeta', () => ({
   resolveArticleSeoMeta: jest.fn(async () => ({ domain: 'x.com', language: 'pl', targetKeyword: 'seo', competitorDomains: ['c.com'] })),
 }));
 

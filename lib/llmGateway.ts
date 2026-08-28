@@ -4,7 +4,7 @@
  */
 import { ensurePipelineJobsTables } from '@/src/infrastructure/persistence/schema/ensurePipelineJobsTables';
 import db from '../database/database';
-import { chatLlmFor } from './ai/deepseek';
+import { chatLlmFor } from '@/src/infrastructure/ai/deepseek';
 
 export type LlmProvider = 'deepseek' | 'openai' | 'anthropic' | 'ollama' | 'gemini' | 'openrouter';
 
