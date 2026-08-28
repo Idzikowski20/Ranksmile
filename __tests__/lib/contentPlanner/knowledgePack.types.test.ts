@@ -1,15 +1,15 @@
-import * as contentPlanner from '../../../lib/contentPlanner';
-import * as knowledgePackTypes from '../../../lib/contentPlanner/knowledgePack/types';
+import * as contentPlanner from '@/src/infrastructure/contentPlanner/index';
+import * as knowledgePackTypes from '@/src/infrastructure/contentPlanner/knowledgePack/types';
 import {
   PIPELINE_COMPONENT_VERSIONS,
-} from '../../../lib/contentPlanner/knowledgePack/types';
+} from '@/src/infrastructure/contentPlanner/knowledgePack/types';
 import type {
   CompileDiagnostics,
   CompiledWritePlan,
   KnowledgeGraphSnapshot,
   KnowledgePack,
   PipelineManifest,
-} from '../../../lib/contentPlanner/knowledgePack/types';
+} from '@/src/infrastructure/contentPlanner/knowledgePack/types';
 
 const emptyGraph = (): KnowledgeGraphSnapshot => ({
   version: '1',

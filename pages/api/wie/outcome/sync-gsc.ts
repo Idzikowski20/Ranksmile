@@ -4,7 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
-import { syncArticleOutcomeFromGsc } from '../../../../lib/wie/gscOutcomeSync';
+import { syncArticleOutcomeFromGsc } from '@/src/infrastructure/wie/gscOutcomeSync';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

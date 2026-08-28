@@ -5,7 +5,7 @@
  *    szantazu emocjonalnego, osobe, relacji, poczucie, emocje, pomocy, problem"
  * — the same stem twice, two spellings of one phrase, and bare function words.
  */
-import { briefPhraseTerms } from '../../lib/contentPlanner/briefWriter';
+import { briefPhraseTerms } from '@/src/infrastructure/contentPlanner/briefWriter';
 
 const REAL_TERMS = [
   'emocjonalne',

@@ -29,9 +29,9 @@ import {
    selectFaqQuestions,
    validateFaqHtmlStructure,
 } from '../../../lib/aoFaqSection';
-import { applyGatedFaqMerge } from '../../../lib/ao/applyGatedFaq';
+import { applyGatedFaqMerge } from '@/src/infrastructure/ao/applyGatedFaq';
 import { buildCriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
-import { countWordsFromHtml } from '../../../lib/ao/aoBaseline';
+import { countWordsFromHtml } from '@/src/infrastructure/ao/aoBaseline';
 import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '@/src/core/domain/optimize/aoRunOutcome';
 import { structureIssues } from '@/src/core/domain/articles/validateStructure';
@@ -62,7 +62,7 @@ import {
    resolveOptimizationStrategy,
    resolveOptimizationPolicy,
    runPrecisionOptimizeV4,
-} from '../../../lib/ao/runPrecisionOptimize';
+} from '@/src/infrastructure/ao/runPrecisionOptimize';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 export const config = { api: { responseLimit: '10mb' } };
@@ -468,7 +468,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                maxSteps: aoPolicy.maxSteps,
                signal: controller.signal,
                llmEdit: async (prompt) => {
-                  const { wieLlmComplete, wieWriterSystemPrompt } = await import('../../../lib/wie/writer');
+                  const { wieLlmComplete, wieWriterSystemPrompt } = await import('@/src/infrastructure/wie/writer');
                   return wieLlmComplete({
                      userPrompt: prompt,
                      systemPrompt: wieWriterSystemPrompt(),
@@ -506,7 +506,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             // WIE Performance Loop: remember pattern ids used in this AO run
             if (articleId != null && !v4.rolledBack) {
                try {
-                  const { extractPatternIdsFromTraceEvents, saveWieLastRun } = await import('../../../lib/wie/outcomeLearning');
+                  const { extractPatternIdsFromTraceEvents, saveWieLastRun } = await import('@/src/infrastructure/wie/outcomeLearning');
                   const patternIds = extractPatternIdsFromTraceEvents(v4.trace.events);
                   if (patternIds.length) {
                      const dnaEv = v4.trace.events.find((e) => typeof e.metadata?.dna_version === 'number');
@@ -568,7 +568,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                         ? '\n\nIMPORTANT: Previous reply was truncated or incomplete. Make SMALLER surgical edits only '
                           + '(a few paragraphs or one section). Return the COMPLETE article HTML — do not omit later sections.'
                         : '';
-                     const { wieLlmComplete } = await import('../../../lib/wie/writer');
+                     const { wieLlmComplete } = await import('@/src/infrastructure/wie/writer');
                      const completed = await wieLlmComplete({
                         userPrompt: `${promptPack.userInstruction}${surgicalHint}\n\n${workingHtml}`,
                         systemPrompt: promptPack.systemPrompt,

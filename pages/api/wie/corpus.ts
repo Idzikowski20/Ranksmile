@@ -7,7 +7,7 @@ import {
   listCorpus,
   removeCorpusEntry,
   type CorpusKind,
-} from '../../../lib/wie/goldBadCorpus';
+} from '@/src/infrastructure/wie/goldBadCorpus';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

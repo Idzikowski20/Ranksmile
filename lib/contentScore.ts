@@ -66,7 +66,7 @@ export interface ScoreData {
       history?: Array<{ score: number; at: string; source: 'heuristic' | 'llm' }>;
    };
    /** WIE Source A — compact competitor brief (not raw HTML). */
-   competitor_synthesis?: import('./wie/competitorSynthesis').CompetitorSynthesis;
+   competitor_synthesis?: import('@/src/infrastructure/wie/competitorSynthesis').CompetitorSynthesis;
    /**
     * Claim sentences extracted per competitor URL from the SERP corpus. Keyed rather
     * than positional so the planner can count how many competitors state the same

@@ -5,7 +5,7 @@ import {
   saveWieLastRun,
   readWieLastRun,
   applyOutcomeLearning,
-} from '../../../lib/wie/outcomeLearning';
+} from '@/src/infrastructure/wie/outcomeLearning';
 
 describe('WIE outcomeLearning', () => {
   it('scores strong GSC + engagement as success', () => {

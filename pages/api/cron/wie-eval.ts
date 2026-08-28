@@ -2,8 +2,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { withCronWatchdog } from '../../../lib/cronWatchdog';
-import { runWieEvalSuite } from '../../../lib/wie/eval/runEvalSuite';
-import { writeTrendsFile, readHistory } from '../../../lib/wie/eval/history';
+import { runWieEvalSuite } from '@/src/infrastructure/wie/eval/runEvalSuite';
+import { writeTrendsFile, readHistory } from '@/src/infrastructure/wie/eval/history';
 import { getErrorMessage } from '../../../lib/errors';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

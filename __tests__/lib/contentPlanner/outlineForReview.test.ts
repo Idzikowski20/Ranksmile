@@ -1,4 +1,4 @@
-import { outlineForReview } from '../../../lib/contentPlanner/reviewOutline';
+import { outlineForReview } from '@/src/infrastructure/contentPlanner/reviewOutline';
 
 /**
  * There is no planner-bundle fallback any more. Rebuilding an outline from the bundle

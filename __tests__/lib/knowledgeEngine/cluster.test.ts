@@ -1,4 +1,4 @@
-import { buildTopicBlocks } from '../../../lib/knowledgeEngine/cluster';
+import { buildTopicBlocks } from '@/src/infrastructure/knowledgeEngine/cluster';
 import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 import { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 

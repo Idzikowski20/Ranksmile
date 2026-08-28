@@ -31,7 +31,7 @@ import {
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
   competitorHeadingTitles,
-} from '../../../../lib/contentPlanner/fromArticleInputs';
+} from '@/src/infrastructure/contentPlanner/fromArticleInputs';
 import {
   compileAndValidateWritePlan,
   finalizePlannerForWrite,
@@ -40,7 +40,7 @@ import {
   approvedOutlineWarnings,
   parseApprovedOutline,
   toSidecarCompiledPlan,
-} from '../../../../lib/contentPlanner';
+} from '@/src/infrastructure/contentPlanner/index';
 import {
   buildStructuralBenchmark,
   benchmarkDocsFromCompetitors,
@@ -49,12 +49,12 @@ import {
 import {
   runKnowledgeEngine,
   shouldUseKnowledgePlanner,
-} from '../../../../lib/knowledgeEngine';
-import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
+} from '@/src/infrastructure/knowledgeEngine/index';
+import type { KnowledgeGraph } from '@/src/infrastructure/knowledgeEngine/index';
 import type { StructuralBenchmark, PlannerTargets } from '@/src/infrastructure/benchmarkIntelligence/index';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
-import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
+import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
 
 /** Bounds the brief LLM call: nothing else force-kills this request, so an unbounded
  *  completion would hang it forever and starve the compile and the sidecar kickoff. */

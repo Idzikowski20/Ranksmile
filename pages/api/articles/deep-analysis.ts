@@ -849,7 +849,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     //
     // Deliberately not awaited — voice learning must never delay or fail an analysis.
     if (resolvedDomainId) {
-      void import('../../../lib/wie/autoLearnBrandDna')
+      void import('@/src/infrastructure/wie/autoLearnBrandDna')
         .then(({ autoLearnBrandDna }) => autoLearnBrandDna({
           domainId: resolvedDomainId as number,
           keyword: resolvedKeyword || pipelineKeyword || keyword || undefined,
@@ -882,7 +882,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // WIE Source A — Competitor Synthesis (bounded JSON from corpus; non-fatal)
     if (corpusTexts.length && (resolvedKeyword || pipelineKeyword || keyword)) {
       try {
-        const { buildCompetitorSynthesisFromCorpus } = await import('../../../lib/wie/competitorSynthesis');
+        const { buildCompetitorSynthesisFromCorpus } = await import('@/src/infrastructure/wie/competitorSynthesis');
         const synth = await buildCompetitorSynthesisFromCorpus({
           keyword: resolvedKeyword || pipelineKeyword || keyword || '',
           corpusTexts,
@@ -893,8 +893,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             `[deep-analysis] competitor_synthesis: critical=${synth.critical.length} examples=${synth.examples.length}`,
           );
           try {
-            const { discoverFromSynthesis } = await import('../../../lib/wie/patternDiscovery');
-            const { inferIndustry } = await import('../../../lib/wie/policyResolver');
+            const { discoverFromSynthesis } = await import('@/src/infrastructure/wie/patternDiscovery');
+            const { inferIndustry } = await import('@/src/infrastructure/wie/policyResolver');
             const { buildHeuristicReaderBrief } = await import('@/src/core/domain/wie/readerBrief');
             const kw = resolvedKeyword || pipelineKeyword || keyword || '';
             const brief = buildHeuristicReaderBrief({ keyword: kw });
@@ -908,7 +908,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               source: 'deep_analysis_synthesis',
             });
             if (n > 0) console.log(`[deep-analysis] pattern discovery accepted=${n}`);
-            const { evolveFromSynthesis } = await import('../../../lib/wie/evolutionLoop');
+            const { evolveFromSynthesis } = await import('@/src/infrastructure/wie/evolutionLoop');
             const evo = await evolveFromSynthesis({
               synthesis: synth,
               industry: inferIndustry(kw),
@@ -922,7 +922,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               );
             }
             try {
-              const { buildWieWriteContext } = await import('../../../lib/wie/writerContext');
+              const { buildWieWriteContext } = await import('@/src/infrastructure/wie/writerContext');
               const wie = await buildWieWriteContext({
                 keyword: kw,
                 synthesis: synth,

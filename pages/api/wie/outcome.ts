@@ -9,7 +9,7 @@ import {
   listOutcomesForArticle,
   readWieLastRun,
   type OutcomeMetrics,
-} from '../../../lib/wie/outcomeLearning';
+} from '@/src/infrastructure/wie/outcomeLearning';
 
 function parseMetrics(raw: unknown): OutcomeMetrics | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;

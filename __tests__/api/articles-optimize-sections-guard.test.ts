@@ -9,7 +9,7 @@ jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn(), ensureUs
 // Opening-policy enforcement rewrites the lead independently of term coverage and
 // consumes LLM calls, which breaks this suite's precision-guard assertions. It has
 // its own suite (__tests__/lib/wie/openingPolicyEnforce.test.ts) — no-op it here.
-jest.mock('../../lib/wie/enforceOpeningPolicy', () => ({
+jest.mock('@/src/infrastructure/wie/enforceOpeningPolicy', () => ({
   enforceOpeningPolicy: jest.fn(async (opts: { html: string }) => ({
     html: opts.html, attempted: false, applied: false, usedHeuristic: false, tokens: 0,
   })),

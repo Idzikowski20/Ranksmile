@@ -1,7 +1,7 @@
-import { applyGatedFaqMerge } from '../../../lib/ao/applyGatedFaq';
+import { applyGatedFaqMerge } from '@/src/infrastructure/ao/applyGatedFaq';
 import { buildCriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
-import { countWordsFromHtml } from '../../../lib/ao/aoBaseline';
+import { countWordsFromHtml } from '@/src/infrastructure/ao/aoBaseline';
 import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 
 const BODY =

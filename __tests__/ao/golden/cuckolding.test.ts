@@ -6,15 +6,15 @@
  * not “FAQ wall → AI score ↑ → Article optimized”.
  */
 import { buildIntentProfile, textHitsForbidden } from '@/src/core/domain/optimize/intentProfile';
-import { filterCandidatesByIntent } from '../../../lib/ao/intentGuard';
+import { filterCandidatesByIntent } from '@/src/infrastructure/ao/intentGuard';
 import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
-import { buildPrecisionEditPlan } from '../../../lib/ao/editPlan';
+import { buildPrecisionEditPlan } from '@/src/infrastructure/ao/editPlan';
 import { runEditSafetyGate } from '@/src/core/domain/optimize/editSafetyGate';
 import { DEFAULT_EDIT_BUDGET } from '@/src/core/domain/optimize/editBudget';
 import { selectFaqQuestions, validateFaqHtmlStructure } from '../../../lib/aoFaqSection';
-import { chooseStrategyFromDiagnosis } from '../../../lib/ao/optimizationPolicy';
+import { chooseStrategyFromDiagnosis } from '@/src/infrastructure/ao/optimizationPolicy';
 import { resolveAoWorkOutcome, aoOutcomeUserMessage } from '@/src/core/domain/optimize/aoRunOutcome';
-import { selectSectionTarget } from '../../../lib/ao/sectionTargeting';
+import { selectSectionTarget } from '@/src/infrastructure/ao/sectionTargeting';
 import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
 import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import type { Section } from '@/src/infrastructure/articles/articleSections';

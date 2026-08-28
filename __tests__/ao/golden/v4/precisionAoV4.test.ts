@@ -7,15 +7,15 @@ import {
 } from '@/src/core/domain/optimize/aoScoreDelta';
 import { buildCriticalContentMap, unitSemanticallyPresent } from '@/src/core/domain/optimize/criticalContentMap';
 import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
-import { selectSectionTarget } from '../../../../lib/ao/sectionTargeting';
+import { selectSectionTarget } from '@/src/infrastructure/ao/sectionTargeting';
 import { splitSections } from '@/src/infrastructure/articles/articleSections';
 import {
   runSemanticPreservationGate,
   runFinalScoreGate,
   runCandidateScoreGate,
-} from '../../../../lib/ao/aoQualityGates';
+} from '@/src/infrastructure/ao/aoQualityGates';
 import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
-import { htmlMatchesNormalized } from '../../../../lib/ao/aoBaseline';
+import { htmlMatchesNormalized } from '@/src/infrastructure/ao/aoBaseline';
 
 const LEAD =
   '<p>Zespół prowokowanej zdrady (ang. cuckolding) to zaburzenie natury psychoseksualnej, które najczęściej dotyczy mężczyzn i polega na namawianiu partnerki do zdrady.</p>';

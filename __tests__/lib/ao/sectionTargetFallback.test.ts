@@ -1,4 +1,4 @@
-import { selectSectionTarget, TARGET_CONFIDENCE_MIN } from '../../../lib/ao/sectionTargeting';
+import { selectSectionTarget, TARGET_CONFIDENCE_MIN } from '@/src/infrastructure/ao/sectionTargeting';
 import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import type { Section } from '@/src/infrastructure/articles/articleSections';

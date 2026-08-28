@@ -37,7 +37,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
    // WIE Performance Loop: GSC 30d page metrics → pattern effectiveness
    try {
-      const { syncDueWieOutcomesFromGsc } = await import('../../../lib/wie/gscOutcomeSync');
+      const { syncDueWieOutcomesFromGsc } = await import('@/src/infrastructure/wie/gscOutcomeSync');
       const wieSync = await syncDueWieOutcomesFromGsc({ limit: 25 });
       if (wieSync.synced > 0) {
          console.log('[cron] WIE GSC outcome synced', wieSync.synced, '/', wieSync.scanned);
@@ -48,7 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
    // WIE Learning hygiene: persist confidence decay
    try {
-      const { persistConfidenceDecay } = await import('../../../lib/wie/patternStore');
+      const { persistConfidenceDecay } = await import('@/src/infrastructure/wie/patternStore');
       const decay = await persistConfidenceDecay();
       if (decay.updated > 0) console.log('[cron] WIE confidence decay updated', decay.updated);
    } catch (e) {

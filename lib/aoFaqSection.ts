@@ -3,7 +3,7 @@ import { isUncoveredAiSearchItem } from '@/src/core/domain/coverage/aiCoverage';
 import { STOP_SLOP_RULES } from '@/src/core/domain/optimize/stopSlopPrompt';
 import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { textHitsForbidden } from '@/src/core/domain/optimize/intentProfile';
-import { scoreCandidateAgainstProfile } from './ao/intentGuard';
+import { scoreCandidateAgainstProfile } from '@/src/infrastructure/ao/intentGuard';
 import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 
 const FAQ_HEADING_RE = /<h2[^>]*>\s*(faq|najcz[eę]ściej zadawane pytania|frequently asked questions|pytania i odpowiedzi)\s*<\/h2>/i;

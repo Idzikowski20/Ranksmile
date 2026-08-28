@@ -13,19 +13,19 @@ import {
   parseEditorialJudgeResult,
   formatEditorialReviewMarkdown,
   buildEditorialJudgeUserPrompt,
-} from '../../../lib/wie/eval/editorialJudge';
+} from '@/src/infrastructure/wie/eval/editorialJudge';
 import {
   buildTechnicalMarkdown,
   buildEditorialMarkdown,
   buildVerdictJson,
-} from '../../../lib/wie/eval/reports';
-import { buildTrendsMarkdown, type HistoryEntry } from '../../../lib/wie/eval/history';
+} from '@/src/infrastructure/wie/eval/reports';
+import { buildTrendsMarkdown, type HistoryEntry } from '@/src/infrastructure/wie/eval/history';
 import { reconcileBeatsTop5, weightedBeatsFromBenchmark, formatBeatsBreakdown } from '@/src/core/domain/wie/verdictAlign';
-import { evaluatePublishGate, scoreRootIntentCoverage } from '../../../lib/wie/eval/publishGate';
+import { evaluatePublishGate, scoreRootIntentCoverage } from '@/src/infrastructure/wie/eval/publishGate';
 import {
   evaluatePolicyCompliance,
   detectOpeningStyle,
-} from '../../../lib/wie/eval/policyCompliance';
+} from '@/src/infrastructure/wie/eval/policyCompliance';
 
 describe('WIE eval scorecard', () => {
   it('weights Writing Intelligence composite', () => {

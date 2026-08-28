@@ -1,12 +1,12 @@
-import { buildCompileDiagnostics } from '../../../lib/contentPlanner/knowledgePack/compileDiagnostics';
-import { PIPELINE_COMPONENT_VERSIONS } from '../../../lib/contentPlanner/knowledgePack/types';
+import { buildCompileDiagnostics } from '@/src/infrastructure/contentPlanner/knowledgePack/compileDiagnostics';
+import { PIPELINE_COMPONENT_VERSIONS } from '@/src/infrastructure/contentPlanner/knowledgePack/types';
 import type {
   CompiledWritePlan,
   KnowledgeGraphSnapshot,
   KnowledgePack,
   ParagraphPlan,
   PipelineManifest,
-} from '../../../lib/contentPlanner/knowledgePack/types';
+} from '@/src/infrastructure/contentPlanner/knowledgePack/types';
 
 const manifest = (): PipelineManifest => ({
   plannerVersion: PIPELINE_COMPONENT_VERSIONS.planner,

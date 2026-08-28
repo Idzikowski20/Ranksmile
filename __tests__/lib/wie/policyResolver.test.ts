@@ -4,16 +4,16 @@ import {
   scorePatternForContext,
   SEED_PATTERNS,
   type WritingPattern,
-} from '../../../lib/wie/patternStore';
-import { discoverAndAcceptPattern } from '../../../lib/wie/patternDiscovery';
+} from '@/src/infrastructure/wie/patternStore';
+import { discoverAndAcceptPattern } from '@/src/infrastructure/wie/patternDiscovery';
 import {
   buildPolicyContext,
   formatPolicyBundleForPrompt,
   inferIndustry,
   resolvePolicyBundle,
-} from '../../../lib/wie/policyResolver';
+} from '@/src/infrastructure/wie/policyResolver';
 import { buildHeuristicReaderBrief } from '@/src/core/domain/wie/readerBrief';
-import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '../../../lib/ao/editPlan';
+import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '@/src/infrastructure/ao/editPlan';
 import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 

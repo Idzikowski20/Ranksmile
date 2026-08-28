@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { wieWrite } from '../../../lib/wie/writer';
+import { wieWrite } from '@/src/infrastructure/wie/writer';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

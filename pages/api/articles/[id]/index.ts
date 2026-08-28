@@ -124,7 +124,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
      && scoreDataObj.knowledge_graph
    ) {
      try {
-       const { applyKnowledgeCoverageOverlay } = await import('../../../../lib/knowledgeEngine');
+       const { applyKnowledgeCoverageOverlay } = await import('@/src/infrastructure/knowledgeEngine/index');
        const overlay = await applyKnowledgeCoverageOverlay(scoreDataObj, content);
        scoreDataObj = overlay.scoreData;
      } catch (err: unknown) {

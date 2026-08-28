@@ -115,9 +115,9 @@ Return ONLY a JSON array of strings (topic titles). No markdown.`;
   try {
     let wieHint = '';
     try {
-      const { buildWieWriteContext, formatBoundedCoverageForPrompt } = await import('@/lib/wie/writerContext');
-      const { formatPolicyBundleForPrompt } = await import('@/lib/wie/policyResolver');
-      const { formatNarrativePlanForPrompt } = await import('@/lib/wie/narrativePlanner');
+      const { buildWieWriteContext, formatBoundedCoverageForPrompt } = await import('@/src/infrastructure/wie/writerContext');
+      const { formatPolicyBundleForPrompt } = await import('@/src/infrastructure/wie/policyResolver');
+      const { formatNarrativePlanForPrompt } = await import('@/src/infrastructure/wie/narrativePlanner');
       const wie = await buildWieWriteContext({ keyword });
       wieHint = [
         formatPolicyBundleForPrompt(wie.policy),
