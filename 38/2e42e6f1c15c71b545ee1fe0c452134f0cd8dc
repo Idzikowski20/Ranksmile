@@ -1,0 +1,33 @@
+lib/contentScore.ts
+  s_e3556ba0769b4b::t_06026c3dca6712 54
+lib/aiScore/liveFactors.ts
+  s_e3556ba0769b4b::t_06026c3dca6712 1
+components/articles/ScoreFactorList.tsx
+  s_e3556ba0769b4b::t_06026c3dca6712 3
+__tests__/lib/aiScore/introductionFactors.test.ts
+  s_e3556ba0769b4b::t_06026c3dca6712 2
+lib/ai/aiSearchScore.ts
+  s_e3556ba0769b4b::t_06026c3dca6712 3
+lib/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_06026c3dca6712 12
+lib/aiScore/introductionFactors.ts
+  s_e3556ba0769b4b::t_06026c3dca6712 1
+__tests__/lib/aiScoreIntent.test.ts
+  s_e3556ba0769b4b::t_06026c3dca6712 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "382e42e6f1c15c71b545ee1fe0c452134f0cd8dc",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
