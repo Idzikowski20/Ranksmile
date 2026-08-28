@@ -1,7 +1,7 @@
 /**
  * Heuristic AO vs Top-N competitor benchmark (Opening / Narrative / Examples / EEAT / CTA).
  */
-import { scoreEeat } from '../eeatScore';
+import { scoreEeat } from '@/src/core/domain/wie/eeatScore';
 
 export type BenchmarkFeature = 'opening' | 'narrative' | 'examples' | 'eeat' | 'cta';
 

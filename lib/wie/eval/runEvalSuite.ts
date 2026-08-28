@@ -8,7 +8,7 @@ import { getArticleIdSql } from '../../articles/articleSql';
 import { buildArticleContext } from '../../articles/articleContext';
 import { runPrecisionOptimizeV4 } from '../../ao/runPrecisionOptimize';
 import { wieLlmComplete, wieWriterSystemPrompt } from '../writer';
-import { scoreEeat } from '../eeatScore';
+import { scoreEeat } from '@/src/core/domain/wie/eeatScore';
 import { buildWieWriteContext } from '../writerContext';
 import { formatCompetitorSynthesisForPrompt } from '../competitorSynthesis';
 import { formatPolicyBundleForPrompt } from '../policyResolver';

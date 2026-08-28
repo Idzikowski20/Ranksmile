@@ -1,4 +1,4 @@
-import { scoreEeat, EEAT_SOFT_FLOOR } from '../../../lib/wie/eeatScore';
+import { scoreEeat, EEAT_SOFT_FLOOR } from '@/src/core/domain/wie/eeatScore';
 import { wieJudgeHtml, wieWriterSystemPrompt } from '../../../lib/wie/writer';
 
 describe('WIE EEAT score', () => {

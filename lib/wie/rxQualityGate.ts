@@ -3,7 +3,7 @@
  * Heuristic only (Filar A) — no second LLM round-trip required.
  */
 import type { CompetitorSynthesis } from './competitorSynthesis';
-import { scoreEeat, EEAT_SOFT_FLOOR } from './eeatScore';
+import { scoreEeat, EEAT_SOFT_FLOOR } from '@/src/core/domain/wie/eeatScore';
 
 export type RxGateResult =
   | { ok: true }

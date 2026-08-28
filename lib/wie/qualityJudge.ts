@@ -1,4 +1,4 @@
-import { scoreEeat } from './eeatScore';
+import { scoreEeat } from '@/src/core/domain/wie/eeatScore';
 
 /**
  * WIE Quality Judge — score curated/SERP articles before Pattern Discovery.
