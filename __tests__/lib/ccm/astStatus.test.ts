@@ -1,5 +1,5 @@
-import type { LexicalAst, SemanticAst } from '../../../lib/ccm/types/ast';
-import type { CoverageStatus, ContentProfileId } from '../../../lib/ccm/types/status';
+import type { LexicalAst, SemanticAst } from '@/src/core/ccm/types/ast';
+import type { CoverageStatus, ContentProfileId } from '@/src/core/ccm/types/status';
 
 describe('ccm status + ast types', () => {
   it('accepts LexicalAst / SemanticAst assignability', () => {

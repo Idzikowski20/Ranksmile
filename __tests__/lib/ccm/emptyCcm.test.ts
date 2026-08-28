@@ -1,7 +1,7 @@
-import { buildGraphIndexes } from '../../../lib/ccm/buildIndexes';
-import { computeDeterministicHash } from '../../../lib/ccm/deterministicHash';
-import { createEmptyCcm } from '../../../lib/ccm/emptyCcm';
-import type { EvidenceSpanNode, FactNode, KgEdge } from '../../../lib/ccm/types/graph';
+import { buildGraphIndexes } from '@/src/core/ccm/buildIndexes';
+import { computeDeterministicHash } from '@/src/core/ccm/deterministicHash';
+import { createEmptyCcm } from '@/src/core/ccm/emptyCcm';
+import type { EvidenceSpanNode, FactNode, KgEdge } from '@/src/core/ccm/types/graph';
 
 describe('canonical hash', () => {
   it('same hash for key-order-permuted objects', () => {

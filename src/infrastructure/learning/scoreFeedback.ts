@@ -1,7 +1,7 @@
 /**
  * Closed-loop learning: score deltas → optimization_history + calibration persist.
  */
-import type { Feature } from '@/lib/primitives/types';
+import type { Feature } from '@/src/core/primitives/types';
 import { recordOptimization } from '@/src/infrastructure/learning/learningLoop';
 import { calibrateAndPersist, extractFeatureVector } from '@/src/infrastructure/engines/calibration';
 import { getErrorMessage } from '@/src/core/shared/errors';

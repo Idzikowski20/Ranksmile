@@ -1,5 +1,5 @@
-import { runCcmCompileCron } from '../../../lib/intelligence/ccmStaleCron';
-import { InMemoryCompileStore } from '../../../lib/intelligence/compileStore';
+import { runCcmCompileCron } from '@/src/core/intelligence/ccmStaleCron';
+import { InMemoryCompileStore } from '@/src/core/intelligence/compileStore';
 
 const FIXED_AT = '2026-08-03T19:00:00.000Z';
 const HTML = '<h1>Temat</h1><p>Rosja anektowała Krym w 2014 roku.</p>';

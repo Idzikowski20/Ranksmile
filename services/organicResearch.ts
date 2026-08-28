@@ -1,7 +1,7 @@
 import { useQuery, UseQueryResult } from 'react-query';
 import type { KeywordPositionPoint } from '@/src/infrastructure/organicResearch/keywordHistory';
 import type { OrganicDataset } from '@/src/infrastructure/organicResearch/types';
-import type { Observation } from '../lib/primitives/types';
+import type { Observation } from '@/src/core/primitives/types';
 
 async function fetchJson<T>(url: string): Promise<T> {
   const r = await fetch(url);

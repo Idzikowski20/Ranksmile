@@ -1,4 +1,4 @@
-import type { Feature, ScoreVector, Signal, Action } from '@/lib/primitives/types';
+import type { Feature, ScoreVector, Signal, Action } from '@/src/core/primitives/types';
 import { getFeatureStore } from '@/src/infrastructure/featureStore';
 
 /** Persist lightweight serp/coverage features for planner consumption. */

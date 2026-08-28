@@ -6,7 +6,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { runActionExecution } from '@/src/infrastructure/runActionExecution';
-import type { Action } from '../../../../lib/primitives/types';
+import type { Action } from '@/src/core/primitives/types';
 import {
   ensureDomainEventTables,
   ensureKnowledgeLayerTables,

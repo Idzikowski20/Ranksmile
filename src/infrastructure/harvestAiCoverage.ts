@@ -1,7 +1,7 @@
 import { scoreCitationPrompt } from '@/src/infrastructure/citationPrompts';
 import { scorePaaQuestion } from '@/src/infrastructure/curateCoverageItems';
 import type { LlmCoverageSource } from '@/src/infrastructure/llmCoverageQuestions';
-import type { MissingItem, StageResult } from '@/lib/primitives/types';
+import type { MissingItem, StageResult } from '@/src/core/primitives/types';
 import {
   dedupeWithProvenance,
   type HarvestedQuestion,

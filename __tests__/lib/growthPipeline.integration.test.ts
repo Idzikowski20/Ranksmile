@@ -10,7 +10,7 @@ import {
 } from '@/src/infrastructure/emitObservations';
 import { actionsFromObservations } from '@/src/infrastructure/observations/actionsFromObservations';
 import { scopeFromAction, auditIssueIdFromAction } from '@/src/infrastructure/observations/optimizeActionScope';
-import { applyStrategy, prioritizeActions } from '../../lib/primitives/prioritizeActions';
+import { applyStrategy, prioritizeActions } from '@/src/core/primitives/prioritizeActions';
 import { persistCoverageFeatureRun } from '@/src/infrastructure/persistCoverageFeatureRun';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 

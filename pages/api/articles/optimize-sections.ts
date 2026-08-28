@@ -445,7 +445,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
             const ccmExtra =
                articleId != null
-                  ? await import('../../../lib/intelligence/loadCcmEditCandidates')
+                  ? await import('@/src/core/intelligence/loadCcmEditCandidates')
                       .then((m) =>
                          m.loadCcmEditCandidatesForArticle({
                             articleId: Number(articleId),
@@ -861,7 +861,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       // CCM after AO (07-runtime) — non-fatal; use final HTML even if client hasn't saved yet
       if (articleId != null && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)) {
-         void import('../../../lib/intelligence/compileAfterArticleChange')
+         void import('@/src/core/intelligence/compileAfterArticleChange')
             .then((m) =>
                m.compileAfterArticleChange({
                   articleId: Number(articleId),

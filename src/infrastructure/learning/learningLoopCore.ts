@@ -1,7 +1,7 @@
 /**
  * Pure learning loop — calibration feedback + corpus-diff planner signals (no DB).
  */
-import type { Feature } from '@/lib/primitives/types';
+import type { Feature } from '@/src/core/primitives/types';
 import {
   calibrateFromFeatures,
   extractFeatureVector,

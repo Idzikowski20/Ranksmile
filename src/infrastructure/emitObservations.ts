@@ -1,5 +1,5 @@
-import type { Observation } from '@/lib/primitives/types';
-import { makeDomainEvent } from '@/lib/primitives/events';
+import type { Observation } from '@/src/core/primitives/types';
+import { makeDomainEvent } from '@/src/core/primitives/events';
 import { getErrorMessage } from '@/src/core/shared/errors';
 
 /** Append observations; never throws to callers (logs warn). */

@@ -11,13 +11,13 @@ import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureC
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { queryOne } from '@/src/infrastructure/db/query';
 import type { ArticleRow } from '@/src/infrastructure/db/query';
-import { SqlCompileStore } from '../../../../../lib/intelligence/sqlCompileStore';
+import { SqlCompileStore } from '@/src/core/intelligence/sqlCompileStore';
 import {
   compileArticle,
   getCcm,
   projectArticleIntelligence,
-} from '../../../../../lib/intelligence/runtimeApi';
-import { serializeCcm } from '../../../../../lib/ccm/serialize';
+} from '@/src/core/intelligence/runtimeApi';
+import { serializeCcm } from '@/src/core/ccm/serialize';
 
 type Body = {
   mode?: 'full' | 'incremental';
@@ -57,7 +57,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         `SELECT content FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
         [articleId],
       );
-      const { isCcmStale } = await import('../../../../../lib/intelligence/compileAfterArticleChange');
+      const { isCcmStale } = await import('@/src/core/intelligence/compileAfterArticleChange');
       const stale = await isCcmStale({
         articleId,
         contentHtml: article?.content || '',
@@ -110,7 +110,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (body.persist !== false) {
         try {
           const { applyDaFactEnrichment } = await import(
-            '../../../../../lib/intelligence/applyDaFactEnrichment'
+            '@/src/core/intelligence/applyDaFactEnrichment'
           );
           model = await applyDaFactEnrichment({
             articleId,
@@ -124,7 +124,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
         try {
           const { persistCcmCoverageProjection } = await import(
-            '../../../../../lib/intelligence/persistCcmCoverageProjection'
+            '@/src/core/intelligence/persistCcmCoverageProjection'
           );
           await persistCcmCoverageProjection({
             articleId,

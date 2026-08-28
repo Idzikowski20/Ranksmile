@@ -241,7 +241,7 @@ export async function reconcilePostGenerateArticle(opts: {
     });
   }
 
-  void import('@/lib/intelligence/compileAfterArticleChange')
+  void import('@/src/core/intelligence/compileAfterArticleChange')
     .then((m) =>
       m.compileAfterArticleChange({
         articleId: opts.articleId,

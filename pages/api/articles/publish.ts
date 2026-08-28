@@ -43,7 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
       // Publish gate: refresh CCM if content drifted (07-runtime) — non-blocking on failure
-      const ccmGate = await import('../../../lib/intelligence/compileAfterArticleChange')
+      const ccmGate = await import('@/src/core/intelligence/compileAfterArticleChange')
          .then((m) =>
             m.compileIfStale({
                articleId: Number(articleId),

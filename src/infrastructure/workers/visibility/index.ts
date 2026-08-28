@@ -1,5 +1,5 @@
 import type { PipelineWorker } from '@/src/infrastructure/workers/types';
-import type { Feature, ScoreVector, Signal, Action } from '@/lib/primitives/types';
+import type { Feature, ScoreVector, Signal, Action } from '@/src/core/primitives/types';
 
 /** AI / SERP visibility feature producer. */
 export const visibilityWorker: PipelineWorker = {

@@ -1,8 +1,8 @@
 import { QueryTypes } from 'sequelize';
 import db from '@/database/database';
 import { ensureDomainEventTables, ensureKnowledgeLayerTables } from '@/src/infrastructure/persistence/schema/ensureGrowthMetaTables';
-import type { DomainEvent, KnowledgeLayerStub } from '@/lib/primitives/types';
-import { makeDomainEvent } from '@/lib/primitives/events';
+import type { DomainEvent, KnowledgeLayerStub } from '@/src/core/primitives/types';
+import { makeDomainEvent } from '@/src/core/primitives/events';
 
 /** Persist DomainEvent (append-only). */
 export async function persistDomainEvent(

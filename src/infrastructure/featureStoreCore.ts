@@ -1,5 +1,5 @@
-import type { Action, Feature, Observation, ScoreVector, Signal } from '@/lib/primitives/types';
-import type { ExperimentRef } from '@/lib/primitives/types';
+import type { Action, Feature, Observation, ScoreVector, Signal } from '@/src/core/primitives/types';
+import type { ExperimentRef } from '@/src/core/primitives/types';
 
 export type FeatureStoreScope = {
   domainId?: number;

@@ -9,7 +9,7 @@ import { getFeatureStore } from '@/src/infrastructure/featureStore';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { queryOne } from '@/src/infrastructure/db/query';
-import type { Observation } from '../../../../lib/primitives/types';
+import type { Observation } from '@/src/core/primitives/types';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

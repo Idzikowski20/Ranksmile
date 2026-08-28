@@ -17,7 +17,7 @@ import type { ArticleRow } from '@/src/infrastructure/db/query';
 
 import { parseJsonish } from '@/src/core/shared/types/json';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
-import { compileArticle } from '../../../../lib/intelligence/runtimeApi';
+import { compileArticle } from '@/src/core/intelligence/runtimeApi';
 
 const parse = (v: unknown): unknown => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
 

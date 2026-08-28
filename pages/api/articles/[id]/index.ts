@@ -233,7 +233,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
 
       // CIA: refresh CCM if content drifted (07-runtime editor save) — non-fatal, no UI
       if (typeof content === 'string' && content.trim().length > 80) {
-         void import('../../../../lib/intelligence/compileAfterArticleChange')
+         void import('@/src/core/intelligence/compileAfterArticleChange')
             .then((m) =>
                m.compileIfStale({
                   articleId: Number(id),

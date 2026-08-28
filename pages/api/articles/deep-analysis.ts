@@ -1206,7 +1206,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         // CCM compile + DA enrich + SoT projection — await so SSE gets CCM snapshot (Etap 29).
         try {
-          const ccmMod = await import('../../../lib/intelligence/compileAfterArticleChange');
+          const ccmMod = await import('@/src/core/intelligence/compileAfterArticleChange');
           const ccmR = await ccmMod.compileAfterArticleChange({
             articleId,
             compiledAt: new Date().toISOString(),

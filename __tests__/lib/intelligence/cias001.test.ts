@@ -1,10 +1,10 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { compile } from '../../../lib/compiler/compile';
-import { buildActionGraph } from '../../../lib/planner/actionGraphBuilder';
-import { projectCoverage } from '../../../lib/projections/coverageView';
-import { diffModels, judgeModels } from '../../../lib/intelligence';
-import { isEntityNode, isEvidenceSpanNode, isFactNode, isIntentNode } from '../../../lib/ccm/types/graph';
+import { compile } from '@/src/core/compiler/compile';
+import { buildActionGraph } from '@/src/core/planner/actionGraphBuilder';
+import { projectCoverage } from '@/src/core/projections/coverageView';
+import { diffModels, judgeModels } from '@/src/core/intelligence/index';
+import { isEntityNode, isEvidenceSpanNode, isFactNode, isIntentNode } from '@/src/core/ccm/types/graph';
 
 const FIXED_AT = '2026-08-03T10:00:00.000Z';
 const FIXTURE = readFileSync(

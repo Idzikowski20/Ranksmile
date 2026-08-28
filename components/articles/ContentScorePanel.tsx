@@ -67,7 +67,7 @@ interface Props {
   initialAiReadability?: AiReadabilityResult | null;
   onAutoOptimize?: () => void;
   /** Surgical Priority Apply. */
-  onOptimizeAction?: (action: import('../../lib/primitives/types').Action) => void;
+  onOptimizeAction?: (action: import('@/src/core/primitives/types').Action) => void;
   isAutoOptimizing?: boolean;
   /** Drives the 3-state Auto-Optimize control: button → running → completed box. */
   optimizeState?: 'idle' | 'optimizing' | 'reviewing';
