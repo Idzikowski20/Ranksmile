@@ -12,7 +12,7 @@ import { scoreEeat } from '@/src/core/domain/wie/eeatScore';
 import { buildWieWriteContext } from '../writerContext';
 import { formatCompetitorSynthesisForPrompt } from '../competitorSynthesis';
 import { formatPolicyBundleForPrompt } from '../policyResolver';
-import { formatReaderBriefForPrompt } from '../readerBrief';
+import { formatReaderBriefForPrompt } from '@/src/core/domain/wie/readerBrief';
 import {
   computeWritingIntelligence,
   coverageScoreFromSnapshot,

@@ -7,8 +7,8 @@ import {
 } from './editBudget';
 import type { CompetitorSynthesis } from '../wie/competitorSynthesis';
 import { formatCompetitorSynthesisForPrompt } from '../wie/competitorSynthesis';
-import type { ReaderBrief } from '../wie/readerBrief';
-import { formatReaderBriefForPrompt } from '../wie/readerBrief';
+import type { ReaderBrief } from '@/src/core/domain/wie/readerBrief';
+import { formatReaderBriefForPrompt } from '@/src/core/domain/wie/readerBrief';
 import type { PolicyBundle } from '../wie/policyResolver';
 import { formatPolicyBundleForPrompt } from '../wie/policyResolver';
 import type { NarrativePlan } from '../wie/narrativePlanner';

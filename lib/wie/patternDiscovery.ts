@@ -7,7 +7,7 @@ import {
   type PatternLayer,
   type WritingPattern,
 } from './patternStore';
-import { getPrinciple } from './principles';
+import { getPrinciple } from '@/src/core/domain/wie/principles';
 
 export type CandidatePattern = {
   pattern: string;

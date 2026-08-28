@@ -895,7 +895,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           try {
             const { discoverFromSynthesis } = await import('../../../lib/wie/patternDiscovery');
             const { inferIndustry } = await import('../../../lib/wie/policyResolver');
-            const { buildHeuristicReaderBrief } = await import('../../../lib/wie/readerBrief');
+            const { buildHeuristicReaderBrief } = await import('@/src/core/domain/wie/readerBrief');
             const kw = resolvedKeyword || pipelineKeyword || keyword || '';
             const brief = buildHeuristicReaderBrief({ keyword: kw });
             const n = await discoverFromSynthesis({

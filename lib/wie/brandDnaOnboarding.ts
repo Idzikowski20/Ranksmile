@@ -6,7 +6,7 @@ import { judgeArticleQuality, QUALITY_DNA_THRESHOLD } from './qualityJudge';
 import { discoverAndAcceptPattern } from './patternDiscovery';
 import { bumpDnaVersion, readPatternStore, type PatternStoreSnapshot } from './patternStore';
 import { inferIndustry } from './policyResolver';
-import { buildHeuristicReaderBrief } from './readerBrief';
+import { buildHeuristicReaderBrief } from '@/src/core/domain/wie/readerBrief';
 
 export type BrandDnaUrlResult = {
   url: string;
