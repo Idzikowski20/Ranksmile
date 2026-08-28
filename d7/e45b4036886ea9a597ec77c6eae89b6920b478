@@ -1,0 +1,75 @@
+lib/knowledgeEngine/runKnowledgeEngine.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 5
+components/articles/AnalysisProgressPanel.tsx
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 4
+lib/learning/learningLoopCore.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 11
+lib/contentPlanner/outlineBuilder.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 19
+lib/workers/coverage/index.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 19
+lib/engines/gapToReco.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 6
+lib/contentPlanner/plannerValidator.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 4
+__tests__/lib/contentPlanner/budgetEngine.test.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 2
+lib/contentPlanner/knowledgeCoverage.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 4
+__tests__/lib/pipelineV7.engines.test.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 6,10,18
+lib/contentPlanner/planningLoop.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 32
+lib/benchmarkIntelligence/index.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 2,4
+lib/knowledgeEngine/aoPlanPatch.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 7
+lib/contentPlanner/budgetEngine.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 5
+lib/recommendationEngine.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 6
+lib/workers/diff/index.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 13
+lib/engines/gapDetection.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 5
+lib/knowledgeEngine/buildGraph.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 1
+lib/knowledgeEngine/canonicalize.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 5
+__tests__/lib/aiScore/liveFactors.test.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 1
+lib/knowledgeEngine/cluster.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 5
+lib/knowledgeEngine/toTargetKg.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 11
+lib/benchmarkIntelligence/buildBenchmark.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 1
+lib/engines/coverageEngine.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 6
+__tests__/lib/analysisPhaseRows.test.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 2
+__tests__/lib/knowledgeEngine/competitorBrands.test.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 1
+__tests__/lib/scoreContribution.test.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 2
+components/articles/ContentScorePanel.tsx
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 19
+lib/knowledgeEngine/index.ts
+  s_e3556ba0769b4b::t_f0bf2a2e70aaa6 4,40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d7e45b4036886ea9a597ec77c6eae89b6920b478",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
