@@ -13,7 +13,7 @@ import { formatBenchmarkMarkdown } from '@/src/core/domain/wie/evalCompetitorBen
 import type { ExplainabilityRecord } from '../explainability';
 import type { PublishGateResult, RootIntentCoverage } from './publishGate';
 import { formatPublishGateMarkdown } from './publishGate';
-import { formatBeatsBreakdown, reconcileBeatsTop5 } from './verdictAlign';
+import { formatBeatsBreakdown, reconcileBeatsTop5 } from '@/src/core/domain/wie/verdictAlign';
 import type { PolicyComplianceResult } from './policyCompliance';
 import { formatPolicyComplianceMarkdown } from './policyCompliance';
 

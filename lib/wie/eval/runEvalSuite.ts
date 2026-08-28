@@ -32,7 +32,7 @@ import { nextjsUrl } from '../../serviceUrls';
 import { scoreArticleHtml } from '../../scoreArticleHtml';
 import type { ScoreData } from '../../contentScore';
 import { evaluatePublishGate, scoreRootIntentCoverage } from './publishGate';
-import { reconcileBeatsTop5 } from './verdictAlign';
+import { reconcileBeatsTop5 } from '@/src/core/domain/wie/verdictAlign';
 import { evaluatePolicyCompliance } from './policyCompliance';
 
 export type WieEvalOptions = {

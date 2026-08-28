@@ -5,7 +5,7 @@ jest.mock('../../utils/getUser', () => ({
 }));
 jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn() }));
 jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn() }));
-jest.mock('../../lib/billing/billingPlanLock', () => ({
+jest.mock('@/src/core/domain/billing/planLock', () => ({
   getLockedCheckoutPlanSlug: jest.fn((
     billing: { planSlug?: string | null; subscriptionStatus?: string | null } | null | undefined,
   ) => {

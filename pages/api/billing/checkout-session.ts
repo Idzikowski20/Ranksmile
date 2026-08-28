@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
-import { getLockedCheckoutPlanSlug } from '../../../lib/billing/billingPlanLock';
+import { getLockedCheckoutPlanSlug } from '@/src/core/domain/billing/planLock';
 import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from '../../../lib/billing/billingTrial';
 import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
 import { assertCanManage } from '../../../lib/members';

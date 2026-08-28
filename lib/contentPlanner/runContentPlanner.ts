@@ -13,7 +13,7 @@ import {
   runBriefPlanningLoop,
   runOutlinePlanningLoop,
   runPlannerImproveLoop,
-} from './planningLoop';
+} from '@/src/core/domain/contentPlanner/planningLoop';
 import {
   assembleArticle,
   buildSectionMemory,

@@ -20,7 +20,7 @@ import {
   buildVerdictJson,
 } from '../../../lib/wie/eval/reports';
 import { buildTrendsMarkdown, type HistoryEntry } from '../../../lib/wie/eval/history';
-import { reconcileBeatsTop5, weightedBeatsFromBenchmark, formatBeatsBreakdown } from '../../../lib/wie/eval/verdictAlign';
+import { reconcileBeatsTop5, weightedBeatsFromBenchmark, formatBeatsBreakdown } from '@/src/core/domain/wie/verdictAlign';
 import { evaluatePublishGate, scoreRootIntentCoverage } from '../../../lib/wie/eval/publishGate';
 import {
   evaluatePolicyCompliance,

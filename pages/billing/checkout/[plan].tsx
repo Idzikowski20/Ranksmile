@@ -22,7 +22,7 @@ import {
   getCheckoutPlan,
   getTrialEndDateLabel,
 } from '@/src/core/domain/billing/plans';
-import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billing/billingPlanLock';
+import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '@/src/core/domain/billing/planLock';
 import { resolveCheckoutMode } from '../../../lib/billing/billingTrial';
 import { isAllowedSubscriptionChange, type UpgradePreview } from '../../../lib/billing/billingUpgrade';
 import { getOrgBillingState } from '../../../lib/orgBilling';

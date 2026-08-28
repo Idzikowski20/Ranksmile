@@ -1,4 +1,4 @@
-import { getLockedCheckoutPlanSlug, blocksNewPaidCheckout } from '../../lib/billing/billingPlanLock';
+import { getLockedCheckoutPlanSlug, blocksNewPaidCheckout } from '@/src/core/domain/billing/planLock';
 
 describe('getLockedCheckoutPlanSlug', () => {
   it('returns null when there is no plan_slug in billing', () => {
