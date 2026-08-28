@@ -1,0 +1,20 @@
+components/auth/AuthField.tsx
+  s_23332a01e90b98::t_7019bb60350ed1 56-63
+  s_23332a01e90b98::t_9714b83513669d 80-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2793e8009004b4f85e5ffadf5835a9505d00bcd1",
+  "prompts": {},
+  "sessions": {
+    "s_23332a01e90b98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31289b00-8714-4778-ba20-25a2c7f7b884",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
