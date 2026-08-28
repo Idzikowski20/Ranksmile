@@ -84,3 +84,4 @@ static_analysis_codeql_1/
 .worktrees/
 .claude/worktrees/
 
+data/

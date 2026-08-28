@@ -7,6 +7,7 @@
  * All engines normalise to { text, citations:[{url,domain,title}], costUsd }.
  * Docs: docs.dataforseo.com/v3/ai_optimization/* and /v3/serp/google/{ai_mode,organic}/live/advanced
  */
+import { sleep } from '@/src/core/shared/sleep';
 import axios from 'axios';
 import { z } from 'zod';
 import { withBreaker } from '@/src/infrastructure/http/circuitBreaker';
@@ -64,7 +65,6 @@ export const isRetryable = (e: unknown): boolean => {
    return err?.code === 'ECONNABORTED' || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET';
 };
 
-const sleep = (ms: number): Promise<void> => new Promise((r) => { setTimeout(r, ms); });
 
 /**
  * Fan-out sub-queries the engine generated while answering. llm_responses expose

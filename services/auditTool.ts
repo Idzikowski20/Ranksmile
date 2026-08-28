@@ -1,25 +1,6 @@
 import { useMutation, useQuery, useQueryClient, UseQueryResult, UseMutationResult } from 'react-query';
-import toast from 'react-hot-toast';
 import type { AuditCardDTO, AuditResult } from '@/src/core/domain/audit/types';
-
-/** Single fetch+parse+error helper — mirrors services/aiVisibility.ts so every hook
- *  throws Error(message-from-server) and react-query onError can toast it uniformly. */
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-   const r = await fetch(url, init);
-   let body: unknown = null;
-   try { body = await r.json(); } catch { /* empty/non-JSON body */ }
-   if (!r.ok) {
-      const msg = (body as { error?: string } | null)?.error || `Request failed (${r.status})`;
-      throw new Error(msg);
-   }
-   return body as T;
-}
-
-const toastError = (e: unknown): void => { toast.error(e instanceof Error ? e.message : 'Something went wrong'); };
-
-const jsonPost = (body: unknown): RequestInit => ({
-   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-});
+import { fetchJson, toastError, jsonPost } from './http';
 
 export interface AuditStatusPayload {
    queued: number; running: number; completed: number; failed: number;
