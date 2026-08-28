@@ -1,0 +1,49 @@
+lib/intelligence/ccmToInfoToCover.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 9
+lib/wie/eval/runEvalSuite.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 35
+lib/billing/billingUpgrade.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 9
+__tests__/lib/infoToCoverTopics.test.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 1
+__tests__/lib/getLockedCheckoutPlanSlug.test.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 1
+lib/contentPlanner/runContentPlanner.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 16
+lib/subscriptionDetails.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 4
+__tests__/lib/contentPlanner/narrativeOptimizer.test.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 3
+components/articles/WriteOptimizePanel.tsx
+  s_e3556ba0769b4b::t_97eab864c9ef72 8
+lib/contentPlanner/index.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 58
+__tests__/lib/wie/evalSuite.test.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 23
+lib/wie/eval/reports.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 16
+pages/api/billing/create-subscription.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 6
+pages/api/billing/checkout-session.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 4
+pages/billing/checkout/[plan].tsx
+  s_e3556ba0769b4b::t_97eab864c9ef72 25
+__tests__/api/billing-guards.test.ts
+  s_e3556ba0769b4b::t_97eab864c9ef72 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "622de23c2fcd6bd89cdec703ce9394d285f31b3d",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
