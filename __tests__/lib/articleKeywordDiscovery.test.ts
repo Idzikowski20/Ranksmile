@@ -1,5 +1,5 @@
 jest.mock('../../database/database', () => ({ default: { query: jest.fn() } }));
-jest.mock('../../lib/seo/keywordData', () => ({
+jest.mock('@/src/infrastructure/seo/keywordData', () => ({
   enrichTerms: jest.fn(),
   getOwnVisibleKeywords: jest.fn().mockResolvedValue({ keywords: [] }),
 }));

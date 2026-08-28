@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../utils/adwords';
-import { getKeywordSuggestions as getDfsKeywordSuggestions } from '../../../lib/seo/keywordData';
+import { getKeywordSuggestions as getDfsKeywordSuggestions } from '@/src/infrastructure/seo/keywordData';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type Suggestion = {
