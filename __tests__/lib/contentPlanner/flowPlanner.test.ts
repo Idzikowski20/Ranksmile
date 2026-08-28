@@ -1,8 +1,8 @@
-import { planFlow } from '../../../lib/contentPlanner/knowledgePack/flowPlanner';
+import { planFlow } from '@/src/infrastructure/contentPlanner/knowledgePack/flowPlanner';
 import type {
   KnowledgePack,
   ParagraphPlan,
-} from '../../../lib/contentPlanner/knowledgePack/types';
+} from '@/src/infrastructure/contentPlanner/knowledgePack/types';
 
 function makeParagraph(partial: Partial<ParagraphPlan> & { id: string; sectionId: string; goal: ParagraphPlan['goal'] }): ParagraphPlan {
   return {

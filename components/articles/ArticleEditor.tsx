@@ -55,9 +55,9 @@ import {
   collectApprovedOutline,
   outlineForReview,
   reviewOutlineToHtml,
-} from '../../lib/contentPlanner/reviewOutline';
+} from '@/src/infrastructure/contentPlanner/reviewOutline';
 import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
-import type { ApprovedOutlineHeading } from '../../lib/contentPlanner/applyApprovedOutline';
+import type { ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
 
 function collectOutlineHeadings(ed: Editor): Array<{ level: number; text: string }> {
   const out: Array<{ level: number; text: string }> = [];

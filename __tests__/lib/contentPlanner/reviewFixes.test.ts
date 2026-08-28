@@ -14,8 +14,8 @@ import {
   validatePlanConformity,
   validatePlannerPlan,
   validateRequiredAssignments,
-} from '../../../lib/contentPlanner';
-import { competitorsFromScoreData } from '../../../lib/contentPlanner/fromArticleInputs';
+} from '@/src/infrastructure/contentPlanner/index';
+import { competitorsFromScoreData } from '@/src/infrastructure/contentPlanner/fromArticleInputs';
 import { benchmarkDocsFromCompetitors } from '@/src/core/domain/benchmark/fromCompetitors';
 import {
   extractRawKnowledge,
@@ -25,7 +25,7 @@ import {
   buildKnowledgeGraph,
   canonicalizeClaims,
   getEmbeddingProvider,
-} from '../../../lib/knowledgeEngine';
+} from '@/src/infrastructure/knowledgeEngine/index';
 import type {
   AdaptiveOutline,
   ArticleBlueprint,

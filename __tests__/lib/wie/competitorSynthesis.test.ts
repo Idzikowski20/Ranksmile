@@ -2,10 +2,10 @@ import {
   formatCompetitorSynthesisForPrompt,
   heuristicCompetitorSynthesis,
   parseCompetitorSynthesis,
-} from '../../../lib/wie/competitorSynthesis';
-import { evaluateRxQualityGate } from '../../../lib/wie/rxQualityGate';
+} from '@/src/infrastructure/wie/competitorSynthesis';
+import { evaluateRxQualityGate } from '@/src/infrastructure/wie/rxQualityGate';
 import { buildHeuristicReaderBrief, formatReaderBriefForPrompt } from '@/src/core/domain/wie/readerBrief';
-import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '../../../lib/ao/editPlan';
+import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '@/src/infrastructure/ao/editPlan';
 import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 

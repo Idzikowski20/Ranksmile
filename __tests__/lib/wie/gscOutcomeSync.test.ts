@@ -1,4 +1,4 @@
-import { aggregateGscPageMetrics } from '../../../lib/wie/gscPageMetrics';
+import { aggregateGscPageMetrics } from '@/src/infrastructure/wie/gscPageMetrics';
 
 describe('WIE gscOutcomeSync', () => {
   it('aggregates exact pathname matches across keyword rows', () => {

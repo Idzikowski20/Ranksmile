@@ -13,7 +13,7 @@ import {
   validatePlanConformity,
   validatePlanForWrite,
   KNOWLEDGE_COVERAGE_MIN_PCT,
-} from '../../../lib/contentPlanner';
+} from '@/src/infrastructure/contentPlanner/index';
 import type {
   AdaptiveOutline,
   ArticleBlueprint,

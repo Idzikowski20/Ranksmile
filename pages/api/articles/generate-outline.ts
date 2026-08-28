@@ -133,7 +133,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   let wieBlock = '';
   try {
-    const { buildWieWriteContext, formatWieWriteBlocks } = await import('../../../lib/wie/writerContext');
+    const { buildWieWriteContext, formatWieWriteBlocks } = await import('@/src/infrastructure/wie/writerContext');
     const scoreData = articleId
       ? await (async () => {
           const { queryOne } = await import('@/src/infrastructure/db/query');

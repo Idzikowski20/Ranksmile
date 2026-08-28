@@ -2,7 +2,7 @@ import {
   compileWritePlan,
   compileAndValidateWritePlan,
   validateCompiledWritePlan,
-} from '../../../lib/contentPlanner';
+} from '@/src/infrastructure/contentPlanner/index';
 import type {
   ArticleExecutionPlan,
   ExecutionPlanSection,

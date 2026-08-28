@@ -1,5 +1,5 @@
 import { scoreEeat, EEAT_SOFT_FLOOR } from '@/src/core/domain/wie/eeatScore';
-import { wieJudgeHtml, wieWriterSystemPrompt } from '../../../lib/wie/writer';
+import { wieJudgeHtml, wieWriterSystemPrompt } from '@/src/infrastructure/wie/writer';
 
 describe('WIE EEAT score', () => {
   it('scores expert practical text higher than stub', () => {

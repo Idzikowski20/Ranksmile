@@ -4,8 +4,8 @@ import type {
   KnowledgePack,
   ParagraphPlan,
   PipelineManifest,
-} from '../../../lib/contentPlanner/knowledgePack/types';
-import { validateRuntime } from '../../../lib/contentPlanner/knowledgePack/validateRuntime';
+} from '@/src/infrastructure/contentPlanner/knowledgePack/types';
+import { validateRuntime } from '@/src/infrastructure/contentPlanner/knowledgePack/validateRuntime';
 
 const manifest: PipelineManifest = {
   plannerVersion: '2',

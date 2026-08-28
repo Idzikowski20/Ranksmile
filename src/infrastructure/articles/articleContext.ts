@@ -11,7 +11,7 @@ import { getDomainVoices } from '@/lib/domainVoices';
 import {
   parseCompetitorSynthesis,
   type CompetitorSynthesis,
-} from '@/lib/wie/competitorSynthesis';
+} from '@/src/infrastructure/wie/competitorSynthesis';
 import { buildHeuristicReaderBrief, type ReaderBrief } from '@/src/core/domain/wie/readerBrief';
 
 export interface CompetitorContext {
@@ -105,7 +105,7 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
 
   let wiePromptBlock: string | undefined;
   try {
-    const { buildWieWriteContext, formatWieWriteBlocks } = await import('@/lib/wie/writerContext');
+    const { buildWieWriteContext, formatWieWriteBlocks } = await import('@/src/infrastructure/wie/writerContext');
     const wie = await buildWieWriteContext({
       keyword,
       paa,

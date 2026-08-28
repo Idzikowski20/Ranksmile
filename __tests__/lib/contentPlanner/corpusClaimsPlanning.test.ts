@@ -3,14 +3,14 @@ import {
   enrichWithCorpusClaims,
   enrichWithWieSynthesis,
   diagnosePlannerInputs,
-} from '../../../lib/contentPlanner/fromArticleInputs';
+} from '@/src/infrastructure/contentPlanner/fromArticleInputs';
 import { buildCompetitorProfiles } from '@/src/core/domain/contentPlanner/competitorIntelligence';
 import { buildCompetitorBenchmark, synthesizeCompetitors } from '@/src/core/domain/contentPlanner/competitorBenchmark';
 import { buildTargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
 import { buildArticleBlueprint } from '@/src/core/domain/contentPlanner/budgetEngine';
 import { buildIntentBlueprint } from '@/src/core/domain/contentPlanner/intentBlueprint';
 import { buildReaderModel } from '@/src/core/domain/contentPlanner/readerModel';
-import { heuristicCompetitorSynthesis } from '../../../lib/wie/competitorSynthesis';
+import { heuristicCompetitorSynthesis } from '@/src/infrastructure/wie/competitorSynthesis';
 
 const SHARED = 'Licencja detektywistyczna jest wymagana przez ustawe z 2001 roku.';
 

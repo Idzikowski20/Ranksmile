@@ -7,7 +7,7 @@ import {
   runContentPlanner,
   synthesizeCompetitors,
   validateBlueprint,
-} from '../../../lib/contentPlanner';
+} from '@/src/infrastructure/contentPlanner/index';
 
 function sampleCompetitors() {
   return buildCompetitorProfiles([

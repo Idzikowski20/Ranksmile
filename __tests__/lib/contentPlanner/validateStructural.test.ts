@@ -5,8 +5,8 @@ import type {
   KnowledgePack,
   ParagraphPlan,
   PipelineManifest,
-} from '../../../lib/contentPlanner/knowledgePack/types';
-import { validateStructural } from '../../../lib/contentPlanner/knowledgePack/validateStructural';
+} from '@/src/infrastructure/contentPlanner/knowledgePack/types';
+import { validateStructural } from '@/src/infrastructure/contentPlanner/knowledgePack/validateStructural';
 
 const emptyManifest: PipelineManifest = {
   plannerVersion: '1',

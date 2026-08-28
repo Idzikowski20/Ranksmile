@@ -20,15 +20,15 @@ import {
   enrichWithCorpusClaims,
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
-} from '../../../../lib/contentPlanner/fromArticleInputs';
-import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlanner';
-import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
+} from '@/src/infrastructure/contentPlanner/fromArticleInputs';
+import { runContentPlanner } from '@/src/infrastructure/contentPlanner/runContentPlanner';
+import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readContentSettings } from '../../../../lib/contentSettings';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { mergedPlannerQuestions } from '../../../../lib/coverageStore';
-import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
+import { parseApprovedOutline } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
 import {
   benchmarkDocsFromCompetitors,
   buildStructuralBenchmark,

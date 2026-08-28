@@ -9,7 +9,7 @@
  * One implementation so those three cannot disagree.
  */
 import { stripHtmlToPlain } from '@/src/core/domain/articles/htmlUsable';
-import { isReviewOutlineHtml } from './contentPlanner/reviewOutline';
+import { isReviewOutlineHtml } from '@/src/infrastructure/contentPlanner/reviewOutline';
 
 export type OutlineReviewInput = {
   content?: string | null;

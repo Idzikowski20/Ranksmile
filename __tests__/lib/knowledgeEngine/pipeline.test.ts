@@ -12,8 +12,8 @@ import {
   runKnowledgeEngine,
   KNOWLEDGE_CONSENSUS_MIN,
   CANONICALIZE_SIM_MIN,
-} from '../../../lib/knowledgeEngine';
-import type { CanonicalClaim, CompetitorDocument } from '../../../lib/knowledgeEngine';
+} from '@/src/infrastructure/knowledgeEngine/index';
+import type { CanonicalClaim, CompetitorDocument } from '@/src/infrastructure/knowledgeEngine/index';
 
 describe('sourceWeight tiers', () => {
   it('uses fixed tiers', () => {

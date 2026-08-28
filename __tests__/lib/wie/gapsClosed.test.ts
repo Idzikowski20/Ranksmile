@@ -1,12 +1,12 @@
-import { buildNarrativePlan } from '../../../lib/wie/narrativePlanner';
-import { bundleToExplainability } from '../../../lib/wie/explainability';
-import { pickDnaAbPattern } from '../../../lib/wie/dnaAb';
-import { formatBoundedCoverageForPrompt } from '../../../lib/wie/writerContext';
-import { addCorpusEntry, listCorpus, removeCorpusEntry } from '../../../lib/wie/goldBadCorpus';
-import type { WritingPattern } from '../../../lib/wie/patternStore';
-import type { PolicyBundle } from '../../../lib/wie/policyResolver';
-import type { CompetitorSynthesis } from '../../../lib/wie/competitorSynthesis';
-import { evaluateRxQualityGate } from '../../../lib/wie/rxQualityGate';
+import { buildNarrativePlan } from '@/src/infrastructure/wie/narrativePlanner';
+import { bundleToExplainability } from '@/src/infrastructure/wie/explainability';
+import { pickDnaAbPattern } from '@/src/infrastructure/wie/dnaAb';
+import { formatBoundedCoverageForPrompt } from '@/src/infrastructure/wie/writerContext';
+import { addCorpusEntry, listCorpus, removeCorpusEntry } from '@/src/infrastructure/wie/goldBadCorpus';
+import type { WritingPattern } from '@/src/infrastructure/wie/patternStore';
+import type { PolicyBundle } from '@/src/infrastructure/wie/policyResolver';
+import type { CompetitorSynthesis } from '@/src/infrastructure/wie/competitorSynthesis';
+import { evaluateRxQualityGate } from '@/src/infrastructure/wie/rxQualityGate';
 
 function pat(partial: Partial<WritingPattern> & Pick<WritingPattern, 'id' | 'pattern'>): WritingPattern {
   return {
