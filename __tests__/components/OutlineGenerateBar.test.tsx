@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import OutlineGenerateBar from '../../components/articles/OutlineGenerateBar';
 
-jest.mock('../../lib/motion/useEntrance', () => ({ useEntrance: () => null }));
+jest.mock('@/components/motion/useEntrance', () => ({ useEntrance: () => null }));
 
 const noop = () => undefined;
 

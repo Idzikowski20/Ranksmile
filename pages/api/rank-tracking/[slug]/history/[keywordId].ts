@@ -3,7 +3,7 @@ import { getErrorMessage } from '@/src/core/shared/errors';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { getConfig } from '@/src/infrastructure/rankTracking/service';
 import { getKeywordHistory } from '@/src/infrastructure/rankTracking/snapshotQueries';
-import type { RankDevice } from '../../../../../lib/types/rankTracking';
+import type { RankDevice } from '@/src/core/shared/types/rankTracking';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

@@ -1,4 +1,4 @@
-import type { ExportFormat, RankTrackingRow } from '@/lib/types/rankTracking';
+import type { ExportFormat, RankTrackingRow } from '@/src/core/shared/types/rankTracking';
 
 function escapeCsv(val: string): string {
   if (/[",\n]/.test(val)) return `"${val.replace(/"/g, '""')}"`;

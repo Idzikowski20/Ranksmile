@@ -11,7 +11,7 @@ import { Button } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
-import { useStaggerReveal } from '../../lib/motion/useStaggerReveal';
+import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
 import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSection';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';

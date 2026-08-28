@@ -1,5 +1,5 @@
 import { buildAnalyticsSummary } from '@/src/infrastructure/rankTracking/analytics';
-import type { RankTrackingConfigRow, RankTrackingRow } from '../../../lib/types/rankTracking';
+import type { RankTrackingConfigRow, RankTrackingRow } from '@/src/core/shared/types/rankTracking';
 
 jest.mock('@/src/infrastructure/rankTracking/results', () => ({
   buildRankResultsPage: jest.fn(),

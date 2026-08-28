@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, type BadgeAppearance } from '../koala/core/badge/badge';
-import { useOpenReveal } from '../../lib/motion/useOpenReveal';
+import { useOpenReveal } from '@/components/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '@/src/infrastructure/contentScore';
 import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';

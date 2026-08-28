@@ -56,13 +56,13 @@ import type { SectionEvent } from '@/src/infrastructure/optimizeSectionEvents';
 import { buildReviewDoc } from '@/src/infrastructure/optimizeReviewDoc';
 import { optimizeStore } from '../../../components/articles/optimizeStore';
 import { useBackgroundDeepAnalysis } from '../../../hooks/useBackgroundDeepAnalysis';
-import { prefersReducedMotion } from '../../../lib/motion/gsap';
-import type { ArticleEditorHandle } from '../../../lib/types/editor';
+import { prefersReducedMotion } from '@/components/motion/gsap';
+import type { ArticleEditorHandle } from '@/src/core/shared/types/editor';
 import type { Editor } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { PlagiarismResult } from '../../../components/articles/PlagiarismPanel';
 import type { AiReadabilityResult } from '../../../components/articles/PrePublishPanel';
-import { parseJsonish } from '../../../lib/types/json';
+import { parseJsonish } from '@/src/core/shared/types/json';
 import ArticleEditor from '../../../components/articles/ArticleEditorClient';
 import type { HeadingItem } from '../../../components/articles/ArticleEditor';
 

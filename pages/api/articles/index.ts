@@ -12,7 +12,7 @@ import { Op } from 'sequelize';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, type ArticleRow } from '@/src/infrastructure/db/query';
-import type { SqlReplacements } from '../../../lib/types/db';
+import type { SqlReplacements } from '@/src/core/shared/types/db';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

@@ -1,5 +1,5 @@
 import { queryRows } from '@/src/infrastructure/db/query';
-import type { ComparePeriod, RankDevice, RankSnapshotRow } from '@/lib/types/rankTracking';
+import type { ComparePeriod, RankDevice, RankSnapshotRow } from '@/src/core/shared/types/rankTracking';
 
 function comparePeriodDays(period: ComparePeriod): number {
   if (period === '1d') return 1;

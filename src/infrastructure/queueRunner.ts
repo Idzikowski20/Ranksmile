@@ -2,7 +2,7 @@ import db from '@/database/database';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isQueueRunnerEnabled } from '@/src/infrastructure/featureFlags';
-import { queryAffected } from '@/lib/types/db';
+import { queryAffected } from '@/src/core/shared/types/db';
 
 const isPg = !!process.env.DATABASE_URL;
 const DEFAULT_STALE_SECS = 5 * 60;

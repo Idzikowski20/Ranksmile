@@ -1,5 +1,5 @@
-import { DURATION, EASE, prefersReducedMotion, registerMotionPlugins } from '../../lib/motion/gsap';
-import { revealVars } from '../../lib/motion/useStaggerReveal';
+import { DURATION, EASE, prefersReducedMotion, registerMotionPlugins } from '@/components/motion/gsap';
+import { revealVars } from '@/components/motion/useStaggerReveal';
 
 describe('motion foundation', () => {
   it('mirrors the CSS --motion-* durations (in seconds)', () => {

@@ -1,5 +1,5 @@
 import db from '@/database/database';
-import type { DbRow, SqlReplacements } from '@/lib/types/db';
+import type { DbRow, SqlReplacements } from '@/src/core/shared/types/db';
 
 export type UserProfile = { name: string | null; avatarUrl: string | null; productUpdates: boolean };
 type Row = DbRow;

@@ -9,7 +9,7 @@ import type {
   RankSnapshotRow,
   RankTrackingConfigRow,
   RankTrackingKeywordRow,
-} from '../lib/types/rankTracking';
+} from '@/src/core/shared/types/rankTracking';
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, init);

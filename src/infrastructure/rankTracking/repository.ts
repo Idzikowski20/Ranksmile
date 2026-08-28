@@ -7,8 +7,8 @@ import type {
   RankTrackingConfigRow,
   RankTrackingKeywordRow,
   ScheduleInterval,
-} from '@/lib/types/rankTracking';
-import { devicesList, normalizeKeyword } from '@/lib/types/rankTracking';
+} from '@/src/core/shared/types/rankTracking';
+import { devicesList, normalizeKeyword } from '@/src/core/shared/types/rankTracking';
 import { MAX_KEYWORDS_PER_CONFIG, STALE_RUN_SECS } from '@/src/infrastructure/rankTracking/cost';
 import { SERP_PROVIDER, SERP_PROVIDER_VERSION } from '@/src/infrastructure/rankTracking/constants';
 import { computeNextCheckAt, isScheduledInterval } from '@/src/infrastructure/rankTracking/schedule';

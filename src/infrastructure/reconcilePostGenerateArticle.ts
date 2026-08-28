@@ -17,7 +17,7 @@ import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRele
 import { needsCoverageRegrade, regradeCoverageSnapshot } from '@/src/infrastructure/regradeCoverageSnapshot';
 import { persistCoverageFeatureRun } from '@/src/infrastructure/persistCoverageFeatureRun';
 import { sidecarUrl } from '@/src/infrastructure/serviceUrls';
-import { parseJsonish } from '@/lib/types/json';
+import { parseJsonish } from '@/src/core/shared/types/json';
 import { countryForLanguage } from '@/src/infrastructure/langCountry';
 import axios from 'axios';
 import { getErrorMessage } from '@/src/core/shared/errors';

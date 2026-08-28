@@ -4,7 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { queryRows } from '@/src/infrastructure/db/query';
-import type { SqlReplacements } from '../../../../lib/types/db';
+import type { SqlReplacements } from '@/src/core/shared/types/db';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

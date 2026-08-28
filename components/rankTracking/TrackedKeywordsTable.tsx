@@ -16,7 +16,7 @@ import { KeywordDifficultyDot } from '../koala/product/helpers/KeywordDifficulty
 import { StatusBadge } from '../koala/primitives/StatusBadge';
 import type { StatusTone } from '../koala/primitives/StatusBadge';
 import { TablePattern } from '../koala/product';
-import type { RankKeywordStatus, RankTrackingConfigRow, RankTrackingRow } from '../../lib/types/rankTracking';
+import type { RankKeywordStatus, RankTrackingConfigRow, RankTrackingRow } from '@/src/core/shared/types/rankTracking';
 import AddKeywordsModal from './AddKeywordsModal';
 import Chart from '../common/Chart';
 

@@ -9,7 +9,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/tenancy';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { flushHeaders, flushSse } from '../../../../lib/types/api';
+import { flushHeaders, flushSse } from '@/src/core/shared/types/api';
 import { streamDelta } from '@/src/core/shared/streamDelta';
 import { staleFinalizationSql } from '@/src/infrastructure/staleFinalization';
 

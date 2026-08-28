@@ -4,7 +4,7 @@
 // the cached record across those client-side navigations.
 import { useQuery } from 'react-query';
 
-import type { RankingSourceEntry } from '../lib/types/sidecar';
+import type { RankingSourceEntry } from '@/src/core/shared/types/sidecar';
 
 export type ArticleRecord = {
    id?: number;

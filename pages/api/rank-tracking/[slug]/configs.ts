@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { createConfigForDomain, getConfigsForDomain } from '@/src/infrastructure/rankTracking/service';
-import type { RankDevices, ScheduleInterval } from '../../../../lib/types/rankTracking';
+import type { RankDevices, ScheduleInterval } from '@/src/core/shared/types/rankTracking';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

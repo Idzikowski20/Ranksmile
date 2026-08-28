@@ -2,7 +2,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAddRankKeywords, useRankConfigs, useRankKeywordsList, useRemoveRankKeywords } from '../../../services/rankTracking';
-import { normalizeKeyword } from '../../../lib/types/rankTracking';
+import { normalizeKeyword } from '@/src/core/shared/types/rankTracking';
 import { Button, Checkbox } from '../../koala/core';
 import { KeywordDifficultyDot } from '../../koala/product/helpers/KeywordDifficultyDot';
 import { KeywordIntentBadge } from '../../koala/product/helpers/KeywordIntentBadge';

@@ -15,7 +15,7 @@ import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import type { ArticleRow } from '@/src/infrastructure/db/query';
 
-import { parseJsonish } from '../../../../lib/types/json';
+import { parseJsonish } from '@/src/core/shared/types/json';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { compileArticle } from '../../../../lib/intelligence/runtimeApi';
 

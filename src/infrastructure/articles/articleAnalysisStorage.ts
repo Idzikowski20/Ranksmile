@@ -1,7 +1,7 @@
 import db from '@/database/database';
 import { countOccurrences } from '@/src/infrastructure/contentScore';
 import type { NlpTerm } from '@/src/infrastructure/contentScore';
-import type { SerpCompetitor } from '@/lib/types/sidecar';
+import type { SerpCompetitor } from '@/src/core/shared/types/sidecar';
 
 /** Replace an article's stored SERP terms atomically. */
 export async function replaceArticleTerms(

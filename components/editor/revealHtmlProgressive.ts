@@ -3,7 +3,7 @@
  * Not a live LLM stream; plays finished HTML so outlines/articles don't pop in at once.
  */
 import type { Editor } from '@tiptap/core';
-import { prefersReducedMotion } from '../motion/gsap';
+import { prefersReducedMotion } from '@/components/motion/gsap';
 
 export function splitHtmlTopLevelBlocks(html: string): string[] {
   const trimmed = (html || '').trim();

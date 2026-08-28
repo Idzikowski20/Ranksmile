@@ -55,7 +55,7 @@ import {
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { throwIfAborted } from '@/src/core/shared/abortSignal';
 import { queryOne } from '@/src/infrastructure/db/query';
-import { flushSse, flushHeaders } from '../../../lib/types/api';
+import { flushSse, flushHeaders } from '@/src/core/shared/types/api';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import {
    buildProfileFromContext,

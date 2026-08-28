@@ -4,7 +4,7 @@
  */
 import { generateText } from 'ai';
 import { deepseek, chatLlm } from '@/src/infrastructure/ai/deepseek';
-import { parseJsonish } from '../types/json';
+import { parseJsonish } from '@/src/core/shared/types/json';
 
 export type GapLocateInput = {
   readonly id: string;

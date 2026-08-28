@@ -12,7 +12,7 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wpConnection';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { mapAutomationEvent, type AutomationEventRow, type AutomationPublishMode } from '../../../../lib/types/automations';
+import { mapAutomationEvent, type AutomationEventRow, type AutomationPublishMode } from '@/src/core/shared/types/automations';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

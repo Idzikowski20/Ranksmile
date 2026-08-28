@@ -1,6 +1,6 @@
 import db from '@/database/database';
 import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
-import type { DbRow, SqlReplacements } from '@/lib/types/db';
+import type { DbRow, SqlReplacements } from '@/src/core/shared/types/db';
 
 export type OrganizationProfile = { name: string | null; logoUrl: string | null };
 

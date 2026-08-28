@@ -1,5 +1,5 @@
 import { useRef, RefObject } from 'react';
-import { gsap, useGSAP, ScrollTrigger, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from './gsap';
+import { gsap, useGSAP, ScrollTrigger, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from '@/components/motion/gsap';
 
 /** Pure config for the reveal tween. Reduced motion → base state already final, zero-duration set. */
 export function revealVars(reduced: boolean) {

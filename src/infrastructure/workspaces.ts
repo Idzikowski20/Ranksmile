@@ -1,7 +1,7 @@
 import db from '@/database/database';
 import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { assertCanManage } from '@/src/infrastructure/members';
-import type { DbRow, SqlReplacements } from '@/lib/types/db';
+import type { DbRow, SqlReplacements } from '@/src/core/shared/types/db';
 
 export type Workspace = { id: number; name: string; domain?: string | null };
 type Row = DbRow;

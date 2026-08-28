@@ -7,7 +7,7 @@ import type {
   RankSummaryChartPoint,
   RankTrackingConfigRow,
   RankTrackingSummaryRow,
-} from '@/lib/types/rankTracking';
+} from '@/src/core/shared/types/rankTracking';
 import { ANALYTICS_VERSION } from '@/src/infrastructure/rankTracking/constants';
 import {
   activeRankDevice,

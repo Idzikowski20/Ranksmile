@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { QueryTypes } from 'sequelize';
 import db from '@/database/database';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import type { DbRow, SqlReplacements } from '@/lib/types/db';
+import type { DbRow, SqlReplacements } from '@/src/core/shared/types/db';
 
 /** Stable per-article hash the plugin stores alongside the post (Ranksmile's permalink_hash). */
 export const permalinkHash = (id: number | string): string => crypto.createHash('md5').update(`wp-art-${id}`).digest('hex').slice(0, 16);

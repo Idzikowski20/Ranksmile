@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import type { AutomationEvent } from '../../lib/types/automations';
+import type { AutomationEvent } from '@/src/core/shared/types/automations';
 
 const FONT = 'var(--font-family-primary)';
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

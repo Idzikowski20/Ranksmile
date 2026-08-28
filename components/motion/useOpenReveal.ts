@@ -1,5 +1,5 @@
 import { useRef, RefObject } from 'react';
-import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from './gsap';
+import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from '@/components/motion/gsap';
 
 /**
  * Height + fade reveal for an accordion section that mounts when `open` becomes true.

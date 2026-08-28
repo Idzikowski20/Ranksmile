@@ -10,7 +10,7 @@ import Domain from '../../../database/models/domain';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows } from '@/src/infrastructure/db/query';
-import { queryAffected } from '../../../lib/types/db';
+import { queryAffected } from '@/src/core/shared/types/db';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

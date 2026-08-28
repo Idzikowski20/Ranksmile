@@ -1,4 +1,4 @@
-import { parseJsonish } from '@/lib/types/json';
+import { parseJsonish } from '@/src/core/shared/types/json';
 import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';
 import type { PageAuditSignals } from '@/src/infrastructure/siteAudit/types';
 import { normalizeForIncoming } from '@/src/infrastructure/siteAudit/redirectScan';
