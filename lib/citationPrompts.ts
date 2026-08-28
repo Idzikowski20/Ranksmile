@@ -2,7 +2,7 @@ import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { hashId } from '@/src/core/domain/coverage/aiCoverage';
 import { isNewCoverageIdsEnabled } from './featureFlags';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
-import { isKeywordOnTopic, seedTokens } from './topicRelevance';
+import { isKeywordOnTopic, seedTokens } from '@/src/core/domain/relevance/topicRelevance';
 
 export const CITATION_INTENT_COUNT = 8;
 

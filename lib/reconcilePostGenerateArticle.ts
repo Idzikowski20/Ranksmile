@@ -13,7 +13,7 @@ import { factsCoverageFactor } from '@/src/core/domain/aiScore/factors';
 import { scoreIntroduction } from './aiScore/introductionFactors';
 import { parseSnapshot } from './coverageStore';
 import { liveCoverageItems } from './liveCoverage';
-import { filterNlpTermsForAnalysis } from './topicRelevance';
+import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
 import { needsCoverageRegrade, regradeCoverageSnapshot } from './regradeCoverageSnapshot';
 import { persistCoverageFeatureRun } from './persistCoverageFeatureRun';
 import { sidecarUrl } from './serviceUrls';

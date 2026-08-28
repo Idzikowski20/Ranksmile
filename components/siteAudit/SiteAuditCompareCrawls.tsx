@@ -3,8 +3,8 @@ import { CompactSelect } from '../koala/core';
 import { KoalaEmptyState, KoalaPanel, KoalaPanelBody } from '../koala/layout';
 import InfoPopper, { dashedLinkStyle } from './InfoPopper';
 import HowToFixPopper from './HowToFixPopper';
-import { getCatalogEntry } from '../../lib/siteAudit/issueCatalog';
-import { SEVERITY_GROUP_INFO } from '../../lib/siteAudit/issueCatalog';
+import { getCatalogEntry } from '@/lib/siteAudit/issueCatalog';
+import { SEVERITY_GROUP_INFO } from '@/lib/siteAudit/issueCatalog';
 import type {
   CompareCrawlsReport,
   CompareCrawlsRow,

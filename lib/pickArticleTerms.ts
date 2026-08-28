@@ -1,6 +1,6 @@
 import type { NlpTerm } from './contentScore';
 import { filterUsefulNlpTerms, isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
-import { filterNlpTermsForAnalysis, filterOnTopicTerms } from './topicRelevance';
+import { filterNlpTermsForAnalysis, filterOnTopicTerms } from '@/src/core/domain/relevance/topicRelevance';
 
 export function mergeNlpTerms(existing: NlpTerm[], incoming: NlpTerm[]): NlpTerm[] {
   const map = new Map<string, NlpTerm>();

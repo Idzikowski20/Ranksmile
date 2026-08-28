@@ -50,7 +50,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
 import { buildRankingSourcesPayload } from '../../../lib/rankingSources';
 import { enrichTermsWithSalience } from '../../../lib/termSalience';
-import { filterNlpTermsForAnalysis } from '../../../lib/topicRelevance';
+import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
 import { buildAuditResult } from '../../../lib/auditCompute';
 import { computeSeoScoreFromAudit } from '@/src/core/domain/audit/seoScore';
 import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';

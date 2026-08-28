@@ -11,7 +11,7 @@ import { DFS_DEFAULT_RANKED_LIMIT } from '../dataforseoBudget';
 import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
 import type { NlpTerm } from '../contentScore';
 import { isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
-import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';
+import { filterOnTopicTerms, isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
 import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
 import { keywordFromUrl, urlAnchorSeed } from '../inferPageKeyword';
 import { kwScore } from '../../utils/gsc';

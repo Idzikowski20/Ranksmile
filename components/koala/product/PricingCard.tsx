@@ -6,8 +6,8 @@ import type {
   BenefitState,
   CtaState,
   PlanSlug,
-} from '../../../lib/pricing/planDefinition';
-import { ctaLabel } from '../../../lib/pricing/planDefinition';
+} from '@/src/core/domain/pricing/planDefinition';
+import { ctaLabel } from '@/src/core/domain/pricing/planDefinition';
 import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import { semantic } from '../tokens/semantic';
 import { typeface, textScale, fontWeight } from '../tokens/typography';

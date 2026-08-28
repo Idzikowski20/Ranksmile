@@ -2,7 +2,7 @@
  * Localized outline skeleton + H1 titleizer + FAQ/Summary order.
  * No product-SEO meta headings (keywords/links/CWV) in article outlines.
  */
-import { tokensShareStem } from '../topicRelevance';
+import { tokensShareStem } from '@/src/core/domain/relevance/topicRelevance';
 
 export type OutlineLang = 'pl' | 'en';
 

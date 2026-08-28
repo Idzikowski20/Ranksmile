@@ -1,5 +1,5 @@
 import { parseJsonish } from '../types/json';
-import { getCatalogEntry, formatIssueTitle, formatIssueLinkText } from './issueCatalog';
+import { getCatalogEntry, formatIssueTitle, formatIssueLinkText } from '@/lib/siteAudit/issueCatalog';
 import { probeExternal403Links } from './externalLinkProbe';
 import { checkHstsMissing } from './hstsCheck';
 import { buildIncomingLinkCounts, pagesWithSingleIncoming } from './incomingLinkGraph';
