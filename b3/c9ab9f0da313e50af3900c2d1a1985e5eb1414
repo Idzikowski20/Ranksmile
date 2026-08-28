@@ -1,0 +1,51 @@
+src/infrastructure/harvest/clusterQuestions.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-118
+src/infrastructure/harvest/questionScore.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-46
+src/infrastructure/harvest/canonicalizeQuestion.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-158
+src/infrastructure/engines/calibration.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-93
+lib/workers/coverage/index.ts
+  s_e3556ba0769b4b::t_0b1ad55a913532 20
+__tests__/lib/pipelineV7.engines.test.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 7-9
+lib/harvestAiCoverage.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 8-9,14-15,22
+lib/workers/planner/index.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 13,15
+src/infrastructure/engines/gapToReco.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-52
+__tests__/lib/harvestAiCoverage.test.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 4,10,16-17,19-20
+src/infrastructure/harvest/enforceBudget.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-95
+src/infrastructure/engines/calibrationStore.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-75
+src/infrastructure/harvest/fillMissingTopics.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-161
+lib/learning/scoreFeedback.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 6
+src/infrastructure/engines/planner.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-46
+lib/learning/learningLoopCore.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 10
+src/infrastructure/harvest/providers.ts
+  s_e3556ba0769b4b::t_dc798631ca23b6 1-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b3c9ab9f0da313e50af3900c2d1a1985e5eb1414",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
