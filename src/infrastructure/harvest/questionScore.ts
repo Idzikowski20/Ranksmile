@@ -1,4 +1,4 @@
-import type { LlmCoverageSource } from '../llmCoverageQuestions';
+import type { LlmCoverageSource } from '@/lib/llmCoverageQuestions';
 
 /** Serper PAA weight (not a LlmCoverageSource id — mapped at merge). */
 export const PAA_SOURCE_WEIGHT = 3;

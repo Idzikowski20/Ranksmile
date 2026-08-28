@@ -1,11 +1,11 @@
 import { languageInstructionForLlm } from '@/src/core/shared/language';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
-import { safeJsonParse } from '../safeJson';
+import { safeJsonParse } from '@/lib/safeJson';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
-import type { TopicBucket } from './clusterQuestions';
-import { PLACEHOLDER_TOPIC_ID, PLACEHOLDER_TOPIC_TITLE, tokenizeForHarvest } from './clusterQuestions';
-import { MIN_TOPICS, medianQuestionCount } from './enforceBudget';
-import type { HarvestedQuestion } from './canonicalizeQuestion';
+import type { TopicBucket } from '@/src/infrastructure/harvest/clusterQuestions';
+import { PLACEHOLDER_TOPIC_ID, PLACEHOLDER_TOPIC_TITLE, tokenizeForHarvest } from '@/src/infrastructure/harvest/clusterQuestions';
+import { MIN_TOPICS, medianQuestionCount } from '@/src/infrastructure/harvest/enforceBudget';
+import type { HarvestedQuestion } from '@/src/infrastructure/harvest/canonicalizeQuestion';
 
 export type FillResult = {
   topics: TopicBucket[];
@@ -115,9 +115,9 @@ Return ONLY a JSON array of strings (topic titles). No markdown.`;
   try {
     let wieHint = '';
     try {
-      const { buildWieWriteContext, formatBoundedCoverageForPrompt } = await import('../wie/writerContext');
-      const { formatPolicyBundleForPrompt } = await import('../wie/policyResolver');
-      const { formatNarrativePlanForPrompt } = await import('../wie/narrativePlanner');
+      const { buildWieWriteContext, formatBoundedCoverageForPrompt } = await import('@/lib/wie/writerContext');
+      const { formatPolicyBundleForPrompt } = await import('@/lib/wie/policyResolver');
+      const { formatNarrativePlanForPrompt } = await import('@/lib/wie/narrativePlanner');
       const wie = await buildWieWriteContext({ keyword });
       wieHint = [
         formatPolicyBundleForPrompt(wie.policy),

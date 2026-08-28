@@ -1,23 +1,23 @@
 import {
   canonicalizeQuestion,
   dedupeWithProvenance,
-} from '../../lib/harvest/canonicalizeQuestion';
+} from '@/src/infrastructure/harvest/canonicalizeQuestion';
 import {
   PLACEHOLDER_THRESHOLD,
   PLACEHOLDER_TOPIC_ID,
   clusterQuestions,
   tokenizeForHarvest,
-} from '../../lib/harvest/clusterQuestions';
+} from '@/src/infrastructure/harvest/clusterQuestions';
 import {
   MIN_PER,
   MAX_PER,
   enforceBudget,
   medianQuestionCount,
-} from '../../lib/harvest/enforceBudget';
-import { computeQuestionScore, SOURCE_WEIGHT, PAA_SOURCE_WEIGHT } from '../../lib/harvest/questionScore';
+} from '@/src/infrastructure/harvest/enforceBudget';
+import { computeQuestionScore, SOURCE_WEIGHT, PAA_SOURCE_WEIGHT } from '@/src/infrastructure/harvest/questionScore';
 import { harvestAiCoverage } from '../../lib/harvestAiCoverage';
-import type { CoverageProvider } from '../../lib/harvest/providers';
-import type { HarvestedQuestion } from '../../lib/harvest/canonicalizeQuestion';
+import type { CoverageProvider } from '@/src/infrastructure/harvest/providers';
+import type { HarvestedQuestion } from '@/src/infrastructure/harvest/canonicalizeQuestion';
 
 describe('questionScore', () => {
   it('computes weight*100 + quality', () => {

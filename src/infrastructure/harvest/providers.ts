@@ -1,7 +1,7 @@
-import { getPeopleAlsoAsk, isDataForSeoConfigured } from '../dataforseo';
-import { fetchLlmCoverageQuestions, type LlmCoverageQuestion, type LlmCoverageSource } from '../llmCoverageQuestions';
+import { getPeopleAlsoAsk, isDataForSeoConfigured } from '@/lib/dataforseo';
+import { fetchLlmCoverageQuestions, type LlmCoverageQuestion, type LlmCoverageSource } from '@/lib/llmCoverageQuestions';
 import { isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
-import { isUsefulCitationPrompt } from '../citationPrompts';
+import { isUsefulCitationPrompt } from '@/lib/citationPrompts';
 
 export type ProviderContext = {
   keyword: string;

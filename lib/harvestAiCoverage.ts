@@ -5,21 +5,21 @@ import type { MissingItem, StageResult } from './primitives/types';
 import {
   dedupeWithProvenance,
   type HarvestedQuestion,
-} from './harvest/canonicalizeQuestion';
-import { clusterQuestions } from './harvest/clusterQuestions';
+} from '@/src/infrastructure/harvest/canonicalizeQuestion';
+import { clusterQuestions } from '@/src/infrastructure/harvest/clusterQuestions';
 import {
   enforceBudget,
   medianQuestionCount,
   type BudgetedTopic,
-} from './harvest/enforceBudget';
-import { fillMissingTopics } from './harvest/fillMissingTopics';
+} from '@/src/infrastructure/harvest/enforceBudget';
+import { fillMissingTopics } from '@/src/infrastructure/harvest/fillMissingTopics';
 import { checkKeywordArticleIntent } from '@/src/core/domain/keywords/articleIntentGate';
 import {
   fetchAllProviders,
   type CoverageProvider,
   type ProviderContext,
   type ProviderResult,
-} from './harvest/providers';
+} from '@/src/infrastructure/harvest/providers';
 
 export type { HarvestedQuestion };
 export type { BudgetedTopic };

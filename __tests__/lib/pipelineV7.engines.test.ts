@@ -4,9 +4,9 @@ import { termWeight, weightedTermCoverageRatio } from '@/src/core/domain/terms/t
 import { computeMultiScore } from '@/src/core/domain/engines/multiScore';
 import { runCoverageEngine } from '@/src/core/domain/engines/coverageEngine';
 import { runGapEngine } from '@/src/core/domain/engines/gapEngine';
-import { runRecommendationEngine } from '../../lib/engines/gapToReco';
-import { planActions } from '../../lib/engines/planner';
-import { fitCalibration, predictCalibrated, extractFeatureVector } from '../../lib/engines/calibration';
+import { runRecommendationEngine } from '@/src/infrastructure/engines/gapToReco';
+import { planActions } from '@/src/infrastructure/engines/planner';
+import { fitCalibration, predictCalibrated, extractFeatureVector } from '@/src/infrastructure/engines/calibration';
 import { diffCorpora } from '@/src/core/domain/engines/corpusDiff';
 import { serpChangeRatio, shouldForceRefresh } from '@/src/core/domain/corpus/serpChange';
 import { resolveEntities, heuristicNerExtract } from '@/src/core/domain/semantic/entityResolver';

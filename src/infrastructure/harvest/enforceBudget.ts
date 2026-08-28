@@ -1,5 +1,5 @@
-import type { TopicBucket } from './clusterQuestions';
-import type { HarvestedQuestion } from './canonicalizeQuestion';
+import type { TopicBucket } from '@/src/infrastructure/harvest/clusterQuestions';
+import type { HarvestedQuestion } from '@/src/infrastructure/harvest/canonicalizeQuestion';
 
 export const MIN_TOPICS = 6;
 export const MAX_TOPICS = 12;

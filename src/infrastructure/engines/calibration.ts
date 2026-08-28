@@ -2,7 +2,7 @@
  * Calibration — Feature Store vectors only (no LLM ranking).
  * Fits simple linear weights from historical score vs outcomes.
  */
-import type { Feature } from '../primitives/types';
+import type { Feature } from '@/lib/primitives/types';
 
 export type CalibrationSample = {
   featureVector: number[];
@@ -87,7 +87,7 @@ export async function calibrateAndPersist(
   outcomes: number[],
 ): Promise<CalibrationModel> {
   const model = calibrateFromFeatures(features, outcomes);
-  const { saveCalibrationModel } = await import('./calibrationStore');
+  const { saveCalibrationModel } = await import('@/src/infrastructure/engines/calibrationStore');
   await saveCalibrationModel(workspaceId, model);
   return model;
 }
