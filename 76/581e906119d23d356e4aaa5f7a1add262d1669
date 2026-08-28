@@ -1,0 +1,23 @@
+lib/workers/coverage/index.ts
+  s_e3556ba0769b4b::t_35851559f9f055 22
+__tests__/lib/pipelineV7.engines.test.ts
+  s_e3556ba0769b4b::t_35851559f9f055 4
+lib/workers/live_score/index.ts
+  s_e3556ba0769b4b::t_35851559f9f055 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "76581e906119d23d356e4aaa5f7a1add262d1669",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
