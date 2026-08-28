@@ -1,0 +1,81 @@
+lib/knowledgeEngine/cluster.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 2-3
+pages/articles/import.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 9
+lib/knowledgeEngine/canonicalize.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 2-3
+lib/pipeline/jobKey.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 2
+lib/corpus/corpusService.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 8
+lib/useOnboardingChecklist.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 6
+pages/api/pipeline/enqueue.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 5-6
+pages/sites/[domain]/content-audit.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 15
+lib/workers/types.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 1
+__tests__/lib/activeWorkspace.test.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 1
+components/wordpress/WpConnectionsTable.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 7
+pages/_app.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 10
+pages/dashboard/index.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 13
+lib/knowledgeEngine/index.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 42-43
+lib/articles/articleWorkspaceLinks.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 1
+__tests__/lib/knowledgeEngine/cluster.test.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 3
+lib/knowledgeEngine/runKnowledgeEngine.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 10
+lib/knowledgeEngine/coverage.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 6
+lib/pipeline/pipelineQueue.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 1-2
+components/koala/shell/WorkspaceSelect.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 9
+lib/workers/serp/index.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 2
+components/koala/shell/Sidebar.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 5
+lib/knowledgeEngine/semanticMatch.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 2-3
+pages/articles/new.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 6
+pages/sites/[domain]/recommendations.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 12
+pages/setup.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 5
+components/common/TopbarSearch.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 6
+__tests__/lib/pipelineV7.engines.test.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 2
+components/dashboard/TrafficAlertsSection.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 8
+pages/articles/index.tsx
+  s_e3556ba0769b4b::t_929774e6f302d0 18
+scripts/pipeline-workers.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 45-46,107
+lib/pipeline/flowProducer.ts
+  s_e3556ba0769b4b::t_929774e6f302d0 14-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3a093913543e846e2e75f716e969f4a0c54e9d7e",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
