@@ -1,0 +1,287 @@
+pages/api/articles/[id]/index.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 11
+pages/api/rank-tracking/[slug]/configs.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/articles/[id]/index.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 53-54
+components/articles/ArticleEditor.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 18
+pages/api/cron/starter-nudge.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+lib/coverageStore.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/api/cron/wie-eval.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+src/infrastructure/siteAudit/hstsCheck.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 1
+pages/api/ai-visibility/internal/analyze-brands.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+src/infrastructure/siteAudit/externalLinkProbe.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 5
+src/infrastructure/ai/tools.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 11
+pages/api/articles/[id]/comments.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 13
+__tests__/api/jobProgressPhases.test.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 5
+lib/uploadToBlob.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 13
+pages/api/articles/backfill.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 11
+pages/api/invitations/[token]/accept.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 4
+pages/api/site-context/[id].ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 10
+pages/api/articles/analyze-batch.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 12,14
+pages/api/articles/import.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 15
+src/infrastructure/rankTracking/runner.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 1
+pages/api/articles/ai-visibility.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 10
+components/articles/WriteOptimizePanel.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 9
+pages/api/ai-visibility/internal/run-chunk.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 11
+pages/api/confirm-account.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+src/infrastructure/articles/articleContext.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 3
+pages/api/articles/publish.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 11
+pages/api/articles/[id]/wizard-state.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 13
+lib/fetchSitemapUrls.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 4
+pages/api/articles/[id]/generate-stream.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 13
+pages/api/automations/[slug]/index.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 14
+pages/api/cron/daily.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 13
+pages/api/cron/stripe-billing-reconcile.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 5
+pages/api/audit-tool/[slug]/create.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 9
+pages/api/domains/[slug]/run-setup.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+pages/api/rank-tracking/[slug]/metrics/refresh.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+lib/introductionAnalyzer.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/api/inbox/mark-read.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 5
+pages/api/articles/job-progress.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 14-15
+src/infrastructure/knowledgeEngine/competitorDocument.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 1
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 55-56,59
+pages/api/pixabay/search.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 5
+pages/api/rank-tracking/[slug]/organic-keyword-history.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+src/infrastructure/wie/eval/editorialJudge.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 4
+utils/parseKeywords.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/api/gsc/pages.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+pages/api/articles/plagiarism.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+components/common/DomainFaviconAvatar.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/api/rank-tracking/[slug]/check.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/api/rank-tracking/[slug]/history/summary.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+__tests__/lib/throttle.test.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 1
+pages/api/articles/ranksmile-agent.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 19
+pages/api/articles/[id]/growth-history.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 9
+pages/api/articles/accept.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 10
+__tests__/lib/mapPool.test.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 1
+src/infrastructure/seo/keywordData.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 25
+pages/api/inbox/index.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+pages/api/rank-tracking/[slug]/history/[keywordId].ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/api/system/cron-health.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+pages/api/articles/competitor-outlines.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 11
+lib/queueRunner.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+src/infrastructure/learning/scoreFeedback.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 7
+pages/api/audit.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 11
+src/infrastructure/wie/competitorSynthesis.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 5
+pages/api/articles/ask-ranksmile.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 16
+pages/api/ai-visibility/[slug]/history.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 9
+src/infrastructure/persistence/schema/ensureNotificationEmailTables.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 2
+pages/api/cron/rank-snapshots-retention.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 4
+pages/api/cron/autopilot.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 9
+lib/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 23
+pages/api/gsc/sites.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 27,49
+pages/api/articles/apply-readability.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 13
+pages/api/articles/index.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 13
+__tests__/api/payment-failed-lock.e2e.test.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 64
+src/infrastructure/persistence/schema/ensureBillingEmailTables.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 2
+pages/api/articles/ai-readability.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 12,17
+pages/api/domains/[slug]/topics/regenerate.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 5
+pages/api/render-page.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+pages/api/sites.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 12
+pages/api/image-proxy.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 6
+pages/api/ai-visibility/[slug]/data.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+pages/api/articles/[id]/content-plan.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 12,14
+pages/api/articles/fetch-site-links.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 9
+pages/api/articles/[id]/versions.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 10
+pages/api/cron/rank-tracking.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+pages/api/keyword-research/[slug]/run.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+pages/api/rank-tracking/[slug]/keywords.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/api/domains/detect-blog-paths.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+components/common/DomainFavicon.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+components/settings/BrandKnowledgeSettings.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 4
+pages/api/articles/suggest-internal-links.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 13
+pages/api/articles/[id]/ccm/live.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+pages/api/notify.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+components/articles/PixabayImageModal.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+pages/api/ai-visibility/[slug]/scan.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 10
+__tests__/lib/streamDelta.test.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 1
+pages/api/rank-tracking/[slug]/cost.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+src/infrastructure/harvest/fillMissingTopics.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 3
+pages/api/ai-visibility/internal/due-scans.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 9
+pages/api/articles/[id]/ccm/index.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+pages/api/articles/content-effort.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 11,14
+lib/auditRunner.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 14
+pages/api/brand-knowledge.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+pages/api/cron/plan-reservations.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 4
+pages/api/rank-tracking/[slug]/analytics.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+components/articles/WordPressExportModal.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+lib/keywordResearchRunner.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+pages/api/ai-visibility/[slug]/config.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+src/infrastructure/contentPlanner/fromArticleInputs.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 4
+pages/api/ai-visibility/[slug]/generate-prompts.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+pages/api/articles/generate-outline.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7,16
+lib/runActionExecution.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+pages/api/cron/ccm-compile.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 5
+pages/api/keyword-research/[slug]/create.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+pages/api/rank-tracking/[slug]/configs/[id].ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+components/articles/SocialMediaModal.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+pages/api/rank-tracking/[slug]/organic.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/api/articles/[id]/execute-action.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 7
+src/infrastructure/ai/aiCoverageJudge.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 11
+pages/api/articles/social-posts.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 11
+pages/api/workspaces/[id].ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 4
+pages/articles/index.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 17
+pages/api/rank-tracking/[slug]/results.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+pages/api/domains/configure.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 12
+pages/api/rank-tracking/[slug]/export.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+src/infrastructure/pipeline/enqueueFromDeepAnalysis.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 7
+src/infrastructure/siteAudit/sitemapValidation.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 5
+lib/emitObservations.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+pages/api/articles/[id]/generate.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 19,22
+pages/api/audit-tool/[slug]/run.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 8
+components/articles/InternalLinksPanel.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+pages/api/articles/[id]/debug-export.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 14
+pages/api/rank-tracking/[slug]/run.ts
+  s_e3556ba0769b4b::t_d340ee16d38b4e 2
+components/articles/ResearchOutlinePanel.tsx
+  s_e3556ba0769b4b::t_d340ee16d38b4e 3
+src/infrastructure/persistence/schema/ensureNotificationTables.ts
+  s_e3556ba0769b4b::t_3b7b599f552d45 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "530ba5c9d5aa98b37026de85a2a206883a2a1b81",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
