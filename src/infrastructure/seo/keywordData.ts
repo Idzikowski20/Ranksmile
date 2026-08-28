@@ -22,7 +22,7 @@ import { CoverageItem, hashId } from '@/src/core/domain/coverage/aiCoverage';
 import { normalizePl, tokenize } from '@/src/core/domain/terms/termMatch';
 import { isUsefulTerm, isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
 import { filterOnTopicTerms, isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
-import { throwIfAborted } from '@/lib/abortSignal';
+import { throwIfAborted } from '@/src/core/shared/abortSignal';
 
 export type KeywordSource = 'dataforseo' | 'gsc' | 'none';
 

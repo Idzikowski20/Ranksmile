@@ -1,7 +1,7 @@
 // lib/fetchSitemapUrls.ts — fetch all page URLs from sitemap.xml / sitemap index trees.
 import { assertPublicUrl } from './ssrfGuard';
 
-import { RANKSMILE_UA } from './httpConstants';
+import { RANKSMILE_UA } from '@/src/core/shared/httpConstants';
 const LOC_RE = /<loc>\s*([^<\s]+)\s*<\/loc>/gi;
 const MAX_CHILD_SITEMAPS = 12;
 const MAX_URLS = 5000;

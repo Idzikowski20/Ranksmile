@@ -6,7 +6,7 @@ import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/conten
 import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicGroup } from '@/src/core/domain/coverage/infoToCoverTopics';
-import { faviconUrl } from '../../lib/faviconUrl';
+import { faviconUrl } from '@/src/core/shared/faviconUrl';
 import DomainFavicon from '../common/DomainFavicon';
 import ScoreTrio from './ScoreTrio';
 import EffortChecklist from './EffortChecklist';

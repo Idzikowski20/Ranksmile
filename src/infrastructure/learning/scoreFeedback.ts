@@ -4,7 +4,7 @@
 import type { Feature } from '@/lib/primitives/types';
 import { recordOptimization } from '@/src/infrastructure/learning/learningLoop';
 import { calibrateAndPersist, extractFeatureVector } from '@/src/infrastructure/engines/calibration';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 export async function recordScoreFeedback(opts: {
   workspaceId: string;

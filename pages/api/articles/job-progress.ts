@@ -11,8 +11,8 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { affectedRows } from '../../../lib/queueRunner';
 import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
-import { safeJsonParse } from '../../../lib/safeJson';
-import { MAX_STREAM_CHARS } from '../../../lib/streamText';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
+import { MAX_STREAM_CHARS } from '@/src/core/shared/streamText';
 import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
 import { staleFinalizationSql } from '../../../lib/staleFinalization';
 

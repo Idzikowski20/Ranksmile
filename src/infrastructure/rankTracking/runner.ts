@@ -1,4 +1,4 @@
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import type { RankTrackingConfigRow, RankTrackingKeywordRow } from '@/lib/types/rankTracking';
 import { KEYWORDS_PER_BATCH, MAX_RUN_ATTEMPTS } from '@/src/infrastructure/rankTracking/cost';
 import { KEYWORD_MAX_ATTEMPTS } from '@/src/infrastructure/rankTracking/constants';

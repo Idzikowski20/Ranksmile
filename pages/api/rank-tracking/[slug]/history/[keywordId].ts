@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getErrorMessage } from '../../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { getConfig } from '@/src/infrastructure/rankTracking/service';
 import { getKeywordHistory } from '@/src/infrastructure/rankTracking/snapshotQueries';

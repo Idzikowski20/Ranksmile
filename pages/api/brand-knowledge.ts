@@ -4,7 +4,7 @@ import axios from 'axios';
 import verifyUser from '../../utils/verifyUser';
 import { sidecarUrl } from '../../lib/serviceUrls';
 import { assertPublicUrl } from '../../lib/ssrfGuard';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

@@ -4,7 +4,7 @@ import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { ensureUserTenancy } from '../../lib/tenancy';
 import { getAppSettings } from './settings';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import {
   enqueueKeywordPositionEmails,
   type DomainNotifyCandidate,

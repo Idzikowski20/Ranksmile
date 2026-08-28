@@ -50,8 +50,8 @@ import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchSc
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { parseSnapshot } from '../../../lib/coverageStore';
 import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '@/src/core/domain/articles/deepAnalysisProgress';
-import { getErrorMessage } from '../../../lib/errors';
-import { isAbortError } from '../../../lib/abortSignal';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { isAbortError } from '@/src/core/shared/abortSignal';
 import type { SectionEvent } from '../../../lib/optimizeSectionEvents';
 import { buildReviewDoc } from '../../../lib/optimizeReviewDoc';
 import { optimizeStore } from '../../../components/articles/optimizeStore';

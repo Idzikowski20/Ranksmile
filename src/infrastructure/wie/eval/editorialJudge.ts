@@ -1,7 +1,7 @@
 /**
  * Editorial Judge — LLM evaluator (not Writer). Code-review style rubrics.
  */
-import { safeJsonParse } from '@/lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import type { BlockerSeverity } from '@/src/infrastructure/wie/eval/publishGate';
 import { severityForWeakness } from '@/src/infrastructure/wie/eval/publishGate';
 

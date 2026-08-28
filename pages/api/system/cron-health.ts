@@ -4,7 +4,7 @@ import { latestCronRuns } from '../../../lib/cronWatchdog';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getCallerRole } from '../../../lib/members';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

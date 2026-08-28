@@ -5,7 +5,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { getPeopleAlsoAsk, isDataForSeoConfigured } from '../../../../lib/dataforseo';
-import { getErrorMessage } from '../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import {
   getDomainLocale,
   looksLikeLanguage,

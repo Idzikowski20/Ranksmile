@@ -5,7 +5,7 @@ import { rankBlogSegments } from '@/src/core/domain/blog/detectBlogPaths';
 import { fetchSitemapUrls } from '../../../lib/fetchSitemapUrls';
 import { ssrfSafeFetch } from '../../../lib/ssrfGuard';
 
-import { RANKSMILE_UA } from '../../../lib/httpConstants';
+import { RANKSMILE_UA } from '@/src/core/shared/httpConstants';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 /** True if a page shows article signals: JSON-LD Article/BlogPosting, datePublished, <article>, or RSS link. */

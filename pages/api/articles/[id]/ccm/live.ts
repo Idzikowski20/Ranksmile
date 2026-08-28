@@ -4,7 +4,7 @@ import verifyUser from '../../../../../utils/verifyUser';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
-import { getErrorMessage } from '../../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
 import { SqlCompileStore } from '../../../../../lib/intelligence/sqlCompileStore';
 import { getCcm, projectArticleIntelligence } from '../../../../../lib/intelligence/runtimeApi';

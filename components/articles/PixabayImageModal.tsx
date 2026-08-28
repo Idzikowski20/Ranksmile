@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { PixabayImage, PixabayResponse } from '../../pages/api/pixabay/search';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import Modal from '../koala/core/modal/modal';
 import Button from '../koala/core/button/button';
 import Input from '../koala/core/input/input';

@@ -1,5 +1,5 @@
 import db from '@/database/database';
-import { ignoreExistingSchema } from '@/lib/ignoreExistingSchema';
+import { ignoreExistingSchema } from '@/src/core/shared/ignoreExistingSchema';
 
 let ready: Promise<void> | null = null;
 const isPostgres = !!process.env.DATABASE_URL;

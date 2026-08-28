@@ -6,7 +6,7 @@ import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { findDueConfigIds, enqueueAiVisScan } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 import { queryRows } from '@/src/infrastructure/db/query';
-import { getErrorMessage } from '../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

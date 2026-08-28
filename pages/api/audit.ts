@@ -8,7 +8,7 @@ import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
 import Domain from '../../database/models/domain';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 

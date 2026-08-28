@@ -9,9 +9,9 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
-import { getErrorMessage } from '../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
-import { safeJsonParse } from '../../../../lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import {
   aiIntelFromScoreData,
   competitorsFromScoreData,

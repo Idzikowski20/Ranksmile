@@ -6,7 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { renderPage } from '../../../utils/spaScraper';
 import { ssrfSafeFetch } from '../../../lib/ssrfGuard';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 const FETCH_HEADERS = {

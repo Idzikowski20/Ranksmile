@@ -2,7 +2,7 @@
  * WIE Layer 2 — Competitor Synthesis (Source A).
  * Small JSON brief from Top-N competitor bodies — never dump full HTML into Writer.
  */
-import { safeJsonParse } from '@/lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 
 export type CompetitorSynthesis = {

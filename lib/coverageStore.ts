@@ -1,5 +1,5 @@
 import { CoverageItem, CoverageResult, CoverageSnapshot, computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
-import { safeJsonParse } from './safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 export interface CoverageSources {

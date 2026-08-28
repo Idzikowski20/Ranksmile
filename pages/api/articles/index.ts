@@ -10,7 +10,7 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, type ArticleRow } from '@/src/infrastructure/db/query';
 import type { SqlReplacements } from '../../../lib/types/db';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';

@@ -8,7 +8,7 @@ import { publishToWordPress, publishToNextJs } from '../../../lib/wordpressPubli
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows, ArticleRow } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

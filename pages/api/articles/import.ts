@@ -12,7 +12,7 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import type { ScoreData, NlpTerm } from '../../../lib/contentScore';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 import { renderPage } from '../../../utils/spaScraper';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { countOccurrences } from '../../../lib/contentScore';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { isSidecarConfigured } from '../../../lib/sidecar';

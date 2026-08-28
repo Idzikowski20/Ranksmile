@@ -1,6 +1,6 @@
 import type { Action, ActionExecution } from './primitives/types';
 import { executeAction, pickExecutor } from './primitives/actionExecutor';
-import { getErrorMessage } from './errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 async function recordActionEvent(
   payload: Record<string, unknown>,

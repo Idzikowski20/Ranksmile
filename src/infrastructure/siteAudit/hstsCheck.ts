@@ -1,4 +1,4 @@
-import { RANKSMILE_UA } from '@/lib/httpConstants';
+import { RANKSMILE_UA } from '@/src/core/shared/httpConstants';
 import { assertPublicUrl } from '@/lib/ssrfGuard';
 import type { HstsMissingInstance } from '@/src/infrastructure/siteAudit/types';
 

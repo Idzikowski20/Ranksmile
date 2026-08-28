@@ -8,7 +8,7 @@ import { readLocalSCData } from '../../../utils/searchConsole';
 import { buildGscUrlKeywordMap, normalizeUrlForMatch } from '../../../utils/gsc';
 import Domain from '../../../database/models/domain';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { queryAffected } from '../../../lib/types/db';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';

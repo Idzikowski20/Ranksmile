@@ -9,9 +9,9 @@ import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership'
 import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getErrorMessage } from '../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows } from '@/src/infrastructure/db/query';
-import { mapPool } from '../../../lib/mapPool';
+import { mapPool } from '@/src/core/shared/mapPool';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 const ANALYZE_BATCH_CONCURRENCY = 3;
