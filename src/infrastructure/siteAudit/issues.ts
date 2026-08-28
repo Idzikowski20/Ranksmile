@@ -1,4 +1,4 @@
-import { parseJsonish } from '@/lib/types/json';
+import { parseJsonish } from '@/src/core/shared/types/json';
 import { getCatalogEntry, formatIssueTitle, formatIssueLinkText } from '@/src/infrastructure/siteAudit/issueCatalog';
 import { probeExternal403Links } from '@/src/infrastructure/siteAudit/externalLinkProbe';
 import { checkHstsMissing } from '@/src/infrastructure/siteAudit/hstsCheck';

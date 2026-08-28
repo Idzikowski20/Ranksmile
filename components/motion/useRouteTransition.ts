@@ -1,6 +1,6 @@
 import { useRef, RefObject } from 'react';
 import { useRouter } from 'next/router';
-import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from './gsap';
+import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from '@/components/motion/gsap';
 
 /**
  * Fades/slides the referenced element in on mount and on every completed route change.

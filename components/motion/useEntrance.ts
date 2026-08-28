@@ -1,5 +1,5 @@
 import { useRef, RefObject } from 'react';
-import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from './gsap';
+import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from '@/components/motion/gsap';
 
 /**
  * One-shot mount entrance: fade + slight rise. For elements that appear (Auto-Optimize sections

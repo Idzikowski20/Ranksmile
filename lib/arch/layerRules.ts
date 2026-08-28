@@ -23,12 +23,9 @@ const OUTER = [
   /(?:^|[\\/])composition[\\/]/,
   /(?:^|[\\/])pages[\\/]/,
 ];
-// Forbid lib/* EXCEPT lib/types/* — the pure type-declaration barrel (db.ts,
-// sidecar.ts, rankTracking.ts, …) has no runtime/vendor coupling, so core may
-// import types from it transitionally. Those types fold into src/core during the
-// "lib/ infrastructure extraction" phase; until then this keeps the migration
-// unblocked without dragging runtime lib code into the pure core.
-const LIB = [/(?:^|[\\/])lib[\\/](?!types[\\/])/];
+// Forbid ALL lib/* from core. The type carve-out (lib/types) has been relocated to
+// src/core/shared/types, so core no longer needs any lib import.
+const LIB = [/(?:^|[\\/])lib[\\/]/];
 
 export const LAYER_RULES: LayerRule[] = [
   {

@@ -5,7 +5,7 @@ import { optimizeStore } from './optimizeStore';
 import { sanitizeArticleHtml } from '@/src/infrastructure/sanitizeHtml';
 import { WHOLE_ARTICLE_ID } from '@/src/infrastructure/optimizeWholeArticle';
 import { renderStructuredDiffHtml } from '@/src/infrastructure/optimizeWordDiff';
-import { useEntrance } from '../../lib/motion/useEntrance';
+import { useEntrance } from '@/components/motion/useEntrance';
 
 // React node-view for the contentOptimizer TipTap node.
 // Queued/scanning: original section while the stream runs.

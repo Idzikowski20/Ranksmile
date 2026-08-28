@@ -13,7 +13,7 @@ import {
 } from '@/src/infrastructure/domainLanguage';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { queryOne } from '@/src/infrastructure/db/query';
-import { parseJsonish } from '../../../../lib/types/json';
+import { parseJsonish } from '@/src/core/shared/types/json';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 /** Provenance tag from where Google surfaced the question. */

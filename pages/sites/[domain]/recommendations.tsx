@@ -6,7 +6,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
+import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
 import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';

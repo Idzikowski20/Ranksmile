@@ -3,7 +3,7 @@ import { assertCanManage } from '@/src/infrastructure/members';
 import { ensureUserTenancy } from '@/src/infrastructure/tenancy';
 import { assertInOrg } from '@/src/infrastructure/workspaces';
 
-import type { DbRow, SqlReplacements } from '@/lib/types/db';
+import type { DbRow, SqlReplacements } from '@/src/core/shared/types/db';
 
 type Row = DbRow;
 const select = async (sql: string, r: SqlReplacements): Promise<Row[]> => {

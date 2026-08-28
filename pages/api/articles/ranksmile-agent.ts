@@ -17,7 +17,7 @@ import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/ten
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 import type { ToolCtx } from '@/src/infrastructure/ai/types';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { flushSse } from '../../../lib/types/api';
+import { flushSse } from '@/src/core/shared/types/api';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 export const config = { api: { responseLimit: '10mb' } };

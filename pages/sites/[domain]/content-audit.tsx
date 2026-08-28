@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
+import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
 import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel, ToolRibbon, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
 import { useSortState } from '@/src/infrastructure/useSortState';
 import { useFetchDomains } from '../../../services/domains';

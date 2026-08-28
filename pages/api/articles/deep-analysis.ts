@@ -12,8 +12,8 @@ import { computeContentScore, countOccurrences } from '@/src/infrastructure/cont
 import { buildGradedCoverageSnapshot } from '@/src/infrastructure/buildCoverageSnapshot';
 import { dedupePaaQuestions } from '@/src/infrastructure/curateCoverageItems';
 import { harvestAiCoverage } from '@/src/infrastructure/harvestAiCoverage';
-import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult } from '../../../lib/types/sidecar';
-import { flushHeaders, flushSse } from '../../../lib/types/api';
+import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult } from '@/src/core/shared/types/sidecar';
+import { flushHeaders, flushSse } from '@/src/core/shared/types/api';
 import type { NlpTerm, ScoreData } from '@/src/infrastructure/contentScore';
 import {
   calibrateTermRangesFromCorpus,

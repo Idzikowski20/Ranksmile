@@ -2,7 +2,7 @@
 // array of Voice. Replaces the global content-settings.json store for voices.
 import db from '@/database/database';
 import type { Voice } from '@/src/infrastructure/contentSettings';
-import type { DbRow } from '@/lib/types/db';
+import type { DbRow } from '@/src/core/shared/types/db';
 
 /** Parse `domain.voices` JSON into a Voice[]; returns [] when missing/blank/invalid. */
 export async function getDomainVoices(domainId: number): Promise<Voice[]> {

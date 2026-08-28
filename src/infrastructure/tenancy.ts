@@ -4,7 +4,7 @@ import db from '@/database/database';
 import { ensureTenancyTables } from '@/src/infrastructure/persistence/schema/ensureTenancyTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 
-import type { DbRow, SqlReplacements } from '@/lib/types/db';
+import type { DbRow, SqlReplacements } from '@/src/core/shared/types/db';
 
 type Row = DbRow;
 async function select(sql: string, replacements: SqlReplacements): Promise<Row[]> {

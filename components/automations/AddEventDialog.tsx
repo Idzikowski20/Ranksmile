@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Modal, { ModalBody, ModalFooter } from '../koala/core/modal/modal';
 import { Button, Input, Select, Alert } from '../koala/core';
 import { Form, FormField, FormSection, FieldHint } from '../koala/forms';
-import type { AutomationPublishMode } from '../../lib/types/automations';
+import type { AutomationPublishMode } from '@/src/core/shared/types/automations';
 
 export type AddEventDialogProps = {
   open: boolean;

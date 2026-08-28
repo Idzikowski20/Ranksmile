@@ -7,7 +7,7 @@ import {
   revealHtmlInEditor,
   splitHtmlTopLevelBlocks,
   editorCanCommand,
-} from '../../../lib/editor/revealHtmlProgressive';
+} from '@/components/editor/revealHtmlProgressive';
 
 // jsdom implements neither, and the reveal calls both on every block.
 Element.prototype.scrollIntoView = () => {};

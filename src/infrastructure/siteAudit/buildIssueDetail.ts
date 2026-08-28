@@ -1,4 +1,4 @@
-import { parseJsonish } from '@/lib/types/json';
+import { parseJsonish } from '@/src/core/shared/types/json';
 import {
   buildIssuesReport,
   buildLinkIssueInstances,

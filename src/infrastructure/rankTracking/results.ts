@@ -8,8 +8,8 @@ import type {
   RankTrackingDeviceResult,
   RankTrackingKeywordRow,
   RankTrackingRow,
-} from '@/lib/types/rankTracking';
-import { devicesList, normalizeKeyword } from '@/lib/types/rankTracking';
+} from '@/src/core/shared/types/rankTracking';
+import { devicesList, normalizeKeyword } from '@/src/core/shared/types/rankTracking';
 import { metricsForKeyword, getLatestMetrics } from '@/src/infrastructure/rankTracking/keywordMetricsCache';
 import { baselineDate, getLatestSnapshots, getSnapshotsBeforeDate } from '@/src/infrastructure/rankTracking/snapshotQueries';
 

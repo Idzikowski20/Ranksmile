@@ -1,7 +1,7 @@
 import { useEffect, type RefObject } from 'react';
 import { ENGINES } from './content';
 
-type GsapModule = typeof import('../../lib/motion/gsap');
+type GsapModule = typeof import('@/components/motion/gsap');
 
 /**
  * All landing motion in one client effect.
@@ -21,7 +21,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement>) {
     let cancelled = false;
     let ctx: ReturnType<GsapModule['gsap']['context']> | undefined;
 
-    import('../../lib/motion/gsap').then((m) => {
+    import('@/components/motion/gsap').then((m) => {
       if (cancelled || m.prefersReducedMotion()) return;
       m.registerMotionPlugins();
       const { gsap, ScrollTrigger, EASE } = m;

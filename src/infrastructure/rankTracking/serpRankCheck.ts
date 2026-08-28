@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getKeywordOverview, isDataForSeoConfigured } from '@/src/infrastructure/dataforseo';
 import { serpCrawlBudget } from '@/src/infrastructure/dataforseoBudget';
-import type { RankDevice } from '@/lib/types/rankTracking';
+import type { RankDevice } from '@/src/core/shared/types/rankTracking';
 import { withDfsRateLimit } from '@/src/infrastructure/rankTracking/dfsRateLimiter';
 
 const BASE = 'https://api.dataforseo.com/v3';

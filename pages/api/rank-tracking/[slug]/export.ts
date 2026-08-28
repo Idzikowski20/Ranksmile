@@ -3,8 +3,8 @@ import { getErrorMessage } from '@/src/core/shared/errors';
 import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
 import { exportRankRows } from '@/src/infrastructure/rankTracking/exporter';
 import { getConfig, getResults } from '@/src/infrastructure/rankTracking/service';
-import type { ComparePeriod, ExportFormat } from '../../../../lib/types/rankTracking';
-import { devicesList } from '../../../../lib/types/rankTracking';
+import type { ComparePeriod, ExportFormat } from '@/src/core/shared/types/rankTracking';
+import { devicesList } from '@/src/core/shared/types/rankTracking';
 import { withOrgPaymentAccess } from '@/src/infrastructure/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
