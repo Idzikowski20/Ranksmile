@@ -1,0 +1,73 @@
+lib/curateCoverageItems.ts
+  s_e3556ba0769b4b::t_52929d7707c025 11
+__tests__/lib/corpusNoiseFilter.chrome.test.ts
+  s_e3556ba0769b4b::t_52929d7707c025 9
+lib/aiScore/liveFactors.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 2
+__tests__/lib/ao/sectionTargetFallback.test.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 3
+lib/ao/sectionTargeting.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 6
+lib/wie/writer.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 7
+__tests__/lib/corpusNoiseFilter.test.ts
+  s_e3556ba0769b4b::t_52929d7707c025 1
+__tests__/lib/curateCoverageItems.test.ts
+  s_e3556ba0769b4b::t_52929d7707c025 8
+__tests__/lib/sitemapLinkTargets.test.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 1
+lib/contentPlanner/knowledgeIntelligence.ts
+  s_e3556ba0769b4b::t_52929d7707c025 15
+lib/ao/runPrecisionOptimize.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 22
+__tests__/lib/wie/brandDna.test.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 1
+lib/wie/competitorSynthesis.ts
+  s_e3556ba0769b4b::t_52929d7707c025 6
+__tests__/ao/golden/v4/precisionAoV4.test.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 8
+lib/wie/brandDnaOnboarding.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 5
+lib/ao/applyGatedFaq.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 8
+__tests__/lib/aiScore/introductionFactors.test.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 1
+lib/knowledgeEngine/extract.ts
+  s_e3556ba0769b4b::t_52929d7707c025 1
+lib/ao/aoQualityGates.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 4-5,24
+__tests__/lib/wie/corpusClaims.test.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 1
+pages/api/articles/optimize-sections.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 33
+pages/api/articles/[id]/generate.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 25
+__tests__/lib/ao/applyGatedFaq.test.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 2
+lib/reconcilePostGenerateArticle.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 13
+pages/api/articles/deep-analysis.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 863
+__tests__/lib/ao/precisionAo.test.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 6
+lib/articles/articleFacts.ts
+  s_e3556ba0769b4b::t_52929d7707c025 8
+__tests__/ao/golden/cuckolding.test.ts
+  s_e3556ba0769b4b::t_a1e34f21c2cc97 12,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "88e987c85b9c66a30f012107a21df0ade693e8be",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
