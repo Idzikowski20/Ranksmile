@@ -14,7 +14,7 @@ import {
 } from './CheckoutStripeProvider';
 import type { CheckoutFieldErrors } from '../../lib/checkoutValidation';
 import type { BillingPeriod, CheckoutPlan } from '@/src/core/domain/billing/plans';
-import type { UpgradePreview } from '../../lib/billing/billingUpgrade';
+import type { UpgradePreview } from '@/src/infrastructure/billing/billingUpgrade';
 import {
   CHECKOUT_PLANS,
   formatEuro,

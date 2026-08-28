@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from 'react-query';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import fetchJson from '../../../lib/fetchJson';
 import { formatTrialCountdown, planEndLine, type PlanSummaryData } from '../../../lib/planLimits';
-import { hasActiveBillingEntitlement } from '../../../lib/billing/billingEntitlement';
+import { hasActiveBillingEntitlement } from '@/src/infrastructure/billing/billingEntitlement';
 import type { SubscriptionStatus } from '../../../lib/orgBilling';
 import { Icon } from '../icons/Icon';
 import { PlanUsageMetricRow } from '../product/PlanUsageMetricRow';

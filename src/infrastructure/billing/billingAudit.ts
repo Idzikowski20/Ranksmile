@@ -1,13 +1,13 @@
 /**
  * Server billing observability — ledger writes. Import only from API / lib server paths.
  */
-import db from '../../database/database';
+import db from '@/database/database';
 import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ensureBillingTables';
 import {
   ensureCorrelationId,
   isBillingAuditLogEnabled,
   type BillingEventPayload,
-} from './billingAuditShared';
+} from '@/src/infrastructure/billing/billingAuditShared';
 
 export {
   BillingSource,
@@ -21,7 +21,7 @@ export {
   type BillingDecision,
   type BillingEventKind,
   type BillingEventPayload,
-} from './billingAuditShared';
+} from '@/src/infrastructure/billing/billingAuditShared';
 
 export async function emitBillingEvent(payload: BillingEventPayload): Promise<void> {
   const correlationId = ensureCorrelationId(payload.correlationId);

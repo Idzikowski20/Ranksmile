@@ -1,5 +1,5 @@
-import type { BillingContext, PaymentMethodCapabilities } from './paymentMethodViewModel';
-import { isPaymentMethodLockedStatus } from './billingLockedStatuses';
+import type { BillingContext, PaymentMethodCapabilities } from '@/src/infrastructure/billing/paymentMethodViewModel';
+import { isPaymentMethodLockedStatus } from '@/src/infrastructure/billing/billingLockedStatuses';
 
 function isOnlyCard(ctx: BillingContext): boolean {
   return ctx.paymentMethods.length <= 1;

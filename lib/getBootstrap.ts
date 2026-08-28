@@ -9,7 +9,7 @@ import {
   type Workspace,
 } from './workspaces';
 import { getOrgBillingState } from './orgBilling';
-import { grantedAccessAtSomePoint } from './billing/billingEverSubscribed';
+import { grantedAccessAtSomePoint } from '@/src/infrastructure/billing/billingEverSubscribed';
 import { ensureUserTenancy } from './tenancy';
 import { isPaymentFailedLocked } from './paymentFailedLock';
 import {

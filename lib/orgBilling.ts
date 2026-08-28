@@ -8,7 +8,7 @@ import {
   ensureCorrelationId,
   isEntitledStatus,
   type BillingAuditContext,
-} from './billing/billingAudit';
+} from '@/src/infrastructure/billing/billingAudit';
 import { ensureBillingTables } from '@/src/infrastructure/persistence/schema/ensureBillingTables';
 import { queryOne } from './db/query';
 import type { LegacyPlanSlug } from '@/src/core/domain/billing/prices';

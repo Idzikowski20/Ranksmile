@@ -1,4 +1,4 @@
-import type { PaymentMethodViewModel } from './paymentMethodViewModel';
+import type { PaymentMethodViewModel } from '@/src/infrastructure/billing/paymentMethodViewModel';
 
 /**
  * Pick a replacement PM after removing `removedId`.

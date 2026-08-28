@@ -16,14 +16,14 @@ jest.mock('../../../lib/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => null),
 }));
 
-jest.mock('../../../lib/billing/billingInvoices', () => ({
+jest.mock('@/src/infrastructure/billing/billingInvoices', () => ({
   listOrgBillingInvoices: jest.fn(async () => []),
 }));
 
 import { billingError } from '@/src/core/domain/billing/errors';
-import { projectTimeline, type BillingDomainEvent } from '../../../lib/billing/domainEvents';
-import { BILLING_SNAPSHOT_SCHEMA_VERSION } from '../../../lib/billing/buildBillingSnapshot';
-import { enrichPaymentMethodViewModels } from '../../../lib/billing/paymentMethodService';
+import { projectTimeline, type BillingDomainEvent } from '@/src/infrastructure/billing/domainEvents';
+import { BILLING_SNAPSHOT_SCHEMA_VERSION } from '@/src/infrastructure/billing/buildBillingSnapshot';
+import { enrichPaymentMethodViewModels } from '@/src/infrastructure/billing/paymentMethodService';
 
 describe('billing domain events → timeline', () => {
   it('projects enum type + SOURCE without human labels', () => {

@@ -8,7 +8,7 @@ jest.mock('../../lib/orgBilling', () => ({
   isTerminalSubscriptionStatus: (status: string | null | undefined) => status === 'canceled' || status === 'incomplete_expired',
 }));
 
-jest.mock('../../lib/billing/billingAudit', () => ({
+jest.mock('@/src/infrastructure/billing/billingAudit', () => ({
   BillingSource: {
     CHECKOUT: 'CHECKOUT',
     ACTIVATE_TRIAL: 'ACTIVATE_TRIAL',

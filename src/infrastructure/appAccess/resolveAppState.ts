@@ -4,7 +4,7 @@ import type {
   ResolvedAppState,
   WorkspaceState,
 } from '@/src/infrastructure/appAccess/types';
-import { hasActiveBillingEntitlement } from '@/lib/billing/billingEntitlement';
+import { hasActiveBillingEntitlement } from '@/src/infrastructure/billing/billingEntitlement';
 import type { SubscriptionStatus } from '@/lib/orgBilling';
 
 /**

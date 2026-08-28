@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { billingError } from '@/src/core/domain/billing/errors';
-import { appendBillingDomainEvent } from '../../../../../lib/billing/domainEvents';
+import { appendBillingDomainEvent } from '@/src/infrastructure/billing/domainEvents';
 import {
   listPaymentMethods,
   setDefaultPaymentMethod,
-} from '../../../../../lib/billing/paymentMethodService';
-import { BillingPolicy } from '../../../../../lib/billing/billingPolicy';
+} from '@/src/infrastructure/billing/paymentMethodService';
+import { BillingPolicy } from '@/src/infrastructure/billing/billingPolicy';
 import { assertCanManage } from '../../../../../lib/members';
 import { getOrgBillingState } from '../../../../../lib/orgBilling';
 import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';

@@ -4,7 +4,7 @@ import { getCheckoutPlan, getPlanPeriodPrice } from '@/src/core/domain/billing/p
 import {
   calculateStripeTaxPreview,
   type TaxPreviewResult,
-} from '../../../lib/billing/stripeTaxPreview';
+} from '@/src/infrastructure/billing/stripeTaxPreview';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { getStripe, isStripeConfigured } from '../../../lib/stripe';
 import { getCurrentUserId } from '../../../utils/getUser';
