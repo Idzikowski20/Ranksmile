@@ -1,5 +1,5 @@
 import type { ScoreFactor } from '@/src/core/domain/aiScore/factors';
-import { scoreIntroduction } from './introductionFactors';
+import { scoreIntroduction } from '@/src/core/domain/aiScore/introductionFactors';
 
 type ScoreDataLike = {
   terms?: Array<{ term?: string }>;

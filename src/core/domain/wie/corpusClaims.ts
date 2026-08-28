@@ -11,7 +11,7 @@
  * Deliberately heuristic, no LLM: this runs over up to five full competitor bodies on
  * every deep analysis, and the synthesis call already covers the interpretive work.
  */
-import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
+import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import { seedTokens, tokensShareStem } from '@/src/core/domain/relevance/topicRelevance';
 import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
 

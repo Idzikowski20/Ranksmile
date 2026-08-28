@@ -3,7 +3,7 @@ import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { filterCandidatesByIntent, validatePlanStepAction } from '../../../lib/ao/intentGuard';
 import { buildPrecisionEditPlan } from '../../../lib/ao/editPlan';
 import { DEFAULT_EDIT_BUDGET } from '@/src/core/domain/optimize/editBudget';
-import { runEditSafetyGate, countWords } from '../../../lib/ao/editSafetyGate';
+import { runEditSafetyGate, countWords } from '@/src/core/domain/optimize/editSafetyGate';
 import {
   coverageStateFromQuality,
   isAdequatelyCovered,

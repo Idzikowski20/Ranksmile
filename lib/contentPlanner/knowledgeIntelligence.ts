@@ -12,7 +12,7 @@
  * the sentence guards drop anything under 20 characters or 4 words — which would have
  * quietly emptied the knowledge graph of its shortest facts.
  */
-import { isCorpusNoiseClaim } from '../corpusNoiseFilter';
+import { isCorpusNoiseClaim } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import type {
   ClaimImportance,
   GainClass,

@@ -4,7 +4,7 @@
  */
 import { buildWieWriteContext, formatWieWriteBlocks, type WieWriteContext } from './writerContext';
 import { evaluateRxQualityGate, type RxGateResult } from './rxQualityGate';
-import { judgeArticleQuality, type QualityJudgeResult } from './qualityJudge';
+import { judgeArticleQuality, type QualityJudgeResult } from '@/src/core/domain/wie/qualityJudge';
 import { scoreEeat, EEAT_SOFT_FLOOR, type EeatBreakdown } from '@/src/core/domain/wie/eeatScore';
 import type { CompetitorSynthesis } from './competitorSynthesis';
 import { openingPolicyViolated } from './enforceOpeningPolicy';

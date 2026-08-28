@@ -22,7 +22,7 @@ import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 import { safeJsonParse } from '../../../../lib/safeJson';
 import { llmGateway } from '../../../../lib/llmGateway';
 import { gatherBlogUrls } from '../../../../lib/gatherBlogUrls';
-import { pickLinkTargets } from '../../../../lib/sitemapLinkTargets';
+import { pickLinkTargets } from '@/src/core/domain/seo/sitemapLinkTargets';
 import { pipelineVersionTag } from '../../../../lib/pipelineVersion';
 import {
   aiIntelFromScoreData,

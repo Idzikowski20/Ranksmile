@@ -30,7 +30,7 @@ import {
    validateFaqHtmlStructure,
 } from '../../../lib/aoFaqSection';
 import { applyGatedFaqMerge } from '../../../lib/ao/applyGatedFaq';
-import { buildCriticalContentMap } from '../../../lib/ao/criticalContentMap';
+import { buildCriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import { countWordsFromHtml } from '../../../lib/ao/aoBaseline';
 import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '@/src/core/domain/optimize/aoRunOutcome';

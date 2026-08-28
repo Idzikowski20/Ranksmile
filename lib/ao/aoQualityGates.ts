@@ -1,8 +1,8 @@
 /**
  * v4 / v4.1 quality gates: invariant, semantic, candidate (TEMP vs WORKING), final (FINAL vs BASELINE).
  */
-import type { CriticalContentMap } from './criticalContentMap';
-import { unitSemanticallyPresent } from './criticalContentMap';
+import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
+import { unitSemanticallyPresent } from '@/src/core/domain/optimize/criticalContentMap';
 import type {
   AoScores,
   ScoreAvailability,
@@ -21,7 +21,7 @@ import {
 } from '@/src/core/domain/optimize/aoScoreDelta';
 import type { AoRejectionReason } from '@/src/core/domain/optimize/aoRejectionReason';
 import { countWordsFromHtml } from './aoBaseline';
-import { runEditSafetyGate, type RejectReason } from './editSafetyGate';
+import { runEditSafetyGate, type RejectReason } from '@/src/core/domain/optimize/editSafetyGate';
 import type { EditBudget } from '@/src/core/domain/optimize/editBudget';
 import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 

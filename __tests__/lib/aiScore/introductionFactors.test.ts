@@ -1,4 +1,4 @@
-import { scoreIntroduction } from '../../../lib/aiScore/introductionFactors';
+import { scoreIntroduction } from '@/src/core/domain/aiScore/introductionFactors';
 import { aioScore, factsCoverageFactor, type ScoreFactor } from '@/src/core/domain/aiScore/factors';
 
 const html = `

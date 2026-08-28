@@ -9,14 +9,14 @@ import { buildIntentProfile, textHitsForbidden } from '@/src/core/domain/optimiz
 import { filterCandidatesByIntent } from '../../../lib/ao/intentGuard';
 import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
 import { buildPrecisionEditPlan } from '../../../lib/ao/editPlan';
-import { runEditSafetyGate } from '../../../lib/ao/editSafetyGate';
+import { runEditSafetyGate } from '@/src/core/domain/optimize/editSafetyGate';
 import { DEFAULT_EDIT_BUDGET } from '@/src/core/domain/optimize/editBudget';
 import { selectFaqQuestions, validateFaqHtmlStructure } from '../../../lib/aoFaqSection';
 import { chooseStrategyFromDiagnosis } from '../../../lib/ao/optimizationPolicy';
 import { resolveAoWorkOutcome, aoOutcomeUserMessage } from '@/src/core/domain/optimize/aoRunOutcome';
 import { selectSectionTarget } from '../../../lib/ao/sectionTargeting';
 import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
-import type { CriticalContentMap } from '../../../lib/ao/criticalContentMap';
+import type { CriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
 import type { Section } from '../../../lib/articles/articleSections';
 
 const ARTICLE = {

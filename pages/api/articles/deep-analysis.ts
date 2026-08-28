@@ -860,7 +860,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (corpusTexts.length && (resolvedKeyword || pipelineKeyword || keyword)) {
       try {
-        const { extractCorpusClaimsByUrl } = await import('../../../lib/wie/corpusClaims');
+        const { extractCorpusClaimsByUrl } = await import('@/src/core/domain/wie/corpusClaims');
         const byUrl = extractCorpusClaimsByUrl(
           competitorBenchmarks?.corpusByUrl ?? {},
           resolvedKeyword || pipelineKeyword || keyword || '',
