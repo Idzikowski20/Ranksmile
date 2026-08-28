@@ -14,11 +14,11 @@ export const coverageWorker: PipelineWorker = {
     const keyword = String(ctx.payload.keyword || '').trim();
     const corpusId = ctx.payload.corpusId != null ? String(ctx.payload.corpusId) : '';
     const plainText = String(ctx.payload.plainText || ctx.payload.html || '');
-    const { getCorpusById } = await import('../../corpus/corpusService');
+    const { getCorpusById } = await import('@/src/infrastructure/corpus/corpusService');
     const { runCoverageEngine } = await import('@/src/core/domain/engines/coverageEngine');
     const { runGapEngine } = await import('@/src/core/domain/engines/gapEngine');
     const { runRecommendationEngine } = await import('../../engines/gapToReco');
-    const { upsertSerpCoverageFeatures } = await import('../../features/serpCoverageFeatures');
+    const { upsertSerpCoverageFeatures } = await import('@/src/infrastructure/features/serpCoverageFeatures');
     const { computeMultiScore } = await import('@/src/core/domain/engines/multiScore');
     const { cachePut } = await import('../../pipeline/cacheLayers');
     const { isWorkerAllowedAtStage } = await import('../../pipeline/pipelineStage');

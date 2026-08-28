@@ -7,7 +7,7 @@ import {
   serpChangeRatio,
   shouldForceRefresh,
   type VolatilityClass,
-} from '../corpus/corpusService';
+} from '@/src/infrastructure/corpus/corpusService';
 
 export type RefreshDecision = {
   shouldRefresh: boolean;

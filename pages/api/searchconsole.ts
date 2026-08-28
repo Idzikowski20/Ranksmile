@@ -5,7 +5,7 @@ import { getCurrentUserId } from '../../utils/getUser';
 import {
   cronRefreshSearchConsoleData,
   getDomainSearchConsoleData,
-} from '../../lib/gsc/domainSearchData';
+} from '@/src/infrastructure/gsc/domainSearchData';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 import { assertCronSecret } from '../../lib/cronAuth';
 

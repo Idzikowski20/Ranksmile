@@ -1,8 +1,8 @@
-jest.mock('../../lib/corpus/corpusService', () => ({
+jest.mock('@/src/infrastructure/corpus/corpusService', () => ({
   getCorpusById: jest.fn(async () => null),
 }));
 
-jest.mock('../../lib/features/serpCoverageFeatures', () => ({
+jest.mock('@/src/infrastructure/features/serpCoverageFeatures', () => ({
   upsertSerpCoverageFeatures: jest.fn(async () => ({})),
 }));
 

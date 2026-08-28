@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@googleapis/searchconsole';
 import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
-import { GOOGLE_OAUTH_SCOPES, upsertAccountForUser } from '../../../lib/gsc/gscAccounts';
+import { GOOGLE_OAUTH_SCOPES, upsertAccountForUser } from '@/src/infrastructure/gsc/gscAccounts';
 import { resolveGscPostOAuthRedirect } from '@/src/core/domain/gsc/gscOAuthRedirect';
 
 function parseState(state: string): { domain?: string; redirect: string | null; userId?: string | null; nonce?: string } {

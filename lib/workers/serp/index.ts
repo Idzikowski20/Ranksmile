@@ -20,7 +20,7 @@ export const serpWorker: PipelineWorker = {
       getFreshCorpus,
       createCorpusFromSerpUrls,
       upsertCompetitorDocuments,
-    } = await import('../../corpus/corpusService');
+    } = await import('@/src/infrastructure/corpus/corpusService');
     const { decideCorpusRefresh, volatilityFromKeywordHints } = await import('../../pipeline/scheduler');
     const { cacheGetOrLoad, cachePut } = await import('../../pipeline/cacheLayers');
     const { recordJobCostActual } = await import('../../pipeline/costTelemetry');

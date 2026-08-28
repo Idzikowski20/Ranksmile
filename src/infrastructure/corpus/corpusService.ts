@@ -3,7 +3,7 @@
  * Pipeline workers consume this API only; they do not own scrape/persist logic.
  */
 import { createHash, randomUUID } from 'crypto';
-import db from '../../database/database';
+import db from '@/database/database';
 import { ensureCorpusTables } from '@/src/infrastructure/persistence/schema/ensureCorpusTables';
 import { PIPELINE_VERSION } from '@/src/core/domain/pipeline/queuePriorities';
 

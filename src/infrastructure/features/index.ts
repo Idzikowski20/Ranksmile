@@ -4,4 +4,4 @@ export {
   runFeatures,
   type FeatureContext,
   type FeatureProducer,
-} from './featureEngine';
+} from '@/src/infrastructure/features/featureEngine';

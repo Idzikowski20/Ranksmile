@@ -1,6 +1,6 @@
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import type { ArticleContext } from './articles/articleContext';
-import { runFeatures } from './features/featureEngine';
+import { runFeatures } from '@/src/infrastructure/features/featureEngine';
 import {
   getFeatureStoreOrNull,
   persistFeatureRun,

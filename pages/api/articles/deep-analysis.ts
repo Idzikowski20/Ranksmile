@@ -37,7 +37,7 @@ import {
 } from '../../../lib/articles/articleKeywordDiscovery';
 import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPageKeyword';
 import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
-import { persistAiVisibilityRun } from '../../../lib/aiVisibility/aiVisibilityStore';
+import { persistAiVisibilityRun } from '@/src/infrastructure/aiVisibility/aiVisibilityStore';
 import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
 import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { sidecarBase, nextjsUrl } from '../../../lib/sidecar';

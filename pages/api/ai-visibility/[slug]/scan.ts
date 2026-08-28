@@ -4,7 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
-import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '../../../../lib/aiVisibility/aiVisibilityScan';
+import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 import { queryOne } from '../../../../lib/db/query';
 import { callSidecar } from '../../../../lib/sidecar';
 import { getErrorMessage } from '../../../../lib/errors';

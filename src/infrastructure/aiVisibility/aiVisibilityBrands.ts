@@ -5,9 +5,9 @@
  * chunk mirrors runScanChunk (resumable, idempotent, per-row best effort).
  */
 import { generateText } from 'ai';
-import { deepseek } from '../ai/deepseek';
-import { queryOne, queryRows } from '../db/query';
-import db from '../../database/database';
+import { deepseek } from '@/lib/ai/deepseek';
+import { queryOne, queryRows } from '@/lib/db/query';
+import db from '@/database/database';
 import { buildBrandPrompt, parseBrandResponse, RawBrand } from '@/src/core/domain/aiVisibility/brands';
 
 // Re-export the pure brand helpers (now src/core/domain/aiVisibility/brands) so

@@ -7,7 +7,7 @@ import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schem
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
 import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '@/src/core/domain/aiVisibility/metrics';
-import { loadScanResultRows, loadScanCitationRows, getDisplayScan, getPreviousDisplayScan } from '../../../../lib/aiVisibility/aiVisibilityRead';
+import { loadScanResultRows, loadScanCitationRows, getDisplayScan, getPreviousDisplayScan } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import { refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
