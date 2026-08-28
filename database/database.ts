@@ -28,7 +28,9 @@ function createConnection(): Sequelize {
          dialectOptions: isLocalPostgresUrl(DATABASE_URL) ? {} : {
             ssl: {
                require: true,
-               rejectUnauthorized: false,
+               // Neon serves publicly-trusted certs — verifying them costs nothing and
+               // closes the MITM hole that rejectUnauthorized:false left open.
+               rejectUnauthorized: true,
             },
          },
          // Neon cold-start + DNS blips: default acquire is too tight under pool pressure

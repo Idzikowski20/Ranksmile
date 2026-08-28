@@ -1,6 +1,7 @@
 // GET  /api/articles?domainId=X  — lista artykułów
 // POST /api/articles              — utwórz artykuł (bez AI)
 import type { NextApiRequest, NextApiResponse } from 'next';
+import TTLCache from '@isaacs/ttlcache';
 import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
@@ -30,6 +31,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    return res.status(405).json({ error: 'Method not allowed' });
 }
 
+// Workspace→domain mapping changes only on domain create/move (rare, admin-side), yet every
+// articles request re-queried it. 30s TTL bounds the staleness window for access revocation.
+const domainIdsCache = new TTLCache<string, number[]>({ max: 500, ttl: 30_000 });
+
 /** Domain IDs in the user's active (scoped) workspace. */
 export async function getUserDomainIds(
    userId: string | null,
@@ -40,8 +45,13 @@ export async function getUserDomainIds(
       ? await getScopedWorkspaceIds(req, userId)
       : await getAccessibleWorkspaceIds(userId);
    if (!wsIds.length) return [];
+   const cacheKey = [...wsIds].sort((a, b) => a - b).join(',');
+   const hit = domainIdsCache.get(cacheKey);
+   if (hit) return hit;
    const domains = await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } }, attributes: ['ID'] });
-   return domains.map((d) => d.ID);
+   const ids = domains.map((d) => d.ID);
+   domainIdsCache.set(cacheKey, ids);
+   return ids;
 }
 
 async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: string | null) {
