@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { getCatalogEntry } from '../../lib/siteAudit/issueCatalog';
+import { getCatalogEntry } from '@/lib/siteAudit/issueCatalog';
 import type { SiteAuditIssueSummary } from '../../lib/siteAudit/types';
 import { useAnchorDismiss } from './useAnchorDismiss';
 

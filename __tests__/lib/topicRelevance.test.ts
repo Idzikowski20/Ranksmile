@@ -1,4 +1,4 @@
-import { isKeywordOnTopic, filterOnTopicTerms, filterNlpTermsForAnalysis } from '../../lib/topicRelevance';
+import { isKeywordOnTopic, filterOnTopicTerms, filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
 
 describe('topicRelevance', () => {
   it('rejects legal/education noise unrelated to detektyw warszawa', () => {

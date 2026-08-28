@@ -11,7 +11,7 @@
  * contains `temida`).
  */
 import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
-import { tokensShareStem } from '../topicRelevance';
+import { tokensShareStem } from '@/src/core/domain/relevance/topicRelevance';
 import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 
 /** Below this a token matches hostnames by accident ("pl", "biz", "osob"). */

@@ -1,7 +1,7 @@
 import { normalizeUrlForMatch } from '../utils/gsc';
 import { tokenize } from '@/src/core/domain/terms/termMatch';
 import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
-import { isKeywordOnTopic } from './topicRelevance';
+import { isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
 
 function bestTokenOverlap(query: string, candidates: string[], fallback: string): string {
   const queryTokens = new Set(tokenize(query.toLowerCase()));

@@ -6,14 +6,14 @@ import type {
   CompareSection,
   CtaState,
   PlanSlug,
-} from '../../../lib/pricing/planDefinition';
+} from '@/src/core/domain/pricing/planDefinition';
 import {
   COMPARE_SECTIONS,
   PRICING_GRID_SLUGS,
   getPlanDefinition,
   planDisplayPrice,
   trackPricingEvent,
-} from '../../../lib/pricing/planDefinition';
+} from '@/src/core/domain/pricing/planDefinition';
 import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import type { PricingCardAction } from './PricingCard';
 import { semantic } from '../tokens/semantic';

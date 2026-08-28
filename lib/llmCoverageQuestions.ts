@@ -9,7 +9,7 @@ import { cached, TTL } from './cache/fileCache';
 import { getPeopleAlsoAsk, isDataForSeoConfigured } from './dataforseo';
 import { runModelPrompt, type AiModel } from './dataforseoLlm';
 import { isUsefulCitationPrompt } from './citationPrompts';
-import { isKeywordOnTopic } from './topicRelevance';
+import { isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 export type LlmCoverageSource = 'ai_overview' | 'chat_gpt' | 'gemini' | 'perplexity' | 'reddit';

@@ -8,7 +8,7 @@ import {
   EXTRA_CATEGORIES,
   SEVERITY_GROUP_INFO,
   VISIBLE_CATEGORIES,
-} from '../../lib/siteAudit/issueCatalog';
+} from '@/lib/siteAudit/issueCatalog';
 import type {
   IssueCategory,
   IssueSeverity,

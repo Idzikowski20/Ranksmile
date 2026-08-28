@@ -1,5 +1,5 @@
 import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
-import { tokensShareStem } from '../topicRelevance';
+import { tokensShareStem } from '@/src/core/domain/relevance/topicRelevance';
 import type { HarvestedQuestion } from './canonicalizeQuestion';
 
 export const PLACEHOLDER_THRESHOLD = 0.25;

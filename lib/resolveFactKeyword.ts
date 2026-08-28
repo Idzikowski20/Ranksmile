@@ -1,6 +1,6 @@
 import { keywordFromUrl } from './inferPageKeyword';
 import { factReadinessScore } from './factReadiness';
-import { seedTokens } from './topicRelevance';
+import { seedTokens } from '@/src/core/domain/relevance/topicRelevance';
 
 /**
  * Keyword for facts / PAA / citations — must align with article body, not domain-wide GSC noise.

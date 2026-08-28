@@ -12,7 +12,7 @@
  * every deep analysis, and the synthesis call already covers the interpretive work.
  */
 import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
-import { seedTokens, tokensShareStem } from '../topicRelevance';
+import { seedTokens, tokensShareStem } from '@/src/core/domain/relevance/topicRelevance';
 import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
 
 /**

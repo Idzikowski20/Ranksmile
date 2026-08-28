@@ -3,7 +3,7 @@ import type { EmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embedd
 import { getEmbeddingProvider } from '@/src/core/domain/knowledgeEngine/embeddingProvider';
 import { semanticMatchScore } from './semanticMatch';
 import { CANONICALIZE_SIM_MIN } from './constants';
-import { tokensShareStem } from '../topicRelevance';
+import { tokensShareStem } from '@/src/core/domain/relevance/topicRelevance';
 import type { CanonicalClaim, KnowledgeGap, TopicBlock, TopicBlockRole } from '@/src/core/domain/knowledgeEngine/types';
 
 function blockId(title: string): string {

@@ -16,7 +16,7 @@ import {
   resolveCtaState,
   trackPricingEvent,
   type PlanSlug,
-} from '../../lib/pricing/planDefinition';
+} from '@/src/core/domain/pricing/planDefinition';
 import { Alert, Button, Link, SegmentedControl } from '../koala/core';
 import { ComparePricingTable, PricingCard, PricingFaqSection } from '../koala/product';
 import type { FaqItem, PricingCardAction } from '../koala/product';

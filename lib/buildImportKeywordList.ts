@@ -5,7 +5,7 @@
 import { normalizeUrlForMatch, kwScore, type GscKeywordRow } from '../utils/gsc';
 import { inferPageKeyword, keywordFromUrl, urlAnchorSeed } from './inferPageKeyword';
 import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
-import { isKeywordOnTopic } from './topicRelevance';
+import { isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
 
 export type { GscKeywordRow };
 

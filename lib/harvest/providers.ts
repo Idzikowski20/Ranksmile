@@ -1,6 +1,6 @@
 import { getPeopleAlsoAsk, isDataForSeoConfigured } from '../dataforseo';
 import { fetchLlmCoverageQuestions, type LlmCoverageQuestion, type LlmCoverageSource } from '../llmCoverageQuestions';
-import { isKeywordOnTopic } from '../topicRelevance';
+import { isKeywordOnTopic } from '@/src/core/domain/relevance/topicRelevance';
 import { isUsefulCitationPrompt } from '../citationPrompts';
 
 export type ProviderContext = {
