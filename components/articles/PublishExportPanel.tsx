@@ -219,7 +219,7 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
                     style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: 'var(--koala-text-secondary)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>Replace</button>
                   <button type="button" onClick={() => onFeaturedImageChange?.(null)}
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: '#e5484d', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: 'var(--koala-status-danger)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-status-danger-bg)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>Remove</button>
                 </div>
               )}

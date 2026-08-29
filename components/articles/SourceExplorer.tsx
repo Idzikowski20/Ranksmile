@@ -97,7 +97,7 @@ export default function SourceExplorer({ claim }: SourceExplorerProps) {
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--koala-text-primary)', minWidth: 72 }}>
               {kindLabel(e)}
             </span>
-            <span style={{ fontSize: 10, color: '#F84416', letterSpacing: 1 }}>{starsFor(e)}</span>
+            <span style={{ fontSize: 10, color: 'var(--koala-text-brand)', letterSpacing: 1 }}>{starsFor(e)}</span>
             <span
               style={{
                 fontSize: 11,

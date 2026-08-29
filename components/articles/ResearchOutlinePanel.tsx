@@ -298,7 +298,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                       <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
                         {[
                           { color: 'var(--koala-status-success)', label: 'Covered' },
-                          { color: '#efa00d', label: 'Expand' },
+                          { color: 'var(--koala-status-warning)', label: 'Expand' },
                           { color: 'var(--koala-status-danger)', label: 'Missing' },
                         ].map(({ color, label }) => (
                           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

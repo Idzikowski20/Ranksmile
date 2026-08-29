@@ -46,7 +46,7 @@ const ResultArt = ({ ok }: { ok: boolean }) => {
         <span style={{ display: 'block', height: 7, width: '70%', borderRadius: 999, background: lineB }} />
         <span style={{ display: 'block', height: 7, width: '88%', borderRadius: 999, background: lineB }} />
       </div>
-      <span style={{ position: 'absolute', top: '50%', left: '50%', marginTop: -16, marginLeft: -16, width: 32, height: 32, borderRadius: '50%', background: badge, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ position: 'absolute', top: '50%', left: '50%', marginTop: -16, marginLeft: -16, width: 32, height: 32, borderRadius: '50%', background: badge, color: 'var(--koala-text-on-inverse)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
         {ok
           ? <svg width={16} height={16} viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
           : <span style={{ fontSize: 18, fontWeight: 800, lineHeight: 1 }}>!</span>}
@@ -61,11 +61,11 @@ const Favicon = ({ domain }: { domain: string }) => (
 
 const Stat = ({ label, value }: { label: string; value: number }) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-    <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.04em', color: '#9f9fa9' }}>{label}</span>
-    <span style={{ fontSize: 15, color: '#18181b', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+    <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.04em', color: 'var(--koala-text-tertiary)' }}>{label}</span>
+    <span style={{ fontSize: 15, color: 'var(--koala-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
   </div>
 );
-const StatSep = () => <div style={{ width: 1, alignSelf: 'stretch', background: '#f4f4f5', margin: '0 6px' }} />;
+const StatSep = () => <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--koala-bg-secondary)', margin: '0 6px' }} />;
 
 const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHighlight }: Props) => {
   const [ignored, setIgnored] = useState<Set<number>>(new Set());
@@ -93,9 +93,9 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
   };
 
   const Header = () => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, fontSize: 14, fontWeight: 600, color: '#18181b' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>
       <span>Plagiarism check</span>
-      <button type="button" onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525c', display: 'inline-flex', padding: 0 }}><IcoX /></button>
+      <button type="button" onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--koala-text-secondary)', display: 'inline-flex', padding: 0 }}><IcoX /></button>
     </div>
   );
 
@@ -107,10 +107,10 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
           <ResultArt ok />
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#1AB25E' }}>No plagiarism detected</div>
-            <span style={{ fontSize: 13, color: '#52525c' }}>Good job! Your article is plagiarism free.</span>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-status-success)' }}>No plagiarism detected</div>
+            <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>Good job! Your article is plagiarism free.</span>
           </div>
-          <button type="button" onClick={onClose} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', color: '#18181b', fontSize: 14, fontWeight: 500, fontFamily: F }}>
+          <button type="button" onClick={onClose} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--koala-text-primary)', fontSize: 14, fontWeight: 500, fontFamily: F }}>
             <IcoX /> Close
           </button>
         </div>
@@ -135,17 +135,17 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
       <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', fontFamily: F }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button type="button" onClick={() => setDetail(null)} aria-label="Back" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#3f3f47', display: 'inline-flex', padding: 0 }}><IcoArrowLeft /></button>
-            <span style={{ fontSize: 15, fontWeight: 500, color: '#18181b' }}>Plagiarism match</span>
+            <button type="button" onClick={() => setDetail(null)} aria-label="Back" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--koala-text-secondary)', display: 'inline-flex', padding: 0 }}><IcoArrowLeft /></button>
+            <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--koala-text-primary)' }}>Plagiarism match</span>
           </div>
           <div style={{ display: 'flex', gap: 6 }}><NavBtn dir="prev" idx={prev} /><NavBtn dir="next" idx={next} /></div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16 }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>Plagiarised sentence</span>
-          <div style={{ border: '1px solid #d4d4d8', borderRadius: 8, padding: 10 }}>
-            <span style={{ fontSize: 13, lineHeight: '20px', color: '#E5484D' }}>{m.text}</span>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)' }}>Plagiarised sentence</span>
+          <div style={{ border: '1px solid var(--koala-border-secondary)', borderRadius: 8, padding: 10 }}>
+            <span style={{ fontSize: 13, lineHeight: '20px', color: 'var(--koala-status-danger)' }}>{m.text}</span>
           </div>
-          <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#52525c' }}>
+          <div style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--koala-text-secondary)' }}>
             <span style={{ flexShrink: 0 }}>Found on</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
               <Favicon domain={m.domain} />
@@ -155,12 +155,12 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '8px 16px' }}>
           <button type="button" disabled={readOnly} onClick={() => ignore(detail)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 20px', borderRadius: 8, border: 'none', background: '#f4f4f5', color: '#18181b', fontSize: 14, fontWeight: 600, cursor: readOnly ? 'not-allowed' : 'pointer', fontFamily: F, transition: 'background 0.15s' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'var(--koala-bg-secondary)', color: 'var(--koala-text-primary)', fontSize: 14, fontWeight: 600, cursor: readOnly ? 'not-allowed' : 'pointer', fontFamily: F, transition: 'background 0.15s' }}
             onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#e4e4e7'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}>
             <IcoX size={18} /> Ignore this plagiarism
           </button>
-          <span style={{ fontSize: 12, color: '#71717b', textAlign: 'center' }}>The sentence will be moved to the ignored list and won&apos;t be considered in your Plagiarism score</span>
+          <span style={{ fontSize: 12, color: 'var(--koala-text-tertiary)', textAlign: 'center' }}>The sentence will be moved to the ignored list and won&apos;t be considered in your Plagiarism score</span>
         </div>
       </div>
     );
@@ -172,7 +172,7 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
     <button type="button" onClick={() => setTab(id)}
       style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14, fontWeight: 500, fontFamily: F, color: tab === id ? '#F84416' : '#3f3f47', boxShadow: tab === id ? 'inset 0 -2px 0 0 #F84416' : 'none' }}>
       {label}
-      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#fff', background: id === 'toFix' ? '#F84416' : '#9f9fa9' }}>{count}</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: 'var(--koala-text-on-inverse)', background: id === 'toFix' ? '#F84416' : '#9f9fa9' }}>{count}</span>
     </button>
   );
 
@@ -183,7 +183,7 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
         {/* Summary */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 16px 0' }}>
           <ResultArt ok={false} />
-          <span style={{ padding: '16px 0', fontSize: 14, color: '#E5484D' }}>{plagiarizedPct}% of content has been plagiarized</span>
+          <span style={{ padding: '16px 0', fontSize: 14, color: 'var(--koala-status-danger)' }}>{plagiarizedPct}% of content has been plagiarized</span>
           <div style={{ display: 'flex', alignItems: 'stretch' }}>
             <Stat label="MATCHES" value={activeIdx.length} />
             <StatSep />
@@ -197,16 +197,16 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
 
         {/* Rescan row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid #f4f4f5' }}>
-          <span style={{ fontSize: 13, color: '#52525c' }}>Re-check against the web anytime.</span>
+          <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>Re-check against the web anytime.</span>
           <button type="button" disabled={!!rescanning || readOnly} onClick={onRescan}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 13, fontWeight: 600, cursor: (rescanning || readOnly) ? 'not-allowed' : 'pointer', opacity: (rescanning || readOnly) ? 0.6 : 1, fontFamily: F }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 6, border: 'none', background: 'var(--koala-bg-inverse)', color: 'var(--koala-text-on-inverse)', fontSize: 13, fontWeight: 600, cursor: (rescanning || readOnly) ? 'not-allowed' : 'pointer', opacity: (rescanning || readOnly) ? 0.6 : 1, fontFamily: F }}>
             <IcoRescan /> Rescan
           </button>
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0' }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>Plagiarism matches</span>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)' }}>Plagiarism matches</span>
         </div>
         <div style={{ display: 'flex', padding: '0 8px', borderBottom: '1px solid #f4f4f5' }}>
           <Tab id="toFix" label="To fix" count={activeIdx.length} />
@@ -217,7 +217,7 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
         {/* Match list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12 }}>
           {list.length === 0 && (
-            <span style={{ fontSize: 13, color: '#9f9fa9', textAlign: 'center', padding: '12px 0' }}>
+            <span style={{ fontSize: 13, color: 'var(--koala-text-tertiary)', textAlign: 'center', padding: '12px 0' }}>
               {tab === 'toFix' ? 'Nothing to fix.' : tab === 'fixed' ? 'No fixed matches.' : 'No ignored matches.'}
             </span>
           )}
@@ -225,10 +225,10 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
             const m = all[i];
             const isIgnored = tab === 'ignored';
             return (
-              <div key={i} style={{ border: '1px solid #f4f4f5', borderRadius: 12, padding: 12, background: '#fff', opacity: isIgnored ? 0.7 : 1 }}>
+              <div key={i} style={{ border: '1px solid #f4f4f5', borderRadius: 12, padding: 12, background: 'var(--koala-bg-primary)', opacity: isIgnored ? 0.7 : 1 }}>
                 {!isIgnored && (
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button type="button" onClick={() => ignore(i)} aria-label="Ignore" title="Ignore this match" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#9f9fa9', display: 'inline-flex', padding: 0 }}><IcoX size={16} /></button>
+                    <button type="button" onClick={() => ignore(i)} aria-label="Ignore" title="Ignore this match" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--koala-text-tertiary)', display: 'inline-flex', padding: 0 }}><IcoX size={16} /></button>
                   </div>
                 )}
                 <button type="button" onClick={() => setDetail(i)}

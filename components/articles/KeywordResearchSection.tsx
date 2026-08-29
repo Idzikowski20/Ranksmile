@@ -65,7 +65,7 @@ const KeywordResearchSection: React.FC<Props> = ({
           placeholder="Filter keywords"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: '100%', padding: '6px 10px 6px 28px', fontSize: 13, border: '1px solid #e4e4e7', borderRadius: 6, outline: 'none', background: '#fff', color: '#111827', boxSizing: 'border-box', fontFamily: 'var(--font-family-primary)' }}
+          style={{ width: '100%', padding: '6px 10px 6px 28px', fontSize: 13, border: '1px solid var(--koala-border-primary)', borderRadius: 6, outline: 'none', background: 'var(--koala-bg-primary)', color: '#111827', boxSizing: 'border-box', fontFamily: 'var(--font-family-primary)' }}
         />
       </div>
 
@@ -96,12 +96,12 @@ const KeywordResearchSection: React.FC<Props> = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {/* Opportunity dot */}
                     <span title={`Opportunity: ${Math.round(oppScore * 100)}%`} style={{ width: 6, height: 6, borderRadius: '50%', background: oppDot, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }} title={kw.keyword}>
+                    <span style={{ fontSize: 12, color: 'var(--koala-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }} title={kw.keyword}>
                       {kw.keyword}
                     </span>
-                    {covered && <span style={{ fontSize: 10, color: '#16a34a', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>in text</span>}
+                    {covered && <span style={{ fontSize: 10, color: 'var(--koala-status-success)', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>in text</span>}
                     {kw.source === 'ads_suggestion' && (
-                      <span style={{ fontSize: 10, color: '#fff', background: '#F84416', borderRadius: 4, padding: '0 4px', lineHeight: '16px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>new</span>
+                      <span style={{ fontSize: 10, color: 'var(--koala-text-on-inverse)', background: 'var(--koala-bg-brand)', borderRadius: 4, padding: '0 4px', lineHeight: '16px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>new</span>
                     )}
                     {isGap && (
                       <span style={{ fontSize: 10, color: '#dc2626', background: '#fff1f2', borderRadius: 4, padding: '0 4px', lineHeight: '16px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>competitor</span>
@@ -109,7 +109,7 @@ const KeywordResearchSection: React.FC<Props> = ({
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
                     {kw.ads_monthly_volume != null && kw.ads_monthly_volume > 0 && (
-                      <span style={{ fontSize: 11, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>{kw.ads_monthly_volume.toLocaleString()}/mo</span>
+                      <span style={{ fontSize: 11, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>{kw.ads_monthly_volume.toLocaleString()}/mo</span>
                     )}
                     {kw.ads_competition && (
                       <span style={{ fontSize: 11, color: competitionColor(kw.ads_competition), fontFamily: 'var(--font-family-primary)', fontWeight: 600 }}>
@@ -117,7 +117,7 @@ const KeywordResearchSection: React.FC<Props> = ({
                       </span>
                     )}
                     {kw.gsc_volume_range && (
-                      <span style={{ fontSize: 11, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>{kw.gsc_volume_range}</span>
+                      <span style={{ fontSize: 11, color: 'var(--koala-text-tertiary)', fontFamily: 'var(--font-family-primary)' }}>{kw.gsc_volume_range}</span>
                     )}
                   </div>
                 </div>
@@ -130,13 +130,13 @@ const KeywordResearchSection: React.FC<Props> = ({
       {/* Competitor gap keywords */}
       {gapKeywords && gapKeywords.length > 0 && (
         <div style={{ marginTop: 8, borderTop: '1px solid #f4f4f5', paddingTop: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#9f9fa9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, fontFamily: 'var(--font-family-primary)' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--koala-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, fontFamily: 'var(--font-family-primary)' }}>
             Competitor Gap ({gapKeywords.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {gapKeywords.slice(0, 10).map((kw, i) => (
               <div key={kw.keyword + i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca' }}>
-                <span style={{ fontSize: 12, color: '#18181b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}>{kw.keyword}</span>
+                <span style={{ fontSize: 12, color: 'var(--koala-text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}>{kw.keyword}</span>
                 <span style={{ fontSize: 11, color: '#dc2626', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>{kw.frequency}×</span>
               </div>
             ))}
@@ -147,21 +147,21 @@ const KeywordResearchSection: React.FC<Props> = ({
       {/* Suggested keywords (from Ads) */}
       {suggestedKeywords && suggestedKeywords.length > 0 && (
         <div style={{ marginTop: 8, borderTop: '1px solid #f4f4f5', paddingTop: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#9f9fa9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, fontFamily: 'var(--font-family-primary)' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--koala-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, fontFamily: 'var(--font-family-primary)' }}>
             Suggested from Ads
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {suggestedKeywords.map((kw, i) => (
               <div key={kw.keyword + i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: '#f3eeff', border: '1px solid #ddd6fe' }}>
-                <span style={{ fontSize: 12, color: '#18181b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}>{kw.keyword}</span>
+                <span style={{ fontSize: 12, color: 'var(--koala-text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}>{kw.keyword}</span>
                 {(() => { const vol = kw.ads_monthly_volume ?? kw.avgMonthlySearches; return vol != null && vol > 0 ? <span style={{ fontSize: 11, color: '#6d28d9', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>{vol.toLocaleString()}/mo</span> : null; })()}
                 <button
                   onClick={(e) => { e.stopPropagation(); onAcceptSuggestion?.(kw); }}
-                  style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, border: 'none', background: '#F84416', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
+                  style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, border: 'none', background: 'var(--koala-bg-brand)', color: 'var(--koala-text-on-inverse)', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
                 >+ Add</button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onDismissSuggestion?.(kw); }}
-                  style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, border: 'none', background: 'transparent', color: '#9f9fa9', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
+                  style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--koala-text-tertiary)', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
                 >×</button>
               </div>
             ))}
@@ -177,7 +177,7 @@ const KeywordResearchSection: React.FC<Props> = ({
           style={{
             width: '100%', marginTop: 8, padding: '7px 0', borderRadius: 6,
             fontSize: 12, fontWeight: 600,
-            background: 'transparent', color: '#F84416', border: '1px dashed #c4b5fd',
+            background: 'transparent', color: 'var(--koala-text-brand)', border: '1px dashed #c4b5fd',
             cursor: isSuggesting ? 'not-allowed' : 'pointer',
             fontFamily: 'var(--font-family-primary)',
             opacity: isSuggesting ? 0.6 : 1,

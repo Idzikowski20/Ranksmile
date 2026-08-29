@@ -47,11 +47,11 @@ const PlagiarismScanningModal = ({ onCancel }: { onCancel: () => void }) => crea
       </span>
     </div>
 
-    <span style={{ color: '#fff', fontSize: 20, fontWeight: 500 }}>We are scanning your content right now…</span>
+    <span style={{ color: 'var(--koala-text-on-inverse)', fontSize: 20, fontWeight: 500 }}>We are scanning your content right now…</span>
 
     {/* indeterminate progress bar */}
     <div style={{ position: 'relative', width: 450, maxWidth: 'calc(100vw - 48px)', height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
-      <span style={{ position: 'absolute', top: 0, bottom: 0, width: '35%', borderRadius: 999, background: '#F84416', animation: 'plagBar 1.4s ease-in-out infinite' }} />
+      <span style={{ position: 'absolute', top: 0, bottom: 0, width: '35%', borderRadius: 999, background: 'var(--koala-bg-brand)', animation: 'plagBar 1.4s ease-in-out infinite' }} />
     </div>
 
     <Button

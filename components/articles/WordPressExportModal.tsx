@@ -47,7 +47,7 @@ const IcoArrowRight = () => (<svg viewBox="0 0 24 24" width={18} height={18} fil
 const IcoChevronRight = () => (<svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m8.25 4.5l7.5 7.5l-7.5 7.5" /></svg>);
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <span style={{ fontSize: 13, fontWeight: 500, color: '#3f3f47' }}>{children}</span>
+  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)' }}>{children}</span>
 );
 
 const toSelectOptions = (options: Opt[]) => options.map((o) => ({
@@ -155,21 +155,21 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: F }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '20px 24px 12px' }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#18181b' }}>Export to WordPress</h2>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Export to WordPress</h2>
           <Button type="button" variant="transparent" size="sm" onClick={onClose} aria-label="Close" icon={<IcoX />} />
         </div>
 
         {/* Body */}
         <div className="styled-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 24px 8px' }}>
-          {loadError && <div style={{ fontSize: 14, color: '#E5484D', padding: '12px 0' }}>{loadError}</div>}
+          {loadError && <div style={{ fontSize: 14, color: 'var(--koala-status-danger)', padding: '12px 0' }}>{loadError}</div>}
           {!opts && !loadError && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '4px 0' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ width: 70, height: 12, borderRadius: 6, background: '#F0F0F4', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
-                <div style={{ width: 190, height: 16, borderRadius: 6, background: '#F0F0F4', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
+                <div style={{ width: 70, height: 12, borderRadius: 6, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
+                <div style={{ width: 190, height: 16, borderRadius: 6, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ width: 150, height: 12, borderRadius: 6, background: '#F0F0F4', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
+                <div style={{ width: 150, height: 12, borderRadius: 6, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
                 <div style={{ height: 52, borderRadius: 12, background: '#F5F5F9', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
                 <div style={{ height: 52, borderRadius: 12, background: '#F5F5F9', animation: 'skeletonPulse 1.5s ease-in-out infinite', animationDelay: '0.08s' }} />
               </div>
@@ -182,15 +182,15 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', background: '#eff6ff', borderRadius: 10, padding: 14 }}>
                   <span style={{ flexShrink: 0, color: '#2563eb', display: 'inline-flex', marginTop: 1 }}><IcoInfo /></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>Connect more domains</div>
-                    <span style={{ fontSize: 13, lineHeight: '19px', color: '#3f3f47' }}>You can connect more than one WordPress site to your account. <a href="/settings/wordpress" target="_blank" rel="noreferrer noopener" style={{ color: '#2563eb', textDecoration: 'underline' }}>Learn more</a></span>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Connect more domains</div>
+                    <span style={{ fontSize: 13, lineHeight: '19px', color: 'var(--koala-text-secondary)' }}>You can connect more than one WordPress site to your account. <a href="/settings/wordpress" target="_blank" rel="noreferrer noopener" style={{ color: '#2563eb', textDecoration: 'underline' }}>Learn more</a></span>
                   </div>
                   <Button type="button" variant="transparent" size="sm" onClick={() => setShowBanner(false)} aria-label="Dismiss" icon={<IcoX size={18} />} />
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <Label>Domain</Label>
-                <span style={{ fontWeight: 600, color: '#18181b' }}>{opts.siteUrl}</span>
+                <span style={{ fontWeight: 600, color: 'var(--koala-text-primary)' }}>{opts.siteUrl}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <Label>What do you want to do?</Label>
@@ -199,13 +199,13 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
                   const sel = mode === k;
                   return (
                     <button type="button" key={k} disabled={disabled} onClick={() => setMode(k)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', border: `1px solid ${sel ? '#F84416' : '#e4e4e7'}`, borderRadius: 12, background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, fontFamily: F, textAlign: 'left' }}>
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', border: `1px solid ${sel ? '#F84416' : '#e4e4e7'}`, borderRadius: 12, background: 'var(--koala-bg-primary)', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, fontFamily: F, textAlign: 'left' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ color: '#18181b', display: 'inline-flex' }}>{icon}</span>
-                        <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{t}{disabled && <span style={{ fontSize: 12, color: '#9f9fa9', fontWeight: 400 }}> (not published yet)</span>}</span>
+                        <span style={{ color: 'var(--koala-text-primary)', display: 'inline-flex' }}>{icon}</span>
+                        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)' }}>{t}{disabled && <span style={{ fontSize: 12, color: 'var(--koala-text-tertiary)', fontWeight: 400 }}> (not published yet)</span>}</span>
                       </span>
                       <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? '#F84416' : '#d4d4d8'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {sel && <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F84416' }} />}
+                        {sel && <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--koala-bg-brand)' }} />}
                       </span>
                     </button>
                   );
@@ -216,11 +216,11 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
 
           {opts && step === 'details' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ background: '#f4f4f5', borderRadius: 8, padding: 14, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 13, color: '#52525c' }}>Domain</span>
-                <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{opts.siteUrl}</span>
+              <div style={{ background: 'var(--koala-bg-secondary)', borderRadius: 8, padding: 14, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>Domain</span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)' }}>{opts.siteUrl}</span>
               </div>
-              <span style={{ fontSize: 14, color: '#52525c' }}>{mode === 'create' ? 'A new post will be created with the following settings:' : 'The linked post will be updated with the following settings:'}</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>{mode === 'create' ? 'A new post will be created with the following settings:' : 'The linked post will be updated with the following settings:'}</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Status</Label><Select size="md" width="100%" placeholder="– Select –" value={status} onChange={setStatus} options={toSelectOptions(opts.statuses)} /></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Type</Label><Select size="md" width="100%" placeholder="– Select –" value={type} onChange={setType} options={toSelectOptions(opts.types.length ? opts.types : [{ value: 'post', label: 'Post' }])} /></div>
@@ -256,12 +256,12 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
 
           {step === 'success' && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '8px 0 16px' }}>
-              <span style={{ flexShrink: 0, marginTop: 2, width: 22, height: 22, borderRadius: '50%', background: '#1AB25E', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ flexShrink: 0, marginTop: 2, width: 22, height: 22, borderRadius: '50%', background: '#1AB25E', color: 'var(--koala-text-on-inverse)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </span>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>High five!</div>
-                <span style={{ fontSize: 14, color: '#52525c' }}>Your WordPress {host ? `(${host})` : ''} has been updated and synced.</span>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>High five!</div>
+                <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>Your WordPress {host ? `(${host})` : ''} has been updated and synced.</span>
               </div>
             </div>
           )}
@@ -271,7 +271,7 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
         <div style={{ borderTop: '1px solid #f4f4f5', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           {step === 'choose' && (
             <>
-              <a href="/settings/wordpress" target="_blank" rel="noreferrer noopener" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: '#3f3f47', textDecoration: 'none' }}>Manage WordPress Integrations <IcoChevronRight /></a>
+              <a href="/settings/wordpress" target="_blank" rel="noreferrer noopener" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)', textDecoration: 'none' }}>Manage WordPress Integrations <IcoChevronRight /></a>
               <div style={{ display: 'flex', gap: 10 }}>
                 <Button type="button" variant="transparent" onClick={onClose}>Cancel</Button>
                 <Button type="button" variant="primary" onClick={() => setStep('details')} disabled={!opts || !mode}>

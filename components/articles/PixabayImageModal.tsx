@@ -105,7 +105,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
       >
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: `${SPACE_6} 20px`, borderBottom: '1px solid #e4e4e7',
+          padding: `${SPACE_6} 20px`, borderBottom: '1px solid var(--koala-border-primary)',
         }}>
           <h2 style={{
             margin: 0, fontSize: 'var(--font-size-md)', fontWeight: 600, color: STRONG,
@@ -152,7 +152,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
               <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m2.25 15.75l5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5m10.5-11.25h.008v.008h-.008zm.375 0a.375.375 0 1 1-.75 0a.375.375 0 0 1 .75 0" />
               </svg>
-              <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', color: '#9f9fa9', fontFamily: FF }}>
+              <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', color: 'var(--koala-text-tertiary)', fontFamily: FF }}>
                 Search for free stock images from Pixabay
               </p>
             </div>
@@ -160,7 +160,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
 
           {error && !isLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0', gap: 8 }}>
-              <p style={{ margin: 0, textAlign: 'center', color: '#9f9fa9', fontSize: 'var(--font-size-sm)', fontFamily: FF }}>
+              <p style={{ margin: 0, textAlign: 'center', color: 'var(--koala-text-tertiary)', fontSize: 'var(--font-size-sm)', fontFamily: FF }}>
                 {error}
               </p>
               <Button type="button" variant="secondary" onClick={() => search(query, 1)}>
@@ -264,7 +264,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
                       <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
                     )}
                   />
-                  <span style={{ fontSize: 'var(--font-size-sm)', color: '#52525c', fontFamily: FF }}>
+                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--koala-text-secondary)', fontFamily: FF }}>
                     {page} / {totalPages}
                   </span>
                   <Button
@@ -295,7 +295,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
           gap: 'var(--space-5)', padding: `var(--space-5) 20px`, borderTop: '1px solid #f4f4f5',
         }}>
           <span style={{
-            fontSize: 'var(--font-size-xs)', color: '#9f9fa9', fontFamily: FF, marginRight: 'auto',
+            fontSize: 'var(--font-size-xs)', color: 'var(--koala-text-tertiary)', fontFamily: FF, marginRight: 'auto',
           }}>
             {total > 0 ? `${total.toLocaleString()} images found` : 'Search to find images'}
           </span>

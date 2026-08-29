@@ -53,12 +53,12 @@ const ArticlePreviewPage: NextPage<PreviewProps> = ({ article: initial }) => {
   const html = (article.content || '').trim();
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', overflowY: 'auto' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--koala-bg-primary)', overflowY: 'auto' }}>
       <Head>
         <title>{`Preview · ${title} — Ranksmile`}</title>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
-      <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff', borderBottom: '1px solid #e5e5e5' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--koala-bg-primary)', borderBottom: '1px solid var(--koala-border-primary)' }}>
         <div
           style={{
             maxWidth: 768,
@@ -96,8 +96,8 @@ const ArticlePreviewPage: NextPage<PreviewProps> = ({ article: initial }) => {
               color: '#767676',
               padding: '4px 10px',
               borderRadius: 999,
-              background: '#f5f5f5',
-              border: '1px solid #e5e5e5',
+              background: 'var(--koala-bg-secondary)',
+              border: '1px solid var(--koala-border-primary)',
             }}
           >
             Preview · read only
