@@ -4,12 +4,30 @@ import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import CompetitorsSection from '../competitors/CompetitorsSection';
 
 /* ── Design tokens ─────────────────────────────────────────────── */
+// Koala tokens, not the mock's zinc palette — the modal now inherits theme changes.
+// The named accents (yellow/green/red/blue) keep literal values where no status token maps.
 const C = {
-  text: '#18181B', g160: '#09090B', g140: '#18181B', g120: '#2F2F34', g100: '#3F3F47', g80: '#52525C',
-  g60: '#9F9FA9', g40: '#D4D4D8', g20: '#E4E4E7', g10: '#F4F4F5', g5: '#f3f4f0',
-  purple: '#F84416', purple80: '#630DE3', purple100: '#B86A42', purple40: '#F5C4A0',
-  purple10: '#FDE8D8', purple5: '#F1EBFE',
-  yellow: '#EFA00D', green: '#1AB25E', red: '#FB5D5D', blue: '#155DFC',
+  text: 'var(--koala-text-primary)',
+  g160: 'var(--koala-text-primary)',
+  g140: 'var(--koala-text-primary)',
+  g120: 'var(--koala-bg-inverse)',
+  g100: 'var(--koala-text-secondary)',
+  g80: 'var(--koala-text-secondary)',
+  g60: 'var(--koala-text-tertiary)',
+  g40: 'var(--koala-border-secondary)',
+  g20: 'var(--koala-border-primary)',
+  g10: 'var(--koala-bg-secondary)',
+  g5: 'var(--koala-bg-tertiary)',
+  purple: 'var(--koala-text-brand)',
+  purple80: 'var(--koala-btn-brand-bg-hover)',
+  purple100: '#B86A42',
+  purple40: '#F5C4A0',
+  purple10: '#FDE8D8',
+  purple5: 'var(--koala-bg-secondary)',
+  yellow: 'var(--koala-status-warning)',
+  green: 'var(--koala-status-success)',
+  red: 'var(--koala-status-danger)',
+  blue: '#155DFC',
 };
 const F = 'var(--font-family-primary)';
 
@@ -89,7 +107,7 @@ const AuthorityShield = ({ n, color }: { n: number; color: 'red' | 'yellow' | 'g
         <path d="M24 5C18.1667 3.83337 12 0 12 0C12 0 5.83334 3.83337 4.03325e-06 5L0 14C0.135798 24.5 12 28 12 28C12 28 24 24.5 24 14V5Z" fill={col.main} />
         <path d="M12 0C12 0 5.83334 3.83337 4.03325e-06 5L0 14C0.135798 24.5 12 28 12 28V0Z" fill={col.light} />
       </svg>
-      <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-52%)', color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: F }}>{n}</span>
+      <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-52%)', color: 'var(--koala-text-on-inverse)', fontSize: 12, fontWeight: 600, fontFamily: F }}>{n}</span>
     </div>
   );
 };
@@ -101,7 +119,7 @@ const Toggle = ({ on }: { on: boolean }) => (
   }}>
     <span style={{
       position: 'absolute', top: 0, left: on ? 16 : 0, width: 16, height: 16, borderRadius: '50%',
-      background: '#fff', boxShadow: '0 1px 2px rgba(24,26,34,0.2)', transition: 'left 0.25s',
+      background: 'var(--koala-bg-primary)', boxShadow: '0 1px 2px rgba(24,26,34,0.2)', transition: 'left 0.25s',
     }} />
   </span>
 );
@@ -113,7 +131,7 @@ const StepBtn = ({ kind, onClick }: { kind: 'minus' | 'plus'; onClick: () => voi
     style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36,
       borderRadius: 24, border: `1px solid ${C.g20}`, background: C.g5, cursor: 'pointer',
-      color: '#18181B', flexShrink: 0,
+      color: 'var(--koala-text-primary)', flexShrink: 0,
     }}
     onMouseDown={(e) => { e.currentTarget.style.background = C.g10; }}
     onMouseUp={(e) => { e.currentTarget.style.background = C.g5; }}
@@ -225,7 +243,7 @@ const InfoTip = ({ text, align = 'center' }: { text: string; align?: 'center' | 
         <span style={{
           position: 'absolute', top: 'calc(100% + 8px)', ...pos, zIndex: 1000,
           width: 'max-content', maxWidth: 260, padding: '10px 12px', borderRadius: 8,
-          background: C.g160, color: '#fff', fontSize: 14, lineHeight: '1.35rem', fontWeight: 400,
+          background: C.g160, color: 'var(--koala-text-on-inverse)', fontSize: 14, lineHeight: '1.35rem', fontWeight: 400,
           fontFamily: F, textAlign: 'left', whiteSpace: 'normal', textTransform: 'none', letterSpacing: 'normal',
           boxShadow: '0px 8px 16px rgba(24,26,34,0.24)', pointerEvents: 'none',
         }}>{text}</span>
@@ -286,7 +304,7 @@ const TermTab = ({ label, count, active, onClick }: { label: string; count: numb
     marginBottom: -1, flexShrink: 0,
   }}>
     {label}
-    <span style={{ background: active ? C.purple80 : C.g80, color: '#fff', fontSize: 11, fontWeight: 500, lineHeight: '0.875rem', letterSpacing: '0.02em', textTransform: 'uppercase', borderRadius: 4, padding: '1px 5px' }}>{count}</span>
+    <span style={{ background: active ? C.purple80 : C.g80, color: 'var(--koala-text-on-inverse)', fontSize: 11, fontWeight: 500, lineHeight: '0.875rem', letterSpacing: '0.02em', textTransform: 'uppercase', borderRadius: 4, padding: '1px 5px' }}>{count}</span>
   </button>
 );
 
@@ -306,7 +324,7 @@ const TermChip = ({ term, onRemove }: { term: Term; onRemove?: (text: string) =>
   <div style={{
     display: 'flex', alignItems: 'center', gap: 8, margin: 4, padding: '8px 12px', borderRadius: 24,
     border: `1px solid ${C.g40}`, color: C.g160, fontSize: 14, fontFamily: F, cursor: 'pointer',
-    background: '#fff', userSelect: 'none', transition: 'background 0.15s',
+    background: 'var(--koala-bg-primary)', userSelect: 'none', transition: 'background 0.15s',
   }}
   title={onRemove ? 'Click to remove this term from grading' : undefined}
   onClick={onRemove ? () => onRemove(term.text) : undefined}
@@ -316,7 +334,7 @@ const TermChip = ({ term, onRemove }: { term: Term; onRemove?: (text: string) =>
     <span style={{ maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{term.text}</span>
     <span style={{
       width: 16, height: 16, borderRadius: 2, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      background: term.heading ? C.yellow : C.g80, color: '#fff', fontSize: 11, fontWeight: 400, lineHeight: '1rem', flexShrink: 0,
+      background: term.heading ? C.yellow : C.g80, color: 'var(--koala-text-on-inverse)', fontSize: 11, fontWeight: 400, lineHeight: '1rem', flexShrink: 0,
     }}>H</span>
     <Checkbox checked readOnly size="sm" />
   </div>
@@ -504,7 +522,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose, articleId, init
         role="dialog"
         aria-label="Customization panel"
         style={{
-          background: '#fff', color: C.text, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
+          background: 'var(--koala-bg-primary)', color: C.text, display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
           maxHeight: '85vh', width: 'calc(100% - 40px)', maxWidth: 1520, borderRadius: 8, overflow: 'hidden',
           boxShadow: '0px 16px 32px 0px rgba(24,26,34,0.32), 0px 2px 4px 0px rgba(24,26,34,0.16), 0px 1px 1px 0px rgba(0,0,0,0.04)',
           animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)',
@@ -570,7 +588,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose, articleId, init
             {/* Language bar */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px 16px',
-              borderBottom: `1px solid ${C.g20}`, background: '#fff', flexShrink: 0,
+              borderBottom: `1px solid ${C.g20}`, background: 'var(--koala-bg-primary)', flexShrink: 0,
             }}>
               <PLFlag />
               <span style={{ fontSize: 16, fontWeight: 500, color: C.g100, fontFamily: F, margin: '0 8px' }}>{keyword || 'tworzenie aplikacji webowych'}</span>
@@ -782,7 +800,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose, articleId, init
             {/* Footer */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px',
-              borderTop: `1px solid ${C.g20}`, background: '#fff', flexShrink: 0,
+              borderTop: `1px solid ${C.g20}`, background: 'var(--koala-bg-primary)', flexShrink: 0,
             }}>
               {/* Auto-save status (left) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 20 }}>
@@ -804,12 +822,12 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose, articleId, init
               {saveState === 'saving' ? (
                 <button type="button" disabled style={{
                   padding: '8px 24px', borderRadius: 8, fontSize: 16, fontWeight: 600, fontFamily: F,
-                  background: C.g80, color: '#fff', border: 'none', cursor: 'default',
+                  background: C.g80, color: 'var(--koala-text-on-inverse)', border: 'none', cursor: 'default',
                 }}>Saving…</button>
               ) : (
                 <button type="button" onClick={onClose} style={{
                   padding: '8px 24px', borderRadius: 8, fontSize: 16, fontWeight: 600, fontFamily: F,
-                  background: C.g160, color: '#fff', border: 'none', cursor: 'pointer', transition: 'background 0.15s',
+                  background: C.g160, color: 'var(--koala-text-on-inverse)', border: 'none', cursor: 'pointer', transition: 'background 0.15s',
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = C.purple; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = C.g160; }}

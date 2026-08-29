@@ -18,7 +18,7 @@ const MiniGauge = ({ score }: { score: number }) => {
         <path fill="none" strokeWidth={12} strokeLinecap="round" d={RIGHT} stroke="#E4E4E7" strokeDasharray="111.70107212763709 9999" opacity={0.5} />
         <path fill="none" strokeWidth={12} strokeLinecap="round" d={RIGHT} stroke={color} strokeDasharray="111.70107212763709 9999" strokeDashoffset={offset} />
       </svg>
-      <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-family-primary)', fontWeight: 600, fontSize: 11, color: '#18181B', fontVariantNumeric: 'tabular-nums' }}>{s}</span>
+      <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-family-primary)', fontWeight: 600, fontSize: 11, color: 'var(--koala-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{s}</span>
     </div>
   );
 };

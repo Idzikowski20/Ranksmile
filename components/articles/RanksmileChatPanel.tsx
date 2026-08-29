@@ -141,7 +141,7 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: RanksmilePanelApi; onBac
             onKeyDown={(e) => { if (e.key === 'Enter' && !editing) onPick(c.id); }}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 8px 8px 10px', borderRadius: 10, cursor: editing ? 'default' : 'pointer', transition: 'background 150ms ease' }}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: '#f5f5f5', color: 'var(--koala-text-secondary)', flexShrink: 0 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: 'var(--koala-bg-secondary)', color: 'var(--koala-text-secondary)', flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" /></svg>
             </span>
             {editing ? (

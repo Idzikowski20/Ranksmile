@@ -33,7 +33,7 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node }) => {
     fontFamily: 'var(--font-family-primary)',
     fontSize: 15,
     lineHeight: 1.6,
-    color: '#18181B',
+    color: 'var(--koala-text-primary)',
   };
 
   const isWholeArticle = sectionId === WHOLE_ARTICLE_ID;

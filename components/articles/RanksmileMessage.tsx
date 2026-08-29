@@ -19,7 +19,7 @@ const Thinking = ({ text }: { text: string }) => {
     <div style={{ marginBottom: 8 }}>
       <button
         type="button" onClick={() => setOpen((o) => !o)}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 4px', margin: '-2px -4px', borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#9f9fa9', fontSize: 12.5, fontWeight: 500, fontFamily: 'var(--font-family-primary)', transition: 'color 150ms ease' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 4px', margin: '-2px -4px', borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--koala-text-tertiary)', fontSize: 12.5, fontWeight: 500, fontFamily: 'var(--font-family-primary)', transition: 'color 150ms ease' }}
         onMouseEnter={(e) => { e.currentTarget.style.color = '#52525c'; }}
         onMouseLeave={(e) => { e.currentTarget.style.color = '#9f9fa9'; }}
       >
@@ -27,7 +27,7 @@ const Thinking = ({ text }: { text: string }) => {
         Thinking
       </button>
       {open && (
-        <div style={{ marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #f0f0f2', color: '#9f9fa9', fontSize: 12.5, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        <div style={{ marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #f0f0f2', color: 'var(--koala-text-tertiary)', fontSize: 12.5, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
           {text}
         </div>
       )}
@@ -43,7 +43,7 @@ const RanksmileMessage = ({ role, message, thinking, animateEnter = false }: Pro
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <div
           style={{
-            maxWidth: '88%', background: '#f4f4f5', color: '#18181b',
+            maxWidth: '88%', background: 'var(--koala-bg-secondary)', color: 'var(--koala-text-primary)',
             borderRadius: 12, borderBottomRightRadius: 4, padding: '8px 12px',
             fontSize: 14, lineHeight: '20px', fontWeight: 500,
             fontFamily: 'var(--font-family-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
