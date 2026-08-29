@@ -16,6 +16,7 @@ import {
 } from '../../../services/workspaces';
 import DomainFaviconAvatar from '../../common/DomainFaviconAvatar';
 import { Avatar } from '../primitives/Avatar';
+import Modal, { ModalBody, ModalHeader } from '../primitives/Modal';
 import { Flag } from '../icons/Flag';
 
 /** Static language picker — no persistence yet, English is the default. */
@@ -39,6 +40,7 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [lang, setLang] = useState<LanguageCode>('en');
+  const [langOpen, setLangOpen] = useState(false);
 
   const { data: org } = useOrganization();
   const { data: domainsData } = useFetchDomains(router, false);
@@ -199,6 +201,16 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
               <MenuListItem as="a" href="/settings/general" label="Organization Settings" onClick={(e) => { e.preventDefault(); nav('/settings/general'); }} />
               <MenuListItem as="a" href="/settings/people" label="Members" onClick={(e) => { e.preventDefault(); nav('/settings/people'); }} />
               <MenuListItem as="a" href="/settings/billing_subscription" label="Usage & Billing" onClick={(e) => { e.preventDefault(); nav('/settings/billing_subscription'); }} />
+              <MenuListItem
+                label="Language"
+                trailingItems={(
+                  <span className="koala-ws-select__lang-value">
+                    <Flag code={activeLang.flag} size={18} />
+                    {activeLang.label}
+                  </span>
+                )}
+                onClick={() => { close(); setLangOpen(true); }}
+              />
               <div className="koala-ws-select__divider" role="separator" />
               {workspaces.map((w) => {
                 const isActive = w.id === activeId;
@@ -215,17 +227,6 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
                   />
                 );
               })}
-              <div className="koala-ws-select__divider" role="separator" />
-              <span className="koala-ws-select__section">Language</span>
-              {LANGUAGES.map((l) => (
-                <MenuListItem
-                  key={l.code}
-                  label={l.label}
-                  leadingItems={<Flag code={l.flag} size={20} />}
-                  trailingItems={l.code === lang ? <Icon name="Check" size={16} color="#F84416" /> : undefined}
-                  onClick={() => setLang(l.code)}
-                />
-              ))}
               {workspaces.length === 0 ? (
                 <p style={{ margin: 0, padding: '8px 10px', fontSize: 13, color: 'var(--koala-text-secondary)' }}>
                   No workspaces yet.
@@ -235,6 +236,23 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
           </div>
         </ShellPortal>
       ) : null}
+
+      <Modal open={langOpen} onClose={() => setLangOpen(false)} aria-label="Choose language">
+        <ModalHeader>Language</ModalHeader>
+        <ModalBody>
+          <div className="koala-lang-dialog__list">
+            {LANGUAGES.map((l) => (
+              <MenuListItem
+                key={l.code}
+                label={l.label}
+                leadingItems={<Flag code={l.flag} size={22} />}
+                trailingItems={l.code === lang ? <Icon name="Check" size={18} color="#F84416" /> : undefined}
+                onClick={() => { setLang(l.code); setLangOpen(false); }}
+              />
+            ))}
+          </div>
+        </ModalBody>
+      </Modal>
     </div>
   );
 }

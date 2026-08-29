@@ -7752,13 +7752,39 @@ html.koala-shell[data-theme="cream"] .app-content {
   margin: 6px 0;
   background: #e5e5e5;
 }
-.koala-ws-select__section {
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+.koala-ws-select__lang-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
   color: var(--koala-text-tertiary);
+}
+.koala-lang-dialog__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.koala-lang-dialog__list .koala-menu-list-item {
+  color: var(--koala-text-primary);
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.koala-lang-dialog__list .koala-menu-list-item:hover {
+  background: var(--koala-bg-secondary);
+}
+.koala-lang-dialog__list .koala-menu-list-item-content {
+  flex: 1;
+  min-width: 0;
 }
 .koala-ws-select__menu .koala-menu-list-item {
   color: var(--koala-text-primary);
