@@ -1,6 +1,8 @@
 """Run a validated CompiledWritePlan without falling back to the legacy writer."""
 from __future__ import annotations
 
+import asyncio
+
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 
@@ -80,8 +82,12 @@ async def run_compiled_write_plan(
 
     index = _graph_index(plan)
 
-    markdown = [f"# {title.strip()}"]
-    reviewed: list[ReviewedParagraphResult] = []
+    # Plan every paragraph first, then write them CONCURRENTLY. The writer keeps no
+    # history between calls by design, so the only order that matters is assembly order
+    # — and a 36-paragraph article at ~2 sequential LLM calls each was the whole reason
+    # generation took 5-10 minutes. The semaphore keeps one article from monopolising
+    # the provider; assembly below reads results by index, so output order is stable.
+    planned: list[tuple[str | None, Mapping[str, object] | None, Mapping[str, object] | None]] = []
     first_paragraph = True
     for pack in packs:
         if not isinstance(pack, Mapping):
@@ -90,7 +96,7 @@ async def run_compiled_write_plan(
         paragraph_ids = pack.get("paragraph_plan_ids")
         if not isinstance(heading, str) or not isinstance(paragraph_ids, list):
             raise ValueError("compiled_write_plan pack is incomplete")
-        markdown.append(f"## {heading}")
+        planned.append((heading, None, None))
         # The writer is called once per paragraph and keeps no history between calls, so
         # everything it needs about where the paragraph sits has to travel with it.
         for paragraph_id in paragraph_ids:
@@ -111,10 +117,32 @@ async def run_compiled_write_plan(
                 "allow_authority_links": allow_authority_links,
             }
             first_paragraph = False
+            planned.append((None, paragraph, context))
+
+    semaphore = asyncio.Semaphore(6)
+
+    async def _write_one(paragraph: Mapping[str, object], context: Mapping[str, object]) -> ReviewedParagraphResult:
+        async with semaphore:
             result = await write_paragraph(paragraph, generate_markdown, context)
-            judged = await review_paragraph(result, rewrite_markdown)
-            reviewed.append(judged)
-            markdown.append(judged.markdown)
+            return await review_paragraph(result, rewrite_markdown)
+
+    tasks = {
+        i: asyncio.create_task(_write_one(paragraph, context))
+        for i, (_, paragraph, context) in enumerate(planned)
+        if paragraph is not None and context is not None
+    }
+    if tasks:
+        await asyncio.gather(*tasks.values())
+
+    markdown = [f"# {title.strip()}"]
+    reviewed: list[ReviewedParagraphResult] = []
+    for i, (heading, paragraph, _) in enumerate(planned):
+        if heading is not None:
+            markdown.append(f"## {heading}")
+            continue
+        judged = tasks[i].result()
+        reviewed.append(judged)
+        markdown.append(judged.markdown)
 
     # Headings come from the plan, so an article whose every write returned nothing still
     # renders as valid HTML and sails past a "is there any text" check. That is exactly

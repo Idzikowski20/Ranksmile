@@ -56,7 +56,13 @@ Zwracaj TYLKO HTML artykułu (bez DOCTYPE, body, head — czysty HTML artykułu)
 # article of headings and images with no prose, which then passed as a success.
 
 
-async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYSTEM_PROMPT) -> str:
+async def _chat(
+    prompt: str,
+    max_tokens: int = 4000,
+    *,
+    system: str | None = SYSTEM_PROMPT,
+    _retry: bool = True,
+) -> str:
     if not get_openrouter_api_key():
         print("[generate] OPENROUTER_API_KEY missing — skipping chat")
         return ""
@@ -77,6 +83,18 @@ async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYS
 
     choice = response.choices[0] if response.choices else None
     content = ((choice.message.content if choice and choice.message else None) or "").strip()
+    # Reasoning burn: the model spends the whole budget thinking and emits nothing —
+    # finish_reason=length with a fully used completion budget and empty content. One
+    # retry with 3× headroom recovers the paragraph; 15/36 paragraphs shipped empty
+    # without it and the article was headings plus stock images.
+    if (
+        not content
+        and _retry
+        and getattr(choice, "finish_reason", None) == "length"
+    ):
+        bumped = max(3000, max_tokens * 3)
+        print(f"[generate] retrying empty length-capped completion with max_tokens={bumped}")
+        return await _chat(prompt, bumped, system=system, _retry=False)
     if not content:
         # "empty content" alone is not a diagnosis — it looks identical whether the model
         # refused, returned nothing, or spent the whole budget before emitting a token.
@@ -546,7 +564,7 @@ If no natural links found, return: []"""
         raw = (
             await _chat(
                 prompt,
-                max_tokens=1024,
+                max_tokens=2048,
                 system="You suggest internal links. Reply with JSON only — no markdown fences.",
             )
         ).strip()
