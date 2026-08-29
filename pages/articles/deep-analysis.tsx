@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
+import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Button } from '../../components/koala/core';
 import { useAppBanner } from '../../components/koala/shell';
@@ -176,7 +177,7 @@ const StepRow = ({ step }: { step: StepState }) => (
 
 const DeepAnalysisPage: NextPage = () => {
   const router = useRouter();
-  const { url, keywords: kwParam, country, domainId: domainIdParam, flow: flowParam, language: languageParam } = router.query;
+  const { url, keywords: kwParam, country, domainId: domainIdParam, flow: flowParam, language: languageParam, mode: modeParam } = router.query;
 
   const [steps, setSteps] = useState<StepState[]>(
     STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })),
@@ -198,6 +199,12 @@ const DeepAnalysisPage: NextPage = () => {
   const kwStr = (kwParam as string || '');
   const keywords = kwStr ? kwStr.split(',').filter(Boolean) : [];
   const flow = (flowParam as string) || 'new';
+  // Express skips the content-type / context / writing-mode steps and hands the article
+  // straight to the editor's outline review, which is where generation runs.
+  const express = modeParam === 'express';
+  const nextHref = useCallback((id: number | string) => (express
+    ? articleOutlineReviewHref(id, { contentType: 'article', internalLinks: true, externalLinks: true })
+    : `/articles/content-type?articleId=${id}`), [express]);
   const languageStr = (languageParam as string) || '';
   const domainIdStr = (domainIdParam as string || '').trim();
   const runSessionKey = useMemo(
@@ -398,10 +405,10 @@ const DeepAnalysisPage: NextPage = () => {
   useEffect(() => {
     if (!allDone || !articleId) return undefined;
     const t = setTimeout(() => {
-      router.replace(`/articles/content-type?articleId=${articleId}`);
+      router.replace(nextHref(articleId));
     }, 600);
     return () => clearTimeout(t);
-  }, [allDone, articleId, router]);
+  }, [allDone, articleId, router, nextHref]);
 
   const subtitle = useMemo(() => {
     if (allDone) return 'Analysis complete — opening your article…';
@@ -412,7 +419,7 @@ const DeepAnalysisPage: NextPage = () => {
   const canContinue = articleId !== null && jobId !== null && !overallError;
   const continueToContentType = () => {
     if (!articleId) return;
-    router.push(`/articles/content-type?articleId=${articleId}`);
+    router.push(nextHref(articleId));
   };
 
   const runRetry = () => {
@@ -495,7 +502,7 @@ const DeepAnalysisPage: NextPage = () => {
       title="Deep analysis"
       footer={(
         <WizardNextButton
-          label="Content type"
+          label={express ? 'Open editor' : 'Content type'}
           disabled={!canContinue}
           onClick={continueToContentType}
         />
