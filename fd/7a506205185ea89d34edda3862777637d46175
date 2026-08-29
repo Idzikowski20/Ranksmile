@@ -1,0 +1,23 @@
+pages/articles/deep-analysis.tsx
+  s_e8c3822b427cc8::t_7c12b91f7c2e9b 4
+  s_e8c3822b427cc8::t_991e3314d9545f 1,205,207,411
+  s_e8c3822b427cc8::t_03c622f2c24fed 180,202-204,206,408,422,505
+pages/articles/new.tsx
+  s_e8c3822b427cc8::t_2f3cc094f9ac1f 8,12,34-35,84,91,95-109,117-157,163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "fd7a506205185ea89d34edda3862777637d46175",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
