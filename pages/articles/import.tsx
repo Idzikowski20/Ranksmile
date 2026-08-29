@@ -1,12 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
+import { useQuery } from 'react-query';
 import { useWorkspaces } from '../../services/workspaces';
+import { useFetchDomains } from '../../services/domains';
+import AddPagesModal from '../../components/domains/AddPagesModal';
+import { aggregateGscPages } from '../../utils/gsc';
+import { Icon } from '../../components/koala/icons/Icon';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Flag } from '../../components/koala';
 import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProgress';
-import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
+import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import toast from 'react-hot-toast';
 
 const COUNTRIES: Record<string, string> = {
@@ -25,8 +30,55 @@ const ImportPage: NextPage = () => {
   const [showCountryMenu, setShowCountryMenu] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [source, setSource] = useState<'gsc' | 'url' | null>(null);
+  const [importingCount, setImportingCount] = useState(0);
   const { data: wsData } = useWorkspaces();
   const wsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
+  const { data: domainsData } = useFetchDomains(router, false);
+  const domains: DomainType[] = domainsData?.domains || [];
+  const activeDomain = resolveActiveDomain(domains, wsId, null) || domains[0] || null;
+
+  const { data: scData, isLoading: gscLoading } = useQuery(
+    ['sc-data', activeDomain?.slug],
+    async () => {
+      const res = await fetch(`/api/gsc/search-data?domain=${activeDomain?.slug}`);
+      return res.json();
+    },
+    { enabled: source === 'gsc' && !!activeDomain?.slug, staleTime: 5 * 60 * 1000 },
+  );
+
+  const gscPages = useMemo(
+    () => aggregateGscPages((scData?.data?.thirtyDays || []) as SearchAnalyticsItem[]),
+    [scData],
+  );
+
+  // ponytail: imports fire in parallel with no concurrency cap — add batching if
+  // selecting 50+ pages starts timing out the scraper.
+  const importPages = async (paths: string[]) => {
+    const picked = gscPages.filter((p) => paths.includes(p.path));
+    if (!picked.length) return;
+    setSource(null);
+    setImportingCount(picked.length);
+    try {
+      const results = await Promise.all(picked.map((p) => fetch('/api/articles/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: p.url,
+          keywords: p.keyword ? [p.keyword] : [],
+          country,
+          domainId: activeDomain?.ID,
+          startAnalysis: true,
+        }),
+      }).then((r) => r.ok).catch(() => false)));
+      const failed = results.filter((ok) => !ok).length;
+      if (failed) toast.error(`${failed} of ${picked.length} pages failed to import`);
+      if (failed < picked.length) toast.success(`Imported ${picked.length - failed} page(s)`);
+      await router.push(workspaceHref(wsId, '/articles'));
+    } finally {
+      setImportingCount(0);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -82,6 +134,70 @@ const ImportPage: NextPage = () => {
 
   const canProceed = url.trim().length > 0 && !isSubmitting;
   const countryName = COUNTRIES[country] || COUNTRIES.US;
+
+  if (source !== 'url') {
+    return (
+      <WizardShell title="Import Content">
+        <div>
+          <h2 className="koala-wizard-title">Import existing content</h2>
+          <p className="koala-wizard-subtitle">
+            Pull pages straight from Search Console, or import a single URL
+          </p>
+        </div>
+
+        <div className="koala-template-card-grid">
+          <button
+            type="button"
+            className="koala-template-card"
+            onClick={() => setSource('gsc')}
+            disabled={importingCount > 0}
+          >
+            <span className="koala-template-card__icon" aria-hidden="true">
+              <Icon name="MagnifyingGlass" size={24} weight="bold" color="var(--koala-text-primary)" />
+            </span>
+            <span className="koala-template-card__text">
+              <span className="koala-template-card__title">From Search Console</span>
+              <span className="koala-template-card__desc">
+                Pick indexed pages by traffic and impressions, then import them in bulk.
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="koala-template-card"
+            onClick={() => setSource('url')}
+            disabled={importingCount > 0}
+          >
+            <span className="koala-template-card__icon" aria-hidden="true">
+              <Icon name="Globe" size={24} weight="bold" color="var(--koala-text-primary)" />
+            </span>
+            <span className="koala-template-card__text">
+              <span className="koala-template-card__title">From URL</span>
+              <span className="koala-template-card__desc">
+                Paste the address of an existing page and target it with keywords.
+              </span>
+            </span>
+          </button>
+        </div>
+
+        {importingCount > 0 ? (
+          <p className="koala-wizard-subtitle">Importing {importingCount} page(s)…</p>
+        ) : null}
+        {source === 'gsc' && gscLoading ? (
+          <p className="koala-wizard-subtitle">Loading pages from Search Console…</p>
+        ) : null}
+
+        {source === 'gsc' && !gscLoading ? (
+          <AddPagesModal
+            pages={gscPages}
+            onClose={() => setSource(null)}
+            onAdd={(paths) => { importPages(paths).catch(() => undefined); }}
+          />
+        ) : null}
+      </WizardShell>
+    );
+  }
 
   return (
     <WizardShell
