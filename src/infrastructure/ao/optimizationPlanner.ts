@@ -263,10 +263,16 @@ function focusBlock(step: PlanStep): string {
   switch (step.focus) {
     case 'seo-terms': {
       const list = step.missingTerms.map((t) => `"${t}"`).join(', ');
-      return list ? `FOCUS — weave in these MISSING NLP terms VERBATIM where natural (exact form, no inflection/synonyms): ${list}` : '';
+      // Natural inflections, not exact-match: the scorer matches lemma variants
+      // (term_words_regexps), and demanding verbatim forms produced keyword-parroting
+      // sentences ("jestem szantażowany" as a clause 12 times).
+      return list ? `FOCUS — weave in these MISSING NLP terms where natural, in their natural grammatical form (inflections count; never force a phrase that reads as broken language): ${list}` : '';
     }
     case 'ai-coverage':
-      return `FOCUS — improve AI-search answer readiness. Apply these guidelines:\n${bullets}`;
+      // Coverage Booster: each guideline names a fact or question the AI engines expect.
+      // Insert the missing information itself, contextually, where the section already
+      // touches the topic — one or two factual sentences, not a new heading.
+      return `FOCUS — cover the missing facts below. For each, INSERT the fact itself into the text where it fits naturally (one or two factual sentences; no new headings, no bullet dumps):\n${bullets}`;
     case 'expand':
       return `FOCUS — deepen this section; it is currently shallow. Apply:\n${bullets}`;
     case 'readability':

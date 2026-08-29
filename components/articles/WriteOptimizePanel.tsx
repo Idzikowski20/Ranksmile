@@ -9,9 +9,7 @@ import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicG
 import { faviconUrl } from '@/src/core/shared/faviconUrl';
 import DomainFavicon from '../common/DomainFavicon';
 import ScoreTrio from './ScoreTrio';
-import EffortChecklist from './EffortChecklist';
 import SourceExplorer from './SourceExplorer';
-import { buildEffortChecklist } from '@/src/core/domain/terms/contentEffort';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 import type { Action } from '@/src/core/primitives/types';
 import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
@@ -433,7 +431,6 @@ const WriteOptimizePanel = ({
   const [tab, setTab] = useState<'all' | 'headings'>('all');
   const [seoOpen, setSeoOpen] = useState(true);
   const [aiOpen, setAiOpen] = useState(false);
-  const [effortOpen, setEffortOpen] = useState(false);
   const [query, setQuery] = useState('');
 
   // Score-gauge shortcuts: expand a section and scroll it into view. The SEO block
@@ -443,10 +440,9 @@ const WriteOptimizePanel = ({
   // Height + fade reveal when a section opens (close is instant — the block unmounts).
   const seoRevealRef = useOpenReveal<HTMLDivElement>(seoOpen);
   const aiRevealRef = useOpenReveal<HTMLDivElement>(aiOpen);
-  const effortRevealRef = useOpenReveal<HTMLDivElement>(effortOpen);
   // Opening one section collapses the other (mutually exclusive focus).
-  const expandSeo = () => { setSeoOpen(true); setAiOpen(false); setEffortOpen(false); requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })); };
-  const expandAi = () => { setAiOpen(true); setSeoOpen(false); setEffortOpen(false); requestAnimationFrame(() => aiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
+  const expandSeo = () => { setSeoOpen(true); setAiOpen(false); requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })); };
+  const expandAi = () => { setAiOpen(true); setSeoOpen(false); requestAnimationFrame(() => aiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
   // Honour the section requested when the panel was opened from a score gauge.
   useEffect(() => {
     if (initialSection === 'ai') expandAi();
@@ -467,11 +463,6 @@ const WriteOptimizePanel = ({
   const [aiGrouping, setAiGrouping] = usePersist('wo:aiGrouping', true);
   const [aiSort, setAiSort] = usePersist<AiSort>('wo:aiSort', 'missing');
 
-  // Content effort display — persisted.
-  const [showEffortOk, setShowEffortOk] = usePersist('wo:effortOk', true);
-  const [showEffortWeak, setShowEffortWeak] = usePersist('wo:effortWeak', true);
-  const [showEffortMissing, setShowEffortMissing] = usePersist('wo:effortMissing', true);
-  const [showEffortUnknown, setShowEffortUnknown] = usePersist('wo:effortUnknown', true);
 
   // Highlighting is active only while this panel is open (Write & Optimize view),
   // following the toggle; cleared when the panel unmounts.
@@ -562,37 +553,6 @@ const WriteOptimizePanel = ({
     return terms.map((t) => `${t.term} `.repeat(Math.max(t.current_count ?? 0, 0))).join(' ');
   }, [html, terms]);
 
-  const effortItems = useMemo(() => {
-    const uvTotal = allInfoFacts.length;
-    const uvCovered = allInfoFacts.filter((f) => f.covered).length;
-    return buildEffortChecklist({
-      html,
-      plainText: plainFromTerms,
-      keyword,
-      paaQuestions,
-      uniqueVsSerp: uvTotal > 0 ? { covered: uvCovered, total: uvTotal } : undefined,
-    });
-  }, [html, plainFromTerms, keyword, paaQuestions, allInfoFacts]);
-
-  const visibleEffortItems = useMemo(
-    () => effortItems.filter((item) => {
-      if (item.status === 'pass') return showEffortOk;
-      if (item.status === 'warn') return showEffortWeak;
-      if (item.status === 'fail') return showEffortMissing;
-      return showEffortUnknown;
-    }),
-    [effortItems, showEffortOk, showEffortWeak, showEffortMissing, showEffortUnknown],
-  );
-
-  const copyEffort = (which: 'all' | 'missing' | 'ok') => {
-    const sel = effortItems.filter((i) => {
-      if (which === 'all') return true;
-      if (which === 'missing') return i.status === 'fail' || i.status === 'warn';
-      return i.status === 'pass';
-    });
-    copy(sel.map((i) => `${i.label}: ${i.detail}`).join('\n'));
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', fontFamily: F }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes growOut { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }`}</style>
@@ -618,7 +578,7 @@ const WriteOptimizePanel = ({
           into content_effort / developer report; the panel simply does not render it. */}
       {/* SEO Entities subheader */}
       <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <button type="button" onClick={() => { setSeoOpen((v) => !v); if (!seoOpen) { setEffortOpen(false); setAiOpen(false); } }} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
+        <button type="button" onClick={() => { setSeoOpen((v) => !v); if (!seoOpen) setAiOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
           <Chevron open={seoOpen} color="var(--koala-text-primary)" />
           <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>SEO</span>
           <span style={{ fontSize: 15, color: 'var(--koala-text-disabled)', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -711,7 +671,7 @@ const WriteOptimizePanel = ({
 
         {/* AI Search collapsible */}
         <div ref={aiRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '14px 0 4px', marginTop: 8, borderTop: '1px solid var(--koala-bg-secondary)' }}>
-          <button type="button" onClick={() => { setAiOpen((v) => !v); if (!aiOpen) { setEffortOpen(false); setSeoOpen(false); } }} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
+          <button type="button" onClick={() => { setAiOpen((v) => !v); if (!aiOpen) setSeoOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
             <svg viewBox="0 0 20 20" width={16} height={16} style={{ flexShrink: 0, color: 'var(--koala-text-disabled)', transform: aiOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}><path fill="currentColor" fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" /></svg>
             <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)', whiteSpace: 'nowrap' }}>
               AI Search

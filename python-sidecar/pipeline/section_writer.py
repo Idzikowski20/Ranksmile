@@ -174,10 +174,16 @@ def _prompt(
     # model two instructions it cannot both satisfy — which is what a special-only opening
     # section produced.
     if ctx.get("is_lead") and not style.get("table") and not style.get("list"):
+        # 38% of AI citations come from the opening ~100 words (Surfer research, 2026):
+        # the answer, the reader and the brand all have to land inside them.
         lines.append(
             "This is the article's opening paragraph: the FIRST sentence answers the"
             " article title's main question directly. No wind-up, no 'w dzisiejszych"
             " czasach' — the answer first, context after."
+            " Within the first 100 words: name who this is for (address the reader as"
+            " 'Ty'), and — when a BRAND section exists in the context — say in one"
+            " natural clause that we help with exactly this. Never quote the raw"
+            " keyword in quotation marks; use its natural inflected form."
         )
     if _reference_ids(paragraph_plan, "sources", "source_id"):
         lines.append(

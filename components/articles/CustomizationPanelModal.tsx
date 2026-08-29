@@ -302,12 +302,14 @@ const ActionBtn = ({ children, disabled }: { children: React.ReactNode; disabled
 );
 
 /* ── Term chip ─────────────────────────────────────────────────── */
-const TermChip = ({ term }: { term: Term }) => (
+const TermChip = ({ term, onRemove }: { term: Term; onRemove?: (text: string) => void }) => (
   <div style={{
     display: 'flex', alignItems: 'center', gap: 8, margin: 4, padding: '8px 12px', borderRadius: 24,
     border: `1px solid ${C.g40}`, color: C.g160, fontSize: 14, fontFamily: F, cursor: 'pointer',
     background: '#fff', userSelect: 'none', transition: 'background 0.15s',
   }}
+  title={onRemove ? 'Click to remove this term from grading' : undefined}
+  onClick={onRemove ? () => onRemove(term.text) : undefined}
   onMouseEnter={(e) => { e.currentTarget.style.background = C.g10; }}
   onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
   >
@@ -333,17 +335,71 @@ const SourceBadge = ({ source }: { source: 'paa' | 'comp' }) => {
 };
 
 /* ── Main component ────────────────────────────────────────────── */
-type Props = { open: boolean; slug: string | undefined; keyword: string; onClose: () => void };
+type Props = {
+  open: boolean;
+  slug: string | undefined;
+  keyword: string;
+  onClose: () => void;
+  /** Article whose guidelines this panel edits — enables real recalculation. */
+  articleId?: number | string;
+  /** Current graded targets/terms from score_data, to seed the controls. */
+  initialStructure?: { words?: number; headings?: number; paragraphs?: number };
+  initialTerms?: Array<{ term: string }>;
+  /** Fired after a server-side change (recalc / structure / terms) — reload scoreData. */
+  onApplied?: () => void;
+};
 
-const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
+const CustomizationPanelModal = ({ open, slug, keyword, onClose, articleId, initialStructure, initialTerms, onApplied }: Props) => {
   const [active, setActive] = useState('competitors');
   const [learn, setLearn] = useState(true);
-  const [structure, setStructure] = useState({ words: 2034, headings: 31, paragraphs: 48, images: 46 });
+  const [structure, setStructure] = useState({
+    words: initialStructure?.words || 2034,
+    headings: initialStructure?.headings || 31,
+    paragraphs: initialStructure?.paragraphs || 48,
+    images: 4,
+  });
+  // Re-seed when a fresh score_data arrives (recalc or reopen).
+  useEffect(() => {
+    if (!open) return;
+    setStructure((prev) => ({
+      ...prev,
+      words: initialStructure?.words || prev.words,
+      headings: initialStructure?.headings || prev.headings,
+      paragraphs: initialStructure?.paragraphs || prev.paragraphs,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialStructure?.words, initialStructure?.headings, initialStructure?.paragraphs]);
   const [wordUnit, setWordUnit] = useState('WORDS');
   const [termsTab, setTermsTab] = useState('all');
   const [topicsTab, setTopicsTab] = useState('all');
   const [page, setPage] = useState(1);
-  const [termList, setTermList] = useState<Term[]>(TERMS);
+  const [termList, setTermList] = useState<Term[]>(
+    initialTerms?.length ? initialTerms.map((t) => ({ text: t.term, heading: false })) : TERMS,
+  );
+  useEffect(() => {
+    if (open && initialTerms?.length) setTermList(initialTerms.map((t) => ({ text: t.term, heading: false })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialTerms?.length]);
+
+  const postCustomization = async (body: Record<string, unknown>) => {
+    if (!articleId) return;
+    try {
+      const res = await fetch(`/api/articles/${articleId}/customization`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) onApplied?.();
+    } catch { /* keep the modal usable — the next save retries */ }
+  };
+  // One recalculation per burst of checkbox clicks, Surfer-style: picking competitors
+  // recomputes structure targets and re-extracts the term list from those pages.
+  const recalcTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queueRecalc = () => {
+    if (recalcTimer.current) clearTimeout(recalcTimer.current);
+    recalcTimer.current = setTimeout(() => { void postCustomization({ recalcCompetitors: true }); }, 1500);
+  };
+  useEffect(() => () => { if (recalcTimer.current) clearTimeout(recalcTimer.current); }, []);
   const [termQuery, setTermQuery] = useState('');
   const [termFocus, setTermFocus] = useState(false);
   const [colMenu, setColMenu] = useState(false);
@@ -381,6 +437,9 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
     if (firstSave.current) { firstSave.current = false; return undefined; }
     setSaveState('saving');
     saveTimer.current = setTimeout(() => {
+      void postCustomization({
+        structure: { words: structure.words, headings: structure.headings, paragraphs: structure.paragraphs },
+      });
       setSaveState('saved');
       savedTimer.current = setTimeout(() => setSaveState('idle'), 1600);
     }, 800);
@@ -417,6 +476,12 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
     if (!t) return;
     setTermList((prev) => [{ text: t, heading: false }, ...prev]);
     setTermQuery('');
+    void postCustomization({ addTerm: t });
+  };
+
+  const removeTerm = (text: string) => {
+    setTermList((prev) => prev.filter((x) => x.text !== text));
+    void postCustomization({ removeTerm: text });
   };
 
   if (!open) return null;
@@ -516,7 +581,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
                   Pick at least five URLs for the most relevant results. <LearnMore />
                 </SectionHeader>
 
-                {slug ? <CompetitorsSection slug={slug} keyword={keyword} /> : <div style={{ padding: 16, fontSize: 14, color: C.g100, fontFamily: F }}>Select a domain to load competitors.</div>}
+                {slug ? <CompetitorsSection slug={slug} keyword={keyword} onSelectionChange={queueRecalc} /> : <div style={{ padding: 16, fontSize: 14, color: C.g100, fontFamily: F }}>Select a domain to load competitors.</div>}
               </div>
 
               {/* Content Structure */}
@@ -614,7 +679,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
                   <div style={{ position: 'relative', paddingLeft: 16 }}>
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: 'repeating-linear-gradient(0deg, transparent, transparent 4px, #57C99A 4px, #57C99A 5px)' }} />
                     <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-                      {filteredTerms.map((t) => <TermChip key={t.text} term={t} />)}
+                      {filteredTerms.map((t) => <TermChip key={t.text} term={t} onRemove={articleId ? removeTerm : undefined} />)}
                     </div>
                   </div>
                 )}
