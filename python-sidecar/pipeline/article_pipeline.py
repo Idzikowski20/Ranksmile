@@ -49,11 +49,13 @@ które rankują na pierwszej stronie Google. Artykuły muszą być:
 Zwracaj TYLKO HTML artykułu (bez DOCTYPE, body, head — czysty HTML artykułu)."""
 
 
-# No `reasoning` parameter here, deliberately. A hardcoded `reasoning: {effort: medium}`
-# made every writer call come back with empty content: reasoning tokens count against
-# max_tokens, and at the 1200 the paragraph writer asks for, the model spent the whole
-# budget thinking and emitted nothing. Eleven consecutive empty responses produced an
-# article of headings and images with no prose, which then passed as a success.
+# `reasoning: {effort: minimal}` — the OPPOSITE of the old bug. A hardcoded
+# `effort: medium` once burned the whole 1200-token budget on thinking and shipped
+# empty paragraphs; removing the parameter entirely let the model fall back to its
+# DEFAULT reasoning effort, which on gpt-5-class models burns the budget just the
+# same (3600/3600 reasoning tokens, zero content). Prose paragraphs need no chain
+# of thought: pin effort to minimal so the budget goes to the article.
+_REASONING_MINIMAL = {"reasoning": {"effort": "minimal", "exclude": True}}
 
 
 async def _chat(
@@ -76,6 +78,7 @@ async def _chat(
             model=MODEL,
             max_tokens=max_tokens,
             messages=messages,
+            extra_body=_REASONING_MINIMAL,
         )
     except Exception as exc:
         print(f"[generate] OpenRouter chat failed: {type(exc).__name__}: {exc}")
@@ -92,7 +95,11 @@ async def _chat(
         and _retry
         and getattr(choice, "finish_reason", None) == "length"
     ):
-        bumped = max(3000, max_tokens * 3)
+        bumped = max(6000, max_tokens * 3)
+        # Diagnosis breadcrumb: if the burn is reasoning, the response carries it.
+        reasoning = getattr(choice.message, "reasoning", None) if choice and choice.message else None
+        if reasoning:
+            print(f"[generate] budget went to reasoning ({len(str(reasoning))} chars) despite effort=minimal")
         print(f"[generate] retrying empty length-capped completion with max_tokens={bumped}")
         return await _chat(prompt, bumped, system=system, _retry=False)
     if not content:
