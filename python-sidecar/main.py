@@ -13,6 +13,10 @@ from dotenv import load_dotenv
 # was removed from git — without this the scheduler sends an empty x-internal-token.
 _ROOT = Path(__file__).resolve().parent.parent
 for _env_file in (
+    # .env.local FIRST — it is where the sidecar's own secrets actually live
+    # (.gitignore keeps *.local out of git); the loader listing only ".env" meant
+    # a fully populated python-sidecar/.env.local was silently ignored.
+    Path(__file__).resolve().parent / ".env.local",
     Path(__file__).resolve().parent / ".env",
     _ROOT / ".env.local",
     _ROOT / ".env",
