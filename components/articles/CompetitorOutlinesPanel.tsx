@@ -35,7 +35,6 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
   const domain = competitor.domain || (() => {
     try { return new URL(competitor.url).hostname.replace(/^www\./, ''); } catch { return competitor.url; }
   })();
-  const pos = competitor.serp_position;
 
   return (
     <div style={{
@@ -85,17 +84,6 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 1 }}>
-          {/* SERP position badge */}
-          {pos != null && (
-            <span style={{
-              fontSize: 10, fontWeight: 700, color: pos <= 3 ? 'var(--koala-status-success)' : pos <= 7 ? 'var(--koala-status-warning)' : 'var(--koala-text-secondary)',
-              background: pos <= 3 ? 'var(--koala-status-success-bg)' : pos <= 7 ? 'var(--koala-status-warning-bg)' : 'var(--koala-bg-secondary)',
-              border: `1px solid ${pos <= 3 ? 'var(--koala-status-success-bg)' : pos <= 7 ? 'var(--koala-status-warning-bg)' : 'var(--koala-border-primary)'}`,
-              borderRadius: 5, padding: '1px 5px', fontFamily: 'var(--font-family-primary)',
-            }}>
-              #{pos}
-            </span>
-          )}
           {/* Chevron */}
           <svg viewBox="0 0 20 20" width={14} height={14} fill="currentColor"
             style={{ color: 'var(--koala-text-disabled)', transition: 'transform 0.15s', transform: open ? 'rotate(90deg)' : 'none', flexShrink: 0 }}>
