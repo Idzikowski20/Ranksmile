@@ -2,7 +2,7 @@ import {
   computeCoverageScores,
   type CoverageSnapshot,
 } from '@/src/core/domain/coverage/aiCoverage';
-import { analyzeIntroduction, deepseekIntroJudge } from '@/src/infrastructure/articles/introductionAnalyzer';
+import { analyzeIntroduction, deepseekIntroJudge, introCoverageItems } from '@/src/infrastructure/articles/introductionAnalyzer';
 import { citationIntentItems, remapLegacyCitationItem } from '@/src/infrastructure/articles/citationPrompts';
 import { liveCoverageItems } from '@/src/infrastructure/coverage/liveCoverage';
 import { compactCoverageSnapshotItems, AI_COVERAGE_MAX } from '@/src/infrastructure/coverage/curateCoverageItems';
@@ -53,7 +53,15 @@ export async function regradeCoverageSnapshot(opts: {
   const serpQuestions = workingSnap.items
     .filter((i) => i.type === 'paa' || i.category === 'knowledge')
     .map((i) => i.label);
-  const intentGraded = citationIntentItems(opts.keyword, intentResult.detectedMainQuestion, { serpQuestions });
+  // The 5 fixed intent rows graded straight from the intro verdict lead the bucket —
+  // deterministic, never judged away. Citation prompts only top the bucket up: built
+  // from serpQuestions they duplicate the knowledge rows, and downstream synthetic
+  // filters ate them (article 35 shipped with ONE intent row and an AI score capped
+  // at 28 because the intent bucket's max was 2).
+  const introRows = introCoverageItems(intentResult);
+  const citationRows = citationIntentItems(opts.keyword, intentResult.detectedMainQuestion, { serpQuestions })
+    .slice(0, 3);
+  const intentGraded = [...introRows, ...citationRows];
   const knowledgeItems = workingSnap.items
     .filter((i) => i.category !== 'intent' && i.type !== 'intent')
     .map(remapLegacyCitationItem);
