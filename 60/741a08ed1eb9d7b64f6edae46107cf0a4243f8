@@ -1,0 +1,21 @@
+src/infrastructure/coverage/regradeCoverageSnapshot.ts
+  s_e8c3822b427cc8::t_d2ac46860a7036 50-60
+python-sidecar/analyzers/image_generator.py
+  s_e8c3822b427cc8::t_87c66f6e31a71c 55-60,117-119,255,332
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "60741a08ed1eb9d7b64f6edae46107cf0a4243f8",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
