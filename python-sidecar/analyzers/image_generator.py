@@ -52,7 +52,12 @@ def _safe_alt(text: str) -> str:
     cleaned = " ".join(str(text or "").split())
     for bad, good in (("<", ""), (">", ""), ("&", " "), ('"', "”"), ("'", "’")):
         cleaned = cleaned.replace(bad, good)
-    return " ".join(cleaned.split())[:300]
+    out = " ".join(cleaned.split())
+    if len(out) <= 300:
+        return out
+    # Cut on a word boundary — a mid-word slice ("napię", "terapeu") reads as a bug
+    # in every alt the limit touches.
+    return out[:300].rsplit(" ", 1)[0]
 
 
 LANGUAGE_NAMES = {
@@ -109,6 +114,9 @@ RULES:
 - Write in English only, max 250 characters
 - NO: charts, diagrams, UI screens, text overlays, watermarks
 - NO HOLLYWOOD CLICHÉS: no dark offices with men in suits handing envelopes, no handshakes, no people smiling at laptops, no generic stock photography
+- NO GENERIC STILL-LIFES: never a notebook/coffee/pen desk arrangement unless the heading is literally about note-taking. Prefer PEOPLE in the heading's actual situation.
+- The scene must visualize THIS heading's specific subject — a reader should guess the section from the image alone
+- End the prompt with: "photorealistic editorial photograph, sharp focus, natural light, correct human anatomy, 16:9"
 
 ALT TEXT — a second, separate job. After the prompt, write the alt attribute for this
 image: one sentence describing what is actually VISIBLE in the scene you just specified,
@@ -244,7 +252,7 @@ def _pollinations_url(prompt: str) -> str:
     token_param = f"&token={api_key}" if api_key else ""
     return (
         f"https://image.pollinations.ai/prompt/{encoded}"
-        f"?width=1920&height=1080&nologo=true&private=true&seed={seed}&enhance=true&model=flux-schnell{token_param}"
+        f"?width=1920&height=1080&nologo=true&private=true&seed={seed}&enhance=true&model=flux{token_param}"
     )
 
 
@@ -321,7 +329,7 @@ async def _pollinations_fetch(prompt: str, alt_text: str = "") -> dict:
     token_param = f"&token={api_key}" if api_key else ""
     url = (
         f"https://image.pollinations.ai/prompt/{encoded}"
-        f"?width=1920&height=1080&nologo=true&private=true&seed={seed}&enhance=true&model=flux-schnell{token_param}"
+        f"?width=1920&height=1080&nologo=true&private=true&seed={seed}&enhance=true&model=flux{token_param}"
     )
 
     headers = {}
