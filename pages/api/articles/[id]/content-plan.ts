@@ -241,7 +241,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // bundle, so the LLM brief was paid for and thrown away on every run.
     if (written?.length && persisted) {
       const planner = (persisted.content_planner_v2 ?? {}) as Record<string, unknown>;
-      const withBrief = { ...persisted, content_planner_v2: { ...planner, brief: written } };
+      // Stored as the approved outline too, not only as the brief. Restoring a review
+      // reads `approvedOutline` first and the brief only as a fallback, and until the
+      // reviewer edited a heading nothing ever wrote the first one — so a plan the
+      // reviewer merely looked at came back as "nothing saved" and was planned again.
+      const withBrief = {
+        ...persisted,
+        content_planner_v2: {
+          ...planner,
+          brief: written,
+          approvedOutline: written,
+          approvedOutlineAt: new Date().toISOString(),
+        },
+      };
       try {
         await db.query(
           `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
