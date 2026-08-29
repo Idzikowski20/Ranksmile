@@ -1,0 +1,25 @@
+pages/api/articles/[id]/generate.ts
+  s_e8c3822b427cc8::t_f318b261a3132e 520-523
+pages/articles/[id]/index.tsx
+  s_e8c3822b427cc8::t_b89423d35ef3a5 1730-1732,1738,1744
+src/infrastructure/coverage/regradeCoverageSnapshot.ts
+  s_e8c3822b427cc8::t_f318b261a3132e 5,56-64
+python-sidecar/pipeline/article_pipeline.py
+  s_e8c3822b427cc8::t_8092eaf67635e4 291-298,300-301
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ca191d283f14fcf2198f1dbbf04c8cd0642c89fa",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
