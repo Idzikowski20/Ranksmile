@@ -2287,6 +2287,23 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       });
     };
 
+    /**
+     * Express mode (`?express=1`): the outline is still planned, it just is not a
+     * checkpoint — as soon as the planner lands, the article is written from it.
+     * Guarded by a ref so a re-render mid-run cannot start a second generation.
+     */
+    const expressAutoRan = useRef(false);
+    useEffect(() => {
+      if (router.query.express !== '1' || !outlineReviewMode || !editor) return;
+      if (outlineBusy || generateBusy || expressAutoRan.current) return;
+      if (!collectApprovedOutline(editor.getJSON()).length) return;
+      expressAutoRan.current = true;
+      handleOutlineGenerate();
+      // handleOutlineGenerate reads the live editor doc; re-running on doc identity would
+      // only re-enter the guard.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [router.query.express, outlineReviewMode, editor, outlineBusy, generateBusy]);
+
     const handleStartOutlineReview = () => {
       setOutlineReviewMode(true);
       void router.replace({

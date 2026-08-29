@@ -48,7 +48,7 @@ export function articleEntryHref(
 
 export function articleOutlineReviewHref(
   articleId: number | string,
-  opts: { contentType: string; internalLinks: boolean; externalLinks: boolean },
+  opts: { contentType: string; internalLinks: boolean; externalLinks: boolean; express?: boolean },
 ): string {
   const query = new URLSearchParams({
     reviewOutline: '1',
@@ -56,5 +56,8 @@ export function articleOutlineReviewHref(
     internal: opts.internalLinks ? '1' : '0',
     external: opts.externalLinks ? '1' : '0',
   });
+  // Express skips the review: the editor plans the outline and writes from it without
+  // waiting for a click. The outline still runs — it is just not a checkpoint.
+  if (opts.express) query.set('express', '1');
   return `/articles/${String(articleId)}?${query.toString()}`;
 }
