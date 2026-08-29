@@ -172,6 +172,7 @@ export async function reconcilePostGenerateArticle(opts: {
       plainText,
       html: opts.html,
       keyword,
+      force: true,
     }).catch((err) => {
       console.warn('[reconcile] coverage regrade failed:', err instanceof Error ? err.message : err);
       return null;
