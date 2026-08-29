@@ -1,6 +1,5 @@
 import React from 'react';
-import { Icon } from '../koala/icons';
-import { Spinner } from '../koala/primitives/Spinner';
+import ProgressCard from './ProgressCard';
 import { analysisPhaseGroups, type PhaseRow } from '@/src/core/domain/articles/analysisPhaseRows';
 import { AiEngineIcons, GoogleEngineIcon } from './EngineIcons';
 import type { AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
@@ -10,32 +9,6 @@ const STATE_LABEL: Record<PhaseRow['state'], string> = {
   active: 'In progress',
   error: 'Error',
   pending: 'Pending',
-};
-
-const Marker: React.FC<{ state: PhaseRow['state'] }> = ({ state }) => {
-  if (state === 'done') return <Icon name="Check" size={16} weight="bold" />;
-  if (state === 'error') return <Icon name="WarningCircle" size={16} weight="bold" />;
-  // Hidden from assistive tech: the panel's own live region announces the running step,
-  // and Spinner carries role="status" which would announce a second time.
-  if (state === 'active') return <Spinner size={14} color="currentColor" />;
-  // A hollow dot, not an empty box. ai_search is the last stage in the sidecar pipeline
-  // (python-sidecar/pipeline/runner.py), so its three rows sit at NEW for most of a run
-  // while the Google group below fills with ticks — and an invisible marker made them
-  // read as plain prose someone forgot to style rather than as steps still to come.
-  return (
-    <span style={{
-      width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    }}
-    >
-      <span style={{
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        border: '1.5px solid var(--koala-border-strong)',
-      }}
-      />
-    </span>
-  );
 };
 
 /** Deep-analysis progress, rendered from typed phases (lib/analysisPhases). */
@@ -66,7 +39,7 @@ const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases })
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    gap: 28,
+    gap: 16,
     minHeight: '100%',
     maxWidth: 340,
     margin: '0 auto',
@@ -77,38 +50,18 @@ const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases })
         announcing nothing left completions and failures silent. */}
     <div aria-live="polite" style={HIDDEN}>{activeSummary(analysisPhaseGroups(phases))}</div>
     {analysisPhaseGroups(phases).map((group) => (
-      <section key={group.id} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--koala-text-primary)', margin: 0 }}>
-            {group.title}
-          </h3>
-          {group.id === 'ai-search' ? <AiEngineIcons /> : <GoogleEngineIcon />}
-        </div>
-        {group.rows.map((row) => (
-          <div
-            key={row.id}
-            aria-label={[STATE_LABEL[row.state], row.label, row.detail].filter(Boolean).join(': ')}
-            style={{
-              display: 'flex',
-              gap: 10,
-              alignItems: 'flex-start',
-              color: row.state === 'active'
-                ? 'var(--koala-text-primary)'
-                : 'var(--koala-text-secondary)',
-            }}
-          >
-            <span style={{ paddingTop: 2 }} aria-hidden="true"><Marker state={row.state} /></span>
-            <span style={{ fontSize: 14, lineHeight: 1.45 }}>
-              {row.label}
-              {row.detail ? (
-                <span style={{ display: 'block', fontSize: 13, color: 'var(--koala-text-secondary)' }}>
-                  {row.detail}
-                </span>
-              ) : null}
-            </span>
-          </div>
-        ))}
-      </section>
+      <ProgressCard
+        key={group.id}
+        title={group.title}
+        trailing={group.id === 'ai-search' ? <AiEngineIcons /> : <GoogleEngineIcon />}
+        rows={group.rows.map((row) => ({
+          id: row.id,
+          label: row.label,
+          detail: row.detail,
+          state: row.state,
+          ariaLabel: [STATE_LABEL[row.state], row.label, row.detail].filter(Boolean).join(': '),
+        }))}
+      />
     ))}
   </div>
 );
