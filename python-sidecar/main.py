@@ -449,7 +449,7 @@ async def extract_terms_from_urls(body: dict):
         return {"terms": []}
 
     deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
-    terms = await extract_semantic_terms(keyword, texts, deepseek_key)
+    terms = await extract_semantic_terms(keyword, texts, deepseek_key, body.get("language", "pl"))
     if len(terms) < 12:
         tfidf = extract_nlp_terms(texts, keyword)
         seen = {t["term"] for t in terms}

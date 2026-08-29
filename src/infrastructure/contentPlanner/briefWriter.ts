@@ -99,6 +99,8 @@ export type BriefWriterInput = {
   brandName?: string;
   /** NLP terms the article has to carry, strongest first. */
   importantTerms?: string[];
+  /** Terms the competitor cohort itself puts in H2/H3 — steer them into headings. */
+  headingTerms?: string[];
   /** H2/H3 titles of the pages that rank — what the topic requires, in their words. */
   competitorHeadings?: string[];
   language?: string;
@@ -251,6 +253,9 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
   // first-person queries turned into sentences. The scorer matches inflections
   // (term_words_regexps), so natural variants count without parroting.
   const kwFolded = (input.keyword || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const headingTerms = briefPhraseTerms(input.headingTerms || [], 10)
+    .map(asEvidence)
+    .filter(Boolean);
   const phraseTerms = briefPhraseTerms(input.importantTerms || [], TERMS)
     .filter((t) => {
       const folded = t.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
@@ -292,6 +297,9 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'A first- or second-person query keyword is NEVER quoted verbatim in a heading:',
     '"jestem szantażowany" becomes "Co zrobić, gdy jesteś szantażowany" — the natural',
     'phrasing a person would write, with the same words inflected.',
+    ...(headingTerms.length ? [
+      `HEADING TERMS: the ranking pages use these inside their own H2/H3 — work each into a heading where it fits the role: ${headingTerms.join(', ')}.`,
+    ] : []),
     'Keep the given order and count, one heading per role. FAQ and the closing section keep their plain names.',
     'RANKING PAGES shows how the pages already ranking title their sections: match that level of',
     'specificity and cover what they cover. Never reuse a title that names a company.',

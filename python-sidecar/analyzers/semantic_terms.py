@@ -79,22 +79,22 @@ def _build_chunks(texts: list[str]) -> list[tuple[str, str]]:
     return chunks
 
 
-async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: str) -> list[dict]:
+async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: str, language: str = "pl") -> list[dict]:
     """
     Extract semantic terms from competitor page texts using DeepSeek.
     Chunks each text by headings, caches per chunk, aggregates results.
     Returns top 50 terms as [{term, target_count, type}].
     """
     if not texts:
-        return _fallback_terms(texts, keyword)
+        return _fallback_terms(texts, keyword, language)
 
     if not deepseek_key:
-        return _fallback_terms(texts, keyword)
+        return _fallback_terms(texts, keyword, language)
 
     # 1. Chunk texts by headings (or whole plain snippets)
     chunks = _build_chunks(texts)
     if not chunks:
-        return _fallback_terms(texts, keyword)
+        return _fallback_terms(texts, keyword, language)
 
     # 2. Cache hits vs misses
     uncached: list[tuple[str, str]] = []
@@ -118,7 +118,7 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
             all_terms.extend(terms)
 
     if not all_terms:
-        return _fallback_terms(texts, keyword)
+        return _fallback_terms(texts, keyword, language)
 
     # 4. Aggregate: doc_freq, avg relevance, dominant type
     term_groups: dict[str, dict] = {}
@@ -181,7 +181,7 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
     aggregated = [t for t in aggregated if t["chunk_hits"] >= min_docs]
 
     if not aggregated:
-        return _fallback_terms(texts, keyword)
+        return _fallback_terms(texts, keyword, language)
 
     aggregated.sort(key=lambda t: (t["chunk_hits"] * t["relevance"]), reverse=True)
 
@@ -273,7 +273,47 @@ TEXT:
         return []
 
 
-def _fallback_terms(texts: list[str], keyword: str) -> list[dict]:
+def _entity_terms(texts: list[str], language: str) -> list[dict]:
+    """NER entities across the cohort — relationship-bearing phrases, not TF-IDF shingles.
+
+    spaCy when the model is installed, regex capitalized-span fallback otherwise. Only
+    entities at least two pages mention survive: a name one page drops is that page's
+    business, not the topic's vocabulary."""
+    from analyzers.ner import extract_entities
+    from analyzers.competitor_terms import is_useful_phrase
+
+    docs_with: dict[str, int] = {}
+    occurrences: dict[str, int] = {}
+    display: dict[str, str] = {}
+    for text in texts:
+        spans = extract_entities(text, language=language, max_spans=60).get("spans", [])
+        seen_here: set[str] = set()
+        lower = text.lower()
+        for span in spans:
+            raw = (span.get("text") or "").strip()
+            key = raw.lower()
+            if len(key) < 4 or len(key) > 60 or not is_useful_phrase(key):
+                continue
+            display.setdefault(key, raw)
+            if key not in seen_here:
+                docs_with[key] = docs_with.get(key, 0) + 1
+                occurrences[key] = occurrences.get(key, 0) + max(1, lower.count(key))
+                seen_here.add(key)
+    n_docs = max(1, len(texts))
+    out = []
+    for key, df in sorted(docs_with.items(), key=lambda kv: (-kv[1], kv[0])):
+        if df < 2 and n_docs >= 3:
+            continue
+        avg = max(1, round(occurrences[key] / df))
+        out.append({
+            "term": display[key], "target_count": min(avg, 5), "type": "entity",
+            "relevance": 0.7, "doc_freq": df,
+            "suggested_min": 1, "suggested_max": min(avg + 1, 6),
+        })
+    return out[:40]
+
+
+def _fallback_terms(texts: list[str], keyword: str, language: str = "pl") -> list[dict]:
     """TF-IDF phrase extraction when DeepSeek is unavailable — Ranksmile-style n-grams.
 
     `doc_freq` passes straight through and means the same thing on both paths: the number
@@ -285,7 +325,26 @@ def _fallback_terms(texts: list[str], keyword: str) -> list[dict]:
     if not texts:
         return [{"term": keyword, "target_count": 3, "type": "core"}] if keyword else []
 
+    # Entities lead, n-grams fill: a Surfer-style guideline is built from entities and
+    # their co-occurrence, and pure TF-IDF was the step where quality fell off a cliff
+    # whenever the LLM extractor was unavailable.
+    entity_terms = _entity_terms(texts, language)
     tfidf_terms = extract_nlp_terms(texts, keyword)
+    if entity_terms:
+        seen = {t["term"].lower() for t in entity_terms}
+        for t in tfidf_terms:
+            if len(entity_terms) >= 50:
+                break
+            if t["term"].lower() in seen:
+                continue
+            entity_terms.append({
+                "term": t["term"], "target_count": t["target_count"], "type": "supporting",
+                "relevance": 0.6, "doc_freq": t.get("doc_freq", 1),
+                "suggested_min": max(1, t["target_count"] - 1),
+                "suggested_max": max(t["target_count"], t["target_count"] + 2),
+            })
+            seen.add(t["term"].lower())
+        return entity_terms
     if tfidf_terms:
         return [
             {

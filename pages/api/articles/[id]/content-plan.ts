@@ -10,6 +10,7 @@ import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
+import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import {
@@ -255,6 +256,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       brandKnowledge: brand.brandKnowledge,
       brandName: brand.brandName,
       importantTerms: importantTermsFromScoreData(scoreData ?? {}, { tableTerms }),
+      headingTerms: (Array.isArray(scoreData?.terms) ? scoreData.terms as NlpTerm[] : [])
+        .filter((t) => t.in_headings)
+        .map((t) => t.term)
+        .slice(0, 10),
       language: row.language || undefined,
       competitorHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
       onTokens: (tokens) => recordAiTokens(orgId, tokens),
