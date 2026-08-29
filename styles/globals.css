@@ -9236,6 +9236,10 @@ html.koala-shell[data-theme="cream"] .app-content {
   max-width: 636px;
   gap: 24px;
 }
+/* Short chooser steps sit in the middle of the canvas, not pinned to the top. */
+.koala-wizard-shell__body:has(.koala-content-type--centered) {
+  justify-content: center;
+}
 .koala-content-type {
   display: flex;
   flex-direction: column;
