@@ -17,22 +17,34 @@ describe('WIE opening policy enforcement', () => {
     expect(openingPolicyViolated(defHtml, 'definition_first')).toBe(false);
   });
 
-  it('heuristic inject yields non-definition opening', async () => {
+  it('heuristic never replaces an existing lead paragraph', async () => {
+    // It used to swap the first <p> for the canned "Czujesz, że…" hook — destroying
+    // the direct answer the AI score demands and opening every article identically.
     const fixed = heuristicProblemFirstInject(defHtml, 'szantaż');
-    expect(fixed).toContain('Czujesz');
-    expect(openingPolicyViolated(fixed, 'problem_first')).toBe(false);
+    expect(fixed).toBe(defHtml);
   });
 
-  it('enforceOpeningPolicy uses heuristic when no llm', async () => {
+  it('heuristic adds the hook only when there is no lead at all', () => {
+    const noLead = '<h1>Szantaż</h1><h2>Dalej</h2>';
+    const fixed = heuristicProblemFirstInject(noLead, 'szantaż');
+    expect(fixed).toContain('Czujesz');
+  });
+
+  it('an answer-style lead the detector cannot classify is not a violation', () => {
+    const answerLead = '<h1>Szantaż</h1><p>Jestem szantażowany? Nie płać ani nie spełniaj żądań — zabezpiecz dowody i zgłoś sprawę.</p>';
+    expect(openingPolicyViolated(answerLead, 'problem_first')).toBe(false);
+  });
+
+  it('enforceOpeningPolicy leaves a definition lead for the LLM path when no llm is given', async () => {
     const r = await enforceOpeningPolicy({
       html: defHtml,
       expectedOpening: 'problem_first',
       keyword: 'szantaż',
     });
     expect(r.attempted).toBe(true);
-    expect(r.method).toBe('heuristic');
-    expect(r.violated).toBe(false);
-    expect(r.html).toContain('Czujesz');
+    // Nothing safe to do without the LLM: replacing the lead loses content.
+    expect(r.html).toBe(defHtml);
+    expect(r.violated).toBe(true);
   });
 
   it('enforceOpeningPolicy prefers LLM rewrite when provided', async () => {

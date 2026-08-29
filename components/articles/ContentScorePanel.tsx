@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from '../koala/core';
-import { KoalaPanelHeader } from '../koala/layout';
 import { ScoreData, NlpTerm, countOccurrences } from '@/src/infrastructure/articles/contentScore';
 import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
 import { computeOpportunityScore } from '@/src/core/domain/keywords/enrichment';
+import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import { introFactorsFromScoreData } from '@/src/core/domain/aiScore/liveFactors';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
+import { Button, Gauge } from '../koala/core';
+import { KoalaPanelHeader } from '../koala/layout';
 import { useArticleKeywords } from '../../services/articleKeywords';
 import type { KeywordItem } from './KeywordResearchSection';
 import KeywordResearchSection from './KeywordResearchSection';
@@ -14,12 +17,7 @@ import PrePublishPanel from './PrePublishPanel';
 import type { AiReadabilityResult } from './PrePublishPanel';
 import type { PlagiarismResult } from './PlagiarismPanel';
 import ScoreTrio from './ScoreTrio';
-import ScoreFactorList from './ScoreFactorList';
-import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
-import { introFactorsFromScoreData } from '@/src/core/domain/aiScore/liveFactors';
-import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { useCompetitors } from '../../services/competitors';
-import { Gauge } from '../koala/core';
 import { useCoverageHistoryDelta } from '../../hooks/articles/useCoverageHistoryDelta';
 import PipelineStatusStrip from './PipelineStatusStrip';
 
@@ -123,7 +121,8 @@ interface Props {
 
 /* ── Small circular progress ───────────────────────────────────────── */
 const CircleProgress = ({ value, max, color }: { value: number; max: number; color: string }) => {
-  const r = 7, circ = 2 * Math.PI * r;
+  const r = 7; const
+circ = 2 * Math.PI * r;
   const pct = max > 0 ? Math.min(value / max, 1) : 0;
   return (
     <svg width={16} height={16} style={{ transform: 'rotate(-90deg)' }}>
@@ -207,8 +206,15 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
       <button
         onClick={() => setOpen((v) => !v)}
         style={{
-          width: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-          padding: '8px 10px', background: 'transparent', border: 'none', cursor: 'pointer', gap: 8,
+          width: '100%',
+display: 'flex',
+alignItems: 'flex-start',
+justifyContent: 'space-between',
+          padding: '8px 10px',
+background: 'transparent',
+border: 'none',
+cursor: 'pointer',
+gap: 8,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, flex: 1, minWidth: 0 }}>
@@ -217,8 +223,13 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontSize: 12, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              fontSize: 12,
+fontWeight: 600,
+color: 'var(--koala-text-primary)',
+fontFamily: 'var(--font-family-primary)',
+              overflow: 'hidden',
+textOverflow: 'ellipsis',
+whiteSpace: 'nowrap',
             }}>
               {competitor.serp_title || competitor.title}
             </div>
@@ -257,9 +268,14 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
             <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginLeft: (h.level - 1) * 8, marginBottom: 1 }}>
               <span style={{ fontSize: 10, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)', flexShrink: 0, width: 14, textAlign: 'right' }}>h{h.level}</span>
               <span style={{
-                fontSize: 11, color: h.level === 1 ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)',
-                fontFamily: 'var(--font-family-primary)', fontWeight: h.level === 1 ? 600 : 400,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4,
+                fontSize: 11,
+color: h.level === 1 ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)',
+                fontFamily: 'var(--font-family-primary)',
+fontWeight: h.level === 1 ? 600 : 400,
+                overflow: 'hidden',
+textOverflow: 'ellipsis',
+whiteSpace: 'nowrap',
+lineHeight: 1.4,
               }} title={h.text}>{h.text}</span>
             </div>
           ))}
@@ -464,7 +480,7 @@ const ContentScorePanel = ({
           targetKeyword: keyword,
           plainText,
         }),
-      }).then(r => r.json()).then(d => {
+      }).then((r) => r.json()).then((d) => {
         if (d.keywords) {
           setKeywords(d.keywords.map((k: KeywordItem) => ({
             ...k,
@@ -485,8 +501,8 @@ const ContentScorePanel = ({
   useEffect(() => {
     if (!nlpOpen || !articleId) return;
     fetch(`/api/articles/${articleId}/keywords/gap`)
-      .then(r => r.json())
-      .then(d => {
+      .then((r) => r.json())
+      .then((d) => {
         setGapKeywords((d.gapKeywords || []).map((g: { keyword: string; frequency?: number }) => ({
           keyword: g.keyword,
           frequency: g.frequency,
@@ -506,15 +522,14 @@ const ContentScorePanel = ({
       });
       const data = await res.json();
       setSuggestedKeywords(data.suggestions || []);
-    } catch { /* ignore */ }
-    finally { setIsSuggesting(false); }
+    } catch { /* ignore */ } finally { setIsSuggesting(false); }
   };
 
   const handleAcceptSuggestion = async (kw: KeywordItem) => {
-    setSuggestedKeywords(prev => prev.filter(k => k.keyword !== kw.keyword));
+    setSuggestedKeywords((prev) => prev.filter((k) => k.keyword !== kw.keyword));
     const monthlyVol = kw.avgMonthlySearches ?? kw.ads_monthly_volume ?? 0;
     const competition = kw.ads_competition ?? null;
-    setKeywords(prev => [...prev, {
+    setKeywords((prev) => [...prev, {
       ...kw,
       keyword: kw.keyword,
       source: 'ads_suggestion',
@@ -537,12 +552,12 @@ const ContentScorePanel = ({
   };
 
   const handleDismissSuggestion = (kw: KeywordItem) => {
-    setSuggestedKeywords(prev => prev.filter(k => k.keyword !== kw.keyword));
+    setSuggestedKeywords((prev) => prev.filter((k) => k.keyword !== kw.keyword));
   };
 
   const handleToggleCoverage = async (kw: KeywordItem) => {
     const newCovered = !kw.is_covered;
-    setKeywords(prev => prev.map(k => k.keyword === kw.keyword ? { ...k, is_covered: newCovered } : k));
+    setKeywords((prev) => prev.map((k) => (k.keyword === kw.keyword ? { ...k, is_covered: newCovered } : k)));
     if (kw.id && articleId) {
       fetch(`/api/articles/${articleId}/keywords`, {
         method: 'PUT',
@@ -579,13 +594,6 @@ const ContentScorePanel = ({
   const displayAi = optimizeLiveScores?.ai ?? baseAiScore;
   const displayContent = optimizeLiveScores?.overall
     ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
-
-  const storedFactors = scoreData?.ai_factors ?? [];
-  // Introduction factors recompute from the text; FACTS_COVERAGE is article-wide and only
-  // written after generation, so keep the persisted one rather than dropping it.
-  const aiFactors = plainText.trim()
-    ? [...storedFactors.filter((f) => !f.name.startsWith('INTRODUCTION_')), ...liveIntroFactors]
-    : storedFactors;
 
   const historyDelta = useCoverageHistoryDelta(articleId);
   const trioDeltas = scoreDeltas ?? (historyDelta ? { ai: historyDelta.delta } : undefined);
@@ -699,11 +707,10 @@ const ContentScorePanel = ({
           onSeoClick={() => { setWriteSection('seo'); setView('write'); }}
           onAiClick={() => { setWriteSection('ai'); setView('write'); }}
         />
-        {aiFactors.length > 0 && (
-          <div style={{ padding: '12px 16px 0' }}>
-            <ScoreFactorList factors={aiFactors} />
-          </div>
-        )}
+        {/* Intro-intent factor list ("Covers the planned topics", "Names the reader"…)
+            is diagnostic plumbing, not something the reader acts on — it fed the score
+            and confused users into optimizing for the checklist. Backend keeps grading
+            on it; the panel no longer prints it. */}
       </div>
 
       {optimizeState === 'idle' && (

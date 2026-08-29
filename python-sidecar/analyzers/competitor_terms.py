@@ -51,9 +51,22 @@ _BOILERPLATE_RE = re.compile(
 )
 
 
+# Function words and site chrome that mark a TF-IDF shingle crossing a sentence or a
+# menu, not a phrase anyone would target: "jedna jezeli ktos", "menu glownego przejdz".
+_EDGE_JUNK = {
+    "jezeli", "jesli", "ktos", "kogos", "jedna", "jeden", "oraz", "albo", "lub",
+    "przejdz", "menu", "glownego", "zobacz", "czytaj", "wiecej", "kliknij", "tutaj",
+}
+
+
 def is_useful_phrase(phrase: str) -> bool:
     tokens = [t for t in phrase.split() if t]
     if not tokens:
+        return False
+    # A multi-word phrase that starts or ends on a function word is a broken shingle.
+    if len(tokens) >= 2 and (tokens[0] in _EDGE_JUNK or tokens[-1] in _EDGE_JUNK):
+        return False
+    if any(t in {"menu", "przejdz", "kliknij"} for t in tokens):
         return False
     if _BOILERPLATE_RE.search(phrase):
         return False
