@@ -47,7 +47,17 @@ export async function regradeCoverageSnapshot(opts: {
   // intro that answers in its first sentence, because 2 stale intent rows blocked the
   // regrade. A fresh generation always regrades.
   if (!opts.force && !needsCoverageRegrade(opts.snapshot, opts.plainText) && opts.snapshot.items.length <= AI_COVERAGE_MAX) return null;
-  if (!chatLlm().apiKey) return null;
+  if (!chatLlm().apiKey) {
+    // Without a chat key the intro judge and the coverage judge never run: the intent
+    // bucket stays at its stale keyword-mode rows and answersMainQuestionEarly stays
+    // false forever — the AI Search score is then structurally capped near ~35. Silent
+    // null here cost days of "why is AI stuck" debugging; say it every time.
+    console.warn(
+      '[coverage] regrade skipped: no chat LLM key in the Next.js environment '
+      + '(set DEEPSEEK_API_KEY or OPENROUTER_API_KEY) — AI Search cannot be graded.',
+    );
+    return null;
+  }
 
   const compacted = compactCoverageSnapshotItems(opts.snapshot.items, opts.keyword)
     .map(remapLegacyCitationItem);
