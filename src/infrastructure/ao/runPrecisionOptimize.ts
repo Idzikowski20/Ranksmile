@@ -105,6 +105,7 @@ export function collectPrecisionCandidates(opts: {
   ctx: ArticleContext | null;
   html: string;
   profile: ArticleIntentProfile;
+  competitorHeadings?: string[];
   visibilityPrompts?: Array<{ id: string; label: string }>;
   defaultSectionId?: string;
   strategy?: OptimizationStrategy;
@@ -121,6 +122,7 @@ export function collectPrecisionCandidates(opts: {
   const sections = splitSections(opts.html);
   const base = buildEditCandidates({
     profile: opts.profile,
+    competitorHeadings: opts.competitorHeadings,
     termGaps,
     coverageItems: liveItems,
     paaQuestions: opts.ctx?.paa,
@@ -405,6 +407,10 @@ export async function runPrecisionOptimizeV4(opts: {
     ctx: opts.ctx,
     html: opts.html,
     profile,
+    // H2s the ranking pages share — same list the ArticleContext already loads.
+    competitorHeadings: (opts.ctx?.competitors ?? [])
+      .flatMap((c) => c.headings ?? [])
+      .filter((h, i, all) => all.indexOf(h) === i),
     visibilityPrompts: opts.visibilityPrompts,
     strategy: policy.strategy,
     seoStrong: policy.seoStrong,

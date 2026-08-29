@@ -11,6 +11,8 @@ import type { OptimizationStrategy } from '@/src/infrastructure/ao/optimizationP
 
 export type BuildCandidatesInput = {
   profile: ArticleIntentProfile;
+  /** Common competitor H2 titles — sections the ranking pages carry (Surfer-style). */
+  competitorHeadings?: string[];
   termGaps?: TermUsageGap[];
   coverageItems?: readonly CoverageItem[];
   paaQuestions?: string[];
@@ -213,5 +215,42 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
     }
   }
 
-  return sortCandidatesByPriority(out);
+    // Missing sections, the way Surfer adds them: a topic the ranking pages share a
+  // heading for and the article does not cover gets a whole new section, not a
+  // sentence squeezed into an existing one. Capped hard — two per run keeps AO from
+  // rebuilding the article's shape wholesale.
+  if (input.competitorHeadings?.length && input.sections?.length && strategy !== 'precision') {
+    const articleText = input.sections.map((sec) => sec.html).join(' ')
+      .replace(/<[^>]+>/g, ' ')
+      .toLowerCase();
+    const anchorSection = input.sections[input.sections.length - 1];
+    let added = 0;
+    for (const heading of input.competitorHeadings) {
+      if (added >= 2) break;
+      const title = (heading || '').trim();
+      if (title.length < 8 || title.length > 90) continue;
+      if (textHitsForbidden(title, profile)) continue;
+      // Covered when the heading's meaningful words already appear in the article.
+      const words = title.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 3);
+      if (!words.length) continue;
+      const hits = words.filter((w) => articleText.includes(w)).length;
+      if (hits / words.length >= 0.6) continue;
+      out.push(
+        makeCandidate({
+          id: `missing-section-${slug(title)}`,
+          gapId: `section:missing:${slug(title)}`,
+          source: 'missing_section',
+          targetSectionId: anchorSection.id,
+          targetGap: title,
+          reason: `Ranking pages cover "${title}"; the article has no section for it`,
+          priority: 'recommended',
+          suggestedAction: 'add_missing_section',
+          expectedOutcome: { type: 'generic', id: `section:missing:${slug(title)}` },
+        }),
+      );
+      added += 1;
+    }
+  }
+
+return sortCandidatesByPriority(out);
 }

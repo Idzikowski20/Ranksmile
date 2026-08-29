@@ -12,7 +12,6 @@ import AppShell from '../../../components/common/AppShell';
 import { Button } from '../../../components/koala/core';
 import { Icon } from '../../../components/koala/icons';
 import ContentScorePanel from '../../../components/articles/ContentScorePanel';
-import InternalLinksPanel from '../../../components/articles/InternalLinksPanel';
 import KeywordSuggestInput from '../../../components/articles/KeywordSuggestInput';
 import PixabayImageModal from '../../../components/articles/PixabayImageModal';
 import WordPressExportModal from '../../../components/articles/WordPressExportModal';
@@ -1448,6 +1447,7 @@ const ArticleEditorPage: NextPage = () => {
     setScanningSectionId(null);
     changedSectionsRef.current = [];
     optimizeStore.clear();
+    autoLinksRanRef.current = false;
     setOptimizeState('optimizing');
     setIsAutoOptimizing(true);
     setOptimizeProgress({ processed: 0, total: 0 });
@@ -1603,7 +1603,13 @@ const ArticleEditorPage: NextPage = () => {
               // Express has no reviewer to click Accept: the point of the mode is a
               // finished article. Resolving every node applies the optimized version and
               // the review-completion effect returns the editor to idle.
-              if (opts?.autoAccept) resolveAllOptimizerNodes();
+              if (opts?.autoAccept) {
+                resolveAllOptimizerNodes();
+                if (!autoLinksRanRef.current) {
+                  autoLinksRanRef.current = true;
+                  void autoInsertInternalLinks();
+                }
+              }
               if (meta.outcome === 'faq_only' || meta.outcome === 'partial_body' || meta.outcome === 'incomplete_no_body') {
                 toast(meta.userMessage || 'Partial optimization — SEO gaps may remain.', { icon: '⚠️', duration: 7000 });
               }
@@ -1691,6 +1697,39 @@ const ArticleEditorPage: NextPage = () => {
   const handleAcceptAll = () => { resolveAllOptimizerNodes(); };
 
   /**
+   * Auto internal links — Surfer-style: after an optimize run resolves, suggested links
+   * are inserted without a panel. Cache-first (internal_links_cache written by the
+   * analysis), capped, and only for URLs the document does not already link.
+   */
+  const autoLinksRanRef = useRef(false);
+  const autoInsertInternalLinks = async () => {
+    const editor = getEditor();
+    if (!editor || !article?.id || !internalArticles.length) return;
+    try {
+      const html: string = editor.getHTML();
+      const plainText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const res = await fetch('/api/articles/suggest-internal-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          articleId: article.id,
+          content: plainText,
+          keyword: article.target_keyword || '',
+          articles: internalArticles,
+        }),
+      });
+      const data = await res.json() as { suggestions?: Array<{ anchorText: string; url: string }> };
+      const links = (data.suggestions || [])
+        .filter((sug) => sug.anchorText && sug.url && !html.includes(`href="${sug.url}"`))
+        .slice(0, 5);
+      if (!links.length) return;
+      const results = handleInsertLinks(links);
+      const inserted = Array.isArray(results) ? results.filter((r) => r.success).length : 0;
+      if (inserted) toast(`Inserted ${inserted} internal link${inserted === 1 ? '' : 's'}`, { icon: '🔗' });
+    } catch { /* links are a bonus — never fail the optimize flow over them */ }
+  };
+
+  /**
    * Express mode finishes the job: once the article is written, run Auto-Optimize at the
    * top target and accept every suggestion, so the reader lands on the best draft the
    * pipeline can produce rather than on a review queue. One shot per entry — the query
@@ -1764,6 +1803,10 @@ const ArticleEditorPage: NextPage = () => {
     setOptimizeSaving(true);
     try {
       resolveAllOptimizerNodes(); // resolve-all FIRST → no contentOptimizer atoms remain
+      if (!autoLinksRanRef.current) {
+        autoLinksRanRef.current = true;
+        await autoInsertInternalLinks();
+      }
       const html: string = editor.getHTML();
       setEditorHtml(html); // keep page state in sync (effect will also sync on transition)
       const text = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -2334,19 +2377,6 @@ const ArticleEditorPage: NextPage = () => {
               ) : ranksmileDockOpen ? (
                 // Docked Ranksmile pane — the editor portals RanksmileChatPanel into this element.
                 <div ref={setRanksmileDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
-              ) : showInternalLinksPanel ? (
-                <InternalLinksPanel
-                  articleId={article.id}
-                  keyword={article.target_keyword || ''}
-                  plainText={plainText}
-                  domainBaseUrl={domainBaseUrl}
-                  domains={domains}
-                  onClose={() => setShowInternalLinksPanel(false)}
-                  onInsertLinks={handleInsertLinks}
-                  onAiActivity={setLinksAiActive}
-                  articleKeywords={articleKeywords}
-                  internalArticles={internalArticles}
-                />
               ) : showHistory ? (
                 <VersionHistoryPanel
                   articleId={article.id}
@@ -2386,7 +2416,6 @@ const ArticleEditorPage: NextPage = () => {
                         overall: aoLiveSnapshot.overall,
                       } : undefined}
                       keyword={article?.target_keyword || ''}
-                      onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
                       onAutoOptimize={() => handleAutoOptimizeSections()}
                       isAutoOptimizing={isAutoOptimizing}
                       optimizeState={optimizeState}

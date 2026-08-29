@@ -229,8 +229,9 @@ export function diagnosePlannerInputs(opts: {
   }
   return {
     code: 'thin_topic',
-    message: `Competitor pages were read but yielded only ${claimCount} usable claims, and the planner needs 5. `
-      + 'This keyword may be too narrow, or the pages that rank for it are too thin to model.',
+    message: `Competitor pages were read but yielded only ${claimCount} usable claims, and the planner needs at least 2. `
+      + 'This keyword may be too narrow, or the pages that rank for it are too thin to model. '
+      + 'Try a longer, more specific keyword.',
   };
 }
 
