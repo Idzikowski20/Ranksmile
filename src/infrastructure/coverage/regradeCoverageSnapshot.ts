@@ -38,8 +38,15 @@ export async function regradeCoverageSnapshot(opts: {
   plainText: string;
   html: string;
   keyword: string;
+  /** Post-generation: the article body just changed wholesale — regrade unconditionally. */
+  force?: boolean;
 }): Promise<CoverageSnapshot | null> {
-  if (!needsCoverageRegrade(opts.snapshot, opts.plainText) && opts.snapshot.items.length <= AI_COVERAGE_MAX) return null;
+  // The heuristic gate exists for cheap paths (autosave, reload). It cannot see that a
+  // snapshot's intent rows were graded in keyword-mode before any article existed —
+  // article 36 kept answersMainQuestionEarly=false from an empty-text verdict over an
+  // intro that answers in its first sentence, because 2 stale intent rows blocked the
+  // regrade. A fresh generation always regrades.
+  if (!opts.force && !needsCoverageRegrade(opts.snapshot, opts.plainText) && opts.snapshot.items.length <= AI_COVERAGE_MAX) return null;
   if (!chatLlm().apiKey) return null;
 
   const compacted = compactCoverageSnapshotItems(opts.snapshot.items, opts.keyword)
