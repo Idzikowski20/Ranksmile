@@ -517,7 +517,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       internal_links: internalLinks,
       external_links: externalLinks,
       review_outline: reviewOutline,
-      brand_knowledge: allowBrandNiche ? brandKnowledge : '',
+      // Always. allowBrandNiche gates the PLANNER's niche-topic selection; wiring it to
+      // this field silently stripped brand knowledge from every generation, so articles
+      // never named the agency ("nawiąż do nas" bullets had nothing to draw on).
+      brand_knowledge: brandKnowledge,
       voice_tone: voiceTone,
       compiled_write_plan: compiledWritePlan,
     };

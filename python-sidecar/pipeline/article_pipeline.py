@@ -288,8 +288,17 @@ async def run_pipeline(
                     await on_status(f"Writing paragraph {written}…")
                 except Exception as exc:
                     print(f"[generate] status callback failed: {exc}")
+            # Brand context travels with every paragraph — the writer is stateless, and
+            # without it no paragraph could name the agency the brief's "nawiąż do nas"
+            # bullets refer to.
+            paragraph_brand = (
+                "\n\nBRAND (use as context where the plan asks to reference us; "
+                f"never invent facts):\n{brand_knowledge.strip()[:1200]}"
+                if brand_knowledge.strip() else ""
+            )
             return await _chat(
-                f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}\n\n"
+                f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}"
+                f"{paragraph_brand}\n\n"
                 f"{prompt}{paragraph_links_block}",
                 max_tokens=1200,
                 system="Write SEO content as Markdown only. Never emit HTML.",

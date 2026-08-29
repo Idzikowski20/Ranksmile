@@ -1727,26 +1727,21 @@ const ArticleEditorPage: NextPage = () => {
   };
 
   /**
-   * Express mode finishes the job: once the article is written, run Auto-Optimize at the
-   * top target and accept every suggestion, so the reader lands on the best draft the
-   * pipeline can produce rather than on a review queue. One shot per entry — the query
-   * flag is dropped as soon as it fires, so a refresh does not re-optimize.
+   * Express no longer auto-runs Auto-Optimize after generation (the auto-run surprised
+   * users and burned a credit unasked). The generated draft lands as-is; the flags are
+   * still dropped so a refresh does not re-enter the express path.
    */
   const expressOptimizeRan = useRef(false);
   useEffect(() => {
     if (router.query.express !== '1' || expressOptimizeRan.current) return;
     if (outlineAwaitingReview || router.query.reviewOutline === '1') return;
-    if (optimizeState !== 'idle' || !scoreData || !article) return;
-    if (!isUsableArticleHtml(editorHtml)) return;
+    if (!article || !isUsableArticleHtml(editorHtml)) return;
     expressOptimizeRan.current = true;
-    toast('Express mode — polishing your article with Auto-Optimize…', { icon: '⚡', duration: 6000 });
     const { express, reviewOutline, type, internal, external, ...rest } = router.query;
     router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true })
       .catch(() => undefined);
-    handleAutoOptimizeSections({ targetScore: 100, autoAccept: true }).catch(() => undefined);
-    // handleAutoOptimizeSections is re-created every render; the ref is the guard.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.query.express, outlineAwaitingReview, optimizeState, scoreData, article, editorHtml]);
+  }, [router.query.express, outlineAwaitingReview, article, editorHtml]);
 
   // Jump the caret to the next/prev unresolved section and scroll it into view.
   const navigateSection = (dir: 1 | -1) => {
