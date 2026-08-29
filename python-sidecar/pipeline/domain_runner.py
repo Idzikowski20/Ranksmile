@@ -64,22 +64,41 @@ async def post_terminal(
         print(f"[domain_runner] terminal {status} for {job_id}: {error or 'done'}")
         return
 
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.post(
-                url,
-                headers={
-                    "Content-Type": "application/json",
-                    "x-internal-token": os.environ.get("INTERNAL_PIPELINE_TOKEN", ""),
-                },
-                json=body,
-            )
-            if resp.status_code >= 400:
-                print(
-                    f"[domain_runner] terminal callback HTTP {resp.status_code}: {resp.text[:200]}"
+    token = os.environ.get("INTERNAL_PIPELINE_TOKEN", "")
+    if not token:
+        # Node rejects tokenless callbacks with "no session" and the job never
+        # finalizes — say so once, loudly, instead of letting 401s scroll by.
+        print(
+            "[domain_runner] INTERNAL_PIPELINE_TOKEN is not set — the terminal "
+            "callback will be rejected by the app. Set the same value in BOTH the "
+            "sidecar and the Next.js environment."
+        )
+
+    # 180 s, not 15: finalize runs the post-generate reconcile (coverage regrade is an
+    # LLM call) inside the request. The terminal callback is the only thing that flips
+    # the job to done — a timeout here leaves a finished article stuck "generating",
+    # so it gets one long attempt and one retry.
+    for attempt in (1, 2):
+        try:
+            async with httpx.AsyncClient(timeout=180) as client:
+                resp = await client.post(
+                    url,
+                    headers={
+                        "Content-Type": "application/json",
+                        "x-internal-token": token,
+                    },
+                    json=body,
                 )
-    except Exception as exc:
-        print(f"[domain_runner] terminal callback failed: {type(exc).__name__}: {exc}")
+                if resp.status_code >= 400:
+                    print(
+                        f"[domain_runner] terminal callback HTTP {resp.status_code}: {resp.text[:200]}"
+                    )
+                return
+        except Exception as exc:
+            print(
+                f"[domain_runner] terminal callback failed (attempt {attempt}/2): "
+                f"{type(exc).__name__}: {exc}"
+            )
 
 
 async def post_progress(nextjs_url: str, job_id: str, total_progress: int, message: str) -> None:
