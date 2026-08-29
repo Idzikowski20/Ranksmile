@@ -180,7 +180,8 @@ def test_authority_sources_resolve_and_gate_the_link_rule():
     prompt = _prompt(plan, ctx)
 
     assert "Authority sources: art. 191 kk -> https://isap.sejm.gov.pl/kk.pdf" in prompt
-    assert "AT MOST one" in prompt
+    # Sources present → the paragraph MUST cite exactly one, naming what it backs.
+    assert "cite EXACTLY ONE" in prompt
     # No sources on the plan -> no link permission in the prompt.
     assert "AT MOST one" not in _prompt(PARAGRAPH, CONTEXT)
 

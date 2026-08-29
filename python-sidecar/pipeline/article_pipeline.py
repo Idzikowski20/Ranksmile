@@ -265,7 +265,13 @@ async def run_pipeline(
         # "2–5" quota would ask for 2–5 links in EACH paragraph, compounding well past
         # the intended per-article total as the plan grows more paragraphs.
         paragraph_links_block = (
-            format_internal_link_block(link_articles, language, limit=8, quota="0–1")
+            format_internal_link_block(
+                link_articles, language, limit=12,
+                # "0–1" read as "optional" and articles shipped with 2 links against the
+                # reference's ~10. One per matching paragraph compounds to 5-8 per
+                # article; enforce_internal_links still unwraps anything off-list.
+                quota="dokładnie 1, jeśli temat akapitu pasuje do pozycji z listy (inaczej 0)",
+            )
             if internal_links else ""
         )
         link_note = (
@@ -496,9 +502,11 @@ Treść strony (fragment):
 Zwróć WYŁĄCZNIE JSON (bez markdown), pisany w języku strony:
 {{
   "brand_name": "krótka nazwa marki/firmy",
-  "brand_knowledge": "Business Type\\n<...>\\n\\nIndustry\\n<...>\\n\\nProducts/Services description\\n<...>\\n\\nCustomer profile\\n<...>\\n\\nCompetitors\\n<...>\\n\\nTopics to cover\\n<...>"
+  "brand_knowledge": "Business Type\\n<...>\\n\\nIndustry\\n<...>\\n\\nProducts/Services description\\n<...>\\n\\nCustomer profile\\n<...>\\n\\nCompetitors\\n<...>\\n\\nTopics to cover\\n<...>\\n\\nExample cases (anonymized)\\n<2-3 zanonimizowane przykłady spraw/realizacji ze strony — sytuacja, działanie, wynik; tylko jeśli treść strony je opisuje, nigdy nie wymyślaj>"
 }}
-Bądź konkretny i oparty na treści strony."""
+Bądź konkretny i oparty na treści strony. Sekcję "Example cases" wypełnij tylko faktami
+ze strony (case studies, opisy realizacji, referencje) — writer użyje ich jako
+przykładów "z naszej praktyki" w artykułach."""
     raw = (await _chat(prompt, max_tokens=1500)).strip()
     for p in ("```json", "```"):
         if raw.startswith(p):
