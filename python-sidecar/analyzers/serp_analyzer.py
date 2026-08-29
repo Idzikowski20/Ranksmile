@@ -48,6 +48,36 @@ def domain_from_url(url: str) -> str:
         return ""
 
 
+# Reference sites, not competitors. A one-word definitional keyword ("szantaż") returns
+# dictionaries, translators and music databases — benchmarking an article against them
+# poisons everything downstream: junk NLP terms (cookie banners, URL fragments), word
+# targets from 400-word dictionary stubs, and planner sections about etymology and
+# pronunciation. These domains can never be the article's real competition.
+_REFERENCE_DOMAINS = (
+    "dictionary.cambridge.org", "sjp.pwn.pl", "sjp.pl", "wsjp.pl", "pl.wiktionary.org",
+    "wiktionary.org", "bab.la", "glosbe.com", "diki.pl", "translate.google.",
+    "ling.pl", "dict.cc", "reverso.net", "linguee.", "pons.com", "collinsdictionary.com",
+    "merriam-webster.com", "dictionary.com", "thefreedictionary.com",
+    "discogs.com", "genius.com", "tekstowo.pl", "spotify.com", "music.apple.com",
+    "youtube.com", "youtu.be", "soundcloud.com", "last.fm", "rateyourmusic.com",
+)
+
+
+def _is_reference_domain(url: str) -> bool:
+    host = domain_from_url(url).lower()
+    return any(host == d or host.endswith("." + d) or d in host for d in _REFERENCE_DOMAINS)
+
+
+def _filter_reference_results(serp_results: list[dict]) -> list[dict]:
+    """Drop dictionary/translator/music results, unless that starves the benchmark
+    (< 3 left) — a definitional SERP with nothing else is still the only data there is."""
+    kept = [r for r in serp_results if not _is_reference_domain(r.get("link", ""))]
+    dropped = len(serp_results) - len(kept)
+    if dropped:
+        print(f"[serp_analyzer] dropped {dropped} reference-site results (dictionary/music)")
+    return kept if len(kept) >= 3 else serp_results
+
+
 def _competitors_from_results(serp_results: list[dict], limit: int = 10) -> list[dict]:
     """SERP URLs/titles/snippets — always returned even when page scrape fails."""
     return [
@@ -103,6 +133,7 @@ async def analyze_serp(
         return {**_placeholder_score_data(keyword, language), "competitors": [], "paa_questions": []}
 
     serp_results, paa_questions = await _fetch_serp_results(keyword, language, num_results, serper_key)
+    serp_results = _filter_reference_results(serp_results)
     competitors = _competitors_from_results(serp_results)
     if not serp_results:
         print(f"[serp_analyzer] No SERP results for {keyword!r}")
@@ -378,10 +409,15 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
         heading_counts = [max(5, wc // 150) for wc in word_counts]
         paragraph_counts = [max(5, wc // 120) for wc in word_counts]
 
+    # Floors: a SERP of dictionary stubs and thin listicles must not cap a real article.
+    # An article longer than everything that ranks is not a defect — never grade words
+    # against a max lower than what a competent guide needs.
+    # ponytail: fixed floors; derive from content type if service pages ever need less.
+    avg_words = int(sum(word_counts) / len(word_counts))
     return {
         "words_min": int(min(word_counts)),
-        "words_max": int(max(word_counts)),
-        "words_target": int(sum(word_counts) / len(word_counts)),
+        "words_max": max(int(max(word_counts)), 1200),
+        "words_target": max(avg_words, 800),
         "headings_min": max(3, min(heading_counts)),
         "headings_max": max(8, max(heading_counts)),
         "headings_target": int(sum(heading_counts) / len(heading_counts)),

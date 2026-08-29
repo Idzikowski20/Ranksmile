@@ -2,11 +2,7 @@
 // GET  /api/articles/job-progress — Polled by frontend for per-step progress display.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
-import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
@@ -19,6 +15,10 @@ import { staleFinalizationSql } from '@/src/infrastructure/articles/staleFinaliz
 import {
   mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
 } from '@/src/core/domain/articles/analysisPhases';
+import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 
 /** Same boundary as articles.content: no raw article HTML survives in the job row. */
 function sanitizedResult(result: unknown): unknown {
@@ -183,7 +183,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (status === 'done' || status === 'failed') {
       const jrows = await db.query<{ job_type: string; domain_id: number | null; article_id: number | null }>(
-        `SELECT job_type, domain_id, article_id FROM analysis_jobs WHERE id = ?`,
+        'SELECT job_type, domain_id, article_id FROM analysis_jobs WHERE id = ?',
         { replacements: [jobId], type: QueryTypes.SELECT },
       );
       if (!jrows.length) return res.status(404).json({ error: 'job not found' });
@@ -273,6 +273,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           });
           const scoreJson = JSON.stringify(reconciled?.scoreData ?? sidecarScore);
           const contentScore = reconciled?.contentScore ?? null;
+          // The compiled-write-plan path returns article_html without meta, so express
+          // articles landed with meta_title/description NULL. Derive from the article
+          // itself rather than leaving the SERP snippet to chance: H1 as the title,
+          // the first real paragraph as the description.
+          const h1Text = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1]?.replace(/<[^>]+>/g, '').trim() || '';
+          const firstPara = /<p[^>]*>([\s\S]*?)<\/p>/i.exec(html)?.[1]?.replace(/<[^>]+>/g, '').trim() || '';
+          const metaTitle = (result?.meta_title as string) || h1Text.slice(0, 70);
+          const metaDescription = (result?.meta_description as string) || firstPara.slice(0, 160);
           await db.query(
             `UPDATE articles SET
                title = COALESCE(?, title), content = ?, meta_title = ?, meta_description = ?, meta_url = ?,
@@ -282,10 +290,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                status = 'draft', updated_at = CURRENT_TIMESTAMP
              WHERE ${articleIdSql} = ?`,
             { replacements: [
-              result?.meta_title || null,
+              result?.meta_title || h1Text || null,
               html,
-              result?.meta_title || '',
-              result?.meta_description || '',
+              metaTitle,
+              metaDescription,
               result?.meta_url || '',
               JSON.stringify(result?.article_schema || result?.schema_json || {}),
               scoreJson,
@@ -328,7 +336,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     };
     if (typeof statusText === 'string' && statusText.trim()) {
       await db.query(
-        `UPDATE analysis_jobs SET status_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        'UPDATE analysis_jobs SET status_text = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         { replacements: [statusText.trim().slice(0, 300), jobId] },
       );
     }
@@ -341,7 +349,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          SET stream_text = substr(COALESCE(stream_text, '') || ?, 1, ${MAX_STREAM_CHARS}),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        { replacements: [sanitizeArticleHtml(contentChunk), jobId] },  // ponytail: fragment-level
+        { replacements: [sanitizeArticleHtml(contentChunk), jobId] }, // ponytail: fragment-level
         // sanitizing cannot catch a tag split across two chunks; the terminal write above
         // sanitizes the assembled article, which is what any surface actually renders.
       );
@@ -351,7 +359,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // stage implies. Stored merged so a later event never erases an earlier phase.
     const { phases: phasePatch } = req.body as { phases?: AnalysisPhasesPatch };
     const prevRows = await db.query<{ progress_json: string | null }>(
-      `SELECT progress_json FROM analysis_jobs WHERE id = ?`,
+      'SELECT progress_json FROM analysis_jobs WHERE id = ?',
       { replacements: [jobId], type: QueryTypes.SELECT },
     );
     const prev = safeJsonParse<AnalysisPhases | null>(prevRows[0]?.progress_json ?? null, null);

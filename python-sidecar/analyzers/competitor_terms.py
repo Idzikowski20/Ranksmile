@@ -36,9 +36,30 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", normalized).strip()
 
 
+# Page furniture, not topic language: cookie/consent banners, URL and CMS fragments,
+# dictionary/translator chrome, music-database metadata. These reached the term list from
+# competitor boilerplate ("partners can use", "index php title", "song duration 2:58")
+# and each uncovered one drags the score of an article that rightly never says them.
+_BOILERPLATE_RE = re.compile(
+    r"cookie|consent|privacy policy|polityka prywatno|partners can|can use this|"
+    r"click here|kliknij tutaj|all rights reserved|wszelkie prawa|newsletter|"
+    r"index php|php title|https?|www|\.com|\.pl|"
+    r"dictionary|dictionaries|słownik|thesaurus|translation|tłumaczenie|wymowa|"
+    r"pronunciation|noun declension|syllable|"
+    r"song duration|based on this song|records dk|popular releases|tracklist",
+    re.IGNORECASE,
+)
+
+
 def is_useful_phrase(phrase: str) -> bool:
     tokens = [t for t in phrase.split() if t]
     if not tokens:
+        return False
+    if _BOILERPLATE_RE.search(phrase):
+        return False
+    # A phrase that is mostly digits is an ID or a timestamp, not a topic.
+    digits = sum(c.isdigit() for c in phrase)
+    if digits > len(phrase) / 3:
         return False
     if all(t in POLISH_STOPWORDS or t in GENERIC_TERMS for t in tokens):
         return False
