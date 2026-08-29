@@ -1,0 +1,27 @@
+utils/gsc.ts
+  s_e8c3822b427cc8::t_7ae7bdd5da14a5 51-84
+pages/sites/[domain]/content-audit.tsx
+  s_e8c3822b427cc8::t_80ee88119e7d2d 18,186
+pages/articles/import.tsx
+  s_e8c3822b427cc8::t_481ebecdd01963 138-194,196-201
+  s_e8c3822b427cc8::t_3ea1f2a61fb922 195
+  s_e8c3822b427cc8::t_ddabadbe8c801f 1,4,6-9,14,33-34,37-81
+__tests__/lib/gscPages.test.ts
+  s_e8c3822b427cc8::t_07677acbd8da32 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "dd935a093749567e255d6fc67dc39554bff243fe",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
