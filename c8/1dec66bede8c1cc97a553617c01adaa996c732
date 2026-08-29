@@ -1,0 +1,46 @@
+python-sidecar/pipeline/stages/extract_terms.py
+  s_e8c3822b427cc8::t_fe78061c75a3b5 18
+python-sidecar/analyzers/semantic_terms.py
+  s_e8c3822b427cc8::t_525b8287600e84 82,89,92,97,121,184,276-316,328-331,333-347
+python-sidecar/analyzers/serp_analyzer.py
+  s_e8c3822b427cc8::t_c0aa46923d51f8 125,174-184,422,441-447
+  s_e8c3822b427cc8::t_fe78061c75a3b5 167
+python-sidecar/main.py
+  s_e8c3822b427cc8::t_fe78061c75a3b5 452
+src/infrastructure/articles/contentScore.ts
+  s_e8c3822b427cc8::t_e748aad0a34d04 346
+  s_e8c3822b427cc8::t_928f5d61bc2127 32-34,344-345,347-349
+src/core/domain/terms/types.ts
+  s_e8c3822b427cc8::t_928f5d61bc2127 18-19
+pages/api/articles/[id]/customization.ts
+  s_e8c3822b427cc8::t_7581e10fa7c91b 81,95
+python-sidecar/tests/test_entity_fallback.py
+  s_e8c3822b427cc8::t_7a452e54f5c047 1-22
+pages/articles/[id]/index.tsx
+  s_e8c3822b427cc8::t_7581e10fa7c91b 2725
+__tests__/lib/contentScoreImages.test.ts
+  s_e8c3822b427cc8::t_f6085b3971c879 1-26
+components/articles/CustomizationPanelModal.tsx
+  s_e8c3822b427cc8::t_7581e10fa7c91b 346,359,441-446
+pages/api/articles/[id]/content-plan.ts
+  s_e8c3822b427cc8::t_e35f619f08d69e 13
+  s_e8c3822b427cc8::t_8ed6d9700e3a3b 259-262
+src/infrastructure/contentPlanner/briefWriter.ts
+  s_e8c3822b427cc8::t_8ed6d9700e3a3b 102-103,256-258,300-302
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c81dec66bede8c1cc97a553617c01adaa996c732",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
