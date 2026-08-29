@@ -28,17 +28,37 @@ import { readContentSettings } from '@/src/infrastructure/stores/contentSettings
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageStore';
-import { parseApprovedOutline } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
+import { parseApprovedOutline, type ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
+import { outlineForReview } from '@/src/infrastructure/contentPlanner/reviewOutline';
 import {
   benchmarkDocsFromCompetitors,
   buildStructuralBenchmark,
   toPlannerTargets,
 } from '@/src/infrastructure/benchmarkIntelligence/index';
+import type { AdaptiveOutline } from '@/src/core/domain/contentPlanner/types';
 import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 import type { PlannerTargets, StructuralBenchmark } from '@/src/core/domain/benchmark/types';
 
+/**
+ * Structure-only rescue for a failed brief: the planner's own H1 and section headings,
+ * with no instructions invented for them.
+ */
+function outlineHeadingsFromBundle(outline: AdaptiveOutline | null): ApprovedOutlineHeading[] {
+  if (!outline) return [];
+  const h1 = (outline.h1 || '').trim();
+  const sections = (outline.sections || [])
+    .map((section) => ({
+      level: 2,
+      text: (section.heading || '').trim(),
+      ...(section.expectedWords > 0 ? { targetWords: Math.round(section.expectedWords) } : {}),
+    }))
+    .filter((section) => section.text);
+  return [...(h1 ? [{ level: 1, text: h1 }] : []), ...sections];
+}
+
 type ArticlePlanRow = {
   id: number;
+  content: string | null;
   target_keyword: string | null;
   score_data: string | null;
   competitor_outlines_cache: string | null;
@@ -98,6 +118,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
       return res.status(200).json({ ok: true, saved: approvedOutline.length });
     }
+
+    // Read before the fresh plan overwrites it — a failed brief falls back to whatever
+    // structure this article already had.
+    const previousPlanner = scoreData?.content_planner_v2 && typeof scoreData.content_planner_v2 === 'object'
+      ? scoreData.content_planner_v2 as Record<string, unknown>
+      : null;
 
     const produceArticle = !!(req.body?.produceArticle);
     const persist = req.body?.persist !== false;
@@ -233,13 +259,41 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       competitorHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
       onTokens: (tokens) => recordAiTokens(orgId, tokens),
     });
+    // Instructions are never reconstructed mechanically. reviewOutlineFromBundle used to
+    // catch a failed brief and hand the reviewer "Pokryj <heading> z przypisanymi claims"
+    // plus raw scraped sentences — a rival's opening hours as instructions for our writer.
+    // The fallback below restores structure only: an earlier run's outline, or the
+    // planner's own headings, so a failed brief costs the instructions and not the plan.
+    let headings = written ?? [];
+    if (!headings.length && result.bundle.outline && result.bundle.briefs.length) {
+      // The brief writer failed, but the planner's own structure is already paid for.
+      // Two ways out before giving up, in order of how much they preserve:
+      //   1. the outline this article already had — an earlier run's reviewed structure;
+      //   2. the plan's headings alone.
+      // Instructions are NOT reconstructed. The old mechanical fallback filled them with
+      // scraped competitor sentences, which is what made a failed brief worse than none;
+      // headings the planner wrote are ours, and the reviewer can see the shape and retry.
+      headings = outlineForReview({
+        approvedOutline: previousPlanner?.approvedOutline,
+        brief: previousPlanner?.brief,
+      });
+      if (!headings.length) headings = outlineHeadingsFromBundle(result.bundle.outline);
+      if (!headings.length) {
+        return res.status(503).json({
+          error: 'Nie udało się napisać briefu do konspektu. Spróbuj ponownie za chwilę.',
+          cause: 'brief_writer_failed',
+          headings: [],
+          canWrite: result.canWrite,
+        });
+      }
+    }
     // Persisted, not just returned. The brief is the expensive part of this endpoint and
     // it used to live only in the reply: the editor rendered it into the TipTap document
     // and nothing else kept it. Every later read — a refresh, a second generation, the
     // same keyword after deleting the article — fell through to reviewOutlineFromBundle
     // and rebuilt the mechanical "Pokryj … / Cover: <scraped sentence>" version from the
     // bundle, so the LLM brief was paid for and thrown away on every run.
-    if (written?.length && persisted) {
+    if (headings.length && persisted) {
       const planner = (persisted.content_planner_v2 ?? {}) as Record<string, unknown>;
       // Stored as the approved outline too, not only as the brief. Restoring a review
       // reads `approvedOutline` first and the brief only as a fallback, and until the
@@ -249,14 +303,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         ...persisted,
         content_planner_v2: {
           ...planner,
-          brief: written,
-          approvedOutline: written,
+          brief: written ?? headings,
+          approvedOutline: headings,
           approvedOutlineAt: new Date().toISOString(),
         },
       };
+      // The step the article is on, written down instead of inferred. Review used to be
+      // recognised only from "empty content + a planner bundle", so anything that put a
+      // byte into content — a stray autosave, a partial import — lost the step and sent
+      // the reader back through the wizard. Only for an article nobody has written yet:
+      // re-planning a finished article must not demote it to review.
+      const awaitingReview = !(row.content || '').trim();
       try {
         await db.query(
-          `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+          awaitingReview
+            ? `UPDATE articles SET score_data = ?, status = 'review', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`
+            : `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(withBrief), articleId] },
         );
       } catch (e) {
@@ -271,22 +333,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           canWrite: result.canWrite,
         });
       }
-    }
-    // No mechanical fallback. reviewOutlineFromBundle used to catch a failed brief and
-    // hand the reviewer "Pokryj <heading> z przypisanymi claims" plus raw scraped
-    // sentences — a rival's opening hours and breadcrumbs as instructions for our writer.
-    // That is worse than no outline: it looks like a result, so nobody retries. A brief
-    // that could not be written is now an error the reviewer can act on.
-    const headings = written ?? [];
-    if (!headings.length && result.bundle.outline && result.bundle.briefs.length) {
-      // The planner had enough to work with — the brief writer is what failed, so a
-      // "your analysis is missing data" message would send the reader to fix the wrong thing.
-      return res.status(503).json({
-        error: 'Nie udało się napisać briefu do konspektu. Spróbuj ponownie za chwilę.',
-        cause: 'brief_writer_failed',
-        headings: [],
-        canWrite: result.canWrite,
-      });
     }
     if (!headings.length) {
       const reason = [
