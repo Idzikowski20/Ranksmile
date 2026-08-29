@@ -2692,6 +2692,16 @@ const ArticleEditorPage: NextPage = () => {
           slug={domains.find((d) => d.ID === article?.domain_id)?.slug}
           keyword={article?.target_keyword || ''}
           onClose={() => setShowCustomization(false)}
+          articleId={article?.id}
+          initialStructure={{
+            words: scoreData?.words_target,
+            headings: scoreData?.headings_target,
+            paragraphs: scoreData?.paragraphs_target,
+          }}
+          initialTerms={scoreData?.terms}
+          // Recalc rewrote score_data server-side — re-pull it the same way an analysis
+          // completion does, so the gauges and term chips grade against the new targets.
+          onApplied={() => setAnalysisReloadKey((k) => k + 1)}
         />
 
         {/* First-visit onboarding coachmark (Ask Ranksmile + Content Score) */}
