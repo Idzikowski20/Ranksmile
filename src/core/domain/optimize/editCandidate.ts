@@ -10,7 +10,8 @@ export type EditCandidateSource =
   | 'entity'
   | 'section_quality'
   | 'critical'
-  | 'intent';
+  | 'intent'
+  | 'missing_section';
 
 /** P0 Critical … P6 Style — tier beats expected score impact. */
 export type EditCandidatePriorityTier = 0 | 1 | 2 | 3 | 4 | 5 | 6;
