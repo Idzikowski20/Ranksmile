@@ -1,0 +1,22 @@
+components/articles/ArticleEditor.tsx
+  s_e8c3822b427cc8::t_4c39e66db935d8 110-112,1108,1737-1741
+pages/articles/[id]/index.tsx
+  s_e8c3822b427cc8::t_3b275245a07062 534-535,2123,2157
+  s_e8c3822b427cc8::t_4c39e66db935d8 533,536,2126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ec25af293d6b7b0f2a75b45a9d23ea74fe9b4637",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
