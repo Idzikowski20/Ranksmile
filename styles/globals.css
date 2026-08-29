@@ -7752,6 +7752,14 @@ html.koala-shell[data-theme="cream"] .app-content {
   margin: 6px 0;
   background: #e5e5e5;
 }
+.koala-ws-select__section {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--koala-text-tertiary);
+}
 .koala-ws-select__menu .koala-menu-list-item {
   color: var(--koala-text-primary);
   width: 100%;
