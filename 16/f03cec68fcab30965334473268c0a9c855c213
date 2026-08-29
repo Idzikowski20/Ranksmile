@@ -1,0 +1,32 @@
+pages/api/articles/[id]/content-plan.ts
+  s_e8c3822b427cc8::t_7b71f961cfe064 31-32,38,42-58,122-127
+  s_e8c3822b427cc8::t_427e57fde58355 267-289,296,306-307
+  s_e8c3822b427cc8::t_864a80914656e8 61,262-266,311-316,319-321
+pages/articles/[id]/index.tsx
+  s_e8c3822b427cc8::t_ba15d19298db48 627,786,1710
+  s_e8c3822b427cc8::t_bb5f29dcbed4f7 1408,1480-1487,1600-1603,1690-1703,1707-1709
+  s_e8c3822b427cc8::t_de7da9816310a2 10
+  s_e8c3822b427cc8::t_476f93d4a5bbf4 1704-1706
+__tests__/lib/outlineReviewState.test.ts
+  s_e8c3822b427cc8::t_0dbc053b63ace5 115-128
+__tests__/api/articles-content-plan-persist.test.ts
+  s_e8c3822b427cc8::t_1193f39c6a1869 21-31,51-73,92,110-196
+src/infrastructure/articles/outlineReviewState.ts
+  s_e8c3822b427cc8::t_ba15d19298db48 18-19,39-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "16f03cec68fcab30965334473268c0a9c855c213",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
