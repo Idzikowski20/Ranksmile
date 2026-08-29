@@ -22,6 +22,22 @@ const COUNTRIES: Record<string, string> = {
   FR: 'France',
 };
 
+/** Import sources — same template-card grid as the content-type step (Figma `8564:560408`). */
+const SOURCES = [
+  {
+    id: 'gsc' as const,
+    label: 'From Search Console',
+    details: 'Pick indexed pages by traffic and impressions, then import them in bulk.',
+    icon: 'MagnifyingGlass',
+  },
+  {
+    id: 'url' as const,
+    label: 'From URL',
+    details: 'Paste the address of an existing page and target it with keywords.',
+    icon: 'Globe',
+  },
+];
+
 const ImportPage: NextPage = () => {
   const router = useRouter();
   const [url, setUrl] = useState('');
@@ -138,55 +154,46 @@ const ImportPage: NextPage = () => {
   if (source !== 'url') {
     return (
       <WizardShell title="Import Content">
-        <div>
-          <h2 className="koala-wizard-title">Import existing content</h2>
-          <p className="koala-wizard-subtitle">
-            Pull pages straight from Search Console, or import a single URL
-          </p>
+        <div className="koala-content-type koala-content-type--centered">
+          <header className="koala-content-type__header">
+            <span className="koala-content-type__header-icon" aria-hidden="true">
+              <Icon name="DownloadSimple" size={24} weight="bold" color="var(--koala-text-secondary)" />
+            </span>
+            <h2 className="koala-content-type__title">Import existing content</h2>
+            <p className="koala-content-type__subtitle">
+              Pull pages straight from Search Console, or import a single URL.
+            </p>
+          </header>
+
+          <section className="koala-content-type__section">
+            <div className="koala-template-card-grid" role="listbox" aria-label="Import source">
+              {SOURCES.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  className="koala-template-card"
+                  onClick={() => setSource(o.id)}
+                  disabled={importingCount > 0}
+                >
+                  <span className="koala-template-card__icon" aria-hidden="true">
+                    <Icon name={o.icon} size={24} weight="bold" color="var(--koala-text-primary)" />
+                  </span>
+                  <span className="koala-template-card__text">
+                    <span className="koala-template-card__title">{o.label}</span>
+                    <span className="koala-template-card__desc">{o.details}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {importingCount > 0 ? (
+            <p className="koala-content-type__empty">Importing {importingCount} page(s)…</p>
+          ) : null}
+          {source === 'gsc' && gscLoading ? (
+            <p className="koala-content-type__empty">Loading pages from Search Console…</p>
+          ) : null}
         </div>
-
-        <div className="koala-template-card-grid">
-          <button
-            type="button"
-            className="koala-template-card"
-            onClick={() => setSource('gsc')}
-            disabled={importingCount > 0}
-          >
-            <span className="koala-template-card__icon" aria-hidden="true">
-              <Icon name="MagnifyingGlass" size={24} weight="bold" color="var(--koala-text-primary)" />
-            </span>
-            <span className="koala-template-card__text">
-              <span className="koala-template-card__title">From Search Console</span>
-              <span className="koala-template-card__desc">
-                Pick indexed pages by traffic and impressions, then import them in bulk.
-              </span>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className="koala-template-card"
-            onClick={() => setSource('url')}
-            disabled={importingCount > 0}
-          >
-            <span className="koala-template-card__icon" aria-hidden="true">
-              <Icon name="Globe" size={24} weight="bold" color="var(--koala-text-primary)" />
-            </span>
-            <span className="koala-template-card__text">
-              <span className="koala-template-card__title">From URL</span>
-              <span className="koala-template-card__desc">
-                Paste the address of an existing page and target it with keywords.
-              </span>
-            </span>
-          </button>
-        </div>
-
-        {importingCount > 0 ? (
-          <p className="koala-wizard-subtitle">Importing {importingCount} page(s)…</p>
-        ) : null}
-        {source === 'gsc' && gscLoading ? (
-          <p className="koala-wizard-subtitle">Loading pages from Search Console…</p>
-        ) : null}
 
         {source === 'gsc' && !gscLoading ? (
           <AddPagesModal

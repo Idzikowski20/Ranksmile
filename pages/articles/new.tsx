@@ -125,31 +125,43 @@ const NewContentPage: NextPage = () => {
           </>
         )}
       >
-        <div>
-          <h2 className="koala-wizard-title">Select generation mode</h2>
-          <p className="koala-wizard-subtitle">
-            Choose how much of the setup you want to go through
-          </p>
-        </div>
+        <div className="koala-content-type koala-content-type--centered">
+          <header className="koala-content-type__header">
+            <span className="koala-content-type__header-icon" aria-hidden="true">
+              <Icon name="Sparkle" size={24} weight="bold" color="var(--koala-text-secondary)" />
+            </span>
+            <h2 className="koala-content-type__title">Select generation mode</h2>
+            <p className="koala-content-type__subtitle">
+              Choose how much of the setup you want to go through.
+            </p>
+          </header>
 
-        <div className="koala-template-card-grid">
-          {MODES.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              className={`koala-template-card${mode === m.id ? ' koala-template-card--selected' : ''}`}
-              aria-pressed={mode === m.id}
-              onClick={() => setMode(m.id)}
-            >
-              <span className="koala-template-card__icon" aria-hidden="true">
-                <Icon name={m.icon} size={24} weight="bold" color="var(--koala-text-primary)" />
-              </span>
-              <span className="koala-template-card__text">
-                <span className="koala-template-card__title">{m.title}</span>
-                <span className="koala-template-card__desc">{m.desc}</span>
-              </span>
-            </button>
-          ))}
+          <section className="koala-content-type__section">
+            <div className="koala-template-card-grid" role="listbox" aria-label="Generation mode">
+              {MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`koala-template-card${mode === m.id ? ' koala-template-card--selected' : ''}`}
+                  aria-pressed={mode === m.id}
+                  onClick={() => setMode(m.id)}
+                >
+                  <span className="koala-template-card__icon" aria-hidden="true">
+                    <Icon name={m.icon} size={24} weight="bold" color="var(--koala-text-primary)" />
+                  </span>
+                  {mode === m.id ? (
+                    <span className="koala-template-card__badge" aria-hidden="true">
+                      <Icon name="Check" size={20} weight="bold" color="var(--koala-text-primary)" />
+                    </span>
+                  ) : null}
+                  <span className="koala-template-card__text">
+                    <span className="koala-template-card__title">{m.title}</span>
+                    <span className="koala-template-card__desc">{m.desc}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
       </WizardShell>
     );
