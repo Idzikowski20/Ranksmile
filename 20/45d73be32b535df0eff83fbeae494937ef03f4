@@ -1,0 +1,33 @@
+python-sidecar/tests/test_junk_terms.py
+  s_e8c3822b427cc8::t_57c9a1fb6ff892 1-28
+pages/api/articles/job-progress.ts
+  s_e8c3822b427cc8::t_0792dd24e90b4b 18-21,186,339,352,362
+  s_e8c3822b427cc8::t_8a036de0e1fa45 276-283,293,295-296
+__tests__/lib/needsCoverageRegrade.test.ts
+  s_e8c3822b427cc8::t_0792dd24e90b4b 1-3
+  s_e8c3822b427cc8::t_966d7016ce00bc 4-57
+python-sidecar/analyzers/serp_analyzer.py
+  s_e8c3822b427cc8::t_71acdfe7af01cb 51-80,136,412-416,419-420
+src/infrastructure/coverage/regradeCoverageSnapshot.ts
+  s_e8c3822b427cc8::t_ec25bd65a95ad8 25-29
+python-sidecar/analyzers/competitor_terms.py
+  s_e8c3822b427cc8::t_1079b435dd4a36 39-53,58-63
+python-sidecar/tests/test_compute_targets.py
+  s_e8c3822b427cc8::t_8cee6e8d337e83 23-24,29-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2045d73be32b535df0eff83fbeae494937ef03f4",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
