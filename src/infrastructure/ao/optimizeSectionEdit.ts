@@ -24,7 +24,10 @@ export function computeTermUsageGaps(scoreData: ScoreData | undefined, articleHt
    if (!scoreData?.terms?.length) return [];
    const plainText = toPlainText(articleHtml);
    return scoreData.terms.map((t) => {
-      const current = countOccurrences(plainText, t.term);
+      // Lemma regexps, same as the scorer. Without them the gap detector and the score
+      // disagreed: the score counted an inflected use, the gap list still said "missing",
+      // and AO kept spending edits on terms the article already carried.
+      const current = countOccurrences(plainText, t.term, t.term_words_regexps);
       const min = Math.max(1, Math.round(t.target_count * 0.7));
       const max = Math.round(t.target_count * 1.5);
       const status: TermUsageStatus =

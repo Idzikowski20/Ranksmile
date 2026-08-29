@@ -285,6 +285,9 @@ export async function runPrecisionOptimizeV4(opts: {
   extraCandidates?: readonly EditCandidate[];
   maxSteps?: number;
   policy?: OptimizationPolicy;
+  /** Requested stop targets (express asks for 100); default v4.1 constants. */
+  targetSeo?: number;
+  targetAi?: number;
   llmEdit: LlmEditFn;
   scoreHtml?: ScoreHtmlFn;
   signal?: AbortSignal;
@@ -440,10 +443,11 @@ export async function runPrecisionOptimizeV4(opts: {
   for (let i = 0; i < steps.length; i++) {
     if (opts.signal?.aborted) break;
 
-    // Early stop: targets reached
+    // Early stop: targets reached. The caller's targets, not the constants — express
+    // requests 100 and used to be silently stopped at the default 90/85.
     if (
-      Math.round(working.scores.seo) >= TARGET_SEO
-      && Math.round(working.scores.ai) >= TARGET_AI
+      Math.round(working.scores.seo) >= (opts.targetSeo ?? TARGET_SEO)
+      && Math.round(working.scores.ai) >= (opts.targetAi ?? TARGET_AI)
     ) {
       trace.push({ step: 'edit_plan', metadata: { stop: 'targets_reached' } });
       break;
