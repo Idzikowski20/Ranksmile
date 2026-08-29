@@ -187,8 +187,10 @@ def _prompt(
         )
     if _reference_ids(paragraph_plan, "sources", "source_id"):
         lines.append(
-            "If 'Authority sources' appear in the context, you may cite AT MOST one as a"
-            " Markdown link [descriptive anchor](url), only where genuinely relevant."
+            "'Authority sources' appear in the context: cite EXACTLY ONE of them as a"
+            " Markdown link [descriptive anchor](url), naming the case, statute or"
+            " statistic it backs in the sentence itself — the reference articles name"
+            " the police case and link the act, not \"some sources say\"."
             " Never link any URL that is not on that list."
         )
     elif ctx.get("allow_authority_links"):

@@ -165,8 +165,17 @@ export function buildFactSheet(claims: readonly TargetClaim[]): string {
   const factsByTopic = new Map<string, string[]>();
   for (const claim of factCandidates) {
     const topic = asEvidence(claim.topic || '') || 'inne';
-    const fact = asEvidence(claim.statement);
-    if (fact) {
+    // The best source travels WITH the fact. Without it the brief could only say
+    // "cite a source" in the abstract, and the writer invented none — the reference
+    // article names the police case and links the statute.
+    const source = [...(claim.sources || [])]
+      .filter((src) => /^https?:\/\//i.test(src.url || ''))
+      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+    const sourceSuffix = source
+      ? ` [źródło: ${asEvidence(source.label || source.url)} — ${asEvidence(source.url)}]`
+      : '';
+    const fact = asEvidence(claim.statement) + sourceSuffix;
+    if (fact.trim()) {
       const group = factsByTopic.get(topic) ?? [];
       group.push(fact);
       factsByTopic.set(topic, group);
@@ -356,6 +365,13 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'Ask for the key term or verdict to be bolded so the answer is scannable, and say it in',
     'plain editorial language ("pogrub kluczowy termin"). Never name an HTML tag: the brief',
     'is read by a writer, and "<strong>" leaked into instructions as stray markup.',
+    'CITED EVIDENCE (hard rule): at least TWO bullets across the article instruct the',
+    'writer to name a concrete real case or statistic from the FACT SHEET and link its',
+    '[źródło: …] URL as a Markdown link. Pick facts that carry a source; NEVER invent a',
+    'case, number or URL — a fact sheet without sources yields zero such bullets, not fakes.',
+    'NAMED FRAMEWORKS: when a recognised conceptual model covers the mechanism of a section',
+    '(e.g. the FOG model — Fear, Obligation, Guilt — for emotional blackmail), one bullet',
+    'tells the writer to NAME it and unpack it; a named framework reads as expertise.',
     'ORIGINAL DATA: at least one bullet per article asks for something the ranking pages do not',
     'have — our own case figure, our own checklist, a worked example with real numbers, or a',
     'decision rule. Take it from the BRAND section; if BRAND has nothing to support it, ask for a',
