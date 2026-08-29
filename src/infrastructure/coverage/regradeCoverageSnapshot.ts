@@ -22,6 +22,11 @@ export function needsCoverageRegrade(snap: CoverageSnapshot, plainText: string):
     (i.type === 'paa' || i.type === 'intent') && /\b(kiedy|oskarżyć|oskarzyc|zachowania|zgłosić|zglosic)\b/i.test(i.label),
   );
   if (hasMisalignedCommercialIntent) return true;
+  // No intent rows at all: the snapshot was graded in keyword-only mode (deep analysis
+  // before any article existed), where the intro analyzer has nothing to read. Intent is
+  // the highest-weighted bucket and answersMainQuestionEarly is worth +15, so a written
+  // article scored against this snapshot is structurally capped — regrade on the real text.
+  if (!snap.items.some((i) => i.category === 'intent' || i.type === 'intent')) return true;
   if (snap.overall > 0) return false;
   const gradedCoverage = snap.items.some((i) => i.covered && i.quality > 0);
   return !gradedCoverage;
