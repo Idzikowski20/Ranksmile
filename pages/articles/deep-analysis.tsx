@@ -437,8 +437,8 @@ const DeepAnalysisPage: NextPage = () => {
     ? {
       variant: 'error',
       message: retryIn !== null && retriesLeft > 0
-        ? `${overallError} — ponawiam za ${retryIn} s (próba ${autoAttempts + 1} z ${AUTO_RETRY_MAX})`
-        : `${overallError} — nie udało się po ${AUTO_RETRY_MAX} próbach.`,
+        ? `${overallError} — retrying in ${retryIn}s (attempt ${autoAttempts + 1} of ${AUTO_RETRY_MAX})`
+        : `${overallError} — failed after ${AUTO_RETRY_MAX} attempts.`,
       busy: retryIn !== null && retriesLeft > 0,
       // Stable across the countdown ticks, fresh for each run. Keyed on the message it
       // would rotate every second; keyed on the error alone, dismissing once suppressed

@@ -285,7 +285,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!headings.length) headings = outlineHeadingsFromBundle(result.bundle.outline);
       if (!headings.length) {
         return res.status(503).json({
-          error: 'Nie udało się napisać briefu do konspektu. Spróbuj ponownie za chwilę.',
+          error: 'Could not write the outline brief. Try again in a moment.',
           cause: 'brief_writer_failed',
           headings: [],
           canWrite: result.canWrite,
@@ -332,7 +332,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         // the bug, losing the brief on the next refresh with nothing to explain it.
         console.warn('[content-plan] brief persist failed:', getErrorMessage(e));
         return res.status(503).json({
-          error: 'Konspekt powstał, ale nie udało się go zapisać. Spróbuj ponownie.',
+          error: 'The outline was created but could not be saved. Try again.',
           cause: 'brief_persist_failed',
           headings: [],
           canWrite: result.canWrite,
