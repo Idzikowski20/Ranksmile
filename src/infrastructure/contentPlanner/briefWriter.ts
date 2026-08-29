@@ -298,7 +298,8 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     '"jestem szantażowany" becomes "Co zrobić, gdy jesteś szantażowany" — the natural',
     'phrasing a person would write, with the same words inflected.',
     ...(headingTerms.length ? [
-      `HEADING TERMS: the ranking pages use these inside their own H2/H3 — work each into a heading where it fits the role: ${headingTerms.join(', ')}.`,
+      'HEADING TERMS: the ranking pages use these inside their own H2/H3 — work each'
+        + ` into a heading where it fits the role: ${headingTerms.join(', ')}.`,
     ] : []),
     'Keep the given order and count, one heading per role. FAQ and the closing section keep their plain names.',
     'RANKING PAGES shows how the pages already ranking title their sections: match that level of',
