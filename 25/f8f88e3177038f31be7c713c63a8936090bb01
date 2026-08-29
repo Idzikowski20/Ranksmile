@@ -1,0 +1,23 @@
+python-sidecar/pipeline/domain_runner.py
+  s_e8c3822b427cc8::t_cb068d939742e7 67-90,92-101
+python-sidecar/pipeline/article_pipeline.py
+  s_e8c3822b427cc8::t_96b51ee6b58947 59-65,86-97,567
+python-sidecar/pipeline/compiled_runtime.py
+  s_e8c3822b427cc8::t_dc964e60b6def9 4-5,85-90,99,120-125,127-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "25f8f88e3177038f31be7c713c63a8936090bb01",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
