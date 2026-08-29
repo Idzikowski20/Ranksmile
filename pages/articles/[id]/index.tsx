@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { isOutlineAwaitingReview } from '@/src/infrastructure/articles/outlineReviewState';
+import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 import AppShell from '../../../components/common/AppShell';
 import { Button } from '../../../components/koala/core';
 import { Icon } from '../../../components/koala/icons';
@@ -623,6 +624,7 @@ const ArticleEditorPage: NextPage = () => {
               content: data.article?.content,
               // The API payload names it score_data; the helper reads one shape only.
               scoreData: data.article?.score_data,
+              status: data.article?.status,
             }),
         });
         const resumeHref = articleEntryHref(String(id), entry);
@@ -781,6 +783,7 @@ const ArticleEditorPage: NextPage = () => {
    */
   const outlineAwaitingReview = useMemo(
     () => isOutlineAwaitingReview({
+      status: article?.status,
       // The LIVE document, not `article.content`. That field is only refreshed on load
       // and on save, so after a generation it still held the outline: the flag stayed
       // true, the editor was pushed back into review over the article it had just
@@ -1402,7 +1405,7 @@ const ArticleEditorPage: NextPage = () => {
   // ordered section events, then loads a "review doc" where each CHANGED section becomes a
   // contentOptimizer node (Accept/Reject). isAutoOptimizing spans the whole flow so autosave +
   // the format toolbar stay suspended until every section is resolved (Step D) or we bail out.
-  const handleAutoOptimizeSections = async () => {
+  const handleAutoOptimizeSections = async (opts?: { targetScore?: number; autoAccept?: boolean }) => {
     const editor = getEditor();
     if (!editor) return;
     const preHtml: string = editor.getHTML();
@@ -1474,7 +1477,14 @@ const ArticleEditorPage: NextPage = () => {
       const res = await fetch('/api/articles/optimize-sections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: preHtml, articleId: article?.id, scoreData, targetScore: 90, maxRounds: 4 }),
+        body: JSON.stringify({
+          content: preHtml,
+          articleId: article?.id,
+          scoreData,
+          targetScore: opts?.targetScore ?? 90,
+          // Express asks for a perfect score, so it gets the rounds to chase one.
+          maxRounds: (opts?.targetScore ?? 90) >= 100 ? 6 : 4,
+        }),
         signal: aoSignal,
       });
       // Org-wide AI budget exhausted — surface the same message the legacy flow uses, then bail.
@@ -1587,6 +1597,10 @@ const ArticleEditorPage: NextPage = () => {
                   : `Review ${nChanged} section${nChanged === 1 ? '' : 's'}…`);
               setAutoOptimizeStatus(statusMsg);
               setOptimizeRemaining(nChanged);
+              // Express has no reviewer to click Accept: the point of the mode is a
+              // finished article. Resolving every node applies the optimized version and
+              // the review-completion effect returns the editor to idle.
+              if (opts?.autoAccept) resolveAllOptimizerNodes();
               if (meta.outcome === 'faq_only' || meta.outcome === 'partial_body' || meta.outcome === 'incomplete_no_body') {
                 toast(meta.userMessage || 'Partial optimization — SEO gaps may remain.', { icon: '⚠️', duration: 7000 });
               }
@@ -1672,6 +1686,27 @@ const ArticleEditorPage: NextPage = () => {
   };
 
   const handleAcceptAll = () => { resolveAllOptimizerNodes(); };
+
+  /**
+   * Express mode finishes the job: once the article is written, run Auto-Optimize at the
+   * top target and accept every suggestion, so the reader lands on the best draft the
+   * pipeline can produce rather than on a review queue. One shot per entry — the query
+   * flag is dropped as soon as it fires, so a refresh does not re-optimize.
+   */
+  const expressOptimizeRan = useRef(false);
+  useEffect(() => {
+    if (router.query.express !== '1' || expressOptimizeRan.current) return;
+    if (outlineAwaitingReview || router.query.reviewOutline === '1') return;
+    if (optimizeState !== 'idle' || !scoreData || !article) return;
+    if (!isUsableArticleHtml(editorHtml)) return;
+    expressOptimizeRan.current = true;
+    const { express, reviewOutline, type, internal, external, ...rest } = router.query;
+    router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true })
+      .catch(() => undefined);
+    handleAutoOptimizeSections({ targetScore: 100, autoAccept: true }).catch(() => undefined);
+    // handleAutoOptimizeSections is re-created every render; the ref is the guard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query.express, outlineAwaitingReview, optimizeState, scoreData, article, editorHtml]);
 
   // Jump the caret to the next/prev unresolved section and scroll it into view.
   const navigateSection = (dir: 1 | -1) => {

@@ -112,3 +112,17 @@ describe('short authored drafts are not outlines', () => {
     },
   );
 });
+
+/**
+ * The status the planner writes is the primary signal; the shape-based rules below it
+ * only exist for rows written before it did.
+ */
+describe('the recorded status', () => {
+  it('resumes review from status alone, with no planner bundle to infer from', () => {
+    expect(isOutlineAwaitingReview({ content: '', scoreData: '{"terms":[]}', status: 'review' })).toBe(true);
+  });
+
+  it('never overrides a written article', () => {
+    expect(isOutlineAwaitingReview({ content: ARTICLE, scoreData: WITH_PLAN, status: 'review' })).toBe(false);
+  });
+});
