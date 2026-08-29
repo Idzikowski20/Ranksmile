@@ -78,7 +78,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (req.body?.structure && typeof req.body.structure === 'object') {
-      const { words, headings, paragraphs } = req.body.structure as Record<string, unknown>;
+      const { words, headings, paragraphs, images } = req.body.structure as Record<string, unknown>;
       const updated: Record<string, unknown> = { ...scoreData };
       const setTarget = (targetKey: string, maxKey: string, value: unknown, headroom: number) => {
         const n = Number(value);
@@ -92,6 +92,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       setTarget('words_target', 'words_max', words, 1.3);
       setTarget('headings_target', 'headings_max', headings, 1.4);
       setTarget('paragraphs_target', 'paragraphs_max', paragraphs, 1.4);
+      setTarget('images_target', 'images_max', images, 1.5);
       updated._customization = { ...(scoreData._customization as object || {}), structureAt: new Date().toISOString() };
       await db.query(
         `UPDATE articles SET score_data = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,

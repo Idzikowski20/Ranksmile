@@ -343,7 +343,7 @@ type Props = {
   /** Article whose guidelines this panel edits — enables real recalculation. */
   articleId?: number | string;
   /** Current graded targets/terms from score_data, to seed the controls. */
-  initialStructure?: { words?: number; headings?: number; paragraphs?: number };
+  initialStructure?: { words?: number; headings?: number; paragraphs?: number; images?: number };
   initialTerms?: Array<{ term: string }>;
   /** Fired after a server-side change (recalc / structure / terms) — reload scoreData. */
   onApplied?: () => void;
@@ -356,7 +356,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose, articleId, init
     words: initialStructure?.words || 2034,
     headings: initialStructure?.headings || 31,
     paragraphs: initialStructure?.paragraphs || 48,
-    images: 4,
+    images: initialStructure?.images || 4,
   });
   // Re-seed when a fresh score_data arrives (recalc or reopen).
   useEffect(() => {
@@ -438,7 +438,12 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose, articleId, init
     setSaveState('saving');
     saveTimer.current = setTimeout(() => {
       void postCustomization({
-        structure: { words: structure.words, headings: structure.headings, paragraphs: structure.paragraphs },
+        structure: {
+          words: structure.words,
+          headings: structure.headings,
+          paragraphs: structure.paragraphs,
+          images: structure.images,
+        },
       });
       setSaveState('saved');
       savedTimer.current = setTimeout(() => setSaveState('idle'), 1600);

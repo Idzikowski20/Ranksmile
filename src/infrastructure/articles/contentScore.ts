@@ -29,6 +29,9 @@ export type { NlpTerm };
 export interface ScoreData {
    terms: NlpTerm[];
    words_target: number;
+   images_target?: number;
+   images_min?: number;
+   images_max?: number;
    words_min: number;
    words_max: number;
    headings_target: number;
@@ -338,6 +341,12 @@ export function collectScoreSlots(
 
    // ── HTML-only signals ──
    if (html) {
+      // Image frequency vs the cohort (Surfer-style). Zero-image cohorts emit no target.
+      if (scoreData.images_target && scoreData.images_target > 0) {
+         const imgCount = (html.match(/<img\b/gi) || []).length;
+         push('images', 'Images', Math.min(imgCount / scoreData.images_target, 1) * 4, 4,
+            `Add images toward ~${scoreData.images_target} (ranking pages average that many)`);
+      }
       const imgScore = _imageAltCoverage(html);
       if (imgScore !== null) push('imageAlt', 'Image alt text', imgScore, 4, 'Add descriptive alt text to every image');
       push('lists', 'Lists', _listUsage(html), 3, 'Add a bullet or numbered list with 3+ items');

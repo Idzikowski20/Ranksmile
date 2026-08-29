@@ -15,4 +15,6 @@ export interface NlpTerm {
   term_words_regexps?: string[];
   /** Stem-sequence identity: equal keys are the same term in different inflections. */
   lemma_key?: string;
+  /** The competitor cohort itself uses this term in H2/H3 — it belongs in headings. */
+  in_headings?: boolean;
 }

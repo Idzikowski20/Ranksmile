@@ -2722,6 +2722,7 @@ const ArticleEditorPage: NextPage = () => {
             words: scoreData?.words_target,
             headings: scoreData?.headings_target,
             paragraphs: scoreData?.paragraphs_target,
+            images: scoreData?.images_target,
           }}
           initialTerms={scoreData?.terms}
           // Recalc rewrote score_data server-side — re-pull it the same way an analysis

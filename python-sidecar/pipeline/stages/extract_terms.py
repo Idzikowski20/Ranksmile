@@ -15,7 +15,7 @@ class ExtractTermsStage(AnalysisStage):
         competitor_texts = serp.get("_competitor_texts", []) or []
 
         await ctx.emit_progress(self, 20, f"Extracting semantic terms for: {keyword}")
-        terms = await extract_semantic_terms(keyword, competitor_texts, deepseek_key)
+        terms = await extract_semantic_terms(keyword, competitor_texts, deepseek_key, ctx.payload.get("language", "pl"))
         # scrape_serp may already have terms (incl. snippet-based extraction) — keep the richer set
         existing = serp.get("terms") or []
         if len(terms) < len(existing):

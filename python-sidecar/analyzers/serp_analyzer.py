@@ -122,7 +122,7 @@ def _serp_snippet_texts(serp_results: list[dict]) -> list[str]:
 async def analyze_serp(
     keyword: str,
     language: str = "pl",
-    num_results: int = 10,
+    num_results: int = 15,
     include_texts: bool = False,
     on_page=None,
 ) -> dict:
@@ -164,13 +164,24 @@ async def analyze_serp(
         serp_texts = serp_texts + snippet_texts
 
     deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
-    nlp_terms = await extract_semantic_terms(keyword, serp_texts, deepseek_key) if serp_texts else []
+    nlp_terms = await extract_semantic_terms(keyword, serp_texts, deepseek_key, language) if serp_texts else []
     if len(nlp_terms) < 3:
         existing = {t["term"] for t in nlp_terms}
         nlp_terms = nlp_terms + [t for t in _keyword_seed_terms(keyword) if t["term"] not in existing]
     # After the fallback merge, so seed terms get their inflections too.
     from analyzers.term_lemmas import attach_lemma_regexps
     nlp_terms = attach_lemma_regexps(nlp_terms, serp_texts, language)
+    # Surfer separates "terms for headings": a term the cohort itself puts into H2/H3
+    # belongs in the article's structure, not only its body.
+    heading_text = " ".join(
+        tag.get_text(" ", strip=True).lower()
+        for soup in (soups or [])
+        for tag in soup.select("h2,h3")
+    )
+    if heading_text:
+        for t in nlp_terms:
+            if t.get("term") and t["term"].lower() in heading_text:
+                t["in_headings"] = True
     targets = _compute_targets(serp_texts, soups if soups else None)
 
     result = {
@@ -408,6 +419,7 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
     else:
         heading_counts = [max(5, wc // 150) for wc in word_counts]
         paragraph_counts = [max(5, wc // 120) for wc in word_counts]
+    image_counts = [len(soup.select("img")) for soup in soups] if soups else []
 
     # Floors: a SERP of dictionary stubs and thin listicles must not cap a real article.
     # An article longer than everything that ranks is not a defect — never grade words
@@ -426,6 +438,13 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
         "paragraphs_min": max(5, min(paragraph_counts)),
         "paragraphs_max": max(20, max(paragraph_counts)),
         "paragraphs_target": int(sum(paragraph_counts) / len(paragraph_counts)),
+        # Image frequency from the cohort (Surfer measures it; zero-image cohorts emit
+        # target 0 and the scorer skips the slot).
+        **({
+            "images_min": min(image_counts),
+            "images_max": max(3, max(image_counts)),
+            "images_target": int(round(sum(image_counts) / len(image_counts))),
+        } if image_counts else {}),
     }
 
 
