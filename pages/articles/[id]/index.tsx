@@ -530,7 +530,10 @@ const ArticleEditorPage: NextPage = () => {
    * better as "the editor is locked" than as "deep analysis is running". It is NOT a second
    * condition: never branch on both, or the second branch is unreachable.
    */
-  const editorLocked = isDeepAnalyzing;
+  const [generationBusy, setGenerationBusy] = useState(false);
+  // Chrome lock (side-panel actions, Publish). Generation locks the chrome but NOT the
+  // document/overlay: the streaming article and its progress pill must stay visible.
+  const editorLocked = isDeepAnalyzing || generationBusy;
   /** Same flag the editor reads for its bottom bar — the side panel has to agree with it. */
 
 
@@ -2117,9 +2120,10 @@ const ArticleEditorPage: NextPage = () => {
               internalArticles={internalArticles}
               reviewMode={!!linkBar}
               formattingSuspended={optimizeState === 'optimizing'}
-              readOnly={editorLocked}
+              readOnly={isDeepAnalyzing}
               highlightTerms={highlightTerms}
               onAiActivity={setRanksmileAiActive}
+              onGeneratingChange={setGenerationBusy}
               articleKeyword={article?.target_keyword || ''}
               plagiarismSentences={plagSentences}
               plagiarismFocused={plagFocused}
@@ -2150,7 +2154,7 @@ const ArticleEditorPage: NextPage = () => {
                 } catch { setCommentThreads((prev) => prev.filter((t) => t.id !== tmp)); return undefined; }
               }}
             />
-            {editorLocked && (
+            {isDeepAnalyzing && (
               <div
                 aria-hidden
                 style={{
