@@ -374,8 +374,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       const originalHtml = content;
 
-      // P0 safety no-op: targets already met → zero LLM (before candidates / FAQ)
-      if (shouldSkipOptimize(initialSeo, initialAi)) {
+      // P0 safety no-op: targets already met → zero LLM (before candidates / FAQ).
+      // Judged against the REQUESTED targets: an express run asking for 100 on an
+      // article already at 90/85 must still work, not return already_optimal.
+      if (shouldSkipOptimize(initialSeo, initialAi)
+         && initialSeo >= TARGET_SEO_SCORE && initialAi >= TARGET_AI_SCORE) {
          sse(res, 'meta', {
             total: MAX_ROUNDS,
             targetSeo: TARGET_SEO_SCORE,
@@ -466,6 +469,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                extraCandidates: ccmExtra,
                policy: aoPolicy,
                maxSteps: aoPolicy.maxSteps,
+               targetSeo: TARGET_SEO_SCORE,
+               targetAi: TARGET_AI_SCORE,
                signal: controller.signal,
                llmEdit: async (prompt) => {
                   const { wieLlmComplete, wieWriterSystemPrompt } = await import('@/src/infrastructure/wie/writer');
