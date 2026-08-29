@@ -396,7 +396,6 @@ const ArticleEditorPage: NextPage = () => {
   const [showPixabay, setShowPixabay] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
-  const [showInternalLinksPanel, setShowInternalLinksPanel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   /** Toolbar Publish → WordPress export modal. */
   const [showWpExportModal, setShowWpExportModal] = useState(false);
@@ -540,7 +539,6 @@ const ArticleEditorPage: NextPage = () => {
     if (!isDeepAnalyzing) return;
     setPanelCollapsed(false);
     setShowHistory(false);
-    setShowInternalLinksPanel(false);
   }, [isDeepAnalyzing]);
 
   const [editorHtml, setEditorHtml] = useState('');
@@ -1117,7 +1115,6 @@ const ArticleEditorPage: NextPage = () => {
     try { await doSave(); } catch { /* open anyway */ }
     if (ranksmileDockOpen) editorRef.current?.toggleRanksmile?.();
     setShowHistory(false);
-    setShowInternalLinksPanel(false);
     setVoiceOpen(false);
     setActionsMenu(false);
     setShowWpExportModal(true);
@@ -2243,7 +2240,7 @@ const ArticleEditorPage: NextPage = () => {
                       label={article.status === 'accepted' ? 'Unmark as done' : 'Mark as done'}
                       onClick={() => { handleAcceptReject(article.status === 'accepted' ? 'reject' : 'accept'); setActionsMenu(false); }}
                     />
-                    <MenuRow disabled={editorLocked} icon={<IcoClock />} label="Version history" onClick={() => { setPanelCollapsed(false); setShowInternalLinksPanel(false); setShowHistory(true); setActionsMenu(false); }} />
+                    <MenuRow disabled={editorLocked} icon={<IcoClock />} label="Version history" onClick={() => { setPanelCollapsed(false); setShowHistory(true); setActionsMenu(false); }} />
                     <MenuRow disabled={editorLocked} icon={<IcoGear />} label="Settings" onClick={() => { setShowCustomization(true); setActionsMenu(false); }} />
                     <MenuRow disabled={editorLocked} icon={<IcoCode />} label="Developer" sub="Download full report" onClick={() => { handleDownloadDeveloperReport(); setActionsMenu(false); }} />
                     <div style={{ position: 'relative' }}>
@@ -2304,7 +2301,7 @@ const ArticleEditorPage: NextPage = () => {
 
                 {/* Version History */}
                 <span data-tour="version" style={{ display: 'inline-flex' }}>
-                  <IconBtn disabled={editorLocked} onClick={() => { setShowInternalLinksPanel(false); setShowHistory((v) => !v); }} title="Version History">
+                  <IconBtn disabled={editorLocked} onClick={() => { setShowHistory((v) => !v); }} title="Version History">
                     <IcoClock />
                   </IconBtn>
                 </span>
@@ -2538,7 +2535,6 @@ const ArticleEditorPage: NextPage = () => {
           onOpenHistory={() => {
             setSavedBannerOpen(false);
             setPanelCollapsed(false);
-            setShowInternalLinksPanel(false);
             setShowHistory(true);
           }}
           onClose={() => setSavedBannerOpen(false)}
