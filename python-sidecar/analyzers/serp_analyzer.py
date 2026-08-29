@@ -419,8 +419,10 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
         "words_max": max(int(max(word_counts)), 1200),
         "words_target": max(avg_words, 800),
         "headings_min": max(3, min(heading_counts)),
-        "headings_max": max(8, max(heading_counts)),
-        "headings_target": int(sum(heading_counts) / len(heading_counts)),
+        # Floored like words: a reference article carries 12-15 H2s, and a cohort of
+        # short pages must not turn a well-structured article into a penalty.
+        "headings_max": max(12, max(heading_counts)),
+        "headings_target": max(8, int(sum(heading_counts) / len(heading_counts))),
         "paragraphs_min": max(5, min(paragraph_counts)),
         "paragraphs_max": max(20, max(paragraph_counts)),
         "paragraphs_target": int(sum(paragraph_counts) / len(paragraph_counts)),
@@ -492,6 +494,9 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
 
     # Fetch more results than needed so we can skip thin/error pages
     results, _ = await _fetch_serp_results(keyword, language, num * 2, serper_key)
+    # Same reference filter as analyze_serp: the outlines feed the Competitors panel and
+    # the planner, and dictionary/translator pages poisoned both for one-word keywords.
+    results = _filter_reference_results(results)
 
     async def _fetch_one(result: dict, serp_position: int):
         url = result["link"]

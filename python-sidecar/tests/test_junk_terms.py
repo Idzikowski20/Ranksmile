@@ -12,6 +12,9 @@ def test_boilerplate_and_reference_chrome_is_rejected():
         "2094662 records dk",
         "polish noun declension",
         "cookie settings",
+        "menu glownego przejdz",
+        "jedna jezeli ktos",
+        "skrzynke mailowa ktos",
     ]
     for phrase in junk:
         assert not is_useful_phrase(phrase), phrase

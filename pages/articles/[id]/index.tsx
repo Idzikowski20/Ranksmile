@@ -1703,6 +1703,7 @@ const ArticleEditorPage: NextPage = () => {
     if (optimizeState !== 'idle' || !scoreData || !article) return;
     if (!isUsableArticleHtml(editorHtml)) return;
     expressOptimizeRan.current = true;
+    toast('Express mode — polishing your article with Auto-Optimize…', { icon: '⚡', duration: 6000 });
     const { express, reviewOutline, type, internal, external, ...rest } = router.query;
     router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true })
       .catch(() => undefined);

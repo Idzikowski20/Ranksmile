@@ -246,7 +246,16 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
   // asEvidence, like every other scraped value in this prompt: terms come from stored NLP
   // output, and a newline or a `<` in one would let it close the evidence wrapper and read
   // as a fresh instruction to the model.
+  // The target keyword never goes on the weave list. It already leads every heading, and
+  // listing it here made the writer repeat it verbatim ("jestem szantażowany" 12×) —
+  // first-person queries turned into sentences. The scorer matches inflections
+  // (term_words_regexps), so natural variants count without parroting.
+  const kwFolded = (input.keyword || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
   const phraseTerms = briefPhraseTerms(input.importantTerms || [], TERMS)
+    .filter((t) => {
+      const folded = t.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+      return folded !== kwFolded && !kwFolded.includes(folded);
+    })
     .map(asEvidence)
     .filter(Boolean);
 
@@ -280,6 +289,9 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'HEADINGS: each section arrives with a ROLE, not a title. Write the real H2 for it.',
     'A heading names what the section covers and carries the keyword or a close variant —',
     '"Jak działa prywatny detektyw w Warszawie — od pierwszej rozmowy do raportu", not "Kim jesteśmy".',
+    'A first- or second-person query keyword is NEVER quoted verbatim in a heading:',
+    '"jestem szantażowany" becomes "Co zrobić, gdy jesteś szantażowany" — the natural',
+    'phrasing a person would write, with the same words inflected.',
     'Keep the given order and count, one heading per role. FAQ and the closing section keep their plain names.',
     'RANKING PAGES shows how the pages already ranking title their sections: match that level of',
     'specificity and cover what they cover. Never reuse a title that names a company.',
@@ -297,7 +309,11 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'writer what the answer is to cover, never just to restate the question.',
     'Middle bullets: "Punkt o <temat>: <konkretne wyliczenie>" — name the actual services,',
     'registries, documents, courts, districts or steps, not the category they belong to.',
-    'Last bullet: "Wpleć frazy: ..." listing the exact phrases from the terms above.',
+    'Last bullet: "Wpleć frazy: ..." listing phrases from the terms above. Tell the writer',
+    'to use them in their NATURAL grammatical form — inflections and reordered variants',
+    'count; never demand a phrase verbatim when it would read as broken Polish.',
+    'Never list the target keyword itself there, and never a first-person query',
+    '("jestem szantażowany") — the writer addresses the reader, not the search box.',
     'Never tell the writer to copy a competitor; say what to cover, from the BRAND section.',
     'Address the writer directly, in the imperative. Never write about them in the third person',
     '("autor powinien", "writer should") — the bullet IS the instruction.',
