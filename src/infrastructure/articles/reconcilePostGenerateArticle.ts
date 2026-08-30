@@ -390,7 +390,10 @@ async function enrichTermsForArticle(opts: {
     terms = filterNlpTermsForAnalysis(filterUsefulNlpTerms(terms), opts.keyword);
   }
 
-  return terms;
+  // At the exit too, not just the entry: every enrichment branch above can re-add the
+  // same suggestion tails the entry filter removed — article 101 left with 85 rows and
+  // 36 of them at zero coverage, all re-imported after the entry pass.
+  return dropSuggestionTailsWhenCorpusRich(terms, opts.keyword);
 }
 
 /**
