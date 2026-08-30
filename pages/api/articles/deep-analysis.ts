@@ -50,7 +50,7 @@ import { getErrorMessage } from '@/src/core/shared/errors';
 import { buildCompetitorBenchmarks } from '@/src/infrastructure/competitors/competitorAuditScore';
 import { buildRankingSourcesPayload } from '@/src/infrastructure/articles/rankingSources';
 import { enrichTermsWithSalience } from '@/src/infrastructure/competitors/termSalience';
-import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
+import { filterNlpTermsForAnalysis, questionsFromSuggestions } from '@/src/core/domain/relevance/topicRelevance';
 import { buildAuditResult } from '@/src/infrastructure/siteAudit/auditCompute';
 import { computeSeoScoreFromAudit } from '@/src/core/domain/audit/seoScore';
 import { findInternalLinkOpportunities } from '@/src/infrastructure/siteAudit/auditInternalLinks';
@@ -676,6 +676,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       + `(serp raw=${allTerms.length}, enriched=${enrichedTerms.length})`,
     );
 
+    // Question-shaped suggestions go where Surfer keeps them — QUESTIONS, not terms.
+    // The term filters drop these rows correctly, but discarding them entirely left a
+    // zero-PAA SERP with a single question in the coverage checklist while the
+    // suggestions carrying exactly Surfer's questions went to waste.
+    const suggestionQuestions = questionsFromSuggestions(
+      [...allTerms, ...enrichedTerms],
+      resolvedKeyword || keyword || '',
+    );
+
     let competitorBenchmarks: Awaited<ReturnType<typeof buildCompetitorBenchmarks>> = null;
     try {
       competitorBenchmarks = await buildCompetitorBenchmarks(
@@ -756,6 +765,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       seoScore: seoScoreFromAudit,
       competitorWordSpread,
     });
+
+    if (suggestionQuestions.length) {
+      const have = new Set((scoreData.paa_questions ?? []).map((q: string) => q.toLowerCase()));
+      scoreData.paa_questions = [
+        ...(scoreData.paa_questions ?? []),
+        ...suggestionQuestions.filter((q) => !have.has(q.toLowerCase())),
+      ];
+      console.log(`[deep-analysis] routed ${suggestionQuestions.length} suggestion questions to paa_questions`);
+    }
     // Written as `score_data = ?`, so everything this route does not rebuild is destroyed
     // unless it is carried over explicitly.
     const carried = await plannerStateToCarry(articleId, articleIdSql);
