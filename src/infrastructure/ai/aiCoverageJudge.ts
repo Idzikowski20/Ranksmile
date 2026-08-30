@@ -33,7 +33,10 @@ export const deepseekJudge: CoverageJudge = {
       'JSON: {"items":[{"id","covered","quality","confidence","needsExpansion","missing":[],"reason","sectionId"}],' +
       '"answersMainQuestionEarly"}.\n\n=== ARTICLE ===\n' + plainText + '\n=== END ===';
     const gw = await llmGateway({
-      provider: 'deepseek',
+      // OpenRouter first: the deepseek account can run out of balance (402) and its
+      // direct endpoint then fails every judge call; the gateway falls back through
+      // deepseek/gemini automatically when openrouter is unavailable.
+      provider: 'openrouter',
       model: COVERAGE_MODEL,
       temperature: COVERAGE_TEMPERATURE,
       seed: 7,
