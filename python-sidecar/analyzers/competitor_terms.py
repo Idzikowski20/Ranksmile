@@ -156,44 +156,62 @@ def extract_collocations(texts: list[str], max_terms: int = 40) -> list[dict]:
     Frequent word-pairs across competitor pages, kept in their inflected form.
 
     Surfer's exported guideline is built from exactly this shape — "poczucia winy",
-    "druga osobe", "wlasnych granic", "zachowanie spokoju" — natural collocations the
-    ranking pages repeat, not entities. Our entity/TF-IDF paths filtered these away as
-    generic, which is why term-selection overlap with the reference list measured 16%.
-    A pair counts when several DISTINCT pages use it; per-page repetition buys nothing.
+    "wlasnych granic", "zachowanie spokoju" — natural collocations the ranking pages
+    repeat. Two hard-learned rules from the first version, which flooded the list with
+    "cennik kontakt" and "bede cie":
+      * pairs never cross a sentence boundary — tokenize per sentence, not per page;
+      * neither word may be a function word, and both need 4+ characters. A single
+        permitted stopword let every "chcesz sie" through.
+    Inflection variants are merged by stem so "poczucie winy" and "poczucia winy" count
+    as one term; the most frequent surface form is what ships.
     """
     if len(texts) < 2:
         return []
     import re as _re
-    token_re = _re.compile(r"[a-zA-Zaąćęłńóśźż"
-                           r"ĄĆĘŁŃÓŚŹŻ]{3,}")
+    token_re = _re.compile(
+        r"[a-zA-Ząćęłńóśźż"
+        r"ĄĆĘŁŃÓŚŹŻ]{4,}"
+    )
+    sentence_re = _re.compile("[.!?\\n\\r]+")
+
+    def _stem(w: str) -> str:
+        # "ia"/"iu" before "a"/"u": poczucia -> poczuc (matches poczucie -> poczuc),
+        # or the genitive and nominative land on different stems and never merge.
+        for suf in ("ami", "ach", "owi", "iem", "ia", "iu", "ie", "em", "om", "ow", "ej", "a", "e", "i", "o", "u", "y"):
+            if len(w) - len(suf) >= 4 and w.endswith(suf):
+                return w[: len(w) - len(suf)]
+        return w
+
     doc_freq: dict[str, int] = {}
     occurrences: dict[str, int] = {}
-    display: dict[str, str] = {}
+    surface_counts: dict[str, dict[str, int]] = {}
     for text in texts:
-        tokens = token_re.findall(text.lower())
         seen_here: set[str] = set()
-        for a, b in zip(tokens, tokens[1:]):
-            if a in POLISH_STOPWORDS and b in POLISH_STOPWORDS:
-                continue
-            if len(a) < 4 and len(b) < 4:
-                continue
-            key = f"{a} {b}"
-            occurrences[key] = occurrences.get(key, 0) + 1
-            if key not in seen_here:
-                doc_freq[key] = doc_freq.get(key, 0) + 1
-                seen_here.add(key)
-            display.setdefault(key, key)
+        for sentence in sentence_re.split(text.lower()):
+            tokens = token_re.findall(sentence)
+            for a, b in zip(tokens, tokens[1:]):
+                if a in POLISH_STOPWORDS or b in POLISH_STOPWORDS:
+                    continue
+                key = f"{_stem(a)} {_stem(b)}"
+                surface = f"{a} {b}"
+                occurrences[key] = occurrences.get(key, 0) + 1
+                surface_counts.setdefault(key, {})
+                surface_counts[key][surface] = surface_counts[key].get(surface, 0) + 1
+                if key not in seen_here:
+                    doc_freq[key] = doc_freq.get(key, 0) + 1
+                    seen_here.add(key)
     n_docs = len(texts)
     floor = max(2, round(0.4 * n_docs))
     out = []
     for key, df in sorted(doc_freq.items(), key=lambda kv: (-kv[1], kv[0])):
         if df < floor:
             continue
-        if not is_useful_phrase(key):
+        surface = max(surface_counts[key].items(), key=lambda kv: kv[1])[0]
+        if not is_useful_phrase(surface):
             continue
         avg = max(1, round(occurrences[key] / df))
         out.append({
-            "term": display[key], "target_count": min(avg, 6), "type": "collocation",
+            "term": surface, "target_count": min(avg, 6), "type": "collocation",
             "relevance": 0.6, "doc_freq": df,
             "suggested_min": 1, "suggested_max": max(2, min(avg + 1, 8)),
         })
