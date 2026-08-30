@@ -5,13 +5,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import axios from 'axios';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { readContentSettings } from '@/src/infrastructure/stores/contentSettings';
 import { getDomainVoices } from '@/src/infrastructure/seo/domainVoices';
-import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageStore';
@@ -56,6 +53,9 @@ import type { StructuralBenchmark, PlannerTargets } from '@/src/infrastructure/b
 import { importantTermsFromScoreData } from '@/src/infrastructure/articles/mergeArticleTerms';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 /** Bounds the brief LLM call: nothing else force-kills this request, so an unbounded
  *  completion would hang it forever and starve the compile and the sidecar kickoff. */
@@ -215,7 +215,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // 2. Domain
     const domainRows = await db.query<{ domain: string }>(
-      `SELECT domain FROM domain WHERE "ID" = ? LIMIT 1`,
+      'SELECT domain FROM domain WHERE "ID" = ? LIMIT 1',
       { replacements: [article.domain_id], type: QueryTypes.SELECT },
     );
     const domainName = domainRows[0]?.domain || '';
@@ -260,8 +260,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const paa = mergedPlannerQuestions(article.ai_info_to_cover, scoreData.paa_questions);
 
     // 5a. CIE — Benchmark + Knowledge Engine (never blocks generate on failure).
-    const useKnowledgeEngine =
-      process.env.USE_KNOWLEDGE_ENGINE === 'true'
+    const useKnowledgeEngine = process.env.USE_KNOWLEDGE_ENGINE === 'true'
       || process.env.USE_KNOWLEDGE_ENGINE === '1';
     let structuralBenchmark: StructuralBenchmark | null = null;
     let plannerTargets: PlannerTargets | null = null;
@@ -554,7 +553,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const e = kickoffErr as { response?: { data?: unknown }; message?: string };
       const detail = e?.response?.data || e?.message || 'sidecar unavailable';
       console.error('[articles/[id]/generate] kickoff failed:', detail);
-      await db.query(`UPDATE analysis_jobs SET status = 'failed', error = ? WHERE id = ?`, { replacements: [String(detail).slice(0, 500), jobId] });
+      await db.query('UPDATE analysis_jobs SET status = \'failed\', error = ? WHERE id = ?', { replacements: [String(detail).slice(0, 500), jobId] });
       await db.query(`UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`, { replacements: [articleId] });
       return res.status(502).json({ error: 'Generation service unavailable', detail });
     }
