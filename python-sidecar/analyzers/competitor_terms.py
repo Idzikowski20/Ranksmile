@@ -31,7 +31,7 @@ GRAMMAR_STOPWORDS = {
     "nim", "niz", "oraz", "po", "pod", "przed", "przez", "przy", "sa", "sie",
     "sobie", "tak", "takze", "tego", "tej", "ten", "teraz", "tez", "to",
     "tych", "tym", "u", "w", "we", "z", "za", "ze", "zeby", "warto",
-    "cie", "ci", "mi", "mnie", "nam", "was", "wam",
+    "cie", "ci", "mi", "mnie", "nam", "was", "wam", "co", "ktos", "cos",
     "nalezy", "czasem", "sytuacja", "informacje", "wielu", "jak",
 }
 
@@ -71,7 +71,7 @@ def normalize_text(text: str) -> str:
 _BOILERPLATE_RE = re.compile(
     r"cookie|consent|privacy policy|polityka prywatno|partners can|can use this|"
     r"click here|kliknij tutaj|all rights reserved|wszelkie prawa|newsletter|"
-    r"index php|php title|https?|www|\.com|\.pl|"
+    r"spis tresci|spis treści|index php|php title|https?|www|\.com|\.pl|"
     r"dictionary|dictionaries|słownik|thesaurus|translation|tłumaczenie|wymowa|"
     r"pronunciation|noun declension|syllable|"
     r"song duration|based on this song|records dk|popular releases|tracklist",
