@@ -1,0 +1,21 @@
+components/articles/ContentOptimizerNodeView.tsx
+  s_e8c3822b427cc8::t_888b190ff87829 78,81-117
+  s_e8c3822b427cc8::t_9ea7f2e8c7707c 15,26-37
+  s_e8c3822b427cc8::t_089a17f64dc32b 75-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b36bf9b877aa26d256fa4fd76c5bbe4519c6729a",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
