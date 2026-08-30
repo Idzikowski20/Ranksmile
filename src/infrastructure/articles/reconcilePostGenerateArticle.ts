@@ -14,7 +14,7 @@ import { factsCoverageFactor } from '@/src/core/domain/aiScore/factors';
 import { scoreIntroduction } from '@/src/core/domain/aiScore/introductionFactors';
 import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
 import { liveCoverageItems } from '@/src/infrastructure/coverage/liveCoverage';
-import { filterNlpTermsForAnalysis, dropNoisyTerms } from '@/src/core/domain/relevance/topicRelevance';
+import { filterNlpTermsForAnalysis, dropNoisyTerms, dropSuggestionTailsWhenCorpusRich } from '@/src/core/domain/relevance/topicRelevance';
 import { needsCoverageRegrade, regradeCoverageSnapshot } from '@/src/infrastructure/coverage/regradeCoverageSnapshot';
 import { persistCoverageFeatureRun } from '@/src/infrastructure/coverage/persistCoverageFeatureRun';
 import { sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
@@ -343,7 +343,10 @@ async function enrichTermsForArticle(opts: {
   // teściowej" and "foch szantaż emocjonalny" because 88 rows counted as "rich". A
   // polluted list is not a rich one, and if cleaning it leaves the list thin, the
   // enrichment below is exactly what should run.
-  let terms = filterNlpTermsForAnalysis(filterUsefulNlpTerms(opts.terms), opts.keyword);
+  let terms = dropSuggestionTailsWhenCorpusRich(
+    filterNlpTermsForAnalysis(filterUsefulNlpTerms(opts.terms), opts.keyword),
+    opts.keyword,
+  );
   if (!needsEnrichment(terms, opts.keyword)) return terms;
 
   terms = await enrichNlpTermsIfNeeded({

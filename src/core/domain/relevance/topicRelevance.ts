@@ -165,6 +165,41 @@ function isWeakKeywordLongTail(term: string, seedKeyword: string, evidence: Term
   return evidence.doc_freq < LONGTAIL_EVIDENCE_MIN_DOCS;
 }
 
+/**
+ * Rows evidenced by the competitor corpus (doc_freq / relevance / type present).
+ *
+ * Surfer's exported guideline for "szantaż emocjonalny" — the ground truth this
+ * pipeline is measured against — contains ONLY corpus n-grams; every autocomplete
+ * shape lives in its separate questions list. Our keyword-suggestion rows carry no
+ * corpus metadata, and once the corpus harvest is rich they are pure dead weight:
+ * article 99 carried 12 of them ("szantaż emocjonalny empik", "… gwp", "foch …",
+ * "teściowa …"), all at zero coverage by construction. They are dropped only when
+ * enough evidenced rows exist — on a thin corpus the suggestions still fill the gap,
+ * which is why an unconditional version of this rule was reverted earlier.
+ */
+const CORPUS_RICH_MIN_ROWS = 30;
+
+export function dropSuggestionTailsWhenCorpusRich<T extends { term: string } & TermEvidence>(
+  terms: T[],
+  seedKeyword: string,
+): T[] {
+  const evidenced = terms.filter(
+    (t) => typeof t.doc_freq === 'number' || t.relevance !== undefined || Boolean(t.type),
+  );
+  if (evidenced.length < CORPUS_RICH_MIN_ROWS) return terms;
+  const seed = normalizeTerm(seedKeyword);
+  if (!seed) return terms;
+  return terms.filter((t) => {
+    const hasEvidence = typeof t.doc_freq === 'number' || t.relevance !== undefined || Boolean(t.type);
+    if (hasEvidence) return true;
+    const term = normalizeTerm(t.term);
+    // Only the keyword-plus-tail shape is a suggestion; a plain phrase with no
+    // metadata may be a legitimate manual or legacy row.
+    if (!term.includes(seed)) return true;
+    return term === seed;
+  });
+}
+
 /** Filter keyword rows to those on-topic for the primary seed. */
 export function filterOnTopicKeywords<T extends { keyword: string }>(rows: T[], seedKeyword: string): T[] {
   return rows.filter((r) => isKeywordOnTopic(r.keyword, seedKeyword));
