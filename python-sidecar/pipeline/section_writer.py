@@ -173,6 +173,14 @@ def _prompt(
     # prose at all, so adding "the FIRST sentence answers the main question" handed the
     # model two instructions it cannot both satisfy — which is what a special-only opening
     # section produced.
+    heading_text = str((ctx or {}).get("heading") or "").lower()
+    if "faq" in heading_text or "najczęściej zadawane" in heading_text or "pytania" in heading_text:
+        lines.append(
+            "FAQ format (hard rule): this paragraph is ONE question-answer pair."
+            " Start with the question alone on its own line in bold (**...?**), then a"
+            " 2-4 sentence answer as a separate paragraph. Never pack several questions"
+            " into one block of prose."
+        )
     if ctx.get("is_lead") and not style.get("table") and not style.get("list"):
         # 38% of AI citations come from the opening ~100 words (Surfer research, 2026):
         # the answer, the reader and the brand all have to land inside them.
