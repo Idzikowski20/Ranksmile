@@ -599,10 +599,21 @@ async def research_authority_facts(keyword: str, language: str = "pl") -> dict:
     if not serper_key or not keyword.strip():
         return {"claims": [], "sources": []}
 
+    # Three profiles, matching the reference guideline's fact mix: legal cases,
+    # statistics, and the psychology declaratives ("skutki", "mechanizmy") that made up
+    # most of the 14 reference facts our harvest was missing.
     suffixes = (
-        ["policja OR prokuratura OR sąd OR wyrok", "statystyki OR raport OR badania"]
+        [
+            "policja OR prokuratura OR sąd OR wyrok",
+            "statystyki OR raport OR badania",
+            "skutki OR objawy OR mechanizmy OR przyczyny",
+        ]
         if language.startswith("pl")
-        else ["police OR court OR case", "statistics OR report OR study"]
+        else [
+            "police OR court OR case",
+            "statistics OR report OR study",
+            "effects OR symptoms OR mechanisms OR causes",
+        ]
     )
     claims: list[str] = []
     sources: list[dict] = []
@@ -629,9 +640,9 @@ async def research_authority_facts(keyword: str, language: str = "pl") -> dict:
                 "label": row.get("title", "")[:80] or domain_from_url(url),
                 "confidence": _authority_confidence(url),
             })
-            if len(claims) >= 6:
+            if len(claims) >= 12:
                 break
-        if len(claims) >= 6:
+        if len(claims) >= 12:
             break
     print(f"[fact-research] {keyword!r}: {len(claims)} sourced facts")
     return {"claims": claims, "sources": sources}
