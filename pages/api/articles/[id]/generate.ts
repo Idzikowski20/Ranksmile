@@ -43,6 +43,7 @@ import {
   buildStructuralBenchmark,
   benchmarkDocsFromCompetitors,
   toPlannerTargets,
+  clampPlannerWordsToScorer,
 } from '@/src/infrastructure/benchmarkIntelligence/index';
 import {
   runKnowledgeEngine,
@@ -281,7 +282,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       structuralBenchmark = storedBenchmark
         ?? (benchDocs.length ? buildStructuralBenchmark(benchDocs) : null);
       if (structuralBenchmark) {
-        plannerTargets = toPlannerTargets(structuralBenchmark);
+        plannerTargets = clampPlannerWordsToScorer(
+          toPlannerTargets(structuralBenchmark),
+          typeof scoreData.words_target === 'number' ? scoreData.words_target : null,
+        );
       }
       if (useKnowledgeEngine) {
         const extraTexts: Array<{ text: string; url: string; kind?: string }> = [];

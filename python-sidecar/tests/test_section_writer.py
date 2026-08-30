@@ -94,7 +94,7 @@ def test_prompt_omits_sections_with_nothing_to_say():
 
 def test_prompt_scopes_the_model_to_a_single_paragraph():
     """Handed a heading and a brief, the model will happily write the whole section."""
-    assert "Write only this paragraph" in _prompt(PARAGRAPH, CONTEXT)
+    assert "Write only this block's content" in _prompt(PARAGRAPH, CONTEXT)
 
 
 #: Every spelling of a closing fence tag a model would honour, not just the literal one.
@@ -131,7 +131,7 @@ def test_scraped_context_can_neither_close_the_fence_nor_escape_it(escape):
     assert any(INJECTION in line for line in inside)
     assert not any(INJECTION in line for line in above)
     # The rules sit above the fence, out of reach of anything scraped.
-    assert any("Write only this paragraph" in line for line in above)
+    assert any("Write only this block's content" in line for line in above)
 
 
 def test_prompt_does_not_claim_a_reviewer_approved_the_outline():
@@ -158,7 +158,7 @@ def test_list_style_paragraph_asks_for_a_labelled_bullet_list():
 
     assert "bullet list" in prompt
     assert "bold label" in prompt
-    assert "Write ONE paragraph" not in prompt
+    assert "Write this content block" not in prompt
 
 
 def test_table_style_paragraph_asks_for_a_markdown_table():
@@ -166,11 +166,11 @@ def test_table_style_paragraph_asks_for_a_markdown_table():
     prompt = _prompt(plan, CONTEXT)
 
     assert "comparison table" in prompt
-    assert "Write ONE paragraph" not in prompt
+    assert "Write this content block" not in prompt
 
 
 def test_plain_paragraph_prompt_is_unchanged():
-    assert "Write ONE paragraph" in _prompt(PARAGRAPH, CONTEXT)
+    assert "Write this content block" in _prompt(PARAGRAPH, CONTEXT)
 
 
 def test_authority_sources_resolve_and_gate_the_link_rule():

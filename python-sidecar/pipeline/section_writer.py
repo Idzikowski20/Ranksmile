@@ -173,8 +173,15 @@ def _prompt(
         ]
     else:
         lines = [
-            "Write ONE paragraph of the article as Markdown only; never emit HTML.",
-            "Write only this paragraph: no heading, no other sections, no preamble.",
+            # Short paragraphs are the reference house style: Surfer's guideline asks for
+            # 65-78 paragraphs in ~2400 words (~30 words each), while one block rendered
+            # as a single <p> averaged 78 words — half the paragraph count at the same
+            # length. The renderer joins blocks with blank lines and parses full
+            # Markdown, so a split here becomes real <p> boundaries.
+            "Write this content block as Markdown only; never emit HTML.",
+            "Split the prose into SHORT paragraphs of 2-3 sentences, separated by blank"
+            " lines — never one long wall of text.",
+            "Write only this block's content: no heading, no other sections, no preamble.",
         ]
     # Only prose can carry the lead. A table or list block has just been told to emit no
     # prose at all, so adding "the FIRST sentence answers the main question" handed the
