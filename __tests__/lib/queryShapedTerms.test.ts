@@ -1,4 +1,4 @@
-import { filterOnTopicTerms, filterOnTopicKeywords, filterNlpTermsForAnalysis, dropSuggestionTailsWhenCorpusRich } from '@/src/core/domain/relevance/topicRelevance';
+import { filterOnTopicTerms, filterOnTopicKeywords, filterNlpTermsForAnalysis, dropSuggestionTailsWhenCorpusRich, questionsFromSuggestions } from '@/src/core/domain/relevance/topicRelevance';
 
 const KEYWORD = 'szantaż emocjonalny';
 const terms = (...list: string[]) => list.map((term) => ({ term }));
@@ -105,5 +105,33 @@ describe('dropSuggestionTailsWhenCorpusRich', () => {
     ).map((t) => t.term);
 
     expect(kept).toContain('szantaż emocjonalny w związku');
+  });
+});
+
+describe('questionsFromSuggestions', () => {
+  const seed = 'szantaż emocjonalny';
+
+  it("routes Surfer's questions out of the suggestion pool", () => {
+    const qs = questionsFromSuggestions(
+      [
+        { term: 'co grozi za szantaż emocjonalny' },
+        { term: 'szantaż emocjonalny gdzie zgłosić' },
+        { term: 'szantaż emocjonalny jak się bronić' },
+        { term: 'szantaż emocjonalny pdf' },
+        { term: 'przemoc psychiczna' },
+      ],
+      seed,
+    );
+
+    expect(qs).toContain('co grozi za szantaż emocjonalny?');
+    expect(qs).toContain('szantaż emocjonalny gdzie zgłosić?');
+    expect(qs).toContain('szantaż emocjonalny jak się bronić?');
+    expect(qs.join(' ')).not.toMatch(/pdf/);
+    expect(qs.join(' ')).not.toMatch(/przemoc psychiczna/);
+  });
+
+  it('dedupes and caps', () => {
+    const rows = Array.from({ length: 20 }, (_, i) => ({ term: `szantaż emocjonalny jak reagować wariant ${i}` }));
+    expect(questionsFromSuggestions(rows, seed).length).toBeLessThanOrEqual(8);
   });
 });

@@ -206,6 +206,40 @@ export function dropSuggestionTailsWhenCorpusRich<T extends { term: string } & T
   });
 }
 
+/**
+ * Question-shaped keyword suggestions, routed to where Surfer keeps them.
+ *
+ * Surfer's exported guideline holds "Co grozi za szantaż emocjonalny?" and "Gdzie
+ * zgłosić szantaż emocjonalny?" in QUESTIONS TO ANSWER — never in terms. Our filters
+ * correctly drop these rows from the term list, but they were discarded entirely: on a
+ * zero-PAA SERP the coverage checklist ended up with a single question-shaped row while
+ * the suggestions carrying exactly Surfer's questions went to waste. This recovers them
+ * for scoreData.paa_questions, which feeds both the planner and the coverage build.
+ */
+export function questionsFromSuggestions<T extends { term: string }>(
+  terms: T[],
+  seedKeyword: string,
+  cap = 8,
+): string[] {
+  const seeds = seedTokens(seedKeyword);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of terms) {
+    const raw = (t.term || '').trim();
+    const norm = normalizeTerm(raw);
+    if (!norm || !isQueryShapedTerm(norm)) continue;
+    // Format/translation noise is a query shape too — but not a question.
+    if (QUERY_MODIFIER_RE.test(norm)) continue;
+    const words = norm.split(/\s+/).filter((w) => w.length >= 3);
+    if (!sharesAnySeedToken(words, seeds)) continue;
+    if (seen.has(norm)) continue;
+    seen.add(norm);
+    out.push(/\?$/.test(raw) ? raw : `${raw}?`);
+    if (out.length >= cap) break;
+  }
+  return out;
+}
+
 /** Filter keyword rows to those on-topic for the primary seed. */
 export function filterOnTopicKeywords<T extends { keyword: string }>(rows: T[], seedKeyword: string): T[] {
   return rows.filter((r) => isKeywordOnTopic(r.keyword, seedKeyword));
