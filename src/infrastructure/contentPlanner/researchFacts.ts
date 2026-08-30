@@ -32,6 +32,7 @@ export async function getResearchedFacts(opts: {
       claims: Array.isArray(out.claims) ? out.claims : [],
       sources: Array.isArray(out.sources) ? out.sources : [],
     };
+    // eslint-disable-next-line no-param-reassign -- the mutation IS the cache contract (see doc above)
     opts.scoreData.researched_facts = facts;
     return facts;
   } catch (err) {
