@@ -255,7 +255,13 @@ def _merge_nlp_terms(semantic: list[dict], texts: list[str], keyword: str) -> li
     """
     seen = {t["term"] for t in semantic}
     extra = [t for t in _fallback_terms(texts, keyword) if t["term"] not in seen]
-    return (semantic + extra)[:MAX_TERMS]
+    seen.update(t["term"] for t in extra)
+    # Collocations third: the natural word-pairs ranking pages repeat ("poczucia winy",
+    # "wlasnych granic") are the bulk of Surfer's own term list, and neither the LLM
+    # entity path nor TF-IDF surfaces them.
+    from analyzers.competitor_terms import extract_collocations
+    collocations = [t for t in extract_collocations(texts) if t["term"] not in seen]
+    return (semantic + extra + collocations)[:MAX_TERMS]
 
 
 async def _extract_chunk(keyword: str, chunk_text: str, chunk_hash: str, api_key: str) -> list[dict]:
