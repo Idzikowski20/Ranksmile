@@ -157,12 +157,32 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
         else:
             target_count = max(1, round(chunk_hits * avg_relevance * 3))
 
-        # Suggested range = spread of real per-competitor occurrence counts (Ranksmile
-        # shows e.g. "1-4"): min/max across the pages that actually use the term.
-        per_doc = [lt.count(term) for lt in lower_texts]
+        # Suggested range from how densely the ranking pages actually use the term.
+        #
+        # This was `lt.count(term)`, a raw substring count with no word boundary, and the
+        # min/max of the result became the range the article is graded against. "emocjonalne"
+        # matches inside "emocjonalnego" and "emocjonalnej", so it scored 37 hits on the
+        # thinnest page and 91 on the heaviest — and article 84 was told to use one adjective
+        # between 37 and 91 times. Counting whole words fixes the inflation; scaling by
+        # document length fixes the rest, because an absolute count taken from a 6000-word
+        # competitor does not transfer to a 2000-word brief.
+        per_doc = [_count_whole_word(lt, term) for lt in lower_texts]
         nonzero = [c for c in per_doc if c > 0]
-        s_min = max(1, min(nonzero)) if nonzero else 1
-        s_max = max(nonzero) if nonzero else target_count
+        if nonzero:
+            densities = sorted(
+                c / max(1, len(lt.split()))
+                for c, lt in zip(per_doc, lower_texts) if c > 0
+            )
+            median_density = densities[len(densities) // 2]
+            typical_words = sum(len(lt.split()) for lt in lower_texts) / len(lower_texts)
+            expected = median_density * typical_words
+            s_min = max(1, round(expected * 0.6))
+            # Capped: no single phrase is worth more than a dozen repetitions, and an
+            # uncapped ceiling is how a stray high-frequency page sets the target.
+            s_max = min(15, max(s_min + 1, round(expected * 1.4)))
+        else:
+            s_min = 1
+            s_max = max(1, target_count)
 
         aggregated.append({
             "term": term,
@@ -327,6 +347,11 @@ def _entity_terms(texts: list[str], language: str) -> list[dict]:
             "suggested_min": 1, "suggested_max": min(avg + 1, 6),
         })
     return out[:40]
+
+
+def _count_whole_word(text: str, term: str) -> int:
+    """Occurrences of `term` as a whole word/phrase — not as a substring of a longer form."""
+    return len(re.findall(rf"(?<!\w){re.escape(term)}(?!\w)", text))
 
 
 def _fallback_terms(texts: list[str], keyword: str, language: str = "pl") -> list[dict]:

@@ -4,7 +4,20 @@ import unicodedata
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-POLISH_STOPWORDS = {
+# Inflected function words the original list missed. They are not vocabulary an article
+# can be graded on, but they survive TF-IDF and shipped as scored terms: article 84 was
+# told to use "ktorych", "jednak", "czego" and "osobe" at competitor-level frequencies.
+_FUNCTION_WORD_FORMS = {
+    "ktorych", "ktorym", "ktora", "ktorej", "ktorego", "jednak", "czego", "czemu",
+    "osobe", "osoby", "osobie", "osoba", "sobie", "siebie", "swoje", "swojego", "swoja",
+    "takze", "rowniez", "wiec", "zatem", "ponadto", "natomiast", "jednakze", "bowiem",
+    "wowczas", "wtedy", "teraz", "potem", "zawsze", "nigdy", "czesto", "czasami",
+    "bardzo", "wcale", "jedynie", "tylko", "nawet", "prawie", "okolo", "wedlug",
+    "kazdy", "kazda", "kazde", "wszystkie", "wszystkich", "innych", "inne", "inny",
+    "temu", "tego", "tym", "tej", "ten", "tego", "przez", "przy", "podczas",
+}
+
+POLISH_STOPWORDS = _FUNCTION_WORD_FORMS | {
     "aby", "ale", "albo", "ani", "bez", "bo", "by", "byc", "byl", "byla", "bylo",
     "byly", "czy", "dla", "do", "gdy", "gdzie", "go", "ich", "im", "jest",
     "jesli", "juz", "kiedy", "kto", "ktora", "ktore", "ktory", "lub", "ma",

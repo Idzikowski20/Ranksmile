@@ -62,3 +62,11 @@ def test_every_row_keeps_the_range_contract():
     for row in terms:
         assert row["suggested_min"] <= row["suggested_max"], row
         assert row["target_count"] >= 1, row
+
+
+def test_count_whole_word_does_not_match_inside_a_longer_form():
+    """`lt.count("emocjonalne")` matched inside "emocjonalnego" and set a 37-91 target."""
+    from analyzers.semantic_terms import _count_whole_word
+    text = "emocjonalnego szantazu, emocjonalnej presji, ale emocjonalne reakcje"
+    assert _count_whole_word(text, "emocjonalne") == 1
+    assert _count_whole_word(text, "emocjonalnego") == 1

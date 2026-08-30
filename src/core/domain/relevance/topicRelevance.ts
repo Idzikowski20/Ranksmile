@@ -94,14 +94,49 @@ export function isKeywordOnTopic(candidate: string, seedKeyword: string): boolea
   return candWords.length === 1 && seeds.some((sw) => candMatchesSeed(candWords[0], sw));
 }
 
+/**
+ * A search query that happens to contain the keyword, rather than vocabulary an article
+ * can use.
+ *
+ * `enrichNlpTermsIfNeeded` merges up to 80 DataForSEO keyword suggestions into the NLP
+ * term list, and every seed check waves them through because they repeat the keyword.
+ * Article 84 was graded against "szantaż emocjonalny po angielsku", "szantaż emocjonalny
+ * po angielskiego" (autocomplete, not even grammatical), "susan forward szantaż
+ * emocjonalny pdf" and "czy szantaż emocjonalny jest karalny" — 64 of its 111 terms went
+ * uncovered, which is 60% of the SEO score's term component gone by construction. A
+ * Polish article about emotional blackmail cannot contain the phrase "po angielsku"
+ * without being about translation.
+ *
+ * Two shapes, both queries rather than terms:
+ *  - format/translation modifiers — the searcher wants a file or a translation;
+ *  - a leading interrogative — that is a question for the coverage checklist, and the
+ *    article answers it in prose rather than repeating the query verbatim.
+ */
+const QUERY_MODIFIER_RE = /\b(pdf|epub|ebook|chomikuj|cda|torrent|po (?:angielsku|ang|niemiecku|polsku)|angielski|angielskiego|tlumaczenie|synonim|cytaty|memy|film|ksiazka|audiobook|streszczenie|wikipedia)\b/;
+const QUESTION_PREFIX_RE = /^(czy|co|jak|jakie|jaki|jaka|kiedy|ile|gdzie|dlaczego|czym|kto|komu)\b/;
+
+function isQueryShapedTerm(term: string): boolean {
+  if (QUERY_MODIFIER_RE.test(term)) return true;
+  // Only multiword phrases: "co" or "jak" alone is a stopword the useful-term check
+  // already handles, and a two-word phrase can still be real vocabulary.
+  return QUESTION_PREFIX_RE.test(term) && term.split(/\s+/).filter(Boolean).length >= 3;
+}
+
 /** Filter keyword rows to those on-topic for the primary seed. */
 export function filterOnTopicKeywords<T extends { keyword: string }>(rows: T[], seedKeyword: string): T[] {
   return rows.filter((r) => isKeywordOnTopic(r.keyword, seedKeyword));
 }
 
-/** Filter NLP term list to on-topic phrases only. */
+/**
+ * Filter NLP term list to on-topic phrases only.
+ *
+ * Query-shaped entries are dropped here and NOT in `isKeywordOnTopic`, which also serves
+ * `filterOnTopicKeywords` — a keyword row is *supposed* to look like a query.
+ */
 export function filterOnTopicTerms<T extends { term: string }>(terms: T[], seedKeyword: string): T[] {
-  return terms.filter((t) => isKeywordOnTopic(t.term, seedKeyword));
+  return terms.filter((t) => (
+    isKeywordOnTopic(t.term, seedKeyword) && !isQueryShapedTerm(normalizeTerm(t.term))
+  ));
 }
 
 /**
@@ -147,6 +182,7 @@ function isKnownNoiseTerm(term: string, seedKeyword = ''): boolean {
   if (!term || !isUsefulTerm(term)) return true;
   if (isDictionaryQueryNoise(term)) return true;
   if (term.split(/\s+/).filter(Boolean).length > MAX_TERM_WORDS) return true;
+  if (isQueryShapedTerm(term)) return true;
   if (seedKeyword && namesAnotherCity(term, seedKeyword)) return true;
   return OFF_TOPIC_PATTERNS.some((re) => re.test(term));
 }
