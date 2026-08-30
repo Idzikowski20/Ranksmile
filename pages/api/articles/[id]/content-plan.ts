@@ -31,6 +31,7 @@ import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastruc
 import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageStore';
 import { parseApprovedOutline, type ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
 import { outlineForReview } from '@/src/infrastructure/contentPlanner/reviewOutline';
+import { getResearchedFacts, withResearchedFacts } from '@/src/infrastructure/contentPlanner/researchFacts';
 import {
   benchmarkDocsFromCompetitors,
   buildStructuralBenchmark,
@@ -139,7 +140,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       scoreData?.competitor_synthesis ?? null,
     );
 
-    const ai = aiIntelFromScoreData(scoreData);
+    const researchedFacts = await getResearchedFacts({
+      keyword: (row.target_keyword || '').trim(),
+      language: row.language,
+      scoreData: scoreData ?? {},
+    });
+    const ai = withResearchedFacts(aiIntelFromScoreData(scoreData), researchedFacts);
     // The coverage judge's own questions lead: the AI Search score is graded against
     // them, and planning without them wrote articles blind to their rubric — 4/10
     // covered on questions no section was ever asked to answer.

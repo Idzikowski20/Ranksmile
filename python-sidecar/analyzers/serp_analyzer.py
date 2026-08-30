@@ -573,3 +573,63 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
     # Filter thin/failed pages, keep top `num` by original SERP order
     valid = [o for o in all_outlines if o is not None]
     return valid[:num]
+
+
+# ── Authority fact research (Surfer "Facts"-style) ──────────────────────────
+# Real cases and statistics with their sources, found on the open web — the fact
+# sheet pairs each with [źródło: …] so the writer can cite a named case instead of
+# writing an article with zero evidence. Deterministic: Serper snippets only, no LLM.
+
+_AUTHORITY_HOSTS = (
+    ".gov.pl", "policja.gov.pl", "prokuratura", "sejm.gov.pl", "uokik.gov.pl",
+    "nask.pl", "cert.pl", "rpo.gov.pl", "stat.gov.pl", ".edu.pl", "europa.eu",
+)
+
+
+def _authority_confidence(url: str) -> float:
+    host = domain_from_url(url).lower()
+    return 0.85 if any(h in host for h in _AUTHORITY_HOSTS) else 0.6
+
+
+async def research_authority_facts(keyword: str, language: str = "pl") -> dict:
+    """Two focused searches; snippets with digits or from authority hosts become claims."""
+    serper_key = os.getenv("SERPER_API_KEY", "")
+    if not serper_key or not keyword.strip():
+        return {"claims": [], "sources": []}
+
+    suffixes = (
+        ["policja OR prokuratura OR sąd OR wyrok", "statystyki OR raport OR badania"]
+        if language.startswith("pl")
+        else ["police OR court OR case", "statistics OR report OR study"]
+    )
+    claims: list[str] = []
+    sources: list[dict] = []
+    seen_urls: set[str] = set()
+    for suffix in suffixes:
+        try:
+            results, _ = await _fetch_serp_results(f"{keyword} {suffix}", language, 6, serper_key)
+        except Exception as exc:
+            print(f"[fact-research] search failed: {exc}")
+            continue
+        for row in results:
+            url = row.get("link") or ""
+            snippet = (row.get("snippet") or "").replace(chr(10), " ").strip()
+            if not url or url in seen_urls or len(snippet) < 60:
+                continue
+            authority = any(h in domain_from_url(url).lower() for h in _AUTHORITY_HOSTS)
+            has_numbers = bool(re.search(r"\d", snippet))
+            if not authority and not has_numbers:
+                continue
+            seen_urls.add(url)
+            claims.append(snippet[:220])
+            sources.append({
+                "url": url,
+                "label": row.get("title", "")[:80] or domain_from_url(url),
+                "confidence": _authority_confidence(url),
+            })
+            if len(claims) >= 6:
+                break
+        if len(claims) >= 6:
+            break
+    print(f"[fact-research] {keyword!r}: {len(claims)} sourced facts")
+    return {"claims": claims, "sources": sources}
