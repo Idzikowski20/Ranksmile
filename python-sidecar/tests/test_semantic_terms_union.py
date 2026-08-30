@@ -84,3 +84,17 @@ def test_ranges_are_recalibrated_with_the_lemma_patterns_the_scorer_uses():
     # 4 lemma matches per 16-word sentence-block: the range must reflect the group count.
     assert terms[0]["suggested_min"] <= terms[0]["suggested_max"]
     assert terms[0]["suggested_max"] > 2
+
+
+def test_collocations_surface_the_word_pairs_surfer_lists():
+    """16% selection overlap with the reference guideline — the missing bulk was
+    collocations like "poczucie winy" that entity/TF-IDF paths filtered as generic."""
+    from analyzers.competitor_terms import extract_collocations
+    texts = [
+        "szantaz wywoluje poczucie winy. stawianie wlasnych granic pomaga.",
+        "poczucie winy jest narzedziem presji. wlasnych granic trzeba bronic.",
+        "zachowanie spokoju wobec szantazysty. poczucie winy paralizuje.",
+    ]
+    terms = {t["term"] for t in extract_collocations(texts)}
+    assert "poczucie winy" in terms
+    assert "wlasnych granic" in terms

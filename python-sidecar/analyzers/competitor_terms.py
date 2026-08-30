@@ -149,3 +149,54 @@ def extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
     result = list(result_by_term.values())
     result.sort(key=lambda x: (x["doc_freq"], x["target_count"]), reverse=True)
     return [{"term": r["term"], "target_count": r["target_count"], "doc_freq": r["doc_freq"]} for r in result[:80]]
+
+
+def extract_collocations(texts: list[str], max_terms: int = 40) -> list[dict]:
+    """
+    Frequent word-pairs across competitor pages, kept in their inflected form.
+
+    Surfer's exported guideline is built from exactly this shape — "poczucia winy",
+    "druga osobe", "wlasnych granic", "zachowanie spokoju" — natural collocations the
+    ranking pages repeat, not entities. Our entity/TF-IDF paths filtered these away as
+    generic, which is why term-selection overlap with the reference list measured 16%.
+    A pair counts when several DISTINCT pages use it; per-page repetition buys nothing.
+    """
+    if len(texts) < 2:
+        return []
+    import re as _re
+    token_re = _re.compile(r"[a-zA-Zaąćęłńóśźż"
+                           r"ĄĆĘŁŃÓŚŹŻ]{3,}")
+    doc_freq: dict[str, int] = {}
+    occurrences: dict[str, int] = {}
+    display: dict[str, str] = {}
+    for text in texts:
+        tokens = token_re.findall(text.lower())
+        seen_here: set[str] = set()
+        for a, b in zip(tokens, tokens[1:]):
+            if a in POLISH_STOPWORDS and b in POLISH_STOPWORDS:
+                continue
+            if len(a) < 4 and len(b) < 4:
+                continue
+            key = f"{a} {b}"
+            occurrences[key] = occurrences.get(key, 0) + 1
+            if key not in seen_here:
+                doc_freq[key] = doc_freq.get(key, 0) + 1
+                seen_here.add(key)
+            display.setdefault(key, key)
+    n_docs = len(texts)
+    floor = max(2, round(0.4 * n_docs))
+    out = []
+    for key, df in sorted(doc_freq.items(), key=lambda kv: (-kv[1], kv[0])):
+        if df < floor:
+            continue
+        if not is_useful_phrase(key):
+            continue
+        avg = max(1, round(occurrences[key] / df))
+        out.append({
+            "term": display[key], "target_count": min(avg, 6), "type": "collocation",
+            "relevance": 0.6, "doc_freq": df,
+            "suggested_min": 1, "suggested_max": max(2, min(avg + 1, 8)),
+        })
+        if len(out) >= max_terms:
+            break
+    return out
