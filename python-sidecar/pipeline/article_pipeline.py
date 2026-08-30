@@ -210,6 +210,7 @@ async def run_pipeline(
     instructions: str = "",
     external_links: bool = True,
     brand_knowledge: str = "",
+    brand_name: str = "",
     voice_tone: str = "",
     execution_plan: dict | None = None,
     compiled_write_plan: dict | None = None,
@@ -297,9 +298,14 @@ async def run_pipeline(
             # Brand context travels with every paragraph — the writer is stateless, and
             # without it no paragraph could name the agency the brief's "nawiąż do nas"
             # bullets refer to.
+            name_line = (
+                f"BRAND NAME: {brand_name.strip()} - when this paragraph references us, "
+                "use this exact name.\n"
+                if brand_name.strip() else ""
+            )
             paragraph_brand = (
                 "\n\nBRAND (use as context where the plan asks to reference us; "
-                f"never invent facts):\n{brand_knowledge.strip()[:1200]}"
+                f"never invent facts):\n{name_line}{brand_knowledge.strip()[:1200]}"
                 if brand_knowledge.strip() else ""
             )
             return await _chat(
@@ -331,7 +337,7 @@ async def run_pipeline(
         )
         if not compiled.html:
             raise RuntimeError("compiled_write_plan produced empty HTML")
-        return compiled.html
+        return ensure_brand_mention(compiled.html, brand_name, language)
 
     if plan:
         # === Planner First: skip outline LLM — execute immutable Execution Plan ===
@@ -485,6 +491,29 @@ Zwróć POPRAWIONY HTML (tylko HTML, bez komentarzy):
 
     print("[generate] Pipeline produced no usable HTML")
     return ""
+
+
+def ensure_brand_mention(html: str, brand_name: str, language: str = "pl") -> str:
+    """
+    Guarantee the article names the brand at least once.
+
+    The closing-paragraph instruction is followed ~60% of the time - 3 of 7 audited
+    articles ended with a correct call to action that never said who was making it.
+    Deterministic, like the FAQ-shape fix: when the name is absent, one CTA sentence
+    is appended to the last paragraph. Prose the model wrote is never edited.
+    """
+    name = (brand_name or "").strip()
+    if not name or name.lower() in html.lower():
+        return html
+    if str(language or "pl").lower().startswith("pl"):
+        cta = f" Jesli potrzebujesz poufnej pomocy w takiej sprawie, skontaktuj sie z {name}."
+    else:
+        cta = f" If you need confidential help with a situation like this, contact {name}."
+    idx = html.rfind("</p>")
+    if idx < 0:
+        return html + "<p>" + cta.strip() + "</p>"
+    print(f"[generate] brand name missing from article - appending closing CTA for {name}")
+    return html[:idx] + cta + html[idx:]
 
 
 async def generate_brand_knowledge(url: str, title: str, description: str, page_text: str) -> dict:

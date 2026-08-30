@@ -292,3 +292,17 @@ def test_leaves_ordinary_prose_alone():
     from pipeline.section_writer import _strip_deliberation
     prose = "Ofiara czuje sie winna. Sprawca przenosi odpowiedzialnosc za swoje emocje."
     assert _strip_deliberation(prose) == prose
+
+
+def test_brand_cta_is_appended_when_the_article_never_names_the_brand():
+    from pipeline.article_pipeline import ensure_brand_mention
+    html = "<h1>T</h1><p>Wstep.</p><p>Zakonczenie z CTA.</p>"
+    out = ensure_brand_mention(html, "ProDetektyw", "pl")
+    assert "ProDetektyw" in out
+    assert out.rindex("ProDetektyw") < out.rindex("</p>")
+
+
+def test_brand_cta_is_not_duplicated_when_the_name_is_already_there():
+    from pipeline.article_pipeline import ensure_brand_mention
+    html = "<p>ProDetektyw pomaga w takich sprawach.</p>"
+    assert ensure_brand_mention(html, "ProDetektyw", "pl") == html

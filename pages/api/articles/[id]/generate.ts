@@ -526,6 +526,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // this field silently stripped brand knowledge from every generation, so articles
       // never named the agency ("nawiąż do nas" bullets had nothing to draw on).
       brand_knowledge: brandKnowledge,
+      // The name separately from the knowledge blob: "name the company as written in
+      // the block" left the model to fish it out of 700 chars of prose, and 3 of 7
+      // articles shipped without it. An explicit field also powers the deterministic
+      // closing-CTA fallback in the sidecar.
+      brand_name: cs.brandName || '',
       voice_tone: voiceTone,
       compiled_write_plan: compiledWritePlan,
     };

@@ -133,6 +133,7 @@ class GenerateRequest(BaseModel):
     external_links: bool = True
     review_outline: bool = False
     brand_knowledge: str = ""   # shared Brand Knowledge (context for the model)
+    brand_name: str = ""        # the company name, verbatim — powers the closing-CTA guarantee
     voice_tone: str = ""        # selected Custom Voice reference text — drives tone/style
     # Planner First — immutable Article Execution Plan (Write Engine executes only).
     execution_plan: dict | None = None
@@ -219,6 +220,7 @@ async def _generate_article(req: GenerateRequest, on_status=None):
         instructions=req.instructions,
         external_links=req.external_links,
         brand_knowledge=req.brand_knowledge,
+        brand_name=req.brand_name,
         voice_tone=req.voice_tone,
         execution_plan=req.execution_plan,
         compiled_write_plan=req.compiled_write_plan,
