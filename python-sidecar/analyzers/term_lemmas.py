@@ -123,3 +123,50 @@ def attach_lemma_regexps(
         ]
         term["lemma_key"] = " ".join(stems)
     return terms
+
+
+def recalibrate_ranges_with_lemmas(
+    terms: list[dict],
+    texts: list[str],
+) -> list[dict]:
+    """
+    Recompute suggested_min/max counting the SAME thing the scorer counts.
+
+    The density ranges are first derived from exact whole-word counts of one inflected
+    form, but the editor scores `current_count` through `term_words_regexps` — every
+    form in the lemma group. For a Polish core term the two differ by an order of
+    magnitude: article 97 was told "emocjonalnego: 6-12" and then scored 112, an
+    automatic overshoot penalty on exactly the terms that matter most. Ranges must be
+    measured with the same lemma-aware pattern, or the band grades a different quantity
+    than the article is scored on.
+    """
+    if not terms or not texts:
+        return terms
+    lowered = [t.lower() for t in texts]
+    for term in terms:
+        regexps = term.get("term_words_regexps")
+        if not isinstance(regexps, list) or not regexps:
+            continue
+        try:
+            pattern = re.compile(
+                r"(?<!\w)" + r"\s+".join(f"(?:{r})" for r in regexps) + r"(?!\w)",
+                re.IGNORECASE,
+            )
+        except re.error:
+            continue
+        per_doc = [len(pattern.findall(lt)) for lt in lowered]
+        nonzero = [(c, lt) for c, lt in zip(per_doc, lowered) if c > 0]
+        if not nonzero:
+            continue
+        densities = sorted(c / max(1, len(lt.split())) for c, lt in nonzero)
+        median_density = densities[len(densities) // 2]
+        typical_words = sum(len(lt.split()) for lt in lowered) / len(lowered)
+        expected = median_density * typical_words
+        density_cap = max(15, round(typical_words * 0.035))
+        s_max = min(density_cap, max(2, round(expected * 1.4)))
+        # Min scales with the capped max, or the cap could leave min above max.
+        s_min = min(max(1, round(expected * 0.6)), max(1, s_max - 1))
+        term["suggested_min"] = s_min
+        term["suggested_max"] = s_max
+        term["target_count"] = max(1, round(expected))
+    return terms

@@ -70,3 +70,17 @@ def test_count_whole_word_does_not_match_inside_a_longer_form():
     text = "emocjonalnego szantazu, emocjonalnej presji, ale emocjonalne reakcje"
     assert _count_whole_word(text, "emocjonalne") == 1
     assert _count_whole_word(text, "emocjonalnego") == 1
+
+
+def test_ranges_are_recalibrated_with_the_lemma_patterns_the_scorer_uses():
+    """Article 97: range 6-12 derived on one inflected form, scored 112 on the lemma
+    group — an automatic overshoot penalty on every core term."""
+    from analyzers.term_lemmas import attach_lemma_regexps, recalibrate_ranges_with_lemmas
+    text = ("szantaz emocjonalny rani. przemoc emocjonalna niszczy. "
+            "emocjonalnego nacisku unikaj. reakcje emocjonalne wracaja. ") * 25
+    terms = [{"term": "emocjonalnego", "target_count": 1, "suggested_min": 1, "suggested_max": 2}]
+    attach_lemma_regexps(terms, [text], "pl")
+    recalibrate_ranges_with_lemmas(terms, [text])
+    # 4 lemma matches per 16-word sentence-block: the range must reflect the group count.
+    assert terms[0]["suggested_min"] <= terms[0]["suggested_max"]
+    assert terms[0]["suggested_max"] > 2

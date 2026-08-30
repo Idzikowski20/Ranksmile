@@ -169,8 +169,10 @@ async def analyze_serp(
         existing = {t["term"] for t in nlp_terms}
         nlp_terms = nlp_terms + [t for t in _keyword_seed_terms(keyword) if t["term"] not in existing]
     # After the fallback merge, so seed terms get their inflections too.
-    from analyzers.term_lemmas import attach_lemma_regexps
+    from analyzers.term_lemmas import attach_lemma_regexps, recalibrate_ranges_with_lemmas
     nlp_terms = attach_lemma_regexps(nlp_terms, serp_texts, language)
+    # Ranges re-derived with the lemma patterns the scorer uses — see the helper's doc.
+    nlp_terms = recalibrate_ranges_with_lemmas(nlp_terms, serp_texts)
     # Surfer separates "terms for headings": a term the cohort itself puts into H2/H3
     # belongs in the article's structure, not only its body.
     heading_text = " ".join(
