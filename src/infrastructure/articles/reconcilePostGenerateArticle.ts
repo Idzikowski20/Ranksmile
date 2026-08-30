@@ -38,13 +38,16 @@ function readerAudienceTerms(scoreData: ScoreData): string[] {
   return persona ? persona.split(/\s+/).filter(Boolean) : [];
 }
 
-function normalizeTerms(terms: NlpTerm[], plainText: string): NlpTerm[] {
-  return terms.map((t) => ({
-    ...t,
-    suggested_min: suggestedTermRange(t).min,
-    suggested_max: suggestedTermRange(t).max,
-    current_count: countOccurrences(plainText, t.term),
-  }));
+function normalizeTerms(terms: NlpTerm[], plainText: string, wordsTarget?: number): NlpTerm[] {
+  return terms.map((t) => {
+    const range = suggestedTermRange(t, wordsTarget);
+    return {
+      ...t,
+      suggested_min: range.min,
+      suggested_max: range.max,
+      current_count: countOccurrences(plainText, t.term),
+    };
+  });
 }
 
 async function syncArticleTerms(articleId: number, terms: NlpTerm[], plainText: string): Promise<void> {
@@ -60,8 +63,8 @@ async function syncArticleTerms(articleId: number, terms: NlpTerm[], plainText: 
           'topic',
           'serp',
           countOccurrences(plainText, t.term),
-          suggestedTermRange(t).min,
-          suggestedTermRange(t).max,
+          t.suggested_min ?? suggestedTermRange(t).min,
+          t.suggested_max ?? suggestedTermRange(t).max,
           t.target_count || 1,
         ],
       },
@@ -148,7 +151,11 @@ export async function reconcilePostGenerateArticle(opts: {
     });
   }
 
-  terms = normalizeTerms(terms, plainText);
+  terms = normalizeTerms(
+    terms,
+    plainText,
+    incomingScore.words_target || existingScore.words_target || undefined,
+  );
 
   const scoreData: ScoreData = {
     ...existingScore,

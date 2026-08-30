@@ -182,7 +182,7 @@ def enforce_internal_links(html: str, allowed: set[str], site_url: str) -> tuple
     return soup.decode(formatter="minimal"), removed
 
 
-def inject_suggestions(html: str, suggestions: list[dict], cap: int = 8) -> tuple[str, int]:
+def inject_suggestions(html: str, suggestions: list[dict], cap: int = 12) -> tuple[str, int]:
     """Deterministically link suggestion anchors in the article body.
 
     The writer's per-paragraph quota is a request, not a guarantee — articles kept

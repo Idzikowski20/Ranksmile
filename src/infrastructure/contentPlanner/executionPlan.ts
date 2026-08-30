@@ -63,6 +63,22 @@ export function buildArticleExecutionPlan(
     };
   });
 
+  // Hold the sections to the article's own word budget. Each brief prices its section
+  // independently and the sum runs long: article 95 planned 3051 words against a
+  // 2384-word target, and the writer's 1.3× per-paragraph ceiling compounded that into
+  // a 3667-word article — 45% over the benchmark (Surfer's guideline for the same
+  // keyword: 2200-2530). Proportional rescale, floored so no section collapses.
+  const budgetWords = bundle.blueprint.budget?.words ?? 0;
+  const plannedWords = sections.reduce((n, s) => n + s.expectedWords, 0);
+  if (budgetWords > 0 && plannedWords > budgetWords) {
+    const scale = budgetWords / plannedWords;
+    for (const section of sections) {
+      const scaled = Math.max(60, Math.round(section.expectedWords * scale));
+      section.expectedWords = scaled;
+      section.budget = { ...section.budget, words: scaled };
+    }
+  }
+
   const withoutHash: Omit<ArticleExecutionPlan, 'planHash'> = {
     schemaVersion: 2,
     plannerVersion: PLANNER_VERSION,
