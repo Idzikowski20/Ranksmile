@@ -1,0 +1,22 @@
+__tests__/lib/queryShapedTerms.test.ts
+  s_e8c3822b427cc8::t_c5c7ebef54f44a 1-43
+src/core/domain/relevance/topicRelevance.ts
+  s_e8c3822b427cc8::t_f3da8fbfd02ea2 130-135,137-139
+  s_e8c3822b427cc8::t_23a4249464f600 97-122,185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b4e8ccfa81232679588b7fec90c7d3f7e72b372f",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
