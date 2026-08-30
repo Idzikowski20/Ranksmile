@@ -181,6 +181,24 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
     min_docs = 1 if n_docs <= 6 else max(2, round(0.3 * n_docs))
     aggregated = [t for t in aggregated if t["chunk_hits"] >= min_docs]
 
+    # Not just "empty": a thin harvest is the same failure with a softer face. Individual
+    # chunk calls fail silently (empty completion, timeout, a provider hiccup), so the same
+    # 6-competitor cohort produced 132 terms one run and 13 the next — and 13 terms means a
+    # weak guideline, a weak score and almost no internal-link targets. Below the floor the
+    # deterministic entity/TF-IDF terms top the list up.
+    MIN_TERMS = 25
+    if len(aggregated) < MIN_TERMS:
+        print(f"[semantic_terms] thin LLM harvest ({len(aggregated)}) — topping up from the deterministic path")
+        fallback = _fallback_terms(texts, keyword, language)
+        have = {t["term"].lower() for t in aggregated}
+        for t in fallback:
+            if t["term"].lower() in have:
+                continue
+            aggregated.append({**t, "chunk_hits": 1, "relevance": t.get("relevance", 0.6)})
+            have.add(t["term"].lower())
+            if len(aggregated) >= 60:
+                break
+
     if not aggregated:
         return _fallback_terms(texts, keyword, language)
 
