@@ -3,7 +3,7 @@ import {
   type CoverageSnapshot,
 } from '@/src/core/domain/coverage/aiCoverage';
 import { analyzeIntroduction, deepseekIntroJudge, introCoverageItems } from '@/src/infrastructure/articles/introductionAnalyzer';
-import { citationIntentItems, remapLegacyCitationItem } from '@/src/infrastructure/articles/citationPrompts';
+import { citationIntentItems, remapLegacyCitationItem, isUsefulCitationPrompt } from '@/src/infrastructure/articles/citationPrompts';
 import { liveCoverageItems } from '@/src/infrastructure/coverage/liveCoverage';
 import { compactCoverageSnapshotItems, AI_COVERAGE_MAX } from '@/src/infrastructure/coverage/curateCoverageItems';
 import {
@@ -79,8 +79,18 @@ export async function regradeCoverageSnapshot(opts: {
   const citationRows = citationIntentItems(opts.keyword, intentResult.detectedMainQuestion, { serpQuestions })
     .slice(0, 3);
   const intentGraded = [...introRows, ...citationRows];
+  // SERP questions must still be about THIS article's keyword.
+  //
+  // Deep analysis runs against the domain (prodetektyw.pl), so its PAA harvest is about
+  // detective pricing; the CCM projection then carries those rows forward by source, and
+  // they are never re-checked against the keyword the article is written for. Article 93
+  // was graded on 23 variants of "Ile kosztuje detektyw za godzinę?" while writing about
+  // emotional blackmail — knowledge fell to 37 and the AI score to 43, against 84 for the
+  // same pipeline on a clean harvest. Only `paa` rows are gated: a harvested fact or
+  // entity ("poczucie winy") is legitimately about the topic without naming the keyword.
   const knowledgeItems = workingSnap.items
     .filter((i) => i.category !== 'intent' && i.type !== 'intent')
+    .filter((i) => i.type !== 'paa' || isUsefulCitationPrompt(i.label, opts.keyword))
     .map(remapLegacyCitationItem);
   const itemsToJudge = [...intentGraded, ...knowledgeItems];
 

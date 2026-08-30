@@ -383,8 +383,20 @@ async function enrichTermsForArticle(opts: {
   return terms;
 }
 
+/**
+ * Terms below which a guideline is not worth grading an article against.
+ *
+ * `isWeakTermList` treats 12 rows as acceptable, which is a floor for "catastrophically
+ * thin", not for "useful": article 94 finished with exactly 12 terms, covered all of
+ * them and scored 89 on SEO — a number that says nothing, because the reference tool
+ * lists 30-60. Raised only here, at the enrichment decision. `isWeakTermList` itself is
+ * also used to CHOOSE between two candidate lists, and moving its threshold would change
+ * which list wins rather than whether one gets topped up.
+ */
+const MIN_USEFUL_TERMS = 25;
+
 function needsEnrichment(terms: NlpTerm[], keyword: string): boolean {
-  return isWeakTermList(terms, keyword);
+  return terms.length < MIN_USEFUL_TERMS || isWeakTermList(terms, keyword);
 }
 
 /** Fix articles where generate overwrote deep-analysis terms with thin sidecar SERP splits. */
