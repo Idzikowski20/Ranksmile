@@ -37,6 +37,23 @@ async def _llm_cluster(domain: str, keywords: list[str], language: str = "en") -
         '[{"title": "...", "summary": "...", "keyword_indexes": [0, 1, 2]}]'
     )
     client = _get_client()
+    # OpenRouter first — same fallback story as recommendations.py.
+    from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+    cfg = chat_config()
+    if cfg and "openrouter" in cfg["url"]:
+        import httpx
+        async with httpx.AsyncClient(timeout=60) as http:
+            resp = await http.post(
+                cfg["url"],
+                headers=chat_headers(cfg),
+                json=chat_payload(cfg, [{"role": "user", "content": prompt}], 1024, temperature=0),
+            )
+            resp.raise_for_status()
+            text = resp.json()["choices"][0]["message"]["content"] or ""
+            parsed = parse_json_array(text)
+            if not parsed:
+                print(f"[topics] LLM text unparseable ({len(text)} chars) head={text[:400]!r}")
+            return parsed
     response = await client.messages.create(
         model=MODEL,
         max_tokens=1024,

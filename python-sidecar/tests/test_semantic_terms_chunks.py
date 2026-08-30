@@ -1,7 +1,17 @@
 """Plain SERP snippets must produce chunks / TF-IDF terms (not keyword seeds only)."""
 import asyncio
+import pytest
 
 from analyzers.semantic_terms import _build_chunks, extract_semantic_terms, _fallback_terms
+
+
+@pytest.fixture(autouse=True)
+def _no_llm_keys(monkeypatch):
+    """These tests exercise the deterministic fallback; a real OPENROUTER key in the
+    developer's environment must not flip them onto the network path."""
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+
 
 
 SNIPPETS = [
