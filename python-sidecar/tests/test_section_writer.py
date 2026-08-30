@@ -230,3 +230,17 @@ def test_no_ceiling_without_a_budget():
     prompt = _prompt({"id": "p1", "goal": "intro", "style": {}})
 
     assert "write at most" not in prompt
+
+
+def test_brand_moments_are_instructions_not_just_context():
+    """A BRAND block in the prompt is context; the lead and closing need an explicit
+    instruction to use it, or the article never names the agency that ordered it."""
+    plan = {"id": "p1", "objective": "x", "section_id": "s1"}
+    lead = _prompt(plan, {**CONTEXT, "is_lead": True})
+    closing = _prompt(plan, {**CONTEXT, "is_closing": True})
+    middle = _prompt(plan, {**CONTEXT})
+
+    assert "ONE natural clause saying we" in lead
+    assert "one concrete next step" in closing
+    assert "ONE natural clause saying we" not in middle
+    assert "one concrete next step" not in middle

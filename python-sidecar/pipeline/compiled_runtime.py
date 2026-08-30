@@ -112,6 +112,10 @@ async def run_compiled_write_plan(
                 # the coverage judge awards a flat bonus for it, and readers and AI
                 # engines both quote the lead, not the third section.
                 "is_lead": first_paragraph,
+                # Set below once the full plan is known — the closing paragraph is where
+                # the reader gets the next step, and a brand block in the prompt without
+                # an instruction to use it produced articles that never named the agency.
+                "is_closing": False,
                 # Only unlocks the prompt rule; every link it produces is still verified
                 # against the authority allowlist and a live fetch before it ships.
                 "allow_authority_links": allow_authority_links,
@@ -125,6 +129,13 @@ async def run_compiled_write_plan(
         async with semaphore:
             result = await write_paragraph(paragraph, generate_markdown, context)
             return await review_paragraph(result, rewrite_markdown)
+
+    # Mark the last real paragraph as the closing one.
+    for i in range(len(planned) - 1, -1, -1):
+        _, paragraph, context = planned[i]
+        if paragraph is not None and context is not None:
+            context["is_closing"] = True
+            break
 
     tasks = {
         i: asyncio.create_task(_write_one(paragraph, context))

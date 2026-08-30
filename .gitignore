@@ -85,3 +85,4 @@ static_analysis_codeql_1/
 .claude/worktrees/
 
 data/
+.tmp-audit/

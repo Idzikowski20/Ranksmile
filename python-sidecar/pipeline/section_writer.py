@@ -181,6 +181,20 @@ def _prompt(
             " 2-4 sentence answer as a separate paragraph. Never pack several questions"
             " into one block of prose."
         )
+    # Brand moments. The BRAND block travels with every paragraph, but context alone is
+    # not an instruction: articles shipped with zero mentions of the agency that
+    # commissioned them. The lead earns one clause, the closing one concrete next step.
+    if ctx.get("is_lead"):
+        lines.append(
+            "If a BRAND block appears in the context, add ONE natural clause saying we"
+            " help with exactly this problem — name the service, never a sales pitch."
+        )
+    if ctx.get("is_closing"):
+        lines.append(
+            "This is the article's closing paragraph: if a BRAND block appears in the"
+            " context, end with one concrete next step for the reader (contact us / how"
+            " we work), using only facts from that block."
+        )
     if ctx.get("is_lead") and not style.get("table") and not style.get("list"):
         # 38% of AI citations come from the opening ~100 words (Surfer research, 2026):
         # the answer, the reader and the brand all have to land inside them.
