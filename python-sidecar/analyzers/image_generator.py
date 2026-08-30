@@ -155,7 +155,13 @@ Analyze this heading through the 3 questions and create a realistic journalistic
             )
             if resp.status_code == 200:
                 data = resp.json()
-                raw = data["choices"][0]["message"]["content"].strip()
+                # `content` can be null when the backend spends its budget on reasoning —
+                # `.strip()` on None then took the whole image prompt down with an
+                # unhelpful "'NoneType' object has no attribute 'strip'".
+                raw = (data.get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
+                if not raw:
+                    print("[image] empty enrichment response — using raw prompt")
+                    return "", ""
 
                 # ALT: is split off FIRST. It comes after PROMPT: in the reply, so
                 # slicing on PROMPT: alone would swallow the alt sentence into the image
