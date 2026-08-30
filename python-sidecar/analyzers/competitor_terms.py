@@ -20,7 +20,10 @@ _FUNCTION_WORD_FORMS = {
     "temu", "tego", "tym", "tej", "ten", "tego", "przez", "przy", "podczas",
 }
 
-POLISH_STOPWORDS = _FUNCTION_WORD_FORMS | {
+# Core grammar words only — prepositions, conjunctions, pronouns, auxiliaries. A
+# multi-word phrase may legitimately contain one INSIDE it ("szantaz emocjonalny w
+# zwiazku", "miec trudnosci"); the extended set below is for judging single words.
+GRAMMAR_STOPWORDS = {
     "aby", "ale", "albo", "ani", "bez", "bo", "by", "byc", "byl", "byla", "bylo",
     "byly", "czy", "dla", "do", "gdy", "gdzie", "go", "ich", "im", "jest",
     "jesli", "juz", "kiedy", "kto", "ktora", "ktore", "ktory", "lub", "ma",
@@ -28,8 +31,17 @@ POLISH_STOPWORDS = _FUNCTION_WORD_FORMS | {
     "nim", "niz", "oraz", "po", "pod", "przed", "przez", "przy", "sa", "sie",
     "sobie", "tak", "takze", "tego", "tej", "ten", "teraz", "tez", "to",
     "tych", "tym", "u", "w", "we", "z", "za", "ze", "zeby", "warto",
+    "cie", "ci", "mi", "mnie", "nam", "was", "wam",
     "nalezy", "czasem", "sytuacja", "informacje", "wielu", "jak",
 }
+
+# Everything a SINGLE-word term must not be: grammar words plus the inflected function
+# forms TF-IDF kept shipping as scored vocabulary ("ktorych", "jednak", "osobe").
+# Reference check: 9 of the 12 Surfer guideline terms our filters rejected were killed
+# by the function-form set matching a word INSIDE a phrase — "druga osobe", "naszym
+# zyciu", "osoby szantazowanej" are real collocations even though "osobe" alone is junk.
+# Hence the split: phrases are judged against GRAMMAR_STOPWORDS, singles against this.
+POLISH_STOPWORDS = _FUNCTION_WORD_FORMS | GRAMMAR_STOPWORDS
 
 GENERIC_TERMS = {
     "strona", "artykul", "tekst", "temat", "firma", "firmy", "osoba", "osoby",
@@ -92,9 +104,17 @@ def is_useful_phrase(phrase: str) -> bool:
         return False
     if all(t in POLISH_STOPWORDS or t in GENERIC_TERMS for t in tokens):
         return False
-    if len(tokens) == 1 and (tokens[0] in POLISH_STOPWORDS or len(tokens[0]) < 5):
+    if len(tokens) == 1:
+        return tokens[0] not in POLISH_STOPWORDS and len(tokens[0]) >= 5
+    # Multi-word: only the EDGES must be content words, and only core grammar disqualifies
+    # them — "druga osobe" and "naszym zyciu" are collocations Surfer's own guideline
+    # lists, while "czym jest szantaz" still dies on its grammar-word edge.
+    if tokens[0] in GRAMMAR_STOPWORDS or tokens[-1] in GRAMMAR_STOPWORDS:
         return False
-    return not any(t in POLISH_STOPWORDS for t in tokens)
+    # Interior grammar words are fine ("szantaz emocjonalny w zwiazku"); a phrase that is
+    # MOSTLY function words is still noise.
+    weak = sum(t in POLISH_STOPWORDS for t in tokens)
+    return weak <= len(tokens) // 2
 
 
 def extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
@@ -170,7 +190,7 @@ def extract_collocations(texts: list[str], max_terms: int = 40) -> list[dict]:
     import re as _re
     token_re = _re.compile(
         r"[a-zA-Ząćęłńóśźż"
-        r"ĄĆĘŁŃÓŚŹŻ]{4,}"
+        r"ĄĆĘŁŃÓŚŹŻ]{1,}"
     )
     sentence_re = _re.compile("[.!?\\n\\r]+")
 
@@ -189,17 +209,34 @@ def extract_collocations(texts: list[str], max_terms: int = 40) -> list[dict]:
         seen_here: set[str] = set()
         for sentence in sentence_re.split(text.lower()):
             tokens = token_re.findall(sentence)
-            for a, b in zip(tokens, tokens[1:]):
-                if a in POLISH_STOPWORDS or b in POLISH_STOPWORDS:
-                    continue
-                key = f"{_stem(a)} {_stem(b)}"
-                surface = f"{a} {b}"
+            def _note(words: tuple[str, ...]) -> None:
+                key = " ".join(_stem(w) for w in words)
+                surface = " ".join(words)
                 occurrences[key] = occurrences.get(key, 0) + 1
                 surface_counts.setdefault(key, {})
                 surface_counts[key][surface] = surface_counts[key].get(surface, 0) + 1
                 if key not in seen_here:
                     doc_freq[key] = doc_freq.get(key, 0) + 1
                     seen_here.add(key)
+
+            # 2-4-grams. Edges must be content words; ONE grammar word may sit inside —
+            # the reference guideline's own shapes are exactly this: "poczucia winy",
+            # "mechanizmow szantazu emocjonalnego", "szantaz emocjonalny w zwiazku".
+            n = len(tokens)
+            for i in range(n):
+                if tokens[i] in GRAMMAR_STOPWORDS:
+                    continue
+                for size in (2, 3, 4):
+                    j = i + size
+                    if j > n:
+                        break
+                    words = tuple(tokens[i:j])
+                    if words[-1] in GRAMMAR_STOPWORDS:
+                        continue
+                    inner_grammar = sum(w in GRAMMAR_STOPWORDS for w in words[1:-1])
+                    if inner_grammar > 1:
+                        continue
+                    _note(words)
     n_docs = len(texts)
     floor = max(2, round(0.4 * n_docs))
     out = []
@@ -214,6 +251,64 @@ def extract_collocations(texts: list[str], max_terms: int = 40) -> list[dict]:
             "term": surface, "target_count": min(avg, 6), "type": "collocation",
             "relevance": 0.6, "doc_freq": df,
             "suggested_min": 1, "suggested_max": max(2, min(avg + 1, 8)),
+        })
+        if len(out) >= max_terms:
+            break
+    return out
+
+
+def extract_content_singles(texts: list[str], max_terms: int = 20) -> list[dict]:
+    """
+    High-frequency single content lemmas — the reference guideline's fourth term shape.
+
+    Surfer lists bare nouns with wide bands ("poczucie: 12-26", "relacji: 18-42",
+    "granice: 8-23"): the vocabulary every ranking page leans on. Entities and
+    collocations both miss them — an entity extractor wants names, a collocation wants
+    pairs. A word counts when MOST pages use it (60% of the cohort); ranges are later
+    recalibrated with lemma regexps like every other term.
+    """
+    if len(texts) < 2:
+        return []
+    import re as _re
+    token_re = _re.compile(
+        r"[a-zA-Ząćęłńóśźż]{5,}"
+    )
+
+    def _stem(w: str) -> str:
+        for suf in ("ami", "ach", "owi", "iem", "ia", "iu", "ie", "em", "om", "ow", "ej", "a", "e", "i", "o", "u", "y"):
+            if len(w) - len(suf) >= 4 and w.endswith(suf):
+                return w[: len(w) - len(suf)]
+        return w
+
+    doc_freq: dict[str, int] = {}
+    occurrences: dict[str, int] = {}
+    surface_counts: dict[str, dict[str, int]] = {}
+    for text in texts:
+        seen_here: set[str] = set()
+        for w in token_re.findall(text.lower()):
+            if w in POLISH_STOPWORDS or w in GENERIC_TERMS:
+                continue
+            key = _stem(w)
+            occurrences[key] = occurrences.get(key, 0) + 1
+            surface_counts.setdefault(key, {})
+            surface_counts[key][w] = surface_counts[key].get(w, 0) + 1
+            if key not in seen_here:
+                doc_freq[key] = doc_freq.get(key, 0) + 1
+                seen_here.add(key)
+    n_docs = len(texts)
+    floor = max(2, round(0.6 * n_docs))
+    out = []
+    for key, df in sorted(doc_freq.items(), key=lambda kv: (-occurrences[kv[0]], kv[0])):
+        if df < floor:
+            continue
+        surface = max(surface_counts[key].items(), key=lambda kv: kv[1])[0]
+        if not is_useful_phrase(surface):
+            continue
+        avg = max(1, round(occurrences[key] / df))
+        out.append({
+            "term": surface, "target_count": min(avg, 12), "type": "supporting",
+            "relevance": 0.55, "doc_freq": df,
+            "suggested_min": max(1, avg // 2), "suggested_max": max(2, min(avg + 2, 26)),
         })
         if len(out) >= max_terms:
             break

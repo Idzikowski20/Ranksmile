@@ -106,7 +106,10 @@ _FENCE_TAG = re.compile(r"<\s*/?\s*context\b[^>]*>", re.IGNORECASE)
 
 
 #: Slack over the target before a paragraph counts as overrunning its budget.
-_WORD_CEILING_RATIO = 1.3
+# 1.2, down from 1.3: with the plan already priced at the scorer's word target, the
+# per-paragraph slack compounded across ~45 paragraphs into +14% article-level overshoot
+# (2832 words against a 2200-2530 reference band). 1.2 keeps room to finish a thought.
+_WORD_CEILING_RATIO = 1.2
 
 
 def _word_ceiling(expected_words: object) -> str:

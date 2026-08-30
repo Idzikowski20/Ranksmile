@@ -211,7 +211,7 @@ def test_prompt_states_a_hard_word_ceiling():
     prompt = _prompt({"id": "p1", "goal": "intro", "expected_words": 100, "style": {}})
 
     assert "Target words: 100" in prompt
-    assert "write at most 130 words — do not exceed it" in prompt
+    assert "write at most 120 words — do not exceed it" in prompt
 
 
 def test_the_ceiling_is_stated_above_the_context_fence():
@@ -223,7 +223,7 @@ def test_the_ceiling_is_stated_above_the_context_fence():
     """
     prompt = _prompt({"id": "p1", "goal": "intro", "expected_words": 100, "style": {}})
 
-    assert prompt.index("write at most 130 words") < prompt.index("<context>")
+    assert prompt.index("write at most 120 words") < prompt.index("<context>")
 
 
 def test_no_ceiling_without_a_budget():

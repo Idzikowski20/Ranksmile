@@ -98,3 +98,19 @@ def test_collocations_surface_the_word_pairs_surfer_lists():
     terms = {t["term"] for t in extract_collocations(texts)}
     assert "poczucie winy" in terms
     assert "wlasnych granic" in terms
+
+
+def test_collocations_cover_the_reference_guideline_shapes():
+    """3-4-grams with an interior grammar word, and singles — the two shapes that kept
+    selection overlap at 21% of the reference list."""
+    from analyzers.competitor_terms import extract_collocations, extract_content_singles
+    texts = [
+        "szantaz emocjonalny w zwiazku niszczy. poczucie winy wraca. granice stawiaj." * 2,
+        "mechanizmow szantazu emocjonalnego wiele. poczucia winy unikaj. granice buduj." * 2,
+        "szantaz emocjonalny w zwiazku trwa. poczucie winy trwa. granice znikaja." * 2,
+    ]
+    colls = {t["term"] for t in extract_collocations(texts)}
+    assert "szantaz emocjonalny w zwiazku" in colls
+    assert "poczucie winy" in colls
+    singles = {t["term"] for t in extract_content_singles(texts)}
+    assert "granice" in singles
