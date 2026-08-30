@@ -119,27 +119,32 @@ async def inject_inline_images(
         print("[images] No H2 slots for inline images")
         return html
 
-    out = html
-    for heading in headings:
+    # Slots in parallel: each image's LLM enrichment is independent, and with the
+    # Pollinations warm-fetch off the critical path the enrichments were the only
+    # remaining serial cost — four slots at ~30s each for no reason. Injection stays
+    # sequential and deterministic below.
+    async def _one(heading: str):
         try:
-            # Hard per-image deadline. Every network call inside has its own timeout, but
-            # the shared Pollinations semaphore does not: a holder that dies without
-            # releasing wedges every later image on `async with _pollinations_sem` and
-            # the whole generation "runs" forever — article 98 hung 40+ minutes exactly
-            # there. An article without one image beats an article that never ships.
-            result = await asyncio.wait_for(
+            return await asyncio.wait_for(
                 generate_article_image_for_embed(keyword, heading, language=language),
                 timeout=240,
             )
-            url = (result or {}).get("url") or ""
-            if not url:
-                continue
-            alt = (result.get("alt") or "").strip() or _default_alt(heading, keyword, language)
-            out = inject_img_after_section(out, heading, url, alt)
-            print(f"[images] Injected after H2: {heading[:60]}")
         except Exception as exc:
             print(f"[images] Skip slot '{heading[:40]}': {exc}")
+            return None
+
+    results = await asyncio.gather(*(_one(h) for h in headings))
+
+    out = html
+    for heading, result in zip(headings, results):
+        if result is None:
             continue
+        url = (result or {}).get("url") or ""
+        if not url:
+            continue
+        alt = (result.get("alt") or "").strip() or _default_alt(heading, keyword, language)
+        out = inject_img_after_section(out, heading, url, alt)
+        print(f"[images] Injected after H2: {heading[:60]}")
     return out
 
 
