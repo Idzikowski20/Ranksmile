@@ -1,0 +1,20 @@
+src/infrastructure/contentPlanner/researchFacts.ts
+  s_e8c3822b427cc8::t_0b8387f5b62f6e 38-41
+  s_e8c3822b427cc8::t_eafc20a47b29d0 24-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a9605ea2f89e081628e1be08705186ac7b7a2613",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
