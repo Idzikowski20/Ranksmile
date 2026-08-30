@@ -177,7 +177,8 @@ function isWeakKeywordLongTail(term: string, seedKeyword: string, evidence: Term
  * enough evidenced rows exist — on a thin corpus the suggestions still fill the gap,
  * which is why an unconditional version of this rule was reverted earlier.
  */
-const CORPUS_RICH_MIN_ROWS = 30;
+const CORPUS_RICH_MIN_ROWS = 25;
+const LIST_RICH_MIN_ROWS = 40;
 
 export function dropSuggestionTailsWhenCorpusRich<T extends { term: string } & TermEvidence>(
   terms: T[],
@@ -186,7 +187,12 @@ export function dropSuggestionTailsWhenCorpusRich<T extends { term: string } & T
   const evidenced = terms.filter(
     (t) => typeof t.doc_freq === 'number' || t.relevance !== undefined || Boolean(t.type),
   );
-  if (evidenced.length < CORPUS_RICH_MIN_ROWS) return terms;
+  // Two ways to be "rich": enough rows still carrying corpus metadata, or a long list
+  // overall. The second matters because evidence fields do not survive the round-trip
+  // through article_terms (the table has no doc_freq/type/relevance columns), so a list
+  // rebuilt from stored rows can be 50 corpus terms that all LOOK unevidenced — article
+  // 100 counted 29 evidenced against a threshold of 30 and kept every junk tail.
+  if (evidenced.length < CORPUS_RICH_MIN_ROWS && terms.length < LIST_RICH_MIN_ROWS) return terms;
   const seed = normalizeTerm(seedKeyword);
   if (!seed) return terms;
   return terms.filter((t) => {
