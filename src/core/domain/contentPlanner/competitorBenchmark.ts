@@ -47,7 +47,11 @@ export function synthesizeCompetitors(profiles: CompetitorProfile[]): Competitor
   const words = profiles.map((p) => p.wordCount);
   const avgWords = mean(words);
   const medWords = median(words);
-  const recommendedWords = round(Math.max(avgWords, medWords) * 1.05);
+  // Median, not max(avg, med): one 6000-word outlier drags the mean and the planner
+  // then prices every article against it — article 103 planned ~3300 words while the
+  // scorer (and Surfer's own guideline for the same keyword: 2200-2530) targets the
+  // median-shaped ~2200. The median IS what ranks typically looks like.
+  const recommendedWords = round(medWords * 1.05);
 
   const commonClaims = frequencyTopPerProfile(
     profiles, (p) => p.claims, Math.max(2, Math.ceil(n * 0.4)), 40,
@@ -105,7 +109,9 @@ export function buildCompetitorBenchmark(
   // that. Folded into the Math.max it also overrode SERPs that were measured perfectly
   // well but simply run short (median 920 on the keyword this was tuned against), which
   // is the SERP telling us what ranks, not a gap to paper over.
-  const measured = Math.max(synth.recommendedWords, synth.averageWords * 1.02);
+  // recommendedWords alone: the old Math.max with averageWords re-imported the outlier
+  // inflation the median-based recommendation exists to avoid.
+  const measured = synth.recommendedWords;
   const targetWords = Math.round(measured > 0 ? measured : BENCHMARK_WORDS_FLOOR);
   // A ceiling as well as a floor. `averageH2` counts every heading a competitor renders —
   // H3s, nav, footer — so a SERP of long pages asked for 22 top-level sections, and the
