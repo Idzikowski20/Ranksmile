@@ -87,8 +87,18 @@ _EDGE_JUNK = {
 }
 
 
+
+def _fold(word: str) -> str:
+    """Diacritics stripped for set membership — the stopword sets store folded forms
+    ("ktora", "ze"), and comparing raw tokens ("która", "że") against them never
+    matched: article 107 shipped "sprawia że" and "osobie która" as scored
+    collocations while "poczucie winy" fell past the cap they flooded."""
+    normalized = unicodedata.normalize("NFD", word)
+    return "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn").replace(chr(0x0142), "l")
+
+
 def is_useful_phrase(phrase: str) -> bool:
-    tokens = [t for t in phrase.split() if t]
+    tokens = [_fold(t) for t in phrase.split() if t]
     if not tokens:
         return False
     # A multi-word phrase that starts or ends on a function word is a broken shingle.
@@ -223,20 +233,20 @@ def extract_collocations(texts: list[str], max_terms: int = 40) -> list[dict]:
             # the reference guideline's own shapes are exactly this: "poczucia winy",
             # "mechanizmow szantazu emocjonalnego", "szantaz emocjonalny w zwiazku".
             n = len(tokens)
+            folded = [_fold(t) for t in tokens]
             for i in range(n):
-                if tokens[i] in GRAMMAR_STOPWORDS:
+                if folded[i] in GRAMMAR_STOPWORDS:
                     continue
                 for size in (2, 3, 4):
                     j = i + size
                     if j > n:
                         break
-                    words = tuple(tokens[i:j])
-                    if words[-1] in GRAMMAR_STOPWORDS:
+                    if folded[j - 1] in GRAMMAR_STOPWORDS:
                         continue
-                    inner_grammar = sum(w in GRAMMAR_STOPWORDS for w in words[1:-1])
+                    inner_grammar = sum(w in GRAMMAR_STOPWORDS for w in folded[i + 1:j - 1])
                     if inner_grammar > 1:
                         continue
-                    _note(words)
+                    _note(tuple(tokens[i:j]))
     n_docs = len(texts)
     floor = max(2, round(0.4 * n_docs))
     out = []
@@ -275,6 +285,7 @@ def extract_content_singles(texts: list[str], max_terms: int = 20) -> list[dict]
     )
 
     def _stem(w: str) -> str:
+        w = _fold(w)
         for suf in ("ami", "ach", "owi", "iem", "ia", "iu", "ie", "em", "om", "ow", "ej", "a", "e", "i", "o", "u", "y"):
             if len(w) - len(suf) >= 4 and w.endswith(suf):
                 return w[: len(w) - len(suf)]
@@ -286,7 +297,7 @@ def extract_content_singles(texts: list[str], max_terms: int = 20) -> list[dict]
     for text in texts:
         seen_here: set[str] = set()
         for w in token_re.findall(text.lower()):
-            if w in POLISH_STOPWORDS or w in GENERIC_TERMS:
+            if _fold(w) in POLISH_STOPWORDS or _fold(w) in GENERIC_TERMS:
                 continue
             key = _stem(w)
             occurrences[key] = occurrences.get(key, 0) + 1
