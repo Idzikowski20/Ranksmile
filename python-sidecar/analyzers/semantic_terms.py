@@ -5,6 +5,7 @@ Chunks competitor pages by headings, caches per (keyword, chunk_hash),
 extracts with concurrency-limited parallelism (asyncio.Semaphore(5)).
 """
 import asyncio
+import os
 import hashlib
 import json
 import re
@@ -88,7 +89,7 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
     if not texts:
         return _fallback_terms(texts, keyword, language)
 
-    if not deepseek_key:
+    if not deepseek_key and not (os.getenv("OPENROUTER_API_KEY") or "").strip():
         return _fallback_terms(texts, keyword, language)
 
     # 1. Chunk texts by headings (or whole plain snippets)
@@ -237,18 +238,15 @@ TEXT:
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
+            from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+            cfg = chat_config() or {
+                "url": "https://api.deepseek.com/v1/chat/completions",
+                "key": api_key, "model": "deepseek-chat", "extra": {},
+            }
             resp = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key}",
-                },
-                json={
-                    "model": "deepseek-chat",
-                    "max_tokens": 1024,
-                    "temperature": 0.1,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
+                cfg["url"],
+                headers=chat_headers(cfg),
+                json=chat_payload(cfg, [{"role": "user", "content": prompt}], 1024),
             )
             resp.raise_for_status()
             data = resp.json()

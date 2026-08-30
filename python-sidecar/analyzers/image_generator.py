@@ -95,9 +95,10 @@ async def _enrich_prompt_with_ai(keyword: str, title: str, language: str = "pl")
     faktycznie widać na obrazku, więc nie pomagał ani czytnikom ekranu, ani Grafice
     Google. Puste wartości = brak klucza lub błąd; caller ma wtedy fallback.
     """
-    api_key = os.getenv("DEEPSEEK_API_KEY", "")
-    if not api_key:
-        print("[image] No DEEPSEEK_API_KEY — using raw prompt")
+    from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+    cfg = chat_config()
+    if cfg is None:
+        print("[image] No chat LLM key — using raw prompt")
         return "", ""
 
     system_prompt = """You are an expert visual prompt engineer for SEO article images.
@@ -143,22 +144,14 @@ Analyze this heading through the 3 questions and create a realistic journalistic
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key}",
-                },
-                json={
-                    "model": "deepseek-chat",
-                    # 300 was sized for reasoning + PROMPT alone. ALT is emitted last, so
-                    # the old budget would have truncated exactly the new field.
-                    "max_tokens": 500,
-                    "temperature": 0.7,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                },
+                cfg["url"],
+                headers=chat_headers(cfg),
+                # 500, not 300: ALT is emitted after the PROMPT and the old budget
+                # truncated exactly the new field.
+                json=chat_payload(cfg, [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ], 500, temperature=0.7),
             )
             if resp.status_code == 200:
                 data = resp.json()

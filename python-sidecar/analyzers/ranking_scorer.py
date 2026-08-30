@@ -84,9 +84,11 @@ async def predict_ranking(
     input_hash = hashlib.sha256(json.dumps(input_data, sort_keys=True).encode()).hexdigest()[:16]
 
     prompt_version = "2026-05-24"
-    model = "deepseek-chat"
+    from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+    cfg = chat_config()
+    model = cfg["model"] if cfg else "none"
 
-    if not deepseek_key:
+    if cfg is None:
         return _fallback_score(content_score, input_hash, prompt_version, model)
 
     prompt = f"""You are an SEO ranking analyst. Using the provided numeric rubric, predict
@@ -130,17 +132,9 @@ Issues: {issues_json}"""
     try:
         async with httpx.AsyncClient(timeout=45) as client:
             resp = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {deepseek_key}",
-                },
-                json={
-                    "model": model,
-                    "max_tokens": 1024,
-                    "temperature": 0.1,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
+                cfg["url"],
+                headers=chat_headers(cfg),
+                json=chat_payload(cfg, [{"role": "user", "content": prompt}], 1024),
             )
             resp.raise_for_status()
             data = resp.json()

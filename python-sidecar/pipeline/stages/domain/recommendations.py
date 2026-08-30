@@ -48,6 +48,21 @@ async def _llm_recommendations(
         '[{"title": "...", "rationale": "...", "priority": "high|medium|low", '
         '"type": "...", "topic_index": 0}]'
     )
+    # OpenRouter first (OpenAI-compatible); the anthropic-compat DeepSeek client only
+    # as fallback — its account balance took every recommendation run down with it.
+    from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+    cfg = chat_config()
+    if cfg and "openrouter" in cfg["url"]:
+        import httpx
+        async with httpx.AsyncClient(timeout=60) as http:
+            resp = await http.post(
+                cfg["url"],
+                headers=chat_headers(cfg),
+                json=chat_payload(cfg, [{"role": "user", "content": prompt}], 1024, temperature=0),
+            )
+            resp.raise_for_status()
+            text = resp.json()["choices"][0]["message"]["content"] or ""
+            return parse_json_array(text)
     client = _get_client()
     response = await client.messages.create(
         model=MODEL,

@@ -1,7 +1,17 @@
 """No-LLM path builds guidelines from entities, not TF-IDF shingles."""
 import asyncio
+import pytest
 
 from analyzers.semantic_terms import extract_semantic_terms
+
+
+@pytest.fixture(autouse=True)
+def _no_llm_keys(monkeypatch):
+    """These tests exercise the deterministic fallback; a real OPENROUTER key in the
+    developer's environment must not flip them onto the network path."""
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+
 
 TEXTS = [
     "Kodeks Karny przewiduje kary za szantaż. Zgłoszenie na Policję wymaga dowodów. "
