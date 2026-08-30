@@ -1,4 +1,4 @@
-import { filterOnTopicTerms, filterOnTopicKeywords, filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
+import { filterOnTopicTerms, filterOnTopicKeywords, filterNlpTermsForAnalysis, dropSuggestionTailsWhenCorpusRich } from '@/src/core/domain/relevance/topicRelevance';
 
 const KEYWORD = 'szantaż emocjonalny';
 const terms = (...list: string[]) => list.map((term) => ({ term }));
@@ -67,5 +67,43 @@ describe('interrogatives inside the phrase', () => {
     ).map((t) => t.term);
 
     expect(kept).toEqual(['szantaż emocjonalny w pracy']);
+  });
+});
+
+describe('dropSuggestionTailsWhenCorpusRich', () => {
+  const seed = 'szantaż emocjonalny';
+  const corpusRow = (term: string, i: number) => ({ term: `${term} ${i}`, doc_freq: 3, relevance: 0.7, type: 'entity' });
+  const richCorpus = Array.from({ length: 30 }, (_, i) => corpusRow('poczucie winy wariant', i));
+
+  it('drops metadata-less keyword tails once the corpus harvest is rich', () => {
+    const kept = dropSuggestionTailsWhenCorpusRich(
+      [...richCorpus,
+        { term: 'szantaż emocjonalny empik' },
+        { term: 'foch szantaż emocjonalny' },
+        { term: 'szantaż emocjonalny' },
+      ],
+      seed,
+    ).map((t) => t.term);
+
+    expect(kept).not.toContain('szantaż emocjonalny empik');
+    expect(kept).not.toContain('foch szantaż emocjonalny');
+    expect(kept).toContain('szantaż emocjonalny');
+  });
+
+  it('keeps every suggestion while the corpus is thin — they still fill the gap', () => {
+    const thin = [
+      { term: 'poczucie winy', doc_freq: 3, relevance: 0.7, type: 'entity' },
+      { term: 'szantaż emocjonalny empik' },
+    ];
+    expect(dropSuggestionTailsWhenCorpusRich(thin, seed)).toHaveLength(2);
+  });
+
+  it('keeps an evidenced subtopic that repeats the keyword', () => {
+    const kept = dropSuggestionTailsWhenCorpusRich(
+      [...richCorpus, { term: 'szantaż emocjonalny w związku', doc_freq: 6, relevance: 0.8, type: 'entity' }],
+      seed,
+    ).map((t) => t.term);
+
+    expect(kept).toContain('szantaż emocjonalny w związku');
   });
 });
