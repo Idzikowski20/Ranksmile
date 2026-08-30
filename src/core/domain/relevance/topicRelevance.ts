@@ -115,11 +115,22 @@ export function isKeywordOnTopic(candidate: string, seedKeyword: string): boolea
 const QUERY_MODIFIER_RE = /\b(pdf|epub|ebook|chomikuj|cda|torrent|po (?:angielsku|ang|niemiecku|polsku)|angielski|angielskiego|tlumaczenie|synonim|cytaty|memy|film|ksiazka|audiobook|streszczenie|wikipedia)\b/;
 const QUESTION_PREFIX_RE = /^(czy|co|jak|jakie|jaki|jaka|kiedy|ile|gdzie|dlaczego|czym|kto|komu)\b/;
 
+/**
+ * An interrogative anywhere in the phrase, not just at the front.
+ *
+ * Google's autocomplete puts the keyword first: "szantaż emocjonalny czy jest karalny",
+ * "szantaż emocjonalny jak się bronić", "szantaż emocjonalny co to". Anchoring the rule
+ * to the start of the string missed every one of them, which is most of the list.
+ */
+const QUESTION_TOKEN_RE = /(^|\s)(czy|jak|jakie|jaki|jaka|kiedy|ile|gdzie|dlaczego|czym|kto|komu|co to|co grozi)(\s|$)/;
+
 function isQueryShapedTerm(term: string): boolean {
   if (QUERY_MODIFIER_RE.test(term)) return true;
   // Only multiword phrases: "co" or "jak" alone is a stopword the useful-term check
   // already handles, and a two-word phrase can still be real vocabulary.
-  return QUESTION_PREFIX_RE.test(term) && term.split(/\s+/).filter(Boolean).length >= 3;
+  const words = term.split(/\s+/).filter(Boolean).length;
+  if (QUESTION_PREFIX_RE.test(term) && words >= 3) return true;
+  return QUESTION_TOKEN_RE.test(term) && words >= 4;
 }
 
 /**
@@ -135,18 +146,23 @@ function isQueryShapedTerm(term: string): boolean {
  */
 const LONGTAIL_EVIDENCE_MIN_DOCS = 3;
 
-function isWeakKeywordLongTail(term: string, seedKeyword: string, docFreq: number | undefined): boolean {
-  // A missing doc_freq is unknown evidence, not zero: the DataForSEO enrichment path
-  // maps suggestions to {term, target_count} with no corpus counts at all, and treating
-  // that as zero deleted the entire enrichment — the thing that exists to fill a thin
-  // list in the first place. Only a term the corpus actually counted can fail this.
-  if (typeof docFreq !== 'number') return false;
+type TermEvidence = { doc_freq?: number; relevance?: number; type?: string };
+
+function isWeakKeywordLongTail(term: string, seedKeyword: string, evidence: TermEvidence): boolean {
   const seed = normalizeTerm(seedKeyword);
   if (!seed || !term.includes(seed)) return false;
   // The keyword itself, and simple inflections of it, are the article's own topic.
   const extra = term.replace(seed, ' ').split(/\s+/).filter(Boolean);
   if (!extra.length) return false;
-  return docFreq < LONGTAIL_EVIDENCE_MIN_DOCS;
+
+  // A missing doc_freq is unknown evidence, not zero. Treating it as junk was tried and
+  // reverted: it also deleted "szantaż emocjonalny w związku", "… w pracy" and "… u
+  // dzieci", which are real subtopics a competitor set discusses. Dropping those lifts
+  // the term score by shrinking what the article is measured against, which is scoring
+  // theatre rather than a better article. Query SHAPE is the honest signal, and
+  // isQueryShapedTerm carries it.
+  if (typeof evidence.doc_freq !== 'number') return false;
+  return evidence.doc_freq < LONGTAIL_EVIDENCE_MIN_DOCS;
 }
 
 /** Filter keyword rows to those on-topic for the primary seed. */
@@ -223,14 +239,14 @@ function isKnownNoiseTerm(term: string, seedKeyword = ''): boolean {
  * autocomplete long-tails and query shapes through, which is how "bezpłatna", "zyciu" and
  * "szantaż emocjonalny empik" reached a graded term list from that branch.
  */
-export function dropNoisyTerms<T extends { term: string; doc_freq?: number }>(
+export function dropNoisyTerms<T extends { term: string } & TermEvidence>(
   terms: T[],
   seedKeyword: string,
 ): T[] {
   return terms.filter((t) => {
     const term = normalizeTerm(t.term);
     if (isKnownNoiseTerm(term, seedKeyword)) return false;
-    return !isWeakKeywordLongTail(term, seedKeyword, t.doc_freq);
+    return !isWeakKeywordLongTail(term, seedKeyword, t);
   });
 }
 
@@ -250,7 +266,7 @@ export function dropNoisyTerms<T extends { term: string; doc_freq?: number }>(
  * So: strict seed matches, plus anything the corpus vouches for, minus known noise.
  */
 export function filterNlpTermsForAnalysis<
-  T extends { term: string; doc_freq?: number },
+  T extends { term: string } & TermEvidence,
 >(terms: T[], seedKeyword: string): T[] {
   if (!terms.length) return [];
   // Noise has to be cut from the strict set too: a search suggestion like
@@ -258,7 +274,7 @@ export function filterNlpTermsForAnalysis<
   // waves it through and it was never reaching the soft branch's filter at all.
   const strict = filterOnTopicTerms(terms, seedKeyword)
     .filter((t) => !isKnownNoiseTerm(normalizeTerm(t.term), seedKeyword))
-    .filter((t) => !isWeakKeywordLongTail(normalizeTerm(t.term), seedKeyword, t.doc_freq));
+    .filter((t) => !isWeakKeywordLongTail(normalizeTerm(t.term), seedKeyword, t));
   const strictTerms = new Set(strict.map((t) => t.term));
 
   const seeds = seedTokens(seedKeyword);
@@ -274,7 +290,7 @@ export function filterNlpTermsForAnalysis<
     if (strictTerms.has(t.term)) return false;
     const term = normalizeTerm(t.term);
     if (isKnownNoiseTerm(term, seedKeyword)) return false;
-    if (isWeakKeywordLongTail(term, seedKeyword, t.doc_freq)) return false;
+    if (isWeakKeywordLongTail(term, seedKeyword, t)) return false;
     const words = term.split(/\s+/).filter((w) => w.length >= 3);
     if (!words.length) return false;
     // Several competitors used it — that is the corpus establishing the topic, not us.
