@@ -463,7 +463,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         bundle: finalized.bundle,
         brandKnowledge,
         brandName: cs.brandName,
-        importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
+        importantTerms: importantTermsFromScoreData(scoreData, { tableTerms, max: 120 }),
         language: lang,
         competitorHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
         // Cron runs resolve no org and skip the budget gate entirely, so there is nothing
@@ -488,7 +488,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const compiledResult = compileAndValidateWritePlan(writePlan, {
-      importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
+      importantTerms: importantTermsFromScoreData(scoreData, { tableTerms, max: 120 }),
       allowBrandNiche,
     });
     if (!compiledResult.ok) {
