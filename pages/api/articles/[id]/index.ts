@@ -132,20 +132,41 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
      }
    }
 
-   const scoreDataJson = scoreDataObj ? JSON.stringify(scoreDataObj) : (score_data ? JSON.stringify(score_data) : null);
-
    try {
       const articleIdSql = await getArticleIdSql();
       let beforeScore: number | undefined;
+      let storedScoreData: Record<string, unknown> | null = null;
       try {
-         const prev = await queryOne<{ content_score: number | null }>(
-            `SELECT content_score FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+         const prev = await queryOne<{ content_score: number | null; score_data: string | null }>(
+            `SELECT content_score, score_data FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
             [id],
          );
          if (prev?.content_score != null) beforeScore = Number(prev.content_score);
+         storedScoreData = prev?.score_data ? JSON.parse(prev.score_data) as Record<string, unknown> : null;
       } catch {
          beforeScore = undefined;
       }
+
+      // Merge ONTO the stored blob, never replace it. The editor loads its score_data
+      // copy when the page opens; the post-generation finalize then enriches the stored
+      // one (ai_factors, regraded coverage, researched_facts, failure markers) — and the
+      // first autosave used to ship the stale client copy wholesale, wiping all of it.
+      // Article 75: finalize wrote at 10:35:06, autosave clobbered it at 10:36:34.
+      // Spread order keeps client-owned keys (terms, counts) winning while server-only
+      // keys survive by absence from the client copy.
+      if (scoreDataObj && storedScoreData) {
+         scoreDataObj = { ...storedScoreData, ...scoreDataObj };
+         // Server-authoritative keys: the client never edits these through this route,
+         // it only holds possibly-stale copies — the stored value always wins.
+         for (const key of [
+            'ai_factors', 'ai_score', 'researched_facts', '_reconcile_error', '_regrade_error',
+            'content_planner_v2', 'compiled_write_plan', 'knowledge_graph',
+            'structural_benchmark', 'competitor_claims', 'competitor_synthesis', 'cie_gate',
+         ]) {
+            if (storedScoreData[key] !== undefined) scoreDataObj[key] = storedScoreData[key];
+         }
+      }
+      const scoreDataJson = scoreDataObj ? JSON.stringify(scoreDataObj) : (score_data ? JSON.stringify(score_data) : null);
       if (version_type && content !== undefined) {
          await db.query(
             `INSERT INTO article_versions (article_id, version_type, content, score_data, created_at)
