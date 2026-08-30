@@ -115,6 +115,18 @@ async function callProvider(
     if (opts?.responseFormat === 'json_object') {
       body.response_format = { type: 'json_object' };
     }
+    // Gemini's flash models reason by default and burn the whole completion budget on
+    // thinking (finish_reason=length, empty content). The OpenAI-compat endpoint accepts
+    // reasoning_effort — pin it low; judges want JSON verdicts, not chains of thought.
+    if (resolved.provider === 'gemini') {
+      body.reasoning_effort = 'low';
+    }
+    // Same burn on OpenRouter: the default chat model is gpt-5-class and reasons by
+    // default. Judges want verdicts, not thinking; OpenRouter ignores the field for
+    // models without reasoning.
+    if (resolved.provider === 'openrouter') {
+      body.reasoning = { effort: 'minimal', exclude: true };
+    }
     // One retry on an empty/truncated body: providers occasionally return 200 with no
     // payload (proxy reset, keep-alive drop). `res.json()` then dies with "Unexpected
     // end of JSON input", and that single crash took the whole coverage regrade down —
@@ -137,14 +149,24 @@ async function callProvider(
         if (attempt === 0) continue;
         throw new Error(`${resolved.provider} returned an empty response body twice`);
       }
-      let data: { choices?: Array<{ message?: { content?: string } }> };
+      let data: { choices?: Array<{ message?: { content?: string; reasoning?: string } ; finish_reason?: string }> };
       try {
         data = JSON.parse(text) as typeof data;
       } catch {
         if (attempt === 0) continue;
         throw new Error(`${resolved.provider} returned unparseable JSON: ${text.slice(0, 120)}`);
       }
-      return data.choices?.[0]?.message?.content?.trim() || '';
+      const content = data.choices?.[0]?.message?.content?.trim() || '';
+      if (!content) {
+        // Reasoning burn (gemini/gpt-5 class): finish_reason=length with no content
+        // means the whole budget went to thinking. Retry, then let the provider chain
+        // move on — returning '' here made the judge silently grade nothing.
+        if (attempt === 0) continue;
+        throw new Error(
+          `${resolved.provider} returned no content (finish_reason=${data.choices?.[0]?.finish_reason ?? '?'})`,
+        );
+      }
+      return content;
     }
     throw new Error(`${resolved.provider} retry loop exhausted`);
   }
