@@ -99,6 +99,22 @@ export function localizedRequiredSections(
   ];
 }
 
+/**
+ * Brand sections, Surfer-parity. The reference article for "szantaż emocjonalny"
+ * dedicates a third of its body to the brand: a services section ("Wsparcie
+ * ProDetektyw w sprawach szantażu") and anonymized case studies ("Studium
+ * przypadku: realne sprawy"). Our planner treated brand as mentions, not
+ * sections — these two H2s close that gap. Injected before FAQ/summary, only
+ * when a brand document exists (briefWriter refuses to invent brand facts).
+ */
+export function brandSections(brandName: string, lang: OutlineLang): string[] {
+  const name = brandName.trim();
+  if (!name) return [];
+  return lang === 'pl'
+    ? [`Jak ${name} pomaga w takich sprawach`, 'Studium przypadku: przykladowe sprawy']
+    : [`How ${name} helps in cases like this`, 'Case studies'];
+}
+
 /** Human H1 — never raw keyword alone. */
 export function titleizeH1(opts: {
   keyword: string;

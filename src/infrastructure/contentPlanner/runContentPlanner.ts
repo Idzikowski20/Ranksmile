@@ -45,6 +45,8 @@ export type RunContentPlannerInput = {
   keyword: string;
   year?: number;
   allowBrandNiche?: boolean;
+  /** Company name for the blueprint's brand sections (services + case studies). */
+  brandName?: string;
   brandNicheHint?: string;
   competitors: CompetitorRawInput[];
   ai?: AiSearchIntelInput;
@@ -145,7 +147,7 @@ export function runContentPlanner(input: RunContentPlannerInput): RunContentPlan
     });
   targetKg = applyPriorityOrder(targetKg);
 
-  let blueprint = buildArticleBlueprint({ benchmark, kg: targetKg, intent, reader });
+  let blueprint = buildArticleBlueprint({ benchmark, kg: targetKg, intent, reader, brandName: input.brandName });
   const blueprintValidation = assertBlueprintGate(blueprint);
 
   if (!blueprintValidation.ok) {
