@@ -26,3 +26,15 @@ def test_never_double_links_an_url():
     out, n = inject_suggestions(html, [{"anchorText": "Poradnik", "url": "https://x.pl/a/"}])
     assert n == 0
     assert out.count('href="https://x.pl/a/"') == 1
+
+
+def test_falls_back_to_the_longest_present_word_run():
+    """The model promises a verbatim anchor and routinely paraphrases: a real run
+    injected 0 of 2 suggestions because no exact anchor existed in the body."""
+    html = "<p>Warto znać mechanizmy manipulacji emocjonalnej w bliskiej relacji.</p>"
+    out, n = inject_suggestions(html, [{
+        "anchorText": "czym są mechanizmy manipulacji emocjonalnej",
+        "url": "https://x.pl/manipulacja/",
+    }])
+    assert n == 1
+    assert '<a href="https://x.pl/manipulacja/">mechanizmy manipulacji emocjonalnej</a>' in out
