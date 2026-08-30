@@ -122,3 +122,28 @@ export function dedupeUsefulTerms<T extends MinimalTerm>(terms: T[]): T[] {
 
   return [...best.values()];
 }
+
+/**
+ * Most times an article is ever asked to repeat one phrase.
+ *
+ * Both `article_terms` writers derived the range as `target_count * 0.7 … * 1.5`, and
+ * `target_count` from the TF-IDF path is a corpus occurrence total, not a per-article
+ * target: `extract_nlp_terms` returns 30 for a phrase across nine competitors, which
+ * became "use this 21 to 45 times". Article 86 was told to use "szantaż" between 41 and
+ * 95 times in 3800 words. A term the article cannot satisfy scores zero however well it
+ * is written.
+ */
+export const MAX_TERM_OCCURRENCES = 12;
+
+/** The occurrence range an article is graded against for one term. */
+export function suggestedTermRange(term: {
+  target_count?: number;
+  suggested_min?: number;
+  suggested_max?: number;
+}): { min: number; max: number } {
+  const target = Math.max(1, term.target_count || 1);
+  const rawMin = term.suggested_min ?? Math.max(1, Math.round(target * 0.7));
+  const rawMax = term.suggested_max ?? Math.max(rawMin, Math.round(target * 1.5));
+  const max = Math.min(MAX_TERM_OCCURRENCES, Math.max(1, rawMax));
+  return { min: Math.min(max, Math.max(1, rawMin)), max };
+}

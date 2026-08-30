@@ -14,6 +14,9 @@ _FUNCTION_WORD_FORMS = {
     "wowczas", "wtedy", "teraz", "potem", "zawsze", "nigdy", "czesto", "czasami",
     "bardzo", "wcale", "jedynie", "tylko", "nawet", "prawie", "okolo", "wedlug",
     "kazdy", "kazda", "kazde", "wszystkie", "wszystkich", "innych", "inne", "inny",
+    "jedna", "jeden", "jedno", "jednej", "jednym", "zyciu", "zycie", "zycia",
+    "swoich", "swoim", "swoja", "czuje", "czuc", "moze", "musi", "trzeba",
+    "bezplatna", "bezplatny", "bezplatne",
     "temu", "tego", "tym", "tej", "ten", "tego", "przez", "przy", "podczas",
 }
 
