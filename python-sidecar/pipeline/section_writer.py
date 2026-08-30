@@ -199,7 +199,9 @@ def _prompt(
         lines.append(
             "This is the article's closing paragraph: if a BRAND block appears in the"
             " context, end with one concrete next step for the reader (contact us / how"
-            " we work), using only facts from that block."
+            " we work), using only facts from that block. Name the company as it is"
+            " written in that block — two of five articles ended with a correct call to"
+            " action that never said who was making it."
         )
     if ctx.get("is_lead") and not style.get("table") and not style.get("list"):
         # 38% of AI citations come from the opening ~100 words (Surfer research, 2026):
@@ -296,6 +298,44 @@ def _prompt(
     return "\n".join(lines)
 
 
+#: Meta-language a model uses when it is talking to itself about the task rather than
+#: writing the article: word-count arithmetic, self-correction, composition planning.
+_DELIBERATION_RE = re.compile(
+    r"\b("
+    r"word count|final count|words whitespace|at most \d+ words|"
+    r"let'?s compose|let me compose|i should|we need to|this inflates|"
+    r"include exact sentence|current has it|okay\. current|fine\. need"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _strip_deliberation(markdown: str) -> str:
+    """
+    Drop trailing chain-of-thought the model wrote into the article body.
+
+    `reasoning: {exclude: True}` removes the separate reasoning field; it cannot stop a
+    model from deliberating inside `content`. One article in fourteen shipped a closing
+    paragraph ending "...Final count likely 105 due link not counted as words generally.
+    At most 104 words whitespace. Let's compose 97." — visible to the reader, and the
+    scorer graded it as prose. Only a trailing run is removed: real article sentences do
+    not discuss their own word count, and cutting from the first match forward would risk
+    eating body text if the phrase ever appears legitimately mid-paragraph.
+    """
+    parts = re.split(r"(?<=[.!?])\s+", markdown.strip())
+    keep = len(parts)
+    while keep > 0 and _DELIBERATION_RE.search(parts[keep - 1]):
+        keep -= 1
+    if keep == len(parts):
+        return markdown
+    if keep == 0:
+        # The whole paragraph is deliberation — better an empty section than gibberish.
+        print("[writer] paragraph was entirely deliberation, dropped")
+        return ""
+    print(f"[writer] stripped {len(parts) - keep} trailing deliberation sentence(s)")
+    return " ".join(parts[:keep])
+
+
 def _force_faq_shape(
     markdown: str,
     paragraph_plan: Mapping[str, object],
@@ -329,6 +369,7 @@ async def write_paragraph(
     context: Mapping[str, object] | None = None,
 ) -> ParagraphResult:
     markdown = (await generate_markdown(_prompt(paragraph_plan, context))).strip()
+    markdown = _strip_deliberation(markdown)
     if _is_faq(context):
         markdown = _force_faq_shape(markdown, paragraph_plan, context)
     used_terms = _terms(paragraph_plan, markdown)
