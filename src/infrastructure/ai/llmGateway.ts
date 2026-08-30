@@ -115,22 +115,38 @@ async function callProvider(
     if (opts?.responseFormat === 'json_object') {
       body.response_format = { type: 'json_object' };
     }
-    const res = await fetch(resolved.url, {
-      method: 'POST',
-      signal: AbortSignal.timeout(180_000),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${key}`,
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://ranksmile.pl',
-        'X-Title': 'Ranksmile',
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error(`${resolved.provider} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
-    const data = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    return data.choices?.[0]?.message?.content?.trim() || '';
+    // One retry on an empty/truncated body: providers occasionally return 200 with no
+    // payload (proxy reset, keep-alive drop). `res.json()` then dies with "Unexpected
+    // end of JSON input", and that single crash took the whole coverage regrade down —
+    // AI Search stayed frozen at its keyword-mode snapshot on every generation.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const res = await fetch(resolved.url, {
+        method: 'POST',
+        signal: AbortSignal.timeout(180_000),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${key}`,
+          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://ranksmile.pl',
+          'X-Title': 'Ranksmile',
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`${resolved.provider} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const text = (await res.text().catch(() => '')).trim();
+      if (!text) {
+        if (attempt === 0) continue;
+        throw new Error(`${resolved.provider} returned an empty response body twice`);
+      }
+      let data: { choices?: Array<{ message?: { content?: string } }> };
+      try {
+        data = JSON.parse(text) as typeof data;
+      } catch {
+        if (attempt === 0) continue;
+        throw new Error(`${resolved.provider} returned unparseable JSON: ${text.slice(0, 120)}`);
+      }
+      return data.choices?.[0]?.message?.content?.trim() || '';
+    }
+    throw new Error(`${resolved.provider} retry loop exhausted`);
   }
   if (provider === 'anthropic') {
     const key = process.env.ANTHROPIC_API_KEY || '';
