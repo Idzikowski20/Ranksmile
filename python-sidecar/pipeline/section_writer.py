@@ -290,7 +290,18 @@ def _prompt(
         if kept:
             lines.append(f"{label}: {'; '.join(kept)}")
 
-    add("Terms to use", ", ".join(terms))
+    if terms:
+        # "Terms to use" alone read as optional: article 102 left 44 of 83 assigned
+        # terms unused while repeating the main keyword 100+ times. One explicit rule,
+        # and the inverse one, so compliance does not turn into stuffing.
+        lines.append(
+            "Terms to use — weave EACH of these into this paragraph at least once,"
+            " in natural inflected form: " + ", ".join(terms)
+        )
+        lines.append(
+            "Do not compensate with the main keyword: if it already appears in this"
+            " paragraph, prefer a synonym or pronoun over repeating it."
+        )
     add("Continues from", paragraph_plan.get("transition_from"))
     add("Leads into", paragraph_plan.get("transition_to"))
 
