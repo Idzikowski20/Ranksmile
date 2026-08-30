@@ -244,3 +244,33 @@ def test_brand_moments_are_instructions_not_just_context():
     assert "one concrete next step" in closing
     assert "ONE natural clause saying we" not in middle
     assert "one concrete next step" not in middle
+
+
+def test_faq_paragraph_gets_its_question_bolded_when_the_model_omits_it():
+    """A real article bolded 2 of 4 FAQ questions and ran the rest together as prose."""
+    plan = {
+        "id": "p1",
+        "section_id": "s1",
+        "questions": [{"question_id": "q1"}],
+    }
+    ctx = {
+        "heading": "FAQ - najczęściej zadawane pytania",
+        "index": {"questions": {"q1": "Czy szantaż emocjonalny jest przestępstwem"}},
+    }
+
+    async def gen(_prompt: str) -> str:
+        return "Zalezy od okolicznosci. Kodeks karny nie zna takiego typu czynu."
+
+    result = asyncio.run(write_paragraph(plan, gen, ctx))
+    assert result.markdown.startswith("**Czy szantaż emocjonalny jest przestępstwem?**")
+
+
+def test_faq_paragraph_the_model_formatted_correctly_is_left_alone():
+    plan = {"id": "p1", "section_id": "s1", "questions": [{"question_id": "q1"}]}
+    ctx = {"heading": "FAQ", "index": {"questions": {"q1": "Inne pytanie"}}}
+
+    async def gen(_prompt: str) -> str:
+        return "**Czy to szantaz?**\n\nTak, gdy pojawia sie grozba."
+
+    result = asyncio.run(write_paragraph(plan, gen, ctx))
+    assert result.markdown.startswith("**Czy to szantaz?**")

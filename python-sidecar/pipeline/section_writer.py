@@ -66,6 +66,13 @@ def _confidence(markdown: str, expected_words: object, used_terms: tuple[tuple[s
 #: Reference field -> (id key, graph index name, prompt label). `facts` is deliberately
 #: absent: the compiler mints one fact per claim with the identical statement, so
 #: including both would send every claim to the writer twice.
+_FAQ_HEADING = re.compile(r"faq|najczęściej zadawane|pytania", re.IGNORECASE)
+
+
+def _is_faq(ctx: Mapping[str, object] | None) -> bool:
+    return bool(_FAQ_HEADING.search(str((ctx or {}).get("heading") or "")))
+
+
 _REFERENCE_FIELDS = (
     ("claims", "claim_id", "claims", "Must cover"),
     ("questions", "question_id", "questions", "Must answer"),
@@ -173,8 +180,7 @@ def _prompt(
     # prose at all, so adding "the FIRST sentence answers the main question" handed the
     # model two instructions it cannot both satisfy — which is what a special-only opening
     # section produced.
-    heading_text = str((ctx or {}).get("heading") or "").lower()
-    if "faq" in heading_text or "najczęściej zadawane" in heading_text or "pytania" in heading_text:
+    if _is_faq(ctx):
         lines.append(
             "FAQ format (hard rule): this paragraph is ONE question-answer pair."
             " Start with the question alone on its own line in bold (**...?**), then a"
@@ -286,12 +292,41 @@ def _prompt(
     return "\n".join(lines)
 
 
+def _force_faq_shape(
+    markdown: str,
+    paragraph_plan: Mapping[str, object],
+    ctx: Mapping[str, object] | None,
+) -> str:
+    """
+    Guarantee the FAQ question is visible above its answer.
+
+    The format is a prompt rule the model only half-follows: a real article bolded 2 of
+    its 4 FAQ questions and ran the rest together as one wall of prose. The planned
+    question is already resolved for the prompt, so prepend it when the paragraph did
+    not open with one rather than hope for compliance next time.
+    """
+    if markdown.lstrip().startswith("**"):
+        return markdown
+    questions = [
+        q for q in (_inline(i) for i in _resolved(paragraph_plan, ctx, "questions", "question_id", "questions"))
+        if q
+    ]
+    if not questions:
+        return markdown
+    question = questions[0].rstrip()
+    if not question.endswith("?"):
+        question = f"{question}?"
+    return f"**{question}**\n\n{markdown}"
+
+
 async def write_paragraph(
     paragraph_plan: Mapping[str, object],
     generate_markdown: Callable[[str], Awaitable[str]],
     context: Mapping[str, object] | None = None,
 ) -> ParagraphResult:
     markdown = (await generate_markdown(_prompt(paragraph_plan, context))).strip()
+    if _is_faq(context):
+        markdown = _force_faq_shape(markdown, paragraph_plan, context)
     used_terms = _terms(paragraph_plan, markdown)
     question_ids = _reference_ids(paragraph_plan, "questions", "question_id")
     return ParagraphResult(
