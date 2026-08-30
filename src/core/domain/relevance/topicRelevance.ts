@@ -122,6 +122,33 @@ function isQueryShapedTerm(term: string): boolean {
   return QUESTION_PREFIX_RE.test(term) && term.split(/\s+/).filter(Boolean).length >= 3;
 }
 
+/**
+ * Corpus evidence a keyword long-tail needs before it counts as vocabulary.
+ *
+ * "szantaż emocjonalny" plus one or two words is the shape of a Google autocomplete
+ * suggestion, and the SERP path ships dozens of them: article 87 was graded on
+ * "szantaż emocjonalny teściowej", "… empik", "… gwp", "… alkoholika" and "…
+ * paragraf" — 54 of its 94 terms went uncovered and almost all of them looked like
+ * this. Two competitor pages is not enough for a phrase the article has no reason to
+ * contain; a genuine subtopic ("szantaż emocjonalny w związku") clears the bar because
+ * several ranking pages actually discuss it.
+ */
+const LONGTAIL_EVIDENCE_MIN_DOCS = 3;
+
+function isWeakKeywordLongTail(term: string, seedKeyword: string, docFreq: number | undefined): boolean {
+  // A missing doc_freq is unknown evidence, not zero: the DataForSEO enrichment path
+  // maps suggestions to {term, target_count} with no corpus counts at all, and treating
+  // that as zero deleted the entire enrichment — the thing that exists to fill a thin
+  // list in the first place. Only a term the corpus actually counted can fail this.
+  if (typeof docFreq !== 'number') return false;
+  const seed = normalizeTerm(seedKeyword);
+  if (!seed || !term.includes(seed)) return false;
+  // The keyword itself, and simple inflections of it, are the article's own topic.
+  const extra = term.replace(seed, ' ').split(/\s+/).filter(Boolean);
+  if (!extra.length) return false;
+  return docFreq < LONGTAIL_EVIDENCE_MIN_DOCS;
+}
+
 /** Filter keyword rows to those on-topic for the primary seed. */
 export function filterOnTopicKeywords<T extends { keyword: string }>(rows: T[], seedKeyword: string): T[] {
   return rows.filter((r) => isKeywordOnTopic(r.keyword, seedKeyword));
@@ -210,7 +237,8 @@ export function filterNlpTermsForAnalysis<
   // "prywatny detektyw jelenia gora cennik" repeats the keyword, so every seed check
   // waves it through and it was never reaching the soft branch's filter at all.
   const strict = filterOnTopicTerms(terms, seedKeyword)
-    .filter((t) => !isKnownNoiseTerm(normalizeTerm(t.term), seedKeyword));
+    .filter((t) => !isKnownNoiseTerm(normalizeTerm(t.term), seedKeyword))
+    .filter((t) => !isWeakKeywordLongTail(normalizeTerm(t.term), seedKeyword, t.doc_freq));
   const strictTerms = new Set(strict.map((t) => t.term));
 
   const seeds = seedTokens(seedKeyword);
@@ -226,6 +254,7 @@ export function filterNlpTermsForAnalysis<
     if (strictTerms.has(t.term)) return false;
     const term = normalizeTerm(t.term);
     if (isKnownNoiseTerm(term, seedKeyword)) return false;
+    if (isWeakKeywordLongTail(term, seedKeyword, t.doc_freq)) return false;
     const words = term.split(/\s+/).filter((w) => w.length >= 3);
     if (!words.length) return false;
     // Several competitors used it — that is the corpus establishing the topic, not us.

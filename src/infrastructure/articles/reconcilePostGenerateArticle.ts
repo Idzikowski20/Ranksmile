@@ -1,4 +1,5 @@
 import db from '@/database/database';
+import { suggestedTermRange } from '@/src/core/domain/terms/termUtils';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
@@ -40,8 +41,8 @@ function readerAudienceTerms(scoreData: ScoreData): string[] {
 function normalizeTerms(terms: NlpTerm[], plainText: string): NlpTerm[] {
   return terms.map((t) => ({
     ...t,
-    suggested_min: t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
-    suggested_max: t.suggested_max ?? Math.max(t.suggested_min ?? 1, Math.round((t.target_count || 1) * 1.5)),
+    suggested_min: suggestedTermRange(t).min,
+    suggested_max: suggestedTermRange(t).max,
     current_count: countOccurrences(plainText, t.term),
   }));
 }
@@ -59,8 +60,8 @@ async function syncArticleTerms(articleId: number, terms: NlpTerm[], plainText: 
           'topic',
           'serp',
           countOccurrences(plainText, t.term),
-          t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
-          t.suggested_max ?? Math.max(1, Math.round((t.target_count || 1) * 1.5)),
+          suggestedTermRange(t).min,
+          suggestedTermRange(t).max,
           t.target_count || 1,
         ],
       },
