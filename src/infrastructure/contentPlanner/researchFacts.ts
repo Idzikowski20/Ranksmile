@@ -21,7 +21,10 @@ export async function getResearchedFacts(opts: {
   scoreData: Record<string, unknown>;
 }): Promise<ResearchedFacts> {
   const cached = opts.scoreData.researched_facts as ResearchedFacts | undefined;
-  if (cached && Array.isArray(cached.claims)) return cached;
+  // An empty harvest is not an answer worth keeping: one call that came back with
+  // nothing (a sidecar restart mid-request is enough) used to be cached forever, and
+  // every later regeneration of that article shipped with zero sourced claims.
+  if (cached && Array.isArray(cached.claims) && cached.claims.length > 0) return cached;
   if (!isSidecarConfigured() || !opts.keyword.trim()) return { claims: [], sources: [] };
   try {
     const out = await callSidecar<ResearchedFacts>('/research-facts', {
@@ -32,8 +35,10 @@ export async function getResearchedFacts(opts: {
       claims: Array.isArray(out.claims) ? out.claims : [],
       sources: Array.isArray(out.sources) ? out.sources : [],
     };
-    // eslint-disable-next-line no-param-reassign -- the mutation IS the cache contract (see doc above)
-    opts.scoreData.researched_facts = facts;
+    if (facts.claims.length > 0) {
+      // eslint-disable-next-line no-param-reassign -- the mutation IS the cache contract (see doc above)
+      opts.scoreData.researched_facts = facts;
+    }
     return facts;
   } catch (err) {
     console.warn('[fact-research] skipped:', getErrorMessage(err));
