@@ -110,6 +110,12 @@ export function projectCcmToCoverageSnapshot(
       continue;
     }
     const keepExtra =
+      // Intent rows ALWAYS survive. The CCM graph models facts and questions, not the
+      // five intro-intent checkpoints the coverage judge grades — so a projection that
+      // dropped them left the intent bucket at max 0 with weight 3, capping AI Search
+      // near ~35 on every generated article no matter how good the intro was.
+      prev.category === 'intent' ||
+      prev.type === 'intent' ||
       (prev.llmSources?.length ?? 0) > 0 ||
       prev.source === 'paa' ||
       prev.source === 'serp' ||

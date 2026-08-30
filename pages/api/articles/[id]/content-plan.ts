@@ -70,17 +70,29 @@ type ArticlePlanRow = {
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await ensureArticlesTables();
-  const authorized = await verifyUser(req, res);
-  if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+  // Cron secret, same as deep-analysis and generate: the outline sits between them in
+  // the pipeline, and requiring a browser session here made the whole chain
+  // unrunnable headlessly (eval suites, scripted regeneration).
+  const { assertCronSecret } = await import('@/src/infrastructure/cron/cronAuth');
+  const isCron = assertCronSecret(req);
+  if (!isCron) {
+    const authorized = await verifyUser(req, res);
+    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+  }
   if (req.method !== 'POST' && req.method !== 'GET') {
     res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const userId = await getCurrentUserId(req, res);
   const articleId = parseInt(String(req.query.id), 10);
-  if (!Number.isFinite(articleId) || !(await assertArticleAccess(userId, articleId))) {
-    return res.status(403).json({ error: 'Access denied.' });
+  if (!Number.isFinite(articleId)) {
+    return res.status(400).json({ error: 'article id required' });
+  }
+  if (!isCron) {
+    const userId = await getCurrentUserId(req, res);
+    if (!(await assertArticleAccess(userId, articleId))) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
   }
   const articleIdSql = await getArticleIdSql();
 
