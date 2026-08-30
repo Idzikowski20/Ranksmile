@@ -371,6 +371,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       keyword,
       year: new Date().getFullYear(),
       allowBrandNiche,
+      brandName: cs.brandName,
       competitors,
       ai,
       paaQuestions: paa,

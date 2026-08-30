@@ -3,7 +3,7 @@
  */
 import { h2FromWords } from '@/src/core/domain/contentPlanner/competitorBenchmark';
 import { MAX_CLAIMS_PER_SECTION } from '@/src/core/domain/knowledgeEngine/constants';
-import { localizedRequiredSections, type OutlineLang } from '@/src/core/domain/contentPlanner/sectionLabels';
+import { brandSections, localizedRequiredSections, type OutlineLang } from '@/src/core/domain/contentPlanner/sectionLabels';
 import type {
   ArticleBlueprint,
   ArticleBudget,
@@ -69,9 +69,20 @@ export function buildArticleBlueprint(opts: {
   kg: TargetKnowledgeGraph;
   intent: IntentBlueprint;
   reader: ReaderModel;
+  /** Company name — adds the services + case-study sections (Surfer parity). */
+  brandName?: string;
 }): ArticleBlueprint {
   const budget = buildArticleBudget(opts.benchmark, opts.kg);
-  const requiredSections = baseRequiredSections(opts.reader);
+  const lang: OutlineLang = opts.reader.language === 'en' ? 'en' : 'pl';
+  const base = baseRequiredSections(opts.reader);
+  const brand = brandSections(opts.brandName ?? '', lang);
+  // Brand sections sit before the FAQ/summary tail, like the reference article.
+  const tailAt = base.findIndex((h) => /faq|podsumowanie|summary|kontakt|contact/i.test(h));
+  const requiredSections = brand.length
+    ? (tailAt >= 0
+      ? [...base.slice(0, tailAt), ...brand, ...base.slice(tailAt)]
+      : [...base, ...brand])
+    : base;
   return {
     targetWords: budget.words,
     targetH2: budget.h2,

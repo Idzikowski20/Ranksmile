@@ -183,10 +183,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const benchmark = storedBenchmark || (benchmarkDocs.length ? buildStructuralBenchmark(benchmarkDocs) : null);
     const plannerTargets: PlannerTargets | null = benchmark ? toPlannerTargets(benchmark) : null;
 
+    // Read before the planner call — the blueprint's brand sections need the name.
+    const contentSettings = await readContentSettings()
+      .catch(() => ({ brandName: '', brandKnowledge: '', voices: [] }));
+
     const result = runContentPlanner({
       keyword,
       year: new Date().getFullYear(),
       allowBrandNiche: false,
+      brandName: contentSettings.brandName,
       competitors,
       ai,
       paaQuestions: paa,
@@ -253,7 +258,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // nothing but a generic "Could not generate an outline" and no way to see why.
     // Loaded here rather than at the top of the handler: only the outline branch needs it,
     // and the approvedOutline save path above returns long before this point.
-    const brand = await readContentSettings().catch(() => ({ brandName: '', brandKnowledge: '', voices: [] }));
+    const brand = contentSettings;
     // Same list /generate compiles the write plan from — terms activated after the
     // analysis live only in article_terms, and a brief written against the stale half
     // would tell the writer to weave in words the editor does not grade.
