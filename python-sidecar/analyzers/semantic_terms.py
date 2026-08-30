@@ -177,9 +177,12 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
             typical_words = sum(len(lt.split()) for lt in lower_texts) / len(lower_texts)
             expected = median_density * typical_words
             s_min = max(1, round(expected * 0.6))
-            # Capped: no single phrase is worth more than a dozen repetitions, and an
-            # uncapped ceiling is how a stray high-frequency page sets the target.
-            s_max = min(15, max(s_min + 1, round(expected * 1.4)))
+            # The ceiling scales with document length instead of a flat 15: Surfer's own
+            # guideline for this keyword allows "szantaż: 44-87" against ~2500 words
+            # (~3.5% density), and a flat cap flattened exactly the core terms. The
+            # density model already tames a stray high-frequency page via the median.
+            density_cap = max(15, round(typical_words * 0.035))
+            s_max = min(density_cap, max(s_min + 1, round(expected * 1.4)))
         else:
             s_min = 1
             s_max = max(1, target_count)

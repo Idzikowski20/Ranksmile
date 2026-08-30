@@ -2,9 +2,21 @@ import { suggestedTermRange, MAX_TERM_OCCURRENCES } from '@/src/core/domain/term
 import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
 
 describe('suggestedTermRange', () => {
-  it('caps a corpus occurrence total so the target stays reachable', () => {
-    // extract_nlp_terms returns the corpus total; article 86 was told to use it 41-95 times.
-    expect(suggestedTermRange({ target_count: 59 })).toEqual({ min: 12, max: MAX_TERM_OCCURRENCES });
+  it('caps a corpus occurrence total and keeps the band proportional', () => {
+    // extract_nlp_terms returns the corpus total; article 86 was told to use it 41-95
+    // times. Flattening min onto the cap produced `need 12-12` — a point target the
+    // article can only overshoot — so the min scales down with the max.
+    const { min, max } = suggestedTermRange({ target_count: 59 });
+    expect(max).toBe(MAX_TERM_OCCURRENCES);
+    expect(min).toBeLessThan(max);
+    expect(min).toBeGreaterThanOrEqual(1);
+  });
+
+  it('lets the range breathe when the article word target is known', () => {
+    // Surfer's guideline for this keyword allows "szantaż: 44-87" against ~2500 words.
+    const { min, max } = suggestedTermRange({ suggested_min: 44, suggested_max: 87 }, 2500);
+    expect(max).toBe(87);
+    expect(min).toBe(44);
   });
 
   it('keeps a sane explicit range untouched', () => {

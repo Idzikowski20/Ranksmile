@@ -541,9 +541,11 @@ async def suggest_internal_links(
     plain = re.sub(r"<[^>]+>", " ", article_html)
     plain = re.sub(r"\s+", " ", plain).strip()
 
-    # Limit to first ~8000 chars to keep prompt reasonable
-    if len(plain) > 8000:
-        plain = plain[:8000] + "…"
+    # The whole article, not the first third: the reference article carries 12 internal
+    # links spread across every section, and an 8k slice meant anchors in the second half
+    # of a ~25k article could never be suggested — runs stalled at 2 links.
+    if len(plain) > 24000:
+        plain = plain[:24000] + "…"
 
     # Build article list
     article_list = "\n".join(
@@ -567,7 +569,8 @@ Rules:
 - Only suggest links where the anchor text appears VERBATIM in the article content
 - Pick the most natural, contextually relevant phrase for each link
 - Prefer longer, more specific phrases (3-7 words) over single words
-- Maximum 8 suggestions total
+- Spread the links across the WHOLE article, not just the opening sections
+- Aim for 8-12 suggestions; fewer only when the article genuinely lacks anchors
 
 OUTPUT FORMAT — JSON array only, no other text:
 [
