@@ -174,7 +174,10 @@ export async function reconcilePostGenerateArticle(opts: {
       keyword,
       force: true,
     }).catch((err) => {
-      console.warn('[reconcile] coverage regrade failed:', err instanceof Error ? err.message : err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('[reconcile] coverage regrade failed:', message);
+      // Same observability contract as job-progress: the reason ships in score_data.
+      (scoreData as unknown as Record<string, unknown>)._regrade_error = message;
       return null;
     });
     if (regaded) {

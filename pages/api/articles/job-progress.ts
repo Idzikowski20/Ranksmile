@@ -263,15 +263,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           const sidecarScore = (result?.score_data && typeof result.score_data === 'object')
             ? result.score_data as import('@/src/infrastructure/articles/contentScore').ScoreData
             : { terms: [], words_target: 2000, words_min: 1500, words_max: 2500, headings_target: 15, headings_min: 10, headings_max: 20 };
+          let reconcileError: string | null = null;
           const reconciled = await reconcilePostGenerateArticle({
             articleId: Number(genArticleId),
             html,
             sidecarScoreData: sidecarScore,
           }).catch((err) => {
+            reconcileError = err instanceof Error ? err.message : String(err);
             console.warn('[job-progress] post-generate reconcile failed (non-fatal):', err);
             return null;
           });
-          const scoreJson = JSON.stringify(reconciled?.scoreData ?? sidecarScore);
+          // The failure travels WITH the article: three debugging rounds went into
+          // guessing why ai_factors were missing because the reason lived only in a
+          // terminal scrollback. The developer report now carries it.
+          const scoreJson = JSON.stringify(
+            reconciled?.scoreData
+              ?? { ...sidecarScore, _reconcile_error: reconcileError ?? 'reconcile returned null' },
+          );
           const contentScore = reconciled?.contentScore ?? null;
           // The compiled-write-plan path returns article_html without meta, so express
           // articles landed with meta_title/description NULL. Derive from the article
