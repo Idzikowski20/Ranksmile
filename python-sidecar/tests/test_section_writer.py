@@ -274,3 +274,21 @@ def test_faq_paragraph_the_model_formatted_correctly_is_left_alone():
 
     result = asyncio.run(write_paragraph(plan, gen, ctx))
     assert result.markdown.startswith("**Czy to szantaz?**")
+
+
+def test_strips_trailing_deliberation_the_model_wrote_into_the_body():
+    """Article 87 shipped this verbatim in its closing paragraph."""
+    from pipeline.section_writer import _strip_deliberation
+    prose = "Szantaz emocjonalny to presja oparta na poczuciu winy. Zglos sie do specjalisty."
+    leaked = (
+        prose + " This inflates but okay. current has it exact."
+        " Final count likely 105 due link not counted as words generally."
+        " At most 104 words whitespace. Let's compose 97."
+    )
+    assert _strip_deliberation(leaked) == prose
+
+
+def test_leaves_ordinary_prose_alone():
+    from pipeline.section_writer import _strip_deliberation
+    prose = "Ofiara czuje sie winna. Sprawca przenosi odpowiedzialnosc za swoje emocje."
+    assert _strip_deliberation(prose) == prose

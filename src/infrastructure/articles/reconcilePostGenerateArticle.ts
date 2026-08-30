@@ -14,7 +14,7 @@ import { factsCoverageFactor } from '@/src/core/domain/aiScore/factors';
 import { scoreIntroduction } from '@/src/core/domain/aiScore/introductionFactors';
 import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
 import { liveCoverageItems } from '@/src/infrastructure/coverage/liveCoverage';
-import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
+import { filterNlpTermsForAnalysis, dropNoisyTerms } from '@/src/core/domain/relevance/topicRelevance';
 import { needsCoverageRegrade, regradeCoverageSnapshot } from '@/src/infrastructure/coverage/regradeCoverageSnapshot';
 import { persistCoverageFeatureRun } from '@/src/infrastructure/coverage/persistCoverageFeatureRun';
 import { sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
@@ -330,7 +330,13 @@ async function enrichTermsForArticle(opts: {
   const country = countryForLanguage(opts.language);
   const languageCode = (opts.language || 'pl').toLowerCase().split(/[-_]/)[0];
 
-  let terms = opts.terms;
+  // Filter BEFORE deciding whether the list needs topping up. Every filter below this
+  // point used to sit behind the early return, so a list that was merely long came
+  // through untouched: article 89 was graded on "szantaż emocjonalny empik", "…
+  // teściowej" and "foch szantaż emocjonalny" because 88 rows counted as "rich". A
+  // polluted list is not a rich one, and if cleaning it leaves the list thin, the
+  // enrichment below is exactly what should run.
+  let terms = filterNlpTermsForAnalysis(filterUsefulNlpTerms(opts.terms), opts.keyword);
   if (!needsEnrichment(terms, opts.keyword)) return terms;
 
   terms = await enrichNlpTermsIfNeeded({
@@ -356,6 +362,8 @@ async function enrichTermsForArticle(opts: {
     if (corpusTerms.length) {
       terms = mergeNlpTerms(filterUsefulNlpTerms(terms), filterUsefulNlpTerms(corpusTerms));
       // Corpus scrape is the authoritative source — do not re-filter with seed-token rules.
+      // Noise still goes: topicality is not the same claim as "an article can use this".
+      terms = dropNoisyTerms(terms, opts.keyword);
       if (terms.length >= 12) return terms;
     }
   }

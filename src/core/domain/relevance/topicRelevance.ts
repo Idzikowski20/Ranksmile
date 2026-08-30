@@ -215,6 +215,26 @@ function isKnownNoiseTerm(term: string, seedKeyword = ''): boolean {
 }
 
 /**
+ * Noise removal WITHOUT the seed-token rules.
+ *
+ * The competitor-corpus scrape establishes topicality by construction — the phrases come
+ * off the pages that already rank — so `filterNlpTermsForAnalysis` is too strict there
+ * and its caller deliberately skipped it. Skipping it entirely also let the stopwords,
+ * autocomplete long-tails and query shapes through, which is how "bezpłatna", "zyciu" and
+ * "szantaż emocjonalny empik" reached a graded term list from that branch.
+ */
+export function dropNoisyTerms<T extends { term: string; doc_freq?: number }>(
+  terms: T[],
+  seedKeyword: string,
+): T[] {
+  return terms.filter((t) => {
+    const term = normalizeTerm(t.term);
+    if (isKnownNoiseTerm(term, seedKeyword)) return false;
+    return !isWeakKeywordLongTail(term, seedKeyword, t.doc_freq);
+  });
+}
+
+/**
  * Deep-analysis term filter.
  *
  * Seed overlap is a weak signal for NLP terms and was being used as the only one. The
