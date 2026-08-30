@@ -123,7 +123,9 @@ async def run_compiled_write_plan(
             first_paragraph = False
             planned.append((None, paragraph, context))
 
-    semaphore = asyncio.Semaphore(6)
+    # 10, up from 6: ~45 paragraph writes per article ran in 8 waves; OpenRouter takes the
+    # extra in-flight requests without breaking a sweat and the waves drop to 5.
+    semaphore = asyncio.Semaphore(10)
 
     async def _write_one(paragraph: Mapping[str, object], context: Mapping[str, object]) -> ReviewedParagraphResult:
         async with semaphore:

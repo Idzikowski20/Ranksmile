@@ -291,7 +291,23 @@ async def generate_article_image_for_embed(
     alt_text = ai_alt or _surfer_style_alt(article_title, keyword, language)
     url = _pollinations_url(prompt)
 
-    # Warm generation so first editor load isn't a cold Pollinations miss.
+    # Warm generation so first editor load isn't a cold Pollinations miss — in the
+    # BACKGROUND. The fetch takes 30-90s per image behind a 1-concurrency semaphore and
+    # its result never changes what we embed ("still embedding URL" on failure), yet it
+    # sat on the critical path: four images serialized 2-6 minutes into every
+    # generation. Fire-and-forget keeps the prefetch and returns the URL immediately.
+    asyncio.create_task(_warm_pollinations(url))
+
+    return {
+        "url": url,
+        "alt": alt_text,
+        "width": 1920,
+        "height": 1080,
+        "source": "pollinations",
+    }
+
+
+async def _warm_pollinations(url: str) -> None:
     try:
         async with _pollinations_sem:
             headers = {}
@@ -301,19 +317,11 @@ async def generate_article_image_for_embed(
             async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
                 resp = await client.get(url, headers=headers)
             if resp.status_code != 200:
-                print(f"[image] Warm-fetch HTTP {resp.status_code} — still embedding URL")
+                print(f"[image] Warm-fetch HTTP {resp.status_code} — URL already embedded")
             else:
-                print(f"[image] Warm-fetch OK ({len(resp.content)//1024} KB) for embed")
+                print(f"[image] Warm-fetch OK ({len(resp.content)//1024} KB)")
     except Exception as e:
         print(f"[image] Warm-fetch skipped: {e}")
-
-    return {
-        "url": url,
-        "alt": alt_text,
-        "width": 1920,
-        "height": 1080,
-        "source": "pollinations",
-    }
 
 
 async def _pollinations_fetch(prompt: str, alt_text: str = "") -> dict:
