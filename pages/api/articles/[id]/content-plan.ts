@@ -36,6 +36,7 @@ import {
   benchmarkDocsFromCompetitors,
   buildStructuralBenchmark,
   toPlannerTargets,
+  clampPlannerWordsToScorer,
 } from '@/src/infrastructure/benchmarkIntelligence/index';
 import type { AdaptiveOutline } from '@/src/core/domain/contentPlanner/types';
 import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
@@ -181,7 +182,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       : null;
     const benchmarkDocs = benchmarkDocsFromCompetitors(competitors);
     const benchmark = storedBenchmark || (benchmarkDocs.length ? buildStructuralBenchmark(benchmarkDocs) : null);
-    const plannerTargets: PlannerTargets | null = benchmark ? toPlannerTargets(benchmark) : null;
+    const plannerTargets: PlannerTargets | null = clampPlannerWordsToScorer(
+      benchmark ? toPlannerTargets(benchmark) : null,
+      typeof scoreData?.words_target === 'number' ? scoreData.words_target : null,
+    );
 
     // Read before the planner call — the blueprint's brand sections need the name.
     const contentSettings = await readContentSettings()
