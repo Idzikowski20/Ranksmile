@@ -1,0 +1,21 @@
+src/infrastructure/coverage/buildCoverageSnapshot.ts
+  s_e8c3822b427cc8::t_73823d2561a7d3 24-37,41-42
+src/core/intelligence/persistCcmCoverageProjection.ts
+  s_e8c3822b427cc8::t_053dda444b4390 34-39,42-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ef4398d8ae14a369e22daf75c0ab5c66c2b486bd",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
