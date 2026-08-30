@@ -18,6 +18,7 @@ import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageSt
 import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { getResearchedFacts, withResearchedFacts } from '@/src/infrastructure/contentPlanner/researchFacts';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { llmGateway } from '@/src/infrastructure/ai/llmGateway';
@@ -248,7 +249,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       competitors,
       scoreData.competitor_synthesis ?? null,
     );
-    const ai = aiIntelFromScoreData(scoreData);
+    const researchedFacts = await getResearchedFacts({
+      keyword,
+      language: lang,
+      scoreData,
+    });
+    const ai = withResearchedFacts(aiIntelFromScoreData(scoreData), researchedFacts);
     // Coverage-judge questions lead — the AI Search score grades against exactly these.
     // Shared helper so review and straight-generate plan from an identical question set.
     const paa = mergedPlannerQuestions(article.ai_info_to_cover, scoreData.paa_questions);

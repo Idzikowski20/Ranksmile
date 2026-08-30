@@ -271,12 +271,18 @@ async def _generate_article(req: GenerateRequest, on_status=None):
     print(f"[generate] Generating meta...")
     meta = generate_meta(article_html, req.keyword, req.language)
 
-    # 5. Internal links (skip when disabled in the wizard)
+    # 5. Internal links (skip when disabled in the wizard). Suggestions are INJECTED
+    # into the body deterministically — the writer's per-paragraph quota alone kept
+    # shipping 2 links against the reference's ~10.
     links = await suggest_internal_links(
         article_html=article_html,
         site_url=req.url,
         existing_articles=domain_articles,
     ) if req.internal_links else []
+    if links:
+        from pipeline.internal_links import inject_suggestions
+        article_html, injected = inject_suggestions(article_html, links)
+        print(f"[generate] Injected {injected} internal links from {len(links)} suggestions")
 
     import datetime as dt
 
@@ -466,6 +472,16 @@ async def extract_terms_from_urls(body: dict):
     terms = attach_lemma_regexps(terms, texts, body.get("language", "pl"))
     print(f"[extract-terms-from-urls] Extracted {len(terms)} terms")
     return {"terms": terms[:80]}
+
+
+@app.post("/research-facts")
+async def research_facts_endpoint(body: dict):
+    """Authority facts with sources for the brief's fact sheet (Surfer Facts-style)."""
+    from analyzers.serp_analyzer import research_authority_facts
+    keyword = (body.get("keyword") or "").strip()
+    if not keyword:
+        raise HTTPException(status_code=400, detail="keyword is required")
+    return await research_authority_facts(keyword, body.get("language", "pl"))
 
 
 @app.post("/competitor-outlines")
