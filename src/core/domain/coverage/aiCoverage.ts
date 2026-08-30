@@ -239,6 +239,12 @@ const INTENT_ITEMS: ReadonlyArray<Omit<CoverageItem, 'covered' | 'quality'>> = [
   { id: 'intent-why',          label: 'Explain why it matters to the reader', type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
 ];
 
+/** Ids of the five fixed intro-intent checkpoints. They are graded by the introduction
+ *  judge against the article's opening, never by looking for their English rubric label
+ *  in the body — a presence check on "Answer the main question early" can only ever
+ *  fail, which silently zeroed the whole intent bucket after every regrade. */
+export const FIXED_INTENT_IDS: ReadonlySet<string> = new Set(INTENT_ITEMS.map((i) => i.id));
+
 /** The 5 fixed search intents, fresh each call. */
 export function intentItems(): CoverageItem[] {
   return INTENT_ITEMS.map((i) => ({ ...i, covered: false, quality: 0 }));
