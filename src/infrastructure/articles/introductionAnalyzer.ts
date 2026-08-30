@@ -53,7 +53,10 @@ export function introCoverageItems(verdict: IntroVerdict): CoverageItem[] {
   });
 }
 
-const INTRO_MODEL = 'deepseek-chat';
+// No model pin: it is the gateway's job to name the model each provider in the chain
+// actually serves. "deepseek-chat" was sent verbatim to OpenRouter, which does not have
+// it, so every call failed past OpenRouter and landed on the Gemini fallback.
+const INTRO_MODEL = 'gateway-default';
 const INTRO_TEMPERATURE = 0;
 const INTRO_PROMPT_VERSION = 'v1';
 
@@ -79,7 +82,6 @@ export const deepseekIntroJudge: IntroductionJudge = {
     // SAFE_DEFAULT and zeroed the intent bucket on articles that read perfectly well.
     const gw = await llmGateway({
       provider: 'openrouter',
-      model: INTRO_MODEL,
       temperature: INTRO_TEMPERATURE,
       seed: 7,
       responseFormat: 'json_object',
