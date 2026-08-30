@@ -4,6 +4,7 @@ Fail-soft: any error leaves HTML unchanged.
 """
 from __future__ import annotations
 
+import asyncio
 import re
 from bs4 import BeautifulSoup
 
@@ -121,7 +122,15 @@ async def inject_inline_images(
     out = html
     for heading in headings:
         try:
-            result = await generate_article_image_for_embed(keyword, heading, language=language)
+            # Hard per-image deadline. Every network call inside has its own timeout, but
+            # the shared Pollinations semaphore does not: a holder that dies without
+            # releasing wedges every later image on `async with _pollinations_sem` and
+            # the whole generation "runs" forever — article 98 hung 40+ minutes exactly
+            # there. An article without one image beats an article that never ships.
+            result = await asyncio.wait_for(
+                generate_article_image_for_embed(keyword, heading, language=language),
+                timeout=240,
+            )
             url = (result or {}).get("url") or ""
             if not url:
                 continue
