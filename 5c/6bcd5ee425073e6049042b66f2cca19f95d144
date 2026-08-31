@@ -1,0 +1,32 @@
+pages/api/domains/[slug]/recommendations.ts
+  s_e8c3822b427cc8::t_93a65bf6a5c52d 30-31,35-37,39,43-44
+src/core/domain/recommendations/types.ts
+  s_e8c3822b427cc8::t_076ee002fcc0db 33-45
+src/infrastructure/persistence/schema/ensurePipelineTables.ts
+  s_e8c3822b427cc8::t_77e604b3608ecb 65-71
+src/infrastructure/cron/domainPipeline.ts
+  s_e8c3822b427cc8::t_fb9176c37c47f9 13
+  s_e8c3822b427cc8::t_c6c5dcbd48d09a 171-174,177-178,181-191
+src/infrastructure/recommendations/loadWriteRecommendations.ts
+  s_e8c3822b427cc8::t_69d78be6de33d5 1-31
+src/core/domain/recommendations/writeRecommendations.test.ts
+  s_e8c3822b427cc8::t_c5477f931c5929 1-37
+src/core/domain/recommendations/writeRecommendations.ts
+  s_e8c3822b427cc8::t_86cec1d91dd38c 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5c6bcd5ee425073e6049042b66f2cca19f95d144",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
