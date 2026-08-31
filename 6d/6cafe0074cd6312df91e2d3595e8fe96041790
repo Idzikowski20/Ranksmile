@@ -1,0 +1,28 @@
+src/infrastructure/ao/buildCandidates.ts
+  s_e8c3822b427cc8::t_419a4687be2e73 300
+  s_e8c3822b427cc8::t_6c191fa8985c36 52-68
+  s_e8c3822b427cc8::t_aba3ea273cf468 248,250-251,255-256,259-277,279
+src/infrastructure/ao/editPlan.ts
+  s_e8c3822b427cc8::t_6db70e499faa93 180-182
+__tests__/lib/ao/missingSectionAnchor.test.ts
+  s_e8c3822b427cc8::t_e46f0469bef8f9 1-49,54,56-57
+  s_e8c3822b427cc8::t_841b45f1a697f6 50-53,55
+src/core/domain/optimize/editBudget.ts
+  s_e8c3822b427cc8::t_68819a4362031f 60-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6d6cafe0074cd6312df91e2d3595e8fe96041790",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
