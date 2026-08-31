@@ -135,6 +135,7 @@ class GenerateRequest(BaseModel):
     brand_knowledge: str = ""   # shared Brand Knowledge (context for the model)
     brand_name: str = ""        # the company name, verbatim — powers the closing-CTA guarantee
     voice_tone: str = ""        # selected Custom Voice reference text — drives tone/style
+    template_reference: str = ""  # selected Content Template reference — drives structure/format
     # Planner First — immutable Article Execution Plan (Write Engine executes only).
     execution_plan: dict | None = None
     compiled_write_plan: dict | None = None
@@ -222,6 +223,7 @@ async def _generate_article(req: GenerateRequest, on_status=None):
         brand_knowledge=req.brand_knowledge,
         brand_name=req.brand_name,
         voice_tone=req.voice_tone,
+        template_reference=req.template_reference,
         execution_plan=req.execution_plan,
         compiled_write_plan=req.compiled_write_plan,
         existing_articles=domain_articles,

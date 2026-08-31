@@ -9,6 +9,7 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { readContentSettings } from '@/src/infrastructure/stores/contentSettings';
 import { getDomainVoices } from '@/src/infrastructure/seo/domainVoices';
+import { getDomainTemplates } from '@/src/infrastructure/seo/domainTemplates';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageStore';
@@ -107,7 +108,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const articleId = req.query.id;
   const {
     language, tone = 'professional',
-    contentType, instructions = '', voiceId = 'serp',
+    contentType, instructions = '', voiceId = 'serp', templateId = '',
     internalLinks = true, externalLinks = true, reviewOutline = false,
     approvedOutline = null,
   } = req.body || {};
@@ -238,6 +239,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const domainVoices = await getDomainVoices(article.domain_id);
     const selectedVoice = voiceId && voiceId !== 'serp' ? domainVoices.find((v) => v.id === voiceId) : undefined;
     const voiceTone = selectedVoice?.description || '';
+    // Content template: reusable reference content whose structure the article mirrors.
+    // Explicit id, else the domain default (Surfer's default:true), else none.
+    const domainTemplates = await getDomainTemplates(article.domain_id);
+    const selectedTemplate = templateId
+      ? domainTemplates.find((t) => t.id === templateId)
+      : domainTemplates.find((t) => t.isDefault);
+    const templateReference = selectedTemplate?.referenceText || '';
     const allowBrandNiche = false;
     // 5. Planner First — build + validate Article Execution Plan (Writer never decides structure).
     const scoreData = safeJsonParse<Record<string, unknown>>(article.score_data, {}) || {};
@@ -544,6 +552,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // closing-CTA fallback in the sidecar.
       brand_name: cs.brandName || '',
       voice_tone: voiceTone,
+      template_reference: templateReference,
       compiled_write_plan: compiledWritePlan,
     };
 

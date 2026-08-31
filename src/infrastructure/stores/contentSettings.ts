@@ -13,6 +13,15 @@ export interface Voice {
   isDefault: boolean;
 }
 
+// Surfer's content_template: reusable reference content whose structure/format a new
+// article mirrors. Parallel to Voice (a writing-style sample) but shapes structure, not tone.
+export interface Template {
+  id: string;
+  name: string;
+  referenceText: string; // the reusable reference content — drives structure/format
+  isDefault: boolean;
+}
+
 export interface ContentSettings {
   brandName: string;
   brandKnowledge: string;
