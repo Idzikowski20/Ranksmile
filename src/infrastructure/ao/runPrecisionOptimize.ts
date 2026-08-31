@@ -403,7 +403,15 @@ export async function runPrecisionOptimizeV4(opts: {
     narrativePlan = null;
   }
 
-  const promptOpts = { synthesis, readerBrief, policy: policyBundle, narrative: narrativePlan };
+  // Missing/underused NLP terms fed into every section rewrite so one edit closes several
+  // term gaps (Surfer's AO injects ~28 in a run; our per-step candidates alone cap far lower).
+  // Ordered by biggest shortfall; the prompt weaves only those that fit each section.
+  const missingTerms = computeTermUsageGaps(opts.scoreData, opts.html)
+    .filter((g) => g.status === 'missing' || g.status === 'low')
+    .sort((a, b) => (b.target - b.current) - (a.target - a.current))
+    .map((g) => g.term);
+
+  const promptOpts = { synthesis, readerBrief, policy: policyBundle, narrative: narrativePlan, missingTerms };
 
   const originalScored = scoreHtml(opts.html);
   const original = makeSnapshot(opts.html, originalScored.scores);
