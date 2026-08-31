@@ -333,19 +333,26 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
 
     # Deep cohort: Surfer benchmarks against ~19 competitors, but Google returns only
     # ~8-10 organic per page for many keywords, so one page yielded a thinner, easier
-    # term set than Surfer's. Pull page 2 as well (deduped by link) when a deep sample
-    # was asked for, so bands (serp_usage) and word/heading targets come from the same
-    # Surfer-sized cohort.
+    # term set than Surfer's. Pull pages 2-3 as well (deduped by link) when a deep sample
+    # was asked for — page 1 (~9) + 2 (~10) + 3 gets the raw pool to ~19 like Surfer, and
+    # bands (serp_usage) + word/heading targets come from that same Surfer-sized cohort.
     if num > 10:
-        try:
-            data2 = await _serper_search(used_query, page=2)
-            seen_links = {i.get("link") for i in organic}
-            for it in (data2.get("organic") or []):
+        seen_links = {i.get("link") for i in organic}
+        for page in (2, 3):
+            try:
+                extra = await _serper_search(used_query, page=page)
+            except Exception as exc:
+                print(f"[serp_analyzer] page-{page} fetch skipped: {exc}")
+                continue
+            page_organic = extra.get("organic") or []
+            if not page_organic:
+                break  # no deeper results — stop paging
+            for it in page_organic:
                 if it.get("link") and it["link"] not in seen_links:
                     seen_links.add(it["link"])
                     organic.append(it)
-        except Exception as exc:
-            print(f"[serp_analyzer] page-2 fetch skipped: {exc}")
+            if len(organic) >= num:
+                break  # enough for the requested cohort
 
     blocked_domains = {
         "allegro.pl", "olx.pl", "amazon.com", "amazon.de", "ebay.com", "etsy.com",
