@@ -292,6 +292,18 @@ def _prompt(
         lines.append("Section brief:")
         lines.extend(f"- {_inline(line)}" for line in objective.splitlines() if line.strip())
 
+    # What the earlier paragraphs of THIS section already said. Without it every paragraph
+    # in a section answers the same brief from scratch, and a four-paragraph section came
+    # back with "Pierwsze kroki:" three times over and two near-identical tables.
+    already = [str(t).strip() for t in (ctx.get("already_written") or []) if str(t).strip()]
+    if already:
+        lines.append(
+            "Already written in this section — continue from it, do NOT restate, re-list"
+            " or re-table any of it. Add only what is still missing:"
+        )
+        for chunk in already:
+            lines.extend(f"| {_inline(line)}" for line in chunk.splitlines() if line.strip())
+
     add("Paragraph role", paragraph_plan.get("goal"))
     add("Target words", paragraph_plan.get("expected_words"))
 
@@ -384,6 +396,35 @@ def _force_faq_shape(
     return f"**{question}**\n\n{markdown}"
 
 
+_ENUM_LINE_RE = re.compile(r"^\s*1\.\s+\S")
+_ENUM_SPLIT_RE = re.compile(r"(?<=[.!?:])\s+(?=\d{1,2}\.\s+\S)")
+
+
+def _split_inline_enumeration(markdown: str) -> str:
+    """Give every numbered step its own line.
+
+    The writer sometimes returns a whole numbered list as a single line — "1. Zabezpiecz
+    komunikację. 2. Oceń ryzyko. 3. Postaw granicę." Markdown reads only the leading "1."
+    as a list marker, so all six steps rendered inside one <li> with "2." through "6."
+    left as literal text mid-sentence.
+
+    Only a line that already opens a numbered list is touched, so an ordinary sentence
+    that happens to contain a number keeps its shape.
+    """
+    out: list[str] = []
+    for line in markdown.split("\n"):
+        if _ENUM_LINE_RE.match(line) and _ENUM_SPLIT_RE.search(line):
+            indent = line[: len(line) - len(line.lstrip())]
+            out.extend(
+                indent + part.strip()
+                for part in _ENUM_SPLIT_RE.split(line.strip())
+                if part.strip()
+            )
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
 async def write_paragraph(
     paragraph_plan: Mapping[str, object],
     generate_markdown: Callable[[str], Awaitable[str]],
@@ -391,6 +432,7 @@ async def write_paragraph(
 ) -> ParagraphResult:
     markdown = (await generate_markdown(_prompt(paragraph_plan, context))).strip()
     markdown = _strip_deliberation(markdown)
+    markdown = _split_inline_enumeration(markdown)
     if _is_faq(context):
         markdown = _force_faq_shape(markdown, paragraph_plan, context)
     used_terms = _terms(paragraph_plan, markdown)
