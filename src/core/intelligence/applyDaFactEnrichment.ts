@@ -5,7 +5,7 @@ import type { CanonicalContentModel } from '@/src/core/ccm/types/ccm';
 import { isFactNode } from '@/src/core/ccm/types/graph';
 import type { CompileStore } from '@/src/core/intelligence/compileStore';
 import { enrichCcmWithDaFacts } from '@/src/core/intelligence/enrichCcmWithDaFacts';
-import { loadDaFactSeeds } from '@/src/core/intelligence/loadDaFactSeeds';
+import { loadDaFactSeeds, researchedFactsToDaSeeds } from '@/src/core/intelligence/loadDaFactSeeds';
 import { applyContradictHeuristics } from '@/src/core/intelligence/applyContradictHeuristics';
 import { applyLlmGapEvidence } from '@/src/core/intelligence/applyLlmGapEvidence';
 
@@ -37,6 +37,31 @@ export async function applyDaFactEnrichment(opts: {
     }
   } catch {
     // no DA seeds available
+  }
+
+  // The 4-engine sidecar harvest (score_data.researched_facts) carries per-fact engine
+  // attribution + source websites — seed those too so the coverage panel shows the engine
+  // icons and source favicons Surfer does.
+  try {
+    const { queryOne } = await import('@/src/infrastructure/db/query');
+    const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
+    const idSql = await getArticleIdSql();
+    const row = await queryOne<{ score_data: string | null }>(
+      `SELECT score_data FROM articles WHERE ${idSql} = ? LIMIT 1`,
+      [opts.articleId],
+    );
+    if (row?.score_data) {
+      const sd = JSON.parse(row.score_data) as { researched_facts?: { claims?: string[]; sources?: unknown[] } };
+      const rfSeeds = researchedFactsToDaSeeds(
+        sd.researched_facts as Parameters<typeof researchedFactsToDaSeeds>[0],
+        plain,
+      );
+      if (rfSeeds.length) {
+        model = enrichCcmWithDaFacts(model, rfSeeds);
+      }
+    }
+  } catch {
+    // non-fatal — no researched facts / DB unavailable
   }
 
   model = applyContradictHeuristics(model);

@@ -4,7 +4,15 @@ import type { AiSearchIntelInput } from '@/src/core/domain/contentPlanner/knowle
 
 type ResearchedFacts = {
   claims: string[];
-  sources: Array<{ url: string; label?: string; confidence?: number }>;
+  sources: Array<{
+    url: string;
+    label?: string;
+    confidence?: number;
+    /** AI engines that cited this fact (4-engine harvest). */
+    cited_by?: string[];
+    /** All source websites behind the fact. */
+    source_urls?: string[];
+  }>;
 };
 
 /**
