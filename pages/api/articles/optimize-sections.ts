@@ -202,8 +202,15 @@ function sse(res: NextApiResponse, event: string, data: object) {
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-   const authorized = await verifyUser(req, res);
-   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+   // Cron secret, same as deep-analysis / content-plan / generate: Surfer exposes
+   // Auto-Optimize over API for bulk workflows, and ours was the one pipeline stage
+   // that could only be driven from a browser session.
+   const { assertCronSecret } = await import('@/src/infrastructure/cron/cronAuth');
+   const isCron = assertCronSecret(req);
+   if (!isCron) {
+      const authorized = await verifyUser(req, res);
+      if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+   }
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
    const { content, articleId, scoreData, targetScore, maxRounds, optimizationStrategy: strategyRaw } = req.body as {
@@ -225,7 +232,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    let userId: string | null = null;
    try { userId = await getCurrentUserId(req, res); } catch { userId = null; }
 
-   if (articleId !== undefined) {
+   // Cron runs resolve no session user — same shape as content-plan and generate.
+   if (articleId !== undefined && !isCron) {
       if (!(await assertArticleAccess(userId, Number(articleId)))) {
          return res.status(403).json({ error: 'Access denied.' });
       }
@@ -342,6 +350,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          aoMeta,
          hasPriorAutoOptimizeVersion: (aoMeta?.runs ?? 0) >= 1,
       });
+      // Surfer-model routing, from CURRENT scores: weak article -> rebuild toward its
+      // own content plan; strong SEO -> touch-ups; strong SEO + weak AI -> AI only.
+      const liveMode = selectOptimizeMode(initialSeo, initialAi, phase);
+      const rebuild = liveMode === 'full';
+      const plannedHeadings: string[] = (() => {
+         const sd = (ctx?.scoreData ?? scoreData) as Record<string, unknown> | undefined;
+         const planner = sd?.content_planner_v2 as
+            | { bundle?: { outline?: { sections?: Array<{ title?: string }> } } }
+            | undefined;
+         return (planner?.bundle?.outline?.sections ?? [])
+            .map((x) => (x?.title || '').trim())
+            .filter((t) => t.length >= 8);
+      })();
+
       const TARGET_SEO_SCORE = phase === 'first_run'
          ? Math.min(100, Math.max(TARGET_SEO, Number(targetScore) || TARGET_SEO))
          : Math.min(100, Math.max(85, Number(targetScore) || 90));
@@ -467,6 +489,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                latestAiFallback: latestAi,
                visibilityPrompts,
                extraCandidates: ccmExtra,
+               rebuild,
+               plannedHeadings,
                policy: aoPolicy,
                maxSteps: aoPolicy.maxSteps,
                targetSeo: TARGET_SEO_SCORE,

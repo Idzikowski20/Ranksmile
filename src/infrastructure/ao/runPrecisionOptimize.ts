@@ -111,6 +111,8 @@ export function collectPrecisionCandidates(opts: {
   strategy?: OptimizationStrategy;
   seoStrong?: boolean;
   aiWeak?: boolean;
+  rebuild?: boolean;
+  plannedHeadings?: string[];
   /** Preloaded CCM → EditCandidate (from ActionGraph). */
   extraCandidates?: readonly EditCandidate[];
 }): EditCandidate[] {
@@ -132,6 +134,8 @@ export function collectPrecisionCandidates(opts: {
     strategy: opts.strategy,
     seoStrong: opts.seoStrong,
     aiWeak: opts.aiWeak,
+    rebuild: opts.rebuild,
+    plannedHeadings: opts.plannedHeadings,
   });
   if (!opts.extraCandidates?.length) return base;
   const seen = new Set(base.map((c) => c.gapId));
@@ -285,6 +289,10 @@ export async function runPrecisionOptimizeV4(opts: {
   visibilityPrompts?: Array<{ id: string; label: string }>;
   /** CCM ActionGraph → candidates (backend CIA wire). */
   extraCandidates?: readonly EditCandidate[];
+  /** Mode 'full': weak article — rebuild missing planned sections, generator-style. */
+  rebuild?: boolean;
+  /** H2 titles from the article's own content plan (score_data.content_planner_v2). */
+  plannedHeadings?: string[];
   maxSteps?: number;
   policy?: OptimizationPolicy;
   /** Requested stop targets (express asks for 100); default v4.1 constants. */
@@ -415,6 +423,8 @@ export async function runPrecisionOptimizeV4(opts: {
     strategy: policy.strategy,
     seoStrong: policy.seoStrong,
     aiWeak: policy.aiWeak,
+    rebuild: opts.rebuild,
+    plannedHeadings: opts.plannedHeadings,
     extraCandidates: opts.extraCandidates,
   });
   const planned = planPrecisionStepsV4({
