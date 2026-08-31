@@ -7,6 +7,9 @@ import { getSiteAuditPageLimit, resolvePlanSlug } from '@/src/infrastructure/bil
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { getOptimizeRecommendations } from '@/src/core/application/recommendations/getOptimizeRecommendations';
+import { createSnapshotRepository } from '@/src/infrastructure/gsc/snapshotRepository';
+import { priorityFromScore } from '@/src/core/domain/recommendations/opportunityScore';
 
 export type StageKey = 'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations';
 export const STAGE_ORDER: StageKey[] = ['gsc', 'keywords', 'topics', 'competitors', 'recommendations'];
@@ -94,8 +97,23 @@ export async function claimJob(jobId: string, token: string): Promise<boolean> {
    return back.length > 0 && back[0].status === 'running' && back[0].locked_by === token;
 }
 
+/** GSC path (no host, no query/hash, no trailing slash) — the key both recs and snapshots share. */
+function recPath(url: string | null | undefined): string {
+   return (url || '').replace(/^https?:\/\/[^/]+/i, '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+}
+
 /** Single materialization point — one transaction, delete-first, then insert. */
 export async function materializeDomainSetup(domainId: number, result: DomainResult): Promise<void> {
+   // Surfer-parity opportunity ranking: score the domain's optimize recs by GSC striking
+   // distance (position 4–20 + traffic + recent slippage), so the queue's priority reflects
+   // where a re-optimize actually moves rankings — not content score alone. Built before the
+   // transaction; defensive — no GSC snapshots yet leaves the analyzer's own ranking intact.
+   const oppByPath = new Map<string, number>();
+   try {
+      const opp = await getOptimizeRecommendations(createSnapshotRepository(), domainId);
+      for (const o of opp) oppByPath.set(recPath(o.page), o.score);
+   } catch { /* no GSC baseline — keep analyzer ranking */ }
+
    await db.transaction(async (tx: Transaction) => {
       const q = (sql: string, repl: unknown[]) => db.query(sql, { replacements: repl, transaction: tx });
       for (const t of ['domain_keywords', 'domain_topics', 'domain_competitors', 'domain_recommendations']) {
@@ -149,8 +167,14 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
                await q(`DELETE FROM page_audits WHERE domain_id=? AND url=?`, [domainId, url]);
       }
 
-      for (const r of result.recommendations || [])
-         await q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, r.topic_index != null ? topicIds[r.topic_index] ?? null : null, r.title, r.rationale || '', r.priority || 'medium', r.type || 'content', r.url ?? null, r.score ?? null]);
+      for (const r of result.recommendations || []) {
+         // Optimize recs with a GSC opportunity score take their priority/score from it;
+         // everything else keeps the analyzer's own values.
+         const opp = (r.type ?? 'content') === 'optimize' ? oppByPath.get(recPath(r.url)) : undefined;
+         const priority = opp != null ? priorityFromScore(opp) : (r.priority || 'medium');
+         const score = opp != null ? opp : (r.score ?? null);
+         await q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, r.topic_index != null ? topicIds[r.topic_index] ?? null : null, r.title, r.rationale || '', priority, r.type || 'content', r.url ?? null, score]);
+      }
    });
 }
 
