@@ -9,7 +9,7 @@ import { termsForOptimize } from '@/src/infrastructure/articles/mergeArticleTerm
 import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import { filterUsefulNlpTerms, isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
-import { countOccurrences, computeContentScore, type NlpTerm, type ScoreData } from '@/src/infrastructure/articles/contentScore';
+import { countOccurrences, computeContentScore, setAiScore, setSeoScore, type NlpTerm, type ScoreData } from '@/src/infrastructure/articles/contentScore';
 import { factsCoverageFactor } from '@/src/core/domain/aiScore/factors';
 import { scoreIntroduction } from '@/src/core/domain/aiScore/introductionFactors';
 import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
@@ -206,7 +206,7 @@ export async function reconcilePostGenerateArticle(opts: {
     };
     aiInfoToCover = JSON.stringify(updatedSnap);
     coverageItems = [...liveItems];
-    scoreData.ai_score = overall;
+    setAiScore(scoreData, overall);
   }
 
   scoreData.ai_factors = [
@@ -231,7 +231,7 @@ export async function reconcilePostGenerateArticle(opts: {
     undefined,
     coverageItems,
   );
-  scoreData.seo_score = seoScore;
+  setSeoScore(scoreData, seoScore);
   scoreData._computed_score = computeOverallContentScore(seoScore, scoreData.ai_score ?? 0);
   scoreData._content_score = scoreData._computed_score;
   scoreData._heading_count = headingCount;

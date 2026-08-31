@@ -57,7 +57,8 @@ async function syncAiScoreToSnapshot(
     const scoreData = JSON.parse(row.score_data) as Record<string, unknown>;
     const seo = typeof scoreData.seo_score === 'number' ? scoreData.seo_score : 0;
     const contentScore = computeOverallContentScore(seo, overall);
-    scoreData.ai_score = overall;
+    const { setAiScore } = await import('@/src/infrastructure/articles/contentScore');
+    setAiScore(scoreData, overall);
     scoreData._computed_score = contentScore;
     scoreData._content_score = contentScore;
     await queryRows(
