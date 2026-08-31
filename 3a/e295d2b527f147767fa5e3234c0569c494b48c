@@ -1,0 +1,40 @@
+python-sidecar/main.py
+  s_e8c3822b427cc8::t_9f0392e373d9f1 138
+  s_e8c3822b427cc8::t_1df5e31ee39ea2 226
+src/infrastructure/stores/contentSettings.ts
+  s_e8c3822b427cc8::t_d6bc7997d68bf2 16-24
+python-sidecar/tests/test_style_reference.py
+  s_e8c3822b427cc8::t_8caaa92b10df40 1-60
+src/infrastructure/persistence/schema/ensureTenancyTables.ts
+  s_e8c3822b427cc8::t_187293f59768aa 107
+python-sidecar/pipeline/article_pipeline.py
+  s_e8c3822b427cc8::t_710d4a2a2c0609 249-260
+  s_e8c3822b427cc8::t_72b041fbe4eeeb 326
+  s_e8c3822b427cc8::t_9ba63858e23c73 215
+src/infrastructure/seo/domainTemplates.ts
+  s_e8c3822b427cc8::t_b3a2e9a1d7ace2 1-29
+pages/api/content-settings.ts
+  s_e8c3822b427cc8::t_56cca0909a9f8f 6
+  s_e8c3822b427cc8::t_3e7ee66acd80d0 35-36,40,42-44,52-53
+pages/api/articles/[id]/generate.ts
+  s_e8c3822b427cc8::t_ef971f1ddf1df9 111
+  s_e8c3822b427cc8::t_4eeac7d97c989c 555
+  s_e8c3822b427cc8::t_87169aaaf9a933 242-248
+  s_e8c3822b427cc8::t_a0e969dd865a69 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3ae295d2b527f147767fa5e3234c0569c494b48c",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
