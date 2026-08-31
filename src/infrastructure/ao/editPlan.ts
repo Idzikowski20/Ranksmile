@@ -177,7 +177,9 @@ export function buildPrecisionStepPrompt(
             // accepted and the article still had the same number of H2s.
             ? `Write ONLY a brand new section — nothing else, do not repeat the section `
               + `you were shown. Start with <h2>${step.targetGap.claimOrQuestion}</h2>, then `
-              + `2-4 short paragraphs (a list where it genuinely helps).`
+              + `2-4 short paragraphs (a list where it genuinely helps). `
+              + `Let the heading set the length: one promising a quick or short answer gets `
+              + `a few sentences, never the longest block on the page.`
           : step.action === 'improve_direct_answer'
               ? 'Add or strengthen a clear direct answer to the question/gap.'
               : step.action === 'add_facts'

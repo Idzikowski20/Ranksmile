@@ -57,7 +57,10 @@ export function budgetForAction(action: string, base: EditBudget): EditBudget {
     // against an empty "before" and the ratio is 1.0 by definition — the metric asks
     // how much of an existing block was rewritten, and none was. Deletion and word
     // budgets still bound it.
-    add_missing_section: { maxNewWords: 600, maxDeletedWords: 50, maxModifiedParagraphs: 24, maxChangeRatio: 1, allowNewHeading: true },
+    // 350, not 600: a restored section should read like the article's other sections, and
+    // 600 made it the biggest budget in the system — larger than a full rewrite_section —
+    // so a "Szybka odpowiedź" (quick answer) came back as the longest block on the page.
+    add_missing_section: { maxNewWords: 350, maxDeletedWords: 50, maxModifiedParagraphs: 24, maxChangeRatio: 1, allowNewHeading: true },
     add_faq: { maxNewWords: 400, maxDeletedWords: 80, maxModifiedParagraphs: 16, allowNewHeading: true },
     enrich_heading: { maxNewWords: 20, maxDeletedWords: 15, maxModifiedParagraphs: 1 },
   };
