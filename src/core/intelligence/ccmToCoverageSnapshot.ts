@@ -38,6 +38,32 @@ function factType(statement: string): CoverageType {
   return 'fact';
 }
 
+function domainOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+/** Source websites a fact references — its CCM citation neighbours, for the panel's favicon row. */
+function factWebSources(
+  q: ReturnType<typeof graphQuery>,
+  factId: string,
+): { url: string; domain: string }[] {
+  const out: { url: string; domain: string }[] = [];
+  const seen = new Set<string>();
+  for (const node of q.neighbors(factId, 'references', 'out')) {
+    if (node.kind !== 'citation' || !node.url) continue;
+    const domain = domainOf(node.url) || node.label;
+    if (!domain || seen.has(domain)) continue;
+    seen.add(domain);
+    out.push({ url: node.url, domain });
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
 function toImportance(v: Importance | string): Importance {
   if (v === 'critical' || v === 'recommended' || v === 'optional') return v;
   return 'recommended';
@@ -78,6 +104,7 @@ export function projectCcmToCoverageSnapshot(
   }
 
   for (const fact of facts) {
+    const webSources = factWebSources(q, fact.id);
     const item: CoverageItem = {
       id: fact.id,
       label: fact.statement,
@@ -90,6 +117,7 @@ export function projectCcmToCoverageSnapshot(
       confidence: fact.confidence,
       sectionId: fact.sectionId,
       reason: 'ccm',
+      ...(webSources.length ? { webSources } : {}),
     };
     labelIndex.set(normalizeFactKey(item.label), items.length);
     items.push(item);
@@ -104,8 +132,14 @@ export function projectCcmToCoverageSnapshot(
     const idx = labelIndex.get(key);
     if (idx != null) {
       const cur = items[idx];
-      if (prev.llmSources?.length && !cur.llmSources?.length) {
-        items[idx] = { ...cur, llmSources: prev.llmSources };
+      const carryLlm = prev.llmSources?.length && !cur.llmSources?.length;
+      const carryWeb = prev.webSources?.length && !cur.webSources?.length;
+      if (carryLlm || carryWeb) {
+        items[idx] = {
+          ...cur,
+          ...(carryLlm ? { llmSources: prev.llmSources } : {}),
+          ...(carryWeb ? { webSources: prev.webSources } : {}),
+        };
       }
       continue;
     }
