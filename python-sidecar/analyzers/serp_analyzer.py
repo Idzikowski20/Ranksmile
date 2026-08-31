@@ -78,7 +78,7 @@ def _filter_reference_results(serp_results: list[dict]) -> list[dict]:
     return kept if len(kept) >= 3 else serp_results
 
 
-def _competitors_from_results(serp_results: list[dict], limit: int = 10) -> list[dict]:
+def _competitors_from_results(serp_results: list[dict], limit: int = 20) -> list[dict]:
     """SERP URLs/titles/snippets — always returned even when page scrape fails."""
     return [
         {
@@ -122,7 +122,7 @@ def _serp_snippet_texts(serp_results: list[dict]) -> list[str]:
 async def analyze_serp(
     keyword: str,
     language: str = "pl",
-    num_results: int = 15,
+    num_results: int = 20,
     include_texts: bool = False,
     on_page=None,
 ) -> dict:
@@ -294,12 +294,12 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
     }
     negatives = negatives_by_lang.get(language, negatives_by_lang["en"])
 
-    async def _serper_search(query: str) -> dict:
+    async def _serper_search(query: str, page: int = 1) -> dict:
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(
                 "https://google.serper.dev/search",
                 headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
-                json={"q": query, "hl": language, "gl": gl, "num": num + 5},
+                json={"q": query, "hl": language, "gl": gl, "num": num + 5, "page": page},
             )
             if response.status_code >= 400:
                 print(
@@ -316,6 +316,7 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
         return [], []
 
     organic = data.get("organic") or []
+    used_query = f"{keyword} {negatives}"
     if not organic:
         # Negatives sometimes over-filter; retry the bare keyword once.
         print(
@@ -325,9 +326,26 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
         try:
             data = await _serper_search(keyword)
             organic = data.get("organic") or []
+            used_query = keyword
         except Exception as exc:
             print(f"[serp_analyzer] serper.dev retry error: {exc}")
             return [], []
+
+    # Deep cohort: Surfer benchmarks against ~19 competitors, but Google returns only
+    # ~8-10 organic per page for many keywords, so one page yielded a thinner, easier
+    # term set than Surfer's. Pull page 2 as well (deduped by link) when a deep sample
+    # was asked for, so bands (serp_usage) and word/heading targets come from the same
+    # Surfer-sized cohort.
+    if num > 10:
+        try:
+            data2 = await _serper_search(used_query, page=2)
+            seen_links = {i.get("link") for i in organic}
+            for it in (data2.get("organic") or []):
+                if it.get("link") and it["link"] not in seen_links:
+                    seen_links.add(it["link"])
+                    organic.append(it)
+        except Exception as exc:
+            print(f"[serp_analyzer] page-2 fetch skipped: {exc}")
 
     blocked_domains = {
         "allegro.pl", "olx.pl", "amazon.com", "amazon.de", "ebay.com", "etsy.com",
