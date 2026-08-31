@@ -9,6 +9,7 @@ import {
   type CoverageTopicGroup,
   type CoverageType,
   type Importance,
+  type LlmCoverageSource,
 } from '@/src/core/domain/coverage/aiCoverage';
 import type { CanonicalContentModel } from '@/src/core/ccm/types/ccm';
 import { graphQuery } from '@/src/core/ccm/graphQuery';
@@ -105,19 +106,22 @@ export function projectCcmToCoverageSnapshot(
 
   for (const fact of facts) {
     const webSources = factWebSources(q, fact.id);
+    // fact.engines uses the same taxonomy as LlmCoverageSource — the engine icons.
+    const llmSources: readonly LlmCoverageSource[] = fact.engines ?? [];
     const item: CoverageItem = {
       id: fact.id,
       label: fact.statement,
       type: factType(fact.statement),
       category: 'knowledge',
       importance: toImportance(fact.importance),
-      source: 'manual',
+      source: llmSources?.length ? 'llm' : 'manual',
       covered: isCovered(fact.status),
       quality: statusToQuality(fact.status),
       confidence: fact.confidence,
       sectionId: fact.sectionId,
       reason: 'ccm',
       ...(webSources.length ? { webSources } : {}),
+      ...(llmSources?.length ? { llmSources } : {}),
     };
     labelIndex.set(normalizeFactKey(item.label), items.length);
     items.push(item);
