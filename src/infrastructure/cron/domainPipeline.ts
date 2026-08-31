@@ -10,6 +10,7 @@ import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
 import { getOptimizeRecommendations } from '@/src/core/application/recommendations/getOptimizeRecommendations';
 import { createSnapshotRepository } from '@/src/infrastructure/gsc/snapshotRepository';
 import { priorityFromScore } from '@/src/core/domain/recommendations/opportunityScore';
+import { loadWriteRecommendations } from '@/src/infrastructure/recommendations/loadWriteRecommendations';
 
 export type StageKey = 'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations';
 export const STAGE_ORDER: StageKey[] = ['gsc', 'keywords', 'topics', 'competitors', 'recommendations'];
@@ -167,13 +168,27 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
                await q(`DELETE FROM page_audits WHERE domain_id=? AND url=?`, [domainId, url]);
       }
 
+      const insertRec = (title: string, topicId: number | null, rationale: string, priority: string, type: string, url: string | null, score: number | null, vol: number | null, kd: number | null) =>
+         q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, search_volume, keyword_difficulty, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [domainId, topicId, title, rationale, priority, type, url, score, vol, kd]);
+
       for (const r of result.recommendations || []) {
          // Optimize recs with a GSC opportunity score take their priority/score from it;
-         // everything else keeps the analyzer's own values.
+         // everything else keeps the analyzer's own values. Opportunity is 0–10; store ×10 so
+         // the INTEGER score column keeps one decimal of striking-distance ordering.
          const opp = (r.type ?? 'content') === 'optimize' ? oppByPath.get(recPath(r.url)) : undefined;
          const priority = opp != null ? priorityFromScore(opp) : (r.priority || 'medium');
-         const score = opp != null ? opp : (r.score ?? null);
-         await q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, r.topic_index != null ? topicIds[r.topic_index] ?? null : null, r.title, r.rationale || '', priority, r.type || 'content', r.url ?? null, score]);
+         const score = opp != null ? Math.round(opp * 10) : (r.score ?? null);
+         await insertRec(r.title, r.topic_index != null ? topicIds[r.topic_index] ?? null : null, r.rationale || '', priority, r.type || 'content', r.url ?? null, score, null, null);
+      }
+
+      // Surfer-parity `write` recs from the domain's latest keyword-research run: head keyword
+      // + search volume + difficulty + opportunity score. Deduped against analyzer create recs
+      // by title so the Content Ideas tab doesn't list the same keyword twice.
+      const existingTitles = new Set((result.recommendations || []).map((r) => (r.title || '').trim().toLowerCase()));
+      for (const w of await loadWriteRecommendations(domainId, { limit: 25 })) {
+         if (existingTitles.has(w.keyword.trim().toLowerCase())) continue;
+         await insertRec(w.keyword, null, '', priorityFromScore(w.score), 'create', null, Math.round(w.score * 10), w.searchVolume, w.keywordDifficulty);
       }
    });
 }

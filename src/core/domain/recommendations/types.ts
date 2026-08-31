@@ -30,3 +30,16 @@ export interface OptimizeRecommendation {
   /** Our internal article id when the page maps to a Ranksmile article, for the Optimize action. */
   articleId?: number;
 }
+
+/** One "write" recommendation: a topical-map keyword idea worth writing, Surfer-style. */
+export interface WriteRecommendation {
+  type: 'create';
+  /** The head keyword to write about. */
+  keyword: string;
+  /** DataForSEO monthly search volume, or null when unknown. */
+  searchVolume: number | null;
+  /** DataForSEO keyword difficulty 0–100, or null when unknown. */
+  keywordDifficulty: number | null;
+  /** 0–10 opportunity score (high volume, low difficulty, not yet covered). */
+  score: number;
+}
