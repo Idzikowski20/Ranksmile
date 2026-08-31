@@ -1,0 +1,19 @@
+src/core/domain/contentPlanner/outlineBuilder.ts
+  s_e8c3822b427cc8::t_ef3f941ea07ab6 158,161-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "22ecabe6c868572b0354d6c31dac32583ac7cb08",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
