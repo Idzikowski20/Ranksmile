@@ -1,0 +1,24 @@
+python-sidecar/analyzers/serp_analyzer.py
+  s_e8c3822b427cc8::t_0ca2f69b71a1fd 742-744,746-751
+  s_e8c3822b427cc8::t_2f522c048b9859 711-719,722-723,726-727
+  s_e8c3822b427cc8::t_6f5f5535bfcac6 816
+  s_e8c3822b427cc8::t_0707bb6ea0a79d 819,821,823
+  s_e8c3822b427cc8::t_9f42ddc2f894af 650
+  s_e8c3822b427cc8::t_71c15d45d4c6bf 664-710,720-721,724-725,728-741,745,752-764,766,771-776
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "744855c06eb33c6877f73e8bf583fcfa5a47cdcc",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
