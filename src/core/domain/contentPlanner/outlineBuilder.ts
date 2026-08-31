@@ -155,9 +155,16 @@ export function buildAdaptiveOutline(opts: {
   /** Competitor common H2s — fillers when no topic blocks. */
   commonHeadings?: string[];
 }): AdaptiveOutline {
-  const seeds: TopicSeed[] = opts.narrativeSeeds?.length
+  const rawSeeds: TopicSeed[] = opts.narrativeSeeds?.length
     ? opts.narrativeSeeds
     : topicSeeds(opts.reader, opts.blueprint, opts.commonHeadings);
+  // Hard cap at targetH2. topicSeeds already slices, but the CIE narrative-seed path did
+  // not, so the same code shipped a 9-section article one run and a 14-section one the
+  // next as the competitor-heading count varied. targetH2 is the Surfer-sized number
+  // (~1 H2 / 230 words); the seed order is required-first, so the trim drops only the
+  // lowest-value topical fillers, never a required section.
+  const h2Cap = Math.max(5, opts.blueprint.targetH2);
+  const seeds = rawSeeds.slice(0, h2Cap);
   const totalImp = seeds.reduce((s, x) => s + x.importance, 0) || 1;
   const claimPool = [...opts.kg.claims];
   const questionPool = [...opts.kg.questions];
