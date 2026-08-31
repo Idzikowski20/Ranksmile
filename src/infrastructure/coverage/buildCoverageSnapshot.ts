@@ -49,6 +49,7 @@ export async function assembleCoverageItems(opts: {
   keyword: string;
   paaQuestions?: PaaQuestion[];
   llmQuestions?: Array<{ question: string; sources: import('@/src/core/domain/coverage/aiCoverage').LlmCoverageSource[] }>;
+  competitorTopics?: string[];
   introPlain: string;
   languageCode?: string;
 }): Promise<{ items: CoverageItem[]; answersMainQuestionEarly: boolean }> {
@@ -57,6 +58,7 @@ export async function assembleCoverageItems(opts: {
     keyword,
     llmQuestions: opts.llmQuestions,
     paaQuestions: opts.paaQuestions,
+    competitorTopics: opts.competitorTopics,
   });
   const intentResult = await analyzeIntroduction(opts.introPlain, keyword, deepseekIntroJudge);
   const serpQuestions = [
@@ -161,6 +163,9 @@ export async function buildGradedCoverageSnapshot(opts: {
     keyword: opts.keyword,
     paaQuestions: opts.paaQuestions,
     llmQuestions: opts.llmQuestions,
+    // Topic titles already arrive with harvestTopics (used for UI grouping); score them
+    // too, the way Surfer scores its topics pool.
+    competitorTopics: opts.harvestTopics?.map((t) => t.title).filter(Boolean),
     introPlain,
     languageCode: opts.languageCode,
   });
