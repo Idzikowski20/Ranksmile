@@ -28,11 +28,14 @@ describe('sectionLabels + outline fixes', () => {
     expect(h1.length).toBeGreaterThan(10);
   });
 
-  it('localized required sections have no SEO meta H2s', () => {
-    const secs = localizedRequiredSections('step-by-step', 'pl');
-    expect(secs.some(isSeoMetaHeading)).toBe(false);
-    expect(secs.filter((s) => /faq/i.test(s)).length).toBe(1);
-    expect(secs[secs.length - 1]).toMatch(/podsum/i);
+  it('informational topics carry no forced skeleton', () => {
+    // Surfer's article for this keyword is eight topical sections with no "Szybka
+    // odpowiedź / Plan działania / FAQ / Podsumowanie" scaffolding — the outline is driven
+    // entirely by competitor topical headings.
+    expect(localizedRequiredSections('step-by-step', 'pl')).toEqual([]);
+    expect(localizedRequiredSections('guide', 'pl')).toEqual([]);
+    // Hiring intent keeps its service-page structure.
+    expect(localizedRequiredSections('service', 'pl').length).toBeGreaterThan(0);
   });
 
   it('orderSectionsFaqLast puts FAQ and Summary at end', () => {
@@ -63,7 +66,7 @@ describe('sectionLabels + outline fixes', () => {
     expect(ordered.sections.map((s) => s.id)).toEqual(['c', 'f', 'k']);
   });
 
-  it('buildAdaptiveOutline for szantaz: titled H1, no SEO meta, FAQ last', () => {
+  it('buildAdaptiveOutline for szantaz: titled H1, no SEO meta, topical sections', () => {
     const intent = buildIntentBlueprint({ keyword: 'szantaz', language: 'pl', year: 2026 });
     const reader = buildReaderModel({ intent, language: 'pl' });
     expect(intent.articleType).toBe('step-by-step');
@@ -101,9 +104,11 @@ describe('sectionLabels + outline fixes', () => {
     });
     expect(outline.h1.toLowerCase()).not.toBe('szantaz');
     expect(outline.sections.every((s) => !isSeoMetaHeading(s.heading))).toBe(true);
-    const lastTwo = outline.sections.slice(-2).map((s) => s.heading.toLowerCase());
-    expect(lastTwo.some((h) => h.includes('faq'))).toBe(true);
-    expect(lastTwo.some((h) => /podsum|summary/.test(h))).toBe(true);
+    // Topical, competitor-driven — no forced FAQ/Podsumowanie scaffolding.
+    const headings = outline.sections.map((s) => s.heading.toLowerCase());
+    expect(headings.some((h) => h.includes('faq'))).toBe(false);
+    expect(headings.some((h) => /podsum|summary/.test(h))).toBe(false);
+    expect(headings.some((h) => h.includes('policję') || h.includes('szantażysta'))).toBe(true);
   });
 });
 
