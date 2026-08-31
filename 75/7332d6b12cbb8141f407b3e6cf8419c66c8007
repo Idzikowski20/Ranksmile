@@ -1,0 +1,24 @@
+python-sidecar/pipeline/stages/scrape_serp.py
+  s_e8c3822b427cc8::t_ce734a89fbc4de 36-40
+python-sidecar/analyzers/serp_analyzer.py
+  s_e8c3822b427cc8::t_0757e51acdaf17 297,302
+  s_e8c3822b427cc8::t_7e3386fa00ea3b 125
+  s_e8c3822b427cc8::t_f57ce6a85a946d 319,329,334-348
+  s_e8c3822b427cc8::t_23fe73c9b6fa90 81,349
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "757332d6b12cbb8141f407b3e6cf8419c66c8007",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
