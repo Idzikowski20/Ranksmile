@@ -1970,6 +1970,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       try {
         let instructions = '';
         let voiceId = 'serp';
+        let templateId = '';
         try {
           const artRes = await fetch(`/api/articles/${articleId}`);
           const artData = await artRes.json() as {
@@ -1977,9 +1978,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           };
           if (!isCurrentRun()) return;
           if (artData.article?.wizard_state) {
-            const ws = JSON.parse(artData.article.wizard_state) as { instructions?: string; voiceId?: string };
+            const ws = JSON.parse(artData.article.wizard_state) as { instructions?: string; voiceId?: string; templateId?: string };
             instructions = ws.instructions || '';
             voiceId = ws.voiceId || 'serp';
+            templateId = ws.templateId || '';
           }
         } catch { /* ignore — generate with defaults */ }
 
@@ -2015,6 +2017,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               contentType: opts?.contentType || 'blog',
               instructions,
               voiceId,
+              templateId,
               internalLinks: opts?.internalLinks ?? true,
               externalLinks: opts?.externalLinks ?? true,
               reviewOutline: false,

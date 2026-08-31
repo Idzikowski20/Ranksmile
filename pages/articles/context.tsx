@@ -14,6 +14,7 @@ import { parseRankingSources, buildAiRankingSources } from '@/src/infrastructure
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
 interface Voice { id: string; name: string; description: string; isDefault: boolean; }
+interface Template { id: string; name: string; referenceText: string; isDefault: boolean; }
 
 const label: React.CSSProperties = {
   fontSize: 14,
@@ -30,6 +31,8 @@ const ContextPage: NextPage = () => {
   const [brandOn, setBrandOn] = useState(true);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voiceId, setVoiceId] = useState('serp');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templateId, setTemplateId] = useState('');
   const [instructions, setInstructions] = useState('');
   const [showNew, setShowNew] = useState(true);
   const [panel, setPanel] = useState<'ranking' | 'brand' | null>(null);
@@ -48,9 +51,12 @@ const ContextPage: NextPage = () => {
     if (!contentSettings || settingsSeeded.current) return;
     settingsSeeded.current = true;
     setVoices(contentSettings.voices as Voice[]);
+    setTemplates(contentSettings.templates as Template[]);
     setBrandText(contentSettings.brandKnowledge || '');
     const def = contentSettings.voices.find((v) => v.isDefault);
     if (def) setVoiceId(def.id);
+    const defTpl = (contentSettings.templates || []).find((t) => t.isDefault);
+    if (defTpl) setTemplateId(defTpl.id);
   }, [contentSettings]);
 
   // Load ranking content gathered during deep analysis + prefill saved wizard
@@ -70,10 +76,11 @@ const ContextPage: NextPage = () => {
     setRankAi(ai);
     if (art?.wizard_state) {
       try {
-        const ws = JSON.parse(art.wizard_state);
+        const ws = JSON.parse(art.wizard_state) as { brandOn?: boolean; instructions?: string; voiceId?: string; templateId?: string };
         if (typeof ws.brandOn === 'boolean') setBrandOn(ws.brandOn);
         if (typeof ws.instructions === 'string') setInstructions(ws.instructions);
         if (ws.voiceId) setVoiceId(ws.voiceId);
+        if (ws.templateId) setTemplateId(ws.templateId);
       } catch { /* ignore */ }
     }
     setHydrated(true);
@@ -82,9 +89,9 @@ const ContextPage: NextPage = () => {
   // Persist progress so the draft can be resumed if the user leaves.
   useEffect(() => {
     if (!hydrated || !articleId) return undefined;
-    const t = setTimeout(() => saveWizardState(articleId, { step: 'context', voiceId, instructions, brandOn }), 400);
+    const t = setTimeout(() => saveWizardState(articleId, { step: 'context', voiceId, templateId, instructions, brandOn }), 400);
     return () => clearTimeout(t);
-  }, [hydrated, articleId, voiceId, instructions, brandOn]);
+  }, [hydrated, articleId, voiceId, templateId, instructions, brandOn]);
 
   const voiceOptions: SelectOption[] = [
     { value: 'serp', label: 'SERP based' },
@@ -98,6 +105,20 @@ const ContextPage: NextPage = () => {
       return;
     }
     setVoiceId(String(opt.value));
+  };
+
+  const templateOptions: SelectOption[] = [
+    { value: '', label: 'No template' },
+    ...templates.map((t) => ({ value: t.id, label: t.name })),
+    { value: '__add__', label: '+ Add Content Template' },
+  ];
+
+  const onTemplateChange = (opt: SelectOption) => {
+    if (opt.value === '__add__') {
+      void router.push('/settings/content_templates');
+      return;
+    }
+    setTemplateId(String(opt.value));
   };
 
   const saveBrand = async () => {
@@ -205,6 +226,25 @@ const ContextPage: NextPage = () => {
             triggerLabel={
               voiceOptions.find((o) => o.value === voiceId && o.value !== '__add__')?.label
               || 'SERP based'
+            }
+          />
+        </div>
+      </div>
+
+      {/* Template */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <label style={label}>Template</label>
+        <div style={{ width: '100%', display: 'grid' }}>
+          <CompactSelect
+            size="md"
+            value={templateId}
+            options={templateOptions}
+            onChange={onTemplateChange}
+            menuWidth="100%"
+            menuMinWidth="100%"
+            triggerLabel={
+              templateOptions.find((o) => o.value === templateId && o.value !== '__add__')?.label
+              || 'No template'
             }
           />
         </div>

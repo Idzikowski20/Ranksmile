@@ -16,6 +16,7 @@ export type SettingsPageSlug =
   | 'members'
   | 'workspace_general'
   | 'custom_voices'
+  | 'content_templates'
   | 'profile'
   | 'notifications'
   | 'masterclass';
@@ -72,6 +73,7 @@ export const SETTINGS_NAV_GROUPS: NavGroup[] = [
       { slug: 'members', label: 'Members', icon: 'UsersThree', href: '/settings/members' },
       { slug: 'brand_knowledge', label: 'Brand Knowledge', icon: 'BookOpen', href: '/settings/brand_knowledge' },
       { slug: 'custom_voices', label: 'Custom Voices', icon: 'Microphone', href: '/settings/custom_voices' },
+      { slug: 'content_templates', label: 'Content Templates', icon: 'Layout', href: '/settings/content_templates' },
     ],
   },
 ];
