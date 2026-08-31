@@ -182,9 +182,32 @@ const IcoGear = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path {..
 /** Code brackets — Developer report download. */
 const IcoCode = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path {...sIco} d="M16 18l6-6-6-6M8 6l-6 6 6 6" /></svg>);
 const IcoPanel = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path {...sIco} d="M15 3V21M7.8 3H16.2C17.8802 3 18.7202 3 19.362 3.32698C19.9265 3.6146 20.3854 4.07354 20.673 4.63803C21 5.27976 21 6.11984 21 7.8V16.2C21 17.8802 21 18.7202 20.673 19.362C20.3854 19.9265 19.9265 20.3854 19.362 20.673C18.7202 21 17.8802 21 16.2 21H7.8C6.11984 21 5.27976 21 4.63803 20.673C4.07354 20.3854 3.6146 19.9265 3.32698 19.362C3 18.7202 3 17.8802 3 16.2V7.8C3 6.11984 3 5.27976 3.32698 4.63803C3.6146 4.07354 4.07354 3.6146 4.63803 3.32698C5.27976 3 6.11984 3 7.8 3Z" /></svg>);
-// The Publish button opens the WordPress export modal, so it wears WordPress's own mark —
-// same logo as PublishExportPanel's WordPress button.
-const WordPressMark = () => (<svg width={16} height={16} viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 0C4.49 0 0 4.48 0 10s4.49 10 10 10 10-4.49 10-10S15.51 0 10 0ZM1.01 10c0-1.3.28-2.54.78-3.66l4.29 11.75A8.99 8.99 0 0 1 1.01 10ZM10 18.99c-.88 0-1.73-.13-2.54-.37l2.7-7.84 2.76 7.57.06.13c-.93.33-1.93.51-2.98.51Zm1.24-13.2c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.88 0-2.37-.11-2.37-.11-.48-.03-.54.71-.06.74 0 0 .46.06.94.09l1.4 3.84-1.97 5.9L4.48 5.79c.55-.03 1.03-.09 1.03-.09.49-.06.43-.77-.06-.74 0 0-1.45.11-2.39.11-.17 0-.37 0-.58-.01A8.98 8.98 0 0 1 9.99 1c2.34 0 4.47.89 6.07 2.36-.04 0-.08-.01-.12-.01-.88 0-1.51.77-1.51 1.6 0 .74.43 1.37.88 2.11.34.6.74 1.37.74 2.48 0 .77-.29 1.66-.69 2.91l-.89 3-3.23-9.66Zm3.28 11.98 2.75-7.94c.51-1.28.68-2.31.68-3.22 0-.33-.02-.64-.06-.93.7 1.28 1.1 2.75 1.1 4.31a8.99 8.99 0 0 1-4.47 7.78Z" fill="currentColor" /></svg>);
+// The Publish button opens the WordPress export modal, so it wears WordPress's own mark.
+const WordPressMark = () => (<svg width={18} height={18} viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 0C4.49 0 0 4.48 0 10s4.49 10 10 10 10-4.49 10-10S15.51 0 10 0ZM1.01 10c0-1.3.28-2.54.78-3.66l4.29 11.75A8.99 8.99 0 0 1 1.01 10ZM10 18.99c-.88 0-1.73-.13-2.54-.37l2.7-7.84 2.76 7.57.06.13c-.93.33-1.93.51-2.98.51Zm1.24-13.2c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.88 0-2.37-.11-2.37-.11-.48-.03-.54.71-.06.74 0 0 .46.06.94.09l1.4 3.84-1.97 5.9L4.48 5.79c.55-.03 1.03-.09 1.03-.09.49-.06.43-.77-.06-.74 0 0-1.45.11-2.39.11-.17 0-.37 0-.58-.01A8.98 8.98 0 0 1 9.99 1c2.34 0 4.47.89 6.07 2.36-.04 0-.08-.01-.12-.01-.88 0-1.51.77-1.51 1.6 0 .74.43 1.37.88 2.11.34.6.74 1.37.74 2.48 0 .77-.29 1.66-.69 2.91l-.89 3-3.23-9.66Zm3.28 11.98 2.75-7.94c.51-1.28.68-2.31.68-3.22 0-.33-.02-.64-.06-.93.7 1.28 1.1 2.75 1.1 4.31a8.99 8.99 0 0 1-4.47 7.78Z" fill="currentColor" /></svg>);
+
+// The same button PublishExportPanel uses in its Export section — inverted fill
+// (black on light, white on dark) with a brand-orange hover — lifted to the toolbar.
+const WpPublishButton = ({ disabled, onClick, ...rest }: { disabled?: boolean; onClick?: () => void } & Record<string, unknown>) => (
+  <button
+    type="button"
+    disabled={disabled}
+    onClick={disabled ? undefined : onClick}
+    style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      padding: '7px 16px', borderRadius: 8, border: 'none',
+      background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)',
+      fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-family-primary)',
+      cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+      transition: 'background 0.15s',
+    }}
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = 'var(--koala-text-brand)'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-text-primary)'; }}
+    {...rest}
+  >
+    <WordPressMark />
+    WordPress
+  </button>
+);
 const IcoDots = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M10 12C10 10.8954 10.8954 10 12 10C13.1046 10 14 10.8954 14 12C14 13.1046 13.1046 14 12 14C10.8954 14 10 13.1046 10 12Z" /><path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M17 12C17 10.8954 17.8954 10 19 10C20.1046 10 21 10.8954 21 12C21 13.1046 20.1046 14 19 14C17.8954 14 17 13.1046 17 12Z" /><path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M3 12C3 10.8954 3.89543 10 5 10C6.10457 10 7 10.8954 7 12C7 13.1046 6.10457 14 5 14C3.89543 14 3 13.1046 3 12Z" /></svg>);
 const IcoChevronR = () => (<svg width={18} height={18} viewBox="0 0 24 24"><path {...sIco} d="m9 18l6-6l-6-6" /></svg>);
 
@@ -2260,16 +2283,10 @@ const ArticleEditorPage: NextPage = () => {
                 )}
               </div>
               <IconBtn disabled={editorLocked} onClick={() => setPanelCollapsed(false)} title="Show side panel"><IcoPanel /></IconBtn>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
+              <WpPublishButton
                 disabled={editorLocked || !id}
-                icon={<WordPressMark />}
                 onClick={() => { void openPublishPanel(); }}
-              >
-                WordPress
-              </Button>
+              />
             </motion.div>
           )}
           </AnimatePresence>
@@ -2341,17 +2358,11 @@ const ArticleEditorPage: NextPage = () => {
                 <span data-tour="hide-panel" style={{ display: 'inline-flex' }}>
                   <IconBtn disabled={editorLocked} onClick={() => { setPanelCollapsed(true); setVoiceOpen(false); }} title="Hide side panel"><IcoPanel /></IconBtn>
                 </span>
-                <Button
+                <WpPublishButton
                   data-tour="publish"
-                  type="button"
-                  variant="primary"
-                  size="sm"
                   disabled={editorLocked || !id}
-                  icon={<WordPressMark />}
                   onClick={() => { void openPublishPanel(); }}
-                >
-                  WordPress
-                </Button>
+                />
               </div>
             </div>
 
