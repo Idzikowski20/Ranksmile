@@ -7,10 +7,12 @@ import { isKeywordOnTopic, seedTokens } from '@/src/core/domain/relevance/topicR
 export const CITATION_INTENT_COUNT = 8;
 
 /** Stable coverage item id for a citation prompt — bucket-aware when ENABLE_NEW_COVERAGE_IDS. */
-export function citationItemId(label: string, bucket: 'paa' | 'intent'): string {
+export function citationItemId(label: string, bucket: 'paa' | 'intent' | 'concept'): string {
   const hash = hashId(label);
   if (isNewCoverageIdsEnabled()) {
-    return bucket === 'intent' ? `intent-citation-${hash}` : `paa-citation-${hash}`;
+    if (bucket === 'intent') return `intent-citation-${hash}`;
+    if (bucket === 'concept') return `concept-topic-${hash}`;
+    return `paa-citation-${hash}`;
   }
   return `citation-${hash}`;
 }

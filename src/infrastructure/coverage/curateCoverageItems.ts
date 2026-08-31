@@ -89,6 +89,9 @@ export function curateAiCoverageItems(opts: {
   keyword: string;
   paaQuestions?: Array<{ question: string; answer?: string }>;
   llmQuestions?: Array<{ question: string; sources: LlmCoverageSource[] }>;
+  /** Competitor article angles / H2 topics — Surfer scores these alongside questions
+   *  in one topics_and_questions pool. Statements, not questions. */
+  competitorTopics?: string[];
   articleFacts?: ArticleFact[];
 }): { knowledge: CoverageItem[]; entity: CoverageItem[] } {
   const keyword = opts.keyword.trim();
@@ -126,6 +129,33 @@ export function curateAiCoverageItems(opts: {
       llmSources: row.sources.length ? row.sources : undefined,
     });
     if (knowledge.length >= AI_COVERAGE_MAX - AI_COVERAGE_INTENT_COUNT) break;
+  }
+
+  // Competitor TOPICS (article angles, H2s) — Surfer's topics_and_questions is one
+  // pool of questions AND topics; we scored only questions. A topic is a statement the
+  // ranking pages cover, mapped to type 'concept'. Filtered like everything else:
+  // on-topic, sane length, not boilerplate, not a dupe of a question already added.
+  for (const raw of opts.competitorTopics ?? []) {
+    if (knowledge.length >= AI_COVERAGE_MAX - AI_COVERAGE_INTENT_COUNT) break;
+    const topic = (raw || '').replace(/\s+/g, ' ').trim();
+    const words = topic.split(/\s+/).filter(Boolean);
+    if (topic.length < 12 || topic.length > 90 || words.length < 2 || words.length > 12) continue;
+    if (topic.includes('?')) continue; // a question, not a topic — handled above
+    if (isCorpusNoiseSentence(topic)) continue;
+    if (!isKeywordOnTopic(topic, keyword)) continue;
+    const key = normalizeTerm(topic);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    knowledge.push({
+      id: citationItemId(topic, 'concept'),
+      label: topic,
+      type: 'concept' as const,
+      category: 'knowledge' as const,
+      importance: 'recommended' as const,
+      source: 'serp' as const,
+      covered: false,
+      quality: 0,
+    });
   }
 
   // ENTITY empty here — NER worker only (Etap 1.5). TERM/CONCEPT come from Coverage Engine.
