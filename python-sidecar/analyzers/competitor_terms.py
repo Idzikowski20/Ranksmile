@@ -127,6 +127,32 @@ def is_useful_phrase(phrase: str) -> bool:
     return weak <= len(tokens) // 2
 
 
+_WORD_RE = re.compile(r"[^\W\d_]+(?:-[^\W\d_]+)*|\d+", re.UNICODE)
+
+
+def _surface_index(texts: list[str]) -> dict[str, str]:
+    """Folded phrase -> the form it was actually written in.
+
+    TF-IDF runs on ASCII-folded text, so every feature name comes back stripped of Polish
+    diacritics. Those strings were emitted as the terms themselves, and the writer is told
+    to weave each term in verbatim — which is how "obowiazku" and "wplyw" reached a
+    published article. Mapping each candidate back to its surface form fixes the terms at
+    the source, so the scorer, the planner and the writer all see real Polish.
+    """
+    surface: dict[str, str] = {}
+    for text in texts:
+        words = [w.lower() for w in _WORD_RE.findall(text or "")]
+        if not words:
+            continue
+        folded = [_fold(w) for w in words]
+        for n in (1, 2, 3):
+            for i in range(len(words) - n + 1):
+                key = " ".join(folded[i:i + n])
+                if key and key not in surface:
+                    surface[key] = " ".join(words[i:i + n])
+    return surface
+
+
 def extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
     """TF-IDF n-grams from competitor pages — Ranksmile-style phrase discovery."""
     if not texts:
@@ -134,6 +160,9 @@ def extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
 
     n_docs = len(texts)
     normalized_texts = [normalize_text(text) for text in texts]
+    # Built from the ORIGINAL texts, so a folded feature name can be written back out in
+    # the spelling a Polish reader expects.
+    surface_of = _surface_index(texts)
 
     # Short SERP-snippet corpora need min_df=1 or TF-IDF returns almost nothing.
     min_df = 1 if n_docs <= 5 else max(2, int(n_docs * 0.25))
@@ -157,7 +186,7 @@ def extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
     if kw and is_useful_phrase(kw):
         kw_total = sum(t.count(kw) for t in normalized_texts)
         result_by_term[kw] = {
-            "term": kw,
+            "term": surface_of.get(kw, keyword.strip().lower() or kw),
             "target_count": max(1, round(kw_total / n_docs)),
             "doc_freq": n_docs,
         }
@@ -171,7 +200,7 @@ def extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
             continue
         avg_across_all = sum(doc_counts) / n_docs
         result_by_term[term] = {
-            "term": term,
+            "term": surface_of.get(term, term),
             "target_count": max(1, round(avg_across_all)),
             "doc_freq": docs_with_term,
         }

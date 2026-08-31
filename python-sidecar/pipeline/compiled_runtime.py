@@ -82,11 +82,14 @@ async def run_compiled_write_plan(
 
     index = _graph_index(plan)
 
-    # Plan every paragraph first, then write them CONCURRENTLY. The writer keeps no
-    # history between calls by design, so the only order that matters is assembly order
-    # — and a 36-paragraph article at ~2 sequential LLM calls each was the whole reason
-    # generation took 5-10 minutes. The semaphore keeps one article from monopolising
-    # the provider; assembly below reads results by index, so output order is stable.
+    # Plan every paragraph first, then write SECTIONS concurrently and the paragraphs
+    # inside a section in order, each one seeing what its siblings already said.
+    #
+    # Writing every paragraph concurrently was faster, but no paragraph could know what
+    # the others were writing: four paragraphs answering one section brief in parallel
+    # produced "Pierwsze kroki:" three times over and two near-identical tables in the
+    # same section. Sections stay parallel, so the wave count barely moves — the longest
+    # section, not the article, now sets the depth.
     planned: list[tuple[str | None, Mapping[str, object] | None, Mapping[str, object] | None]] = []
     first_paragraph = True
     for pack in packs:
@@ -139,13 +142,33 @@ async def run_compiled_write_plan(
             context["is_closing"] = True
             break
 
-    tasks = {
-        i: asyncio.create_task(_write_one(paragraph, context))
-        for i, (_, paragraph, context) in enumerate(planned)
-        if paragraph is not None and context is not None
-    }
-    if tasks:
-        await asyncio.gather(*tasks.values())
+    # Indices of the paragraphs belonging to each section, in reading order.
+    section_groups: list[list[int]] = []
+    for i, (heading, paragraph, _) in enumerate(planned):
+        if heading is not None:
+            section_groups.append([])
+        elif paragraph is not None:
+            if not section_groups:
+                section_groups.append([])
+            section_groups[-1].append(i)
+
+    results: dict[int, ReviewedParagraphResult] = {}
+
+    async def _write_section(indices: list[int]) -> None:
+        already: list[str] = []
+        for i in indices:
+            _, paragraph, context = planned[i]
+            if paragraph is None or context is None:
+                continue
+            context["already_written"] = list(already)
+            results[i] = await _write_one(paragraph, context)
+            text = results[i].markdown.strip()
+            if text:
+                already.append(text)
+
+    groups = [g for g in section_groups if g]
+    if groups:
+        await asyncio.gather(*(_write_section(g) for g in groups))
 
     markdown = [f"# {title.strip()}"]
     reviewed: list[ReviewedParagraphResult] = []
@@ -153,7 +176,7 @@ async def run_compiled_write_plan(
         if heading is not None:
             markdown.append(f"## {heading}")
             continue
-        judged = tasks[i].result()
+        judged = results[i]
         reviewed.append(judged)
         markdown.append(judged.markdown)
 
