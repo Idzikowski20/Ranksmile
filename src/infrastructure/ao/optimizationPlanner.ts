@@ -151,7 +151,7 @@ export function buildOptimizationPlan(input: PlanInput): Plan {
   const phase = input.phase ?? 'first_run';
   const mode = input.mode ?? selectOptimizeMode(input.seoScore, input.aiScore, phase);
   const followUp = phase === 'follow_up';
-  const aiTakeover = followUp || mode === 'ai-only' || mode === 'minimal'
+  const aiTakeover = mode === 'ai-only' || mode === 'minimal'
     || (input.seoScore >= SEO_HIGH && (input.seoScore - input.aiScore) > AI_GAP_LEGACY);
   const seoOnly = mode === 'seo-first';
   const snapshot = input.context.coverage;
@@ -192,8 +192,10 @@ export function buildOptimizationPlan(input: PlanInput): Plan {
     let editMode: EditMode = snapshot
       ? selectMode({ section, expectedLift, rgs: filteredRgs, snapshot, aiTakeover })
       : 'normal';
-    if (mode === 'ai-only' || mode === 'minimal' || followUp) editMode = 'less';
-    if (mode === 'full' && focus === 'expand' && !followUp) editMode = 'expand';
+    // Mode already encodes the ambition — follow_up forcing 'less' here made every
+    // second run cosmetic regardless of how weak the article had become.
+    if (mode === 'ai-only' || mode === 'minimal') editMode = 'less';
+    if (mode === 'full' && focus === 'expand') editMode = 'expand';
 
     const draft: PlanStep = {
       ...base, focus, expectedLift,

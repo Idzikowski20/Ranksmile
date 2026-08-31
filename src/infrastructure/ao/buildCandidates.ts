@@ -22,6 +22,10 @@ export type BuildCandidatesInput = {
   strategy?: OptimizationStrategy;
   seoStrong?: boolean;
   aiWeak?: boolean;
+  /** Mode 'full': the article is weak enough to rebuild toward the plan. */
+  rebuild?: boolean;
+  /** H2 titles the content plan intended — the generator's own outline. */
+  plannedHeadings?: string[];
 };
 
 function slug(s: string): string {
@@ -219,15 +223,25 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
   // heading for and the article does not cover gets a whole new section, not a
   // sentence squeezed into an existing one. Capped hard — two per run keeps AO from
   // rebuilding the article's shape wholesale.
-  if (input.competitorHeadings?.length && input.sections?.length && strategy !== 'precision') {
+  // Planned headings first: when the article drifted from its own content plan
+  // (imported, damaged, heavily edited), the plan is the strongest statement of what
+  // sections should exist — the same outline the generator writes from. Competitor
+  // headings top up after. Precision strategy is no longer excluded: that exclusion
+  // made section rebuild dead code, since precision is the default strategy.
+  const headingSources = [
+    ...(input.plannedHeadings ?? []).map((t) => ({ title: t, planned: true })),
+    ...(input.competitorHeadings ?? []).map((t) => ({ title: t, planned: false })),
+  ];
+  const missingCap = input.rebuild ? 5 : 2;
+  if (headingSources.length && input.sections?.length && (input.rebuild || strategy !== 'precision')) {
     const articleText = input.sections.map((sec) => sec.html).join(' ')
       .replace(/<[^>]+>/g, ' ')
       .toLowerCase();
     const anchorSection = input.sections[input.sections.length - 1];
     let added = 0;
-    for (const heading of input.competitorHeadings) {
-      if (added >= 2) break;
-      const title = (heading || '').trim();
+    for (const { title: rawTitle, planned } of headingSources) {
+      if (added >= missingCap) break;
+      const title = (rawTitle || '').trim();
       if (title.length < 8 || title.length > 90) continue;
       if (textHitsForbidden(title, profile)) continue;
       // Covered when the heading's meaningful words already appear in the article.
@@ -242,8 +256,10 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
           source: 'missing_section',
           targetSectionId: anchorSection.id,
           targetGap: title,
-          reason: `Ranking pages cover "${title}"; the article has no section for it`,
-          priority: 'recommended',
+          reason: planned
+            ? `The content plan has a section "${title}"; the article lost or never had it`
+            : `Ranking pages cover "${title}"; the article has no section for it`,
+          priority: planned ? 'critical' : 'recommended',
           suggestedAction: 'add_missing_section',
           expectedOutcome: { type: 'generic', id: `section:missing:${slug(title)}` },
         }),
