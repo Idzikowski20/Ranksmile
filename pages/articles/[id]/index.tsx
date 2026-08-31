@@ -497,7 +497,18 @@ const ArticleEditorPage: NextPage = () => {
                 setAiCoverageScore(snap.overall ?? null);
                 setCoverageSnapshot(snap);
               }
-              if (art.score_data || snap?.items?.length) break;
+              // Wait for the POST-GENERATE snapshot, not the first one that exists.
+              // Deep analysis writes a PAA-only snapshot; the intent rows (weight 3 in
+              // the AI blend) and the early-answer flag are added later by the
+              // post-generate regrade and the CCM projection, which runs fire-and-forget.
+              // Breaking on "any snapshot" left the panel scoring an article on knowledge
+              // rows alone — article 146 read AI 36 in the editor while the database had
+              // 73, and the developer report exported the stale number 40 minutes later.
+              const hasIntentRows = (snap?.items ?? []).some(
+                (it) => it.category === 'intent' || it.type === 'intent',
+              );
+              const finalizing = art.status === 'generating' || art.status === 'analyzing';
+              if (hasIntentRows || (!finalizing && (art.score_data || snap?.items?.length))) break;
             }
           }
         } catch { /* retry */ }
