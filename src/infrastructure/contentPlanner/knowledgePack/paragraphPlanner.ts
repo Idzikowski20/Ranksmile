@@ -96,9 +96,13 @@ export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
   )]
     .sort((a, b) => Number(b === 'comparison') - Number(a === 'comparison'))
     .slice(0, MAX_STRUCTURED_BLOCKS);
+  // No per-section 'summary' paragraph: Surfer's generated article closes a section with
+  // its last substantive point, not a recap — eleven sections each ending in a summary
+  // paragraph was a major source of the repetitive, machine-written feel. The article-level
+  // closing is handled separately by the runtime's is_closing flag.
   const planned: ParagraphGoal[] = hasOnlySpecialBlocks(section.blocks)
     ? section.blocks.map(mapBlockToGoal)
-    : ['intro', ...(structured.length ? structured : ['definition' as ParagraphGoal]), 'summary'];
+    : ['intro', ...(structured.length ? structured : ['definition' as ParagraphGoal])];
   const goals = fitToWordBudget(planned, section.expectedWords);
 
   const totalWords = section.expectedWords;
@@ -121,8 +125,12 @@ export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
     if (goal === 'steps') {
       style.ordered = true;
     }
+    // A comparison renders as a bold-label bullet contrast, not a table. Surfer's
+    // generated article carries zero tables — its "szantaż vs zdrowa prośba" comparison
+    // is prose and bullets — while our tables were the most machine-looking blocks on
+    // the page. The 'comparison' goal itself survives; only the table styling goes.
     if (goal === 'comparison') {
-      style.table = true;
+      style.list = true;
     }
 
     paragraphs.push({
