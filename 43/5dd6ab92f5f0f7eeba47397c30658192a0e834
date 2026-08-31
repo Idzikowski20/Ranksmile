@@ -1,0 +1,27 @@
+__tests__/lib/topicsPool.test.ts
+  s_e8c3822b427cc8::t_4bf94dcaa577e0 12
+src/infrastructure/articles/citationPrompts.ts
+  s_e8c3822b427cc8::t_a91745b2e1bc85 10,13-15
+src/infrastructure/coverage/curateCoverageItems.ts
+  s_e8c3822b427cc8::t_fcf26391a10af8 134-160
+  s_e8c3822b427cc8::t_6297b80c2c0603 92-94
+src/infrastructure/coverage/buildCoverageSnapshot.ts
+  s_e8c3822b427cc8::t_816633742703ae 166-168
+  s_e8c3822b427cc8::t_aa6e77e34fd51c 52,61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "435dd6ab92f5f0f7eeba47397c30658192a0e834",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
