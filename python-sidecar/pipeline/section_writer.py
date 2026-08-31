@@ -176,14 +176,16 @@ def _prompt(
         ]
     else:
         lines = [
-            # Short paragraphs are the reference house style: Surfer's guideline asks for
-            # 65-78 paragraphs in ~2400 words (~30 words each), while one block rendered
-            # as a single <p> averaged 78 words — half the paragraph count at the same
-            # length. The renderer joins blocks with blank lines and parses full
-            # Markdown, so a split here becomes real <p> boundaries.
+            # 3-4 sentences, not 2-3: the earlier "SHORT paragraphs" rule was calibrated
+            # against Surfer's structural guideline (~30 words/paragraph), but Surfer's own
+            # generated article measures 52 words per paragraph (34 <p> / 1767 words) —
+            # while ours came out at 37 with a quarter of paragraphs under 25 words,
+            # reading as fragments. One content block is one thought: split only when the
+            # block genuinely changes point, never to hit a paragraph count.
             "Write this content block as Markdown only; never emit HTML.",
-            "Split the prose into SHORT paragraphs of 2-3 sentences, separated by blank"
-            " lines — never one long wall of text.",
+            "Write it as ONE cohesive paragraph of 3-4 full sentences (~45-65 words).",
+            "Split into a second paragraph ONLY when the block truly changes point —"
+            " never emit one- or two-sentence fragments.",
             "Write only this block's content: no heading, no other sections, no preamble.",
         ]
     # Only prose can carry the lead. A table or list block has just been told to emit no

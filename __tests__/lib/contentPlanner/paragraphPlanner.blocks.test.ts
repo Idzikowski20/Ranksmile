@@ -26,11 +26,13 @@ describe('planParagraphs block styles', () => {
     expect(checklist?.style.ordered).toBeUndefined();
   });
 
-  it('marks a table block as a table, not a list', () => {
+  it('renders a comparison as a bullet contrast, never a table', () => {
+    // Surfer's generated article carries zero tables — its comparison sections are prose
+    // and bullets — while our tables were the most machine-looking blocks on the page.
     const comparison = planParagraphs(section(['table'])).find((p) => p.goal === 'comparison');
 
-    expect(comparison?.style.table).toBe(true);
-    expect(comparison?.style.list).toBeUndefined();
+    expect(comparison?.style.list).toBe(true);
+    expect(comparison?.style.table).toBeUndefined();
   });
 });
 
@@ -62,14 +64,16 @@ describe('planParagraphs word budget', () => {
 
     expect(paragraphs.length).toBeGreaterThan(2);
     expect(paragraphs[0].goal).toBe('intro');
-    expect(paragraphs[paragraphs.length - 1].goal).toBe('summary');
+    // No per-section summary: Surfer sections end on their last substantive point,
+    // and eleven recap paragraphs read as machine-written.
+    expect(paragraphs.some((p) => p.goal === 'summary')).toBe(false);
   });
 
-  it('always keeps the opening, and the closing whenever two fit', () => {
+  it('always keeps the opening', () => {
     const paragraphs = planParagraphs(budgeted(120));
 
     expect(paragraphs[0].goal).toBe('intro');
-    expect(paragraphs[paragraphs.length - 1].goal).toBe('summary');
+    expect(paragraphs.some((p) => p.goal === 'summary')).toBe(false);
   });
 
   it('never returns nothing for a tiny section', () => {
@@ -83,7 +87,7 @@ describe('planParagraphs word budget', () => {
  * targetTables: 1 and rendered none.
  */
 describe('planParagraphs keeps the comparison block', () => {
-  it('does not let checklist and steps crowd out the table', () => {
+  it('does not let checklist and steps crowd out the comparison', () => {
     const section = {
       id: 'sec-1',
       heading: 'Dlaczego warto',
@@ -94,6 +98,6 @@ describe('planParagraphs keeps the comparison block', () => {
     const goals = planParagraphs(section).map((p) => p.goal);
 
     expect(goals).toContain('comparison');
-    expect(planParagraphs(section).find((p) => p.goal === 'comparison')?.style.table).toBe(true);
+    expect(planParagraphs(section).find((p) => p.goal === 'comparison')?.style.list).toBe(true);
   });
 });

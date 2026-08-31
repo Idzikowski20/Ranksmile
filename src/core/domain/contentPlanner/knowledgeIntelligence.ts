@@ -30,6 +30,9 @@ export type AiSearchIntelInput = {
   sources?: Array<{ url: string; label?: string; confidence?: number }>;
 };
 
+/** Surfer's guideline for the test keyword grades 37 facts; 40 leaves headroom. */
+const MAX_TARGET_CLAIMS = 40;
+
 function slugId(prefix: string, text: string, i: number): string {
   const base = text.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/gi, '-').slice(0, 40);
   // Always append index so long/punctuation-variant collisions cannot overwrite map keys.
@@ -111,21 +114,26 @@ export function buildTargetKnowledgeGraph(opts: {
   }
   // Gain-frequency stays competitor-only — AI claims must not inflate core promotion.
 
+  // AI-engine facts BEFORE competitor sentences. The reference tool's fact pool is what
+  // the engines cite — atomic, sourced statements — and its articles are written from
+  // those, not from prose scraped off ranking pages. Inserting AI facts first means that
+  // when both routes carry the same statement, the clean phrasing survives the dedup
+  // instead of whichever sentence a competitor page happened to word it as.
   const statements = new Map<string, string>();
   const claimHasAi = new Set<string>();
-  for (const p of profiles) {
-    for (const c of p.claims) {
-      if (isCorpusNoiseClaim(c)) continue;
-      const k = c.trim().toLowerCase();
-      if (k && !statements.has(k)) statements.set(k, c.trim());
-    }
-  }
   for (const c of ai?.claims ?? []) {
     if (isCorpusNoiseClaim(c)) continue;
     const k = c.trim().toLowerCase();
     if (!k) continue;
     claimHasAi.add(k);
     if (!statements.has(k)) statements.set(k, c.trim());
+  }
+  for (const p of profiles) {
+    for (const c of p.claims) {
+      if (isCorpusNoiseClaim(c)) continue;
+      const k = c.trim().toLowerCase();
+      if (k && !statements.has(k)) statements.set(k, c.trim());
+    }
   }
 
   const aiSources = (ai?.sources ?? []).map((s) => ({
@@ -134,13 +142,13 @@ export function buildTargetKnowledgeGraph(opts: {
     confidence: s.confidence ?? sourceConfidence(s.url),
   }));
 
-  const claims: TargetClaim[] = [];
+  const allClaims: TargetClaim[] = [];
   let i = 0;
   for (const [norm, statement] of statements) {
     const gainClass = classifyGain(norm, profiles.length, claimCounts);
     const importance = importanceFromGain(gainClass);
     const priority = priorityFromGainAndImportance(gainClass, importance);
-    claims.push({
+    allClaims.push({
       id: slugId('claim', norm, i++),
       statement,
       topic: statement.split(/\s+/).slice(0, 3).join(' ').toLowerCase(),
@@ -153,6 +161,20 @@ export function buildTargetKnowledgeGraph(opts: {
       citationHint: profiles.find((p) => p.claims.some((x) => x.toLowerCase() === norm))?.url,
     });
   }
+
+  // Surfer-sized pool. The reference guideline grades ~37 facts; article 147's plan
+  // carried 75 claims and the surplus was scraped competitor prose — the writer covered
+  // it all, verbatim. AI-engine facts are the grading standard so they are never cut;
+  // scraped claims fill the remaining budget best-consensus-first.
+  const gainRank: Record<GainClass, number> = { core: 0, expected: 1, opportunity: 2 };
+  const aiBacked = allClaims.filter((c) => claimHasAi.has(c.statement.trim().toLowerCase()));
+  const scraped = allClaims
+    .filter((c) => !claimHasAi.has(c.statement.trim().toLowerCase()))
+    .sort((a, b) => gainRank[a.gainClass] - gainRank[b.gainClass]);
+  const claims = [
+    ...aiBacked,
+    ...scraped.slice(0, Math.max(0, MAX_TARGET_CLAIMS - aiBacked.length)),
+  ];
 
   const qSet = new Map<string, string>();
   for (const p of profiles) {
