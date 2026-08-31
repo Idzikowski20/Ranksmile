@@ -44,6 +44,24 @@ describe('AppBanner', () => {
     expect(container.querySelector('.koala-app-banner')).toBeNull();
   });
 
+  it('persists dismissal across remounts when persistDismiss is set', () => {
+    localStorage.clear();
+    const banner: AppBannerState = {
+      message: 'Ranksmile jest teraz dostępny w języku polskim.',
+      dismissible: true,
+      persistDismiss: true,
+      dismissKey: 'locale-pl-announcement',
+    };
+
+    const first = render(<Harness banner={banner} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(first.container.querySelector('.koala-app-banner')).toBeNull();
+    first.unmount();
+
+    const second = render(<Harness banner={banner} />);
+    expect(second.container.querySelector('.koala-app-banner')).toBeNull();
+  });
+
   /**
    * Two consumers can be mounted at once — a page and a wizard inside it — and their
    * banners can serialise identically. Cleanup used to call setBanner(null) whatever was
