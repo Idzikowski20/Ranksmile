@@ -1,0 +1,25 @@
+src/core/intelligence/ccmToCoverageSnapshot.ts
+  s_e8c3822b427cc8::t_a95797248af5f7 41-66
+  s_e8c3822b427cc8::t_14dd2f59a7650a 107,120
+  s_e8c3822b427cc8::t_b67e7b984f6a1b 135-142
+src/core/domain/coverage/aiCoverage.ts
+  s_e8c3822b427cc8::t_7e1fd87cf25d57 65-67
+src/core/domain/coverage/infoToCoverTopics.ts
+  s_e8c3822b427cc8::t_8aec2da72cecf9 29-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4987eb7169a5955c023d914ed5517bb973801b6a",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
