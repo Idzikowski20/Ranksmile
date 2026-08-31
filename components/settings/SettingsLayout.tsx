@@ -12,7 +12,7 @@ import UsageSettings from './UsageSettings';
 import BillingDetailsSettings from './BillingDetailsSettings';
 import BillingHistorySettings from './BillingHistorySettings';
 import WordPressSettings from './WordPressSettings';
-import ApiSettings from './ApiSettings';
+import McpApiSettings from './McpApiSettings';
 import ProfileSettings from './ProfileSettings';
 import BrandKnowledgeSettings from './BrandKnowledgeSettings';
 import CustomVoicesSettings from './CustomVoicesSettings';
@@ -46,7 +46,7 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
   brand_knowledge: 'Brand Knowledge',
   google_search_console: 'Search Console',
   wordpress: 'WordPress',
-  api: 'API',
+  api: 'MCP i API',
   billing_subscription: 'Subscription',
   billing_usage: 'Usage',
   billing_invoices: 'Billing History',
@@ -68,7 +68,7 @@ const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
   billing_usage: 'See how your workspace is using plan limits.',
   billing_invoices: 'Track and manage your past invoices.',
   wordpress: 'Connect WordPress sites to publish from Ranksmile.',
-  api: 'Scale your workflows with API access.',
+  api: 'Skaluj swoje procesy dzięki zaawansowanemu dostępowi przez MCP i API.',
   profile: 'Manage your Ranksmile profile and security.',
   general: 'Organization name and defaults.',
   people: 'Invite and manage organization members.',
@@ -161,7 +161,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     if (currentPage === 'billing_invoices') return <BillingHistorySettings />;
     if (currentPage === 'billing_details') return <BillingDetailsSettings />;
     if (currentPage === 'wordpress') return <WordPressSettings />;
-    if (currentPage === 'api') return <ApiSettings />;
+    if (currentPage === 'api') return <McpApiSettings />;
     if (currentPage === 'profile') return <ProfileSettings />;
 
     return <div className="koala-settings-loading">Coming soon</div>;

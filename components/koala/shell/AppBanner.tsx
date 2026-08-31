@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import Link from 'next/link';
 import { Icon } from '../icons/Icon';
 import { Spinner } from '../primitives/Spinner';
+import { isBannerDismissed, markBannerDismissed } from '../../../lib/bannerDismissal';
 
 /** Full-width bar above the shell (Figma `3950:55902`). Single line of text + optional link. */
 export type AppBannerState = {
@@ -22,6 +23,12 @@ export type AppBannerState = {
   busy?: boolean;
   /** Close button; omit for banners the user must resolve. */
   dismissible?: boolean;
+  /**
+   * Remember the dismissal across reloads (persisted, keyed on `dismissKey`/`message`).
+   * For standing announcements that should not come back once closed — unlike a warning,
+   * which must reappear next session while the condition it names still holds.
+   */
+  persistDismiss?: boolean;
 };
 
 type Entry = { id: symbol; banner: AppBannerState };
@@ -110,9 +117,15 @@ export function AppBanner() {
   const ctx = useContext(AppBannerContext);
   const banner = ctx?.banner ?? null;
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
-  const key = banner ? JSON.stringify(banner) : '';
   // Dismissal is keyed on the stable identity, not the rendered text.
   const closeKey = banner?.dismissKey ?? banner?.message ?? '';
+  const persist = banner?.persistDismiss ?? false;
+
+  // Restore a persisted dismissal after mount — reading storage during render would
+  // mismatch the server-rendered null.
+  useEffect(() => {
+    if (persist && closeKey && isBannerDismissed(closeKey)) setDismissedKey(closeKey);
+  }, [persist, closeKey]);
 
   if (!banner || (banner.dismissible && dismissedKey === closeKey)) return null;
 
@@ -145,7 +158,10 @@ export function AppBanner() {
               type="button"
               className="koala-app-banner__close"
               aria-label="Dismiss"
-              onClick={() => setDismissedKey(closeKey)}
+              onClick={() => {
+                setDismissedKey(closeKey);
+                if (persist) markBannerDismissed(closeKey);
+              }}
             >
               <Icon name="X" size={20} weight="regular" />
             </button>
