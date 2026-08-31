@@ -281,10 +281,14 @@ async def run_pipeline(
         paragraph_links_block = (
             format_internal_link_block(
                 link_articles, language, limit=12,
-                # "0–1" read as "optional" and articles shipped with 2 links against the
-                # reference's ~10. One per matching paragraph compounds to 5-8 per
-                # article; enforce_internal_links still unwraps anything off-list.
-                quota="dokładnie 1, jeśli temat akapitu pasuje do pozycji z listy (inaczej 0)",
+                # Link generously. "dokładnie 1, jeśli DOKŁADNIE pasuje" shipped 3 links
+                # against the reference's 12: most topical paragraphs (mechanizmy, techniki)
+                # never name a service-page slug, so they linked nothing. The reference
+                # links on a RELATED concept — "uporczywe nękanie" -> /stalking-nekanie/,
+                # "przemoc psychiczna" -> /przemoc-psychiczna/ — not an exact match.
+                # enforce_internal_links still unwraps anything off-list, so being liberal
+                # here is safe.
+                quota="1 (wyjątkowo 2), gdy akapit dotyka tematu powiązanego z pozycją z listy — linkuj chętnie na luźno powiązane pojęcia, nie tylko przy dokładnym dopasowaniu (jeśli nic nie pasuje, 0)",
             )
             if internal_links else ""
         )
@@ -612,7 +616,7 @@ Rules:
 - Pick the most natural, contextually relevant phrase for each link
 - Prefer longer, more specific phrases (3-7 words) over single words
 - Spread the links across the WHOLE article, not just the opening sections
-- Aim for 8-12 suggestions; fewer only when the article genuinely lacks anchors
+- Aim for 12-16 suggestions; fewer only when the article genuinely lacks anchors
 
 OUTPUT FORMAT — JSON array only, no other text:
 [
