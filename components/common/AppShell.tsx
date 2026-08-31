@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import { registerMotionPlugins } from '../../lib/motion/gsap';
 import { useRouteTransition } from '../../lib/motion/useRouteTransition';
-import { AppBanner, KoalaHeader, KoalaSidebar } from '../koala/shell';
+import { AppBanner, KoalaHeader, KoalaSidebar, useAppBanner } from '../koala/shell';
 import MobileSidebar from './MobileSidebar';
 
 type AppShellProps = {
@@ -32,6 +32,15 @@ const AppShell = ({
   contentClassName = '',
 }: AppShellProps) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Standing announcement: Polish is available. Yields to any page-level banner
+  // (a warning/error published later wins), and stays gone once dismissed.
+  useAppBanner({
+    message: 'Ranksmile jest teraz dostępny w języku polskim.',
+    variant: 'brand',
+    dismissible: true,
+    persistDismiss: true,
+    dismissKey: 'locale-pl-announcement',
+  });
   useGSAP(() => { registerMotionPlugins(); });
   const contentRef = useRouteTransition<HTMLElement>();
 
