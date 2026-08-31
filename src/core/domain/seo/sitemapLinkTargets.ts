@@ -99,10 +99,18 @@ export function pickLinkTargets(opts: {
         + words.filter((w) => topic.has(w)).length;
       return { url, title, overlap };
     })
-    .filter((row) => row.title.length >= 3 && row.overlap > 0 && !BOILERPLATE_SLUG.test(normalizeTerm(row.title)))
+    .filter((row) => row.title.length >= 3 && !BOILERPLATE_SLUG.test(normalizeTerm(row.title)))
     .sort((a, b) => b.overlap - a.overlap || a.url.localeCompare(b.url));
 
-  return scored
+  // Overlap-ranked pages lead, but the rest of the site backfills the palette. Requiring
+  // token overlap surfaced only the three "szantaz-*" pages, while the reference tool links
+  // a dozen — including topically adjacent ones (/stalking-nekanie/, /przemoc-psychiczna/)
+  // whose slug shares no token with the query. On a niche site every page is adjacent, and
+  // the writer links only from this list where a paragraph genuinely fits, so a fuller
+  // palette raises link count without forcing an irrelevant link.
+  const overlapping = scored.filter((r) => r.overlap > 0);
+  const rest = scored.filter((r) => r.overlap === 0);
+  return [...overlapping, ...rest]
     .slice(0, opts.limit ?? 12)
     .map((row, i) => ({ id: -(i + 1), title: row.title, url: row.url }));
 }
