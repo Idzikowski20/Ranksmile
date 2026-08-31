@@ -140,10 +140,11 @@ export function buildCompetitorBenchmark(
   };
 }
 
-/** Adaptive H2 count from word budget. */
+/** Adaptive H2 count from word budget.
+ *
+ * ~1 H2 per 230 words, matching Surfer's generated article (1767 words → 8 H2) rather than
+ * the old step curve, which jumped to 11 for anything over 1400 words and gave a
+ * ~1900-word article eleven thin sections against Surfer's eight. */
 export function h2FromWords(words: number): number {
-  if (words <= 1400) return 7;
-  if (words <= 2800) return 11;
-  if (words <= 4800) return 16;
-  return 22;
+  return Math.min(22, Math.max(6, Math.round(words / 230)));
 }
