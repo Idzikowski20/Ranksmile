@@ -54,17 +54,49 @@ export function localizedRequiredSections(
         'Contact',
       ];
   }
-  // Informational topics carry NO forced skeleton. Surfer's generated article for this
-  // exact keyword has eight sections and every one is topical — "Czym jest…", "Jak
-  // rozpoznać…", "Mechanizmy…", "Kto pada ofiarą…" — with zero "Szybka odpowiedź / Plan
-  // działania / FAQ / Podsumowanie" scaffolding. Those seven generic headings were the
-  // single biggest source of both the inflated H2 count and the machine-guide feel: they
-  // crowded out the competitor topical headings the outline builder already has, and read
-  // as advice for doing the investigator's job yourself. Returning nothing lets the real
-  // competitor headings (headingFillersFromCompetitors) drive the whole outline, exactly
-  // as the reference tool does; `cost` no longer forces a section — a paragraph covers it.
-  void cost;
-  return [];
+  if (lang === 'pl') {
+    if (articleType === 'step-by-step' || articleType === 'guide') {
+      const steps = [
+        'Szybka odpowiedź',
+        'Pierwsze kroki',
+        'Plan działania',
+        'Najczęstsze błędy',
+        ...(cost ? ['Koszty i opcje'] : []),
+        'FAQ',
+        'Podsumowanie',
+      ];
+      return steps;
+    }
+    return [
+      'Szybki start',
+      'Podstawy',
+      'Checklista',
+      'Najczęstsze błędy',
+      ...(cost ? ['Koszty'] : []),
+      'FAQ',
+      'Podsumowanie',
+    ];
+  }
+  if (articleType === 'step-by-step') {
+    return [
+      'Quick Answer',
+      'First steps',
+      'Action plan',
+      'Common Mistakes',
+      ...(cost ? ['Cost'] : []),
+      'FAQ',
+      'Summary',
+    ];
+  }
+  return [
+    'Quick Start',
+    'Foundation',
+    'Checklist',
+    'Common Mistakes',
+    ...(cost ? ['Cost'] : []),
+    'FAQ',
+    'Summary',
+  ];
 }
 
 /**

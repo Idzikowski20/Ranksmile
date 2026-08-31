@@ -30,10 +30,9 @@ export function validateBlueprint(bp: ArticleBlueprint): ValidationResult {
   if (bp.targetClaims < 2) {
     issues.push({ code: 'claims_too_low', message: 'targetClaims below minimum 2' });
   }
-  // No blueprint-level "requiredSections empty" gate any more. Informational topics carry
-  // no forced skeleton — the outline is built from competitor topical headings — and
-  // validateOutline below already rejects an outline that ends up with too few H2, which
-  // is the real requirement. Keeping this check forced the machine-guide scaffolding back.
+  if (!bp.requiredSections.length) {
+    issues.push({ code: 'no_sections', message: 'requiredSections empty' });
+  }
   if (bp.budget.words !== bp.targetWords) {
     issues.push({ code: 'budget_mismatch', message: 'budget.words must equal targetWords' });
   }
