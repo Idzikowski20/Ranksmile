@@ -647,7 +647,7 @@ async def _ai_surface_facts(keyword: str, language: str, serper_key: str) -> tup
             return
         seen.add(text.lower())
         claims.append(text[:240])
-        sources.append({"url": url or "", "label": (label or "Google")[:80], "confidence": 0.8})
+        sources.append({"url": url or "", "source_urls": [url] if url else [], "label": (label or "Google")[:80], "confidence": 0.8, "cited_by": ["google"]})
 
     box = data.get("answerBox") or {}
     _add(box.get("answer") or box.get("snippet"), box.get("link", ""), box.get("title") or "Google answer")
@@ -661,14 +661,119 @@ async def _ai_surface_facts(keyword: str, language: str, serper_key: str) -> tup
     return claims, sources
 
 
+# Surfer harvests facts each AI engine cites when answering the query. OpenRouter reaches
+# the same engines through one key: perplexity (native web+citations) and gpt-4o-mini /
+# gemini-flash with the `:online` web-search plugin. Each returns `annotations` with the
+# source URLs the model cited — the same signal as Surfer's `cited_by`.
+_AI_ENGINES = (
+    ("perplexity", "perplexity/sonar"),
+    ("openai", "openai/gpt-4o-mini:online"),
+    ("gemini", "google/gemini-2.5-flash:online"),
+)
+
+
+async def _ai_engine_facts(keyword: str, language: str, openrouter_key: str) -> tuple[list[str], list[dict]]:
+    """Facts perplexity / openai / gemini cite for the query, each tagged with its engine
+    (Surfer `cited_by` parity). One OpenRouter key; models do the web search themselves."""
+    if not openrouter_key or not keyword.strip():
+        return [], []
+    lang_hint = "Odpowiedz po polsku." if language.startswith("pl") else ""
+    prompt = (
+        f'Wypisz 6 konkretnych, sprawdzalnych faktów o temacie: "{keyword}". '
+        f"Każdy fakt w osobnej linii — jedno zdanie, z liczbą, definicją lub konkretem. "
+        f"Bez wstępu i bez numeracji. {lang_hint}"
+    )
+
+    async def _one(engine: str, model: str) -> tuple[list[str], list[dict]]:
+        try:
+            async with httpx.AsyncClient(timeout=45) as client:
+                resp = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {openrouter_key}", "Content-Type": "application/json"},
+                    json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 700},
+                )
+            if resp.status_code != 200:
+                print(f"[fact-research] {engine} HTTP {resp.status_code}: {resp.text[:120]}")
+                return [], []
+            message = resp.json()["choices"][0]["message"]
+        except Exception as exc:
+            print(f"[fact-research] {engine} failed: {exc}")
+            return [], []
+        content = message.get("content") or ""
+        urls = [
+            a.get("url_citation", {}).get("url")
+            for a in (message.get("annotations") or [])
+            if isinstance(a, dict) and a.get("url_citation", {}).get("url")
+        ]
+        claims: list[str] = []
+        sources: list[dict] = []
+        for line in content.split("\n"):
+            stripped = re.sub(r"^[\s\-\*\d\.\)\]]+", "", line)
+            # `[n]` markers map a sentence to the engine's nth citation (perplexity/OpenRouter
+            # style). Collect those specific sources before stripping the markers off the text.
+            marker_urls = [
+                urls[int(n) - 1]
+                for n in re.findall(r"\[(\d+)\]", stripped)
+                if 0 < int(n) <= len(urls)
+            ]
+            text = re.sub(r"\[\d+\]", "", stripped).strip()
+            if len(text) < 40:
+                continue
+            # Fall back to the response's cited URLs when a sentence carries no explicit marker.
+            fact_urls = list(dict.fromkeys(marker_urls or urls))
+            claims.append(text[:240])
+            sources.append({
+                "url": fact_urls[0] if fact_urls else "",
+                "source_urls": fact_urls[:6],
+                "label": engine,
+                "confidence": 0.85,
+                "cited_by": [engine],
+            })
+        return claims, sources
+
+    results = await asyncio.gather(*[_one(e, m) for e, m in _AI_ENGINES])
+    claims: list[str] = []
+    sources: list[dict] = []
+    seen: dict[str, dict] = {}
+    for engine_claims, engine_sources in results:
+        for claim, src in zip(engine_claims, engine_sources):
+            key = " ".join(claim.lower().split())[:120]
+            if key in seen:
+                # Same fact from another engine — merge attribution (engines + source URLs)
+                # instead of duplicating, exactly as Surfer stacks icons on one fact.
+                prev = seen[key]
+                for e in src["cited_by"]:
+                    if e not in prev["cited_by"]:
+                        prev["cited_by"].append(e)
+                merged = list(dict.fromkeys(prev.get("source_urls", []) + src.get("source_urls", [])))
+                prev["source_urls"] = merged[:8]
+                if not prev.get("url") and merged:
+                    prev["url"] = merged[0]
+                continue
+            seen[key] = src
+            claims.append(claim)
+            sources.append(src)
+    if claims:
+        by = {}
+        for s in sources:
+            for e in s["cited_by"]:
+                by[e] = by.get(e, 0) + 1
+        print(f"[fact-research] {keyword!r}: {len(claims)} AI-engine facts {by}")
+    return claims, sources
+
+
 async def research_authority_facts(keyword: str, language: str = "pl") -> dict:
-    """Google answer surfaces + focused searches; sourced snippets become claims."""
+    """AI-engine facts (perplexity/openai/gemini) + Google surfaces + focused SERP searches."""
     serper_key = os.getenv("SERPER_API_KEY", "")
     if not serper_key or not keyword.strip():
         return {"claims": [], "sources": []}
 
-    # AI-engine-style facts first: Google's own answer surfaces (Surfer parity, partial).
-    ai_claims, ai_sources = await _ai_surface_facts(keyword, language, serper_key)
+    # Real 4-engine harvest: the AI engines via OpenRouter, then Google's own answer surfaces.
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    engine_claims, engine_sources = await _ai_engine_facts(keyword, language, openrouter_key)
+    surface_claims, surface_sources = await _ai_surface_facts(keyword, language, serper_key)
+    ai_claims = engine_claims + surface_claims
+    ai_sources = engine_sources + surface_sources
 
     # Three profiles, matching the reference guideline's fact mix: legal cases,
     # statistics, and the psychology declaratives ("skutki", "mechanizmy") that made up
@@ -708,12 +813,14 @@ async def research_authority_facts(keyword: str, language: str = "pl") -> dict:
             claims.append(snippet[:220])
             sources.append({
                 "url": url,
+                "source_urls": [url],
                 "label": row.get("title", "")[:80] or domain_from_url(url),
                 "confidence": _authority_confidence(url),
+                "cited_by": ["serp"],
             })
-            if len(claims) >= 12:
+            if len(claims) >= 18:
                 break
-        if len(claims) >= 12:
+        if len(claims) >= 18:
             break
     print(f"[fact-research] {keyword!r}: {len(claims)} sourced facts")
     return {"claims": claims, "sources": sources}
