@@ -62,6 +62,9 @@ export interface CoverageItem {
   readonly provenance?: CoverageProvenance;
   /** LLM engines that generated/surfaced this question (AI Search checklist). */
   readonly llmSources?: readonly LlmCoverageSource[];
+  /** Source websites behind this item — the pages the engines cited, shown as favicons
+   *  with a hover-to-source link (Surfer's per-fact source row). */
+  readonly webSources?: readonly { readonly url: string; readonly domain: string }[];
 }
 
 export interface CoverageVerdict {
