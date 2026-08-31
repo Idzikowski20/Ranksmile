@@ -154,8 +154,14 @@ export function buildPrecisionStepPrompt(
         : step.action === 'expand_section' || step.action === 'expand_existing_paragraph'
           ? 'Expand only as needed to satisfy the objective. Do not pad to a word count.'
           : step.action === 'add_missing_section'
-            ? 'Create a new focused section/block for the missing topic (do not dump into intro).'
-            : step.action === 'improve_direct_answer'
+            // ONLY the new section. The runtime appends it after the anchor
+            // (see runPrecisionOptimizeV4) — asking the model to echo the anchor back
+            // made it merge the topic into that section instead, so the step was
+            // accepted and the article still had the same number of H2s.
+            ? `Write ONLY a brand new section — nothing else, do not repeat the section `
+              + `you were shown. Start with <h2>${step.targetGap.claimOrQuestion}</h2>, then `
+              + `2-4 short paragraphs (a list where it genuinely helps).`
+          : step.action === 'improve_direct_answer'
               ? 'Add or strengthen a clear direct answer to the question/gap.'
               : step.action === 'add_facts'
                 ? 'Add supporting facts/entities relevant to the gap.'

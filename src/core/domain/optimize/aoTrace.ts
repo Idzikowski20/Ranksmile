@@ -52,9 +52,15 @@ export function createAoTrace(runId: string) {
         accepted: events.filter((e) => e.step === 'accepted').length,
         rejected: events.filter((e) => e.step === 'rejected').length,
         rollback: events.some((e) => e.step === 'rollback'),
+        // Action alongside the reason: "5x CHANGE_RATIO" is unactionable without
+        // knowing which edit shapes hit it.
         reasons: events
           .filter((e) => e.reason)
-          .map((e) => e.reason as string),
+          .map((e) => {
+            const action = (e.metadata as { action?: string } | undefined)?.action;
+            const detail = (e.metadata as { detail?: string } | undefined)?.detail;
+            return [e.reason, action, detail].filter(Boolean).join(' | ');
+          }),
       };
     },
   };

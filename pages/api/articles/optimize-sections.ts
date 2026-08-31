@@ -356,11 +356,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const rebuild = liveMode === 'full';
       const plannedHeadings: string[] = (() => {
          const sd = (ctx?.scoreData ?? scoreData) as Record<string, unknown> | undefined;
-         const planner = sd?.content_planner_v2 as
-            | { bundle?: { outline?: { sections?: Array<{ title?: string }> } } }
+         // The planner's own field is `heading`; reading `title` (which does not exist
+            // on OutlineSection) silently produced an empty list on every run.
+            const planner = sd?.content_planner_v2 as
+            | { bundle?: { outline?: { sections?: Array<{ heading?: string; title?: string }> } } }
             | undefined;
          return (planner?.bundle?.outline?.sections ?? [])
-            .map((x) => (x?.title || '').trim())
+            .map((x) => (x?.heading || x?.title || '').trim())
             .filter((t) => t.length >= 8);
       })();
 
