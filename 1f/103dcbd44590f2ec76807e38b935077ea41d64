@@ -1,0 +1,43 @@
+__tests__/components/McpApiSettings.test.tsx
+  s_88af64c9082b5e::t_46a8e178300513 1-19
+components/koala/shell/AppBanner.tsx
+  s_88af64c9082b5e::t_fd87651ba42553 127
+  s_88af64c9082b5e::t_6bc8a017064f0b 161-162,164
+  s_88af64c9082b5e::t_579843d0729f67 163
+  s_88af64c9082b5e::t_6c2324e1407e84 5
+  s_88af64c9082b5e::t_fe0cf6abf7b162 26,28-31
+  s_88af64c9082b5e::t_e2d4d0ece48c8c 27
+  s_88af64c9082b5e::t_f72554d6acba4f 122-126,128
+components/settings/SettingsLayout.tsx
+  s_88af64c9082b5e::t_f6a3d9c6fb5ab0 15
+  s_88af64c9082b5e::t_91edec3de9b137 71
+  s_88af64c9082b5e::t_ec7207b613c05f 49
+  s_88af64c9082b5e::t_c8a2598880533f 164
+lib/bannerDismissal.ts
+  s_88af64c9082b5e::t_f471b11e5dedf8 1-27
+components/settings/SettingsNav.tsx
+  s_88af64c9082b5e::t_45988973e6aa78 65
+components/common/AppShell.tsx
+  s_88af64c9082b5e::t_bcdfc1f611c1c4 5
+  s_88af64c9082b5e::t_2e58fb176ad80f 35-43
+__tests__/components/AppBanner.test.tsx
+  s_88af64c9082b5e::t_1a7a2831c93bf9 47-64
+components/settings/McpApiSettings.tsx
+  s_88af64c9082b5e::t_b54023158328f7 1-233
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1f103dcbd44590f2ec76807e38b935077ea41d64",
+  "prompts": {},
+  "sessions": {
+    "s_88af64c9082b5e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f5ced22a-8983-433f-aa8f-5b87e4107a44",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
