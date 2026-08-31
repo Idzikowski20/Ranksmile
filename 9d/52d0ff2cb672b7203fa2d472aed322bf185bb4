@@ -1,0 +1,31 @@
+python-sidecar/tests/test_inline_enumeration.py
+  s_e8c3822b427cc8::t_ff566f2a5ded30 1-32
+python-sidecar/pipeline/compiled_runtime.py
+  s_e8c3822b427cc8::t_181f7ad60efbb8 85-92
+  s_e8c3822b427cc8::t_a0553dcd054b48 145-171,179
+python-sidecar/pipeline/section_writer.py
+  s_e8c3822b427cc8::t_c8c50126688783 295-306
+  s_e8c3822b427cc8::t_621528a1f69dc4 399-427,435
+python-sidecar/analyzers/competitor_terms.py
+  s_e8c3822b427cc8::t_e894affec53dc4 130-155,163-165
+  s_e8c3822b427cc8::t_e3989f278cd647 203
+  s_e8c3822b427cc8::t_3a1ce8487cdcdc 189
+python-sidecar/tests/test_section_coherence.py
+  s_e8c3822b427cc8::t_f9dd01ceb694b1 1-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9d52d0ff2cb672b7203fa2d472aed322bf185bb4",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
