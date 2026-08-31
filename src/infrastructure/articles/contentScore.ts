@@ -12,6 +12,24 @@ import { termWeight } from '@/src/core/domain/terms/termWeight';
 import { countOccurrences, normalizePl, tokenize, wordMatch } from '@/src/core/domain/terms/termMatch';
 
 export { countOccurrences } from '@/src/core/domain/terms/termMatch';
+
+/**
+ * Write the AI Search score and its calculated_at together, so they cannot drift.
+ *
+ * Bug 146 was exactly a drift: ai_score was overwritten by a later async pass while the
+ * timestamp signal that would have flagged the stale read did not exist. Surfer stamps
+ * every subscore with `calculated_at`; this is that stamp, written atomically with the
+ * value at each authoritative write site.
+ */
+export function setAiScore(scoreData: { ai_score?: number; _ai_score_at?: number }, value: number, at = Date.now()): void {
+   scoreData.ai_score = value;
+   scoreData._ai_score_at = at;
+}
+
+export function setSeoScore(scoreData: { seo_score?: number; _seo_score_at?: number }, value: number, at = Date.now()): void {
+   scoreData.seo_score = value;
+   scoreData._seo_score_at = at;
+}
 import type { NlpTerm } from '@/src/core/domain/terms/types';
 export type { NlpTerm };
 
@@ -53,6 +71,11 @@ export interface ScoreData {
    seo_score?: number;
    /** AI Search score (Facts + Intent) — persisted after deep-analysis. */
    ai_score?: number;
+   /** Epoch ms when seo_score / ai_score were last written. Surfer-style freshness
+    *  (their per-subscore `calculated_at`): a consumer can tell a score's age and which
+    *  pass produced it, so a stale read like bug 146 is detectable rather than silent. */
+   _seo_score_at?: number;
+   _ai_score_at?: number;
    /** Typed AI factors with the sentence that earned each one — shown under the score. */
    ai_factors?: import('@/src/core/domain/aiScore/factors').ScoreFactor[];
    /** Persisted gauge values (not part of scoring formula). */

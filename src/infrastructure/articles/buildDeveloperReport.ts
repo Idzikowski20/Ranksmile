@@ -146,6 +146,11 @@ export function buildDeveloperReport(input: DeveloperReportInput): Record<string
         _computed_score: input.scoreData._computed_score ?? null,
         _content_score: input.scoreData._content_score ?? null,
         panel_ai_coverage_score: input.aiCoverageScore,
+        // Surfer-style calculated_at: when each subscore was last written, so a stale
+        // read (bug 146: report exported AI 36 while the DB held 73) is visible in the
+        // report itself rather than silent.
+        seo_score_at: input.scoreData._seo_score_at ?? null,
+        ai_score_at: input.scoreData._ai_score_at ?? null,
       },
     },
     terms: {
