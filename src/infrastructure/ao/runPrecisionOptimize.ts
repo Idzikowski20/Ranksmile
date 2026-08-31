@@ -247,6 +247,35 @@ export type PrecisionV4Result = {
   targeting: { skippedNoTarget: number; usedFallback: number; assigned: number };
 };
 
+/**
+ * Splice a step's output into the article.
+ *
+ * `add_missing_section` APPENDS after the anchor instead of replacing it: the model is
+ * given the anchor section as context and returns only the new section, so replacing
+ * would delete the anchor. This is also why the action used to be a silent no-op —
+ * the model, asked to "create a new section" while holding the anchor's HTML, expanded
+ * that section and the H2 count never moved.
+ */
+function applyStepHtml(
+  working: string,
+  sectionHtml: string,
+  afterHtml: string,
+  sectionId: string,
+  action: string,
+): string {
+  if (action === 'add_missing_section') {
+    const idx = working.indexOf(sectionHtml);
+    if (idx >= 0) {
+      const end = idx + sectionHtml.length;
+      return `${working.slice(0, end)}
+${afterHtml}${working.slice(end)}`;
+    }
+    return `${working}
+${afterHtml}`;
+  }
+  return replaceSectionHtml(working, sectionHtml, afterHtml, sectionId);
+}
+
 function replaceSectionHtml(working: string, sectionHtml: string, afterHtml: string, sectionId: string): string {
   const idx = working.indexOf(sectionHtml);
   if (idx >= 0) {
@@ -522,7 +551,7 @@ export async function runPrecisionOptimizeV4(opts: {
       }
 
       const scoreSection = (sectionHtml: string): AoScores => {
-        const fullHtml = replaceSectionHtml(working.html, section.html, sectionHtml, section.id);
+        const fullHtml = applyStepHtml(working.html, section.html, sectionHtml, section.id, step.action);
         return scoreHtml(fullHtml).scores;
       };
 
@@ -562,11 +591,14 @@ export async function runPrecisionOptimizeV4(opts: {
       });
     }
 
-    const tempHtml = replaceSectionHtml(working.html, section.html, afterSection, section.id);
+    const tempHtml = applyStepHtml(working.html, section.html, afterSection, section.id, step.action);
     if (tempHtml.trim() === working.html.trim()) continue;
 
     const safety = runLocalSafetyGate({
-      beforeHtml: section.html,
+      // An appended section is measured against the empty string, not the anchor: the
+      // anchor is untouched, so comparing "anchor" to "new section" reported the whole
+      // anchor as deleted and the whole new section as added.
+      beforeHtml: step.action === 'add_missing_section' ? '' : section.html,
       afterHtml: afterSection,
       budget: step.budget,
       profile,
@@ -574,6 +606,7 @@ export async function runPrecisionOptimizeV4(opts: {
     });
     if (!safety.ok) {
       rejected += 1;
+      trace.push({ step: 'candidate_score_gate', candidateId: step.candidateId, sectionId: step.sectionId, reason: `SAFETY_${safety.reason}`, metadata: { action: step.action, detail: safety.detail } });
       continue;
     }
 
@@ -584,6 +617,7 @@ export async function runPrecisionOptimizeV4(opts: {
     });
     if (!inv.ok) {
       rejected += 1;
+      trace.push({ step: 'invariant_gate', candidateId: step.candidateId, sectionId: step.sectionId, reason: 'INVARIANT', metadata: { action: step.action } });
       continue;
     }
 
@@ -594,6 +628,7 @@ export async function runPrecisionOptimizeV4(opts: {
     });
     if (!sem.ok) {
       rejected += 1;
+      trace.push({ step: 'semantic_gate', candidateId: step.candidateId, sectionId: step.sectionId, reason: 'SEMANTIC', metadata: { action: step.action } });
       continue;
     }
 
@@ -607,6 +642,7 @@ export async function runPrecisionOptimizeV4(opts: {
     // Skip AI spend on clear SEO/overall regression vs working (strict early)
     if (gatePolicy.mode === 'strict_non_regression' && hasSeoContentRegression(working.scores, tempSeoContent)) {
       rejected += 1;
+      trace.push({ step: 'candidate_score_gate', candidateId: step.candidateId, sectionId: step.sectionId, reason: 'SEO_REGRESSION', metadata: { action: step.action } });
       continue;
     }
 
@@ -648,7 +684,12 @@ export async function runPrecisionOptimizeV4(opts: {
     }
 
     const rx = evaluateRxQualityGate({
-      afterHtml: afterSection,
+      // The whole article after the edit, not the fragment. An appended section is a
+      // fresh 100+ word block that carries no expert marker of its own, so judging it
+      // in isolation vetoed every rebuilt section on "no_expert_voice" — while the
+      // article it joins may carry that voice throughout. Replacing steps see the same
+      // document they always did, since the fragment is spliced in either way.
+      afterHtml: tempHtml,
       action: step.action,
       synthesis,
     });

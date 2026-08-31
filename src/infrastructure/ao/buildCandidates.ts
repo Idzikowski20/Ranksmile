@@ -232,8 +232,8 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
     ...(input.plannedHeadings ?? []).map((t) => ({ title: t, planned: true })),
     ...(input.competitorHeadings ?? []).map((t) => ({ title: t, planned: false })),
   ];
-  const missingCap = input.rebuild ? 5 : 2;
-  if (headingSources.length && input.sections?.length && (input.rebuild || strategy !== 'precision')) {
+  const missingCap = input.rebuild ? 5 : 3;
+  if (headingSources.length && input.sections?.length) {
     const articleText = input.sections.map((sec) => sec.html).join(' ')
       .replace(/<[^>]+>/g, ' ')
       .toLowerCase();
@@ -241,6 +241,12 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
     let added = 0;
     for (const { title: rawTitle, planned } of headingSources) {
       if (added >= missingCap) break;
+      // A section the PLAN intended is structural damage whatever the score or strategy
+      // says — the degraded-article test sat at SEO 68 (mode seo-first, strategy
+      // precision) with seven planned sections gone, and both prior gates skipped the
+      // rebuild entirely. Competitor-heading suggestions stay behind the old gate:
+      // they are a nice-to-have, not the article's own contract.
+      if (!planned && !(input.rebuild || strategy !== 'precision')) continue;
       const title = (rawTitle || '').trim();
       if (title.length < 8 || title.length > 90) continue;
       if (textHitsForbidden(title, profile)) continue;

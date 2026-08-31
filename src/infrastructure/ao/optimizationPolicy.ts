@@ -153,17 +153,18 @@ export function resolveOptimizationPolicy(opts: {
 
   let strategy = opts.strategy;
   if (!strategy || strategy === 'precision') {
-    // Re-diagnose unless explicitly enrichment/deep/whole from caller
-    if (!opts.strategy) {
-      strategy = chooseStrategyFromDiagnosis({
-        scores: opts.scores,
-        structural,
-        intent,
-        highValueGaps,
-      });
-    } else {
-      strategy = opts.strategy;
-    }
+    // 'precision' is also the resolver's DEFAULT ("policy resolver overrides by
+    // diagnosis" — line 51), but this branch only re-diagnosed on undefined, so the
+    // endpoint's defaulted 'precision' pinned every run to 3-6 steps with
+    // allowNewHeading=false. A degraded article (7 planned sections gone, SEO 68)
+    // could never route to deep_optimize and never rebuild. Diagnosis now runs for
+    // 'precision' too; explicitly requested enrichment/deep/whole still win.
+    strategy = chooseStrategyFromDiagnosis({
+      scores: opts.scores,
+      structural,
+      intent,
+      highValueGaps,
+    });
   }
 
   const seoStrong = Math.round(opts.scores.seo) >= 85;
