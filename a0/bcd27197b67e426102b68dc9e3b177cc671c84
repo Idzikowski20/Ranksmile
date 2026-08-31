@@ -1,0 +1,19 @@
+src/infrastructure/ao/optimizationPolicy.ts
+  s_e8c3822b427cc8::t_844db32829ce3f 162-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a0bcd27197b67e426102b68dc9e3b177cc671c84",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
