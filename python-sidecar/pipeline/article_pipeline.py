@@ -212,6 +212,7 @@ async def run_pipeline(
     brand_knowledge: str = "",
     brand_name: str = "",
     voice_tone: str = "",
+    template_reference: str = "",
     execution_plan: dict | None = None,
     compiled_write_plan: dict | None = None,
     existing_articles: list[dict] | None = None,
@@ -245,6 +246,18 @@ async def run_pipeline(
         f"Ton i styl: naśladuj poniższy wzorzec głosu marki —\n{voice_tone.strip()[:1500]}"
         if voice_tone.strip() else f"Ton: {tone}"
     )
+    # Voice (writing-style sample) + template (structure/format reference) travel with
+    # every paragraph in the compiled path — the writer is stateless, so without this the
+    # selected Custom Voice / Content Template never reached the model that wrote the body.
+    voice_block = (
+        f"\n\nGŁOS MARKI (naśladuj ton i styl, nie kopiuj treści):\n{voice_tone.strip()[:1500]}"
+        if voice_tone.strip() else ""
+    )
+    template_block = (
+        f"\n\nWZORZEC TREŚCI (naśladuj strukturę i format, nie kopiuj treści):\n{template_reference.strip()[:1500]}"
+        if template_reference.strip() else ""
+    )
+    style_block = f"{voice_block}{template_block}"
 
     site_info = (
         f"Strona: {site_context.get('url', '')}\n"
@@ -310,7 +323,7 @@ async def run_pipeline(
             )
             return await _chat(
                 f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}"
-                f"{paragraph_brand}\n\n"
+                f"{paragraph_brand}{style_block}\n\n"
                 f"{prompt}{paragraph_links_block}",
                 max_tokens=1200,
                 system="Write SEO content as Markdown only. Never emit HTML.",
