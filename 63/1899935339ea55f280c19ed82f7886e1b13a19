@@ -1,0 +1,24 @@
+__tests__/lib/precisionStepPromptTerms.test.ts
+  s_e8c3822b427cc8::t_8c8c776b8c00fb 1-30
+src/infrastructure/ao/runPrecisionOptimize.ts
+  s_e8c3822b427cc8::t_5fca8b91f4e4a5 406-414
+src/infrastructure/ao/editPlan.ts
+  s_e8c3822b427cc8::t_7f96d08f5700a0 147-149,152-165
+  s_e8c3822b427cc8::t_4aacdfb08630ac 229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "631899935339ea55f280c19ed82f7886e1b13a19",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
