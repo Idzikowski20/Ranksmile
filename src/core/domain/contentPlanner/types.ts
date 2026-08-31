@@ -382,4 +382,4 @@ export const KNOWLEDGE_COVERAGE_MIN_PCT = 95;
  * so that also bought four sections nobody had material for, and they overlapped.
  */
 export const BENCHMARK_WORDS_FLOOR = 1200;
-export const BENCHMARK_H2_FLOOR = 6;
+export const BENCHMARK_H2_FLOOR = 7;
