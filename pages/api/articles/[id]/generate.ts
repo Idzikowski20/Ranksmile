@@ -469,6 +469,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         brandKnowledge,
         brandName: cs.brandName,
         importantTerms: importantTermsFromScoreData(scoreData, { tableTerms, max: 120 }),
+        // Heading terms, same as /content-plan: the SERP-flagged terms the brief writer
+        // works into H2/H3. Omitting them here let the express path (no outline review)
+        // ignore heading placement entirely, which the scorer now measures.
+        headingTerms: (Array.isArray(scoreData.terms) ? scoreData.terms : [])
+          .filter((t): t is { term: string; in_headings?: boolean } => Boolean(t?.in_headings))
+          .map((t) => t.term)
+          .slice(0, 10),
         language: lang,
         competitorHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
         // Cron runs resolve no org and skip the budget gate entirely, so there is nothing

@@ -311,6 +311,22 @@ export function collectScoreSlots(
       push('terms', 'NLP terms', termsRatio * 25, 25, 'Use the suggested terms at their target counts (see Keywords & Terms)');
    }
 
+   // Heading terms — Surfer scores whether the terms it marked for headings actually
+   // land in an H2/H3 (its `in_headings_count`). Only appears when the SERP flagged
+   // some, so an article without heading terms is scored exactly as before.
+   if (html && scoreData.terms?.length) {
+      const headingTerms = scoreData.terms.filter((t) => t.in_headings);
+      if (headingTerms.length) {
+         const headingText = (html.match(/<h[2-4][^>]*>[\s\S]*?<\/h[2-4]>/gi) || [])
+            .join(' ')
+            .replace(/<[^>]+>/g, ' ')
+            .toLowerCase();
+         const placed = headingTerms.filter((t) => headingText.includes(t.term.toLowerCase())).length;
+         push('headingTerms', 'Heading terms', (placed / headingTerms.length) * 5, 5,
+            `${placed}/${headingTerms.length} heading terms in a heading`);
+      }
+   }
+
    if (scoreData.paragraphs_target && paragraphCount !== undefined) {
       push('paragraphs', 'Paragraphs', Math.min(paragraphCount / Math.max(scoreData.paragraphs_target, 1), 1) * 5, 5,
          `Aim for ~${scoreData.paragraphs_target} paragraphs`);
