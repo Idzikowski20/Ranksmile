@@ -593,11 +593,64 @@ def _authority_confidence(url: str) -> float:
     return 0.85 if any(h in host for h in _AUTHORITY_HOSTS) else 0.6
 
 
+async def _ai_surface_facts(keyword: str, language: str, serper_key: str) -> tuple[list[str], list[dict]]:
+    """
+    Facts from Google's own answer surfaces — the closest thing to Surfer's AI-engine
+    facts that the available keys reach.
+
+    Surfer harvests facts from Google AI Overviews / AI Mode, Gemini, OpenAI and
+    Perplexity. We have Serper (Google) and OpenRouter, but no OpenAI/Perplexity keys,
+    so full four-engine parity is out of reach. What we CAN read is Google's featured
+    answer, knowledge panel and People-Also-Ask answers — Google's surfaced facts,
+    already sourced, no model hallucination. Honest partial coverage.
+    """
+    gl = {"pl": "pl", "en": "us", "de": "de", "fr": "fr", "es": "es"}.get(language, "us")
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(
+                "https://google.serper.dev/search",
+                headers={"X-API-KEY": serper_key, "Content-Type": "application/json"},
+                json={"q": keyword, "hl": language, "gl": gl},
+            )
+        if resp.status_code != 200:
+            return [], []
+        data = resp.json()
+    except Exception as exc:
+        print(f"[fact-research] AI-surface fetch failed: {exc}")
+        return [], []
+
+    claims: list[str] = []
+    sources: list[dict] = []
+    seen: set[str] = set()
+
+    def _add(text: str, url: str, label: str) -> None:
+        text = " ".join(str(text or "").split())
+        if len(text) < 40 or text.lower() in seen:
+            return
+        seen.add(text.lower())
+        claims.append(text[:240])
+        sources.append({"url": url or "", "label": (label or "Google")[:80], "confidence": 0.8})
+
+    box = data.get("answerBox") or {}
+    _add(box.get("answer") or box.get("snippet"), box.get("link", ""), box.get("title") or "Google answer")
+    kg = data.get("knowledgeGraph") or {}
+    _add(kg.get("description"), kg.get("descriptionLink", ""), kg.get("title") or "Google knowledge panel")
+    for paa in (data.get("peopleAlsoAsk") or [])[:6]:
+        _add(paa.get("snippet"), paa.get("link", ""), paa.get("question") or "People also ask")
+
+    if claims:
+        print(f"[fact-research] {keyword!r}: {len(claims)} facts from Google answer surfaces")
+    return claims, sources
+
+
 async def research_authority_facts(keyword: str, language: str = "pl") -> dict:
-    """Two focused searches; snippets with digits or from authority hosts become claims."""
+    """Google answer surfaces + focused searches; sourced snippets become claims."""
     serper_key = os.getenv("SERPER_API_KEY", "")
     if not serper_key or not keyword.strip():
         return {"claims": [], "sources": []}
+
+    # AI-engine-style facts first: Google's own answer surfaces (Surfer parity, partial).
+    ai_claims, ai_sources = await _ai_surface_facts(keyword, language, serper_key)
 
     # Three profiles, matching the reference guideline's fact mix: legal cases,
     # statistics, and the psychology declaratives ("skutki", "mechanizmy") that made up
@@ -615,8 +668,8 @@ async def research_authority_facts(keyword: str, language: str = "pl") -> dict:
             "effects OR symptoms OR mechanisms OR causes",
         ]
     )
-    claims: list[str] = []
-    sources: list[dict] = []
+    claims: list[str] = list(ai_claims)
+    sources: list[dict] = list(ai_sources)
     seen_urls: set[str] = set()
     for suffix in suffixes:
         try:
