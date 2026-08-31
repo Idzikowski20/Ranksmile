@@ -4,14 +4,15 @@
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 export type ContentVoice = { id: string; name: string; description: string; isDefault: boolean };
-export type ContentSettingsData = { voices: ContentVoice[]; brandKnowledge: string; brandName: string };
+export type ContentTemplate = { id: string; name: string; referenceText: string; isDefault: boolean };
+export type ContentSettingsData = { voices: ContentVoice[]; templates: ContentTemplate[]; brandKnowledge: string; brandName: string };
 
 const KEY = 'content-settings';
 
 export async function fetchContentSettings(): Promise<ContentSettingsData> {
    const res = await fetch('/api/content-settings');
    const d = await res.json().catch(() => ({}));
-   return { voices: d.voices || [], brandKnowledge: d.brandKnowledge || '', brandName: d.brandName || '' };
+   return { voices: d.voices || [], templates: d.templates || [], brandKnowledge: d.brandKnowledge || '', brandName: d.brandName || '' };
 }
 
 export function useContentSettings() {
@@ -22,7 +23,7 @@ export function useContentSettings() {
 export function useUpdateContentSettings() {
    const qc = useQueryClient();
    return useMutation(
-      async (patch: Partial<{ brandKnowledge: string; brandName: string; voices: ContentVoice[] }>) => {
+      async (patch: Partial<{ brandKnowledge: string; brandName: string; voices: ContentVoice[]; templates: ContentTemplate[] }>) => {
          const res = await fetch('/api/content-settings', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
