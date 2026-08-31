@@ -111,8 +111,17 @@ export function buildCompetitorBenchmark(
   // is the SERP telling us what ranks, not a gap to paper over.
   // recommendedWords alone: the old Math.max with averageWords re-imported the outlier
   // inflation the median-based recommendation exists to avoid.
+  // Ceiling as well as floor. recommendedWords is the competitor median, ~2760 on this
+  // keyword — but Surfer writes a focused 1767 for the same SERP, and our own writer lands
+  // at ~1930 whatever the target says, so the 2760 was fiction that only inflated the H2
+  // count (a ~1930-word article was given twelve thin sections against Surfer's eight).
+  // Cap at a focused length: fewer, fuller sections, matching what actually ships.
+  const WORDS_CEIL = 2000;
   const measured = synth.recommendedWords;
-  const targetWords = Math.round(measured > 0 ? measured : BENCHMARK_WORDS_FLOOR);
+  const targetWords = Math.min(
+    WORDS_CEIL,
+    Math.round(measured > 0 ? measured : BENCHMARK_WORDS_FLOOR),
+  );
   // A ceiling as well as a floor. `averageH2` counts every heading a competitor renders —
   // H3s, nav, footer — so a SERP of long pages asked for 22 top-level sections, and the
   // outline builder padded to match at ~100 words each. The reference tool reports the
@@ -140,10 +149,11 @@ export function buildCompetitorBenchmark(
   };
 }
 
-/** Adaptive H2 count from word budget. */
+/** Adaptive H2 count from word budget.
+ *
+ * ~1 H2 per 230 words, matching Surfer's generated article (1767 words → 8 H2) rather than
+ * the old step curve, which jumped to 11 for anything over 1400 words and gave a
+ * ~1900-word article eleven thin sections against Surfer's eight. */
 export function h2FromWords(words: number): number {
-  if (words <= 1400) return 7;
-  if (words <= 2800) return 11;
-  if (words <= 4800) return 16;
-  return 22;
+  return Math.min(22, Math.max(6, Math.round(words / 230)));
 }

@@ -275,6 +275,13 @@ export function parseCompetitorCacheJson(raw: string | null | undefined): Compet
 }
 
 /** H2/H3 titles from competitor outlines cache — outline fillers + AI coverage seeds. */
+// Encyclopedia section furniture, not article topics. Wikipedia ranks for many keywords,
+// and its "Przypisy" / "Bibliografia" / "Zobacz też" H2s were becoming article sections —
+// art153 shipped a "Przypisy do informacji o szantażu emocjonalnym" heading.
+// No trailing \b — an ASCII word boundary after "też"/"treści" never fires, the trap
+// documented across this codebase. Start-anchored is enough for a section heading.
+const HEADING_FURNITURE = /^(przypisy|bibliografia|zobacz (też|również)|linki zewnętrzne|uwagi|galeria|kategori|spis treści|references|see also|external links|further reading|notes|bibliography|contents)/i;
+
 export function competitorHeadingTitles(raw: string | null | undefined): string[] {
   if (!raw) return [];
   const parsed = safeJsonParse<unknown>(raw, null);
@@ -296,6 +303,7 @@ export function competitorHeadingTitles(raw: string | null | undefined): string[
       if ((level === 2 || level === 3) && typeof text === 'string') {
         const t = text.trim();
         if (t.length < 8 || t.length > 100) continue;
+        if (HEADING_FURNITURE.test(t)) continue;
         const key = t.toLowerCase();
         if (seen.has(key)) continue;
         seen.add(key);
