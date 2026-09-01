@@ -52,7 +52,12 @@ def _safe_alt(text: str) -> str:
     cleaned = " ".join(str(text or "").split())
     for bad, good in (("<", ""), (">", ""), ("&", " "), ('"', "”"), ("'", "’")):
         cleaned = cleaned.replace(bad, good)
-    return " ".join(cleaned.split())[:300]
+    out = " ".join(cleaned.split())
+    if len(out) <= 300:
+        return out
+    # Cut on a word boundary — a mid-word slice ("napię", "terapeu") reads as a bug
+    # in every alt the limit touches.
+    return out[:300].rsplit(" ", 1)[0]
 
 
 LANGUAGE_NAMES = {
@@ -90,9 +95,10 @@ async def _enrich_prompt_with_ai(keyword: str, title: str, language: str = "pl")
     faktycznie widać na obrazku, więc nie pomagał ani czytnikom ekranu, ani Grafice
     Google. Puste wartości = brak klucza lub błąd; caller ma wtedy fallback.
     """
-    api_key = os.getenv("DEEPSEEK_API_KEY", "")
-    if not api_key:
-        print("[image] No DEEPSEEK_API_KEY — using raw prompt")
+    from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+    cfg = chat_config()
+    if cfg is None:
+        print("[image] No chat LLM key — using raw prompt")
         return "", ""
 
     system_prompt = """You are an expert visual prompt engineer for SEO article images.
@@ -109,6 +115,9 @@ RULES:
 - Write in English only, max 250 characters
 - NO: charts, diagrams, UI screens, text overlays, watermarks
 - NO HOLLYWOOD CLICHÉS: no dark offices with men in suits handing envelopes, no handshakes, no people smiling at laptops, no generic stock photography
+- NO GENERIC STILL-LIFES: never a notebook/coffee/pen desk arrangement unless the heading is literally about note-taking. Prefer PEOPLE in the heading's actual situation.
+- The scene must visualize THIS heading's specific subject — a reader should guess the section from the image alone
+- End the prompt with: "photorealistic editorial photograph, sharp focus, natural light, correct human anatomy, 16:9"
 
 ALT TEXT — a second, separate job. After the prompt, write the alt attribute for this
 image: one sentence describing what is actually VISIBLE in the scene you just specified,
@@ -135,26 +144,24 @@ Analyze this heading through the 3 questions and create a realistic journalistic
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key}",
-                },
-                json={
-                    "model": "deepseek-chat",
-                    # 300 was sized for reasoning + PROMPT alone. ALT is emitted last, so
-                    # the old budget would have truncated exactly the new field.
-                    "max_tokens": 500,
-                    "temperature": 0.7,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                },
+                cfg["url"],
+                headers=chat_headers(cfg),
+                # 500, not 300: ALT is emitted after the PROMPT and the old budget
+                # truncated exactly the new field.
+                json=chat_payload(cfg, [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ], 500, temperature=0.7),
             )
             if resp.status_code == 200:
                 data = resp.json()
-                raw = data["choices"][0]["message"]["content"].strip()
+                # `content` can be null when the backend spends its budget on reasoning —
+                # `.strip()` on None then took the whole image prompt down with an
+                # unhelpful "'NoneType' object has no attribute 'strip'".
+                raw = (data.get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
+                if not raw:
+                    print("[image] empty enrichment response — using raw prompt")
+                    return "", ""
 
                 # ALT: is split off FIRST. It comes after PROMPT: in the reply, so
                 # slicing on PROMPT: alone would swallow the alt sentence into the image
@@ -244,7 +251,7 @@ def _pollinations_url(prompt: str) -> str:
     token_param = f"&token={api_key}" if api_key else ""
     return (
         f"https://image.pollinations.ai/prompt/{encoded}"
-        f"?width=1920&height=1080&nologo=true&private=true&seed={seed}&enhance=true&model=flux-schnell{token_param}"
+        f"?width=1920&height=1080&nologo=true&private=true&seed={seed}&enhance=true&model=flux{token_param}"
     )
 
 
@@ -260,6 +267,103 @@ def _surfer_style_alt(heading: str, keyword: str, language: str = "pl") -> str:
     )[:400]
 
 
+# The reference tool illustrates with real, bright, clean stock photography — a tired
+# person at a laptop, someone comforting another on a sofa — not the dark AI-generated
+# confrontation scenes flux was giving us. Pixabay is real stock we already have a key for,
+# so a topical search there beats generating, and only falls back to flux when it is empty.
+_STOCK_MODEL = "openai/gpt-5.4-nano"
+
+
+async def _stock_query_and_alt(keyword: str, title: str, language: str) -> tuple[str, str]:
+    """gpt-5.4-nano turns a heading into a stock-photo search query + an alt sentence."""
+    from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+    cfg = chat_config()
+    if not cfg:
+        return "", ""
+    # nano's minimal-reasoning budget would otherwise eat the whole completion and return
+    # empty content, so drop the reasoning extra and give it real room.
+    cfg = {**cfg, "model": _STOCK_MODEL, "extra": {}}
+    alt_lang = _language_name(language)
+    system = (
+        "You pick real stock photography for article sections. Output two lines only.\n"
+        "QUERY: 2-4 English keywords for a bright, authentic lifestyle stock photo that fits "
+        "this section — real people in the situation, clean and hopeful, never dark or grim. "
+        "Concrete nouns (e.g. 'woman stressed laptop home', 'couple support sofa', "
+        "'person thinking window light'). No brand names, no abstract words.\n"
+        f"ALT: one {alt_lang} sentence, 90-140 chars, describing a realistic scene for this "
+        "section and naming the topic; never start with 'Zdjecie'/'Obraz'/'Image'."
+    )
+    user = f'Heading: "{_inert(title)}"\nArticle topic: "{_inert(keyword)}"'
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                cfg["url"], headers=chat_headers(cfg),
+                json=chat_payload(cfg, [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ], max_tokens=220, temperature=0.4),
+            )
+        if resp.status_code != 200:
+            print(f"[image] stock query LLM HTTP {resp.status_code}")
+            return "", ""
+        raw = (resp.json()["choices"][0]["message"].get("content") or "").strip()
+    except Exception as exc:
+        print(f"[image] stock query failed: {exc}")
+        return "", ""
+    query, alt = "", ""
+    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+    for ln in lines:
+        if ln.upper().startswith("QUERY:"):
+            query = ln.split(":", 1)[1].strip().strip('"').strip("'")
+        elif ln.upper().startswith("ALT:"):
+            alt = ln.split(":", 1)[1].strip().strip('"').strip("'")
+    # nano drops the labels and sometimes swaps the order, so fall back on language: the
+    # English keyword line (no Polish diacritics) is the query, the Polish line is the alt.
+    if (not query or not alt) and lines:
+        pl = "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"
+        english = [ln for ln in lines if not any(c in pl for c in ln)]
+        polish = [ln for ln in lines if any(c in pl for c in ln)]
+        if not query:
+            query = (english[0] if english else lines[0]).strip('"').strip("'")
+        if not alt:
+            alt = (polish[0] if polish else (lines[1] if len(lines) > 1 else "")).strip('"').strip("'")
+    return query, alt
+
+
+async def _pexels_photo(query: str) -> dict | None:
+    """Best real stock photo for `query` from Pexels, or None. Pexels is already curated to
+    the authentic, people-in-the-situation look we want, so we just take a landscape hit."""
+    key = os.getenv("PEXELS_API_KEY", "").strip()
+    if not key or not query.strip():
+        return None
+    params = {"query": query.strip(), "orientation": "landscape", "size": "large", "per_page": "15"}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(
+                "https://api.pexels.com/v1/search",
+                params=params, headers={"Authorization": key},
+            )
+        if resp.status_code != 200:
+            print(f"[image] pexels HTTP {resp.status_code}")
+            return None
+        photos = (resp.json() or {}).get("photos") or []
+    except Exception as exc:
+        print(f"[image] pexels search failed: {exc}")
+        return None
+    if not photos:
+        return None
+    # Deterministic spread across the top few relevant hits so repeated headings on one page
+    # don't all land on Pexels' #1 result.
+    idx = int(hashlib.md5(query.encode()).hexdigest()[:6], 16) % min(6, len(photos))
+    pick = photos[idx]
+    src = pick.get("src") or {}
+    return {
+        "url": src.get("large2x") or src.get("large") or src.get("original"),
+        "width": pick.get("width") or 1920,
+        "height": pick.get("height") or 1080,
+    }
+
+
 async def generate_article_image_for_embed(
     keyword: str,
     article_title: str,
@@ -267,9 +371,21 @@ async def generate_article_image_for_embed(
     language: str = "pl",
 ) -> dict:
     """
-    For mid-article <img src>: return Pollinations CDN URL (not base64).
-    Warm the cache with one server GET (fail-soft — URL still returned).
+    For mid-article <img src>: prefer a real Pexels stock photo (GPT-5.4 Nano turns the
+    heading into a search query); fall back to Pollinations/flux only when Pexels is empty.
     """
+    stock_query, stock_alt = await _stock_query_and_alt(keyword, article_title, language)
+    photo = await _pexels_photo(stock_query) if stock_query else None
+    if photo and photo.get("url"):
+        return {
+            "url": photo["url"],
+            "alt": stock_alt or _surfer_style_alt(article_title, keyword, language),
+            "width": photo["width"],
+            "height": photo["height"],
+            "source": "pexels",
+        }
+
+    # No Pexels hit — fall back to generated art.
     enriched, ai_alt = await _enrich_prompt_with_ai(keyword, article_title, language)
     if enriched:
         prompt = (
@@ -284,7 +400,23 @@ async def generate_article_image_for_embed(
     alt_text = ai_alt or _surfer_style_alt(article_title, keyword, language)
     url = _pollinations_url(prompt)
 
-    # Warm generation so first editor load isn't a cold Pollinations miss.
+    # Warm generation so first editor load isn't a cold Pollinations miss — in the
+    # BACKGROUND. The fetch takes 30-90s per image behind a 1-concurrency semaphore and
+    # its result never changes what we embed ("still embedding URL" on failure), yet it
+    # sat on the critical path: four images serialized 2-6 minutes into every
+    # generation. Fire-and-forget keeps the prefetch and returns the URL immediately.
+    asyncio.create_task(_warm_pollinations(url))
+
+    return {
+        "url": url,
+        "alt": alt_text,
+        "width": 1920,
+        "height": 1080,
+        "source": "pollinations",
+    }
+
+
+async def _warm_pollinations(url: str) -> None:
     try:
         async with _pollinations_sem:
             headers = {}
@@ -294,19 +426,11 @@ async def generate_article_image_for_embed(
             async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
                 resp = await client.get(url, headers=headers)
             if resp.status_code != 200:
-                print(f"[image] Warm-fetch HTTP {resp.status_code} — still embedding URL")
+                print(f"[image] Warm-fetch HTTP {resp.status_code} — URL already embedded")
             else:
-                print(f"[image] Warm-fetch OK ({len(resp.content)//1024} KB) for embed")
+                print(f"[image] Warm-fetch OK ({len(resp.content)//1024} KB)")
     except Exception as e:
         print(f"[image] Warm-fetch skipped: {e}")
-
-    return {
-        "url": url,
-        "alt": alt_text,
-        "width": 1920,
-        "height": 1080,
-        "source": "pollinations",
-    }
 
 
 async def _pollinations_fetch(prompt: str, alt_text: str = "") -> dict:
@@ -321,7 +445,7 @@ async def _pollinations_fetch(prompt: str, alt_text: str = "") -> dict:
     token_param = f"&token={api_key}" if api_key else ""
     url = (
         f"https://image.pollinations.ai/prompt/{encoded}"
-        f"?width=1920&height=1080&nologo=true&private=true&seed={seed}&enhance=true&model=flux-schnell{token_param}"
+        f"?width=1920&height=1080&nologo=true&private=true&seed={seed}&enhance=true&model=flux{token_param}"
     )
 
     headers = {}

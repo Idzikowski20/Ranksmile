@@ -66,6 +66,13 @@ def _confidence(markdown: str, expected_words: object, used_terms: tuple[tuple[s
 #: Reference field -> (id key, graph index name, prompt label). `facts` is deliberately
 #: absent: the compiler mints one fact per claim with the identical statement, so
 #: including both would send every claim to the writer twice.
+_FAQ_HEADING = re.compile(r"faq|najczęściej zadawane|pytania", re.IGNORECASE)
+
+
+def _is_faq(ctx: Mapping[str, object] | None) -> bool:
+    return bool(_FAQ_HEADING.search(str((ctx or {}).get("heading") or "")))
+
+
 _REFERENCE_FIELDS = (
     ("claims", "claim_id", "claims", "Must cover"),
     ("questions", "question_id", "questions", "Must answer"),
@@ -99,7 +106,10 @@ _FENCE_TAG = re.compile(r"<\s*/?\s*context\b[^>]*>", re.IGNORECASE)
 
 
 #: Slack over the target before a paragraph counts as overrunning its budget.
-_WORD_CEILING_RATIO = 1.3
+# 1.2, down from 1.3: with the plan already priced at the scorer's word target, the
+# per-paragraph slack compounded across ~45 paragraphs into +14% article-level overshoot
+# (2832 words against a 2200-2530 reference band). 1.2 keeps room to finish a thought.
+_WORD_CEILING_RATIO = 1.2
 
 
 def _word_ceiling(expected_words: object) -> str:
@@ -166,23 +176,67 @@ def _prompt(
         ]
     else:
         lines = [
-            "Write ONE paragraph of the article as Markdown only; never emit HTML.",
-            "Write only this paragraph: no heading, no other sections, no preamble.",
+            # 3-4 sentences, not 2-3: the earlier "SHORT paragraphs" rule was calibrated
+            # against Surfer's structural guideline (~30 words/paragraph), but Surfer's own
+            # generated article measures 52 words per paragraph (34 <p> / 1767 words) —
+            # while ours came out at 37 with a quarter of paragraphs under 25 words,
+            # reading as fragments. One content block is one thought: split only when the
+            # block genuinely changes point, never to hit a paragraph count.
+            "Write this content block as Markdown only; never emit HTML.",
+            "Write it as ONE cohesive paragraph of 3-4 full sentences (~45-65 words).",
+            "Split into a second paragraph ONLY when the block truly changes point —"
+            " never emit one- or two-sentence fragments.",
+            "Write only this block's content: no heading, no other sections, no preamble.",
         ]
     # Only prose can carry the lead. A table or list block has just been told to emit no
     # prose at all, so adding "the FIRST sentence answers the main question" handed the
     # model two instructions it cannot both satisfy — which is what a special-only opening
     # section produced.
+    if _is_faq(ctx):
+        lines.append(
+            "FAQ format (hard rule): this paragraph is ONE question-answer pair."
+            " Start with the question alone on its own line in bold (**...?**), then a"
+            " 2-4 sentence answer as a separate paragraph. Never pack several questions"
+            " into one block of prose."
+        )
+    # Brand moments. The BRAND block travels with every paragraph, but context alone is
+    # not an instruction: articles shipped with zero mentions of the agency that
+    # commissioned them. The lead earns one clause, the closing one concrete next step.
+    if ctx.get("is_lead"):
+        lines.append(
+            "If a BRAND block appears in the context, add ONE natural clause saying we"
+            " help with exactly this problem — name the service, never a sales pitch."
+        )
+    if ctx.get("is_closing"):
+        lines.append(
+            "This is the article's closing paragraph: if a BRAND block appears in the"
+            " context, end with one concrete next step for the reader (contact us / how"
+            " we work), using only facts from that block. Name the company as it is"
+            " written in that block — two of five articles ended with a correct call to"
+            " action that never said who was making it."
+        )
     if ctx.get("is_lead") and not style.get("table") and not style.get("list"):
+        # 38% of AI citations come from the opening ~100 words (Surfer research, 2026):
+        # the answer, the reader and the brand all have to land inside them.
         lines.append(
             "This is the article's opening paragraph: the FIRST sentence answers the"
             " article title's main question directly. No wind-up, no 'w dzisiejszych"
             " czasach' — the answer first, context after."
+            " Answer the question the title actually asks. When the title asks what to"
+            " do, the first sentence names the action, not the definition of the"
+            " keyword — a lead that opens by defining the term scores as background,"
+            " not as an answer."
+            " Within the first 100 words: name who this is for (address the reader as"
+            " 'Ty'), and — when a BRAND section exists in the context — say in one"
+            " natural clause that we help with exactly this. Never quote the raw"
+            " keyword in quotation marks; use its natural inflected form."
         )
     if _reference_ids(paragraph_plan, "sources", "source_id"):
         lines.append(
-            "If 'Authority sources' appear in the context, you may cite AT MOST one as a"
-            " Markdown link [descriptive anchor](url), only where genuinely relevant."
+            "'Authority sources' appear in the context: cite EXACTLY ONE of them as a"
+            " Markdown link [descriptive anchor](url), naming the case, statute or"
+            " statistic it backs in the sentence itself — the reference articles name"
+            " the police case and link the act, not \"some sources say\"."
             " Never link any URL that is not on that list."
         )
     elif ctx.get("allow_authority_links"):
@@ -240,6 +294,18 @@ def _prompt(
         lines.append("Section brief:")
         lines.extend(f"- {_inline(line)}" for line in objective.splitlines() if line.strip())
 
+    # What the earlier paragraphs of THIS section already said. Without it every paragraph
+    # in a section answers the same brief from scratch, and a four-paragraph section came
+    # back with "Pierwsze kroki:" three times over and two near-identical tables.
+    already = [str(t).strip() for t in (ctx.get("already_written") or []) if str(t).strip()]
+    if already:
+        lines.append(
+            "Already written in this section — continue from it, do NOT restate, re-list"
+            " or re-table any of it. Add only what is still missing:"
+        )
+        for chunk in already:
+            lines.extend(f"| {_inline(line)}" for line in chunk.splitlines() if line.strip())
+
     add("Paragraph role", paragraph_plan.get("goal"))
     add("Target words", paragraph_plan.get("expected_words"))
 
@@ -248,12 +314,117 @@ def _prompt(
         if kept:
             lines.append(f"{label}: {'; '.join(kept)}")
 
-    add("Terms to use", ", ".join(terms))
+    if terms:
+        # "Terms to use" alone read as optional: article 102 left 44 of 83 assigned
+        # terms unused while repeating the main keyword 100+ times. One explicit rule,
+        # and the inverse one, so compliance does not turn into stuffing.
+        lines.append(
+            "Terms to use — weave EACH of these into this paragraph at least once,"
+            " in natural inflected form: " + ", ".join(terms)
+        )
+        lines.append(
+            "Do not compensate with the main keyword: if it already appears in this"
+            " paragraph, prefer a synonym or pronoun over repeating it."
+        )
     add("Continues from", paragraph_plan.get("transition_from"))
     add("Leads into", paragraph_plan.get("transition_to"))
 
     lines.append("</context>")
     return "\n".join(lines)
+
+
+#: Meta-language a model uses when it is talking to itself about the task rather than
+#: writing the article: word-count arithmetic, self-correction, composition planning.
+_DELIBERATION_RE = re.compile(
+    r"\b("
+    r"word count|final count|words whitespace|at most \d+ words|"
+    r"let'?s compose|let me compose|i should|we need to|this inflates|"
+    r"include exact sentence|current has it|okay\. current|fine\. need"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _strip_deliberation(markdown: str) -> str:
+    """
+    Drop trailing chain-of-thought the model wrote into the article body.
+
+    `reasoning: {exclude: True}` removes the separate reasoning field; it cannot stop a
+    model from deliberating inside `content`. One article in fourteen shipped a closing
+    paragraph ending "...Final count likely 105 due link not counted as words generally.
+    At most 104 words whitespace. Let's compose 97." — visible to the reader, and the
+    scorer graded it as prose. Only a trailing run is removed: real article sentences do
+    not discuss their own word count, and cutting from the first match forward would risk
+    eating body text if the phrase ever appears legitimately mid-paragraph.
+    """
+    parts = re.split(r"(?<=[.!?])\s+", markdown.strip())
+    keep = len(parts)
+    while keep > 0 and _DELIBERATION_RE.search(parts[keep - 1]):
+        keep -= 1
+    if keep == len(parts):
+        return markdown
+    if keep == 0:
+        # The whole paragraph is deliberation — better an empty section than gibberish.
+        print("[writer] paragraph was entirely deliberation, dropped")
+        return ""
+    print(f"[writer] stripped {len(parts) - keep} trailing deliberation sentence(s)")
+    return " ".join(parts[:keep])
+
+
+def _force_faq_shape(
+    markdown: str,
+    paragraph_plan: Mapping[str, object],
+    ctx: Mapping[str, object] | None,
+) -> str:
+    """
+    Guarantee the FAQ question is visible above its answer.
+
+    The format is a prompt rule the model only half-follows: a real article bolded 2 of
+    its 4 FAQ questions and ran the rest together as one wall of prose. The planned
+    question is already resolved for the prompt, so prepend it when the paragraph did
+    not open with one rather than hope for compliance next time.
+    """
+    if markdown.lstrip().startswith("**"):
+        return markdown
+    questions = [
+        q for q in (_inline(i) for i in _resolved(paragraph_plan, ctx, "questions", "question_id", "questions"))
+        if q
+    ]
+    if not questions:
+        return markdown
+    question = questions[0].rstrip()
+    if not question.endswith("?"):
+        question = f"{question}?"
+    return f"**{question}**\n\n{markdown}"
+
+
+_ENUM_LINE_RE = re.compile(r"^\s*1\.\s+\S")
+_ENUM_SPLIT_RE = re.compile(r"(?<=[.!?:])\s+(?=\d{1,2}\.\s+\S)")
+
+
+def _split_inline_enumeration(markdown: str) -> str:
+    """Give every numbered step its own line.
+
+    The writer sometimes returns a whole numbered list as a single line — "1. Zabezpiecz
+    komunikację. 2. Oceń ryzyko. 3. Postaw granicę." Markdown reads only the leading "1."
+    as a list marker, so all six steps rendered inside one <li> with "2." through "6."
+    left as literal text mid-sentence.
+
+    Only a line that already opens a numbered list is touched, so an ordinary sentence
+    that happens to contain a number keeps its shape.
+    """
+    out: list[str] = []
+    for line in markdown.split("\n"):
+        if _ENUM_LINE_RE.match(line) and _ENUM_SPLIT_RE.search(line):
+            indent = line[: len(line) - len(line.lstrip())]
+            out.extend(
+                indent + part.strip()
+                for part in _ENUM_SPLIT_RE.split(line.strip())
+                if part.strip()
+            )
+        else:
+            out.append(line)
+    return "\n".join(out)
 
 
 async def write_paragraph(
@@ -262,6 +433,10 @@ async def write_paragraph(
     context: Mapping[str, object] | None = None,
 ) -> ParagraphResult:
     markdown = (await generate_markdown(_prompt(paragraph_plan, context))).strip()
+    markdown = _strip_deliberation(markdown)
+    markdown = _split_inline_enumeration(markdown)
+    if _is_faq(context):
+        markdown = _force_faq_shape(markdown, paragraph_plan, context)
     used_terms = _terms(paragraph_plan, markdown)
     question_ids = _reference_ids(paragraph_plan, "questions", "question_id")
     return ParagraphResult(
