@@ -1,4 +1,4 @@
-import { isCorpusNoiseSentence } from '../../lib/corpusNoiseFilter';
+import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
 
 /** Every form the same sentence can reach us in from a scrape. */

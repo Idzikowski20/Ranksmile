@@ -4,8 +4,8 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/router';
 import type { Editor, JSONContent } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import type { PendingAction } from '../../lib/ai/types';
-import type { ArticleEditorHandle } from '../../lib/types/editor';
+import type { PendingAction } from '@/src/infrastructure/ai/types';
+import type { ArticleEditorHandle } from '@/src/core/shared/types/editor';
 import { ArrowUp01Icon, ArrowDown01Icon } from 'hugeicons-react';
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -14,10 +14,10 @@ import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
 import Placeholder from '@tiptap/extension-placeholder';
-import type { ScoreData, NlpTerm } from '../../lib/contentScore';
-import { getErrorMessage } from '../../lib/errors';
+import type { ScoreData, NlpTerm } from '@/src/infrastructure/articles/contentScore';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
-import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
+import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '@/src/infrastructure/highlightColors';
 import { EC } from './editorChrome';
 import RanksmileImageNode from './RanksmileImageNode';
 import ContentOptimizer from './contentOptimizerNode';
@@ -47,17 +47,17 @@ import ProgressiveBlur from '../common/ProgressiveBlur';
 import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 import OutlineGenerateBar from './OutlineGenerateBar';
 import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
-import { revealHtmlInEditor, editorCanCommand } from '../../lib/editor/revealHtmlProgressive';
-import clearEditorHistory from '../../lib/editor/clearEditorHistory';
-import { normalizeListHtml } from '../../lib/editor/normalizeListHtml';
-import { clearWizardState } from '../../lib/wizardState';
+import { revealHtmlInEditor, editorCanCommand } from '@/components/editor/revealHtmlProgressive';
+import clearEditorHistory from '@/components/editor/clearEditorHistory';
+import { normalizeListHtml } from '@/src/core/domain/editor/normalizeListHtml';
+import { clearWizardState } from '@/src/infrastructure/articles/wizardState';
 import {
   collectApprovedOutline,
   outlineForReview,
   reviewOutlineToHtml,
-} from '../../lib/contentPlanner/reviewOutline';
+} from '@/src/infrastructure/contentPlanner/reviewOutline';
 import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
-import type { ApprovedOutlineHeading } from '../../lib/contentPlanner/applyApprovedOutline';
+import type { ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
 
 function collectOutlineHeadings(ed: Editor): Array<{ level: number; text: string }> {
   const out: Array<{ level: number; text: string }> = [];

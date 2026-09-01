@@ -3,9 +3,9 @@
 // Shape mirrors Ranksmile's: { traffic_data: [{ site, clicks, impressions, position }] }.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
-import { authPluginRequest } from '../../../../lib/wpConnection';
+import { authPluginRequest } from '@/src/infrastructure/wordpress/wpConnection';
 import { readLocalSCData } from '../../../../utils/searchConsole';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const cleanHost = (raw: string) => (raw || '')
    .replace(/^sc-domain:/i, '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim().toLowerCase();

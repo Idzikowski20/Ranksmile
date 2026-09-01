@@ -1,5 +1,5 @@
-import { runFeatures, coverageFeatureProducer } from '../../lib/features/featureEngine';
-import type { CoverageSnapshot } from '../../lib/ai/aiCoverage';
+import { runFeatures, coverageFeatureProducer } from '@/src/infrastructure/features/featureEngine';
+import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 const snap = (overrides?: Partial<CoverageSnapshot>): CoverageSnapshot =>
   ({

@@ -3,8 +3,8 @@ import {
   buildAiRankingSources,
   buildRankingSourcesPayload,
   parseRankingSources,
-} from '../../lib/rankingSources';
-import type { AiVisibilitySummary } from '../../lib/ai/aiSearchScore';
+} from '@/src/infrastructure/articles/rankingSources';
+import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
 describe('rankingSources', () => {
   it('builds google sources from SERP competitors', () => {

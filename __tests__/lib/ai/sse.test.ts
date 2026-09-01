@@ -1,4 +1,4 @@
-import { sseEvent, formatTokens } from '../../../lib/ai/sse';
+import { sseEvent, formatTokens } from '@/src/infrastructure/ai/sse';
 
 describe('sseEvent', () => {
   it('formats an SSE frame with event + JSON data', () => {

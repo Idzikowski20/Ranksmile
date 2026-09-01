@@ -1,8 +1,8 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
-jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }) }));
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }) }));
 
 import db from '../../database/database';
-import { readOrganization, writeOrganization } from '../../lib/organization';
+import { readOrganization, writeOrganization } from '@/src/infrastructure/identity/organization';
 
 const mockQuery = db.query as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];

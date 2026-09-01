@@ -1,4 +1,4 @@
-import { isReviewOutlineHtml, reviewOutlineToHtml } from '../../../lib/contentPlanner/reviewOutline';
+import { isReviewOutlineHtml, reviewOutlineToHtml } from '@/src/infrastructure/contentPlanner/reviewOutline';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 
 const OUTLINE = reviewOutlineToHtml([

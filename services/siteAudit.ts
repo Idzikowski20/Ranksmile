@@ -4,7 +4,7 @@ import type {
   CrawledPagesReport,
   SiteAuditIssueDetailPayload,
   SiteAuditOverviewPayload,
-} from '../lib/siteAudit/types';
+} from '@/src/infrastructure/siteAudit/types';
 
 async function fetchSiteAudit(slug: string): Promise<SiteAuditOverviewPayload> {
   const res = await fetch(`/api/domains/${encodeURIComponent(slug)}/site-audit`);

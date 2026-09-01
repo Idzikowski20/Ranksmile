@@ -3,7 +3,7 @@ import {
   summarizeCumulativeBuckets,
   summarizeExclusiveBuckets,
 } from '@/src/core/domain/rankTracking/buckets';
-import type { RankTrackingDeviceResult } from '../../../lib/types/rankTracking';
+import type { RankTrackingDeviceResult } from '@/src/core/shared/types/rankTracking';
 
 describe('rankTracking/buckets', () => {
   const dev = (position: number | null, previousPosition: number | null, found = position != null): RankTrackingDeviceResult => ({

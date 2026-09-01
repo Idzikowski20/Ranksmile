@@ -3,11 +3,11 @@ import {
   computeFeatureScoreDelta,
   persistFeatureRun,
   setFeatureStore,
-} from '../../lib/featureStoreCore';
-import type { Feature, Observation } from '../../lib/primitives/types';
-import { buildKnowledgeLayer } from '../../lib/primitives/knowledgeLayer';
-import { executeAction, pickExecutor } from '../../lib/primitives/actionExecutor';
-import { assignExperimentBucket, COVERAGE_EXPERIMENT, withExperiment } from '../../lib/primitives/experiments';
+} from '@/src/infrastructure/stores/featureStoreCore';
+import type { Feature, Observation } from '@/src/core/primitives/types';
+import { buildKnowledgeLayer } from '@/src/core/primitives/knowledgeLayer';
+import { executeAction, pickExecutor } from '@/src/core/primitives/actionExecutor';
+import { assignExperimentBucket, COVERAGE_EXPERIMENT, withExperiment } from '@/src/core/primitives/experiments';
 
 const obs = (partial: Partial<Observation> & Pick<Observation, 'id' | 'title'>): Observation => ({
   kind: 'missing_topic',

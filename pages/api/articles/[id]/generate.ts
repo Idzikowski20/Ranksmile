@@ -7,23 +7,23 @@ import { QueryTypes } from 'sequelize';
 import axios from 'axios';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
-import { readContentSettings } from '../../../../lib/contentSettings';
-import { getDomainVoices } from '../../../../lib/domainVoices';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { readContentSettings } from '@/src/infrastructure/stores/contentSettings';
+import { getDomainVoices } from '@/src/infrastructure/seo/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../lib/tenancy';
-import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/ai/aiBudget';
-import { mergedPlannerQuestions } from '../../../../lib/coverageStore';
-import { resolveContentLocale } from '../../../../lib/domainLanguage';
-import { getErrorMessage } from '../../../../lib/errors';
-import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
-import { safeJsonParse } from '../../../../lib/safeJson';
-import { llmGateway } from '../../../../lib/llmGateway';
-import { gatherBlogUrls } from '../../../../lib/gatherBlogUrls';
-import { pickLinkTargets } from '../../../../lib/sitemapLinkTargets';
-import { pipelineVersionTag } from '../../../../lib/pipelineVersion';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
+import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageStore';
+import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
+import { llmGateway } from '@/src/infrastructure/ai/llmGateway';
+import { gatherBlogUrls } from '@/src/infrastructure/seo/gatherBlogUrls';
+import { pickLinkTargets } from '@/src/core/domain/seo/sitemapLinkTargets';
+import { pipelineVersionTag } from '@/src/core/domain/pipeline/pipelineVersion';
 import {
   aiIntelFromScoreData,
   competitorsFromScoreData,
@@ -31,7 +31,7 @@ import {
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
   competitorHeadingTitles,
-} from '../../../../lib/contentPlanner/fromArticleInputs';
+} from '@/src/infrastructure/contentPlanner/fromArticleInputs';
 import {
   compileAndValidateWritePlan,
   finalizePlannerForWrite,
@@ -40,21 +40,21 @@ import {
   approvedOutlineWarnings,
   parseApprovedOutline,
   toSidecarCompiledPlan,
-} from '../../../../lib/contentPlanner';
+} from '@/src/infrastructure/contentPlanner/index';
 import {
   buildStructuralBenchmark,
   benchmarkDocsFromCompetitors,
   toPlannerTargets,
-} from '../../../../lib/benchmarkIntelligence';
+} from '@/src/infrastructure/benchmarkIntelligence/index';
 import {
   runKnowledgeEngine,
   shouldUseKnowledgePlanner,
-} from '../../../../lib/knowledgeEngine';
-import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
-import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchmarkIntelligence';
-import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
-import { readArticleTerms } from '../../../../lib/articles/articleTerms';
-import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
+} from '@/src/infrastructure/knowledgeEngine/index';
+import type { KnowledgeGraph } from '@/src/infrastructure/knowledgeEngine/index';
+import type { StructuralBenchmark, PlannerTargets } from '@/src/infrastructure/benchmarkIntelligence/index';
+import { importantTermsFromScoreData } from '@/src/infrastructure/articles/mergeArticleTerms';
+import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
+import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
 
 /** Bounds the brief LLM call: nothing else force-kills this request, so an unbounded
  *  completion would hang it forever and starve the compile and the sidecar kickoff. */
@@ -76,7 +76,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   await ensureArticlesTables();
 
-  const { assertCronSecret } = await import('../../../../lib/cronAuth');
+  const { assertCronSecret } = await import('@/src/infrastructure/cron/cronAuth');
   const isCron = assertCronSecret(req);
   if (!isCron) {
     const authorized = await verifyUser(req, res);

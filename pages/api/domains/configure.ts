@@ -6,12 +6,12 @@ import db from '../../../database/database';
 import Domain from '../../../database/models/domain';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
-import { getWorkspace } from '../../../lib/workspaces';
-import { getErrorMessage } from '../../../lib/errors';
-import { mergeGscProperty } from '../../../lib/gsc/gscProperty';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
+import { getWorkspace } from '@/src/infrastructure/identity/workspaces';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { mergeGscProperty } from '@/src/core/domain/gsc/gscProperty';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { clearDomainIdsCache } from '../../../lib/domainIdsCache';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

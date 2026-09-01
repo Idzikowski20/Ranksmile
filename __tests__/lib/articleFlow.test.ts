@@ -1,4 +1,4 @@
-import { resolveArticleEntry, articleEntryHref, articleOutlineReviewHref } from '../../lib/articles/articleFlow';
+import { resolveArticleEntry, articleEntryHref, articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
 
 describe('resolveArticleEntry', () => {
   it('returns generating when status is generating', () => {

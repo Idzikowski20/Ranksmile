@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from '@emotion/styled';
 import { Icon } from '../icons/Icon';
-import type { BenefitState } from '../../../lib/pricing/planDefinition';
+import type { BenefitState } from '@/src/core/domain/pricing/planDefinition';
 import { semantic } from '../tokens/semantic';
 import { typeface, textScale, fontWeight } from '../tokens/typography';
 import { spacing } from '../tokens/spacing';

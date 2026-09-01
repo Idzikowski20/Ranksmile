@@ -8,13 +8,13 @@ import {
   EXTRA_CATEGORIES,
   SEVERITY_GROUP_INFO,
   VISIBLE_CATEGORIES,
-} from '../../lib/siteAudit/issueCatalog';
+} from '@/src/infrastructure/siteAudit/issueCatalog';
 import type {
   IssueCategory,
   IssueSeverity,
   SiteAuditIssueSummary,
   SiteAuditIssuesReport,
-} from '../../lib/siteAudit/types';
+} from '@/src/infrastructure/siteAudit/types';
 
 type SeverityFilter = 'all' | IssueSeverity;
 type TriggeredFilter = 'with_issues' | 'with_new_issues';

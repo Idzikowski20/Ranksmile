@@ -6,17 +6,17 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
+import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
-import { deriveActiveId, workspaceHref } from '../../../lib/activeWorkspace';
-import { writeAnalyzeSession } from '../../../lib/deepAnalysisProgress';
-import { buildImportKeywordList } from '../../../lib/buildImportKeywordList';
+import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
+import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProgress';
+import { buildImportKeywordList } from '@/src/infrastructure/keywords/buildImportKeywordList';
 import { normalizeUrlForMatch, kwScore, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import toast from 'react-hot-toast';
 import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
-import { useSortState } from '../../../lib/useSortState';
+import { useSortState } from '@/hooks/useSortState';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
 
 function compactNum(n: number): string {

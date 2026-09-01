@@ -3,16 +3,16 @@ jest.mock('../../../database/database', () => ({
   default: { query: jest.fn(async () => [[], undefined]) },
 }));
 
-jest.mock('../../../lib/ensureBillingTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => ({
   ensureBillingTables: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../../lib/stripe', () => ({
+jest.mock('@/src/infrastructure/billing/stripe', () => ({
   getStripe: jest.fn(),
   isStripeConfigured: jest.fn(() => false),
 }));
 
-jest.mock('../../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => ({
     stripeCustomerId: null,
     stripeSubscriptionId: null,
@@ -28,7 +28,7 @@ jest.mock('@/src/composition/billing', () => ({
   listOrgBillingInvoices: jest.fn(async () => []),
 }));
 
-import { buildBillingSnapshot, BILLING_SNAPSHOT_SCHEMA_VERSION } from '../../../lib/billing/buildBillingSnapshot';
+import { buildBillingSnapshot, BILLING_SNAPSHOT_SCHEMA_VERSION } from '@/src/infrastructure/billing/buildBillingSnapshot';
 
 describe('buildBillingSnapshot envelope', () => {
   it('returns schemaVersion, generatedAt, etag, payment_method_count', async () => {

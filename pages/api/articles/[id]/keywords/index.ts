@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../../database/database';
 import verifyUser from '../../../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getCurrentUserId } from '../../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../../lib/tenancy';
-import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();

@@ -2,7 +2,7 @@ import {
   resolveAoWorkOutcome,
   aoOutcomeUserMessage,
   type AoRunOutcomeKind,
-} from '../../../lib/ao/aoRunOutcome';
+} from '@/src/core/domain/optimize/aoRunOutcome';
 
 describe('aoRunOutcome', () => {
   it('classifies faq_only when body untouched and SEO gaps remain', () => {

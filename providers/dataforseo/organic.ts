@@ -7,8 +7,8 @@ import type {
   PositionBucketKey,
   ProviderKeywordRow,
   SearchIntent,
-} from '../../lib/organicResearch/types';
-import { ORGANIC_FETCH_LIMIT } from '../../lib/organicResearch/types';
+} from '@/src/infrastructure/organicResearch/types';
+import { ORGANIC_FETCH_LIMIT } from '@/src/infrastructure/organicResearch/types';
 import {
   dfsPostResult,
   isDataForSeoConfigured,

@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { assertCronSecret } from '../../../lib/cronAuth';
+import { assertCronSecret } from '@/src/infrastructure/cron/cronAuth';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getCallerRole } from '../../../lib/members';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { queryOne } from '../../../lib/db/query';
-import { isStripeConfigured } from '../../../lib/stripe';
-import { sidecarUrl, isLocalServiceUrl } from '../../../lib/serviceUrls';
-import { isSentryEnabled } from '../../../lib/sentryEnv';
+import { getCallerRole } from '@/src/infrastructure/identity/members';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { isStripeConfigured } from '@/src/infrastructure/billing/stripe';
+import { sidecarUrl, isLocalServiceUrl } from '@/src/infrastructure/config/serviceUrls';
+import { isSentryEnabled } from '@/src/infrastructure/config/sentryEnv';
 
 type CheckStatus = 'ok' | 'fail' | 'skip' | 'unknown';
 

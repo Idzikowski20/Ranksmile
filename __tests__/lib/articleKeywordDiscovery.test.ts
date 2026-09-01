@@ -1,20 +1,20 @@
 jest.mock('../../database/database', () => ({ default: { query: jest.fn() } }));
-jest.mock('../../lib/seo/keywordData', () => ({
+jest.mock('@/src/infrastructure/seo/keywordData', () => ({
   enrichTerms: jest.fn(),
   getOwnVisibleKeywords: jest.fn().mockResolvedValue({ keywords: [] }),
 }));
-jest.mock('../../lib/dataforseo', () => ({
+jest.mock('@/src/infrastructure/dataforseo/dataforseo', () => ({
   getRankedKeywords: jest.fn(),
   isDataForSeoConfigured: jest.fn().mockReturnValue(true),
 }));
-jest.mock('../../lib/cache/fileCache', () => ({
+jest.mock('@/src/infrastructure/cache/fileCache', () => ({
   cached: jest.fn(({ producer }: { producer: () => Promise<unknown> }) => producer()),
   TTL: { RANKED_KEYWORDS: 1 },
 }));
 
-import { getRankedKeywords } from '../../lib/dataforseo';
-import { needsTermEnrichment, mergeNlpTerms, discoverRankingKeywords } from '../../lib/articles/articleKeywordDiscovery';
-import type { NlpTerm } from '../../lib/contentScore';
+import { getRankedKeywords } from '@/src/infrastructure/dataforseo/dataforseo';
+import { needsTermEnrichment, mergeNlpTerms, discoverRankingKeywords } from '@/src/infrastructure/articles/articleKeywordDiscovery';
+import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 
 const mockGetRankedKeywords = getRankedKeywords as jest.MockedFunction<typeof getRankedKeywords>;
 
@@ -88,7 +88,7 @@ describe('discoverRankingKeywords', () => {
   });
 
   it('prefers URL anchor as primary over off-topic GSC', async () => {
-    const { getOwnVisibleKeywords } = jest.requireMock('../../lib/seo/keywordData') as {
+    const { getOwnVisibleKeywords } = jest.requireMock('@/src/infrastructure/seo/keywordData') as {
       getOwnVisibleKeywords: jest.Mock;
     };
     getOwnVisibleKeywords.mockResolvedValueOnce({

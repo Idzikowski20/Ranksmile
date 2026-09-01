@@ -4,9 +4,9 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
 import GscAccount from '../../../database/models/gscAccount';
-import { buildOAuthClientFromAccount } from '../../../lib/gsc/gscAccounts';
-import { getErrorMessage } from '../../../lib/errors';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type GscSiteEntry = { siteUrl?: string | null; permissionLevel?: string | null };
 

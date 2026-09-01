@@ -6,9 +6,9 @@ import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import OrderConfirmationBody from '../../../components/billing/OrderConfirmationBody';
 import Button from '../../../components/koala/primitives/Button';
-import type { BillingConfirmation } from '../../../lib/billing/billingConfirmation';
-import { fetchBootstrapOrNull } from '../../../lib/fetchBootstrap';
-import type { BootstrapData } from '../../../lib/getBootstrap';
+import type { BillingConfirmation } from '@/src/infrastructure/billing/billingConfirmation';
+import { fetchBootstrapOrNull } from '@/src/infrastructure/http/fetchBootstrap';
+import type { BootstrapData } from '@/src/infrastructure/http/getBootstrap';
 
 const F = 'var(--font-family-primary)';
 

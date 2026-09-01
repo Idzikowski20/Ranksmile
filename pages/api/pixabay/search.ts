@@ -2,8 +2,8 @@
 // Server-side proxy to Pixabay API — keeps the API key secret.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
-import { getErrorMessage } from '../../../lib/errors';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 export interface PixabayImage {
   id: number;

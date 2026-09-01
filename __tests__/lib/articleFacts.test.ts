@@ -1,14 +1,14 @@
-jest.mock('../../lib/dataforseo', () => ({
+jest.mock('@/src/infrastructure/dataforseo/dataforseo', () => ({
   getPeopleAlsoAsk: jest.fn(),
   isDataForSeoConfigured: jest.fn().mockReturnValue(true),
 }));
-jest.mock('../../lib/cache/fileCache', () => ({
+jest.mock('@/src/infrastructure/cache/fileCache', () => ({
   cached: jest.fn(({ producer }: { producer: () => Promise<unknown> }) => producer()),
   TTL: { SERP: 1 },
 }));
 
-import { getPeopleAlsoAsk } from '../../lib/dataforseo';
-import { cached } from '../../lib/cache/fileCache';
+import { getPeopleAlsoAsk } from '@/src/infrastructure/dataforseo/dataforseo';
+import { cached } from '@/src/infrastructure/cache/fileCache';
 import {
   factsToCoverageItems,
   factsToVisibilitySummary,
@@ -17,8 +17,8 @@ import {
   splitFactSentences,
   fetchArticleFacts,
   type ArticleFact,
-} from '../../lib/articles/articleFacts';
-import type { AiVisibilitySummary } from '../../lib/ai/aiSearchScore';
+} from '@/src/infrastructure/articles/articleFacts';
+import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
 const mockPaa = getPeopleAlsoAsk as jest.MockedFunction<typeof getPeopleAlsoAsk>;
 const mockCached = cached as jest.MockedFunction<typeof cached>;

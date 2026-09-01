@@ -2,11 +2,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { rankBlogSegments } from '@/src/core/domain/blog/detectBlogPaths';
-import { fetchSitemapUrls } from '../../../lib/fetchSitemapUrls';
-import { ssrfSafeFetch } from '../../../lib/ssrfGuard';
+import { fetchSitemapUrls } from '@/src/infrastructure/seo/fetchSitemapUrls';
+import { ssrfSafeFetch } from '@/src/infrastructure/http/ssrfGuard';
 
-import { RANKSMILE_UA } from '../../../lib/httpConstants';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { RANKSMILE_UA } from '@/src/core/shared/httpConstants';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 /** True if a page shows article signals: JSON-LD Article/BlogPosting, datePublished, <article>, or RSS link. */
 async function hasArticleSignals(url: string): Promise<boolean> {

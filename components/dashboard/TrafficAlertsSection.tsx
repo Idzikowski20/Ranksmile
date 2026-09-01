@@ -5,7 +5,7 @@ import { ListWidget } from '../koala/product';
 import { Flex } from '../koala/core/layout';
 import { Text } from '../koala/core/text';
 import { useWorkspaces } from '../../services/workspaces';
-import { deriveActiveId } from '../../lib/activeWorkspace';
+import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
 import DomainFavicon from '../common/DomainFavicon';
 
 // Mirrors the /api/gsc/traffic-alerts response (no `any` — project rule).

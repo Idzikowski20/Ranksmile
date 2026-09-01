@@ -1,11 +1,11 @@
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('unauthorized') }));
 jest.mock('../../utils/spaScraper', () => ({ renderPage: jest.fn().mockResolvedValue({ html: '<html></html>', url: 'https://example.com' }) }));
-jest.mock('../../lib/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/http/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(undefined) }));
 
 import handler from '../../pages/api/render-page';
 import verifyUser from '../../utils/verifyUser';
 import { renderPage } from '../../utils/spaScraper';
-import { assertPublicUrl } from '../../lib/ssrfGuard';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 
 const makeRes = () => {
   const res: { status: jest.Mock; json: jest.Mock } = {

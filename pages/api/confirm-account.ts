@@ -3,9 +3,9 @@
 // confirmation link may be opened in a fresh browser with no session cookie.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUser } from '../../utils/getUser';
-import { getConfirmationStatus, issueConfirmationToken, confirmEmailToken } from '../../lib/emailConfirmation';
-import { sendConfirmationEmail } from '../../lib/confirmEmail';
-import { getErrorMessage } from '../../lib/errors';
+import { getConfirmationStatus, issueConfirmationToken, confirmEmailToken } from '@/src/infrastructure/email/emailConfirmation';
+import { sendConfirmationEmail } from '@/src/infrastructure/email/confirmEmail';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 function buildOrigin(req: NextApiRequest): string {
   // Prefer the server-configured base URL so confirmation links can't be pointed

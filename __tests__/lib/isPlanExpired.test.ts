@@ -1,6 +1,6 @@
 /** @jest-environment node */
-import { isPlanExpired } from '../../lib/appAccess/isPlanExpired';
-import type { AccessSnapshot, AppState, BillingState } from '../../lib/appAccess/types';
+import { isPlanExpired } from '@/src/infrastructure/appAccess/isPlanExpired';
+import type { AccessSnapshot, AppState, BillingState } from '@/src/infrastructure/appAccess/types';
 
 function snapshot(
   appState: AppState,

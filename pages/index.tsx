@@ -7,9 +7,9 @@ import { dehydrate, QueryClient } from 'react-query';
 import AppLoading from '../components/common/AppLoading';
 import { PlanExpired } from '../components/billing/PlanExpired';
 import { getCurrentUser } from '../utils/getUser';
-import { getBootstrap } from '../lib/getBootstrap';
-import type { BootstrapData } from '../lib/getBootstrap';
-import { isPlanExpired } from '../lib/appAccess/isPlanExpired';
+import { getBootstrap } from '@/src/infrastructure/http/getBootstrap';
+import type { BootstrapData } from '@/src/infrastructure/http/getBootstrap';
+import { isPlanExpired } from '@/src/infrastructure/appAccess/isPlanExpired';
 import { LandingPage } from '../components/landing/LandingPage';
 
 type HomeProps = {

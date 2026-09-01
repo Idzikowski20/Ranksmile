@@ -1,13 +1,13 @@
 import type { NextApiRequest } from 'next';
 import { makeRes, callHandler, type MockRes } from '../../test-utils/apiHandler';
 import ORG_NAME_MAX_LENGTH from '@/src/core/domain/organization/limits';
-import { writeOrganization } from '../../lib/organization';
-import { uploadImageBuffer } from '../../lib/uploadToBlob';
+import { writeOrganization } from '@/src/infrastructure/identity/organization';
+import { uploadImageBuffer } from '@/src/infrastructure/http/uploadToBlob';
 import { getCurrentUserId } from '../../utils/getUser';
 import handler from '../../pages/api/organization';
 
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('u1') }));
-jest.mock('../../lib/organization', () => ({
+jest.mock('@/src/infrastructure/identity/organization', () => ({
   readOrganization: jest.fn().mockResolvedValue({ name: 'Acme', logoUrl: null }),
   writeOrganization: jest.fn(
     (_userId: string, patch: { name?: string; logoUrl?: string | null }) => Promise.resolve({
@@ -16,16 +16,16 @@ jest.mock('../../lib/organization', () => ({
     }),
   ),
 }));
-jest.mock('../../lib/uploadToBlob', () => ({
+jest.mock('@/src/infrastructure/http/uploadToBlob', () => ({
   parseDataUrl: jest.fn(() => ({ buffer: Buffer.from('x'), contentType: 'image/png' })),
   uploadImageBuffer: jest.fn().mockResolvedValue('https://cdn/org-logos/logo.png'),
 }));
 // PUT is owner/admin-only; these cases cover the request contract, not authz
 // (see organization-role-guard.test.ts for the role checks).
-jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/identity/members', () => ({ assertCanManage: jest.fn().mockResolvedValue(undefined) }));
 // The access-policy wrapper has its own coverage; here it would only drag the real
 // tenancy + billing lookups into what is a handler unit test.
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 const mockWrite = writeOrganization as jest.Mock;
 const mockUpload = uploadImageBuffer as jest.Mock;

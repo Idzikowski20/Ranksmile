@@ -1,5 +1,5 @@
-import { showsPlanExpired } from '../../../lib/appAccess/isPlanExpired';
-import type { AccessSnapshot } from '../../../lib/appAccess/types';
+import { showsPlanExpired } from '@/src/infrastructure/appAccess/isPlanExpired';
+import type { AccessSnapshot } from '@/src/infrastructure/appAccess/types';
 
 /** A customer whose subscription lapsed: BILLING_REQUIRED with a billing history. */
 const expired = {

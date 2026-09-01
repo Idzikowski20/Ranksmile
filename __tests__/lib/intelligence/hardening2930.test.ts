@@ -1,13 +1,13 @@
-import { compile } from '../../../lib/compiler/compile';
-import { applyContradictHeuristics } from '../../../lib/intelligence/applyContradictHeuristics';
-import { enrichCcmWithDaFacts } from '../../../lib/intelligence/enrichCcmWithDaFacts';
+import { compile } from '@/src/core/compiler/compile';
+import { applyContradictHeuristics } from '@/src/core/intelligence/applyContradictHeuristics';
+import { enrichCcmWithDaFacts } from '@/src/core/intelligence/enrichCcmWithDaFacts';
 import {
   getCcmCompileMetricsSummary,
   recordCcmCompileMetric,
   resetCcmCompileMetrics,
-} from '../../../lib/intelligence/ccmCompileMetrics';
-import { applyLlmGapEvidence } from '../../../lib/intelligence/applyLlmGapEvidence';
-import { isFactNode } from '../../../lib/ccm/types/graph';
+} from '@/src/core/intelligence/ccmCompileMetrics';
+import { applyLlmGapEvidence } from '@/src/core/intelligence/applyLlmGapEvidence';
+import { isFactNode } from '@/src/core/ccm/types/graph';
 
 const FIXED_AT = '2026-08-03T17:00:00.000Z';
 

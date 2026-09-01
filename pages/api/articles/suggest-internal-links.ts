@@ -7,15 +7,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
-import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/ai/aiBudget';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
-import { getErrorMessage } from '../../../lib/errors';
-import { queryOne } from '../../../lib/db/query';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { chatLlm } from '../../../lib/ai/deepseek';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
 export interface LinkSuggestion {
   anchorText: string;

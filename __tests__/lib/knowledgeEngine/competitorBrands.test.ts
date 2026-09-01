@@ -1,4 +1,4 @@
-import { dropCompetitorBrandClaims, namesCompetitorBrand } from '../../../lib/knowledgeEngine/competitorBrands';
+import { dropCompetitorBrandClaims, namesCompetitorBrand } from '@/src/core/domain/knowledgeEngine/competitorBrands';
 import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 
 const KEYWORD = 'prywatny detektyw warszawa';

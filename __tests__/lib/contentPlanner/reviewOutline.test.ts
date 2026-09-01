@@ -1,7 +1,7 @@
 import {
   collectApprovedOutline,
   reviewOutlineToHtml,
-} from '../../../lib/contentPlanner/reviewOutline';
+} from '@/src/infrastructure/contentPlanner/reviewOutline';
 
 describe('review outline', () => {
   /**

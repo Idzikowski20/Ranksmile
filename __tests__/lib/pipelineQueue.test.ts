@@ -1,7 +1,7 @@
-import { enqueueJob } from '../../lib/pipeline/pipelineQueue';
-import { buildJobKey } from '../../lib/pipeline/jobKey';
+import { enqueueJob } from '@/src/infrastructure/pipeline/pipelineQueue';
+import { buildJobKey } from '@/src/infrastructure/pipeline/jobKey';
 
-jest.mock('../../lib/ensurePipelineJobsTables', () => {
+jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables', () => {
   const jobs = new Map<string, { id: number; status: string; finished_at?: string }>();
   let seq = 1;
   return {
@@ -27,7 +27,7 @@ jest.mock('../../lib/ensurePipelineJobsTables', () => {
   };
 });
 
-jest.mock('../../lib/workers/registry', () => ({
+jest.mock('@/src/infrastructure/workers/registry', () => ({
   getWorker: jest.fn(() => ({
     id: 'serp',
     queue: 'serp_crawl',

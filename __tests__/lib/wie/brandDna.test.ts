@@ -1,6 +1,6 @@
-import { judgeArticleQuality, QUALITY_DNA_THRESHOLD } from '../../../lib/wie/qualityJudge';
-import { bumpDnaVersion, readPatternStore } from '../../../lib/wie/patternStore';
-import { discoverAndAcceptPattern } from '../../../lib/wie/patternDiscovery';
+import { judgeArticleQuality, QUALITY_DNA_THRESHOLD } from '@/src/core/domain/wie/qualityJudge';
+import { bumpDnaVersion, readPatternStore } from '@/src/infrastructure/wie/patternStore';
+import { discoverAndAcceptPattern } from '@/src/infrastructure/wie/patternDiscovery';
 
 describe('WIE qualityJudge', () => {
   it('fails thin stub below DNA threshold', () => {

@@ -1,5 +1,5 @@
 import React, { useId, useMemo } from 'react';
-import { scoreColor } from '../../lib/scoreColor';
+import { scoreColor } from '@/src/infrastructure/config/scoreColor';
 
 export type SiteAuditScoreGaugeVariant = 'watchtower' | 'compact';
 

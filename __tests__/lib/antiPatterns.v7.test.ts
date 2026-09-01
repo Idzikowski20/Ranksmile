@@ -5,10 +5,10 @@ import {
   isFlowProducerAllowed,
   isWorkerAllowedAtStage,
   parsePipelineStage,
-} from '../../lib/pipeline/pipelineStage';
-import { resetWorkerRegistry, listWorkers, getWorker } from '../../lib/workers/registry';
+} from '@/src/infrastructure/pipeline/pipelineStage';
+import { resetWorkerRegistry, listWorkers, getWorker } from '@/src/infrastructure/workers/registry';
 
-jest.mock('../../lib/ensurePipelineJobsTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables', () => ({
   ensurePipelineJobsTables: jest.fn(async () => undefined),
   insertPipelineJob: jest.fn(async () => 1),
   findActiveJobByKey: jest.fn(async () => null),
@@ -16,7 +16,7 @@ jest.mock('../../lib/ensurePipelineJobsTables', () => ({
   moveJobToDlq: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/pipeline/pipelineQueue', () => {
+jest.mock('@/src/infrastructure/pipeline/pipelineQueue', () => {
   class PipelineQueueDisabledError extends Error {
     queue: string;
     stage: string;
@@ -126,7 +126,7 @@ describe('v7 anti-pattern guards', () => {
       process.env.PIPELINE_STAGE = '0';
       resetWorkerRegistry();
       const { enqueueAnalyzeDag, FlowProducerStageError } = await import(
-        '../../lib/pipeline/flowProducer'
+        '@/src/infrastructure/pipeline/flowProducer'
       );
       await expect(
         enqueueAnalyzeDag({ workspaceId: '1', keyword: 'test' }),
@@ -137,8 +137,8 @@ describe('v7 anti-pattern guards', () => {
   describe('Corpus API — workers must not touch corpus tables directly', () => {
     it('workers and pipelineQueue do not SQL serp_corpora', () => {
       const files = [
-        ...walkTsFiles(path.join(ROOT, 'lib/workers')),
-        path.join(ROOT, 'lib/pipeline/pipelineQueue.ts'),
+        ...walkTsFiles(path.join(ROOT, 'src/infrastructure/workers')),
+        path.join(ROOT, 'src/infrastructure/pipeline/pipelineQueue.ts'),
       ];
       const banned = [/serp_corpora/i, /INSERT\s+INTO\s+serp_/i, /FROM\s+serp_fingerprints/i];
       for (const file of files) {
@@ -154,7 +154,7 @@ describe('v7 anti-pattern guards', () => {
 
   describe('Worker → LLM only via Gateway', () => {
     it('workers do not call OpenAI/Anthropic/DeepSeek directly', () => {
-      const files = walkTsFiles(path.join(ROOT, 'lib/workers'));
+      const files = walkTsFiles(path.join(ROOT, 'src/infrastructure/workers'));
       const banned = [
         /api\.openai\.com/,
         /api\.deepseek\.com/,

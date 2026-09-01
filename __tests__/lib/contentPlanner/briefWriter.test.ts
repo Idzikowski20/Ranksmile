@@ -1,4 +1,4 @@
-import { writeOutlineBrief } from '../../../lib/contentPlanner/briefWriter';
+import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
 import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
 
 const BRAND = 'ProDetektyw — licencjonowana agencja detektywistyczna, ul. Mazowiecka 11/49 Warszawa. '

@@ -1,16 +1,16 @@
-import { makeWorkingDoc } from '../../../lib/ai/workingDoc';
-import { buildTools } from '../../../lib/ai/tools';
-import { callSidecar } from '../../../lib/sidecar';
-import type { ToolCtx } from '../../../lib/ai/types';
+import { makeWorkingDoc } from '@/src/infrastructure/ai/workingDoc';
+import { buildTools } from '@/src/infrastructure/ai/tools';
+import { callSidecar } from '@/src/infrastructure/http/sidecar';
+import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
 // scoreContentClient is unused by the Phase-2 tools but pulled in by buildTools;
 // stub it so the registry imports cleanly (mirrors tools.read.test).
-jest.mock('../../../lib/seo/scoreContentClient', () => ({
+jest.mock('@/src/infrastructure/seo/scoreContentClient', () => ({
   scoreContent: jest.fn(),
 }));
 
 // Sidecar returns a fixture keyed on the request PATH.
-jest.mock('../../../lib/sidecar', () => ({
+jest.mock('@/src/infrastructure/http/sidecar', () => ({
   callSidecar: jest.fn(async (path: string) => {
     if (path === '/ai-visibility') {
       return { prompts_total: 5, prompts_cited: 2, competitor_citations: 1, extractability_score: 60, citations: [] };
@@ -26,7 +26,7 @@ jest.mock('../../../lib/sidecar', () => ({
 }));
 
 // Real computeAiSearchScore runs; only the DB resolver is mocked.
-jest.mock('../../../lib/ai/articleMeta', () => ({
+jest.mock('@/src/infrastructure/ai/articleMeta', () => ({
   resolveArticleSeoMeta: jest.fn(async () => ({ domain: 'x.com', language: 'pl', targetKeyword: 'seo', competitorDomains: ['c.com'] })),
 }));
 

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getErrorMessage } from '../../../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import {
   exportOrganic,
   getOrganicObservations,
@@ -9,11 +9,11 @@ import {
   type OrganicFilters,
   type OrganicSortKey,
   type OrganicTab,
-} from '../../../../lib/organicResearch';
-import type { ExportFormat } from '../../../../lib/organicResearch/export';
-import type { KeywordState, SearchIntent } from '../../../../lib/organicResearch/types';
-import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+} from '@/src/infrastructure/organicResearch/index';
+import type { ExportFormat } from '@/src/infrastructure/organicResearch/export';
+import type { KeywordState, SearchIntent } from '@/src/infrastructure/organicResearch/types';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 function numOrNull(v: string | string[] | undefined): number | null {
   if (v == null || Array.isArray(v)) return null;

@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 import AuthPageLayout from '../../components/auth/AuthPageLayout';
 import AuthShell from '../../components/auth/AuthShell';
-import { useMarkEmailConfirmed } from '../../lib/emailConfirmedStatus';
+import { useMarkEmailConfirmed } from '@/src/infrastructure/emailConfirmedStatus';
 import { Card } from '../../components/koala/product';
 import Button from '../../components/koala/primitives/Button';
 import { ErrorState, LoadingState } from '../../components/koala/feedback';

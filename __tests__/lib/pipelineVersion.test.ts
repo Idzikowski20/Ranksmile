@@ -1,4 +1,4 @@
-import { PIPELINE_VERSION, pipelineVersionTag } from '../../lib/pipelineVersion';
+import { PIPELINE_VERSION, pipelineVersionTag } from '@/src/core/domain/pipeline/pipelineVersion';
 
 describe('pipelineVersionTag', () => {
   it('records the planner version', () => {

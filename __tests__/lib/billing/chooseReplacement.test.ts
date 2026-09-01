@@ -1,5 +1,5 @@
-import { chooseReplacement } from '../../../lib/billing/chooseReplacement';
-import type { PaymentMethodViewModel } from '../../../lib/billing/paymentMethodViewModel';
+import { chooseReplacement } from '@/src/infrastructure/billing/chooseReplacement';
+import type { PaymentMethodViewModel } from '@/src/infrastructure/billing/paymentMethodViewModel';
 
 function pm(partial: Partial<PaymentMethodViewModel> & { id: string }): PaymentMethodViewModel {
   return {

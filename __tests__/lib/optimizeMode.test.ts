@@ -6,7 +6,7 @@ import {
   TARGET_AI,
   TARGET_SEO,
   DEFAULT_MAX_ROUNDS,
-} from '../../lib/optimizeMode';
+} from '@/src/core/domain/optimize/optimizeMode';
 
 describe('selectOptimizeMode', () => {
   it('routes to ai-only when SEO is ready but AI is weak (first run)', () => {

@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Button } from '../../components/koala/core';
 import { Icon } from '../../components/koala/icons/Icon';
-import { saveWizardState } from '../../lib/wizardState';
+import { saveWizardState } from '@/src/infrastructure/articles/wizardState';
 import { useArticle } from '../../services/article';
 
 type ContentTypeOption = {

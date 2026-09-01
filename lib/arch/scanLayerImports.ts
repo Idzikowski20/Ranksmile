@@ -34,6 +34,8 @@ export function findLayerViolations(rootDir: string): LayerViolation[] {
   for (const rule of LAYER_RULES) {
     const base = path.join(rootDir, rule.root);
     for (const file of walk(base)) {
+      const rel = path.relative(rootDir, file).replace(/\\/g, '/');
+      if (rule.exclude?.test(rel)) continue;
       const specs = extractSpecifiers(fs.readFileSync(file, 'utf8'));
       for (const spec of specs) {
         if (rule.forbid.some((re) => re.test(spec))) {

@@ -6,18 +6,18 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
-import { ScoreData, computeContentScore, computeContentScoreBreakdown, updateTermsCoverage } from '../../../../lib/contentScore';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { ScoreData, computeContentScore, computeContentScoreBreakdown, updateTermsCoverage } from '@/src/infrastructure/articles/contentScore';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../lib/tenancy';
-import { getErrorMessage } from '../../../../lib/errors';
-import { queryRows, queryOne } from '../../../../lib/db/query';
-import type { ArticleRow } from '../../../../lib/db/query';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryRows, queryOne } from '@/src/infrastructure/db/query';
+import type { ArticleRow } from '@/src/infrastructure/db/query';
 
-import { parseJsonish } from '../../../../lib/types/json';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
-import { compileArticle } from '../../../../lib/intelligence/runtimeApi';
+import { parseJsonish } from '@/src/core/shared/types/json';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { compileArticle } from '@/src/core/intelligence/runtimeApi';
 
 const parse = (v: unknown): unknown => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
 

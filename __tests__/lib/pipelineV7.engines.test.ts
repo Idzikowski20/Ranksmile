@@ -1,23 +1,23 @@
-import { buildJobKey } from '../../lib/pipeline/jobKey';
-import { QUEUE_PRIORITY, PIPELINE_VERSION } from '../../lib/pipeline/queuePriorities';
+import { buildJobKey } from '@/src/infrastructure/pipeline/jobKey';
+import { QUEUE_PRIORITY, PIPELINE_VERSION } from '@/src/core/domain/pipeline/queuePriorities';
 import { termWeight, weightedTermCoverageRatio } from '@/src/core/domain/terms/termWeight';
-import { computeMultiScore } from '../../lib/engines/multiScore';
-import { runCoverageEngine } from '../../lib/engines/coverageEngine';
-import { runGapEngine } from '../../lib/engines/gapEngine';
-import { runRecommendationEngine } from '../../lib/engines/gapToReco';
-import { planActions } from '../../lib/engines/planner';
-import { fitCalibration, predictCalibrated, extractFeatureVector } from '../../lib/engines/calibration';
-import { diffCorpora } from '../../lib/engines/corpusDiff';
+import { computeMultiScore } from '@/src/core/domain/engines/multiScore';
+import { runCoverageEngine } from '@/src/core/domain/engines/coverageEngine';
+import { runGapEngine } from '@/src/core/domain/engines/gapEngine';
+import { runRecommendationEngine } from '@/src/infrastructure/engines/gapToReco';
+import { planActions } from '@/src/infrastructure/engines/planner';
+import { fitCalibration, predictCalibrated, extractFeatureVector } from '@/src/infrastructure/engines/calibration';
+import { diffCorpora } from '@/src/core/domain/engines/corpusDiff';
 import { serpChangeRatio, shouldForceRefresh } from '@/src/core/domain/corpus/serpChange';
-import { resolveEntities, heuristicNerExtract } from '../../lib/entities/entityResolver';
+import { resolveEntities, heuristicNerExtract } from '@/src/core/domain/semantic/entityResolver';
 import { bm25Rank, assignHarvestToSections } from '@/src/core/domain/search/bm25';
 import { extractKeybertTerms } from '@/src/core/domain/semantic/keybert';
-import { hashEmbed, cosineSim, findEmbeddingGaps } from '../../lib/semantic/embeddings';
+import { hashEmbed, cosineSim, findEmbeddingGaps } from '@/src/core/domain/semantic/embeddings';
 import { computeGeoCues, geoPromptBlock } from '@/src/core/domain/geo/geoCues';
-import { runLearningLoop } from '../../lib/learning/learningLoopCore';
-import { curateConceptsFromTerms } from '../../lib/coverage/curateConcepts';
-import { informationGain } from '../../lib/engines/evidence';
-import { detectResearchGaps } from '../../lib/engines/gapDetection';
+import { runLearningLoop } from '@/src/infrastructure/learning/learningLoopCore';
+import { curateConceptsFromTerms } from '@/src/core/domain/coverage/curateConcepts';
+import { informationGain } from '@/src/core/domain/engines/evidence';
+import { detectResearchGaps } from '@/src/core/domain/engines/gapDetection';
 
 describe('pipeline v7 foundation', () => {
   it('builds stable job keys', () => {
@@ -36,7 +36,7 @@ describe('pipeline v7 foundation', () => {
   it('registers all workers by default (PIPELINE_STAGE=5)', async () => {
     const prev = process.env.PIPELINE_STAGE;
     delete process.env.PIPELINE_STAGE;
-    const { listWorkers, getWorker, resetWorkerRegistry } = await import('../../lib/workers/registry');
+    const { listWorkers, getWorker, resetWorkerRegistry } = await import('@/src/infrastructure/workers/registry');
     resetWorkerRegistry();
     const ids = listWorkers().map((w) => w.id);
     expect(ids).toEqual(
@@ -52,7 +52,7 @@ describe('pipeline v7 foundation', () => {
   it('registers only Etap 0 workers when PIPELINE_STAGE=0', async () => {
     const prev = process.env.PIPELINE_STAGE;
     process.env.PIPELINE_STAGE = '0';
-    const { listWorkers, getWorker, resetWorkerRegistry } = await import('../../lib/workers/registry');
+    const { listWorkers, getWorker, resetWorkerRegistry } = await import('@/src/infrastructure/workers/registry');
     resetWorkerRegistry();
     const ids = listWorkers().map((w) => w.id).sort();
     expect(ids).toEqual(['coverage', 'live_score', 'serp']);

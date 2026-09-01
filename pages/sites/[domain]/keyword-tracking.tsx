@@ -27,7 +27,7 @@ import {
   useRankRunPolling,
   useRemoveRankKeywords,
 } from '../../../services/rankTracking';
-import type { RankKeywordStatus } from '../../../lib/types/rankTracking';
+import type { RankKeywordStatus } from '@/src/core/shared/types/rankTracking';
 import { slugToDomain } from '../../../utils/slugToDomain';
 
 const FONT = 'var(--font-family-primary)';

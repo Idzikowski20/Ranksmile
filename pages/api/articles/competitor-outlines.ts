@@ -6,15 +6,15 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
-import { getErrorMessage } from '../../../lib/errors';
-import { queryOne, ArticleRow } from '../../../lib/db/query';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { sidecarUrl } from '../../../lib/serviceUrls';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

@@ -1,4 +1,4 @@
-import { getStripePriceId, getPlanFromPriceId } from '../../lib/stripePrices';
+import { getStripePriceId, getPlanFromPriceId } from '@/src/core/domain/billing/prices';
 
 describe('stripePrices', () => {
   const env = process.env;

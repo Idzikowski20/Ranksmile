@@ -1,4 +1,4 @@
-import { decideAutopilotAction, MAX_ANALYSIS_ATTEMPTS } from '../../lib/autopilot';
+import { decideAutopilotAction, MAX_ANALYSIS_ATTEMPTS } from '@/src/infrastructure/cron/autopilot';
 
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
 

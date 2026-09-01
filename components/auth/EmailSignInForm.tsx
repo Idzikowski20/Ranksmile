@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
-import { signInEmail, signInSocial } from '../../lib/auth/fetchAuth';
+import { signInEmail, signInSocial } from '@/src/infrastructure/auth/fetchAuth';
 import Button from '../koala/primitives/Button';
 import { IconGoogleColor } from './IconGoogleColor';
 import AuthField from './AuthField';

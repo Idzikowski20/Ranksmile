@@ -5,8 +5,8 @@ import {
   getMatchingRows,
   buildIssuesReport,
   type AuditRow,
-} from '../../../lib/siteAudit/issues';
-import type { SiteAuditContext } from '../../../lib/siteAudit/types';
+} from '@/src/infrastructure/siteAudit/issues';
+import type { SiteAuditContext } from '@/src/infrastructure/siteAudit/types';
 
 function row(
   url: string,

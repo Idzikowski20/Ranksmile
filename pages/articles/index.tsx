@@ -14,9 +14,9 @@ import { useFetchDomains } from '../../services/domains';
 import { useFetchSettings } from '../../services/settings';
 import { useWorkspaces } from '../../services/workspaces';
 import { useQuery, useQueryClient } from 'react-query';
-import { getErrorMessage } from '../../lib/errors';
-import { deriveActiveId } from '../../lib/activeWorkspace';
-import { buildArticleWorkspaceLinks } from '../../lib/articles/articleWorkspaceLinks';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
+import { buildArticleWorkspaceLinks } from '@/src/core/domain/articles/articleWorkspaceLinks';
 
 type ArticleRow = {
   id: number | string;

@@ -5,8 +5,8 @@ jest.mock('react-hot-toast', () => ({
   __esModule: true,
   default: Object.assign(jest.fn(), { success: jest.fn(), error: jest.fn() }),
 }));
-jest.mock('../../lib/auth/fetchAuth', () => ({ changePassword: jest.fn() }));
-jest.mock('../../lib/auth/client', () => ({ authClient: { useSession: () => ({ data: null }) } }));
+jest.mock('@/src/infrastructure/auth/fetchAuth', () => ({ changePassword: jest.fn() }));
+jest.mock('@/src/infrastructure/auth/client', () => ({ authClient: { useSession: () => ({ data: null }) } }));
 jest.mock('../../services/gscAccount', () => ({ useGscAccount: () => ({ data: null }) }));
 jest.mock('../../services/profile', () => ({
   useProfile: () => ({ data: { name: 'Ada', avatarUrl: '' } }),

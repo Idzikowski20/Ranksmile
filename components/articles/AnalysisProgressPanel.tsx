@@ -1,7 +1,7 @@
 import React from 'react';
 import { Icon } from '../koala/icons';
 import { Spinner } from '../koala/primitives/Spinner';
-import { analysisPhaseGroups, type PhaseRow } from '../../lib/analysisPhaseRows';
+import { analysisPhaseGroups, type PhaseRow } from '@/src/core/domain/articles/analysisPhaseRows';
 import { AiEngineIcons, GoogleEngineIcon } from './EngineIcons';
 import type { AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
 

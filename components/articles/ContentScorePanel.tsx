@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '../koala/core';
 import { KoalaPanelHeader } from '../koala/layout';
-import { ScoreData, NlpTerm, countOccurrences } from '../../lib/contentScore';
-import { scoreArticleHtml } from '../../lib/scoreArticleHtml';
+import { ScoreData, NlpTerm, countOccurrences } from '@/src/infrastructure/articles/contentScore';
+import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
 import { computeOpportunityScore } from '@/src/core/domain/keywords/enrichment';
 import { useArticleKeywords } from '../../services/articleKeywords';
 import type { KeywordItem } from './KeywordResearchSection';
@@ -15,9 +15,9 @@ import type { AiReadabilityResult } from './PrePublishPanel';
 import type { PlagiarismResult } from './PlagiarismPanel';
 import ScoreTrio from './ScoreTrio';
 import ScoreFactorList from './ScoreFactorList';
-import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '../../lib/ai/aiSearchScore';
-import { introFactorsFromScoreData } from '../../lib/aiScore/liveFactors';
-import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/ai/aiCoverage';
+import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import { introFactorsFromScoreData } from '@/src/core/domain/aiScore/liveFactors';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { useCompetitors } from '../../services/competitors';
 import { Gauge } from '../koala/core';
 import { useCoverageHistoryDelta } from '../../hooks/articles/useCoverageHistoryDelta';
@@ -67,7 +67,7 @@ interface Props {
   initialAiReadability?: AiReadabilityResult | null;
   onAutoOptimize?: () => void;
   /** Surgical Priority Apply. */
-  onOptimizeAction?: (action: import('../../lib/primitives/types').Action) => void;
+  onOptimizeAction?: (action: import('@/src/core/primitives/types').Action) => void;
   isAutoOptimizing?: boolean;
   /** Drives the 3-state Auto-Optimize control: button → running → completed box. */
   optimizeState?: 'idle' | 'optimizing' | 'reviewing';

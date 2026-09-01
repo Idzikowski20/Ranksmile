@@ -1,5 +1,5 @@
-import { sectionStatusLabel, sectionResultLabel } from '../../lib/optimizeMessaging';
-import type { StepFocus, EditMode } from '../../lib/optimizationPlanner';
+import { sectionStatusLabel, sectionResultLabel } from '@/src/infrastructure/ao/optimizeMessaging';
+import type { StepFocus, EditMode } from '@/src/infrastructure/ao/optimizationPlanner';
 
 describe('sectionStatusLabel', () => {
   it('returns expanding message when mode is expand, regardless of focus', () => {

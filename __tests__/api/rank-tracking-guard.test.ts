@@ -1,5 +1,5 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
-jest.mock('../../lib/featureFlags', () => ({
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/config/featureFlags', () => ({
   isRankTrackingUiEnabled: jest.fn().mockReturnValue(true),
   isRankTrackingRunnerEnabled: jest.fn().mockReturnValue(true),
 }));
@@ -8,15 +8,15 @@ jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolv
 jest.mock('../../utils/verifyDomainOwnership', () => ({
   verifyDomainOwnershipBySlug: jest.fn().mockResolvedValue(false),
 }));
-jest.mock('../../lib/ensureRankTrackingTables', () => ({ ensureRankTrackingTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/rankTracking/service', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureRankTrackingTables', () => ({ ensureRankTrackingTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/rankTracking/service', () => ({
   getConfigsForDomain: jest.fn().mockResolvedValue([]),
   getConfig: jest.fn(),
 }));
-jest.mock('../../lib/rankTracking/repository', () => ({
+jest.mock('@/src/infrastructure/rankTracking/repository', () => ({
   getActiveRun: jest.fn(),
 }));
-jest.mock('../../lib/rankTracking/snapshotQueries', () => ({
+jest.mock('@/src/infrastructure/rankTracking/snapshotQueries', () => ({
   getKeywordHistory: jest.fn(),
 }));
 
@@ -24,9 +24,9 @@ import handler from '../../pages/api/rank-tracking/[slug]/configs';
 import latestRunHandler from '../../pages/api/rank-tracking/[slug]/runs/latest';
 import historyHandler from '../../pages/api/rank-tracking/[slug]/history/[keywordId]';
 import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
-import { getConfig } from '../../lib/rankTracking/service';
-import { getActiveRun } from '../../lib/rankTracking/repository';
-import { getKeywordHistory } from '../../lib/rankTracking/snapshotQueries';
+import { getConfig } from '@/src/infrastructure/rankTracking/service';
+import { getActiveRun } from '@/src/infrastructure/rankTracking/repository';
+import { getKeywordHistory } from '@/src/infrastructure/rankTracking/snapshotQueries';
 
 const makeRes = () => {
   const res: { status: jest.Mock; json: jest.Mock; setHeader: jest.Mock } = {

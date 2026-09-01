@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import RanksmileMarkdown from './RanksmileMarkdown';
-import { shouldShowRanksmileThinkingDisclosure } from '../../lib/ai/text';
+import { shouldShowRanksmileThinkingDisclosure } from '@/src/infrastructure/ai/text';
 
 type Props = {
   role: 'user' | 'assistant';

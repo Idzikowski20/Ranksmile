@@ -1,31 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from 'react-query';
-import toast from 'react-hot-toast';
 import type { AiVisConfig, AiVisTopic, AiVisPriority } from '@/src/core/domain/aiVisibility/config';
+import { fetchJson, toastError, jsonPost } from './http';
 
 export type AiVisScanStatus = {
    status: 'idle' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled',
    progressDone: number, progressTotal: number, costUsd: number, finishedAt: string | null,
 };
-
-/** Single fetch+parse+error helper — replaces the repeated `if (!r.ok) throw`
- * across every hook. Throws Error(message-from-server) so react-query onError
- * can toast it uniformly. */
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-   const r = await fetch(url, init);
-   let body: unknown = null;
-   try { body = await r.json(); } catch { /* empty/non-JSON body */ }
-   if (!r.ok) {
-      const msg = (body as { error?: string } | null)?.error || `Request failed (${r.status})`;
-      throw new Error(msg);
-   }
-   return body as T;
-}
-
-const toastError = (e: unknown): void => { toast.error(e instanceof Error ? e.message : 'Something went wrong'); };
-
-const jsonPost = (body: unknown): RequestInit => ({
-   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-});
 
 export function useAiVisData<T>(slug: string | undefined, view: string) {
    return useQuery<T & { pending?: boolean }>(
@@ -136,8 +116,8 @@ export type OverviewPayload = {
    pending?: boolean; scanId?: number; finishedAt?: string | null;
    usingFallbackScan?: boolean; latestAttemptFailedAt?: string | null;
    snapshot?: DomainSnapshotDTO;
-   competitors?: Array<{ domain: string; snapshot: DomainSnapshotDTO }>;   // top-5, sources emptied
-   competitorsAll?: Array<{ domain: string; visibilityScore: number }>;     // all, for the picker
+   competitors?: Array<{ domain: string; snapshot: DomainSnapshotDTO }>; // top-5, sources emptied
+   competitorsAll?: Array<{ domain: string; visibilityScore: number }>; // all, for the picker
    compare?: { competitorDomain: string; snapshot: DomainSnapshotDTO } | null; // long-tail fallback
    delta?: unknown; nextRefreshAt?: string | null; daysUntilRefresh?: number | null;
    refreshIntervalDays?: number; priority?: AiVisPriority;

@@ -1,4 +1,4 @@
-import { compile } from '../../../lib/compiler/compile';
+import { compile } from '@/src/core/compiler/compile';
 import {
   createConsumerContext,
   coverageConsumer,
@@ -12,8 +12,8 @@ import {
   ccmToBlob,
   ccmFromBlob,
   actionGraphConsumer,
-} from '../../../lib/intelligence';
-import { buildActionGraph } from '../../../lib/planner';
+} from '@/src/core/intelligence/index';
+import { buildActionGraph } from '@/src/core/planner/index';
 
 const AT = '2026-08-03T18:00:00.000Z';
 

@@ -4,18 +4,18 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import Domain from '../../../database/models/domain';
 import { getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../../utils/searchConsole';
-import { ensureGscSnapshotTables } from '../../../lib/ensureGscSnapshotTables';
-import { captureWeeklySnapshot, weekStartFor } from '../../../lib/gsc/gscSnapshots';
+import { ensureGscSnapshotTables } from '@/src/infrastructure/persistence/schema/ensureGscSnapshotTables';
+import { captureWeeklySnapshot, weekStartFor } from '@/src/infrastructure/gsc/gscSnapshots';
 import { getWeeklyDrops } from '../../../src/composition/gsc';
-import { buildGscDigest, type DomainDigest } from '../../../lib/gsc/gscDigestEmail';
-import { sendMail } from '../../../lib/sendMail';
-import { queryRows, type ArticleRow } from '../../../lib/db/query';
-import { getErrorMessage } from '../../../lib/errors';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { withCronWatchdog } from '../../../lib/cronWatchdog';
-import { cronSecrets } from '../../../lib/cronAuth';
-import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '../../../lib/autopilot';
-import { nextjsUrl } from '../../../lib/serviceUrls';
+import { buildGscDigest, type DomainDigest } from '@/src/infrastructure/gsc/gscDigestEmail';
+import { sendMail } from '@/src/infrastructure/email/sendMail';
+import { queryRows, type ArticleRow } from '@/src/infrastructure/db/query';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { withCronWatchdog } from '@/src/infrastructure/cron/cronWatchdog';
+import { cronSecrets } from '@/src/infrastructure/cron/cronAuth';
+import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '@/src/infrastructure/cron/autopilot';
+import { nextjsUrl } from '@/src/infrastructure/config/serviceUrls';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -37,7 +37,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
    // WIE Performance Loop: GSC 30d page metrics → pattern effectiveness
    try {
-      const { syncDueWieOutcomesFromGsc } = await import('../../../lib/wie/gscOutcomeSync');
+      const { syncDueWieOutcomesFromGsc } = await import('@/src/infrastructure/wie/gscOutcomeSync');
       const wieSync = await syncDueWieOutcomesFromGsc({ limit: 25 });
       if (wieSync.synced > 0) {
          console.log('[cron] WIE GSC outcome synced', wieSync.synced, '/', wieSync.scanned);
@@ -48,7 +48,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
    // WIE Learning hygiene: persist confidence decay
    try {
-      const { persistConfidenceDecay } = await import('../../../lib/wie/patternStore');
+      const { persistConfidenceDecay } = await import('@/src/infrastructure/wie/patternStore');
       const decay = await persistConfidenceDecay();
       if (decay.updated > 0) console.log('[cron] WIE confidence decay updated', decay.updated);
    } catch (e) {

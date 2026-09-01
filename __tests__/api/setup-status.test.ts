@@ -1,8 +1,8 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('u1') }));
 jest.mock('../../utils/verifyDomainOwnership', () => ({ verifyDomainOwnershipBySlug: jest.fn().mockResolvedValue({ ID: 42 }) }));
-jest.mock('../../lib/domainPipeline', () => ({
+jest.mock('@/src/infrastructure/cron/domainPipeline', () => ({
    getSetupStatus: jest.fn().mockResolvedValue({
       status: 'running',
       currentStage: 'gsc',
@@ -14,7 +14,7 @@ jest.mock('../../lib/domainPipeline', () => ({
 
 import verifyUser from '../../utils/verifyUser';
 import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
-import { getSetupStatus } from '../../lib/domainPipeline';
+import { getSetupStatus } from '@/src/infrastructure/cron/domainPipeline';
 import handler from '../../pages/api/domains/[slug]/setup-status';
 
 const makeRes = () => {

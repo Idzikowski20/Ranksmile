@@ -1,15 +1,15 @@
 jest.mock('../../utils/getUser', () => ({ getCurrentUser: jest.fn() }));
-jest.mock('../../lib/emailConfirmation', () => ({
+jest.mock('@/src/infrastructure/email/emailConfirmation', () => ({
   getConfirmationStatus: jest.fn(),
   issueConfirmationToken: jest.fn(),
   confirmEmailToken: jest.fn(),
 }));
-jest.mock('../../lib/confirmEmail', () => ({ sendConfirmationEmail: jest.fn() }));
+jest.mock('@/src/infrastructure/email/confirmEmail', () => ({ sendConfirmationEmail: jest.fn() }));
 
 import handler from '../../pages/api/confirm-account';
 import { getCurrentUser } from '../../utils/getUser';
-import { getConfirmationStatus, issueConfirmationToken, confirmEmailToken } from '../../lib/emailConfirmation';
-import { sendConfirmationEmail } from '../../lib/confirmEmail';
+import { getConfirmationStatus, issueConfirmationToken, confirmEmailToken } from '@/src/infrastructure/email/emailConfirmation';
+import { sendConfirmationEmail } from '@/src/infrastructure/email/confirmEmail';
 
 const mockGetCurrentUser = getCurrentUser as jest.MockedFunction<typeof getCurrentUser>;
 const mockGetConfirmationStatus = getConfirmationStatus as jest.MockedFunction<typeof getConfirmationStatus>;

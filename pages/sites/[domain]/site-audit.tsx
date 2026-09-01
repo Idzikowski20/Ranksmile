@@ -16,12 +16,12 @@ import { SiteAuditIssueDetailSkeleton, SiteAuditOverviewSkeleton, SiteAuditTable
 import { CrawlLimitIndicator } from '../../../components/siteAudit/CrawlLimitPopover';
 import CrawlLimitUpgradeBanner from '../../../components/siteAudit/CrawlLimitUpgradeBanner';
 import { Button, Tabs } from '../../../components/koala/core';
-import { AUDIT_URL_PATH, sitePath } from '../../../lib/navigation';
+import { AUDIT_URL_PATH, sitePath } from '@/src/infrastructure/navigation/index';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { useSiteAuditCompareCrawls, useSiteAuditCrawledPages, useSiteAuditIssueDetail, useSiteAuditOverview } from '../../../services/siteAudit';
 import { useRunSetup, useSetupStatus } from '../../../services/domainPipeline';
-import type { SiteAuditTab } from '../../../lib/siteAudit/types';
+import type { SiteAuditTab } from '@/src/infrastructure/siteAudit/types';
 import { useQueryClient } from 'react-query';
 
 const FONT = 'var(--font-family-primary)';

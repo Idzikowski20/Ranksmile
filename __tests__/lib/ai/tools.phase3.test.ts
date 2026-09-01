@@ -1,13 +1,13 @@
-import { makeWorkingDoc } from '../../../lib/ai/workingDoc';
-import { buildTools } from '../../../lib/ai/tools';
-import { callSidecar } from '../../../lib/sidecar';
-import type { ToolCtx } from '../../../lib/ai/types';
+import { makeWorkingDoc } from '@/src/infrastructure/ai/workingDoc';
+import { buildTools } from '@/src/infrastructure/ai/tools';
+import { callSidecar } from '@/src/infrastructure/http/sidecar';
+import type { ToolCtx } from '@/src/infrastructure/ai/types';
 
-jest.mock('../../../lib/seo/scoreContentClient', () => ({ scoreContent: jest.fn() }));
-jest.mock('../../../lib/ai/articleMeta', () => ({ resolveArticleSeoMeta: jest.fn() }));
+jest.mock('@/src/infrastructure/seo/scoreContentClient', () => ({ scoreContent: jest.fn() }));
+jest.mock('@/src/infrastructure/ai/articleMeta', () => ({ resolveArticleSeoMeta: jest.fn() }));
 
 // Sidecar returns a fixture keyed on the request PATH.
-jest.mock('../../../lib/sidecar', () => ({
+jest.mock('@/src/infrastructure/http/sidecar', () => ({
   callSidecar: jest.fn(async (path: string) => {
     if (path === '/social-posts') return { variants: ['post A', 'post B'] };
     if (path === '/ai-readability') {

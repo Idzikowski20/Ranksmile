@@ -6,13 +6,13 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAutomationTables } from '../../../../lib/ensureAutomationTables';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
-import { getConnectionForWorkspace } from '../../../../lib/wpConnection';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
-import { getErrorMessage } from '../../../../lib/errors';
-import { mapAutomationEvent, type AutomationEventRow, type AutomationPublishMode } from '../../../../lib/types/automations';
+import { ensureAutomationTables } from '@/src/infrastructure/persistence/schema/ensureAutomationTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { mapAutomationEvent, type AutomationEventRow, type AutomationPublishMode } from '@/src/core/shared/types/automations';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -100,7 +100,7 @@ async function createEvent(
 
   try {
     await ensureArticlesTables();
-    const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('../../../../lib/quota');
+    const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
     const orgId = await getOrgIdForDomain(domainId);
     if (!orgId) return res.status(400).json({ error: 'Domain has no organization' });
     await ensureOrgQuotaBalances(orgId);
@@ -205,7 +205,7 @@ async function createEvent(
 
     return res.status(200).json({ event: mapAutomationEvent(row), articleId: articleId ?? null });
   } catch (error) {
-    const { isPlanLimitError, planLimitBody } = await import('../../../../lib/quota');
+    const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
     if (isPlanLimitError(error)) return res.status(402).json(planLimitBody(error));
     return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
   }

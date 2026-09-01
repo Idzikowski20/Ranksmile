@@ -4,7 +4,7 @@ import { ArrowUpRight, FacebookLogo, Globe, InstagramLogo, LinkedinLogo, XLogo }
 import { semantic } from '../../koala/tokens/semantic';
 import { typeface, fontWeight } from '../../koala/tokens/typography';
 import { shadow } from '../../koala/tokens/effects';
-import { LEGAL_COMPANY } from '../../../lib/legal/company';
+import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
 import { BP, Container } from '../primitives';
 import { FOOTER_COLUMNS, FOOTER_LEGAL, SITE_NAME } from '../content';
 

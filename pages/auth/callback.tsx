@@ -2,7 +2,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect } from 'react';
-import { fetchBootstrapOrNull } from '../../lib/fetchBootstrap';
+import { fetchBootstrapOrNull } from '@/src/infrastructure/http/fetchBootstrap';
 import { authSubtitleStyle, authTitleStyle } from '../../components/auth/authStyles';
 import AuthPageLayout from '../../components/auth/AuthPageLayout';
 import AuthShell from '../../components/auth/AuthShell';

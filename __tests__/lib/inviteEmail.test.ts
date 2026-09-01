@@ -1,4 +1,4 @@
-import { inviteEmailHtml } from '../../lib/inviteEmail';
+import { inviteEmailHtml } from '@/src/infrastructure/email/inviteEmail';
 
 describe('inviteEmailHtml', () => {
   it('includes the accept url, role and expiry', () => {

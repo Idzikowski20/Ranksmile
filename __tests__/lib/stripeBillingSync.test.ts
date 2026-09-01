@@ -1,14 +1,14 @@
 import type Stripe from 'stripe';
-import { syncSubscriptionToOrg } from '../../lib/stripeBillingSync';
-import { getOrgBillingState, updateOrgBillingState, type OrgBillingState } from '../../lib/orgBilling';
+import { syncSubscriptionToOrg } from '@/src/infrastructure/billing/stripeBillingSync';
+import { getOrgBillingState, updateOrgBillingState, type OrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   updateOrgBillingState: jest.fn(async () => undefined),
   getOrgBillingState: jest.fn(async () => null),
   isTerminalSubscriptionStatus: (status: string | null | undefined) => status === 'canceled' || status === 'incomplete_expired',
 }));
 
-jest.mock('../../lib/billing/billingAudit', () => ({
+jest.mock('@/src/infrastructure/billing/billingAudit', () => ({
   BillingSource: {
     CHECKOUT: 'CHECKOUT',
     ACTIVATE_TRIAL: 'ACTIVATE_TRIAL',
@@ -21,11 +21,11 @@ jest.mock('../../lib/billing/billingAudit', () => ({
   ensureCorrelationId: (id?: string | null) => (typeof id === 'string' && id.trim() ? id.trim() : 'corr-test'),
 }));
 
-jest.mock('../../lib/quota/ensureBalances', () => ({
+jest.mock('@/src/infrastructure/quota/ensureBalances', () => ({
   ensureOrgQuotaBalances: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/stripePrices', () => ({
+jest.mock('@/src/core/domain/billing/prices', () => ({
   getPlanFromPriceId: jest.fn((priceId: string) => {
     if (priceId === 'price_scale_m') return { slug: 'scale', billing: 'monthly' };
     if (priceId === 'price_growth_m') return { slug: 'growth', billing: 'monthly' };

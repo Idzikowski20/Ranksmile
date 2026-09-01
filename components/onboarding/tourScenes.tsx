@@ -25,7 +25,7 @@ import { semantic } from '../koala/tokens/semantic';
 import { typeface } from '../koala/tokens/typography';
 import {
   DURATION, EASE, gsap, prefersReducedMotion, registerMotionPlugins, useGSAP,
-} from '../../lib/motion/gsap';
+} from '@/components/motion/gsap';
 
 /** Ink on the window surface — flips with the window because bg-primary does. */
 const ink = (pct: number) => `color-mix(in srgb, ${semantic.background.primary} ${pct}%, transparent)`;

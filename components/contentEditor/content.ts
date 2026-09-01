@@ -3,7 +3,7 @@
  * Layout follows Figma cn7zCRglwVkmcbCdT01bgI · 5:2626 1:1 (dark → Koala light), assets in
  * public/content-editor/. Copy adapted to Ranksmile; no borrowed testimonials or logos.
  */
-import { LEGAL_COMPANY } from '../../lib/legal/company';
+import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || LEGAL_COMPANY.website).replace(/\/$/, '');
 export const SUPPORT_EMAIL = LEGAL_COMPANY.supportEmail;

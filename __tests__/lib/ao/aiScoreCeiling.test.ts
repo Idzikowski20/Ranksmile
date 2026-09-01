@@ -1,7 +1,7 @@
-import { computeCoverageScores, type CoverageItem } from '../../../lib/ai/aiCoverage';
-import { buildEditCandidates } from '../../../lib/ao/buildCandidates';
-import { buildIntentProfile } from '../../../lib/ao/intentProfile';
-import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_TARGET } from '../../../lib/ao/coverageState';
+import { computeCoverageScores, type CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
+import { buildEditCandidates } from '@/src/infrastructure/ao/buildCandidates';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
+import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_TARGET } from '@/src/core/domain/optimize/coverageState';
 
 const gi = (
   id: string,

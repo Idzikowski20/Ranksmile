@@ -9,28 +9,8 @@ import type {
   RankSnapshotRow,
   RankTrackingConfigRow,
   RankTrackingKeywordRow,
-} from '../lib/types/rankTracking';
-
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(url, init);
-  let body: unknown = null;
-  try { body = await r.json(); } catch { /* empty */ }
-  if (!r.ok) {
-    const msg = (body as { error?: string } | null)?.error || `Request failed (${r.status})`;
-    throw new Error(msg);
-  }
-  return body as T;
-}
-
-const toastError = (e: unknown): void => {
-  toast.error(e instanceof Error ? e.message : 'Something went wrong');
-};
-
-const jsonPost = (body: unknown): RequestInit => ({
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-});
+} from '@/src/core/shared/types/rankTracking';
+import { fetchJson, toastError, jsonPost } from './http';
 
 export function useRankConfigs(slug: string | undefined): UseQueryResult<{ configs: RankTrackingConfigRow[] }> {
   return useQuery(

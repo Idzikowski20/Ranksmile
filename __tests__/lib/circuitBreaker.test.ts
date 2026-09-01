@@ -1,4 +1,4 @@
-import { withBreaker, CircuitOpenError, resetBreaker } from '../../lib/circuitBreaker';
+import { withBreaker, CircuitOpenError, resetBreaker } from '@/src/infrastructure/http/circuitBreaker';
 
 const fail = () => Promise.reject(new Error('boom'));
 const ok = () => Promise.resolve('ok');

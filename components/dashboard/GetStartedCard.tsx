@@ -4,7 +4,7 @@ import { Flex, Stack } from '../koala/core/layout';
 import { Text } from '../koala/core/text';
 import { Button } from '../koala/core';
 import { ActionWidget } from '../koala/product';
-import { useOnboardingChecklist } from '../../lib/useOnboardingChecklist';
+import { useOnboardingChecklist } from '@/hooks/useOnboardingChecklist';
 
 const Chevron = () => (
   <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">

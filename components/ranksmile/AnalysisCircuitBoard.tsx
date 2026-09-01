@@ -6,7 +6,7 @@ import CircuitBoard, {
   type CircuitNode,
   type CircuitNodeStatus,
 } from './CircuitBoard';
-import type { DeepAnalysisUiState, StepVisualStatus } from '../../lib/deepAnalysisProgress';
+import type { DeepAnalysisUiState, StepVisualStatus } from '@/src/core/domain/articles/deepAnalysisProgress';
 
 const iconProps = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true as const };
 

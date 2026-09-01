@@ -13,8 +13,8 @@ describe('pipeline-workers env bootstrap', () => {
       'utf8',
     );
     const dotenvIdx = src.indexOf("dotenv.config({ path: '.env.local' })");
-    const dynamicDbIdx = src.indexOf("await import('../lib/ensurePipelineJobsTables')");
-    const staticDbImport = /import\s+\{[^}]*insertPipelineJob[^}]*\}\s+from\s+['"]\.\.\/lib\/ensurePipelineJobsTables['"]/.test(
+    const dynamicDbIdx = src.indexOf("await import('@/src/infrastructure/persistence/schema/ensurePipelineJobsTables')");
+    const staticDbImport = /import\s+\{[^}]*insertPipelineJob[^}]*\}\s+from\s+['"]@\/src\/infrastructure\/persistence\/schema\/ensurePipelineJobsTables['"]/.test(
       src,
     );
 

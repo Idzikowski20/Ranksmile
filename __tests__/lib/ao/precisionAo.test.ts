@@ -1,18 +1,18 @@
-import { makeCandidate } from '../../../lib/ao/editCandidate';
-import { buildIntentProfile } from '../../../lib/ao/intentProfile';
-import { filterCandidatesByIntent, validatePlanStepAction } from '../../../lib/ao/intentGuard';
-import { buildPrecisionEditPlan } from '../../../lib/ao/editPlan';
-import { DEFAULT_EDIT_BUDGET } from '../../../lib/ao/editBudget';
-import { runEditSafetyGate, countWords } from '../../../lib/ao/editSafetyGate';
+import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
+import { filterCandidatesByIntent, validatePlanStepAction } from '@/src/infrastructure/ao/intentGuard';
+import { buildPrecisionEditPlan } from '@/src/infrastructure/ao/editPlan';
+import { DEFAULT_EDIT_BUDGET } from '@/src/core/domain/optimize/editBudget';
+import { runEditSafetyGate, countWords } from '@/src/core/domain/optimize/editSafetyGate';
 import {
   coverageStateFromQuality,
   isAdequatelyCovered,
   livePresenceQualityCap,
-} from '../../../lib/ao/coverageState';
-import { faqBudgetForWordCount, selectFaqQuestions } from '../../../lib/aoFaqSection';
-import { shouldSkipOptimize, TARGET_AI, TARGET_SEO } from '../../../lib/optimizeMode';
-import { resolveOptimizationStrategy } from '../../../lib/ao/runPrecisionOptimize';
-import { buildEditCandidates } from '../../../lib/ao/buildCandidates';
+} from '@/src/core/domain/optimize/coverageState';
+import { faqBudgetForWordCount, selectFaqQuestions } from '@/src/infrastructure/ao/aoFaqSection';
+import { shouldSkipOptimize, TARGET_AI, TARGET_SEO } from '@/src/core/domain/optimize/optimizeMode';
+import { resolveOptimizationStrategy } from '@/src/infrastructure/ao/runPrecisionOptimize';
+import { buildEditCandidates } from '@/src/infrastructure/ao/buildCandidates';
 
 describe('EditCandidate', () => {
   it('has WHAT/WHY fields and no action', () => {

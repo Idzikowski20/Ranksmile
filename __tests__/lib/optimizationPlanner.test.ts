@@ -1,13 +1,13 @@
 import {
   estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt, worthEditing, selectMode,
   introMayExpand, buildStepPromptForMode, userInstructionForMode,
-} from '../../lib/optimizationPlanner';
-import type { PlanInput, PlanStep } from '../../lib/optimizationPlanner';
-import type { Section } from '../../lib/articles/articleSections';
-import type { Guideline } from '../../lib/recommendationEngine';
-import type { ArticleContext } from '../../lib/articles/articleContext';
-import type { RoutedGuideline } from '../../lib/optimizeGuidelineRouting';
-import type { CoverageSnapshot } from '../../lib/ai/aiCoverage';
+} from '@/src/infrastructure/ao/optimizationPlanner';
+import type { PlanInput, PlanStep } from '@/src/infrastructure/ao/optimizationPlanner';
+import type { Section } from '@/src/infrastructure/articles/articleSections';
+import type { Guideline } from '@/src/infrastructure/engines/recommendationEngine';
+import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
+import type { RoutedGuideline } from '@/src/infrastructure/ao/optimizeGuidelineRouting';
+import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 const sec = (html: string): Section => ({ id: 's', index: 0, headingText: '', html });
 

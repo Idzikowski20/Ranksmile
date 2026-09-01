@@ -3,14 +3,14 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
-import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '../../../../lib/aiVisibility/aiVisibilityScan';
-import { queryOne } from '../../../../lib/db/query';
-import { callSidecar } from '../../../../lib/sidecar';
-import { getErrorMessage } from '../../../../lib/errors';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
+import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { callSidecar } from '@/src/infrastructure/http/sidecar';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { manualRefreshCooldownDays, refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
-import { nextjsUrl } from '../../../../lib/serviceUrls';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { nextjsUrl } from '@/src/infrastructure/config/serviceUrls';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

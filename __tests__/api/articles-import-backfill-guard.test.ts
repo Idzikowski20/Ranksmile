@@ -1,4 +1,4 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('sequelize', () => ({ QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT' } }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
@@ -7,23 +7,23 @@ jest.mock('../../utils/verifyDomainOwnership', () => ({
    verifyDomainOwnershipById: jest.fn(),
    firstAccessibleDomainId: jest.fn(),
 }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 jest.mock('../../utils/searchConsole', () => ({ readLocalSCData: jest.fn() }));
 jest.mock('../../utils/gsc', () => ({
    kwScore: jest.fn(),
    normalizeUrlForMatch: jest.fn((url: string) => url),
 }));
 jest.mock('../../database/models/domain', () => ({ __esModule: true, default: { findByPk: jest.fn() } }));
-jest.mock('../../lib/uploadToBlob', () => ({ uploadImageFromUrl: jest.fn() }));
+jest.mock('@/src/infrastructure/http/uploadToBlob', () => ({ uploadImageFromUrl: jest.fn() }));
 jest.mock('../../utils/spaScraper', () => ({ renderPage: jest.fn() }));
-jest.mock('../../lib/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://safe.example/post')) }));
+jest.mock('@/src/infrastructure/http/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://safe.example/post')) }));
 
 import db from '../../database/database';
 import backfillHandler from '../../pages/api/articles/backfill';
 import importHandler from '../../pages/api/articles/import';
 import { firstAccessibleDomainId, verifyDomainOwnershipById } from '../../utils/verifyDomainOwnership';
-import { assertPublicUrl } from '../../lib/ssrfGuard';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 
 const mockAssertPublicUrl = assertPublicUrl as jest.MockedFunction<typeof assertPublicUrl>;
 

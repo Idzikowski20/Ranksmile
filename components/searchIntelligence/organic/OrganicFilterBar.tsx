@@ -7,7 +7,7 @@ import {
   SearchBar,
   type SelectOptionOrSection,
 } from '../../koala/core';
-import type { OrganicFilters } from '../../../lib/organicResearch/filter';
+import type { OrganicFilters } from '@/src/infrastructure/organicResearch/filter';
 import {
   kdFilterFromValue,
   kdFilterValue,
@@ -15,8 +15,8 @@ import {
   positionFilterValue,
   volumeFilterFromValue,
   volumeFilterValue,
-} from '../../../lib/organicResearch/filter';
-import type { SearchIntent } from '../../../lib/organicResearch/types';
+} from '@/src/infrastructure/organicResearch/filter';
+import type { SearchIntent } from '@/src/infrastructure/organicResearch/types';
 
 const FONT = 'var(--font-family-primary)';
 

@@ -5,8 +5,8 @@ import {
   isAllowedSubscriptionChange,
   isPaidPlanUpgrade,
   planRank,
-} from '../../lib/billing/billingUpgrade';
-import type { OrgBillingState } from '../../lib/orgBilling';
+} from '@/src/infrastructure/billing/billingUpgrade';
+import type { OrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 
 describe('billingUpgrade helpers', () => {
   it('ranks plans starter < growth < scale < agency', () => {

@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
-import { verifyTwoFactor } from '../../lib/auth/fetchAuth';
+import { verifyTwoFactor } from '@/src/infrastructure/auth/fetchAuth';
 import Button from '../koala/primitives/Button';
 import AuthBrandMark from './AuthBrandMark';
 import AuthField from './AuthField';
