@@ -116,30 +116,25 @@ const VARIANT_ICON: Record<NonNullable<AppBannerState['variant']>, string> = {
 export function AppBanner() {
   const ctx = useContext(AppBannerContext);
   const banner = ctx?.banner ?? null;
-  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
-  // The (persistence + closeKey) token whose storage read has completed. Keyed on both, not a
-  // boolean, so a banner published after mount, a closeKey change, OR persistDismiss flipping
-  // false→true (same closeKey) all re-gate until ITS read runs — a token that ignored the
-  // persistence mode would still match after the flip and let a dismissed banner flash.
-  const [checkedToken, setCheckedToken] = useState<string | null>(null);
+  // Track dismissals per closeKey, not a single "last dismissed" key: banners come and
+  // go within one AppShell mount (a page publishes an error over the standing
+  // announcement, then clears it), and a shared key meant dismissing one un-dismissed
+  // the other when it reappeared.
+  const [dismissedKeys, setDismissedKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const addDismissed = useCallback((key: string) => {
+    setDismissedKeys((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+  }, []);
   // Dismissal is keyed on the stable identity, not the rendered text.
   const closeKey = banner?.dismissKey ?? banner?.message ?? '';
   const persist = banner?.persistDismiss ?? false;
-  const token = `${persist ? '1' : '0'}:${closeKey}`;
 
-  // Restore a persisted dismissal after mount — reading storage during render would mismatch
-  // the server-rendered null. Runs again whenever persistence or the banner's closeKey changes.
+  // Restore a persisted dismissal after mount — reading storage during render would
+  // mismatch the server-rendered null.
   useEffect(() => {
-    if (persist && closeKey && isBannerDismissed(closeKey)) setDismissedKey(closeKey);
-    setCheckedToken(token);
-  }, [persist, closeKey, token]);
+    if (persist && closeKey && isBannerDismissed(closeKey)) addDismissed(closeKey);
+  }, [persist, closeKey, addDismissed]);
 
-  if (!banner) return null;
-  // Persisted-dismissible banners stay hidden until THIS banner's storage read runs, so a
-  // returning user who dismissed one never sees it flash (and re-fire role="alert") on cold
-  // load, when a new persistent banner is published, or when it becomes persistent.
-  if (banner.dismissible && persist && checkedToken !== token) return null;
-  if (banner.dismissible && dismissedKey === closeKey) return null;
+  if (!banner || (banner.dismissible && dismissedKeys.has(closeKey))) return null;
 
   const variant = banner.variant ?? 'error';
 
@@ -171,7 +166,7 @@ export function AppBanner() {
               className="koala-app-banner__close"
               aria-label="Dismiss"
               onClick={() => {
-                setDismissedKey(closeKey);
+                addDismissed(closeKey);
                 if (persist) markBannerDismissed(closeKey);
               }}
             >

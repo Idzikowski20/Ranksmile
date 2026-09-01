@@ -8,39 +8,13 @@
  * imports (`../../lib/x`, `../../infrastructure/y`) — hence segment-boundary
  * anchors like `(?:^|[\\/])lib[\\/]` rather than a literal `src/lib`.
  */
-import { builtinModules } from 'node:module';
-
 export type LayerRule = {
   root: string;
   label: string;
-  /** Explicit deny-list — kept for clear violation messages on the common vendor/outer imports. */
   forbid: RegExp[];
-  /**
-   * Allow-list for NON-relative specifiers (bare packages, aliases): anything matching none of
-   * these is a violation. Closes the deny-list's gap where an unlisted package or another core
-   * layer would pass every `forbid` pattern.
-   */
-  allowOnly: RegExp[];
-  /**
-   * Repo-relative path roots a RELATIVE import may resolve into. A relative specifier is
-   * resolved against the importing file and rejected if it lands outside these — otherwise
-   * `../../application/x` from a domain file would escape the layer unchecked.
-   */
-  allowedRoots: string[];
+  /** Repo-relative paths under `root` to skip (matched against the forward-slash path). */
+  exclude?: RegExp;
 };
-
-// Node's own builtins, both `node:fs` and bare `fs`/`path`/`crypto` — pure, no outer dependency.
-const NODE_BUILTIN = new RegExp(
-  `^(?:node:)?(?:${builtinModules.map((m) => m.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')).join('|')})(?:[\\/]|$)`,
-);
-
-// Non-relative imports a pure core layer may make: only its own layer's siblings and the
-// shared kernel (as aliases), plus node builtins.
-const CORE_ALLOW = [
-  NODE_BUILTIN,
-  /^@\/src\/core\/domain(?:[\\/]|$)/,
-  /^@\/src\/core\/shared(?:[\\/]|$)/,
-];
 
 // Vendors / outer layers the pure core must never touch.
 const VENDORS = [
@@ -58,22 +32,38 @@ const OUTER = [
 // Forbid ALL lib/* from core. The type carve-out (lib/types) has been relocated to
 // src/core/shared/types, so core no longer needs any lib import.
 const LIB = [/(?:^|[\\/])lib[\\/]/];
+// Inner-layer specifiers, so the denylist enforces dependency DIRECTION, not just
+// keeps outer layers out: a domain file importing `../../application/x` (an inverted
+// dependency) is caught the same as a vendor import. A layer never lists its own
+// segment — that would forbid its files from importing each other.
+const APPLICATION = [/(?:^|[\\/])application[\\/]/];
+const DOMAIN = [/(?:^|[\\/])domain[\\/]/];
 
 export const LAYER_RULES: LayerRule[] = [
   {
     root: 'src/core/domain',
     label: 'domain',
-    // domain may import only src/core/domain + src/core/shared (+ node builtins)
-    forbid: [...VENDORS, ...OUTER, ...LIB],
-    allowOnly: CORE_ALLOW,
-    allowedRoots: ['src/core/domain', 'src/core/shared'],
+    // domain may import only src/core/domain + src/core/shared
+    forbid: [...VENDORS, ...OUTER, ...LIB, ...APPLICATION],
   },
   {
     root: 'src/core/application',
     label: 'application',
-    // application may import src/core/application + src/core/domain + src/core/shared (+ node builtins)
+    // application may import src/core/application + domain + shared
     forbid: [...VENDORS, ...OUTER, ...LIB],
-    allowOnly: CORE_ALLOW,
-    allowedRoots: ['src/core/application', 'src/core/domain', 'src/core/shared'],
+  },
+  {
+    root: 'src/core/shared',
+    label: 'shared',
+    // shared runtime primitives are the innermost leaf — may import only src/core/shared.
+    // The relocated type barrel (src/core/shared/types/*) is a pure type-declaration
+    // surface that legitimately references types from every layer (the old lib/types
+    // carve-out), so it is excluded from the leaf constraint.
+    forbid: [...VENDORS, ...OUTER, ...LIB, ...APPLICATION, ...DOMAIN],
+    // ponytail: blanket carve-out — the whole types/ subtree skips the leaf check, so a
+    // stray vendor/outer *runtime* import in a types file would go unnoticed. Acceptable
+    // while types/ is declaration-only (`import type` erases at build). Upgrade path when
+    // it gains runtime code: scan types/ too but allow only `import type` specifiers.
+    exclude: /^src[\\/]core[\\/]shared[\\/]types[\\/]/,
   },
 ];

@@ -1,5 +1,5 @@
 /** Inflection-tolerant term matching — shared by content score + competitor scoring (client-safe). */
-const PL_DIACRITICS: Record<string, string> = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z' };
+import { PL_DIACRITICS } from './plDiacritics';
 
 function normalizePl(s: string): string {
   return (s || '').toLowerCase().replace(/[ąćęłńóśźż]/g, (c) => PL_DIACRITICS[c] || c);
