@@ -1,6 +1,8 @@
 """Run a validated CompiledWritePlan without falling back to the legacy writer."""
 from __future__ import annotations
 
+import asyncio
+
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 
@@ -80,8 +82,15 @@ async def run_compiled_write_plan(
 
     index = _graph_index(plan)
 
-    markdown = [f"# {title.strip()}"]
-    reviewed: list[ReviewedParagraphResult] = []
+    # Plan every paragraph first, then write SECTIONS concurrently and the paragraphs
+    # inside a section in order, each one seeing what its siblings already said.
+    #
+    # Writing every paragraph concurrently was faster, but no paragraph could know what
+    # the others were writing: four paragraphs answering one section brief in parallel
+    # produced "Pierwsze kroki:" three times over and two near-identical tables in the
+    # same section. Sections stay parallel, so the wave count barely moves — the longest
+    # section, not the article, now sets the depth.
+    planned: list[tuple[str | None, Mapping[str, object] | None, Mapping[str, object] | None]] = []
     first_paragraph = True
     for pack in packs:
         if not isinstance(pack, Mapping):
@@ -90,7 +99,7 @@ async def run_compiled_write_plan(
         paragraph_ids = pack.get("paragraph_plan_ids")
         if not isinstance(heading, str) or not isinstance(paragraph_ids, list):
             raise ValueError("compiled_write_plan pack is incomplete")
-        markdown.append(f"## {heading}")
+        planned.append((heading, None, None))
         # The writer is called once per paragraph and keeps no history between calls, so
         # everything it needs about where the paragraph sits has to travel with it.
         for paragraph_id in paragraph_ids:
@@ -106,15 +115,70 @@ async def run_compiled_write_plan(
                 # the coverage judge awards a flat bonus for it, and readers and AI
                 # engines both quote the lead, not the third section.
                 "is_lead": first_paragraph,
+                # Set below once the full plan is known — the closing paragraph is where
+                # the reader gets the next step, and a brand block in the prompt without
+                # an instruction to use it produced articles that never named the agency.
+                "is_closing": False,
                 # Only unlocks the prompt rule; every link it produces is still verified
                 # against the authority allowlist and a live fetch before it ships.
                 "allow_authority_links": allow_authority_links,
             }
             first_paragraph = False
+            planned.append((None, paragraph, context))
+
+    # 10, up from 6: ~45 paragraph writes per article ran in 8 waves; OpenRouter takes the
+    # extra in-flight requests without breaking a sweat and the waves drop to 5.
+    semaphore = asyncio.Semaphore(10)
+
+    async def _write_one(paragraph: Mapping[str, object], context: Mapping[str, object]) -> ReviewedParagraphResult:
+        async with semaphore:
             result = await write_paragraph(paragraph, generate_markdown, context)
-            judged = await review_paragraph(result, rewrite_markdown)
-            reviewed.append(judged)
-            markdown.append(judged.markdown)
+            return await review_paragraph(result, rewrite_markdown)
+
+    # Mark the last real paragraph as the closing one.
+    for i in range(len(planned) - 1, -1, -1):
+        _, paragraph, context = planned[i]
+        if paragraph is not None and context is not None:
+            context["is_closing"] = True
+            break
+
+    # Indices of the paragraphs belonging to each section, in reading order.
+    section_groups: list[list[int]] = []
+    for i, (heading, paragraph, _) in enumerate(planned):
+        if heading is not None:
+            section_groups.append([])
+        elif paragraph is not None:
+            if not section_groups:
+                section_groups.append([])
+            section_groups[-1].append(i)
+
+    results: dict[int, ReviewedParagraphResult] = {}
+
+    async def _write_section(indices: list[int]) -> None:
+        already: list[str] = []
+        for i in indices:
+            _, paragraph, context = planned[i]
+            if paragraph is None or context is None:
+                continue
+            context["already_written"] = list(already)
+            results[i] = await _write_one(paragraph, context)
+            text = results[i].markdown.strip()
+            if text:
+                already.append(text)
+
+    groups = [g for g in section_groups if g]
+    if groups:
+        await asyncio.gather(*(_write_section(g) for g in groups))
+
+    markdown = [f"# {title.strip()}"]
+    reviewed: list[ReviewedParagraphResult] = []
+    for i, (heading, paragraph, _) in enumerate(planned):
+        if heading is not None:
+            markdown.append(f"## {heading}")
+            continue
+        judged = results[i]
+        reviewed.append(judged)
+        markdown.append(judged.markdown)
 
     # Headings come from the plan, so an article whose every write returned nothing still
     # renders as valid HTML and sails past a "is there any text" check. That is exactly

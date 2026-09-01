@@ -49,14 +49,22 @@ które rankują na pierwszej stronie Google. Artykuły muszą być:
 Zwracaj TYLKO HTML artykułu (bez DOCTYPE, body, head — czysty HTML artykułu)."""
 
 
-# No `reasoning` parameter here, deliberately. A hardcoded `reasoning: {effort: medium}`
-# made every writer call come back with empty content: reasoning tokens count against
-# max_tokens, and at the 1200 the paragraph writer asks for, the model spent the whole
-# budget thinking and emitted nothing. Eleven consecutive empty responses produced an
-# article of headings and images with no prose, which then passed as a success.
+# `reasoning: {effort: minimal}` — the OPPOSITE of the old bug. A hardcoded
+# `effort: medium` once burned the whole 1200-token budget on thinking and shipped
+# empty paragraphs; removing the parameter entirely let the model fall back to its
+# DEFAULT reasoning effort, which on gpt-5-class models burns the budget just the
+# same (3600/3600 reasoning tokens, zero content). Prose paragraphs need no chain
+# of thought: pin effort to minimal so the budget goes to the article.
+_REASONING_MINIMAL = {"reasoning": {"effort": "minimal", "exclude": True}}
 
 
-async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYSTEM_PROMPT) -> str:
+async def _chat(
+    prompt: str,
+    max_tokens: int = 4000,
+    *,
+    system: str | None = SYSTEM_PROMPT,
+    _retry: bool = True,
+) -> str:
     if not get_openrouter_api_key():
         print("[generate] OPENROUTER_API_KEY missing — skipping chat")
         return ""
@@ -70,6 +78,7 @@ async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYS
             model=MODEL,
             max_tokens=max_tokens,
             messages=messages,
+            extra_body=_REASONING_MINIMAL,
         )
     except Exception as exc:
         print(f"[generate] OpenRouter chat failed: {type(exc).__name__}: {exc}")
@@ -77,6 +86,22 @@ async def _chat(prompt: str, max_tokens: int = 4000, *, system: str | None = SYS
 
     choice = response.choices[0] if response.choices else None
     content = ((choice.message.content if choice and choice.message else None) or "").strip()
+    # Reasoning burn: the model spends the whole budget thinking and emits nothing —
+    # finish_reason=length with a fully used completion budget and empty content. One
+    # retry with 3× headroom recovers the paragraph; 15/36 paragraphs shipped empty
+    # without it and the article was headings plus stock images.
+    if (
+        not content
+        and _retry
+        and getattr(choice, "finish_reason", None) == "length"
+    ):
+        bumped = max(6000, max_tokens * 3)
+        # Diagnosis breadcrumb: if the burn is reasoning, the response carries it.
+        reasoning = getattr(choice.message, "reasoning", None) if choice and choice.message else None
+        if reasoning:
+            print(f"[generate] budget went to reasoning ({len(str(reasoning))} chars) despite effort=minimal")
+        print(f"[generate] retrying empty length-capped completion with max_tokens={bumped}")
+        return await _chat(prompt, bumped, system=system, _retry=False)
     if not content:
         # "empty content" alone is not a diagnosis — it looks identical whether the model
         # refused, returned nothing, or spent the whole budget before emitting a token.
@@ -185,7 +210,9 @@ async def run_pipeline(
     instructions: str = "",
     external_links: bool = True,
     brand_knowledge: str = "",
+    brand_name: str = "",
     voice_tone: str = "",
+    template_reference: str = "",
     execution_plan: dict | None = None,
     compiled_write_plan: dict | None = None,
     existing_articles: list[dict] | None = None,
@@ -219,6 +246,18 @@ async def run_pipeline(
         f"Ton i styl: naśladuj poniższy wzorzec głosu marki —\n{voice_tone.strip()[:1500]}"
         if voice_tone.strip() else f"Ton: {tone}"
     )
+    # Voice (writing-style sample) + template (structure/format reference) travel with
+    # every paragraph in the compiled path — the writer is stateless, so without this the
+    # selected Custom Voice / Content Template never reached the model that wrote the body.
+    voice_block = (
+        f"\n\nGŁOS MARKI (naśladuj ton i styl, nie kopiuj treści):\n{voice_tone.strip()[:1500]}"
+        if voice_tone.strip() else ""
+    )
+    template_block = (
+        f"\n\nWZORZEC TREŚCI (naśladuj strukturę i format, nie kopiuj treści):\n{template_reference.strip()[:1500]}"
+        if template_reference.strip() else ""
+    )
+    style_block = f"{voice_block}{template_block}"
 
     site_info = (
         f"Strona: {site_context.get('url', '')}\n"
@@ -240,7 +279,17 @@ async def run_pipeline(
         # "2–5" quota would ask for 2–5 links in EACH paragraph, compounding well past
         # the intended per-article total as the plan grows more paragraphs.
         paragraph_links_block = (
-            format_internal_link_block(link_articles, language, limit=8, quota="0–1")
+            format_internal_link_block(
+                link_articles, language, limit=12,
+                # Link generously. "dokładnie 1, jeśli DOKŁADNIE pasuje" shipped 3 links
+                # against the reference's 12: most topical paragraphs (mechanizmy, techniki)
+                # never name a service-page slug, so they linked nothing. The reference
+                # links on a RELATED concept — "uporczywe nękanie" -> /stalking-nekanie/,
+                # "przemoc psychiczna" -> /przemoc-psychiczna/ — not an exact match.
+                # enforce_internal_links still unwraps anything off-list, so being liberal
+                # here is safe.
+                quota="1 (wyjątkowo 2), gdy akapit dotyka tematu powiązanego z pozycją z listy — linkuj chętnie na luźno powiązane pojęcia, nie tylko przy dokładnym dopasowaniu (jeśli nic nie pasuje, 0)",
+            )
             if internal_links else ""
         )
         link_note = (
@@ -263,8 +312,22 @@ async def run_pipeline(
                     await on_status(f"Writing paragraph {written}…")
                 except Exception as exc:
                     print(f"[generate] status callback failed: {exc}")
+            # Brand context travels with every paragraph — the writer is stateless, and
+            # without it no paragraph could name the agency the brief's "nawiąż do nas"
+            # bullets refer to.
+            name_line = (
+                f"BRAND NAME: {brand_name.strip()} - when this paragraph references us, "
+                "use this exact name.\n"
+                if brand_name.strip() else ""
+            )
+            paragraph_brand = (
+                "\n\nBRAND (use as context where the plan asks to reference us; "
+                f"never invent facts):\n{name_line}{brand_knowledge.strip()[:1200]}"
+                if brand_knowledge.strip() else ""
+            )
             return await _chat(
-                f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}\n\n"
+                f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}"
+                f"{paragraph_brand}{style_block}\n\n"
                 f"{prompt}{paragraph_links_block}",
                 max_tokens=1200,
                 system="Write SEO content as Markdown only. Never emit HTML.",
@@ -291,7 +354,7 @@ async def run_pipeline(
         )
         if not compiled.html:
             raise RuntimeError("compiled_write_plan produced empty HTML")
-        return compiled.html
+        return ensure_brand_mention(compiled.html, brand_name, language)
 
     if plan:
         # === Planner First: skip outline LLM — execute immutable Execution Plan ===
@@ -447,6 +510,29 @@ Zwróć POPRAWIONY HTML (tylko HTML, bez komentarzy):
     return ""
 
 
+def ensure_brand_mention(html: str, brand_name: str, language: str = "pl") -> str:
+    """
+    Guarantee the article names the brand at least once.
+
+    The closing-paragraph instruction is followed ~60% of the time - 3 of 7 audited
+    articles ended with a correct call to action that never said who was making it.
+    Deterministic, like the FAQ-shape fix: when the name is absent, one CTA sentence
+    is appended to the last paragraph. Prose the model wrote is never edited.
+    """
+    name = (brand_name or "").strip()
+    if not name or name.lower() in html.lower():
+        return html
+    if str(language or "pl").lower().startswith("pl"):
+        cta = f" Jesli potrzebujesz poufnej pomocy w takiej sprawie, skontaktuj sie z {name}."
+    else:
+        cta = f" If you need confidential help with a situation like this, contact {name}."
+    idx = html.rfind("</p>")
+    if idx < 0:
+        return html + "<p>" + cta.strip() + "</p>"
+    print(f"[generate] brand name missing from article - appending closing CTA for {name}")
+    return html[:idx] + cta + html[idx:]
+
+
 async def generate_brand_knowledge(url: str, title: str, description: str, page_text: str) -> dict:
     """Scrape-based Brand Knowledge draft: analyse a company page and produce the
     structured Brand Knowledge fields, in the page's language."""
@@ -462,9 +548,11 @@ Treść strony (fragment):
 Zwróć WYŁĄCZNIE JSON (bez markdown), pisany w języku strony:
 {{
   "brand_name": "krótka nazwa marki/firmy",
-  "brand_knowledge": "Business Type\\n<...>\\n\\nIndustry\\n<...>\\n\\nProducts/Services description\\n<...>\\n\\nCustomer profile\\n<...>\\n\\nCompetitors\\n<...>\\n\\nTopics to cover\\n<...>"
+  "brand_knowledge": "Business Type\\n<...>\\n\\nIndustry\\n<...>\\n\\nProducts/Services description\\n<...>\\n\\nCustomer profile\\n<...>\\n\\nCompetitors\\n<...>\\n\\nTopics to cover\\n<...>\\n\\nExample cases (anonymized)\\n<2-3 zanonimizowane przykłady spraw/realizacji ze strony — sytuacja, działanie, wynik; tylko jeśli treść strony je opisuje, nigdy nie wymyślaj>"
 }}
-Bądź konkretny i oparty na treści strony."""
+Bądź konkretny i oparty na treści strony. Sekcję "Example cases" wypełnij tylko faktami
+ze strony (case studies, opisy realizacji, referencje) — writer użyje ich jako
+przykładów "z naszej praktyki" w artykułach."""
     raw = (await _chat(prompt, max_tokens=1500)).strip()
     for p in ("```json", "```"):
         if raw.startswith(p):
@@ -483,6 +571,33 @@ Bądź konkretny i oparty na treści strony."""
         return {"brand_name": "", "brand_knowledge": raw}
 
 
+def _parse_link_suggestions(raw: str) -> list[dict]:
+    """Parse the link-suggestion JSON, salvaging a truncated array.
+
+    The model returns a JSON array of {anchorText, url, articleTitle}. When the response
+    is cut off mid-array (token budget), the closing bracket is missing and a whole-array
+    parse yields nothing — so fall back to collecting every complete {...} object that
+    still parsed, keeping the links the model did finish.
+    """
+    m = re.search(r"\[[\s\S]*\]", raw)
+    if m:
+        try:
+            arr = json.loads(m.group(0))
+            if isinstance(arr, list):
+                return [s for s in arr if isinstance(s, dict) and s.get("anchorText") and s.get("url")]
+        except Exception:
+            pass
+    out: list[dict] = []
+    for obj in re.findall(r"\{[^{}]*\}", raw):
+        try:
+            s = json.loads(obj)
+        except Exception:
+            continue
+        if isinstance(s, dict) and s.get("anchorText") and s.get("url"):
+            out.append(s)
+    return out
+
+
 async def suggest_internal_links(
     article_html: str,
     site_url: str,
@@ -499,9 +614,11 @@ async def suggest_internal_links(
     plain = re.sub(r"<[^>]+>", " ", article_html)
     plain = re.sub(r"\s+", " ", plain).strip()
 
-    # Limit to first ~8000 chars to keep prompt reasonable
-    if len(plain) > 8000:
-        plain = plain[:8000] + "…"
+    # The whole article, not the first third: the reference article carries 12 internal
+    # links spread across every section, and an 8k slice meant anchors in the second half
+    # of a ~25k article could never be suggested — runs stalled at 2 links.
+    if len(plain) > 24000:
+        plain = plain[:24000] + "…"
 
     # Build article list
     article_list = "\n".join(
@@ -525,7 +642,8 @@ Rules:
 - Only suggest links where the anchor text appears VERBATIM in the article content
 - Pick the most natural, contextually relevant phrase for each link
 - Prefer longer, more specific phrases (3-7 words) over single words
-- Maximum 8 suggestions total
+- Spread the links across the WHOLE article, not just the opening sections
+- Aim for 12-16 suggestions; fewer only when the article genuinely lacks anchors
 
 OUTPUT FORMAT — JSON array only, no other text:
 [
@@ -543,20 +661,18 @@ If no natural links found, return: []"""
             print("[internal-links] No OPENROUTER_API_KEY — skipping")
             return []
 
+        # 4096, not 2048: a rich link pool makes the model emit 12-16 suggestions, and the
+        # smaller budget truncated the JSON array mid-object — the closing ] never arrived,
+        # so the array parse found nothing and the run shipped 0 links.
         raw = (
             await _chat(
                 prompt,
-                max_tokens=1024,
+                max_tokens=4096,
                 system="You suggest internal links. Reply with JSON only — no markdown fences.",
             )
         ).strip()
 
-        json_match = re.search(r"\[[\s\S]*\]", raw)
-        if not json_match:
-            print(f"[internal-links] No JSON array in response: {raw[:200]}")
-            return []
-
-        suggestions = json.loads(json_match[0])
+        suggestions = _parse_link_suggestions(raw)
         print(f"[internal-links] Found {len(suggestions)} suggestions")
         return suggestions
 

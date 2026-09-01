@@ -3,7 +3,6 @@ import type {
   ComparePeriod,
   RankDevice,
   RankResultsPage,
-  RankSnapshotRow,
   RankTrackingConfigRow,
   RankTrackingDeviceResult,
   RankTrackingKeywordRow,
@@ -11,7 +10,7 @@ import type {
 } from '@/src/core/shared/types/rankTracking';
 import { devicesList, normalizeKeyword } from '@/src/core/shared/types/rankTracking';
 import { metricsForKeyword, getLatestMetrics } from '@/src/infrastructure/rankTracking/keywordMetricsCache';
-import { baselineDate, getLatestSnapshots, getSnapshotsBeforeDate } from '@/src/infrastructure/rankTracking/snapshotQueries';
+import { baselineDate, getLatestSnapshots, getSnapshotsBeforeDate, type RankSnapshotListRow } from '@/src/infrastructure/rankTracking/snapshotQueries';
 
 function parseSerpFeatures(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.filter((x): x is string => typeof x === 'string');
@@ -25,8 +24,8 @@ function parseSerpFeatures(raw: unknown): string[] {
 }
 
 function snapshotToDeviceResult(
-  current: RankSnapshotRow | undefined,
-  previous: RankSnapshotRow | undefined,
+  current: RankSnapshotListRow | undefined,
+  previous: RankSnapshotListRow | undefined,
 ): RankTrackingDeviceResult {
   return {
     position: current?.position ?? null,
