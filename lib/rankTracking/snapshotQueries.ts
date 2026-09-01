@@ -1,4 +1,4 @@
-import { queryRows } from '../db/query';
+﻿import { queryRows } from '../db/query';
 import type { ComparePeriod, RankDevice, RankSnapshotRow } from '../types/rankTracking';
 
 function comparePeriodDays(period: ComparePeriod): number {
@@ -10,47 +10,51 @@ function comparePeriodDays(period: ComparePeriod): number {
   return 90;
 }
 
+// Everything except raw_items (full SERP payload) — no read path consumes it, and it
+// dominates row size, so SELECT * here multiplied transfer for nothing.
+const SNAPSHOT_COLS = 'id, config_id, run_id, tracking_keyword_id, device, found, position, '
+  + 'ranking_url, ranking_title, ranking_description, ranking_domain, serp_features, '
+  + 'provider, provider_version, provider_response_hash, checked_at';
+
+/** What SNAPSHOT_COLS actually selects — keeps callers honest about raw_items being absent. */
+export type RankSnapshotListRow = Omit<RankSnapshotRow, 'raw_items'>;
+
+/** One windowed query instead of 2N round trips (works on Postgres and SQLite 3.25+). */
+async function latestPerKeywordDevice(
+  configId: number,
+  keywordIds: number[],
+  beforeIso?: string,
+): Promise<Map<string, RankSnapshotListRow>> {
+  const out = new Map<string, RankSnapshotListRow>();
+  if (!keywordIds.length) return out;
+
+  const placeholders = keywordIds.map(() => '?').join(',');
+  const rows = await queryRows<RankSnapshotListRow>(
+    `SELECT ${SNAPSHOT_COLS} FROM (
+       SELECT *, ROW_NUMBER() OVER (
+         PARTITION BY tracking_keyword_id, device ORDER BY checked_at DESC) AS rn
+       FROM rank_snapshots
+       WHERE config_id = ? AND tracking_keyword_id IN (${placeholders})${beforeIso ? ' AND checked_at < ?' : ''}
+     ) t WHERE rn = 1`,
+    beforeIso ? [configId, ...keywordIds, beforeIso] : [configId, ...keywordIds],
+  );
+  for (const r of rows) out.set(`${r.tracking_keyword_id}:${r.device}`, r);
+  return out;
+}
+
 export async function getLatestSnapshots(
   configId: number,
   keywordIds: number[],
-): Promise<Map<string, RankSnapshotRow>> {
-  const out = new Map<string, RankSnapshotRow>();
-  if (!keywordIds.length) return out;
-
-  for (const kid of keywordIds) {
-    for (const device of ['desktop', 'mobile'] as RankDevice[]) {
-      const row = await queryRows<RankSnapshotRow>(
-        `SELECT * FROM rank_snapshots
-         WHERE config_id = ? AND tracking_keyword_id = ? AND device = ?
-         ORDER BY checked_at DESC LIMIT 1`,
-        [configId, kid, device],
-      );
-      if (row[0]) out.set(`${kid}:${device}`, row[0]);
-    }
-  }
-  return out;
+): Promise<Map<string, RankSnapshotListRow>> {
+  return latestPerKeywordDevice(configId, keywordIds);
 }
 
 export async function getSnapshotsBeforeDate(
   configId: number,
   keywordIds: number[],
   beforeIso: string,
-): Promise<Map<string, RankSnapshotRow>> {
-  const out = new Map<string, RankSnapshotRow>();
-  if (!keywordIds.length) return out;
-
-  for (const kid of keywordIds) {
-    for (const device of ['desktop', 'mobile'] as RankDevice[]) {
-      const row = await queryRows<RankSnapshotRow>(
-        `SELECT * FROM rank_snapshots
-         WHERE config_id = ? AND tracking_keyword_id = ? AND device = ? AND checked_at < ?
-         ORDER BY checked_at DESC LIMIT 1`,
-        [configId, kid, device, beforeIso],
-      );
-      if (row[0]) out.set(`${kid}:${device}`, row[0]);
-    }
-  }
-  return out;
+): Promise<Map<string, RankSnapshotListRow>> {
+  return latestPerKeywordDevice(configId, keywordIds, beforeIso);
 }
 
 export function baselineDate(comparePeriod: ComparePeriod): string {
@@ -64,9 +68,9 @@ export async function getKeywordHistory(
   trackingKeywordId: number,
   device: RankDevice,
   limit = 365,
-): Promise<RankSnapshotRow[]> {
-  return queryRows<RankSnapshotRow>(
-    `SELECT * FROM rank_snapshots
+): Promise<RankSnapshotListRow[]> {
+  return queryRows<RankSnapshotListRow>(
+    `SELECT ${SNAPSHOT_COLS} FROM rank_snapshots
      WHERE config_id = ? AND tracking_keyword_id = ? AND device = ?
      ORDER BY checked_at ASC LIMIT ?`,
     [configId, trackingKeywordId, device, limit],
@@ -79,9 +83,29 @@ export async function getHistorySummaryForConfig(
 ): Promise<Array<{ trackingKeywordId: number; device: RankDevice; min: number | null; max: number | null; avg: number | null; points: Array<{ date: string; position: number | null; found: boolean }> }>> {
   const summaries: Array<{ trackingKeywordId: number; device: RankDevice; min: number | null; max: number | null; avg: number | null; points: Array<{ date: string; position: number | null; found: boolean }> }> = [];
 
+  if (!keywordIds.length) return summaries;
+
+  const placeholders = keywordIds.map(() => '?').join(',');
+  const all = await queryRows<Pick<RankSnapshotRow, 'tracking_keyword_id' | 'device' | 'checked_at' | 'position' | 'found'>>(
+    `SELECT tracking_keyword_id, device, checked_at, position, found FROM (
+       SELECT tracking_keyword_id, device, checked_at, position, found, ROW_NUMBER() OVER (
+         PARTITION BY tracking_keyword_id, device ORDER BY checked_at ASC) AS rn
+       FROM rank_snapshots
+       WHERE config_id = ? AND tracking_keyword_id IN (${placeholders})
+     ) t WHERE rn <= 90 ORDER BY tracking_keyword_id, device, checked_at ASC`,
+    [configId, ...keywordIds],
+  );
+  const grouped = new Map<string, typeof all>();
+  for (const r of all) {
+    const key = `${r.tracking_keyword_id}:${r.device}`;
+    const list = grouped.get(key) ?? [];
+    list.push(r);
+    grouped.set(key, list);
+  }
+
   for (const kid of keywordIds) {
     for (const device of ['desktop', 'mobile'] as RankDevice[]) {
-      const rows = await getKeywordHistory(configId, kid, device, 90);
+      const rows = grouped.get(`${kid}:${device}`) ?? [];
       const positions = rows.filter((r) => r.found && r.position != null).map((r) => r.position as number);
       summaries.push({
         trackingKeywordId: kid,

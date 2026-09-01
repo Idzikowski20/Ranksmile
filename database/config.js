@@ -14,7 +14,8 @@ const postgres = {
   dialectOptions: isLocalPostgresUrl(url) ? {} : {
     ssl: {
       require: true,
-      rejectUnauthorized: false,
+      // Match database/database.ts — Neon serves publicly-trusted certs, so verify them.
+      rejectUnauthorized: true,
     },
   },
   logging: false,

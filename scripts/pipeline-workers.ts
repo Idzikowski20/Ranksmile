@@ -173,7 +173,9 @@ async function main(): Promise<void> {
   const { ensureNotificationEmailTables } = await import('../lib/ensureNotificationEmailTables');
   const { startEmailOutboxReconciler } = await import('../lib/notifications/emailOutboxReconciler');
   await ensureNotificationEmailTables();
-  const reconcilerTimer = startEmailOutboxReconciler(60_000);
+  // 5 min: outbox carries only periodic digest emails, and a 60s poll kept the Neon
+  // compute awake 24/7 (scale-to-zero never kicked in — see Aug 2026 quota burn).
+  const reconcilerTimer = startEmailOutboxReconciler(Number(process.env.EMAIL_OUTBOX_POLL_MS) || 300_000);
   console.log('[pipeline-workers] notification_email DB poller registered');
 
   const shutdown = async () => {
