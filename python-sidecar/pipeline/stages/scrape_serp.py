@@ -33,7 +33,11 @@ class ScrapeSerpStage(AnalysisStage):
             )
 
         serp_data = await analyze_serp(
-            keyword, language, num_results=10, include_texts=True, on_page=on_page,
+            # 20, matching Surfer's ~19-competitor term cohort: bands (serp_usage) and
+            # word/heading targets derive from scraped pages, so a 10-URL cohort yielded a
+            # thinner, easier term set (~6 pages survived soft-blocks) and our own articles
+            # scored high against a bar Surfer sets from twice the sample.
+            keyword, language, num_results=20, include_texts=True, on_page=on_page,
         )
 
         found = len(serp_data.get("competitors", []))
