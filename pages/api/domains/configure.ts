@@ -12,6 +12,7 @@ import { getWorkspace } from '@/src/infrastructure/identity/workspaces';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { mergeGscProperty } from '@/src/core/domain/gsc/gscProperty';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { clearDomainIdsCache } from '../../../lib/domainIdsCache';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -62,6 +63,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          } as CreationAttributes<Domain>,
       });
 
+      // A brand-new domain is bound to this workspace by the defaults above — invalidate the
+      // articles domain-id cache (keyed on workspace IDs) so GET /api/articles sees it at once,
+      // matching the attach branch below and domains.ts addDomain.
+      if (created) clearDomainIdsCache();
+
       if (!created && userId && workspaceId) {
          const existingWs = (domain as unknown as { workspace_id: number | null }).workspace_id;
          const wsIds = await getAccessibleWorkspaceIds(userId);
@@ -74,6 +80,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             await db.query('UPDATE domain SET workspace_id = ? WHERE "ID" = ?', {
                replacements: [workspaceId, domain.ID],
             });
+            clearDomainIdsCache();
          } else if (existingWs == null || !wsIds.includes(Number(existingWs))) {
             return res.status(403).json({ error: 'Access denied.' });
          } else if (Number(existingWs) !== workspaceId) {

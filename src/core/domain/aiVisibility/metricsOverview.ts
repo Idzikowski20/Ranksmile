@@ -1,13 +1,14 @@
 import type { LlmCitation } from './citation';
 import type { ResultRow } from './metricsTypes';
+// Single source of host normalization — shared with citation blocking so the two
+// never drift on the same input.
+import { normCitationDomain as norm } from './blockedDomains';
 
 const pairScore = (r: ResultRow): number => (
   r.ownCited && r.ownPosition ? Math.max(0, 100 - (r.ownPosition - 1) * 15) : 0
 );
 
 const mean = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-
-const norm = (d: string): string => d.toLowerCase().replace(/^www\./, '');
 
 export function ownDomainPosition(citations: LlmCitation[], ownDomain: string): number | null {
   const own = norm(ownDomain);
@@ -51,4 +52,4 @@ export function isOwnDomainCitation(citationDomain: string, ownDomain: string): 
   return d === own || d.endsWith(`.${own}`);
 }
 
-export { norm, pairScore, mean };
+export { pairScore, mean };

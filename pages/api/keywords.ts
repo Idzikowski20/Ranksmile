@@ -76,7 +76,8 @@ const getKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGet
    const domainSCData = integratedSC || (search_console_client_email && search_console_private_key) ? await readLocalSCData(domain) : false;
 
    try {
-      const allKeywords:Keyword[] = await Keyword.findAll({ where: { domain } });
+      // lastResult (full SERP JSON) is zeroed below before responding — never fetch it.
+      const allKeywords:Keyword[] = await Keyword.findAll({ where: { domain }, attributes: { exclude: ['lastResult'] } });
       const keywords: KeywordType[] = parseKeywords(allKeywords.map((e) => e.get({ plain: true })));
       const processedKeywords = keywords.map((keyword) => {
          const historyArray = Object.keys(keyword.history).map((dateKey:string) => ({

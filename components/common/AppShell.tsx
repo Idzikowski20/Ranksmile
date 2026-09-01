@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { useGSAP } from '@gsap/react';
 import { registerMotionPlugins } from '@/components/motion/gsap';
 import { useRouteTransition } from '@/components/motion/useRouteTransition';
@@ -32,9 +33,13 @@ const AppShell = ({
   contentClassName = '',
 }: AppShellProps) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { pathname } = useRouter();
+  // Purchase/upgrade flows shouldn't carry the marketing announcement — keep the plan
+  // and checkout pages focused.
+  const suppressAnnouncement = pathname.startsWith('/billing') || pathname.startsWith('/plans');
   // Standing announcement: Polish is available. Yields to any page-level banner
   // (a warning/error published later wins), and stays gone once dismissed.
-  useAppBanner({
+  useAppBanner(suppressAnnouncement ? null : {
     message: 'Ranksmile jest teraz dostępny w języku polskim.',
     variant: 'brand',
     dismissible: true,
