@@ -117,26 +117,28 @@ export function AppBanner() {
   const ctx = useContext(AppBannerContext);
   const banner = ctx?.banner ?? null;
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
-  // The closeKey whose storage read has completed. Tracked per-key, not as a boolean, so a
-  // banner published after mount (or a closeKey change) re-gates until ITS read runs — a
-  // shared boolean would stay true and let the new banner flash before it was checked.
-  const [checkedKey, setCheckedKey] = useState<string | null>(null);
+  // The (persistence + closeKey) token whose storage read has completed. Keyed on both, not a
+  // boolean, so a banner published after mount, a closeKey change, OR persistDismiss flipping
+  // false→true (same closeKey) all re-gate until ITS read runs — a token that ignored the
+  // persistence mode would still match after the flip and let a dismissed banner flash.
+  const [checkedToken, setCheckedToken] = useState<string | null>(null);
   // Dismissal is keyed on the stable identity, not the rendered text.
   const closeKey = banner?.dismissKey ?? banner?.message ?? '';
   const persist = banner?.persistDismiss ?? false;
+  const token = `${persist ? '1' : '0'}:${closeKey}`;
 
-  // Restore a persisted dismissal after mount — reading storage during render would
-  // mismatch the server-rendered null. Runs again whenever the banner's closeKey changes.
+  // Restore a persisted dismissal after mount — reading storage during render would mismatch
+  // the server-rendered null. Runs again whenever persistence or the banner's closeKey changes.
   useEffect(() => {
     if (persist && closeKey && isBannerDismissed(closeKey)) setDismissedKey(closeKey);
-    setCheckedKey(closeKey);
-  }, [persist, closeKey]);
+    setCheckedToken(token);
+  }, [persist, closeKey, token]);
 
   if (!banner) return null;
   // Persisted-dismissible banners stay hidden until THIS banner's storage read runs, so a
   // returning user who dismissed one never sees it flash (and re-fire role="alert") on cold
-  // load or when a new persistent banner is published.
-  if (banner.dismissible && persist && checkedKey !== closeKey) return null;
+  // load, when a new persistent banner is published, or when it becomes persistent.
+  if (banner.dismissible && persist && checkedToken !== token) return null;
   if (banner.dismissible && dismissedKey === closeKey) return null;
 
   const variant = banner.variant ?? 'error';

@@ -8,24 +8,36 @@
  * imports (`../../lib/x`, `../../infrastructure/y`) — hence segment-boundary
  * anchors like `(?:^|[\\/])lib[\\/]` rather than a literal `src/lib`.
  */
+import { builtinModules } from 'node:module';
+
 export type LayerRule = {
   root: string;
   label: string;
   /** Explicit deny-list — kept for clear violation messages on the common vendor/outer imports. */
   forbid: RegExp[];
   /**
-   * Allow-list for NON-relative specifiers: any bare package, alias, or other-layer import
-   * that matches none of these is a violation. Relative imports (./ , ../) are always allowed
-   * — they stay inside the layer. This closes the deny-list's gap where an unlisted package
-   * or another core layer would pass every `forbid` pattern.
+   * Allow-list for NON-relative specifiers (bare packages, aliases): anything matching none of
+   * these is a violation. Closes the deny-list's gap where an unlisted package or another core
+   * layer would pass every `forbid` pattern.
    */
   allowOnly: RegExp[];
+  /**
+   * Repo-relative path roots a RELATIVE import may resolve into. A relative specifier is
+   * resolved against the importing file and rejected if it lands outside these — otherwise
+   * `../../application/x` from a domain file would escape the layer unchecked.
+   */
+  allowedRoots: string[];
 };
 
+// Node's own builtins, both `node:fs` and bare `fs`/`path`/`crypto` — pure, no outer dependency.
+const NODE_BUILTIN = new RegExp(
+  `^(?:node:)?(?:${builtinModules.map((m) => m.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')).join('|')})(?:[\\/]|$)`,
+);
+
 // Non-relative imports a pure core layer may make: only its own layer's siblings and the
-// shared kernel. Node's own builtins are allowed (pure, no outer dependency).
+// shared kernel (as aliases), plus node builtins.
 const CORE_ALLOW = [
-  /^node:/,
+  NODE_BUILTIN,
   /^@\/src\/core\/domain(?:[\\/]|$)/,
   /^@\/src\/core\/shared(?:[\\/]|$)/,
 ];
@@ -51,15 +63,17 @@ export const LAYER_RULES: LayerRule[] = [
   {
     root: 'src/core/domain',
     label: 'domain',
-    // domain may import only src/core/domain + src/core/shared (+ relative, + node builtins)
+    // domain may import only src/core/domain + src/core/shared (+ node builtins)
     forbid: [...VENDORS, ...OUTER, ...LIB],
     allowOnly: CORE_ALLOW,
+    allowedRoots: ['src/core/domain', 'src/core/shared'],
   },
   {
     root: 'src/core/application',
     label: 'application',
-    // application may import only src/core/domain + src/core/shared (+ relative, + node builtins)
+    // application may import src/core/application + src/core/domain + src/core/shared (+ node builtins)
     forbid: [...VENDORS, ...OUTER, ...LIB],
     allowOnly: CORE_ALLOW,
+    allowedRoots: ['src/core/application', 'src/core/domain', 'src/core/shared'],
   },
 ];
