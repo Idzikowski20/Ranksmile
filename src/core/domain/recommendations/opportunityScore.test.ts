@@ -1,15 +1,27 @@
-import { opportunityScore, strikingDistance, movementBoost } from './opportunityScore';
+import { opportunityScore, strikingDistance } from './opportunityScore';
 
 describe('opportunityScore', () => {
-  it('peaks on page 2 (striking distance) over top-3 and deep pages', () => {
-    expect(strikingDistance(15)).toBeGreaterThan(strikingDistance(2));
-    expect(strikingDistance(15)).toBeGreaterThan(strikingDistance(60));
+  it('rises with position inside the striking-distance band (deeper = more upside)', () => {
+    // Surfer scores a page at 19 above one at 8 above one already in the top 3.
+    expect(strikingDistance(19)).toBeGreaterThan(strikingDistance(8));
+    expect(strikingDistance(8)).toBeGreaterThan(strikingDistance(2));
   });
 
-  it('ranks a striking-distance page above one already in the top 3', () => {
-    const striking = opportunityScore({ position: 18, previousPosition: 18, impressions: 4000 });
-    const alreadyTop = opportunityScore({ position: 2, previousPosition: 2, impressions: 4000 });
-    expect(striking).toBeGreaterThan(alreadyTop);
+  it('drops off for pages too deep to be a cheap win', () => {
+    expect(strikingDistance(19)).toBeGreaterThan(strikingDistance(35));
+    expect(strikingDistance(35)).toBeGreaterThan(strikingDistance(70));
+  });
+
+  it('ranks a deeper striking-distance page above a shallower one (Surfer monotonic)', () => {
+    const deep = opportunityScore({ position: 19, previousPosition: 19, impressions: 4000 });
+    const shallow = opportunityScore({ position: 14, previousPosition: 14, impressions: 4000 });
+    expect(deep).toBeGreaterThan(shallow);
+  });
+
+  it('does NOT reward a recent drop — movement is context, not score', () => {
+    const slipped = opportunityScore({ position: 19, previousPosition: 12, impressions: 3000 });
+    const held = opportunityScore({ position: 19, previousPosition: 19, impressions: 3000 });
+    expect(slipped).toBe(held);
   });
 
   it('rewards more impressions at the same position', () => {
@@ -18,14 +30,10 @@ describe('opportunityScore', () => {
     expect(busy).toBeGreaterThan(quiet);
   });
 
-  it('adds urgency when a page recently slipped', () => {
-    const dropped = opportunityScore({ position: 19, previousPosition: 12, impressions: 3000 });
-    const stable = opportunityScore({ position: 19, previousPosition: 19, impressions: 3000 });
-    expect(dropped).toBeGreaterThan(stable);
-  });
-
-  it('boosts hardest when a page falls off page 1', () => {
-    expect(movementBoost(14, 9)).toBeGreaterThan(movementBoost(14, 12));
+  it('ranks a striking-distance page above one already in the top 3', () => {
+    const striking = opportunityScore({ position: 18, previousPosition: 18, impressions: 4000 });
+    const alreadyTop = opportunityScore({ position: 2, previousPosition: 2, impressions: 4000 });
+    expect(striking).toBeGreaterThan(alreadyTop);
   });
 
   it('stays within 0..10', () => {
