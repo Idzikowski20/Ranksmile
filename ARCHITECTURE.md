@@ -5,20 +5,20 @@ keeping the app green. The value is the **dependency rule**, not the folders. Se
 `docs/superpowers/plans/2026-08-27-clean-architecture-migration.md` for the plan and
 roadmap. The billing-invoices vertical is the reference implementation.
 
-## Status (Phase N complete)
+## Status (migration complete)
 
-The migration is essentially complete: **all domain, application, shared and
-infrastructure code now lives under `src/`**. `lib/` retains only:
-- **CIA zones** (`ccm`, `cia`, `compiler`, `intelligence`, `planner`, `projections`)
-  + the `primitives` intelligence kernel — their own architecture, out of scope.
-- **`types`** — the shared type carve-out (core may import type-only).
-- **`arch`** — the boundary-test tooling itself.
-- **`editor` / `motion`** — presentation utilities (belong with `components/`, not a
-  clean-arch layer).
-
+The migration is complete: **all application code lives under `src/`** —
 `src/core/{domain,application,shared}` + `src/composition` + `src/infrastructure`
-hold the whole business + infrastructure surface; `pages/api/**` are the thin
-controllers.
+hold the whole business + infrastructure surface, the CIA zones (`ccm`, `compiler`,
+`intelligence`, `planner`, `projections`) and the `primitives` kernel live under
+`src/core/` (own architecture, guarded by the CIA boundary test), the shared type
+barrel is `src/core/shared/types`, and the editor/motion presentation utilities sit
+under `components/`. `pages/api/**` are the thin controllers.
+
+`lib/` retains only:
+- **`arch`** — the clean-arch boundary-test tooling.
+- **`cia`** — the CIA-zone boundary-test tooling (scanner + zone rules).
+- **`navigation/routeAliases.cjs`** — required via CommonJS by `next.config.js`.
 
 ## Layers
 
