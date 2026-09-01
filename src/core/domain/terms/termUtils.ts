@@ -1,5 +1,5 @@
 /** Client-safe term quality helpers — no DB imports. */
-const PL_DIACRITICS: Record<string, string> = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z' };
+import { PL_DIACRITICS } from './plDiacritics';
 
 const POLISH_STOPWORDS = new Set([
   'aby', 'acz', 'aczkolwiek', 'ale', 'albo', 'ani', 'az', 'bardziej', 'bardzo',
