@@ -79,9 +79,9 @@ export async function issueConfirmationToken(userId: string, email: string, now:
   const expiresMs = now + TOKEN_TTL_MS;
 
   // Atomic upsert on the user_id PRIMARY KEY so concurrent resend/initial-send requests can't both
-  // pass a SELECT and then race into duplicate INSERTs (PK violation → server error). Unconfirmed
-  // users only reach here (confirmed → early-returned above), so overwriting confirmed_ms=NULL is safe.
-  // Same SQL on both dialects: SQLite supports ON CONFLICT DO UPDATE since 3.24.
+  // pass a SELECT and then race into duplicate INSERTs (PK violation → server error). confirmed_ms
+  // is intentionally left out of DO UPDATE SET so an existing value is preserved (confirmed users
+  // are early-returned above anyway). Same SQL on both dialects: SQLite supports it since 3.24.
   await db.query(
     `INSERT INTO email_confirmations (user_id, email, token_hash, expires_ms, last_sent_ms, confirmed_ms)
      VALUES (?, ?, ?, ?, ?, NULL)

@@ -69,7 +69,11 @@ let syncPromise: Promise<unknown> | null = null;
 const originalSync = connection.sync.bind(connection);
 (connection as unknown as { sync: typeof connection.sync }).sync = ((options?: Parameters<typeof connection.sync>[0]) => {
    if (options) return originalSync(options);
-   if (!syncPromise) syncPromise = originalSync();
+   // Reset on rejection: a DB outage at boot must not cache a rejected promise for the
+   // whole process — the next caller retries once the database is reachable again.
+   if (!syncPromise) {
+      syncPromise = originalSync().catch((err) => { syncPromise = null; throw err; });
+   }
    return syncPromise;
 }) as typeof connection.sync;
 

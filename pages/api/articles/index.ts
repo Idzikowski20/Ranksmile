@@ -1,7 +1,6 @@
 // GET  /api/articles?domainId=X  — lista artykułów
 // POST /api/articles              — utwórz artykuł (bez AI)
 import type { NextApiRequest, NextApiResponse } from 'next';
-import TTLCache from '@isaacs/ttlcache';
 import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
@@ -15,6 +14,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, type ArticleRow } from '../../../lib/db/query';
 import type { SqlReplacements } from '../../../lib/types/db';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { domainIdsCache } from '../../../lib/domainIdsCache';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -32,8 +32,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 }
 
 // Workspace→domain mapping changes only on domain create/move (rare, admin-side), yet every
-// articles request re-queried it. 30s TTL bounds the staleness window for access revocation.
-const domainIdsCache = new TTLCache<string, number[]>({ max: 500, ttl: 30_000 });
+// articles request re-queried it. Mutating endpoints call clearDomainIdsCache() (lib/domainIdsCache)
+// and the 30s TTL bounds staleness for any mutation path nobody wired up.
 
 /** Domain IDs in the user's active (scoped) workspace. */
 export async function getUserDomainIds(

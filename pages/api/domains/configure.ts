@@ -12,6 +12,7 @@ import { getWorkspace } from '../../../lib/workspaces';
 import { getErrorMessage } from '../../../lib/errors';
 import { mergeGscProperty } from '../../../lib/gscProperty';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { clearDomainIdsCache } from '../../../lib/domainIdsCache';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -74,6 +75,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             await db.query('UPDATE domain SET workspace_id = ? WHERE "ID" = ?', {
                replacements: [workspaceId, domain.ID],
             });
+            clearDomainIdsCache();
          } else if (existingWs == null || !wsIds.includes(Number(existingWs))) {
             return res.status(403).json({ error: 'Access denied.' });
          } else if (Number(existingWs) !== workspaceId) {
