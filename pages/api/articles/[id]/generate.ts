@@ -63,6 +63,13 @@ import db from '../../../../database/database';
  *  completion would hang it forever and starve the compile and the sidecar kickoff. */
 const BRIEF_TIMEOUT_MS = 25_000;
 
+/** Readable title from a URL's last path segment — page_audits often stores a null title. */
+function titleFromSlug(url: string): string {
+  const seg = url.replace(/^https?:\/\/[^/]+/i, '').replace(/[?#].*$/, '').replace(/\/+$/, '').split('/').pop() || '';
+  const words = seg.replace(/-/g, ' ').trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : url;
+}
+
 /** A claimed job with no update this long is presumed dead (killed function, timeout) and reclaimable. */
 const GENERATE_STALE_MINUTES = 10;
 
@@ -451,17 +458,39 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // brief and the compiled plan cannot be written against different vocabularies.
     const tableTerms = await readArticleTerms(articleIdNum).catch(() => []);
 
-    // A domain that has not published through Ranksmile yet has nothing here, so the
-    // Writer's allowlist was empty and the article shipped without a single internal
-    // link. The client's own pages are in the sitemap the audit already reads.
-    if (domainArticles.length < 3 && domainName) {
+    // Always enrich the writer's link allowlist from the client's own sitemap, not only
+    // when Ranksmile has published nothing yet. Surfer links a fresh draft to ~15 of the
+    // client's existing pages; gating this on `domainArticles.length < 3` starved every
+    // established domain (which already has a few Ranksmile pages) back down to a handful
+    // of internal links. Merge deduped so the writer sees the client's real topical pages.
+    if (domainName) {
       try {
-        const sitemapUrls = await gatherBlogUrls(article.domain_id, domainName);
         const known = new Set(domainArticles.map((a) => a.url.replace(/\/+$/, '')));
+
+        // The client's own crawled pages (page_audits) are the richest, most on-topic link
+        // pool — the site's whole topical map, already stored, no fetch. Surfer links a fresh
+        // draft to ~15 of these. The suggester matches anchors on title, so when the crawl
+        // left the title null we derive a readable one from the slug.
+        try {
+          const audited = await db.query<{ url: string; title: string | null }>(
+            `SELECT url, title FROM page_audits WHERE domain_id = ? LIMIT 100`,
+            { replacements: [article.domain_id], type: QueryTypes.SELECT },
+          );
+          for (const p of audited) {
+            const key = p.url.replace(/\/+$/, '');
+            if (!p.url || known.has(key)) continue;
+            known.add(key);
+            domainArticles.push({ id: 0, title: p.title || titleFromSlug(p.url), url: p.url });
+          }
+        } catch (err) {
+          console.warn('[articles/[id]/generate] page_audits link pool skipped:', getErrorMessage(err));
+        }
+
+        const sitemapUrls = await gatherBlogUrls(article.domain_id, domainName);
         // Terms, not just the keyword: the client's topical pages rarely repeat the query
         // in their slug, and ranking on the keyword alone found exactly one page.
         const linkTerms = importantTermsFromScoreData(scoreData, { tableTerms });
-        for (const target of pickLinkTargets({ urls: sitemapUrls, keyword, terms: linkTerms })) {
+        for (const target of pickLinkTargets({ urls: sitemapUrls, keyword, terms: linkTerms, limit: 16 })) {
           if (!known.has(target.url.replace(/\/+$/, ''))) domainArticles.push(target);
         }
       } catch (err) {

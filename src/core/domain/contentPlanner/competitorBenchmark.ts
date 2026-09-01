@@ -111,12 +111,11 @@ export function buildCompetitorBenchmark(
   // is the SERP telling us what ranks, not a gap to paper over.
   // recommendedWords alone: the old Math.max with averageWords re-imported the outlier
   // inflation the median-based recommendation exists to avoid.
-  // Ceiling as well as floor. recommendedWords is the competitor median, ~2760 on this
-  // keyword — but Surfer writes a focused 1767 for the same SERP, and our own writer lands
-  // at ~1930 whatever the target says, so the 2760 was fiction that only inflated the H2
-  // count (a ~1930-word article was given twelve thin sections against Surfer's eight).
-  // Cap at a focused length: fewer, fuller sections, matching what actually ships.
-  const WORDS_CEIL = 2000;
+  // Ceiling as well as floor on the competitor median. An earlier 2000 cap was set against
+  // a hand-picked Surfer article (~1767 words); but Surfer's own generator (ai_article__generate)
+  // writes ~2657 words / 13 H2 for this same SERP, so the focused-length assumption undershot
+  // parity. Cap near that real output — h2FromWords then lifts targetH2 to ~12 to match.
+  const WORDS_CEIL = 2800;
   const measured = synth.recommendedWords;
   const targetWords = Math.min(
     WORDS_CEIL,
