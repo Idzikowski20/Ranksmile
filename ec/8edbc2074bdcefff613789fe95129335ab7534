@@ -1,0 +1,36 @@
+src/infrastructure/cron/domainPipeline.ts
+  s_e8c3822b427cc8::t_254aed63ffcc65 171-178,184-185,188-193,196-198,202-206
+src/core/domain/recommendations/types.ts
+  s_e8c3822b427cc8::t_9218037c841616 37-39,41-42
+pages/sites/[domain]/recommendations.tsx
+  s_e8c3822b427cc8::t_438ca0d956b98c 343-346,350
+  s_e8c3822b427cc8::t_e245cf9f5bf73c 489-500
+  s_e8c3822b427cc8::t_5651f77e746cca 243
+pages/api/domains/[slug]/recommendations.ts
+  s_e8c3822b427cc8::t_afebe2258e8f5a 27-30,32-33,35-36,38-39,41
+  s_e8c3822b427cc8::t_723d8e3a47857d 48-50,52-56,58-59
+  s_e8c3822b427cc8::t_180ea75691dfcb 12,31,34,37,40
+src/core/domain/recommendations/writeRecommendations.test.ts
+  s_e8c3822b427cc8::t_d44771d8e0195a 21-23
+src/infrastructure/persistence/schema/ensurePipelineTables.ts
+  s_e8c3822b427cc8::t_641f1b81663b8e 74-76
+  s_e8c3822b427cc8::t_eeced0ad1c3fa6 71-73
+src/core/domain/recommendations/writeRecommendations.ts
+  s_e8c3822b427cc8::t_b9d348911edd80 25,27,37-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ec8edbc2074bdcefff613789fe95129335ab7534",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
