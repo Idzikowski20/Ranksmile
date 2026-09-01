@@ -2,9 +2,9 @@
  * Build Ranksmile-style topic groups for AI Search "Info to cover" from citations,
  * coverage items, and competitor outline headings.
  */
-import type { AiVisibilitySummary } from './aiSearchScore';
-import type { CoverageItem, CoverageTopicGroup, LlmCoverageSource } from './aiCoverage';
-import { normalizeTerm } from './termUtils';
+import type { AiVisibilitySummary } from './ai/aiSearchScore';
+import type { CoverageItem, CoverageTopicGroup, LlmCoverageSource } from './ai/aiCoverage';
+import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 export type InfoSource = {
   key: string;

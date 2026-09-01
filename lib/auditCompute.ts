@@ -6,26 +6,26 @@
 import { load } from 'cheerio';
 import { assertPublicUrl } from './ssrfGuard';
 import { findTermRangesBatch, ScoreData, computeContentScore } from './contentScore';
-import { countOccurrences } from './termMatch';
+import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 import {
    auditContentScore,
    termCoverageFraction,
    termRangeCoverageFraction,
    termScoreFraction,
    type RichTerm,
-} from './competitorContentScore';
+} from '@/src/core/domain/competitors/contentScore';
 import { plainText, wordCount } from './optimizationPlanner';
 import {
    AuditResult, AuditFactor, AuditCompetitor, AuditInternalLink, AuditTerm,
-} from './auditTypes';
+} from '@/src/core/domain/audit/types';
 
-export type { RichTerm } from './competitorContentScore';
+export type { RichTerm } from '@/src/core/domain/competitors/contentScore';
 export {
    auditContentScore,
    termCoverageFraction,
    termRangeCoverageFraction,
    termScoreFraction,
-} from './competitorContentScore';
+} from '@/src/core/domain/competitors/contentScore';
 
 export interface FetchTiming { ttfbMs: number; loadMs: number; }
 
@@ -44,27 +44,6 @@ export interface RealAuditData {
  * SEO score from audit factor verdicts (Ranksmile-style on-page checklist).
  * Non-info factors contribute; internal-link gaps apply a logarithmic penalty.
  */
-export function computeSeoScoreFromAudit(audit: AuditResult): number {
-   const scored = audit.factors.filter((f) => f.verdict !== 'info');
-   if (!scored.length) return audit.contentScore;
-   let sum = 0;
-   for (const f of scored) {
-      if (f.verdict === 'ok') { sum += 1; continue; }
-      const min = f.suggestedMin ?? 0;
-      const max = f.suggestedMax ?? min;
-      const span = Math.max(max - min, max * 0.2, 1);
-      if (f.you < min) sum += Math.max(0, 1 - (min - f.you) / span);
-      else if (f.you > max) sum += Math.max(0, 1 - (f.you - max) / span);
-   }
-   let base = Math.round((sum / scored.length) * 100);
-   const missing = audit.internalLinks?.filter((l) => !l.linked).length ?? 0;
-   if (missing > 0) {
-      const penalty = Math.min(20, Math.round(Math.log10(missing + 1) * 8));
-      base = Math.max(0, base - penalty);
-   }
-   return base;
-}
-
 /** Extracted numbers for one page keyed by factor key + the bits used elsewhere. */
 export interface PageMetrics {
    values: Record<string, number>;

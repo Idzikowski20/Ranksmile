@@ -8,7 +8,7 @@ import { load } from 'cheerio';
 import { fetchPage } from './auditCompute';
 import { countOccurrences } from './contentScore';
 import { plainText } from './optimizationPlanner';
-import { AuditInternalLink } from './auditTypes';
+import { AuditInternalLink } from '@/src/core/domain/audit/types';
 
 const MAX_FETCH = 18; // bound the crawl — each candidate is a full HTTP fetch + parse
 const RELEVANCE_MIN = 0.5; // ≥50% of the keyword's meaningful tokens must appear

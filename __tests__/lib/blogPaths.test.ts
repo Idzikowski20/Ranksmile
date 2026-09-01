@@ -1,5 +1,5 @@
 // __tests__/lib/blogPaths.test.ts
-import { normalizeBlogPaths, matchesBlogPath } from '../../lib/blogPaths';
+import { normalizeBlogPaths, matchesBlogPath } from '@/src/core/domain/blog/blogPaths';
 
 describe('normalizeBlogPaths', () => {
   it('reduces a prefix to its blog segment, deduped, locale/category-stripped', () => {

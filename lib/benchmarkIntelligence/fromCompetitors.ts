@@ -1,5 +1,5 @@
 import type { CompetitorRawInput } from '../contentPlanner/competitorIntelligence';
-import type { BenchmarkDocInput } from './types';
+import type { BenchmarkDocInput } from '@/src/core/domain/benchmark/types';
 
 /** Map planner competitor rows → Benchmark Intelligence docs. */
 export function benchmarkDocsFromCompetitors(competitors: CompetitorRawInput[]): BenchmarkDocInput[] {

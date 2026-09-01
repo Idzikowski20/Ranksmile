@@ -1,5 +1,5 @@
-import { BENCHMARK_H2_FLOOR, BENCHMARK_WORDS_FLOOR } from '../contentPlanner/types';
-import type { PlannerTargets, StructuralBenchmark } from './types';
+import { BENCHMARK_H2_FLOOR, BENCHMARK_WORDS_FLOOR } from '@/src/core/domain/contentPlanner/types';
+import type { PlannerTargets, StructuralBenchmark } from '@/src/core/domain/benchmark/types';
 
 /**
  * Calibrated against the reference tool on one measured SERP.

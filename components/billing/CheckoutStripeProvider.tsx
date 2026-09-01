@@ -11,7 +11,7 @@ import {
   type StripeElementsOptions,
 } from '@stripe/stripe-js';
 import React from 'react';
-import type { BillingPeriod } from '../../lib/billingPlans';
+import type { BillingPeriod } from '../../lib/billing/billingPlans';
 import {
   hasFieldErrors,
   hasRequiredBillingAddressFields,

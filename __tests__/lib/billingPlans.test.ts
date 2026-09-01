@@ -4,7 +4,7 @@ import {
   getPlanCheckoutHref,
   getPlanPeriodPrice,
   getTrialEndDateLabel,
-} from '../../lib/billingPlans';
+} from '../../lib/billing/billingPlans';
 
 describe('billingPlans', () => {
   it('builds checkout hrefs with billing period and checkout mode', () => {

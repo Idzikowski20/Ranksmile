@@ -1,4 +1,4 @@
-import type { CanonicalClaim, CompetitorDocument } from './types';
+import type { CanonicalClaim, CompetitorDocument } from '@/src/core/domain/knowledgeEngine/types';
 
 function becauseLabels(claim: CanonicalClaim, docs: CompetitorDocument[]): string[] {
   const labels: string[] = [];

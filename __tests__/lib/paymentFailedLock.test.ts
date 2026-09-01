@@ -1,5 +1,5 @@
 import type { OrgBillingState } from '../../lib/orgBilling';
-import type { BillingPeriod } from '../../lib/billingPlans';
+import type { BillingPeriod } from '../../lib/billing/billingPlans';
 import type { PlanSlug } from '../../lib/stripePrices';
 import {
   isApiRouteAllowedDuringPaymentLock,

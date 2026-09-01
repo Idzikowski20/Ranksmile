@@ -1,4 +1,4 @@
-import { publicDeepAnalysisError } from '../../lib/deepAnalysisErrors';
+import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
 
 describe('publicDeepAnalysisError', () => {
   it.each([

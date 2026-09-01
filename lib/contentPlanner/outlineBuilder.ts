@@ -14,7 +14,7 @@ import type {
   SectionBudget,
   SectionBrief,
   TargetKnowledgeGraph,
-} from './types';
+} from '@/src/core/domain/contentPlanner/types';
 import type { NarrativeSeed } from './narrativeOptimizer';
 import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
 import {

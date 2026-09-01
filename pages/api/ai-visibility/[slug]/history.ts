@@ -8,8 +8,8 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows } from '../../../../lib/db/query';
-import { loadScanCitationRowsForScans } from '../../../../lib/aiVisibilityRead';
-import { overviewForDomain } from '../../../../lib/aiVisibilityMetrics';
+import { loadScanCitationRowsForScans } from '../../../../lib/aiVisibility/aiVisibilityRead';
+import { overviewForDomain } from '../../../../lib/aiVisibility/aiVisibilityMetrics';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 const HISTORY_LIMIT = 24;

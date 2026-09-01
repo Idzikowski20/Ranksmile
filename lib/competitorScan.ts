@@ -6,8 +6,9 @@
 import db from '../database/database';
 import { queryRows } from './db/query';
 import { callSidecar } from './sidecar';
-import { isContentCompetitor } from './competitorRelevance';
-import { CompetitorDTO, CompetitorRow, rowToCompetitorDTO } from './competitorTypes';
+import { isContentCompetitor } from '@/src/core/domain/competitors/relevance';
+import type { CompetitorDTO } from '@/src/core/domain/competitors/competitor';
+import { CompetitorRow, rowToCompetitorDTO } from '@/src/infrastructure/competitors/competitorRow';
 
 /** Shape of one competitor returned by the sidecar /competitor-outlines endpoint. */
 interface SidecarCompetitor {

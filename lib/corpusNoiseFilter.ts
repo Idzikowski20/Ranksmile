@@ -1,4 +1,4 @@
-import { foldPolishLetters } from './termUtils';
+import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
 
 /**
  * Boilerplate patterns, written with Polish diacritics and matched against text that has

@@ -5,7 +5,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { publishToWordPress, publishToNextJs } from '../../../lib/wordpressPublish';
-import { getArticleIdSql } from '../../../lib/articleSql';
+import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';

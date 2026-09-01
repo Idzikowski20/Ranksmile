@@ -41,7 +41,7 @@ async function reapStaleFinalization(jobId: string, articleId: number): Promise<
       { replacements: [jobId], type: QueryTypes.SELECT, transaction },
     );
     if (!rows.length) return false;
-    const { getArticleIdSql } = await import('../../../../lib/articleSql');
+    const { getArticleIdSql } = await import('../../../../lib/articles/articleSql');
     const articleIdSql = await getArticleIdSql();
     await db.query(
       `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP

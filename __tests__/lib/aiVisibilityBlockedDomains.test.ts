@@ -1,4 +1,4 @@
-import { filterCitations, isBlockedCitationDomain } from '../../lib/aiVisibilityBlockedDomains';
+import { filterCitations, isBlockedCitationDomain } from '@/src/core/domain/aiVisibility/blockedDomains';
 
 describe('aiVisibilityBlockedDomains', () => {
   it('blocks vertexaisearch.cloud.google.com', () => {

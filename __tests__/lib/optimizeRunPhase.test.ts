@@ -3,7 +3,7 @@ import {
   TARGET_CONTENT_FIRST,
   maxRoundsForPhase,
   targetContentForPhase,
-} from '../../lib/optimizeRunPhase';
+} from '@/src/core/domain/optimize/runPhase';
 
 describe('resolveOptimizePhase', () => {
   it('returns first_run when score low and no prior AO', () => {

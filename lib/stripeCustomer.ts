@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { BillingSource } from './billingAudit';
+import { BillingSource } from './billing/billingAudit';
 import { updateOrgBillingState } from './orgBilling';
 
 export async function ensureStripeCustomer(

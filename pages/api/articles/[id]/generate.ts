@@ -8,12 +8,12 @@ import axios from 'axios';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articleSql';
+import { getArticleIdSql } from '../../../../lib/articles/articleSql';
 import { readContentSettings } from '../../../../lib/contentSettings';
 import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
-import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/ai/aiBudget';
 import { mergedPlannerQuestions } from '../../../../lib/coverageStore';
 import { resolveContentLocale } from '../../../../lib/domainLanguage';
 import { getErrorMessage } from '../../../../lib/errors';
@@ -53,7 +53,7 @@ import {
 import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine';
 import type { StructuralBenchmark, PlannerTargets } from '../../../../lib/benchmarkIntelligence';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
-import { readArticleTerms } from '../../../../lib/articleTerms';
+import { readArticleTerms } from '../../../../lib/articles/articleTerms';
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 
 /** Bounds the brief LLM call: nothing else force-kills this request, so an unbounded

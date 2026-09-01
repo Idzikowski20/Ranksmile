@@ -2,7 +2,7 @@
  * DataForSEO Labs historical_serps — monthly SERP snapshots for one keyword.
  * We extract the target domain's organic rank_group over time.
  */
-import { toDfsLanguageCode } from '../../lib/domainLanguagePrompts';
+import { toDfsLanguageCode } from '@/src/core/shared/language';
 import {
   dfsPostResultList,
   isDataForSeoConfigured,

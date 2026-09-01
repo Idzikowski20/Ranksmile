@@ -6,7 +6,7 @@ import {
 import type {
   ArticleExecutionPlan,
   ExecutionPlanSection,
-} from '../../../lib/contentPlanner/types';
+} from '@/src/core/domain/contentPlanner/types';
 
 function sampleExecutionPlan(partial?: Partial<ArticleExecutionPlan>): ArticleExecutionPlan {
   const base: ArticleExecutionPlan = {

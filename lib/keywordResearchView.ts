@@ -4,7 +4,7 @@
  * clusters: one card per cluster, showing an intent badge, MSV/KD and the flat
  * list of keywords in that cluster.
  */
-import type { KeywordResearchResult } from './keywordResearchTypes';
+import type { KeywordResearchResult } from '@/src/core/domain/keywords/types';
 
 import type { SearchIntent } from './organicResearch/types';
 

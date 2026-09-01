@@ -12,8 +12,8 @@ import type {
   TargetKnowledgeGraph,
   ValidationIssue,
   ValidationResult,
-} from '../types';
-import { KNOWLEDGE_COVERAGE_MIN_PCT } from '../types';
+} from '@/src/core/domain/contentPlanner/types';
+import { KNOWLEDGE_COVERAGE_MIN_PCT } from '@/src/core/domain/contentPlanner/types';
 
 export function validateBlueprint(bp: ArticleBlueprint): ValidationResult {
   const issues: ValidationIssue[] = [];

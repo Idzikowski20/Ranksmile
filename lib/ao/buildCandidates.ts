@@ -2,11 +2,11 @@ import type { EditCandidate } from './editCandidate';
 import { makeCandidate, sortCandidatesByPriority } from './editCandidate';
 import type { ArticleIntentProfile } from './intentProfile';
 import { textHitsForbidden } from './intentProfile';
-import type { CoverageItem } from '../aiCoverage';
-import { AI_SEARCH_CHECKPOINT_TYPES } from '../aiCoverage';
+import type { CoverageItem } from '../ai/aiCoverage';
+import { AI_SEARCH_CHECKPOINT_TYPES } from '../ai/aiCoverage';
 import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_TARGET } from './coverageState';
 import type { TermUsageGap } from '../optimizeSectionEdit';
-import type { Section } from '../articleSections';
+import type { Section } from '../articles/articleSections';
 import type { OptimizationStrategy } from './optimizationPolicy';
 
 export type BuildCandidatesInput = {

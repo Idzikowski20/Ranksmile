@@ -4,15 +4,15 @@
  */
 import { generateText } from 'ai';
 import { chatLlm, deepseek } from './ai/deepseek';
-import { languageInstructionForLlm } from './domainLanguagePrompts';
-import { computeTopicalCohesion } from './contentEffort';
+import { languageInstructionForLlm } from '@/src/core/shared/language';
+import { computeTopicalCohesion } from '@/src/core/domain/terms/contentEffort';
 import type {
    TopicCluster,
    TopicIdea,
    TopicKeyword,
    KeywordResearchResult,
    KeywordResearchStats,
-} from './keywordResearchTypes';
+} from '@/src/core/domain/keywords/types';
 
 export type EnrichedKeyword = {
    keyword: string;

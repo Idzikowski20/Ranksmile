@@ -28,7 +28,7 @@ import SetupPipeline from '../../components/dashboard/SetupPipeline';
 import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
 import { useAiVisHistory } from '../../services/aiVisibility';
 import fetchJson from '../../lib/fetchJson';
-import { isActionableRecommendation } from '../../lib/recommendations';
+import { isActionableRecommendation } from '@/src/core/domain/recommendations/actionable';
 
 const formatShortDate = (dateStr: string): string => {
   if (!dateStr) return '';

@@ -13,7 +13,7 @@ export const embeddingsWorker: PipelineWorker = {
     const { hashEmbed, findEmbeddingGaps, pgvectorResearchNotes } = await import(
       '../../semantic/embeddings'
     );
-    const { extractKeybertTerms } = await import('../../semantic/keybert');
+    const { extractKeybertTerms } = await import('@/src/core/domain/semantic/keybert');
     const { storeHashEmbeddings } = await import('../../semantic/embeddingStore');
 
     const articleText = String(ctx.payload.plainText || ctx.payload.html || '').replace(

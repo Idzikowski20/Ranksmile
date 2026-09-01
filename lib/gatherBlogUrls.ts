@@ -1,7 +1,7 @@
 // lib/gatherBlogUrls.ts
 import { QueryTypes } from 'sequelize';
 import db from '../database/database';
-import { matchesBlogPath, normalizeBlogPaths } from './blogPaths';
+import { matchesBlogPath, normalizeBlogPaths } from '@/src/core/domain/blog/blogPaths';
 import { fetchSitemapUrls } from './fetchSitemapUrls';
 
 /**

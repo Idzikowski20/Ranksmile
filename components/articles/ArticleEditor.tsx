@@ -16,7 +16,7 @@ import Highlight from '@tiptap/extension-highlight';
 import Placeholder from '@tiptap/extension-placeholder';
 import type { ScoreData, NlpTerm } from '../../lib/contentScore';
 import { getErrorMessage } from '../../lib/errors';
-import { isUsableArticleHtml } from '../../lib/articleHtmlUsable';
+import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 import { EC } from './editorChrome';
 import RanksmileImageNode from './RanksmileImageNode';
@@ -56,7 +56,7 @@ import {
   outlineForReview,
   reviewOutlineToHtml,
 } from '../../lib/contentPlanner/reviewOutline';
-import type { ContentPlannerBundle } from '../../lib/contentPlanner/types';
+import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
 import type { ApprovedOutlineHeading } from '../../lib/contentPlanner/applyApprovedOutline';
 
 function collectOutlineHeadings(ed: Editor): Array<{ level: number; text: string }> {

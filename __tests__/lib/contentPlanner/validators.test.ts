@@ -14,7 +14,7 @@ import {
   validateQuestions,
 } from '../../../lib/contentPlanner/validators/postWriteValidators';
 import { buildRewritePlan } from '../../../lib/contentPlanner/knowledgeCompletion';
-import type { AdaptiveOutline, ArticleBlueprint, TargetKnowledgeGraph } from '../../../lib/contentPlanner/types';
+import type { AdaptiveOutline, ArticleBlueprint, TargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/types';
 
 describe('Information Gain classifyGain', () => {
   it('marks core / expected / opportunity by competitor frequency', () => {

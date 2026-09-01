@@ -35,8 +35,8 @@ import type {
   ReaderModel,
   SectionBrief,
   TargetKnowledgeGraph,
-} from '../../../lib/contentPlanner/types';
-import type { CanonicalClaim } from '../../../lib/knowledgeEngine/types';
+} from '@/src/core/domain/contentPlanner/types';
+import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 
 const emptyBudget: CompetitorBenchmark = {
   averageWords: 3000,

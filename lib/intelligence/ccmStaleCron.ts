@@ -45,7 +45,7 @@ type ArticleContentRow = {
  */
 export async function listCcmCompileCandidates(limit: number): Promise<CcmCronCandidate[]> {
   const { ensureCcmTables } = await import('../ensureCcmTables');
-  const { getArticleIdSql } = await import('../articleSql');
+  const { getArticleIdSql } = await import('../articles/articleSql');
   const { queryRows } = await import('../db/query');
   await ensureCcmTables();
   const articleIdSql = await getArticleIdSql();

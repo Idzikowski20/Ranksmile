@@ -2,10 +2,10 @@
  * AO patches Execution Plan only — never mutates Knowledge Graph.
  */
 import { createHash } from 'crypto';
-import type { ArticleExecutionPlan, ExecutionPlanSection } from '../contentPlanner/types';
+import type { ArticleExecutionPlan, ExecutionPlanSection } from '@/src/core/domain/contentPlanner/types';
 import { hashExecutionPlanPayload } from '../contentPlanner/executionPlan';
 import { MAX_CLAIMS_PER_SECTION } from './constants';
-import type { KnowledgeCoverageReport, KnowledgeGraph } from './types';
+import type { KnowledgeCoverageReport, KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 
 export type AoPlanPatchResult = {
   previousPlanHash: string;

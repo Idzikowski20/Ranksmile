@@ -2,7 +2,7 @@
 import {
   mergeCoverageItems, buildSnapshot, parseSnapshot, coverageQuestionsForPlanner,
 } from '../../lib/coverageStore';
-import { CoverageItem, CoverageResult } from '../../lib/aiCoverage';
+import { CoverageItem, CoverageResult } from '../../lib/ai/aiCoverage';
 
 const item = (id: string, type: CoverageItem['type'] = 'paa', category: CoverageItem['category'] = 'knowledge'): CoverageItem =>
   ({ id, label: id, type, category, importance: 'recommended', source: 'paa', covered: false, quality: 0 });

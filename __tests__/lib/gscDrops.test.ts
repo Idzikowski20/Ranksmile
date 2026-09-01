@@ -1,4 +1,4 @@
-import { computeDrops, SnapMap, PageSnap } from '../../lib/gscDrops';
+import { computeDrops, SnapMap, PageSnap } from '@/src/core/domain/gsc/drops';
 
 const snap = (position: number, clicks = 0, impressions = 0): PageSnap => ({ position, clicks, impressions });
 const map = (entries: Record<string, PageSnap>): SnapMap => new Map(Object.entries(entries));

@@ -1,12 +1,12 @@
-import type { Section } from './articleSections';
+import type { Section } from './articles/articleSections';
 import type { Guideline } from './recommendationEngine';
-import type { ArticleContext } from './articleContext';
+import type { ArticleContext } from './articles/articleContext';
 import type { RoutedGuideline } from './optimizeGuidelineRouting';
-import type { CoverageSnapshot } from './aiCoverage';
+import type { CoverageSnapshot } from './ai/aiCoverage';
 import { assignGuidelinesToSections } from './optimizeGuidelineRouting';
 import { countOccurrences } from './contentScore';
 import { selectOptimizeMode, type OptimizeMode, SEO_READY, AI_GAP } from './optimizeMode';
-import type { OptimizePhase } from './optimizeRunPhase';
+import type { OptimizePhase } from '@/src/core/domain/optimize/runPhase';
 import { STOP_SLOP_RULES } from './stopSlopPrompt';
 
 export type { RoutedGuideline } from './optimizeGuidelineRouting';

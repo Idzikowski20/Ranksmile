@@ -1,0 +1,124 @@
+/** Client-safe term quality helpers — no DB imports. */
+import { PL_DIACRITICS } from './plDiacritics';
+
+const POLISH_STOPWORDS = new Set([
+  'aby', 'acz', 'aczkolwiek', 'ale', 'albo', 'ani', 'az', 'bardziej', 'bardzo',
+  'bez', 'bo', 'bowiem', 'by', 'byc', 'byl', 'byla', 'bylo', 'byly', 'beda',
+  'bedzie', 'cala', 'cali', 'caly', 'ci', 'cie', 'ciebie', 'co', 'czy', 'dla',
+  'do', 'gdy', 'gdyz', 'gdzie', 'go', 'ich', 'im', 'inna', 'inne', 'inny',
+  'jest', 'jestem', 'jesli', 'juz', 'kazdy', 'kiedy', 'kto', 'ktora', 'ktore',
+  'ktory', 'ku', 'lub', 'ma', 'maja', 'mam', 'mial', 'miec', 'mnie', 'moze',
+  'mozna', 'na', 'nad', 'nam', 'nas', 'nasi', 'nasz', 'nasza', 'nasze', 'nic',
+  'nich', 'nie', 'nim', 'niz', 'oraz', 'pan', 'pani', 'po', 'pod', 'poniewaz',
+  'przed', 'przez', 'przy', 'sa', 'sie', 'sobie', 'sposob', 'ta', 'tak',
+  'takze', 'tam', 'te', 'tego', 'tej', 'ten', 'teraz', 'tez', 'to', 'toba',
+  'tobie', 'trzeba', 'tu', 'tych', 'tylko', 'tym', 'u', 'was', 'we', 'wedlug',
+  'wiele', 'wlasnie', 'wszystko', 'wtedy', 'z', 'za', 'zaden', 'ze', 'zeby',
+]);
+
+const ENGLISH_STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'that', 'this', 'from', 'are', 'was', 'were',
+  'has', 'have', 'had', 'not', 'you', 'your', 'can', 'will', 'would', 'could',
+  'should', 'about', 'into', 'than', 'then', 'when', 'where', 'what', 'how',
+]);
+
+const GENERIC_WORDS = new Set([
+  'artykul', 'strona', 'tekst', 'temat', 'informacje', 'warto', 'mozna',
+  'nalezy', 'czas', 'czasem', 'sytuacja', 'sytuacji', 'ktos', 'cos',
+]);
+
+/** Polish dictionary / “what does X mean” SERP spam — not content entities. */
+const DICTIONARY_QUERY_PATTERNS = [
+  /\bco to znaczy\b/,
+  /\bco znaczy\b/,
+  /^\d+\s+co znaczy\b/,
+  /\bco znaczy\s+\d+\b/,
+  /^znaczy$/,
+  /^co to znaczy$/,
+  /\bco to jest\b/,
+  /\bco oznacza\b/,
+];
+
+export function isDictionaryQueryNoise(term: string): boolean {
+  const normalized = normalizeTerm(term);
+  if (!normalized) return true;
+  return DICTIONARY_QUERY_PATTERNS.some((re) => re.test(normalized));
+}
+
+/**
+ * Lowercase and fold Polish letters to ASCII, leaving everything else — punctuation,
+ * regex metacharacters — untouched.
+ *
+ * Split out from `normalizeTerm` because that one also blanks non-alphanumerics, which
+ * is right for a term but would wreck a regex source — word boundaries, quantifiers
+ * and escapes would all be blanked. Safe to apply to a pattern and its input alike.
+ *
+ * NFD runs after the table so decomposed input (`z` + combining dot) folds as well —
+ * scraped HTML arrives in either form and the table only sees composed characters.
+ */
+export function foldPolishLetters(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[ąćęłńóśźż]/g, (c) => PL_DIACRITICS[c] || c)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+export function normalizeTerm(term: string): string {
+  return foldPolishLetters(term)
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isStopword(token: string): boolean {
+  return POLISH_STOPWORDS.has(token) || ENGLISH_STOPWORDS.has(token) || GENERIC_WORDS.has(token);
+}
+
+export function isUsefulTerm(term: string): boolean {
+  const normalized = normalizeTerm(term);
+  if (normalized.length < 4) return false;
+  if (isDictionaryQueryNoise(normalized)) return false;
+  if (/^\d+$/.test(normalized)) return false;
+
+  const tokens = normalized.split(' ').filter(Boolean);
+  if (!tokens.length) return false;
+  if (tokens.every(isStopword)) return false;
+  if (tokens.length === 1) {
+    if (isStopword(tokens[0])) return false;
+    if (tokens[0].length < 5) return false;
+  }
+
+  const meaningfulTokens = tokens.filter((token) => !isStopword(token));
+  return meaningfulTokens.length > 0;
+}
+
+export type MinimalTerm = { term: string };
+
+function prefersDisplayForm(a: string, b: string): string {
+  const aDiacritics = /[ąćęłńóśźż]/i.test(a);
+  const bDiacritics = /[ąćęłńóśźż]/i.test(b);
+  if (aDiacritics && !bDiacritics) return a;
+  if (bDiacritics && !aDiacritics) return b;
+  return a.length >= b.length ? a : b;
+}
+
+/** Dedupe by normalized match key; keep original display orthography. */
+export function dedupeUsefulTerms<T extends MinimalTerm>(terms: T[]): T[] {
+  const best = new Map<string, T>();
+
+  for (const term of terms) {
+    const display = (term.term || '').trim();
+    const key = normalizeTerm(display);
+    if (!isUsefulTerm(key)) continue;
+    const prev = best.get(key);
+    if (!prev) {
+      best.set(key, { ...term, term: display } as T);
+      continue;
+    }
+    const chosen = prefersDisplayForm(prev.term, display);
+    best.set(key, { ...prev, ...term, term: chosen } as T);
+  }
+
+  return [...best.values()];
+}

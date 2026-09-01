@@ -2,12 +2,12 @@
  * Precision AO v4 / v4.1 orchestration: dual gates, snapshots, targeting, rollback.
  * All strategies (precision|enrichment|deep_optimize) use this same engine.
  */
-import { splitSections } from '../articleSections';
-import type { ArticleContext } from '../articleContext';
+import { splitSections } from '../articles/articleSections';
+import type { ArticleContext } from '../articles/articleContext';
 import { computeTermUsageGaps } from '../optimizeSectionEdit';
 import { liveCoverageItems } from '../liveCoverage';
 import { scoreArticleHtml } from '../scoreArticleHtml';
-import { computeOverallContentScore } from '../aiSearchScore';
+import { computeOverallContentScore } from '../ai/aiSearchScore';
 import type { ScoreData } from '../contentScore';
 import { buildIntentProfile, type ArticleIntentProfile } from './intentProfile';
 import { filterCandidatesByIntent, filterPlanStepsByAction } from './intentGuard';

@@ -2,7 +2,7 @@
 import {
   liveCoverageItems, scoreAttribution, remainingOpportunities, scoreDeltaGate,
 } from '../../lib/liveCoverage';
-import { computeCoverageScores, type CoverageItem, type BucketScore } from '../../lib/aiCoverage';
+import { computeCoverageScores, type CoverageItem, type BucketScore } from '../../lib/ai/aiCoverage';
 
 // Item factory — mirrors __tests__/lib/aiCoverage.test.ts `gi` helper.
 const item = (
