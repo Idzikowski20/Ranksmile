@@ -60,6 +60,10 @@ export const LAYER_RULES: LayerRule[] = [
     // surface that legitimately references types from every layer (the old lib/types
     // carve-out), so it is excluded from the leaf constraint.
     forbid: [...VENDORS, ...OUTER, ...LIB, ...APPLICATION, ...DOMAIN],
+    // ponytail: blanket carve-out — the whole types/ subtree skips the leaf check, so a
+    // stray vendor/outer *runtime* import in a types file would go unnoticed. Acceptable
+    // while types/ is declaration-only (`import type` erases at build). Upgrade path when
+    // it gains runtime code: scan types/ too but allow only `import type` specifiers.
     exclude: /^src[\\/]core[\\/]shared[\\/]types[\\/]/,
   },
 ];
