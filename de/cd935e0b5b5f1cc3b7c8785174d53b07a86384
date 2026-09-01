@@ -1,0 +1,20 @@
+components/koala/shell/AppBanner.tsx
+  s_88af64c9082b5e::t_2ee3be93fbca60 124,126
+  s_88af64c9082b5e::t_12c482760e489a 135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "decd935e0b5b5f1cc3b7c8785174d53b07a86384",
+  "prompts": {},
+  "sessions": {
+    "s_88af64c9082b5e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f5ced22a-8983-433f-aa8f-5b87e4107a44",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
