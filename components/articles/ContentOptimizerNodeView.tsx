@@ -29,10 +29,14 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
   // existing review-completion effect returns the editor to idle, and Save still
   // resolves whatever the reviewer left untouched.
   const resolveTo = (html: string) => {
-    if (!html) return;
     const pos = typeof getPos === 'function' ? getPos() : null;
     if (pos == null) return;
-    editor.chain().insertContentAt({ from: pos, to: pos + node.nodeSize }, html).run();
+    const range = { from: pos, to: pos + node.nodeSize };
+    // An empty chosen side is a real outcome, not a no-op: accepting a section deletion
+    // (newHtml empty) or undoing a section addition (oldHtml empty) both mean "remove this
+    // node". Deleting the range does that; returning early left the suggestion node stranded.
+    if (html) editor.chain().insertContentAt(range, html).run();
+    else editor.chain().deleteRange(range).run();
     optimizeStore.notifyDocChange();
   };
 
@@ -73,8 +77,10 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
   }
 
   // Review phase only (buildReviewDoc statuses). During streaming every frame rebuilds
-  // the doc, so a mid-run click would be silently overwritten a moment later.
-  const showControls = (status === 'active' || status === 'pending') && Boolean(newHtml);
+  // the doc, so a mid-run click would be silently overwritten a moment later. Gate on the
+  // changed result existing, not Boolean(newHtml): a section deletion has empty newHtml but
+  // still needs Add/Undo so the reviewer can accept or reject the removal.
+  const showControls = (status === 'active' || status === 'pending') && Boolean(r);
 
   return (
     <NodeViewWrapper as="div" ref={entranceRef} contentEditable={false} style={wrapperStyle}>
@@ -106,7 +112,7 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
             onClick={() => resolveTo(newHtml)}
             style={{
               border: 'none', cursor: 'pointer',
-              background: 'var(--koala-text-brand)', color: 'var(--white-base, #fff)',
+              background: 'var(--koala-bg-brand)', color: 'var(--koala-text-on-brand, #fff)',
               fontFamily: 'var(--font-family-primary)', fontSize: 12, fontWeight: 600,
               padding: '3px 10px', borderRadius: 8,
             }}

@@ -18,12 +18,21 @@ export function extractSpecifiers(source: string): string[] {
 }
 
 const EXT = new Set(['.ts', '.tsx']);
+/** Tests and mocks legitimately import infrastructure fixtures — the layer rule is about
+ *  production code, so they are excluded from the scan. */
+function isTestFile(name: string): boolean {
+  return /\.(test|spec)\.tsx?$/.test(name) || name.endsWith('.d.ts');
+}
 function walk(dir: string, acc: string[] = []): string[] {
   if (!fs.existsSync(dir)) return acc;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
-    if (e.isDirectory()) walk(p, acc);
-    else if (EXT.has(path.extname(e.name))) acc.push(p);
+    if (e.isDirectory()) {
+      if (e.name === '__tests__' || e.name === '__mocks__') continue;
+      walk(p, acc);
+    } else if (EXT.has(path.extname(e.name)) && !isTestFile(e.name)) {
+      acc.push(p);
+    }
   }
   return acc;
 }

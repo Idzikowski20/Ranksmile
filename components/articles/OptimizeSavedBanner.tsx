@@ -65,7 +65,7 @@ const OptimizeSavedBanner: React.FC<OptimizeSavedBannerProps> = ({ open, onOpenH
                      marginTop: 12,
                      fontSize: 13,
                      fontWeight: 600,
-                     color: '#FFFFFF',
+                     color: 'var(--koala-text-on-inverse)',
                      background: 'var(--koala-bg-inverse)',
                      border: 'none',
                      borderRadius: 8,
@@ -74,8 +74,8 @@ const OptimizeSavedBanner: React.FC<OptimizeSavedBannerProps> = ({ open, onOpenH
                      padding: '6px 14px',
                      transition: 'background 0.15s ease',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-brand)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-inverse)'; }}
                >
                   Version History
                </button>
@@ -96,8 +96,8 @@ const OptimizeSavedBanner: React.FC<OptimizeSavedBannerProps> = ({ open, onOpenH
                   display: 'inline-flex',
                   transition: 'color 0.15s ease',
                }}
-               onMouseEnter={(e) => { e.currentTarget.style.color = '#52525C'; }}
-               onMouseLeave={(e) => { e.currentTarget.style.color = '#9F9FA9'; }}
+               onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}
+               onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-tertiary)'; }}
             >
                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

@@ -105,7 +105,10 @@ const Marker = ({ state }: { state: ProgressState }) => {
   if (state === 'error') {
     return <Icon name="XCircle" size={20} weight="fill" color="var(--koala-status-danger)" className={cls} />;
   }
-  if (state === 'active') return <Ring className={cls} role="status" aria-label="In progress" />;
+  // Presentation-only: the row's own accessible name (ariaLabel) carries the state, and
+  // panels that use this card announce the active step themselves — a status role here
+  // double-announced "In progress" alongside the panel's own live summary.
+  if (state === 'active') return <Ring className={cls} aria-hidden="true" />;
   return <Dashed className={cls} aria-hidden="true" />;
 };
 
@@ -118,37 +121,45 @@ export type ProgressCardRow = {
   ariaLabel?: string;
 };
 
-const ProgressCard = ({ title, icon, trailing, rows }: {
+const ProgressCard = ({ title, icon, trailing, rows, headingLevel }: {
   title?: React.ReactNode;
   icon?: React.ReactNode;
   trailing?: React.ReactNode;
   rows: ProgressCardRow[];
-}) => (
-  <Card>
-    {title ? (
-      <Header>
-        {icon}
-        <span style={{ flex: 1, minWidth: 0 }}>{title}</span>
-        {trailing}
-      </Header>
-    ) : null}
-    <Rows>
-      {rows.map((row) => (
-        <Row
-          key={row.id}
-          $state={row.state}
-          className={`progress-row progress-row--${row.state}`}
-          aria-label={row.ariaLabel}
-        >
-          <Label>
-            {row.label}
-            {row.detail ? <Detail>{row.detail}</Detail> : null}
-          </Label>
-          <Marker state={row.state} />
-        </Row>
-      ))}
-    </Rows>
-  </Card>
-);
+  /** Render the title as a heading (h2/h3) so screen-reader users can navigate to it. */
+  headingLevel?: 2 | 3;
+}) => {
+  const HeadingTag = (headingLevel ? `h${headingLevel}` : 'span') as 'h2' | 'h3' | 'span';
+  return (
+    <Card>
+      {title ? (
+        <Header>
+          {icon}
+          <HeadingTag style={{ flex: 1, minWidth: 0, margin: 0, font: 'inherit' }}>{title}</HeadingTag>
+          {trailing}
+        </Header>
+      ) : null}
+      {/* role=list/listitem so each row's aria-label (which carries the state the visible
+          label drops) is exposed as its accessible name — a bare styled div would swallow it. */}
+      <Rows role="list">
+        {rows.map((row) => (
+          <Row
+            key={row.id}
+            $state={row.state}
+            role="listitem"
+            className={`progress-row progress-row--${row.state}`}
+            aria-label={row.ariaLabel}
+          >
+            <Label>
+              {row.label}
+              {row.detail ? <Detail>{row.detail}</Detail> : null}
+            </Label>
+            <Marker state={row.state} />
+          </Row>
+        ))}
+      </Rows>
+    </Card>
+  );
+};
 
 export default ProgressCard;
