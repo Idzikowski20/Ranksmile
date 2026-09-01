@@ -168,27 +168,42 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
                await q(`DELETE FROM page_audits WHERE domain_id=? AND url=?`, [domainId, url]);
       }
 
-      const insertRec = (title: string, topicId: number | null, rationale: string, priority: string, type: string, url: string | null, score: number | null, vol: number | null, kd: number | null) =>
-         q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, search_volume, keyword_difficulty, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-            [domainId, topicId, title, rationale, priority, type, url, score, vol, kd]);
+      type RecCols = {
+         title: string; topicId: number | null; rationale: string; priority: string; type: string;
+         url: string | null; score: number | null; vol: number | null; kd: number | null;
+         keyword: string | null; topicTitle: string | null; optimizationStatus: string | null;
+      };
+      const insertRec = (c: RecCols) =>
+         q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, search_volume, keyword_difficulty, keyword, topic_title, optimization_status, article_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [domainId, c.topicId, c.title, c.rationale, c.priority, c.type, c.url, c.score, c.vol, c.kd, c.keyword, c.topicTitle, c.optimizationStatus, null]);
 
       for (const r of result.recommendations || []) {
          // Optimize recs with a GSC opportunity score take their priority/score from it;
          // everything else keeps the analyzer's own values. Opportunity is 0–10; store ×10 so
          // the INTEGER score column keeps one decimal of striking-distance ordering.
-         const opp = (r.type ?? 'content') === 'optimize' ? oppByPath.get(recPath(r.url)) : undefined;
+         const isOptimize = (r.type ?? 'content') === 'optimize';
+         const opp = isOptimize ? oppByPath.get(recPath(r.url)) : undefined;
          const priority = opp != null ? priorityFromScore(opp) : (r.priority || 'medium');
          const score = opp != null ? Math.round(opp * 10) : (r.score ?? null);
-         await insertRec(r.title, r.topic_index != null ? topicIds[r.topic_index] ?? null : null, r.rationale || '', priority, r.type || 'content', r.url ?? null, score, null, null);
+         await insertRec({
+            title: r.title, topicId: r.topic_index != null ? topicIds[r.topic_index] ?? null : null,
+            rationale: r.rationale || '', priority, type: r.type || 'content', url: r.url ?? null,
+            score, vol: null, kd: null, keyword: r.url ? recPath(r.url).split('/').pop() || null : null,
+            topicTitle: null, optimizationStatus: isOptimize ? 'not_started' : null,
+         });
       }
 
-      // Surfer-parity `write` recs from the domain's latest keyword-research run: head keyword
-      // + search volume + difficulty + opportunity score. Deduped against analyzer create recs
-      // by title so the Content Ideas tab doesn't list the same keyword twice.
+      // Surfer-parity `write` recs from the domain's latest keyword-research run: an article
+      // title + head keyword + topic cluster + search volume + difficulty + opportunity score.
+      // Deduped against analyzer create recs by keyword so the Content Ideas tab has no dupes.
       const existingTitles = new Set((result.recommendations || []).map((r) => (r.title || '').trim().toLowerCase()));
       for (const w of await loadWriteRecommendations(domainId, { limit: 25 })) {
          if (existingTitles.has(w.keyword.trim().toLowerCase())) continue;
-         await insertRec(w.keyword, null, '', priorityFromScore(w.score), 'create', null, Math.round(w.score * 10), w.searchVolume, w.keywordDifficulty);
+         await insertRec({
+            title: w.title, topicId: null, rationale: '', priority: priorityFromScore(w.score),
+            type: 'create', url: null, score: Math.round(w.score * 10), vol: w.searchVolume,
+            kd: w.keywordDifficulty, keyword: w.keyword, topicTitle: w.topicTitle, optimizationStatus: null,
+         });
       }
    });
 }

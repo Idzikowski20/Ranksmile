@@ -34,8 +34,12 @@ export interface OptimizeRecommendation {
 /** One "write" recommendation: a topical-map keyword idea worth writing, Surfer-style. */
 export interface WriteRecommendation {
   type: 'create';
-  /** The head keyword to write about. */
+  /** Suggested article title/headline (Surfer's `title`). */
+  title: string;
+  /** The head keyword to write about (Surfer's `main_keyword`). */
   keyword: string;
+  /** The topic-map cluster this idea belongs to (Surfer's `topic_title`), or null. */
+  topicTitle: string | null;
   /** DataForSEO monthly search volume, or null when unknown. */
   searchVolume: number | null;
   /** DataForSEO keyword difficulty 0–100, or null when unknown. */

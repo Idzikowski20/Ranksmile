@@ -22,7 +22,9 @@ export function topicIdeasToWriteRecs(
       seen.add(key);
       recs.push({
         type: 'create',
+        title: headlineFrom(idea.main),
         keyword: idea.main,
+        topicTitle: cluster.title || null,
         searchVolume: idea.volume,
         keywordDifficulty: idea.kd,
         score: idea.score,
@@ -31,4 +33,10 @@ export function topicIdeasToWriteRecs(
   }
   recs.sort((a, b) => b.score - a.score);
   return recs.slice(0, opts.limit ?? 25);
+}
+
+/** A readable headline from a head keyword — capitalise the first word, keep the rest. */
+function headlineFrom(keyword: string): string {
+  const k = keyword.trim();
+  return k ? k.charAt(0).toUpperCase() + k.slice(1) : k;
 }
