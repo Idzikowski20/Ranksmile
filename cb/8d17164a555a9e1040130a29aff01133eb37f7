@@ -1,0 +1,48 @@
+lib/rankTracking/snapshotQueries.ts
+  s_f97db5a5f951f3::t_33b4e50fd66d4d 13
+  s_f97db5a5f951f3::t_8848f4aa8d2cc2 19
+  s_f97db5a5f951f3::t_517c2423f0ea2b 20
+pages/api/articles/index.ts
+  s_f97db5a5f951f3::t_4b7d326ca3b6d5 17
+  s_f97db5a5f951f3::t_dc82d1ed3353f8 35-36
+lib/appSettingsStore.ts
+  s_f97db5a5f951f3::t_a16dcc512abb59 20-25
+pages/api/domains/configure.ts
+  s_f97db5a5f951f3::t_2b5409f3588ed6 15
+  s_f97db5a5f951f3::t_f8210fa1018df8 78
+lib/ensureArticlesTables.ts
+  s_f97db5a5f951f3::t_0885a3ac2a6fc1 278-280,282
+pages/api/dbmigrate.ts
+  s_f97db5a5f951f3::t_949c0e811f365d 28
+database/config.js
+  s_f97db5a5f951f3::t_8bce350af24c83 17-18
+lib/rankTracking/results.ts
+  s_f97db5a5f951f3::t_cdb4b9a15292bf 13
+  s_f97db5a5f951f3::t_7d9da56528a804 27-28
+lib/emailConfirmation.ts
+  s_f97db5a5f951f3::t_833f6a46083268 82-84
+pages/api/domains.ts
+  s_f97db5a5f951f3::t_29601e8b3f475a 14
+  s_f97db5a5f951f3::t_e48c6bff8a5269 117
+  s_f97db5a5f951f3::t_04ca09ea4897b1 144
+database/database.ts
+  s_f97db5a5f951f3::t_6273d6b02374a3 72-76
+lib/domainIdsCache.ts
+  s_f97db5a5f951f3::t_df13eb6a6e18f8 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "cb8d17164a555a9e1040130a29aff01133eb37f7",
+  "prompts": {},
+  "sessions": {
+    "s_f97db5a5f951f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30754a21-682b-42e2-bd1a-278a0b89ec78",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
