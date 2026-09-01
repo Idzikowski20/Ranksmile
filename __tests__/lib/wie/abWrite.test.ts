@@ -4,7 +4,7 @@ import {
   scoreAbVariant,
   scoreRxHeuristics,
   shouldAbWriteStep,
-} from '../../../lib/wie/abWrite';
+} from '@/src/infrastructure/wie/abWrite';
 
 describe('WIE abWrite', () => {
   const working = { seo: 70, content: 70, ai: 70 };

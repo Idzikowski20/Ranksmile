@@ -2,9 +2,9 @@ import {
   observationsFromGscLowCtr,
   observationsFromAuditIssues,
   observationsFromVisibilityDelta,
-} from '../../lib/emitObservations';
-import { runActionExecution } from '../../lib/runActionExecution';
-import type { Action } from '../../lib/primitives/types';
+} from '@/src/infrastructure/observations/emitObservations';
+import { runActionExecution } from '@/src/infrastructure/ao/runActionExecution';
+import type { Action } from '@/src/core/primitives/types';
 
 describe('observationsFromGscLowCtr', () => {
   it('emits low_ctr for high-impression low-CTR pages', () => {

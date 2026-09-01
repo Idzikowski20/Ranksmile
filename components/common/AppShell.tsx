@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useGSAP } from '@gsap/react';
-import { registerMotionPlugins } from '../../lib/motion/gsap';
-import { useRouteTransition } from '../../lib/motion/useRouteTransition';
+import { registerMotionPlugins } from '@/components/motion/gsap';
+import { useRouteTransition } from '@/components/motion/useRouteTransition';
 import { AppBanner, KoalaHeader, KoalaSidebar, useAppBanner } from '../koala/shell';
 import MobileSidebar from './MobileSidebar';
 

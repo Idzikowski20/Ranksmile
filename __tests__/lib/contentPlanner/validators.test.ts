@@ -2,19 +2,19 @@ import {
   classifyGain,
   importanceFromGain,
   priorityFromGainAndImportance,
-} from '../../../lib/contentPlanner/knowledgeIntelligence';
+} from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
 import {
   validateBlueprint,
   validateBrief,
   validateOutline,
-} from '../../../lib/contentPlanner/validators/planValidators';
+} from '@/src/core/domain/contentPlanner/planValidators';
 import {
   validateFlow,
   validateClaims,
   validateQuestions,
-} from '../../../lib/contentPlanner/validators/postWriteValidators';
-import { buildRewritePlan } from '../../../lib/contentPlanner/knowledgeCompletion';
-import type { AdaptiveOutline, ArticleBlueprint, TargetKnowledgeGraph } from '../../../lib/contentPlanner/types';
+} from '@/src/core/domain/contentPlanner/postWriteValidators';
+import { buildRewritePlan } from '@/src/core/domain/contentPlanner/knowledgeCompletion';
+import type { AdaptiveOutline, ArticleBlueprint, TargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/types';
 
 describe('Information Gain classifyGain', () => {
   it('marks core / expected / opportunity by competitor frequency', () => {

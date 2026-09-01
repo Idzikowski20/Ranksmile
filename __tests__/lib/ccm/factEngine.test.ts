@@ -2,9 +2,9 @@ import {
   normalizeFactKey,
   parseSpoHeuristic,
   splitAtomicClaims,
-} from '../../../lib/ccm/builders/factEngine';
-import { compile } from '../../../lib/compiler/compile';
-import { isFactNode } from '../../../lib/ccm/types/graph';
+} from '@/src/core/ccm/builders/factEngine';
+import { compile } from '@/src/core/compiler/compile';
+import { isFactNode } from '@/src/core/ccm/types/graph';
 
 describe('factEngine MVP', () => {
   it('splits long paragraphs into sentences', () => {

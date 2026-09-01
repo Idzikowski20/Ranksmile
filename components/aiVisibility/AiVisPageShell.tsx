@@ -9,7 +9,7 @@ import CrunchingBar from './CrunchingBar';
 import { SkeletonBars } from './SkeletonBlocks';
 import { Button, ToolRibbon } from '../koala/core';
 import type { PromptOption } from './types';
-import { useAiVisibilityGuard } from '../../lib/useAiVisibilityGuard';
+import { useAiVisibilityGuard } from '@/hooks/useAiVisibilityGuard';
 import { useAiVisScanStatus } from '../../services/aiVisibility';
 import { useFetchDomains } from '../../services/domains';
 import { slugToDomain } from '../../utils/slugToDomain';

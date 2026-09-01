@@ -1,4 +1,4 @@
-import { filterNlpTermsForAnalysis } from '../../lib/topicRelevance';
+import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
 
 const KEYWORD = 'prywatny detektyw warszawa';
 

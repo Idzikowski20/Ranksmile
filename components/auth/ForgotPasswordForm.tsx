@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import React, { useState } from 'react';
-import { requestPasswordReset } from '../../lib/auth/fetchAuth';
+import { requestPasswordReset } from '@/src/infrastructure/auth/fetchAuth';
 import Button from '../koala/primitives/Button';
 import AuthBrandMark from './AuthBrandMark';
 import AuthField from './AuthField';

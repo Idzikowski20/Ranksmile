@@ -1,5 +1,5 @@
-import { BillingPolicy } from '../../../lib/billing/billingPolicy';
-import type { BillingContext, PaymentMethodViewModel } from '../../../lib/billing/paymentMethodViewModel';
+import { BillingPolicy } from '@/src/infrastructure/billing/billingPolicy';
+import type { BillingContext, PaymentMethodViewModel } from '@/src/infrastructure/billing/paymentMethodViewModel';
 
 function pm(partial: Partial<PaymentMethodViewModel> & { id: string }): PaymentMethodViewModel {
   return {

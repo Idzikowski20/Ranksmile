@@ -11,14 +11,14 @@ import {
   type StripeElementsOptions,
 } from '@stripe/stripe-js';
 import React from 'react';
-import type { BillingPeriod } from '../../lib/billingPlans';
+import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import {
   hasFieldErrors,
   hasRequiredBillingAddressFields,
   validateCompanyFields,
   type CheckoutAddressValue,
   type CheckoutFieldErrors,
-} from '../../lib/checkoutValidation';
+} from '@/src/infrastructure/billing/checkoutValidation';
 import { Field } from '../koala/forms';
 import { Icon } from '../koala/icons';
 import Input from '../koala/primitives/Input';

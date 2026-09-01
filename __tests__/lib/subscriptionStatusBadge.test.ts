@@ -1,5 +1,5 @@
 import { resolveSubscriptionBadge } from '../../components/settings/SubscriptionStatusBadge';
-import type { SubscriptionDetails } from '../../lib/subscriptionDetails';
+import type { SubscriptionDetails } from '@/src/infrastructure/billing/subscriptionDetails';
 
 function sub(partial: Partial<SubscriptionDetails>): SubscriptionDetails {
   return {

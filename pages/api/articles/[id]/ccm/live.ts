@@ -1,15 +1,15 @@
 // POST /api/articles/[id]/ccm/live — live presence overlay (no persist, no new facts)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../../utils/verifyUser';
-import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { getCurrentUserId } from '../../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../../lib/tenancy';
-import { getErrorMessage } from '../../../../../lib/errors';
-import { ensureCcmTables } from '../../../../../lib/ensureCcmTables';
-import { SqlCompileStore } from '../../../../../lib/intelligence/sqlCompileStore';
-import { getCcm, projectArticleIntelligence } from '../../../../../lib/intelligence/runtimeApi';
-import { applyLivePresence } from '../../../../../lib/intelligence/livePresence';
-import { buildActionGraph } from '../../../../../lib/planner/actionGraphBuilder';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
+import { SqlCompileStore } from '@/src/core/intelligence/sqlCompileStore';
+import { getCcm, projectArticleIntelligence } from '@/src/core/intelligence/runtimeApi';
+import { applyLivePresence } from '@/src/core/intelligence/livePresence';
+import { buildActionGraph } from '@/src/core/planner/actionGraphBuilder';
 
 type Body = {
   plainText?: string;

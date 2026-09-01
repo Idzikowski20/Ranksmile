@@ -12,12 +12,12 @@ jest.mock('next/router', () => ({
    }),
 }));
 
-jest.mock('../../lib/getBootstrap', () => ({
+jest.mock('@/src/infrastructure/http/getBootstrap', () => ({
    getBootstrap: jest.fn(),
 }));
 
 // The landing lazy-loads GSAP; jsdom has no layout, so opt out like a reduced-motion user.
-jest.mock('../../lib/motion/gsap', () => ({
+jest.mock('@/components/motion/gsap', () => ({
    prefersReducedMotion: () => true,
    registerMotionPlugins: jest.fn(),
 }));

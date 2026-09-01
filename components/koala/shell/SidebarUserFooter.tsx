@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { authClient } from '../../../lib/auth/client';
+import { authClient } from '@/src/infrastructure/auth/client';
 import { useProfile } from '../../../services/profile';
 import { useGscAccount } from '../../../services/gscAccount';
 import { Avatar } from '../core/avatar';

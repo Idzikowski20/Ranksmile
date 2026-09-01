@@ -1,4 +1,4 @@
-import { computeRelevanceScore, computeOpportunityScore, checkCoverage, competitionWeight } from '../../lib/keywordEnrichment';
+import { computeRelevanceScore, computeOpportunityScore, checkCoverage, competitionWeight } from '@/src/core/domain/keywords/enrichment';
 
 describe('computeRelevanceScore', () => {
   it('returns 1 for exact keyword match in title', () => {

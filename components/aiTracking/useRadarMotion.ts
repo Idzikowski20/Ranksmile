@@ -24,7 +24,7 @@ export function useRadarMotion(rootRef: RefObject<HTMLElement>) {
     let cancelled = false;
     let ctx: { revert(): void } | undefined;
 
-    import('../../lib/motion/gsap').then((m) => {
+    import('@/components/motion/gsap').then((m) => {
       if (cancelled || m.prefersReducedMotion()) return;
       const { gsap } = m;
 

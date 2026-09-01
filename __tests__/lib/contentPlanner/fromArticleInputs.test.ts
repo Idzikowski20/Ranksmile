@@ -1,7 +1,7 @@
 import {
   competitorsFromScoreData,
   parseCompetitorCacheJson,
-} from '../../../lib/contentPlanner/fromArticleInputs';
+} from '@/src/infrastructure/contentPlanner/fromArticleInputs';
 
 describe('parseCompetitorCacheJson', () => {
   const cache = JSON.stringify({

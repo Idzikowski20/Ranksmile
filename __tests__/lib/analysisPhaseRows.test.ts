@@ -1,5 +1,5 @@
-import { emptyPhases, mergePhases, type AnalysisPhases } from '../../lib/analysisPhases';
-import { analysisPhaseGroups } from '../../lib/analysisPhaseRows';
+import { emptyPhases, mergePhases, type AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
+import { analysisPhaseGroups } from '@/src/core/domain/articles/analysisPhaseRows';
 
 function rows(phases: AnalysisPhases = emptyPhases()) {
   const groups = analysisPhaseGroups(phases);

@@ -1,26 +1,26 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type Stripe from 'stripe';
-import { getStripe, getStripeWebhookSecret } from '../../../lib/stripe';
-import { readRawBody } from '../../../lib/readRawBody';
-import { claimStripeEvent, releaseStripeEvent } from '../../../lib/stripeWebhookEvents';
+import { getStripe, getStripeWebhookSecret } from '@/src/infrastructure/billing/stripe';
+import { readRawBody } from '@/src/infrastructure/http/readRawBody';
+import { claimStripeEvent, releaseStripeEvent } from '@/src/infrastructure/billing/stripeWebhookEvents';
 import {
   orgIdFromMetadata,
   syncCheckoutSessionToOrg,
   syncSubscriptionToOrg,
-} from '../../../lib/stripeBillingSync';
-import { getOrgBillingState, getOrgIdByStripeCustomerId, updateOrgBillingState } from '../../../lib/orgBilling';
-import { BillingSource, ensureCorrelationId } from '../../../lib/billingAudit';
+} from '@/src/infrastructure/billing/stripeBillingSync';
+import { getOrgBillingState, getOrgIdByStripeCustomerId, updateOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { BillingSource, ensureCorrelationId } from '@/src/infrastructure/billing/billingAudit';
 import db from '../../../database/database';
-import { getCheckoutPlan } from '../../../lib/billingPlans';
-import { getAppOrigin } from '../../../lib/appOrigin';
-import { claimBillingEmailAndEnqueue } from '../../../lib/billingEmailClaim';
-import { shouldSendAbandonedForSubscription } from '../../../lib/billingAbandoned';
+import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
+import { getAppOrigin } from '@/src/infrastructure/config/appOrigin';
+import { claimBillingEmailAndEnqueue } from '@/src/infrastructure/billing/billingEmailClaim';
+import { shouldSendAbandonedForSubscription } from '@/src/infrastructure/billing/billingAbandoned';
 import {
   EMAIL_JOB_TYPE_ABANDONED_CHECKOUT,
   EMAIL_JOB_TYPE_PAYMENT_FAILED,
-} from '../../../lib/notifications/emailTypes';
-import { ABANDONED_CHECKOUT_SUBJECT } from '../../../lib/emails/abandonedCheckoutEmail';
-import { paymentFailedEmailSubject } from '../../../lib/emails/paymentFailedEmail';
+} from '@/src/infrastructure/notifications/emailTypes';
+import { ABANDONED_CHECKOUT_SUBJECT } from '@/src/infrastructure/email/abandonedCheckoutEmail';
+import { paymentFailedEmailSubject } from '@/src/infrastructure/email/paymentFailedEmail';
 
 export const config = {
   api: { bodyParser: false },
@@ -200,7 +200,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const orgId = await resolveOrgId(stripe, setupIntent.metadata, setupIntent.customer);
         const userId = setupIntent.metadata?.user_id;
         if (!orgId || !userId) break;
-        const { activateTrialFromSetupIntent } = await import('../../../lib/billingActivateTrial');
+        const { activateTrialFromSetupIntent } = await import('@/src/infrastructure/billing/billingActivateTrial');
         const result = await activateTrialFromSetupIntent(stripe, {
           orgId,
           userId,

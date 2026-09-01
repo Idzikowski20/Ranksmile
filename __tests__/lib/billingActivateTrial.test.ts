@@ -1,16 +1,16 @@
 import type Stripe from 'stripe';
-import { activateTrialFromSetupIntent } from '../../lib/billingActivateTrial';
-import { syncSubscriptionToOrg } from '../../lib/stripeBillingSync';
-import { claimTrialActivation, updateOrgBillingState } from '../../lib/orgBilling';
-import { appendBillingDomainEvent } from '../../lib/billing/domainEvents';
+import { activateTrialFromSetupIntent } from '@/src/infrastructure/billing/billingActivateTrial';
+import { syncSubscriptionToOrg } from '@/src/infrastructure/billing/stripeBillingSync';
+import { claimTrialActivation, updateOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { appendBillingDomainEvent } from '@/src/infrastructure/billing/domainEvents';
 
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => ({ trialConsumedAt: null })),
   claimTrialActivation: jest.fn(async () => true),
   updateOrgBillingState: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/billingAudit', () => ({
+jest.mock('@/src/infrastructure/billing/billingAudit', () => ({
   BillingSource: {
     ACTIVATE_TRIAL: 'ACTIVATE_TRIAL',
     WEBHOOK_SETUP: 'WEBHOOK_SETUP',
@@ -22,21 +22,21 @@ jest.mock('../../lib/billingAudit', () => ({
   ensureCorrelationId: (id?: string | null) => (typeof id === 'string' && id.trim() ? id.trim() : 'corr-test'),
 }));
 
-jest.mock('../../lib/stripeBillingSync', () => ({
+jest.mock('@/src/infrastructure/billing/stripeBillingSync', () => ({
   syncSubscriptionToOrg: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/billing/domainEvents', () => ({
+jest.mock('@/src/infrastructure/billing/domainEvents', () => ({
   appendBillingDomainEvent: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/billingPlans', () => ({
+jest.mock('@/src/core/domain/billing/plans', () => ({
   getCheckoutPlan: jest.fn((slug: string) => (
     slug === 'growth' ? { slug: 'growth', name: 'Growth', priceMonthly: 59, priceYearly: 49, features: [] } : undefined
   )),
 }));
 
-jest.mock('../../lib/stripePrices', () => ({
+jest.mock('@/src/core/domain/billing/prices', () => ({
   getStripePriceId: jest.fn(() => 'price_growth_y'),
 }));
 

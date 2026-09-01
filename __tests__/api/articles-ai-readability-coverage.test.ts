@@ -1,23 +1,23 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { query: jest.fn().mockResolvedValue(undefined), sync: jest.fn().mockResolvedValue(undefined) },
 }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
-jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(true) }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
-jest.mock('../../lib/db/query', () => ({ queryOne: jest.fn() }));
-jest.mock('../../lib/sidecar', () => ({ callSidecar: jest.fn() }));
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(true) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('@/src/infrastructure/db/query', () => ({ queryOne: jest.fn() }));
+jest.mock('@/src/infrastructure/http/sidecar', () => ({ callSidecar: jest.fn() }));
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../database/database';
 import handler from '../../pages/api/articles/ai-readability';
-import { queryOne } from '../../lib/db/query';
-import { callSidecar } from '../../lib/sidecar';
-import { buildSnapshot, parseSnapshot } from '../../lib/coverageStore';
-import type { CoverageItem } from '../../lib/aiCoverage';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { callSidecar } from '@/src/infrastructure/http/sidecar';
+import { buildSnapshot, parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
+import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 
 const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;
 const mockQueryOne = queryOne as jest.MockedFunction<typeof queryOne>;

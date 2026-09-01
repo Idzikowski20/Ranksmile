@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { getCheckoutPlan, getPlanPeriodPrice } from '../../../lib/billingPlans';
+import { getCheckoutPlan, getPlanPeriodPrice } from '@/src/core/domain/billing/plans';
 import {
   calculateStripeTaxPreview,
   type TaxPreviewResult,
-} from '../../../lib/billing/stripeTaxPreview';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { getStripe, isStripeConfigured } from '../../../lib/stripe';
+} from '@/src/infrastructure/billing/stripeTaxPreview';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getStripe, isStripeConfigured } from '@/src/infrastructure/billing/stripe';
 import { getCurrentUserId } from '../../../utils/getUser';
 
 const addressSchema = z.object({

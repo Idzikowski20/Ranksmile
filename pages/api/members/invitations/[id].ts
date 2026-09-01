@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertCanManage } from '../../../../lib/members';
-import { revokeInvitation } from '../../../../lib/invitations';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { revokeInvitation } from '@/src/infrastructure/identity/invitations';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);

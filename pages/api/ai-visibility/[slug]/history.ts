@@ -5,12 +5,12 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
-import { getErrorMessage } from '../../../../lib/errors';
-import { queryRows } from '../../../../lib/db/query';
-import { loadScanCitationRowsForScans } from '../../../../lib/aiVisibilityRead';
-import { overviewForDomain } from '../../../../lib/aiVisibilityMetrics';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryRows } from '@/src/infrastructure/db/query';
+import { loadScanCitationRowsForScans } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
+import { overviewForDomain } from '@/src/core/domain/aiVisibility/metrics';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const HISTORY_LIMIT = 24;
 

@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { normalizeListHtml } from '../../../lib/editor/normalizeListHtml';
+import { normalizeListHtml } from '@/src/core/domain/editor/normalizeListHtml';
 
 describe('normalizeListHtml', () => {
   it('pulls orphan trailing paragraphs back into the preceding ul', () => {

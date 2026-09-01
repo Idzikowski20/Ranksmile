@@ -1,16 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import type { BillingPeriod } from '../../../lib/billingPlans';
-import { getCheckoutPlan } from '../../../lib/billingPlans';
-import { getLockedCheckoutPlanSlug } from '../../../lib/billingPlanLock';
-import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from '../../../lib/billingTrial';
-import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
-import { assertCanManage } from '../../../lib/members';
-import { getStripe } from '../../../lib/stripe';
-import { getStripePriceId, type PlanSlug } from '../../../lib/stripePrices';
-import { ensureUserTenancy } from '../../../lib/tenancy';
-import { getAppOrigin } from '../../../lib/appOrigin';
+import type { BillingPeriod } from '@/src/core/domain/billing/plans';
+import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
+import { getLockedCheckoutPlanSlug } from '@/src/core/domain/billing/planLock';
+import { assertTrialAllowed, TRIAL_PERIOD_DAYS } from '@/src/infrastructure/billing/billingTrial';
+import { getOrgBillingState, hasNonTerminalStripeSubscription } from '@/src/infrastructure/billing/orgBilling';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { getStripe } from '@/src/infrastructure/billing/stripe';
+import { getStripePriceId, type PlanSlug } from '@/src/core/domain/billing/prices';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
+import { getAppOrigin } from '@/src/infrastructure/config/appOrigin';
 import { getCurrentUser } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type CheckoutMode = 'trial' | 'upfront';
 

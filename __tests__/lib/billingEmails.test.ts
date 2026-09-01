@@ -1,14 +1,14 @@
-import { paymentFailedEmailHtml, paymentFailedEmailSubject } from '../../lib/emails/paymentFailedEmail';
-import { abandonedCheckoutEmailHtml, ABANDONED_CHECKOUT_SUBJECT } from '../../lib/emails/abandonedCheckoutEmail';
-import { starterNudgeEmailHtml, STARTER_NUDGE_SUBJECT } from '../../lib/emails/starterNudgeEmail';
-import { inviteEmailHtml } from '../../lib/inviteEmail';
+import { paymentFailedEmailHtml, paymentFailedEmailSubject } from '@/src/infrastructure/email/paymentFailedEmail';
+import { abandonedCheckoutEmailHtml, ABANDONED_CHECKOUT_SUBJECT } from '@/src/infrastructure/email/abandonedCheckoutEmail';
+import { starterNudgeEmailHtml, STARTER_NUDGE_SUBJECT } from '@/src/infrastructure/email/starterNudgeEmail';
+import { inviteEmailHtml } from '@/src/infrastructure/email/inviteEmail';
 import {
   EMAIL_BG_PAGE,
   EMAIL_CTA_BG,
   EMAIL_FONT,
   EMAIL_RADIUS_BTN,
   defaultEmailLogoUrl,
-} from '../../lib/emails/layout';
+} from '@/src/infrastructure/email/layout';
 
 describe('koala-style transactional emails', () => {
   it('defaultEmailLogoUrl never uses localhost (email clients cannot fetch it)', () => {

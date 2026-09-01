@@ -1,6 +1,6 @@
-import { compile } from '../../../lib/compiler/compile';
-import { applyLivePresence } from '../../../lib/intelligence/livePresence';
-import { isFactNode } from '../../../lib/ccm/types/graph';
+import { compile } from '@/src/core/compiler/compile';
+import { applyLivePresence } from '@/src/core/intelligence/livePresence';
+import { isFactNode } from '@/src/core/ccm/types/graph';
 
 const FIXED_AT = '2026-08-03T17:00:00.000Z';
 

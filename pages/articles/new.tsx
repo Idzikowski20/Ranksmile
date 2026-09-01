@@ -3,7 +3,7 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
-import { deriveActiveId, resolveActiveDomain } from '../../lib/activeWorkspace';
+import { deriveActiveId, resolveActiveDomain } from '@/src/core/domain/navigation/activeWorkspace';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Button, CompactSelect } from '../../components/koala/core';

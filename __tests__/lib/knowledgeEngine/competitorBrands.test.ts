@@ -1,5 +1,5 @@
-import { dropCompetitorBrandClaims, namesCompetitorBrand } from '../../../lib/knowledgeEngine/competitorBrands';
-import type { CanonicalClaim } from '../../../lib/knowledgeEngine/types';
+import { dropCompetitorBrandClaims, namesCompetitorBrand } from '@/src/core/domain/knowledgeEngine/competitorBrands';
+import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 
 const KEYWORD = 'prywatny detektyw warszawa';
 // The real SERP behind article 18.

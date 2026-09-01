@@ -1,5 +1,5 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
-jest.mock('../../lib/featureFlags', () => ({
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/config/featureFlags', () => ({
   isRankTrackingUiEnabled: jest.fn().mockReturnValue(false),
   isRankTrackingRunnerEnabled: jest.fn().mockReturnValue(false),
 }));
@@ -8,10 +8,10 @@ jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolv
 jest.mock('../../utils/verifyDomainOwnership', () => ({
   verifyDomainOwnershipBySlug: jest.fn().mockResolvedValue({ ID: 42 }),
 }));
-jest.mock('../../lib/ensureRankTrackingTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureRankTrackingTables', () => ({
   ensureRankTrackingTables: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('../../lib/organicResearch', () => ({
+jest.mock('@/src/infrastructure/organicResearch/index', () => ({
   loadOrganicDatasetForDomainId: jest.fn().mockResolvedValue({
     ok: true,
     dataset: { domain: 'protektyw.pl', keywords: [], metrics: {}, meta: {}, chart: [], topics: [] },
@@ -24,8 +24,8 @@ jest.mock('../../lib/organicResearch', () => ({
 }));
 
 import handler from '../../pages/api/rank-tracking/[slug]/organic';
-import { isRankTrackingUiEnabled } from '../../lib/featureFlags';
-import { loadOrganicDatasetForDomainId } from '../../lib/organicResearch';
+import { isRankTrackingUiEnabled } from '@/src/infrastructure/config/featureFlags';
+import { loadOrganicDatasetForDomainId } from '@/src/infrastructure/organicResearch/index';
 
 const makeRes = () => {
   const res: { status: jest.Mock; json: jest.Mock; setHeader: jest.Mock } = {

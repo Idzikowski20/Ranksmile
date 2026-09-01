@@ -2,10 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
-import { enqueueKeywordResearch } from '../../../../lib/keywordResearchRunner';
-import { getErrorMessage } from '../../../../lib/errors';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
+import { enqueueKeywordResearch } from '@/src/infrastructure/keywords/keywordResearchRunner';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await ensureKeywordResearchTables();
@@ -27,10 +27,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    try {
       const id = await enqueueKeywordResearch(domainId, seed, country);
       try {
-         const { reserveKeywordResearchQuota } = await import('../../../../lib/quota/keywordResearch');
+         const { reserveKeywordResearchQuota } = await import('@/src/infrastructure/quota/keywordResearch');
          await reserveKeywordResearchQuota(domainId, id, userId);
       } catch (e) {
-         const { isPlanLimitError, planLimitBody } = await import('../../../../lib/quota');
+         const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
          if (isPlanLimitError(e)) {
             const db = (await import('../../../../database/database')).default;
             await db.query(
@@ -39,7 +39,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             ).catch(() => { /* best effort */ });
             return res.status(402).json(planLimitBody(e));
          }
-         const { settleKeywordResearchQuota } = await import('../../../../lib/quota/keywordResearch');
+         const { settleKeywordResearchQuota } = await import('@/src/infrastructure/quota/keywordResearch');
          await settleKeywordResearchQuota(domainId, id, 'release').catch(() => {});
          throw e;
       }

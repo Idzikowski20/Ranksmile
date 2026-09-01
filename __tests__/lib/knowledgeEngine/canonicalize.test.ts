@@ -1,4 +1,4 @@
-import { canonicalizeClaims } from '../../../lib/knowledgeEngine/canonicalize';
+import { canonicalizeClaims } from '@/src/infrastructure/knowledgeEngine/canonicalize';
 
 // VAGUE is the shorter of the two, so the old "keep the shortest member" rule picks it.
 const VAGUE = 'Zakres usług detektywistycznych jest bardzo szeroki.';

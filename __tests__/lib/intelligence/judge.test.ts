@@ -1,8 +1,8 @@
-import { compile } from '../../../lib/compiler/compile';
-import { buildActionGraph } from '../../../lib/planner/actionGraphBuilder';
-import { projectCoverage } from '../../../lib/projections/coverageView';
-import { diffModels, judgeModels } from '../../../lib/intelligence';
-import { isFactNode } from '../../../lib/ccm/types/graph';
+import { compile } from '@/src/core/compiler/compile';
+import { buildActionGraph } from '@/src/core/planner/actionGraphBuilder';
+import { projectCoverage } from '@/src/core/projections/coverageView';
+import { diffModels, judgeModels } from '@/src/core/intelligence/index';
+import { isFactNode } from '@/src/core/ccm/types/graph';
 
 const AT = '2026-08-03T10:00:00.000Z';
 

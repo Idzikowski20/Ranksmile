@@ -2,11 +2,11 @@ import {
   compileWritePlan,
   compileAndValidateWritePlan,
   validateCompiledWritePlan,
-} from '../../../lib/contentPlanner';
+} from '@/src/infrastructure/contentPlanner/index';
 import type {
   ArticleExecutionPlan,
   ExecutionPlanSection,
-} from '../../../lib/contentPlanner/types';
+} from '@/src/core/domain/contentPlanner/types';
 
 function sampleExecutionPlan(partial?: Partial<ArticleExecutionPlan>): ArticleExecutionPlan {
   const base: ArticleExecutionPlan = {

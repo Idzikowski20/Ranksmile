@@ -3,11 +3,11 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
-import { getErrorMessage } from '../../../../lib/errors';
-import { queryOne, queryRows } from '../../../../lib/db/query';
-import { AiVisConfig, AiVisTopic, AI_VIS_DEFAULT_MODELS, AI_VIS_PROMPT_LIMIT, sanitizeModels, normalizeAiVisPriority, type AiVisPriority } from '../../../../lib/aiVisibility';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
+import { AiVisConfig, AiVisTopic, AI_VIS_DEFAULT_MODELS, AI_VIS_PROMPT_LIMIT, sanitizeModels, normalizeAiVisPriority, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type ConfigRow = { id: number, brand_name: string, prompt_limit: number, models: string | null, completed_at: string | null, priority: string | null };
 type PromptRow = { id: number, topic: string, text: string, provenance: string | null, selected: number };
@@ -69,7 +69,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             adjustActiveUsage,
             isPlanLimitError,
             planLimitBody,
-         } = await import('../../../../lib/quota');
+         } = await import('@/src/infrastructure/quota/index');
          const orgId = await getOrgIdForDomain(domain.ID);
          if (!orgId) return res.status(400).json({ error: 'Domain has no organization' });
          await ensureOrgQuotaBalances(orgId);

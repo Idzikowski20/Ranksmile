@@ -1,5 +1,5 @@
 import React from 'react';
-import type { RankAnalyticsSummary, RankSummaryChartPoint } from '../../lib/types/rankTracking';
+import type { RankAnalyticsSummary, RankSummaryChartPoint } from '@/src/core/shared/types/rankTracking';
 import { Chart } from '../koala/charts/Chart';
 import { Chip } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';

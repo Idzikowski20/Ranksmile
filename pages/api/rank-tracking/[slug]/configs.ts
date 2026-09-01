@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getErrorMessage } from '../../../../lib/errors';
-import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
-import { createConfigForDomain, getConfigsForDomain } from '../../../../lib/rankTracking/service';
-import type { RankDevices, ScheduleInterval } from '../../../../lib/types/rankTracking';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
+import { createConfigForDomain, getConfigsForDomain } from '@/src/infrastructure/rankTracking/service';
+import type { RankDevices, ScheduleInterval } from '@/src/core/shared/types/rankTracking';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);

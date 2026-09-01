@@ -4,7 +4,7 @@ import type { ChartPreparedData, ChartSeries, ChartSeriesKind } from '../koala/c
 import { ChartLegend } from '../koala/charts/ChartLegend';
 import { chartColors } from '../koala/tokens/chart';
 import { Icon } from '../koala/icons/Icon';
-import type { ChartPoint } from '../../lib/performance/types';
+import type { ChartPoint } from '@/src/infrastructure/performance/types';
 
 type VisibleMetrics = { clicks: boolean; impressions: boolean; ctr: boolean; position: boolean };
 

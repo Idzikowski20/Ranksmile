@@ -1,10 +1,10 @@
-import { compile } from '../../../lib/compiler/compile';
-import { buildActionGraph } from '../../../lib/planner/actionGraphBuilder';
+import { compile } from '@/src/core/compiler/compile';
+import { buildActionGraph } from '@/src/core/planner/actionGraphBuilder';
 import {
   recommendationKindLabel,
   summarizeRecommendations,
-} from '../../../lib/intelligence/ccmRecommendations';
-import { projectArticleIntelligence } from '../../../lib/intelligence/runtimeApi';
+} from '@/src/core/intelligence/ccmRecommendations';
+import { projectArticleIntelligence } from '@/src/core/intelligence/runtimeApi';
 
 const FIXED_AT = '2026-08-03T18:00:00.000Z';
 

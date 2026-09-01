@@ -1,4 +1,4 @@
-import { allowsApi, allowsFrontend, resolveAppState } from '../../lib/appAccess';
+import { allowsApi, allowsFrontend, resolveAppState } from '@/src/infrastructure/appAccess/index';
 
 /**
  * The state a user is in for the whole gap between "payment succeeded" and

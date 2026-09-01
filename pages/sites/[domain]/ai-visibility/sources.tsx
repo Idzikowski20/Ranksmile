@@ -8,7 +8,7 @@ import MentionGapCards from '../../../../components/aiVisibility/MentionGapCards
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { HoverTooltip, Toggle, SearchBar, Button } from '../../../../components/koala/core';
 import { useAiVisSources, useAiVisData } from '../../../../services/aiVisibility';
-import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
+import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
 
 const SourceDetailModal = dynamic(
   () => import('../../../../components/aiVisibility/SourceDetailModal'),

@@ -2,7 +2,7 @@ export type CiaZoneId = 'ccm' | 'compiler' | 'projections' | 'planner' | 'intell
 
 export type CiaZone = {
   readonly id: CiaZoneId;
-  /** Repo-relative path prefix using forward slashes, e.g. lib/projections/ */
+  /** Repo-relative path prefix using forward slashes, e.g. src/core/projections/ */
   readonly root: string;
   readonly forbiddenSubstrings: readonly string[];
 };
@@ -10,27 +10,27 @@ export type CiaZone = {
 export const CIA_ZONES: readonly CiaZone[] = [
   {
     id: 'ccm',
-    root: 'lib/ccm/',
+    root: 'src/core/ccm/',
     forbiddenSubstrings: ['cheerio', 'jsdom', 'engines/coverageEngine', 'coverageSnapshotToKg'],
   },
   {
     id: 'compiler',
-    root: 'lib/compiler/',
+    root: 'src/core/compiler/',
     forbiddenSubstrings: [
       'cheerio',
       'jsdom',
-      '/lib/ao/',
-      'lib/ao/',
+      '/infrastructure/ao/',
+      'infrastructure/ao/',
       '../ao/',
-      '/lib/wie/',
-      'lib/wie/',
+      '/infrastructure/wie/',
+      'infrastructure/wie/',
       '../wie/',
       'engines/coverageEngine',
     ],
   },
   {
     id: 'projections',
-    root: 'lib/projections/',
+    root: 'src/core/projections/',
     forbiddenSubstrings: [
       'cheerio',
       'jsdom',
@@ -43,7 +43,7 @@ export const CIA_ZONES: readonly CiaZone[] = [
   },
   {
     id: 'planner',
-    root: 'lib/planner/',
+    root: 'src/core/planner/',
     forbiddenSubstrings: [
       'cheerio',
       'jsdom',
@@ -55,7 +55,7 @@ export const CIA_ZONES: readonly CiaZone[] = [
   },
   {
     id: 'intelligence',
-    root: 'lib/intelligence/',
+    root: 'src/core/intelligence/',
     forbiddenSubstrings: [
       'cheerio',
       'jsdom',

@@ -6,11 +6,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { getArticleIdSql } from '../../../lib/articleSql';
-import { getConnectionForWorkspace } from '../../../lib/wpConnection';
-import { wpRestFetch } from '../../../lib/wpRest';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
+import { wpRestFetch } from '@/src/infrastructure/wordpress/wpRest';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 // WordPress post statuses the plugin accepts (resolve_post_status validates against these).
 const STATUSES = [

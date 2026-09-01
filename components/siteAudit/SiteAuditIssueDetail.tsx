@@ -24,7 +24,7 @@ import {
   SentryTableHeaderCell,
   SentryTableRow,
 } from '../koala/layout';
-import type { IssueDetailLayout, IssueInstance, SiteAuditIssueDetailPayload } from '../../lib/siteAudit/types';
+import type { IssueDetailLayout, IssueInstance, SiteAuditIssueDetailPayload } from '@/src/infrastructure/siteAudit/types';
 import { UrlCell } from './AuditUrlCell';
 import IssueHelpContent from './IssueHelpContent';
 

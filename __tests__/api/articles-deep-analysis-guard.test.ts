@@ -1,35 +1,35 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' }, QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT' } }));
-jest.mock('../../lib/cronAuth', () => ({ assertCronSecret: jest.fn().mockReturnValue(false), cronSecrets: () => [] }));
+jest.mock('@/src/infrastructure/cron/cronAuth', () => ({ assertCronSecret: jest.fn().mockReturnValue(false), cronSecrets: () => [] }));
 // Locale resolution runs its own DB queries the ordered db.query mock chain below
 // doesn't account for; stub it so the chain stays aligned with the job queries.
-jest.mock('../../lib/domainLanguage', () => ({
+jest.mock('@/src/infrastructure/config/domainLanguage', () => ({
   resolveContentLocale: jest.fn().mockResolvedValue({ languageCode: 'pl', countryCode: 'PL' }),
 }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('intruder') }));
-jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(false) }));
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(false) }));
 // false = domain exists but the caller's workspace can't reach it → 403.
 // null = the caller can reach no domain at all → 403 on the no-domainId fallback.
 jest.mock('../../utils/verifyDomainOwnership', () => ({
   verifyDomainOwnershipById: jest.fn().mockResolvedValue(false),
   firstAccessibleDomainId: jest.fn().mockResolvedValue(null),
 }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
-jest.mock('../../lib/contentScore', () => ({ computeContentScore: jest.fn() }));
-jest.mock('../../lib/seo/keywordData', () => ({ getAiSearchInfo: jest.fn() }));
-jest.mock('../../lib/aiVisibilityStore', () => ({ persistAiVisibilityRun: jest.fn() }));
-jest.mock('../../lib/aiSearchScore', () => ({}));
-jest.mock('../../lib/sidecar', () => ({ callSidecar: jest.fn(), sidecarBase: jest.fn() }));
-jest.mock('../../lib/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://safe.example/post')) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('@/src/infrastructure/articles/contentScore', () => ({ computeContentScore: jest.fn() }));
+jest.mock('@/src/infrastructure/seo/keywordData', () => ({ getAiSearchInfo: jest.fn() }));
+jest.mock('@/src/infrastructure/aiVisibility/aiVisibilityStore', () => ({ persistAiVisibilityRun: jest.fn() }));
+jest.mock('@/src/core/domain/aiScore/aiSearchScore', () => ({}));
+jest.mock('@/src/infrastructure/http/sidecar', () => ({ callSidecar: jest.fn(), sidecarBase: jest.fn() }));
+jest.mock('@/src/infrastructure/http/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://safe.example/post')) }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 
 import handler from '../../pages/api/articles/deep-analysis';
 import db from '../../database/database';
-import { assertArticleAccess } from '../../lib/tenancy';
-import { sidecarBase } from '../../lib/sidecar';
-import { assertPublicUrl } from '../../lib/ssrfGuard';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { sidecarBase } from '@/src/infrastructure/http/sidecar';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 
 const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;
 const mockAssertArticleAccess = assertArticleAccess as jest.MockedFunction<typeof assertArticleAccess>;

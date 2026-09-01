@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { naiveTimestampAlterSql } from '../../lib/ensureUtcTimestamps';
+import { naiveTimestampAlterSql } from '@/src/infrastructure/persistence/schema/ensureUtcTimestamps';
 
 type QueryOpts = { transaction?: unknown };
 
@@ -18,9 +18,9 @@ jest.mock('../../database/database', () => ({
 
 // Fresh module per test — the helper memoises its first run on purpose.
 async function loadEnsure() {
-  let mod!: typeof import('../../lib/ensureUtcTimestamps');
+  let mod!: typeof import('@/src/infrastructure/persistence/schema/ensureUtcTimestamps');
   await jest.isolateModulesAsync(async () => {
-    mod = await import('../../lib/ensureUtcTimestamps');
+    mod = await import('@/src/infrastructure/persistence/schema/ensureUtcTimestamps');
   });
   return mod;
 }

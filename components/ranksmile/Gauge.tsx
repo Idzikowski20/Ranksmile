@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { scoreColor } from '../../lib/scoreColor';
+import { scoreColor } from '@/src/infrastructure/config/scoreColor';
 
 export type GaugeSize = 'sm' | 'md' | 'lg';
 

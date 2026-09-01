@@ -5,8 +5,8 @@ import {
   getCcm,
   projectArticleIntelligence,
   resolveCompileSource,
-} from '../../../lib/intelligence/runtimeApi';
-import { InMemoryCompileStore } from '../../../lib/intelligence/compileStore';
+} from '@/src/core/intelligence/runtimeApi';
+import { InMemoryCompileStore } from '@/src/core/intelligence/compileStore';
 
 const FIXED_AT = '2026-08-03T12:00:00.000Z';
 const FIXTURE = readFileSync(

@@ -1,13 +1,13 @@
 // GET/POST/DELETE /api/wie/corpus — GOLD / BAD curated exemplars
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import {
   addCorpusEntry,
   listCorpus,
   removeCorpusEntry,
   type CorpusKind,
-} from '../../../lib/wie/goldBadCorpus';
+} from '@/src/infrastructure/wie/goldBadCorpus';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

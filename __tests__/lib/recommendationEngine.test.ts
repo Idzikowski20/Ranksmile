@@ -1,5 +1,5 @@
-import { buildInstruction, effortOf, buildGuidelines, groupGuidelines, isFullyCovered } from '../../lib/recommendationEngine';
-import type { CoverageItem, CoverageSnapshot } from '../../lib/aiCoverage';
+import { buildInstruction, effortOf, buildGuidelines, groupGuidelines, isFullyCovered } from '@/src/infrastructure/engines/recommendationEngine';
+import type { CoverageItem, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 const it_ = (over: Partial<CoverageItem>): CoverageItem =>
   ({ id: 'x', label: 'What is X?', type: 'paa', category: 'knowledge',
@@ -104,7 +104,7 @@ describe('groupGuidelines', () => {
   });
   it('groupGuidelines sorts importance-first: a critical +1 guideline beats a recommended +15 guideline', () => {
     // Construct two manual Guidelines with asymmetric lifts to prove importance trumps projectedLift
-    const guidelines: import('../../lib/recommendationEngine').Guideline[] = [
+    const guidelines: import('@/src/infrastructure/engines/recommendationEngine').Guideline[] = [
       {
         id: 'guideline-rec', coverageItemId: 'k-rec', group: 'knowledge',
         title: 'Recommended', instruction: 'x', importance: 'recommended', status: 'open',

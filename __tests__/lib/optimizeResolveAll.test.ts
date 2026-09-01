@@ -1,4 +1,4 @@
-import { collectOptimizerPositions, PMDocLike, PMNodeLike } from '../../lib/optimizeResolveAll';
+import { collectOptimizerPositions, PMDocLike, PMNodeLike } from '@/src/core/domain/optimize/resolveAll';
 
 /** Build a fake PM doc whose `descendants` yields the given nodes in document order. */
 const makeDoc = (nodes: Array<{ name: string; pos: number; nodeSize: number; sectionId?: string }>): PMDocLike => ({

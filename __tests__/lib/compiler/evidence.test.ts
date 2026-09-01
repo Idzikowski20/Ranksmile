@@ -1,7 +1,7 @@
-import { compile } from '../../../lib/compiler/compile';
-import { buildEvidenceForFacts } from '../../../lib/ccm/builders/evidenceBuilder';
-import type { FactNode } from '../../../lib/ccm/types/graph';
-import type { LexicalAst } from '../../../lib/ccm/types/ast';
+import { compile } from '@/src/core/compiler/compile';
+import { buildEvidenceForFacts } from '@/src/core/ccm/builders/evidenceBuilder';
+import type { FactNode } from '@/src/core/ccm/types/graph';
+import type { LexicalAst } from '@/src/core/ccm/types/ast';
 
 const FIXED_AT = '2026-08-03T08:00:00.000Z';
 

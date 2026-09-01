@@ -1,4 +1,4 @@
-import { compile } from '../../../lib/compiler/compile';
+import { compile } from '@/src/core/compiler/compile';
 import {
   createConsumerContext,
   coverageConsumer,
@@ -9,8 +9,8 @@ import {
   runBenchmark,
   InMemoryCompileStore,
   createHistoryConsumer,
-} from '../../../lib/intelligence';
-import { plannerConsumer } from '../../../lib/planner';
+} from '@/src/core/intelligence/index';
+import { plannerConsumer } from '@/src/core/planner/index';
 
 const AT = '2026-08-03T16:00:00.000Z';
 

@@ -1,6 +1,6 @@
-import { createEmptyCcm } from '../../../lib/ccm/emptyCcm';
-import { parseCcm, serializeCcm } from '../../../lib/ccm/serialize';
-import { buildEntityNodes, buildFactNodes, buildIntentNodes } from '../../../lib/ccm/builders';
+import { createEmptyCcm } from '@/src/core/ccm/emptyCcm';
+import { parseCcm, serializeCcm } from '@/src/core/ccm/serialize';
+import { buildEntityNodes, buildFactNodes, buildIntentNodes } from '@/src/core/ccm/builders/index';
 
 describe('serialize / parseCcm', () => {
   it('roundtrips empty CCM and rebuilds Maps', () => {

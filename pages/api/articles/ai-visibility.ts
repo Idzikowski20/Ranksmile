@@ -1,19 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { computeOverallContentScore } from '../../../lib/aiSearchScore';
-import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
-import { getArticleIdSql } from '../../../lib/articleSql';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import { persistAiVisibilityRun } from '@/src/infrastructure/aiVisibility/aiVisibilityStore';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { getErrorMessage } from '../../../lib/errors';
-import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
-import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
-import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
-import { computeContentScore } from '../../../lib/contentScore';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
+import { queryOne, queryRows, ArticleRow } from '@/src/infrastructure/db/query';
+import { runArticleAiPipeline } from '@/src/infrastructure/articles/articleAiPipeline';
+import { buildCompetitorBenchmarks } from '@/src/infrastructure/competitors/competitorAuditScore';
+import { computeContentScore } from '@/src/infrastructure/articles/contentScore';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 function domainFromUrl(url: string): string {
    try {
@@ -99,7 +99,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          await persistAiVisibilityRun(articleId, keyword, summary, aiScore);
       }
 
-      let scoreData: import('../../../lib/contentScore').ScoreData | null = null;
+      let scoreData: import('@/src/infrastructure/articles/contentScore').ScoreData | null = null;
       try {
          scoreData = article.score_data ? JSON.parse(article.score_data) : null;
       } catch { scoreData = null; }

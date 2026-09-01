@@ -1,4 +1,4 @@
-import { extractCorpusClaims, extractCorpusClaimsByUrl } from '../../../lib/wie/corpusClaims';
+import { extractCorpusClaims, extractCorpusClaimsByUrl } from '@/src/core/domain/wie/corpusClaims';
 
 const BODY = [
   'Detektyw w Krakowie prowadzi sprawy rozwodowe oraz gospodarcze.',

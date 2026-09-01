@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
-import { resetPassword } from '../../lib/auth/fetchAuth';
+import { resetPassword } from '@/src/infrastructure/auth/fetchAuth';
 import Button from '../koala/primitives/Button';
 import AuthBrandMark from './AuthBrandMark';
 import AuthField from './AuthField';

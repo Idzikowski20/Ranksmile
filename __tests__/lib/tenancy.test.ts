@@ -2,11 +2,11 @@ jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { query: jest.fn(), transaction: jest.fn(async (cb: any) => cb('TX')) },
 }));
-jest.mock('../../lib/ensureTenancyTables', () => ({ ensureTenancyTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureTenancyTables', () => ({ ensureTenancyTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 
 import db from '../../database/database';
-import { ensureUserTenancy, getAccessibleWorkspaceIds, getActiveWorkspaceId, assertArticleAccess } from '../../lib/tenancy';
+import { ensureUserTenancy, getAccessibleWorkspaceIds, getActiveWorkspaceId, assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 
 const mockQuery = db.query as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];

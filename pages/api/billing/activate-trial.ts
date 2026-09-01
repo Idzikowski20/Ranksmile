@@ -1,14 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { activateTrialFromSetupIntent } from '../../../lib/billingActivateTrial';
-import { BillingSource } from '../../../lib/billingAudit';
-import { mintBillingConfirmationToken } from '../../../lib/billingConfirmationToken';
-import { assertCanManage } from '../../../lib/members';
-import { getStripe } from '../../../lib/stripe';
-import { assertStripeModeOrThrow } from '../../../lib/stripeMode';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { activateTrialFromSetupIntent } from '@/src/infrastructure/billing/billingActivateTrial';
+import { BillingSource } from '@/src/infrastructure/billing/billingAudit';
+import { mintBillingConfirmationToken } from '@/src/infrastructure/billing/billingConfirmationToken';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { getStripe } from '@/src/infrastructure/billing/stripe';
+import { assertStripeModeOrThrow } from '@/src/infrastructure/billing/stripeMode';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const schema = z.object({
   setupIntentId: z.string().min(1),

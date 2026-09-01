@@ -7,14 +7,14 @@ jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { query: (...a: unknown[]) => query(...a) },
 }));
-jest.mock('../../lib/wie/brandDnaOnboarding', () => ({
+jest.mock('@/src/infrastructure/wie/brandDnaOnboarding', () => ({
   __esModule: true,
   getBrandDnaSummary: () => getBrandDnaSummary(),
   onboardBrandDna: (...a: unknown[]) => onboardBrandDna(...a),
 }));
 
 // eslint-disable-next-line import/first
-import { autoLearnBrandDna } from '../../lib/wie/autoLearnBrandDna';
+import { autoLearnBrandDna } from '@/src/infrastructure/wie/autoLearnBrandDna';
 
 const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
 

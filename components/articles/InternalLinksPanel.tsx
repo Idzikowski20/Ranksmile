@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { LinkSuggestion } from '../../pages/api/articles/suggest-internal-links';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import DomainFavicon from '../common/DomainFavicon';
 import { CompactSelect, DropdownButton } from '../koala/core';
 

@@ -2,11 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensurePipelineTables } from '../../../../lib/ensurePipelineTables';
-import { buildSiteAuditOverview } from '../../../../lib/siteAudit/buildOverview';
-import { resolveSiteAuditPageLimit } from '../../../../lib/siteAudit/pageLimit';
-import type { SiteAuditOverviewPayload } from '../../../../lib/siteAudit/types';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
+import { buildSiteAuditOverview } from '@/src/infrastructure/siteAudit/buildOverview';
+import { resolveSiteAuditPageLimit } from '@/src/infrastructure/siteAudit/pageLimit';
+import type { SiteAuditOverviewPayload } from '@/src/infrastructure/siteAudit/types';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(
   req: NextApiRequest,

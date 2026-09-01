@@ -17,11 +17,11 @@ function mockRes() {
   return res as unknown as NextApiResponse & { statusCode: number; body: unknown };
 }
 
-jest.mock('../../lib/db/query', () => ({
+jest.mock('@/src/infrastructure/db/query', () => ({
   queryOne: jest.fn(),
 }));
 
-jest.mock('../../lib/serviceUrls', () => ({
+jest.mock('@/src/infrastructure/config/serviceUrls', () => ({
   logResolvedSidecarUrl: jest.fn(),
 }));
 
@@ -42,7 +42,7 @@ jest.mock('ioredis', () => ({
 
 import health from '../../pages/api/health';
 import ready from '../../pages/api/ready';
-import { queryOne } from '../../lib/db/query';
+import { queryOne } from '@/src/infrastructure/db/query';
 
 const mockedQueryOne = queryOne as jest.MockedFunction<typeof queryOne>;
 

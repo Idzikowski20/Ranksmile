@@ -1,6 +1,6 @@
 ﻿import Link from 'next/link';
 import React, { useState } from 'react';
-import { signInSocial, signUpEmail } from '../../lib/auth/fetchAuth';
+import { signInSocial, signUpEmail } from '@/src/infrastructure/auth/fetchAuth';
 import Button from '../koala/primitives/Button';
 import { IconGoogleColor } from './IconGoogleColor';
 import AuthField from './AuthField';

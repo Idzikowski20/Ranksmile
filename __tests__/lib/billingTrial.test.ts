@@ -3,7 +3,7 @@ import {
   isTrialEligible,
   isTrialPlan,
   resolveCheckoutMode,
-} from '../../lib/billingTrial';
+} from '@/src/infrastructure/billing/billingTrial';
 
 describe('billingTrial policy', () => {
   it('allows trial only on Growth', () => {

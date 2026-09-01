@@ -12,7 +12,7 @@ jest.mock('../../database/models/keyword', () => {
   return { __esModule: true, default: { findAll, findOne, update, destroy, bulkCreate } };
 });
 jest.mock('../../database/models/domain', () => ({ __esModule: true, default: { count: jest.fn(), findAll: jest.fn(), findOne: jest.fn() } }));
-jest.mock('../../lib/tenancy', () => ({ getAccessibleWorkspaceIds: jest.fn() }));
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({ getAccessibleWorkspaceIds: jest.fn() }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/parseKeywords', () => ({ __esModule: true, default: jest.fn().mockReturnValue([]) }));
@@ -25,7 +25,7 @@ jest.mock('../../pages/api/settings', () => ({ getAppSettings: jest.fn().mockRes
 
 import Keyword from '../../database/models/keyword';
 import Domain from '../../database/models/domain';
-import { getAccessibleWorkspaceIds } from '../../lib/tenancy';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 import { userOwnsAllKeywords } from '../../pages/api/keywords';
 
 const mockFindAll = Keyword.findAll as jest.Mock;

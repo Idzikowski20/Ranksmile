@@ -3,16 +3,16 @@ jest.mock('../../database/database', () => ({
   default: { query: jest.fn(async () => [[], undefined]) },
 }));
 
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => null),
 }));
 
-jest.mock('../../lib/stripe', () => ({
+jest.mock('@/src/infrastructure/billing/stripe', () => ({
   getStripe: jest.fn(),
   isStripeConfigured: jest.fn(() => false),
 }));
 
-jest.mock('../../lib/stripeBillingSync', () => ({
+jest.mock('@/src/infrastructure/billing/stripeBillingSync', () => ({
   syncSubscriptionToOrg: jest.fn(),
 }));
 
@@ -21,7 +21,7 @@ import {
   formatConfirmationDateLabel,
   resolveNextBillingUnix,
   resolvePaymentMethodLabel,
-} from '../../lib/billingConfirmation';
+} from '@/src/infrastructure/billing/billingConfirmation';
 
 describe('formatConfirmationDateLabel', () => {
   it('formats unix trial_end (not “today” when trial is 7 days)', () => {

@@ -6,7 +6,7 @@ import MenuListItem from '../core/menuListItem';
 import { MenuList } from '../core/menuList';
 import { ShellPortal } from '../overlay/ShellPortal';
 import { zIndex } from '../tokens/zIndex';
-import { deriveActiveId, resolveActiveDomain } from '../../../lib/activeWorkspace';
+import { deriveActiveId, resolveActiveDomain } from '@/src/core/domain/navigation/activeWorkspace';
 import { useOrganization } from '../../../services/organization';
 import { useFetchDomains } from '../../../services/domains';
 import {

@@ -1,4 +1,4 @@
-import { parseHttpUrl, normalizeCitationUrl } from '../../lib/safeUrl';
+import { parseHttpUrl, normalizeCitationUrl } from '@/src/infrastructure/http/safeUrl';
 
 describe('safeUrl', () => {
   it('parses valid http URLs', () => {

@@ -7,12 +7,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes } from 'crypto';
 import db from '../../../../database/database';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { emitCommentChange } from '../../../../lib/commentBus';
-import { getCommentAccessKind } from '../../../../lib/commentAccess';
-import { getErrorMessage } from '../../../../lib/errors';
-import { queryOne } from '../../../../lib/db/query';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { emitCommentChange } from '@/src/infrastructure/http/commentBus';
+import { getCommentAccessKind } from '@/src/infrastructure/identity/commentAccess';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type Row = {
    id: string; quote: string; body: string; images_json: string; author: string; color: string;

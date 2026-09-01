@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SearchIntent } from '../../../../lib/organicResearch/types';
+import type { SearchIntent } from '@/src/infrastructure/organicResearch/types';
 
 const FONT = 'var(--font-family-primary)';
 

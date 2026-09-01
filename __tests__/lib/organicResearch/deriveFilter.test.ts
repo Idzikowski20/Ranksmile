@@ -1,13 +1,13 @@
 import {
   filterKeywords,
   sortKeywords,
-} from '../../../lib/organicResearch/filter';
+} from '@/src/infrastructure/organicResearch/filter';
 import {
   opportunityScore,
   mapKeywords,
   expandMonthlyChartToDaily,
-} from '../../../lib/organicResearch/derive';
-import type { ChartPoint, ProviderKeywordRow } from '../../../lib/organicResearch/types';
+} from '@/src/infrastructure/organicResearch/derive';
+import type { ChartPoint, ProviderKeywordRow } from '@/src/infrastructure/organicResearch/types';
 
 describe('organicResearch derive + filter', () => {
   const rows: ProviderKeywordRow[] = [

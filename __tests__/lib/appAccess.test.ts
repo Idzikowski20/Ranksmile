@@ -7,7 +7,7 @@ import {
   allowsApi,
   resolveRedirect,
   redirectLoopKey,
-} from '../../lib/appAccess';
+} from '@/src/infrastructure/appAccess/index';
 
 describe('resolveAppState', () => {
   it('prioritizes email → onboarding → payment failed → billing → workspace → ready', () => {

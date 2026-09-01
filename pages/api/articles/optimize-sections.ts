@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { chatLlm } from '../../../lib/ai/deepseek';
+import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
-import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '../../../lib/aiTokenUsage';
-import { splitSections, normalizeHtmlForDiff } from '../../../lib/articleSections';
-import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
-import { buildWholeArticlePrompt } from '../../../lib/optimizeWholeArticle';
+import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
+import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '@/src/infrastructure/ai/aiTokenUsage';
+import { splitSections, normalizeHtmlForDiff } from '@/src/infrastructure/articles/articleSections';
+import { buildArticleSectionDiffEvents } from '@/src/infrastructure/ao/optimizeSectionEvents';
+import { buildWholeArticlePrompt } from '@/src/infrastructure/ao/optimizeWholeArticle';
 import {
    stripFences,
    isUsableEdit,
@@ -14,56 +14,56 @@ import {
    shouldChargeCredit,
    resolveOptimizeDoneOutcome,
    computeTermUsageGaps,
-} from '../../../lib/optimizeSectionEdit';
-import type { ScoreData } from '../../../lib/contentScore';
-import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '../../../lib/aiSearchScore';
-import { buildArticleContext } from '../../../lib/articleContext';
-import type { ArticleContext } from '../../../lib/articleContext';
-import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articleKeywordDiscovery';
-import { filterUsefulNlpTerms } from '../../../lib/competitorTermCalibration';
-import { termsForOptimize } from '../../../lib/mergeArticleTerms';
-import { liveCoverageItems } from '../../../lib/liveCoverage';
+} from '@/src/infrastructure/ao/optimizeSectionEdit';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
+import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
+import { buildArticleContext } from '@/src/infrastructure/articles/articleContext';
+import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
+import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '@/src/infrastructure/articles/articleKeywordDiscovery';
+import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
+import { termsForOptimize } from '@/src/infrastructure/articles/mergeArticleTerms';
+import { liveCoverageItems } from '@/src/infrastructure/coverage/liveCoverage';
 import {
    collectUncoveredAiQuestions,
    buildFaqSectionPrompt,
    selectFaqQuestions,
    validateFaqHtmlStructure,
-} from '../../../lib/aoFaqSection';
-import { applyGatedFaqMerge } from '../../../lib/ao/applyGatedFaq';
-import { buildCriticalContentMap } from '../../../lib/ao/criticalContentMap';
-import { countWordsFromHtml } from '../../../lib/ao/aoBaseline';
-import type { AoScores } from '../../../lib/ao/aoScoreDelta';
-import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '../../../lib/ao/aoRunOutcome';
-import { structureIssues } from '../../../lib/validateArticleStructure';
-import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
-import { getArticleIdSql } from '../../../lib/articleSql';
+} from '@/src/infrastructure/ao/aoFaqSection';
+import { applyGatedFaqMerge } from '@/src/infrastructure/ao/applyGatedFaq';
+import { buildCriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
+import { countWordsFromHtml } from '@/src/infrastructure/ao/aoBaseline';
+import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
+import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '@/src/core/domain/optimize/aoRunOutcome';
+import { structureIssues } from '@/src/core/domain/articles/validateStructure';
+import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import db from '../../../database/database';
-import { buildGuidelines } from '../../../lib/recommendationEngine';
+import { buildGuidelines } from '@/src/infrastructure/engines/recommendationEngine';
 import {
    DEFAULT_MAX_ROUNDS,
    selectOptimizeMode,
    shouldSkipOptimize,
    TARGET_AI,
    TARGET_SEO,
-} from '../../../lib/optimizeMode';
+} from '@/src/core/domain/optimize/optimizeMode';
 import {
    maxRoundsForPhase,
    resolveOptimizePhase,
    targetContentForPhase,
    type AoMeta,
-} from '../../../lib/optimizeRunPhase';
-import { getErrorMessage } from '../../../lib/errors';
-import { throwIfAborted } from '../../../lib/abortSignal';
-import { queryOne } from '../../../lib/db/query';
-import { flushSse, flushHeaders } from '../../../lib/types/api';
-import { safeJsonParse } from '../../../lib/safeJson';
+} from '@/src/core/domain/optimize/runPhase';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { throwIfAborted } from '@/src/core/shared/abortSignal';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { flushSse, flushHeaders } from '@/src/core/shared/types/api';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import {
    buildProfileFromContext,
    resolveOptimizationStrategy,
    resolveOptimizationPolicy,
    runPrecisionOptimizeV4,
-} from '../../../lib/ao/runPrecisionOptimize';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+} from '@/src/infrastructure/ao/runPrecisionOptimize';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 export const config = { api: { responseLimit: '10mb' } };
 
@@ -445,7 +445,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
             const ccmExtra =
                articleId != null
-                  ? await import('../../../lib/intelligence/loadCcmEditCandidates')
+                  ? await import('@/src/core/intelligence/loadCcmEditCandidates')
                       .then((m) =>
                          m.loadCcmEditCandidatesForArticle({
                             articleId: Number(articleId),
@@ -468,7 +468,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                maxSteps: aoPolicy.maxSteps,
                signal: controller.signal,
                llmEdit: async (prompt) => {
-                  const { wieLlmComplete, wieWriterSystemPrompt } = await import('../../../lib/wie/writer');
+                  const { wieLlmComplete, wieWriterSystemPrompt } = await import('@/src/infrastructure/wie/writer');
                   return wieLlmComplete({
                      userPrompt: prompt,
                      systemPrompt: wieWriterSystemPrompt(),
@@ -506,7 +506,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             // WIE Performance Loop: remember pattern ids used in this AO run
             if (articleId != null && !v4.rolledBack) {
                try {
-                  const { extractPatternIdsFromTraceEvents, saveWieLastRun } = await import('../../../lib/wie/outcomeLearning');
+                  const { extractPatternIdsFromTraceEvents, saveWieLastRun } = await import('@/src/infrastructure/wie/outcomeLearning');
                   const patternIds = extractPatternIdsFromTraceEvents(v4.trace.events);
                   if (patternIds.length) {
                      const dnaEv = v4.trace.events.find((e) => typeof e.metadata?.dna_version === 'number');
@@ -568,7 +568,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                         ? '\n\nIMPORTANT: Previous reply was truncated or incomplete. Make SMALLER surgical edits only '
                           + '(a few paragraphs or one section). Return the COMPLETE article HTML — do not omit later sections.'
                         : '';
-                     const { wieLlmComplete } = await import('../../../lib/wie/writer');
+                     const { wieLlmComplete } = await import('@/src/infrastructure/wie/writer');
                      const completed = await wieLlmComplete({
                         userPrompt: `${promptPack.userInstruction}${surgicalHint}\n\n${workingHtml}`,
                         systemPrompt: promptPack.systemPrompt,
@@ -861,7 +861,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       // CCM after AO (07-runtime) — non-fatal; use final HTML even if client hasn't saved yet
       if (articleId != null && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)) {
-         void import('../../../lib/intelligence/compileAfterArticleChange')
+         void import('@/src/core/intelligence/compileAfterArticleChange')
             .then((m) =>
                m.compileAfterArticleChange({
                   articleId: Number(articleId),

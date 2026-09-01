@@ -7,7 +7,7 @@ import { Text } from '../koala/core/text';
 import { Button, Gauge } from '../koala/core';
 import { WidgetShell } from '../koala/product';
 import Skeleton from './Skeleton';
-import { authClient } from '../../lib/auth/client';
+import { authClient } from '@/src/infrastructure/auth/client';
 
 export interface RecentlyEditedItem {
   id: string | number;

@@ -1,13 +1,13 @@
 import db from '../../database/database';
 import {
   createInvitation, getInvitationByToken, acceptInvitation, revokeInvitation,
-} from '../../lib/invitations';
+} from '@/src/infrastructure/identity/invitations';
 
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }),
 }));
-jest.mock('../../lib/ensureArticlesTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({
   ensureArticlesTables: jest.fn().mockResolvedValue(undefined),
 }));
 

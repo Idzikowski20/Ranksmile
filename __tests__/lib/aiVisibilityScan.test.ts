@@ -2,7 +2,7 @@
 // can't initialise under jsdom. claimScan is pure (takes an exec stub), so stub the db.
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
 
-import { claimScan } from '../../lib/aiVisibilityScan';
+import { claimScan } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 
 describe('claimScan', () => {
    it('returns true only when the UPDATE changed a row', async () => {

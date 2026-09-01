@@ -4,9 +4,9 @@
 // Ranksmile treats GSC: connected the moment the Google OAuth account is linked — not
 // only once 30 days of data has been scraped.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authPluginRequest } from '../../../../lib/wpConnection';
-import { getAccountsForUser } from '../../../../lib/gscAccounts';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { authPluginRequest } from '@/src/infrastructure/wordpress/wpConnection';
+import { getAccountsForUser } from '@/src/infrastructure/gsc/gscAccounts';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);

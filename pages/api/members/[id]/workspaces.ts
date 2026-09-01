@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { setMemberWorkspaces } from '../../../../lib/members';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { setMemberWorkspaces } from '@/src/infrastructure/identity/members';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);

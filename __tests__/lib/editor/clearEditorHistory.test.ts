@@ -3,7 +3,7 @@
  */
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
-import clearEditorHistory from '../../../lib/editor/clearEditorHistory';
+import clearEditorHistory from '@/components/editor/clearEditorHistory';
 
 const OUTLINE = '<h2>Kim jesteśmy</h2><p>Pokryj sekcję.</p>';
 const ARTICLE = '<h2>Jak działa prywatny detektyw</h2><p>Napisany akapit.</p>';

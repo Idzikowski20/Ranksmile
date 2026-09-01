@@ -1,9 +1,9 @@
 import {
   buildPipelinePayloadFromDeepAnalysis,
   enqueueFromDeepAnalysis,
-} from '../../lib/pipeline/enqueueFromDeepAnalysis';
+} from '@/src/infrastructure/pipeline/enqueueFromDeepAnalysis';
 
-jest.mock('../../lib/pipeline/pipelineQueue', () => ({
+jest.mock('@/src/infrastructure/pipeline/pipelineQueue', () => ({
   enqueueJob: jest.fn(async (opts: { queue: string; keyword: string }) => ({
     accepted: true,
     status: 202,

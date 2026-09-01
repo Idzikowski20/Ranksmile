@@ -1,4 +1,4 @@
-import { buildSectionEvents, buildSectionEvent, buildArticleSectionDiffEvents } from '../../lib/optimizeSectionEvents';
+import { buildSectionEvents, buildSectionEvent, buildArticleSectionDiffEvents } from '@/src/infrastructure/ao/optimizeSectionEvents';
 import type { SectionResult } from '../../components/articles/optimizeStore';
 
 const sections = [

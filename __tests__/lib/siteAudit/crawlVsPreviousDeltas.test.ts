@@ -1,4 +1,4 @@
-import { crawlVsPreviousDeltas } from '../../../lib/siteAudit/crawlDeltas';
+import { crawlVsPreviousDeltas } from '@/src/core/domain/siteAudit/crawlDeltas';
 
 describe('crawlVsPreviousDeltas', () => {
   const prev = {

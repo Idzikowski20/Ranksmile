@@ -3,11 +3,11 @@
 // enqueues a scan for each, and returns the scanIds for the sidecar to drive.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
-import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
-import { findDueConfigIds, enqueueAiVisScan } from '../../../../lib/aiVisibilityScan';
-import { queryRows } from '../../../../lib/db/query';
-import { getErrorMessage } from '../../../../lib/errors';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
+import { findDueConfigIds, enqueueAiVisScan } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
+import { queryRows } from '@/src/infrastructure/db/query';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const token = req.headers['x-internal-token'];

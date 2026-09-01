@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { faviconUrl } from '../../lib/faviconUrl';
+import { faviconUrl } from '@/src/core/shared/faviconUrl';
 
 type DomainFaviconProps = {
   domain: string;

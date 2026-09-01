@@ -4,9 +4,9 @@ import {
   readPatternStore,
   rollbackDnaVersion,
   writePatternStore,
-} from '../../../lib/wie/patternStore';
-import { __evolutionSignals } from '../../../lib/wie/evolutionLoop';
-import type { CompetitorSynthesis } from '../../../lib/wie/competitorSynthesis';
+} from '@/src/infrastructure/wie/patternStore';
+import { __evolutionSignals } from '@/src/infrastructure/wie/evolutionLoop';
+import type { CompetitorSynthesis } from '@/src/infrastructure/wie/competitorSynthesis';
 
 describe('WIE DNA rollback', () => {
   it('snapshots on bump and restores prior version', async () => {

@@ -1,13 +1,13 @@
-import { defaultFeatureRegistry, FeatureRegistry } from '../../lib/primitives/featureRegistry';
-import { listCapabilities, getCapability } from '../../lib/primitives/capabilities';
-import { emptyKnowledgeLayer } from '../../lib/primitives/knowledgeLayer';
-import { pendingExecution } from '../../lib/primitives/actionExecutor';
-import type { Feature } from '../../lib/primitives/types';
+import { defaultFeatureRegistry, FeatureRegistry } from '@/src/core/primitives/featureRegistry';
+import { listCapabilities, getCapability } from '@/src/core/primitives/capabilities';
+import { emptyKnowledgeLayer } from '@/src/core/primitives/knowledgeLayer';
+import { pendingExecution } from '@/src/core/primitives/actionExecutor';
+import type { Feature } from '@/src/core/primitives/types';
 import {
   observationsFromCoverage,
   runFeatures,
-} from '../../lib/features/featureEngine';
-import type { CoverageSnapshot } from '../../lib/aiCoverage';
+} from '@/src/infrastructure/features/featureEngine';
+import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 function stubSnapshot(overrides?: Partial<CoverageSnapshot>): CoverageSnapshot {
   return {

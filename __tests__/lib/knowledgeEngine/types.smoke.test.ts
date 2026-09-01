@@ -1,10 +1,10 @@
-import type { DistributionStats } from '../../../lib/benchmarkIntelligence/types';
-import type { CanonicalClaim } from '../../../lib/knowledgeEngine';
+import type { DistributionStats } from '@/src/core/domain/benchmark/types';
+import type { CanonicalClaim } from '@/src/infrastructure/knowledgeEngine/index';
 import {
   KNOWLEDGE_SCHEMA_VERSION,
   PLANNER_CLAIMS_FLOOR,
   buildKnowledgeGraph,
-} from '../../../lib/knowledgeEngine';
+} from '@/src/infrastructure/knowledgeEngine/index';
 
 describe('CIE types smoke', () => {
   it('DistributionStats has percentiles', () => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { CompactSelect, Select } from '../koala/core';
 import Modal from '../koala/core/modal/modal';
 import Button from '../koala/core/button/button';

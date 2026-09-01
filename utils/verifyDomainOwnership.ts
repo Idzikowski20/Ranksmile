@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import Domain from '../database/models/domain';
-import { getAccessibleWorkspaceIds } from '../lib/tenancy';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 
 /**
  * Workspace-scoped access check. Authorization lives in the query WHERE clause (a

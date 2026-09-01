@@ -1,4 +1,4 @@
-import { streamDelta } from '../../lib/streamDelta';
+import { streamDelta } from '@/src/core/shared/streamDelta';
 
 describe('streamDelta', () => {
   it('emits only what has not been sent', () => {

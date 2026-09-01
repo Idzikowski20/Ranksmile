@@ -8,7 +8,7 @@ jest.mock('../../utils/getUser', () => ({
 }));
 
 import { getCurrentUserId, wasAuthUnavailable } from '../../utils/getUser';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const mockUid = getCurrentUserId as jest.MockedFunction<typeof getCurrentUserId>;
 const mockUnavail = wasAuthUnavailable as jest.MockedFunction<typeof wasAuthUnavailable>;

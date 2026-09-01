@@ -1,6 +1,6 @@
 /* eslint-disable max-len -- SVG path data; wrapping it would only make it unreadable. */
 import React from 'react';
-import { GOOGLE_G_PATHS } from '../aiVisibility/modelIcons';
+import { GOOGLE_G_PATHS } from '@/components/aiVisibility/modelIcons';
 
 /**
  * Overlapping engine badges shown beside a progress group's title, so the row reads as

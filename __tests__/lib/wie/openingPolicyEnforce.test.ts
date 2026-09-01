@@ -3,10 +3,10 @@ import {
   heuristicProblemFirstInject,
   openingPolicyViolated,
   openingPolicyHardRules,
-} from '../../../lib/wie/enforceOpeningPolicy';
-import { detectOpeningStyle } from '../../../lib/wie/eval/policyCompliance';
-import { evaluatePublishGate } from '../../../lib/wie/eval/publishGate';
-import { wieJudgeHtml } from '../../../lib/wie/writer';
+} from '@/src/infrastructure/wie/enforceOpeningPolicy';
+import { detectOpeningStyle } from '@/src/infrastructure/wie/eval/policyCompliance';
+import { evaluatePublishGate } from '@/src/infrastructure/wie/eval/publishGate';
+import { wieJudgeHtml } from '@/src/infrastructure/wie/writer';
 
 describe('WIE opening policy enforcement', () => {
   const defHtml = '<h1>Szantaż</h1><p>Szantaż to zmuszanie kogoś do określonego zachowania przez groźbę.</p><h2>Dalej</h2><p>Treść.</p>';

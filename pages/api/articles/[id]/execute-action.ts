@@ -3,15 +3,15 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../lib/tenancy';
-import { getErrorMessage } from '../../../../lib/errors';
-import { runActionExecution } from '../../../../lib/runActionExecution';
-import type { Action } from '../../../../lib/primitives/types';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { runActionExecution } from '@/src/infrastructure/ao/runActionExecution';
+import type { Action } from '@/src/core/primitives/types';
 import {
   ensureDomainEventTables,
   ensureKnowledgeLayerTables,
-} from '../../../../lib/ensureGrowthMetaTables';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+} from '@/src/infrastructure/persistence/schema/ensureGrowthMetaTables';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();

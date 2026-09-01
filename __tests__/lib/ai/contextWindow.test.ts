@@ -1,4 +1,4 @@
-import { contextUsageColor, contextUsagePct, CONTEXT_WINDOW_TOKENS } from '../../../lib/ai/contextWindow';
+import { contextUsageColor, contextUsagePct, CONTEXT_WINDOW_TOKENS } from '@/src/infrastructure/ai/contextWindow';
 
 describe('context window usage', () => {
   it('colours by threshold (green ≤50, yellow ≤75, orange ≤90, red >90)', () => {

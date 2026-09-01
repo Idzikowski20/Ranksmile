@@ -1,5 +1,5 @@
 // Comments API no longer fan-outs via Ably — create still persists the thread.
-jest.mock('../../lib/commentAccess', () => ({
+jest.mock('@/src/infrastructure/identity/commentAccess', () => ({
   getCommentAccessKind: jest.fn().mockResolvedValue('owner'),
   isOwnerComment: jest.fn().mockResolvedValue(false),
 }));
@@ -7,7 +7,7 @@ jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { sync: jest.fn().mockResolvedValue(undefined), query: jest.fn().mockResolvedValue([[], {}]) },
 }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 
 import handler from '../../pages/api/articles/[id]/comments';
 

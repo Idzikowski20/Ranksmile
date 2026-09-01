@@ -1,14 +1,14 @@
 import type { NextApiRequest } from 'next';
 import { makeRes, callHandler, type MockRes } from '../../test-utils/apiHandler';
 import { getCurrentUserId } from '../../utils/getUser';
-import { finishWorkspaceSetup } from '../../lib/workspaces';
+import { finishWorkspaceSetup } from '@/src/infrastructure/identity/workspaces';
 import handler from '../../pages/api/workspaces/[id]/finish';
 
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('u1') }));
-jest.mock('../../lib/workspaces', () => ({ finishWorkspaceSetup: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/identity/workspaces', () => ({ finishWorkspaceSetup: jest.fn().mockResolvedValue(undefined) }));
 // The access-policy wrapper has its own coverage; unmocked it resolves real tenancy
 // and turns every case below into a 503.
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 const call = (req: Partial<NextApiRequest>, res: MockRes) => callHandler(handler, req, res);
 

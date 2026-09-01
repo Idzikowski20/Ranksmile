@@ -8,8 +8,8 @@ import {
    keywordStuffingScore,
    thinOriginalityScore,
    titleQueryScore,
-} from '../../lib/contentEffort';
-import { collectScoreSlots, computeContentScoreBreakdown, type ScoreData } from '../../lib/contentScore';
+} from '@/src/core/domain/terms/contentEffort';
+import { collectScoreSlots, computeContentScoreBreakdown, type ScoreData } from '@/src/infrastructure/articles/contentScore';
 
 const baseScoreData = (): ScoreData => ({
    terms: [{ term: 'seo', target_count: 2 }],

@@ -1,6 +1,6 @@
 import type { NextPage } from 'next';
 import LegalLayout from '../../components/legal/LegalLayout';
-import { LEGAL_COMPANY } from '../../lib/legal/company';
+import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
 
 const PrivacyPage: NextPage = () => (
   <LegalLayout
