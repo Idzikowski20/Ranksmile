@@ -1,0 +1,41 @@
+components/articles/ContentOptimizerNodeView.tsx
+  s_e8c3822b427cc8::t_61353c8135a31e 5
+  s_e8c3822b427cc8::t_2ba7ec246a7a23 36-38
+components/articles/ProgressCard.tsx
+  s_e8c3822b427cc8::t_419de71e06dbc6 100,108-116
+  s_e8c3822b427cc8::t_488eda2b3501be 162
+  s_e8c3822b427cc8::t_0e9a45f916d30e 8-9
+lib/arch/layerRules.ts
+  s_e8c3822b427cc8::t_3eabb239187bd5 11-31
+  s_e8c3822b427cc8::t_41251655d14574 54,56,61,63
+lib/cia/scanImports.ts
+  s_e8c3822b427cc8::t_be2072b32c5b25 4,11-19
+components/articles/resolveNodeOp.ts
+  s_e8c3822b427cc8::t_b7e5ba54b91036 1-12
+components/articles/resolveNodeOp.test.ts
+  s_e8c3822b427cc8::t_37c11d42bd111f 1-11
+components/koala/shell/AppBanner.tsx
+  s_e8c3822b427cc8::t_47bfc4dfde875d 120-123,129,132,136-139
+pages/api/articles/ask-ranksmile.ts
+  s_e8c3822b427cc8::t_d12bc9f1c3ca34 110
+  s_e8c3822b427cc8::t_aa06ef534d1962 92-95
+lib/arch/scanLayerImports.ts
+  s_e8c3822b427cc8::t_8b93b8aa90a0d2 59-65
+  s_e8c3822b427cc8::t_69a31051e214c5 15-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "614b2277f7a042ea10021724250d91f7195193d9",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
