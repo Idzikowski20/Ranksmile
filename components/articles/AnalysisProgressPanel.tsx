@@ -53,6 +53,7 @@ const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases })
       <ProgressCard
         key={group.id}
         title={group.title}
+        headingLevel={3}
         trailing={group.id === 'ai-search' ? <AiEngineIcons /> : <GoogleEngineIcon />}
         rows={group.rows.map((row) => ({
           id: row.id,

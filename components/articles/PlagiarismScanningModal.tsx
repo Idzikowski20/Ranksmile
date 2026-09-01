@@ -47,7 +47,9 @@ const PlagiarismScanningModal = ({ onCancel }: { onCancel: () => void }) => crea
       </span>
     </div>
 
-    <span style={{ color: 'var(--koala-text-on-inverse)', fontSize: 20, fontWeight: 500 }}>We are scanning your content right now…</span>
+    {/* Overlay is a fixed dark scrim regardless of theme, so the label stays a fixed light
+        colour — the theme-flipping --koala-text-on-inverse would go dark-on-dark in dark mode. */}
+    <span style={{ color: '#fafafa', fontSize: 20, fontWeight: 500 }}>We are scanning your content right now…</span>
 
     {/* indeterminate progress bar */}
     <div style={{ position: 'relative', width: 450, maxWidth: 'calc(100vw - 48px)', height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>

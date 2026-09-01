@@ -117,17 +117,23 @@ export function AppBanner() {
   const ctx = useContext(AppBannerContext);
   const banner = ctx?.banner ?? null;
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   // Dismissal is keyed on the stable identity, not the rendered text.
   const closeKey = banner?.dismissKey ?? banner?.message ?? '';
   const persist = banner?.persistDismiss ?? false;
 
   // Restore a persisted dismissal after mount — reading storage during render would
-  // mismatch the server-rendered null.
+  // mismatch the server-rendered null. `ready` flips once that read has run.
   useEffect(() => {
     if (persist && closeKey && isBannerDismissed(closeKey)) setDismissedKey(closeKey);
+    setReady(true);
   }, [persist, closeKey]);
 
-  if (!banner || (banner.dismissible && dismissedKey === closeKey)) return null;
+  if (!banner) return null;
+  // Persisted-dismissible banners stay hidden until the storage read runs, so a returning
+  // user who already dismissed one never sees it flash (and re-fire role="alert") on cold load.
+  if (banner.dismissible && persist && !ready) return null;
+  if (banner.dismissible && dismissedKey === closeKey) return null;
 
   const variant = banner.variant ?? 'error';
 
