@@ -1,0 +1,21 @@
+pages/api/domains/configure.ts
+  s_f97db5a5f951f3::t_88a351dec0e06a 66-70
+lib/ensureArticlesTables.ts
+  s_f97db5a5f951f3::t_fd038ac0e37626 281-290
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "11296718cd311b2cd7c80713a4ed9a5f1d14e402",
+  "prompts": {},
+  "sessions": {
+    "s_f97db5a5f951f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30754a21-682b-42e2-bd1a-278a0b89ec78",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
