@@ -12,9 +12,20 @@ export type LayerViolation = { file: string; specifier: string; layer: string };
  * multi-line statements.
  */
 export function extractSpecifiers(source: string): string[] {
-  return ts
-    .preProcessFile(source, /* readImportFiles */ true, /* detectJavaScriptImports */ true)
-    .importedFiles.map((f) => f.fileName);
+  const out = new Set<string>();
+  for (const f of ts.preProcessFile(source, /* readImportFiles */ true, /* detectJavaScriptImports */ true).importedFiles) {
+    out.add(f.fileName);
+  }
+  // ts.preProcessFile omits `export * as ns from "x"` (namespace re-export), which would let
+  // a core file re-export a forbidden layer past this rule unseen. Export declarations are
+  // top-level, so a single statement pass catches them.
+  const sf = ts.createSourceFile('scan.ts', source, ts.ScriptTarget.Latest, false);
+  for (const stmt of sf.statements) {
+    if (ts.isExportDeclaration(stmt) && stmt.moduleSpecifier && ts.isStringLiteral(stmt.moduleSpecifier)) {
+      out.add(stmt.moduleSpecifier.text);
+    }
+  }
+  return [...out];
 }
 
 const EXT = new Set(['.ts', '.tsx']);
@@ -45,7 +56,13 @@ export function findLayerViolations(rootDir: string): LayerViolation[] {
     for (const file of walk(base)) {
       const specs = extractSpecifiers(fs.readFileSync(file, 'utf8'));
       for (const spec of specs) {
-        if (rule.forbid.some((re) => re.test(spec))) {
+        // Relative imports stay inside the layer and are always allowed. Everything else
+        // must match the allow-list; a bare package or other-layer import that slips past
+        // every `forbid` pattern is still a violation.
+        const isRelative = spec.startsWith('.');
+        const denied = rule.forbid.some((re) => re.test(spec));
+        const notAllowed = !isRelative && !rule.allowOnly.some((re) => re.test(spec));
+        if (denied || notAllowed) {
           out.push({ file: path.relative(rootDir, file).replace(/\\/g, '/'), specifier: spec, layer: rule.label });
         }
       }
