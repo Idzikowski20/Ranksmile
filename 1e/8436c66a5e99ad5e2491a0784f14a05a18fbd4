@@ -1,0 +1,30 @@
+components/settings/McpApiSettings.tsx
+  s_88af64c9082b5e::t_e259be08d5cf91 156,162
+  s_88af64c9082b5e::t_1317ce4ea09365 168
+  s_88af64c9082b5e::t_2df45effbb399a 115,117-118
+  s_88af64c9082b5e::t_8edbfc6c2f3b97 85
+components/koala/shell/AppBanner.tsx
+  s_88af64c9082b5e::t_4badc784baf9f3 168
+  s_88af64c9082b5e::t_34d4ec5908fbcf 119-125,133,136
+__tests__/components/AppBanner.test.tsx
+  s_88af64c9082b5e::t_d6aab2f5eabdad 94-123
+components/common/AppShell.tsx
+  s_88af64c9082b5e::t_cf20863a53ef2b 36-39,42
+  s_88af64c9082b5e::t_b897c6bb5f2b14 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1e8436c66a5e99ad5e2491a0784f14a05a18fbd4",
+  "prompts": {},
+  "sessions": {
+    "s_88af64c9082b5e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f5ced22a-8983-433f-aa8f-5b87e4107a44",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
