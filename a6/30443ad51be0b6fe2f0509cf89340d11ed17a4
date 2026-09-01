@@ -1,0 +1,29 @@
+lib/arch/scanLayerImports.ts
+  s_e3556ba0769b4b::t_7e95ab41dadfb1 30-43,46,49-51,53-63
+components/articles/ProgressCard.tsx
+  s_e3556ba0769b4b::t_d47b700d17c3ef 100,103,106-113,127,132-135,141-147,163
+components/articles/AnalysisProgressPanel.tsx
+  s_e3556ba0769b4b::t_d47b700d17c3ef 56-57
+docs/lib-reorg-plan.md
+  s_e3556ba0769b4b::t_c4a4d3d180a933 25-27,32-33
+lib/arch/layerRules.ts
+  s_e3556ba0769b4b::t_eee613135d3d5a 5-13,15-22,24-26,33-36,43-44,49-51
+components/articles/RanksmileMessage.tsx
+  s_e3556ba0769b4b::t_c4a4d3d180a933 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a630443ad51be0b6fe2f0509cf89340d11ed17a4",
+  "prompts": {},
+  "sessions": {
+    "s_e3556ba0769b4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6540432-6f30-49d1-beb1-3e8f434fbb8c",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
