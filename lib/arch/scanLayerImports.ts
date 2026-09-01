@@ -56,13 +56,19 @@ export function findLayerViolations(rootDir: string): LayerViolation[] {
     for (const file of walk(base)) {
       const specs = extractSpecifiers(fs.readFileSync(file, 'utf8'));
       for (const spec of specs) {
-        // Relative imports stay inside the layer and are always allowed. Everything else
-        // must match the allow-list; a bare package or other-layer import that slips past
-        // every `forbid` pattern is still a violation.
-        const isRelative = spec.startsWith('.');
         const denied = rule.forbid.some((re) => re.test(spec));
-        const notAllowed = !isRelative && !rule.allowOnly.some((re) => re.test(spec));
-        if (denied || notAllowed) {
+        let escapes: boolean;
+        if (spec.startsWith('.')) {
+          // A relative import is only in-bounds if it RESOLVES inside a permitted root —
+          // `../../application/x` is dot-prefixed but escapes the layer, so resolve it against
+          // the importing file and check where it lands.
+          const resolved = path.relative(rootDir, path.resolve(path.dirname(file), spec)).replace(/\\/g, '/');
+          escapes = !rule.allowedRoots.some((r) => resolved === r || resolved.startsWith(`${r}/`));
+        } else {
+          // Bare package / alias: must match the allow-list.
+          escapes = !rule.allowOnly.some((re) => re.test(spec));
+        }
+        if (denied || escapes) {
           out.push({ file: path.relative(rootDir, file).replace(/\\/g, '/'), specifier: spec, layer: rule.label });
         }
       }
