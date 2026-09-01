@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import SidebarUserFooter from '../../components/koala/shell/SidebarUserFooter';
 
-jest.mock('../../lib/auth/client', () => ({
+jest.mock('@/src/infrastructure/auth/client', () => ({
   authClient: {
     useSession: () => ({ data: { user: { name: 'Patryk Idzikowski', email: 'boski.idzikowski@gmail.com' } } }),
     signOut: jest.fn(),

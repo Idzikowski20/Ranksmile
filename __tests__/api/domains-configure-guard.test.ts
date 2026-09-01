@@ -1,4 +1,4 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { sync: jest.fn().mockResolvedValue(undefined), query: jest.fn() },
@@ -9,15 +9,15 @@ jest.mock('../../database/models/domain', () => ({
 }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   getActiveWorkspaceId: jest.fn().mockResolvedValue(123),
   getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([123]),
 }));
-jest.mock('../../lib/workspaces', () => ({
+jest.mock('@/src/infrastructure/identity/workspaces', () => ({
   getWorkspace: jest.fn().mockResolvedValue({ id: 123, status: 'setup' }),
 }));
-jest.mock('../../lib/gscProperty', () => ({ mergeGscProperty: jest.fn() }));
+jest.mock('@/src/core/domain/gsc/gscProperty', () => ({ mergeGscProperty: jest.fn() }));
 
 import db from '../../database/database';
 import Domain from '../../database/models/domain';

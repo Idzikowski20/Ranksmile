@@ -2,16 +2,16 @@
 // channels Surfer splits across AiArticleStatusStreaming and AiArticleContentStreaming.
 // The browser polls nothing; this handler tails the job row and pushes deltas.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { QueryTypes } from 'sequelize';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../lib/tenancy';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { flushHeaders, flushSse } from '../../../../lib/types/api';
-import { streamDelta } from '../../../../lib/streamDelta';
-import { staleFinalizationSql } from '../../../../lib/staleFinalization';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { flushHeaders, flushSse } from '@/src/core/shared/types/api';
+import { streamDelta } from '@/src/core/shared/streamDelta';
+import { staleFinalizationSql } from '@/src/infrastructure/articles/staleFinalization';
 
 const TICK_MS = 700;
 
@@ -41,7 +41,7 @@ async function reapStaleFinalization(jobId: string, articleId: number): Promise<
       { replacements: [jobId], type: QueryTypes.SELECT, transaction },
     );
     if (!rows.length) return false;
-    const { getArticleIdSql } = await import('../../../../lib/articleSql');
+    const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
     const articleIdSql = await getArticleIdSql();
     await db.query(
       `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP

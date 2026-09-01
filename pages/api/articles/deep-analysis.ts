@@ -6,26 +6,26 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articleSql';
-import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
-import { buildGradedCoverageSnapshot } from '../../../lib/buildCoverageSnapshot';
-import { dedupePaaQuestions } from '../../../lib/curateCoverageItems';
-import { harvestAiCoverage } from '../../../lib/harvestAiCoverage';
-import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult } from '../../../lib/types/sidecar';
-import { flushHeaders, flushSse } from '../../../lib/types/api';
-import type { NlpTerm, ScoreData } from '../../../lib/contentScore';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { computeContentScore, countOccurrences } from '@/src/infrastructure/articles/contentScore';
+import { buildGradedCoverageSnapshot } from '@/src/infrastructure/coverage/buildCoverageSnapshot';
+import { dedupePaaQuestions } from '@/src/infrastructure/coverage/curateCoverageItems';
+import { harvestAiCoverage } from '@/src/infrastructure/coverage/harvestAiCoverage';
+import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult } from '@/src/core/shared/types/sidecar';
+import { flushHeaders, flushSse } from '@/src/core/shared/types/api';
+import type { NlpTerm, ScoreData } from '@/src/infrastructure/articles/contentScore';
 import {
   calibrateTermRangesFromCorpus,
   filterUsefulNlpTerms,
   hasMinCompetitorDomains,
   scaleTermRangesToWordCount,
-} from '../../../lib/competitorTermCalibration';
-import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
-import { computeOverallContentScore, resolveAiScore } from '../../../lib/aiSearchScore';
-import type { ArticleFact } from '../../../lib/articleFacts';
-import { safeJsonParse } from '../../../lib/safeJson';
-import { carriedScoreData } from '../../../lib/carriedScoreData';
+} from '@/src/core/domain/competitors/termCalibration';
+import { runArticleAiPipeline } from '@/src/infrastructure/articles/articleAiPipeline';
+import { computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import type { ArticleFact } from '@/src/infrastructure/articles/articleFacts';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
+import { carriedScoreData } from '@/src/core/domain/articles/carriedScoreData';
 
 type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: number };
 import {
@@ -34,30 +34,31 @@ import {
   hostFromUrl,
   mergeNlpTerms,
   saveArticleKeywords,
-} from '../../../lib/articleKeywordDiscovery';
-import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPageKeyword';
-import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
-import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
-import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
-import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
-import { sidecarBase, nextjsUrl } from '../../../lib/sidecar';
+} from '@/src/infrastructure/articles/articleKeywordDiscovery';
+import { keywordFromUrl, resolveAnalysisSeedKeyword } from '@/src/infrastructure/keywords/inferPageKeyword';
+import { resolveFactKeyword } from '@/src/infrastructure/keywords/resolveFactKeyword';
+import { persistAiVisibilityRun } from '@/src/infrastructure/aiVisibility/aiVisibilityStore';
+import { persistCoverageFeatureRun } from '@/src/infrastructure/coverage/persistCoverageFeatureRun';
+import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
+import { sidecarBase, nextjsUrl } from '@/src/infrastructure/http/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
-import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
-import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
-import { getErrorMessage } from '../../../lib/errors';
-import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
-import { buildRankingSourcesPayload } from '../../../lib/rankingSources';
-import { enrichTermsWithSalience } from '../../../lib/termSalience';
-import { filterNlpTermsForAnalysis } from '../../../lib/topicRelevance';
-import { buildAuditResult, computeSeoScoreFromAudit } from '../../../lib/auditCompute';
-import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
-import { assertPublicUrl } from '../../../lib/ssrfGuard';
-import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articleAnalysisStorage';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
+import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
+import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { buildCompetitorBenchmarks } from '@/src/infrastructure/competitors/competitorAuditScore';
+import { buildRankingSourcesPayload } from '@/src/infrastructure/articles/rankingSources';
+import { enrichTermsWithSalience } from '@/src/infrastructure/competitors/termSalience';
+import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
+import { buildAuditResult } from '@/src/infrastructure/siteAudit/auditCompute';
+import { computeSeoScoreFromAudit } from '@/src/core/domain/audit/seoScore';
+import { findInternalLinkOpportunities } from '@/src/infrastructure/siteAudit/auditInternalLinks';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
+import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
+import { replaceArticleTerms, replaceCompetitors } from '@/src/infrastructure/articles/articleAnalysisStorage';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
 
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -114,7 +115,7 @@ function buildScoreData(
   opts?: {
     scoringModel?: 'competitor' | 'legacy';
     contentTargets?: { avgWords: number; avgHeadings: number; avgPs: number };
-    auditResult?: import('../../../lib/auditTypes').AuditResult;
+    auditResult?: import('@/src/core/domain/audit/types').AuditResult;
     seoScore?: number;
     competitorWordSpread?: { min: number; max: number };
   },
@@ -206,7 +207,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   await ensureArticlesTables();
 
-  const { assertCronSecret } = await import('../../../lib/cronAuth');
+  const { assertCronSecret } = await import('@/src/infrastructure/cron/cronAuth');
   const isCron = assertCronSecret(req);
   if (!isCron) {
     const authorized = await verifyUser(req, res);
@@ -811,7 +812,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Baseline content-effort estimate (heuristic). LLM refine is available in Pre-Publish.
     {
-      const { heuristicContentEffort } = await import('../../../lib/contentEffort');
+      const { heuristicContentEffort } = await import('@/src/core/domain/terms/contentEffort');
       const effort = heuristicContentEffort({
         html: pageContent || '',
         plainText,
@@ -848,7 +849,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     //
     // Deliberately not awaited — voice learning must never delay or fail an analysis.
     if (resolvedDomainId) {
-      void import('../../../lib/wie/autoLearnBrandDna')
+      void import('@/src/infrastructure/wie/autoLearnBrandDna')
         .then(({ autoLearnBrandDna }) => autoLearnBrandDna({
           domainId: resolvedDomainId as number,
           keyword: resolvedKeyword || pipelineKeyword || keyword || undefined,
@@ -859,7 +860,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (corpusTexts.length && (resolvedKeyword || pipelineKeyword || keyword)) {
       try {
-        const { extractCorpusClaimsByUrl } = await import('../../../lib/wie/corpusClaims');
+        const { extractCorpusClaimsByUrl } = await import('@/src/core/domain/wie/corpusClaims');
         const byUrl = extractCorpusClaimsByUrl(
           competitorBenchmarks?.corpusByUrl ?? {},
           resolvedKeyword || pipelineKeyword || keyword || '',
@@ -881,7 +882,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // WIE Source A — Competitor Synthesis (bounded JSON from corpus; non-fatal)
     if (corpusTexts.length && (resolvedKeyword || pipelineKeyword || keyword)) {
       try {
-        const { buildCompetitorSynthesisFromCorpus } = await import('../../../lib/wie/competitorSynthesis');
+        const { buildCompetitorSynthesisFromCorpus } = await import('@/src/infrastructure/wie/competitorSynthesis');
         const synth = await buildCompetitorSynthesisFromCorpus({
           keyword: resolvedKeyword || pipelineKeyword || keyword || '',
           corpusTexts,
@@ -892,9 +893,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             `[deep-analysis] competitor_synthesis: critical=${synth.critical.length} examples=${synth.examples.length}`,
           );
           try {
-            const { discoverFromSynthesis } = await import('../../../lib/wie/patternDiscovery');
-            const { inferIndustry } = await import('../../../lib/wie/policyResolver');
-            const { buildHeuristicReaderBrief } = await import('../../../lib/wie/readerBrief');
+            const { discoverFromSynthesis } = await import('@/src/infrastructure/wie/patternDiscovery');
+            const { inferIndustry } = await import('@/src/infrastructure/wie/policyResolver');
+            const { buildHeuristicReaderBrief } = await import('@/src/core/domain/wie/readerBrief');
             const kw = resolvedKeyword || pipelineKeyword || keyword || '';
             const brief = buildHeuristicReaderBrief({ keyword: kw });
             const n = await discoverFromSynthesis({
@@ -907,7 +908,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               source: 'deep_analysis_synthesis',
             });
             if (n > 0) console.log(`[deep-analysis] pattern discovery accepted=${n}`);
-            const { evolveFromSynthesis } = await import('../../../lib/wie/evolutionLoop');
+            const { evolveFromSynthesis } = await import('@/src/infrastructure/wie/evolutionLoop');
             const evo = await evolveFromSynthesis({
               synthesis: synth,
               industry: inferIndustry(kw),
@@ -921,7 +922,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               );
             }
             try {
-              const { buildWieWriteContext } = await import('../../../lib/wie/writerContext');
+              const { buildWieWriteContext } = await import('@/src/infrastructure/wie/writerContext');
               const wie = await buildWieWriteContext({
                 keyword: kw,
                 synthesis: synth,
@@ -1205,7 +1206,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         // CCM compile + DA enrich + SoT projection — await so SSE gets CCM snapshot (Etap 29).
         try {
-          const ccmMod = await import('../../../lib/intelligence/compileAfterArticleChange');
+          const ccmMod = await import('@/src/core/intelligence/compileAfterArticleChange');
           const ccmR = await ccmMod.compileAfterArticleChange({
             articleId,
             compiledAt: new Date().toISOString(),
@@ -1302,7 +1303,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // v7 pipeline bridge (fire-and-forget; after competitors + AI visibility settled)
     try {
       const { enqueueFromDeepAnalysis, enqueueVisibilityFromDeepAnalysis } = await import(
-        '../../../lib/pipeline/enqueueFromDeepAnalysis'
+        '@/src/infrastructure/pipeline/enqueueFromDeepAnalysis'
       );
       const bridgeUserId = await getCurrentUserId(req, res);
       const workspaceId = String(bridgeUserId || resolvedDomainId || '0');

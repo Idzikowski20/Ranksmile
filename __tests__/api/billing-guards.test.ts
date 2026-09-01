@@ -1,11 +1,11 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../utils/getUser', () => ({
   getCurrentUserId: jest.fn(),
   getCurrentUser: jest.fn(),
 }));
-jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn() }));
-jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn() }));
-jest.mock('../../lib/billingPlanLock', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({ ensureUserTenancy: jest.fn() }));
+jest.mock('@/src/infrastructure/identity/members', () => ({ assertCanManage: jest.fn() }));
+jest.mock('@/src/core/domain/billing/planLock', () => ({
   getLockedCheckoutPlanSlug: jest.fn((
     billing: { planSlug?: string | null; subscriptionStatus?: string | null } | null | undefined,
   ) => {
@@ -18,7 +18,7 @@ jest.mock('../../lib/billingPlanLock', () => ({
     status === 'active' || status === 'trialing' || status === 'past_due' || status === 'unpaid'
   )),
 }));
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   getOrgBillingState: jest.fn(),
   updateOrgBillingState: jest.fn(),
   hasNonTerminalStripeSubscription: jest.fn((
@@ -29,20 +29,20 @@ jest.mock('../../lib/orgBilling', () => ({
       && billing.subscriptionStatus !== 'incomplete_expired',
   )),
 }));
-jest.mock('../../lib/stripe', () => ({
+jest.mock('@/src/infrastructure/billing/stripe', () => ({
   getStripe: jest.fn(),
   isStripeConfigured: jest.fn(),
 }));
-jest.mock('../../lib/stripeMode', () => ({
+jest.mock('@/src/infrastructure/billing/stripeMode', () => ({
   assertStripeModeOrThrow: jest.fn(),
 }));
-jest.mock('../../lib/stripeBillingSync', () => ({ syncSubscriptionToOrg: jest.fn() }));
-jest.mock('../../lib/stripeCustomer', () => ({ ensureStripeCustomer: jest.fn() }));
-jest.mock('../../lib/stripePrices', () => ({ getStripePriceId: jest.fn().mockReturnValue('price_growth') }));
-jest.mock('../../lib/billingPlans', () => ({
+jest.mock('@/src/infrastructure/billing/stripeBillingSync', () => ({ syncSubscriptionToOrg: jest.fn() }));
+jest.mock('@/src/infrastructure/billing/stripeCustomer', () => ({ ensureStripeCustomer: jest.fn() }));
+jest.mock('@/src/core/domain/billing/prices', () => ({ getStripePriceId: jest.fn().mockReturnValue('price_growth') }));
+jest.mock('@/src/core/domain/billing/plans', () => ({
   getCheckoutPlan: jest.fn().mockReturnValue({ slug: 'growth', name: 'Growth', priceMonthly: 59 }),
 }));
-jest.mock('../../lib/getBootstrap', () => ({
+jest.mock('@/src/infrastructure/http/getBootstrap', () => ({
   getBootstrap: jest.fn(async () => ({
     access: {
       schemaVersion: 1,
@@ -64,10 +64,10 @@ import createSubscriptionHandler from '../../pages/api/billing/create-subscripti
 import portalHandler from '../../pages/api/billing/portal';
 import updateCustomerHandler from '../../pages/api/billing/update-customer';
 import { getCurrentUser, getCurrentUserId } from '../../utils/getUser';
-import { ensureUserTenancy } from '../../lib/tenancy';
-import { assertCanManage } from '../../lib/members';
-import { getOrgBillingState } from '../../lib/orgBilling';
-import { isStripeConfigured } from '../../lib/stripe';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { isStripeConfigured } from '@/src/infrastructure/billing/stripe';
 
 type ApiHandler = (req: NextApiRequest, res: NextApiResponse) => Promise<unknown>;
 type TestResponse = NextApiResponse & { statusCode?: number; body?: unknown };

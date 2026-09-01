@@ -1,10 +1,10 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('u1') }));
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   getActiveWorkspaceId: jest.fn().mockResolvedValue(9),
   getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([9, 10]),
 }));
-jest.mock('../../lib/workspaces', () => ({
+jest.mock('@/src/infrastructure/identity/workspaces', () => ({
   listWorkspaces: jest.fn().mockResolvedValue([{ id: 9, name: 'Default' }]),
   createWorkspace: jest.fn().mockResolvedValue({ id: 11, name: 'New' }),
   renameWorkspace: jest.fn().mockResolvedValue(undefined),
@@ -16,7 +16,7 @@ import listHandler from '../../pages/api/workspaces/index';
 import idHandler from '../../pages/api/workspaces/[id]';
 import activeHandler from '../../pages/api/workspaces/active';
 import setupHandler from '../../pages/api/workspaces/setup';
-import { deleteWorkspace } from '../../lib/workspaces';
+import { deleteWorkspace } from '@/src/infrastructure/identity/workspaces';
 
 const makeRes = () => { const r: any = {}; r.status = jest.fn().mockReturnValue(r); r.json = jest.fn().mockReturnValue(r); r.setHeader = jest.fn(); return r; };
 

@@ -1,8 +1,8 @@
 /**
  * DataForSEO Labs historical_rank_overview — chart + metric deltas (provider shape).
  */
-import { toDfsLanguageCode } from '../../lib/domainLanguagePrompts';
-import type { ProviderOverviewPoint } from '../../lib/organicResearch/types';
+import { toDfsLanguageCode } from '@/src/core/shared/language';
+import type { ProviderOverviewPoint } from '@/src/infrastructure/organicResearch/types';
 import {
   dfsPostResult,
   isDataForSeoConfigured,

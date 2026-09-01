@@ -2,29 +2,29 @@
 // the real access-enforcement wrapper (402 on payment-failed lock) end to end.
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-import type { OrgBillingState } from '../../lib/orgBilling';
+import type { OrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 
 jest.mock('../../database/database', () => ({
   __esModule: true,
   default: { query: jest.fn() },
 }));
 
-jest.mock('../../lib/stripe', () => ({
+jest.mock('@/src/infrastructure/billing/stripe', () => ({
   getStripe: jest.fn(),
   getStripeWebhookSecret: jest.fn(),
   isStripeConfigured: jest.fn(() => false),
 }));
 
-jest.mock('../../lib/readRawBody', () => ({
+jest.mock('@/src/infrastructure/http/readRawBody', () => ({
   readRawBody: jest.fn(),
 }));
 
-jest.mock('../../lib/billingEmailClaim', () => ({
+jest.mock('@/src/infrastructure/billing/billingEmailClaim', () => ({
   claimBillingEmailAndEnqueue: jest.fn(),
 }));
 
-jest.mock('../../lib/stripeBillingSync', () => {
-  const actual = jest.requireActual('../../lib/stripeBillingSync') as typeof import('../../lib/stripeBillingSync');
+jest.mock('@/src/infrastructure/billing/stripeBillingSync', () => {
+  const actual = jest.requireActual('@/src/infrastructure/billing/stripeBillingSync') as typeof import('@/src/infrastructure/billing/stripeBillingSync');
   return {
     ...actual,
     syncSubscriptionToOrg: jest.fn(),
@@ -32,7 +32,7 @@ jest.mock('../../lib/stripeBillingSync', () => {
   };
 });
 
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   getOrgBillingState: jest.fn(),
   getOrgIdByStripeCustomerId: jest.fn(),
   updateOrgBillingState: jest.fn(),
@@ -48,20 +48,20 @@ jest.mock('../../utils/verifyUser', () => ({
   default: jest.fn().mockResolvedValue('authorized'),
 }));
 
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   ensureUserTenancy: jest.fn(),
   getAccessibleWorkspaceIds: jest.fn(),
 }));
 
-jest.mock('../../lib/notifications/inboxService', () => ({
+jest.mock('@/src/infrastructure/notifications/inboxService', () => ({
   listInboxForUser: jest.fn(),
 }));
 
-jest.mock('../../lib/notifications/syncOptimizationInbox', () => ({
+jest.mock('@/src/infrastructure/notifications/syncOptimizationInbox', () => ({
   syncOptimizationInbox: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../lib/errors', () => ({
+jest.mock('@/src/core/shared/errors', () => ({
   getErrorMessage: jest.fn(() => 'DB error'),
 }));
 
@@ -69,7 +69,7 @@ jest.mock('../../lib/errors', () => ({
 // [rows, meta] which the bare db mock can't satisfy). A Set mirrors the real
 // semantics: first claim of an event id wins, replays are deduped, release re-arms.
 const claimedEvents = new Set<string>();
-jest.mock('../../lib/stripeWebhookEvents', () => ({
+jest.mock('@/src/infrastructure/billing/stripeWebhookEvents', () => ({
   claimStripeEvent: jest.fn(async (event: { id: string }) => {
     if (claimedEvents.has(event.id)) return false;
     claimedEvents.add(event.id);
@@ -83,14 +83,14 @@ import stripeWebhookHandler from '../../pages/api/webhooks/stripe';
 import inboxHandler from '../../pages/api/inbox';
 import billingSubscriptionHandler from '../../pages/api/billing/subscription';
 import db from '../../database/database';
-import { getStripe, getStripeWebhookSecret } from '../../lib/stripe';
-import { readRawBody } from '../../lib/readRawBody';
-import { claimBillingEmailAndEnqueue } from '../../lib/billingEmailClaim';
-import { syncSubscriptionToOrg } from '../../lib/stripeBillingSync';
-import { getOrgBillingState } from '../../lib/orgBilling';
-import { ensureUserTenancy, getAccessibleWorkspaceIds } from '../../lib/tenancy';
+import { getStripe, getStripeWebhookSecret } from '@/src/infrastructure/billing/stripe';
+import { readRawBody } from '@/src/infrastructure/http/readRawBody';
+import { claimBillingEmailAndEnqueue } from '@/src/infrastructure/billing/billingEmailClaim';
+import { syncSubscriptionToOrg } from '@/src/infrastructure/billing/stripeBillingSync';
+import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { ensureUserTenancy, getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 import { getCurrentUserId } from '../../utils/getUser';
-import { listInboxForUser } from '../../lib/notifications/inboxService';
+import { listInboxForUser } from '@/src/infrastructure/notifications/inboxService';
 
 type TestResponse = NextApiResponse & { statusCode?: number; body?: unknown };
 

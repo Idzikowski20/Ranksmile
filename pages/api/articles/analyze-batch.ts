@@ -6,13 +6,13 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
-import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
-import { getArticleIdSql } from '../../../lib/articleSql';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getErrorMessage } from '../../../lib/errors';
-import { queryRows } from '../../../lib/db/query';
-import { mapPool } from '../../../lib/mapPool';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryRows } from '@/src/infrastructure/db/query';
+import { mapPool } from '@/src/core/shared/mapPool';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const ANALYZE_BATCH_CONCURRENCY = 3;
 

@@ -1,10 +1,10 @@
-import * as approvedOutline from '../../../lib/contentPlanner/applyApprovedOutline';
+import * as approvedOutline from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
 import {
   applyApprovedOutlineToPlan,
   approvedOutlineWarnings,
   parseApprovedOutline,
-} from '../../../lib/contentPlanner/applyApprovedOutline';
-import type { ArticleExecutionPlan, ExecutionPlanSection } from '../../../lib/contentPlanner/types';
+} from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
+import type { ArticleExecutionPlan, ExecutionPlanSection } from '@/src/core/domain/contentPlanner/types';
 
 function section(id: string): ExecutionPlanSection {
   return {

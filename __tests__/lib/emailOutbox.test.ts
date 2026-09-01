@@ -1,7 +1,7 @@
 /**
  * Stateful in-memory mock — email outbox claim / retry / poller without live Postgres.
  */
-jest.mock('../../lib/ensureNotificationEmailTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureNotificationEmailTables', () => ({
   ensureNotificationEmailTables: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -44,7 +44,7 @@ const mockProcessEmailJob = jest.fn(async (dbJobId: number) => {
   }
 });
 
-jest.mock('../../lib/notifications/emailWorker', () => ({
+jest.mock('@/src/infrastructure/notifications/emailWorker', () => ({
   processEmailJob: (...args: unknown[]) => mockProcessEmailJob(...(args as [number])),
 }));
 
@@ -198,9 +198,9 @@ import {
   markEmailFailed,
   markEmailDlq,
   recoverStaleEmailJobs,
-} from '../../lib/notifications/emailJobState';
-import { enqueueKeywordPositionEmails } from '../../lib/notifications/emailQueue';
-import { reconcileEmailOutbox } from '../../lib/notifications/emailOutboxReconciler';
+} from '@/src/infrastructure/notifications/emailJobState';
+import { enqueueKeywordPositionEmails } from '@/src/infrastructure/notifications/emailQueue';
+import { reconcileEmailOutbox } from '@/src/infrastructure/notifications/emailOutboxReconciler';
 
 describe('email outbox queue + state', () => {
   beforeEach(() => {

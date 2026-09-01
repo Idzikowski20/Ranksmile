@@ -3,27 +3,27 @@ jest.mock('../../../database/database', () => ({
   default: { query: jest.fn(async () => [[], undefined]) },
 }));
 
-jest.mock('../../../lib/ensureBillingTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => ({
   ensureBillingTables: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../../lib/stripe', () => ({
+jest.mock('@/src/infrastructure/billing/stripe', () => ({
   getStripe: jest.fn(),
   isStripeConfigured: jest.fn(() => false),
 }));
 
-jest.mock('../../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   getOrgBillingState: jest.fn(async () => null),
 }));
 
-jest.mock('../../../lib/billingInvoices', () => ({
+jest.mock('@/src/composition/billing', () => ({
   listOrgBillingInvoices: jest.fn(async () => []),
 }));
 
-import { billingError } from '../../../lib/billing/billingErrors';
-import { projectTimeline, type BillingDomainEvent } from '../../../lib/billing/domainEvents';
-import { BILLING_SNAPSHOT_SCHEMA_VERSION } from '../../../lib/billing/buildBillingSnapshot';
-import { enrichPaymentMethodViewModels } from '../../../lib/billing/paymentMethodService';
+import { billingError } from '@/src/core/domain/billing/errors';
+import { projectTimeline, type BillingDomainEvent } from '@/src/infrastructure/billing/domainEvents';
+import { BILLING_SNAPSHOT_SCHEMA_VERSION } from '@/src/infrastructure/billing/buildBillingSnapshot';
+import { enrichPaymentMethodViewModels } from '@/src/infrastructure/billing/paymentMethodService';
 
 describe('billing domain events → timeline', () => {
   it('projects enum type + SOURCE without human labels', () => {

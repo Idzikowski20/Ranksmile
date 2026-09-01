@@ -2,10 +2,10 @@ import React from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
 import { optimizeStore } from './optimizeStore';
-import { sanitizeArticleHtml } from '../../lib/sanitizeHtml';
-import { WHOLE_ARTICLE_ID } from '../../lib/optimizeWholeArticle';
-import { renderStructuredDiffHtml } from '../../lib/optimizeWordDiff';
-import { useEntrance } from '../../lib/motion/useEntrance';
+import { sanitizeArticleHtml } from '@/src/infrastructure/http/sanitizeHtml';
+import { WHOLE_ARTICLE_ID } from '@/src/infrastructure/ao/optimizeWholeArticle';
+import { renderStructuredDiffHtml } from '@/src/infrastructure/ao/optimizeWordDiff';
+import { useEntrance } from '@/components/motion/useEntrance';
 
 // React node-view for the contentOptimizer TipTap node.
 // Queued/scanning: original section while the stream runs.

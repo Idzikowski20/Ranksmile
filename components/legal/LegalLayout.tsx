@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import styled from '@emotion/styled';
-import { LEGAL_COMPANY, LEGAL_DOCS } from '../../lib/legal/company';
+import { LEGAL_COMPANY, LEGAL_DOCS } from '@/src/core/domain/legal/company';
 
 const FONT = 'var(--font-family-primary)';
 const BRAND = '#F84416';

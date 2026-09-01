@@ -11,7 +11,7 @@ import { Alert, Button } from '../../../components/koala/core';
 import { useAppBanner } from '../../../components/koala/shell';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
-import type { AutomationEvent, AutomationPublishMode } from '../../../lib/types/automations';
+import type { AutomationEvent, AutomationPublishMode } from '@/src/core/shared/types/automations';
 
 type ListResponse = {
   wordpressConnected: boolean;

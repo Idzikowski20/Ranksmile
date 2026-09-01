@@ -1,11 +1,11 @@
-import { computeOptimizeLiveSnapshot } from '../../lib/computeLiveArticleScores';
+import { computeOptimizeLiveSnapshot } from '@/src/infrastructure/articles/computeLiveArticleScores';
 import {
   computeAiSearchScore,
   computeOverallContentScore,
   type AiVisibilitySummary,
-} from '../../lib/aiSearchScore';
-import type { CoverageItem } from '../../lib/aiCoverage';
-import type { ScoreData } from '../../lib/contentScore';
+} from '@/src/core/domain/aiScore/aiSearchScore';
+import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 
 const coverageItems: CoverageItem[] = [
   {

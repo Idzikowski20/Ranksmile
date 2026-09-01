@@ -1,4 +1,4 @@
-import { mapAutomationEvent } from '../../lib/types/automations';
+import { mapAutomationEvent } from '@/src/core/shared/types/automations';
 
 describe('mapAutomationEvent', () => {
   it('normalizes publish mode and date', () => {

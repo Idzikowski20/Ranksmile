@@ -3,8 +3,8 @@ import {
   enrichTermsWithSalienceFromZones,
   termSalienceWeight,
   type SalienceZones,
-} from '../../lib/termSalienceCore';
-import { extractSalienceZones } from '../../lib/termSalience';
+} from '@/src/core/domain/terms/salienceCore';
+import { extractSalienceZones } from '@/src/infrastructure/competitors/termSalience';
 
 describe('termSalience', () => {
   const competitorHtml = `

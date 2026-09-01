@@ -32,7 +32,7 @@ import {
   type SortMetric,
   type SortOrder,
   type TableRow,
-} from '../../../lib/performance/types';
+} from '@/src/infrastructure/performance/types';
 import {
   addDays,
   buildKeywordQuery,
@@ -48,7 +48,7 @@ import {
   getToday,
   normalizePath,
   parseDateKey,
-} from '../../../lib/performance/formatters';
+} from '@/src/infrastructure/performance/formatters';
 import { slugToDomain } from '../../../utils/slugToDomain';
 
 const KeywordFilterModal = dynamic(() => import('../../../components/performance/KeywordFilterModal'), { ssr: false });

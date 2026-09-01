@@ -5,11 +5,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUser } from '../../../utils/getUser';
-import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
-import { createConnection, mintApiKey } from '../../../lib/wpConnection';
-import { wpRestFetch } from '../../../lib/wpRest';
-import { assertPublicUrl } from '../../../lib/ssrfGuard';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
+import { createConnection, mintApiKey } from '@/src/infrastructure/wordpress/wpConnection';
+import { wpRestFetch } from '@/src/infrastructure/wordpress/wpRest';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

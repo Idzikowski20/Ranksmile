@@ -15,7 +15,7 @@ import {
   authSubtitleStyle,
   authTitleStyle,
 } from '../../components/auth/authStyles';
-import { authClient } from '../../lib/auth/client';
+import { authClient } from '@/src/infrastructure/auth/client';
 import { useWorkspaces } from '../../services/workspaces';
 import { useOrganization } from '../../services/organization';
 

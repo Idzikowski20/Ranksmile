@@ -1,7 +1,7 @@
 import {
   mintBillingConfirmationToken,
   verifyBillingConfirmationToken,
-} from '../../lib/billingConfirmationToken';
+} from '@/src/infrastructure/billing/billingConfirmationToken';
 
 describe('billingConfirmationToken', () => {
   const prev = process.env.BILLING_CONFIRMATION_SECRET;

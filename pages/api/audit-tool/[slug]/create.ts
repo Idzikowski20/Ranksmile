@@ -3,11 +3,11 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
-import { enqueueAudit } from '../../../../lib/auditRunner';
-import { langForCountry } from '../../../../lib/countryLang';
-import { getErrorMessage } from '../../../../lib/errors';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
+import { enqueueAudit } from '@/src/infrastructure/siteAudit/auditRunner';
+import { langForCountry } from '@/src/core/domain/audit/country';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

@@ -2,8 +2,8 @@ import React, { useCallback, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQuery } from 'react-query';
 import { useRouter } from 'next/router';
-import { getPlanCheckoutHref, type BillingPeriod } from '../../lib/billingPlans';
-import type { SubscriptionDetails } from '../../lib/subscriptionDetails';
+import { getPlanCheckoutHref, type BillingPeriod } from '@/src/core/domain/billing/plans';
+import type { SubscriptionDetails } from '@/src/infrastructure/billing/subscriptionDetails';
 import {
   COMPARE_SECTIONS,
   PRICING_GRID_SLUGS,
@@ -16,7 +16,7 @@ import {
   resolveCtaState,
   trackPricingEvent,
   type PlanSlug,
-} from '../../lib/pricing/planDefinition';
+} from '@/src/core/domain/pricing/planDefinition';
 import { Alert, Button, Link, SegmentedControl } from '../koala/core';
 import { ComparePricingTable, PricingCard, PricingFaqSection } from '../koala/product';
 import type { FaqItem, PricingCardAction } from '../koala/product';

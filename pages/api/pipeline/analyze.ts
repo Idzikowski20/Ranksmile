@@ -4,9 +4,9 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import {
   enqueueAnalyzeDag,
   FlowProducerStageError,
-} from '../../../lib/pipeline/flowProducer';
-import { getPipelineStage } from '../../../lib/pipeline/pipelineStage';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+} from '@/src/infrastructure/pipeline/flowProducer';
+import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 /**
  * POST /api/pipeline/analyze — Etap 2+ FlowProducer DAG (or sequential fallback).

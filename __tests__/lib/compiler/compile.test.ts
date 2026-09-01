@@ -1,7 +1,7 @@
-import { compile } from '../../../lib/compiler/compile';
-import { lex } from '../../../lib/compiler/lexer';
-import { hashCompileSource } from '../../../lib/compiler/contentHash';
-import { isEntityNode, isFactNode, isIntentNode } from '../../../lib/ccm/types/graph';
+import { compile } from '@/src/core/compiler/compile';
+import { lex } from '@/src/core/compiler/lexer';
+import { hashCompileSource } from '@/src/core/compiler/contentHash';
+import { isEntityNode, isFactNode, isIntentNode } from '@/src/core/ccm/types/graph';
 
 const FIXED_AT = '2026-08-03T00:00:00.000Z';
 

@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from 'react-query';
-import { getCheckoutPlan } from '../../../lib/billingPlans';
-import fetchJson from '../../../lib/fetchJson';
-import { formatTrialCountdown, planEndLine, type PlanSummaryData } from '../../../lib/planLimits';
-import { hasActiveBillingEntitlement } from '../../../lib/billingEntitlement';
-import type { SubscriptionStatus } from '../../../lib/orgBilling';
+import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
+import fetchJson from '@/src/infrastructure/http/fetchJson';
+import { formatTrialCountdown, planEndLine, type PlanSummaryData } from '@/src/infrastructure/billing/planLimits';
+import { hasActiveBillingEntitlement } from '@/src/infrastructure/billing/billingEntitlement';
+import type { SubscriptionStatus } from '@/src/infrastructure/billing/orgBilling';
 import { Icon } from '../icons/Icon';
 import { PlanUsageMetricRow } from '../product/PlanUsageMetricRow';
 import { Popover } from '../primitives/Popover';

@@ -7,7 +7,7 @@ jest.mock('../../database/database', () => ({
   default: { query: jest.fn() },
 }));
 
-import { articleTermsToCoverageItems, ArticleTermRow } from '../../lib/articleTerms';
+import { articleTermsToCoverageItems, ArticleTermRow } from '@/src/infrastructure/articles/articleTerms';
 
 const row = (over: Partial<ArticleTermRow> = {}): ArticleTermRow => ({
   term: 't', term_type: 'topic', source: 'serp',

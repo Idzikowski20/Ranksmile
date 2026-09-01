@@ -1,4 +1,4 @@
-import { structureIssues } from '../../lib/validateArticleStructure';
+import { structureIssues } from '@/src/core/domain/articles/validateStructure';
 
 describe('validateArticleStructure', () => {
   it('flags paragraphs over 700 chars', () => {

@@ -10,8 +10,8 @@ import { FeedbackPopover, Card, AnalyticsMetricItem } from '../../components/koa
 import { Button } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
-import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../lib/activeWorkspace';
-import { useStaggerReveal } from '../../lib/motion/useStaggerReveal';
+import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
+import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
 import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSection';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
@@ -27,8 +27,8 @@ import LearnSection from '../../components/dashboard/LearnSection';
 import SetupPipeline from '../../components/dashboard/SetupPipeline';
 import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
 import { useAiVisHistory } from '../../services/aiVisibility';
-import fetchJson from '../../lib/fetchJson';
-import { isActionableRecommendation } from '../../lib/recommendations';
+import fetchJson from '@/src/infrastructure/http/fetchJson';
+import { isActionableRecommendation } from '@/src/core/domain/recommendations/actionable';
 
 const formatShortDate = (dateStr: string): string => {
   if (!dateStr) return '';

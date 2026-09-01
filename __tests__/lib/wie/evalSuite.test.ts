@@ -3,29 +3,29 @@ import {
   scale10to100,
   patternUsageScore,
   coverageScoreFromSnapshot,
-} from '../../../lib/wie/eval/scorecard';
+} from '@/src/core/domain/wie/scorecard';
 import {
   scoreDocFeatures,
   buildCompetitorBenchmark,
   formatBenchmarkMarkdown,
-} from '../../../lib/wie/eval/competitorBenchmark';
+} from '@/src/core/domain/wie/evalCompetitorBenchmark';
 import {
   parseEditorialJudgeResult,
   formatEditorialReviewMarkdown,
   buildEditorialJudgeUserPrompt,
-} from '../../../lib/wie/eval/editorialJudge';
+} from '@/src/infrastructure/wie/eval/editorialJudge';
 import {
   buildTechnicalMarkdown,
   buildEditorialMarkdown,
   buildVerdictJson,
-} from '../../../lib/wie/eval/reports';
-import { buildTrendsMarkdown, type HistoryEntry } from '../../../lib/wie/eval/history';
-import { reconcileBeatsTop5, weightedBeatsFromBenchmark, formatBeatsBreakdown } from '../../../lib/wie/eval/verdictAlign';
-import { evaluatePublishGate, scoreRootIntentCoverage } from '../../../lib/wie/eval/publishGate';
+} from '@/src/infrastructure/wie/eval/reports';
+import { buildTrendsMarkdown, type HistoryEntry } from '@/src/infrastructure/wie/eval/history';
+import { reconcileBeatsTop5, weightedBeatsFromBenchmark, formatBeatsBreakdown } from '@/src/core/domain/wie/verdictAlign';
+import { evaluatePublishGate, scoreRootIntentCoverage } from '@/src/infrastructure/wie/eval/publishGate';
 import {
   evaluatePolicyCompliance,
   detectOpeningStyle,
-} from '../../../lib/wie/eval/policyCompliance';
+} from '@/src/infrastructure/wie/eval/policyCompliance';
 
 describe('WIE eval scorecard', () => {
   it('weights Writing Intelligence composite', () => {

@@ -1,5 +1,5 @@
-import { compile } from '../../../lib/compiler/compile';
-import { buildActionGraph } from '../../../lib/planner/actionGraphBuilder';
+import { compile } from '@/src/core/compiler/compile';
+import { buildActionGraph } from '@/src/core/planner/actionGraphBuilder';
 
 const FIXED_AT = '2026-08-03T08:00:00.000Z';
 const BUILT_AT = '2026-08-03T08:01:00.000Z';

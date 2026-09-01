@@ -15,21 +15,21 @@ import {
 } from '../../../components/billing/CheckoutStripeProvider';
 import CheckoutKoalaBody from '../../../components/billing/CheckoutKoalaBody';
 import { CheckoutPageSkeleton } from '../../../components/billing/CheckoutPageSkeleton';
-import type { CheckoutFieldErrors } from '../../../lib/checkoutValidation';
+import type { CheckoutFieldErrors } from '@/src/infrastructure/billing/checkoutValidation';
 import {
   BillingPeriod,
   CheckoutPlan,
   getCheckoutPlan,
   getTrialEndDateLabel,
-} from '../../../lib/billingPlans';
-import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billingPlanLock';
-import { resolveCheckoutMode } from '../../../lib/billingTrial';
-import { isAllowedSubscriptionChange, type UpgradePreview } from '../../../lib/billingUpgrade';
-import { getOrgBillingState } from '../../../lib/orgBilling';
-import type { SubscriptionDetails } from '../../../lib/subscriptionDetails';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+} from '@/src/core/domain/billing/plans';
+import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '@/src/core/domain/billing/planLock';
+import { resolveCheckoutMode } from '@/src/infrastructure/billing/billingTrial';
+import { isAllowedSubscriptionChange, type UpgradePreview } from '@/src/infrastructure/billing/billingUpgrade';
+import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import type { SubscriptionDetails } from '@/src/infrastructure/billing/subscriptionDetails';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
-import { isStripeCheckoutConfigured, type PlanSlug } from '../../../lib/stripePrices';
+import { isStripeCheckoutConfigured, type PlanSlug } from '@/src/core/domain/billing/prices';
 
 const F = 'var(--font-family-primary)';
 

@@ -5,8 +5,8 @@
  * Layout follows the Figma reference (cn7zCRglwVkmcbCdT01bgI · 2:80) 1:1; copy is
  * Ranksmile's own — no borrowed customer logos, testimonials or review scores.
  */
-import { PLAN_DEFINITIONS, PLAN_HIERARCHY } from '../../lib/pricing/planDefinition';
-import { LEGAL_COMPANY } from '../../lib/legal/company';
+import { PLAN_DEFINITIONS, PLAN_HIERARCHY } from '@/src/core/domain/pricing/planDefinition';
+import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
 
 export const SITE_NAME = 'Ranksmile';
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || LEGAL_COMPANY.website).replace(/\/$/, '');

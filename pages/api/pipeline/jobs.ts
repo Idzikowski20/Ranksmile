@@ -3,9 +3,9 @@ import verifyUser from '../../../utils/verifyUser';
 import {
   ensurePipelineJobsTables,
   expireStaleQueuedJobs,
-} from '../../../lib/ensurePipelineJobsTables';
+} from '@/src/infrastructure/persistence/schema/ensurePipelineJobsTables';
 import db from '../../../database/database';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type JobPublic = {
   id: number;

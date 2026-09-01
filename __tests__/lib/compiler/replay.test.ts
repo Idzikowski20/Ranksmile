@@ -1,12 +1,12 @@
-import { compile } from '../../../lib/compiler/compile';
+import { compile } from '@/src/core/compiler/compile';
 import {
   ReplayError,
   recomputeDeterministicHash,
   replayCompileFromSource,
   replayRoundTrip,
   verifyDeterministicHash,
-} from '../../../lib/compiler/replay';
-import { parseCcm } from '../../../lib/ccm/serialize';
+} from '@/src/core/compiler/replay';
+import { parseCcm } from '@/src/core/ccm/serialize';
 
 const FIXED_AT = '2026-08-03T08:00:00.000Z';
 

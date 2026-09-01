@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUser } from '../../../../utils/getUser';
-import { acceptInvitation } from '../../../../lib/invitations';
-import { getErrorMessage } from '../../../../lib/errors';
+import { acceptInvitation } from '@/src/infrastructure/identity/invitations';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const user = await getCurrentUser(req, res);

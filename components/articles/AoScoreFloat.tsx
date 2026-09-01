@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from '../../lib/motion/gsap';
+import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from '@/components/motion/gsap';
 
 interface Props {
   label: string;

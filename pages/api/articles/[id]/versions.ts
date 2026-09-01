@@ -3,13 +3,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articleSql';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../lib/tenancy';
-import { getErrorMessage } from '../../../../lib/errors';
-import { queryRows, queryOne } from '../../../../lib/db/query';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryRows, queryOne } from '@/src/infrastructure/db/query';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

@@ -1,4 +1,4 @@
-import { mapPool } from '../../lib/mapPool';
+import { mapPool } from '@/src/core/shared/mapPool';
 
 describe('mapPool', () => {
   it('never runs more than concurrency workers at once', async () => {

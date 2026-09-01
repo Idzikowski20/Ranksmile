@@ -1,4 +1,4 @@
-import { LEGAL_COMPANY, LEGAL_DOCS } from '../../lib/legal/company';
+import { LEGAL_COMPANY, LEGAL_DOCS } from '@/src/core/domain/legal/company';
 
 describe('legal company catalog', () => {
   it('exposes launch docs with unique hrefs', () => {

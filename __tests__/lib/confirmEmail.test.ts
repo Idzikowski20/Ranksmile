@@ -1,4 +1,4 @@
-import { buildConfirmEmailHtml, sendConfirmationEmail, CONFIRM_EMAIL_SUBJECT } from '../../lib/confirmEmail';
+import { buildConfirmEmailHtml, sendConfirmationEmail, CONFIRM_EMAIL_SUBJECT } from '@/src/infrastructure/email/confirmEmail';
 
 describe('buildConfirmEmailHtml', () => {
    const confirmUrl = 'https://app.example.com/auth/confirm-email?token=tok123';

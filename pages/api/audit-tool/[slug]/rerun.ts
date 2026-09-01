@@ -3,9 +3,9 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
-import { queryOne } from '../../../../lib/db/query';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 // POST /api/audit-tool/[slug]/rerun { id } — re-queue one audit so it recomputes (e.g.
 // after the competitor selection changed). The client then kicks /run to process it.

@@ -13,7 +13,7 @@ import type {
   SiteAuditIssue,
   SiteAuditOverviewPayload,
   ThematicReport,
-} from '../../lib/siteAudit/types';
+} from '@/src/infrastructure/siteAudit/types';
 
 const FONT = 'var(--font-family-primary)';
 

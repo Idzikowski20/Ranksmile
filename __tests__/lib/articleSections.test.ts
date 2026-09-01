@@ -1,4 +1,4 @@
-import { splitSections, normalizeHtmlForDiff, sectionId } from '../../lib/articleSections';
+import { splitSections, normalizeHtmlForDiff, sectionId } from '@/src/infrastructure/articles/articleSections';
 
 describe('articleSections', () => {
   const html = '<p>intro</p><h2>One</h2><p>a</p><h2>Two</h2><p>b</p>';

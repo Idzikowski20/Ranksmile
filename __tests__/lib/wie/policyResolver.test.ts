@@ -1,21 +1,21 @@
-import { WRITING_PRINCIPLES, getPrinciple } from '../../../lib/wie/principles';
+import { WRITING_PRINCIPLES, getPrinciple } from '@/src/core/domain/wie/principles';
 import {
   applyConfidenceDecay,
   scorePatternForContext,
   SEED_PATTERNS,
   type WritingPattern,
-} from '../../../lib/wie/patternStore';
-import { discoverAndAcceptPattern } from '../../../lib/wie/patternDiscovery';
+} from '@/src/infrastructure/wie/patternStore';
+import { discoverAndAcceptPattern } from '@/src/infrastructure/wie/patternDiscovery';
 import {
   buildPolicyContext,
   formatPolicyBundleForPrompt,
   inferIndustry,
   resolvePolicyBundle,
-} from '../../../lib/wie/policyResolver';
-import { buildHeuristicReaderBrief } from '../../../lib/wie/readerBrief';
-import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '../../../lib/ao/editPlan';
-import { makeCandidate } from '../../../lib/ao/editCandidate';
-import { buildIntentProfile } from '../../../lib/ao/intentProfile';
+} from '@/src/infrastructure/wie/policyResolver';
+import { buildHeuristicReaderBrief } from '@/src/core/domain/wie/readerBrief';
+import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '@/src/infrastructure/ao/editPlan';
+import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 
 describe('WIE principles', () => {
   it('has durable answer_user_problem_first principle', () => {

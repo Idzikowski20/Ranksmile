@@ -11,7 +11,7 @@ import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { Card, ActivityFeed } from '../../../components/koala/product';
 import type { ActivityFeedGroupData } from '../../../components/koala/product';
 import { EmptyState } from '../../../components/koala/feedback';
-import { authClient } from '../../../lib/auth/client';
+import { authClient } from '@/src/infrastructure/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { usePeople } from '../../../services/people';
 import { slugToDomain } from '../../../utils/slugToDomain';

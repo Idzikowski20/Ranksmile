@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { enqueueJob, PipelineQueueDisabledError } from '../../../lib/pipeline/pipelineQueue';
-import type { QueueName } from '../../../lib/pipeline/queuePriorities';
-import { QUEUE_PRIORITY } from '../../../lib/pipeline/queuePriorities';
-import { isQueueEnabled } from '../../../lib/workers/registry';
-import { getPipelineStage } from '../../../lib/pipeline/pipelineStage';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { enqueueJob, PipelineQueueDisabledError } from '@/src/infrastructure/pipeline/pipelineQueue';
+import type { QueueName } from '@/src/core/domain/pipeline/queuePriorities';
+import { QUEUE_PRIORITY } from '@/src/core/domain/pipeline/queuePriorities';
+import { isQueueEnabled } from '@/src/infrastructure/workers/registry';
+import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 /**
  * POST /api/pipeline/enqueue

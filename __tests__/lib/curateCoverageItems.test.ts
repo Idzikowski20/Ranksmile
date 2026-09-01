@@ -4,16 +4,16 @@ import {
   isLikelySyntheticCitationTemplate,
   isUsefulCitationPrompt,
   scoreCitationPrompt,
-} from '../../lib/citationPrompts';
-import { isCorpusNoiseSentence } from '../../lib/corpusNoiseFilter';
+} from '@/src/infrastructure/articles/citationPrompts';
+import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 import {
   AI_COVERAGE_MAX,
   curateAiCoverageItems,
   compactCoverageSnapshotItems,
   dedupePaaQuestions,
   scorePaaQuestion,
-} from '../../lib/curateCoverageItems';
-import type { CoverageItem } from '../../lib/aiCoverage';
+} from '@/src/infrastructure/coverage/curateCoverageItems';
+import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 
 describe('citationPrompts', () => {
   const keyword = 'prywatny detektyw Warszawa';

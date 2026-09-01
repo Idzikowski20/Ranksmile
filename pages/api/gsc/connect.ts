@@ -3,11 +3,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { auth } from '@googleapis/searchconsole';
-import { GOOGLE_OAUTH_SCOPES } from '../../../lib/gscAccounts';
+import { GOOGLE_OAUTH_SCOPES } from '@/src/infrastructure/gsc/gscAccounts';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 /** Only allow same-origin relative redirect targets (blocks ?redirect=https://evil open-redirect). */
 const safeRelative = (r: unknown): string | null => (typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') ? r : null);

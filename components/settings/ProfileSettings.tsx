@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { changePassword } from '../../lib/auth/fetchAuth';
-import { authClient } from '../../lib/auth/client';
+import { changePassword } from '@/src/infrastructure/auth/fetchAuth';
+import { authClient } from '@/src/infrastructure/auth/client';
 import { useGscAccount } from '../../services/gscAccount';
 import { useProfile, useUpdateProfile } from '../../services/profile';
 import { useDeleteAccount } from '../../services/accountSecurity';

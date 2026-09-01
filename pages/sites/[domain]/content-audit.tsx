@@ -7,18 +7,18 @@ import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
+import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
 import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel, ToolRibbon, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
-import { useSortState } from '../../../lib/useSortState';
+import { useSortState } from '@/hooks/useSortState';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
-import { deriveActiveId } from '../../../lib/activeWorkspace';
-import { useTrafficAlerts } from '../../../lib/useTrafficAlerts';
+import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
+import { useTrafficAlerts } from '@/hooks/useTrafficAlerts';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { kwScore } from '../../../utils/gsc';
 import AddPagesModal, { AvailablePage } from '../../../components/domains/AddPagesModal';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
-import { computePortfolioPruning } from '../../../lib/contentEffort';
+import { computePortfolioPruning } from '@/src/core/domain/terms/contentEffort';
 
 // Normalize a full URL or path down to its pathname (e.g. "https://x.pl/blog/" -> "/blog").
 function toPath(url: string): string {

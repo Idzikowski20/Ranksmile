@@ -4,9 +4,9 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { getDomainLocale } from '../../../../lib/domainLanguage';
-import { topicsNeedLocalization } from '../../../../lib/domainLanguagePrompts';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
+import { topicsNeedLocalization } from '@/src/core/shared/language';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

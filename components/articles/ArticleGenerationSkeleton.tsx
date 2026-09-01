@@ -1,5 +1,5 @@
 import React from 'react';
-import { prefersReducedMotion } from '../../lib/motion/gsap';
+import { prefersReducedMotion } from '@/components/motion/gsap';
 
 /**
  * The document surface while a run is writing into it: [height, width, top margin].

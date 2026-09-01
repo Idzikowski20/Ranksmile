@@ -1,0 +1,136 @@
+import type { ArticleFact } from '@/src/core/domain/articles/factTypes';
+import { factReadinessScore } from '@/src/core/domain/articles/factReadiness';
+import { DEFAULT_WEIGHTS, type ScoreFactor } from '@/src/core/domain/aiScore/factors';
+
+export type AiCitation = {
+   prompt: string;
+   answer?: string;
+   cited_url?: string;
+   cited_domain?: string;
+   is_own_domain?: boolean;
+   is_competitor?: boolean;
+   answer_readiness_score?: number;
+};
+
+export type AiVisibilitySummary = {
+   prompts_total: number;
+   prompts_cited: number;
+   competitor_citations: number;
+   extractability_score: number;
+   citations: AiCitation[];
+};
+
+/** Legacy PAA-readiness score — used when facts pipeline has not run. */
+export function computeAiSearchScore(summary?: AiVisibilitySummary | null): number {
+   if (!summary || summary.prompts_total <= 0) return 0;
+
+   const scores = (summary.citations || [])
+      .map((c) => c.answer_readiness_score ?? 0)
+      .filter((n) => Number.isFinite(n));
+   if (!scores.length) return 0;
+
+   const coveredRate = summary.prompts_cited / summary.prompts_total;
+   const avgReadiness = scores.reduce((a, b) => a + b, 0) / scores.length;
+   const extractability = Math.min(Math.max(summary.extractability_score || avgReadiness, 0), 100) / 100;
+
+   // Content coverage dominates (Ranksmile parity); extractability secondary.
+   const coverageScore = coveredRate * 60;
+   const readinessScore = (avgReadiness / 100) * 30;
+   const extractScore = extractability * 10;
+
+   return Math.round(Math.min(100, coverageScore + readinessScore + extractScore));
+}
+
+/** Ranksmile-style AI Search Score v2 — Facts Coverage (70%) + Upfront Intent (30%). */
+/**
+ * Intent part of the AI score, 0..100, from the four introduction factors. Weighted the
+ * same way as AioScore, so the number under the gauge and the factor list beside it
+ * cannot disagree. Falls back to the legacy boolean when no factors were computed.
+ */
+function intentFromIntroFactors(factors: ScoreFactor[]): number {
+   // Read from the same table AioScore uses — a second copy would drift on the first tune.
+   const weights = Object.fromEntries(
+      Object.entries(DEFAULT_WEIGHTS).filter(([name]) => name.startsWith('INTRODUCTION_')),
+   ) as Record<string, number>;
+   const total = Object.values(weights).reduce((sum, w) => sum + w, 0);
+   if (!total) return 0;
+   const earned = factors.reduce(
+      (sum, factor) => sum + factor.score * (weights[factor.name] ?? 0),
+      0,
+   );
+   return (earned / total) * 100;
+}
+
+export function computeAiSearchScoreV2(opts: {
+   facts: ArticleFact[];
+   articleText: string;
+   intentScore?: number;
+   answersMainQuestionEarly?: boolean;
+   /** Introduction factors (lib/aiScore) — replace the legacy boolean when present. */
+   introFactors?: ScoreFactor[];
+}): number {
+   const { facts, articleText } = opts;
+   if (!facts.length) return 0;
+
+   let weightSum = 0;
+   let coveredSum = 0;
+   for (const f of facts) {
+      const w = Math.min(3, Math.max(1, f.sourceFrequency));
+      weightSum += w;
+      if (factReadinessScore(articleText, f.text) >= 65) coveredSum += w;
+   }
+   const factsCoverage = weightSum > 0 ? (coveredSum / weightSum) * 70 : 0;
+
+   let intentPart = opts.intentScore ?? 0;
+   if (opts.introFactors?.length) {
+      intentPart = intentFromIntroFactors(opts.introFactors);
+   } else if (opts.answersMainQuestionEarly) {
+      intentPart = Math.min(100, intentPart + 15);
+   }
+   const intentScore = (Math.min(100, Math.max(0, intentPart)) / 100) * 30;
+
+   return Math.round(Math.min(100, factsCoverage + intentScore));
+}
+
+export function resolveAiScore(opts: {
+   facts?: ArticleFact[];
+   articleText?: string;
+   summary?: AiVisibilitySummary | null;
+   intentScore?: number;
+   answersMainQuestionEarly?: boolean;
+   coverageOverall?: number | null;
+   /** Live introduction factors — keep the gauge and the factor list on one input. */
+   introFactors?: ScoreFactor[];
+}): number {
+   // Prefer the best available signal. Facts-V2 alone can be 0 while citation readiness
+   // (legacy summary) is healthy — article 159: V2=0 persisted, summary ≈37, UI showed 0.
+   let fromFacts = 0;
+   if (opts.facts?.length && opts.articleText) {
+      fromFacts = computeAiSearchScoreV2({
+         facts: opts.facts,
+         articleText: opts.articleText,
+         intentScore: opts.intentScore,
+         answersMainQuestionEarly: opts.answersMainQuestionEarly,
+         introFactors: opts.introFactors,
+      });
+   }
+   const fromCoverage = (opts.coverageOverall != null && opts.coverageOverall > 0)
+      ? opts.coverageOverall
+      : 0;
+   const fromSummary = computeAiSearchScore(opts.summary);
+   return Math.max(fromFacts, fromCoverage, fromSummary);
+}
+
+/** Ranksmile-style Content Score — weighted blend with weak-dimension floor. */
+export function computeOverallContentScore(seoScore: number, aiScore: number): number {
+   const seo = Math.min(100, Math.max(0, seoScore));
+   const ai = Math.min(100, Math.max(0, aiScore));
+   const weighted = seo * 0.55 + ai * 0.45;
+   const floor = Math.min(seo, ai) * 0.8;
+   return Math.round(Math.min(100, Math.max(weighted, floor)));
+}
+
+export function contentScoreSplit(seoScore: number, aiScore: number): { seoPct: number; aiPct: number } {
+   const total = Math.max(1, seoScore + aiScore);
+   return { seoPct: Math.round((seoScore / total) * 100), aiPct: Math.round((aiScore / total) * 100) };
+}

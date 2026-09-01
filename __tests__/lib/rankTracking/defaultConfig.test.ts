@@ -1,4 +1,4 @@
-import { defaultConfigFromCountry } from '../../../lib/rankTracking/defaultConfig';
+import { defaultConfigFromCountry } from '@/src/infrastructure/rankTracking/defaultConfig';
 
 describe('defaultConfigFromCountry', () => {
   it('maps PL to Polish locale', () => {

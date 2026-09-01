@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import * as Sentry from '@sentry/nextjs';
-import { reconcileStripeBilling } from '../../../lib/stripeBillingReconcile';
-import { pruneStripeWebhookEvents } from '../../../lib/stripeWebhookEvents';
-import { getErrorMessage } from '../../../lib/errors';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { withCronWatchdog } from '../../../lib/cronWatchdog';
+import { reconcileStripeBilling } from '@/src/infrastructure/billing/stripeBillingReconcile';
+import { pruneStripeWebhookEvents } from '@/src/infrastructure/billing/stripeWebhookEvents';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { withCronWatchdog } from '@/src/infrastructure/cron/cronWatchdog';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {

@@ -1,6 +1,6 @@
-import { prioritizeActions } from '../../lib/primitives/prioritizeActions';
-import { applyStrategy } from '../../lib/primitives/prioritizeActions';
-import type { Action } from '../../lib/primitives/types';
+import { prioritizeActions } from '@/src/core/primitives/prioritizeActions';
+import { applyStrategy } from '@/src/core/primitives/prioritizeActions';
+import type { Action } from '@/src/core/primitives/types';
 
 const base = (partial: Partial<Action> & Pick<Action, 'id' | 'title' | 'expectedLift'>): Action => ({
   type: partial.type || 'custom',

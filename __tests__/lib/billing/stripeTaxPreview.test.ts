@@ -1,7 +1,7 @@
 import {
   buildTaxLabel,
   mapStripeTaxCalculation,
-} from '../../../lib/billing/stripeTaxPreview';
+} from '@/src/infrastructure/billing/stripeTaxPreview';
 
 describe('buildTaxLabel', () => {
   it('formats VAT with percent', () => {

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from 'react-query';
 import { MenuList, MenuListItem } from '../koala/core';
 import { useWorkspaces } from '../../services/workspaces';
-import { deriveActiveId } from '../../lib/activeWorkspace';
+import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
 
 const font = 'var(--font-family-primary)';
 

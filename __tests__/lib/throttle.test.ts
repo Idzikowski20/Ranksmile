@@ -1,4 +1,4 @@
-import { throttle } from '../../lib/throttle';
+import { throttle } from '@/src/core/shared/throttle';
 
 jest.useFakeTimers();
 

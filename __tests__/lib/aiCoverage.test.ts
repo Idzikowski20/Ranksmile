@@ -11,8 +11,8 @@ jest.mock('@googleapis/searchconsole', () => ({ searchconsole_v1: { Searchconsol
 import {
   computeCoverageScores, computeBucketScore, blendBuckets, earlyAnswerBonus,
   CoverageItem,
-} from '../../lib/aiCoverage';
-import { paaCoverageItems } from '../../lib/seo/keywordData';
+} from '@/src/core/domain/coverage/aiCoverage';
+import { paaCoverageItems } from '@/src/infrastructure/seo/keywordData';
 
 // GRADED item factory — the scorer works on graded items (covered/quality baked in), NOT CoverageResult.
 const gi = (
@@ -123,7 +123,7 @@ describe('scoring helpers (isolated)', () => {
 });
 
 // checkCoverage + intentItems + hashId tests
-import { checkCoverage, intentItems, hashId, CoverageJudge, sanitizeVerdict } from '../../lib/aiCoverage';
+import { checkCoverage, intentItems, hashId, CoverageJudge, sanitizeVerdict } from '@/src/core/domain/coverage/aiCoverage';
 
 const paaItems: CoverageItem[] = [
   { id: 'paa-x', label: 'Q1?', type: 'paa', category: 'knowledge', importance: 'recommended', source: 'paa', covered: false, quality: 0 },

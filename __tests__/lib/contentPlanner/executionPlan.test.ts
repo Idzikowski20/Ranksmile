@@ -13,7 +13,7 @@ import {
   validatePlanConformity,
   validatePlanForWrite,
   KNOWLEDGE_COVERAGE_MIN_PCT,
-} from '../../../lib/contentPlanner';
+} from '@/src/infrastructure/contentPlanner/index';
 import type {
   AdaptiveOutline,
   ArticleBlueprint,
@@ -21,7 +21,7 @@ import type {
   KnowledgeCoverageReport,
   SectionBrief,
   TargetKnowledgeGraph,
-} from '../../../lib/contentPlanner/types';
+} from '@/src/core/domain/contentPlanner/types';
 
 function sampleBrief(partial?: Partial<SectionBrief>): SectionBrief {
   return {

@@ -1,4 +1,4 @@
-import { introFactorsFromScoreData } from '../../../lib/aiScore/liveFactors';
+import { introFactorsFromScoreData } from '@/src/core/domain/aiScore/liveFactors';
 
 const html = `
   <h1>Detektywi Kraków</h1>

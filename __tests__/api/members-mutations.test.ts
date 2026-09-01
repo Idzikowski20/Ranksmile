@@ -3,20 +3,20 @@ import { makeRes, callHandler, type ApiHandler, type MockRes } from '../../test-
 import idHandler from '../../pages/api/members/[id]';
 import wsHandler from '../../pages/api/members/[id]/workspaces';
 import { getCurrentUserId } from '../../utils/getUser';
-import { changeMemberRole, removeMember, setMemberWorkspaces } from '../../lib/members';
+import { changeMemberRole, removeMember, setMemberWorkspaces } from '@/src/infrastructure/identity/members';
 
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' } }));
 jest.mock('../../utils/getUser', () => ({
   getCurrentUserId: jest.fn().mockResolvedValue('u1'),
 }));
-jest.mock('../../lib/members', () => ({
+jest.mock('@/src/infrastructure/identity/members', () => ({
   changeMemberRole: jest.fn().mockResolvedValue(undefined),
   removeMember: jest.fn().mockResolvedValue(undefined),
   setMemberWorkspaces: jest.fn().mockResolvedValue(undefined),
 }));
 // The access-policy wrapper has its own coverage; unmocked it resolves real tenancy
 // and turns every case below into a 503.
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 const call = (handler: ApiHandler, req: Partial<NextApiRequest>, res: MockRes) => callHandler(handler, req, res);
 

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getActiveWorkspaceId, ForbiddenWorkspaceError } from '../../../lib/tenancy';
-import { listWorkspaces, createWorkspace } from '../../../lib/workspaces';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { getActiveWorkspaceId, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
+import { listWorkspaces, createWorkspace } from '@/src/infrastructure/identity/workspaces';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);
@@ -25,7 +25,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       try {
          return res.status(201).json(await createWorkspace(userId, name));
       } catch (e) {
-         const { isPlanLimitError, planLimitBody } = await import('../../../lib/quota');
+         const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
          if (isPlanLimitError(e)) return res.status(402).json(planLimitBody(e));
          throw e;
       }

@@ -1,6 +1,6 @@
-import { countOccurrences } from '../../lib/termMatch';
-import { filterUsefulNlpTerms } from '../../lib/competitorTermCalibration';
-import type { NlpTerm } from '../../lib/contentScore';
+import { countOccurrences } from '@/src/core/domain/terms/termMatch';
+import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
+import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 
 /** Shape produced by python-sidecar/analyzers/term_lemmas.py. */
 const USLUGI_RX = ['(?:usługami|usługach|usługi|usługa|usług)', '(?:detektywistycznych|detektywistyczne|detektywistyczna)'];

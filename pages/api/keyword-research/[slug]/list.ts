@@ -2,10 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
-import { queryRows } from '../../../../lib/db/query';
-import type { KeywordResearchCardDTO, KeywordResearchStats, KeywordResearchStatus } from '../../../../lib/keywordResearchTypes';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
+import { queryRows } from '@/src/infrastructure/db/query';
+import type { KeywordResearchCardDTO, KeywordResearchStats, KeywordResearchStatus } from '@/src/core/domain/keywords/types';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type ListRow = {
    id: number;

@@ -1,4 +1,4 @@
-import { parseWorkspaceId, workspaceHref, deriveActiveId } from '../../lib/activeWorkspace';
+import { parseWorkspaceId, workspaceHref, deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
 
 describe('deriveActiveId (SSR-safe)', () => {
   it('ignores the URL until mounted, so server + first client render match', () => {

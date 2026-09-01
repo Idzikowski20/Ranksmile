@@ -1,0 +1,103 @@
+import { useMutation, useQuery, useQueryClient, UseQueryResult, UseMutationResult } from 'react-query';
+import type { AuditCardDTO, AuditResult } from '@/src/core/domain/audit/types';
+import { fetchJson, toastError, jsonPost } from './http';
+
+export interface AuditStatusPayload {
+   queued: number; running: number; completed: number; failed: number;
+   runs: { id: number; status: string; progressDone: number; progressTotal: number }[];
+}
+
+export interface AuditDetailPayload {
+   run: { id: number; url: string; keyword: string; status: string; contentScore: number | null; createdAt: string | null; finishedAt: string | null; error: string | null };
+   result: AuditResult | null;
+}
+
+export function useAuditList(slug: string | undefined): UseQueryResult<{ items: AuditCardDTO[] }> {
+   return useQuery<{ items: AuditCardDTO[] }>(
+      ['audit-list', slug],
+      () => fetchJson<{ items: AuditCardDTO[] }>(`/api/audit-tool/${slug}/list`),
+      { enabled: !!slug, keepPreviousData: true },
+   );
+}
+
+export function useAuditRun(slug: string | undefined, id: number | undefined): UseQueryResult<AuditDetailPayload> {
+   return useQuery<AuditDetailPayload>(
+      ['audit-run', slug, id],
+      () => fetchJson<AuditDetailPayload>(`/api/audit-tool/${slug}/${id}`),
+      {
+         enabled: !!slug && !!id,
+         // Poll while the run is still computing so the detail page updates when it finishes.
+         refetchInterval: (data) => (
+            data?.run?.status !== 'completed' && data?.run?.status !== 'failed' ? 3000 : false
+         ),
+      },
+   );
+}
+
+export function useAuditStatus(slug: string | undefined): UseQueryResult<AuditStatusPayload> {
+   return useQuery<AuditStatusPayload>(
+      ['audit-status', slug],
+      () => fetchJson<AuditStatusPayload>(`/api/audit-tool/${slug}/status`),
+      {
+         enabled: !!slug,
+         refetchInterval: (data) => (data && (data.queued > 0 || data.running > 0) ? 3000 : false),
+      },
+   );
+}
+
+export function useCreateAudit(slug: string | undefined): UseMutationResult<{ ids: number[] }, Error, { url: string; keywords: string[]; country?: string }> {
+   const qc = useQueryClient();
+   return useMutation<{ ids: number[] }, Error, { url: string; keywords: string[]; country?: string }>(
+      (body) => fetchJson<{ ids: number[] }>(`/api/audit-tool/${slug}/create`, jsonPost(body)),
+      {
+         onSuccess: () => {
+            qc.invalidateQueries(['audit-list', slug]);
+            qc.invalidateQueries(['audit-status', slug]);
+         },
+         onError: toastError,
+      },
+   );
+}
+
+/** Re-queue one audit (e.g. after the competitor selection changed) so it recomputes. */
+export function useRerunAudit(slug: string | undefined): UseMutationResult<{ ok: boolean }, Error, { id: number }> {
+   const qc = useQueryClient();
+   return useMutation<{ ok: boolean }, Error, { id: number }>(
+      (body) => fetchJson<{ ok: boolean }>(`/api/audit-tool/${slug}/rerun`, jsonPost(body)),
+      {
+         onSuccess: (_res, vars) => {
+            qc.invalidateQueries(['audit-run', slug, vars.id]);
+            qc.invalidateQueries(['audit-status', slug]);
+         },
+         onError: toastError,
+      },
+   );
+}
+
+export function useDeleteAudit(slug: string | undefined): UseMutationResult<{ ok: boolean }, Error, { id: number }> {
+   const qc = useQueryClient();
+   return useMutation<{ ok: boolean }, Error, { id: number }>(
+      ({ id }) => fetchJson<{ ok: boolean }>(`/api/audit-tool/${slug}/${id}`, { method: 'DELETE' }),
+      {
+         onSuccess: () => {
+            qc.invalidateQueries(['audit-list', slug]);
+            qc.invalidateQueries(['audit-status', slug]);
+         },
+         onError: toastError,
+      },
+   );
+}
+
+export function useRunAudits(slug: string | undefined): UseMutationResult<{ processed: number }, Error, void> {
+   const qc = useQueryClient();
+   return useMutation<{ processed: number }, Error, void>(
+      () => fetchJson<{ processed: number }>(`/api/audit-tool/${slug}/run`, jsonPost({})),
+      {
+         onSuccess: () => {
+            qc.invalidateQueries(['audit-list', slug]);
+            qc.invalidateQueries(['audit-status', slug]);
+         },
+         onError: toastError,
+      },
+   );
+}

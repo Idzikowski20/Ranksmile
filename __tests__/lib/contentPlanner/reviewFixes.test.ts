@@ -14,9 +14,9 @@ import {
   validatePlanConformity,
   validatePlannerPlan,
   validateRequiredAssignments,
-} from '../../../lib/contentPlanner';
-import { competitorsFromScoreData } from '../../../lib/contentPlanner/fromArticleInputs';
-import { benchmarkDocsFromCompetitors } from '../../../lib/benchmarkIntelligence/fromCompetitors';
+} from '@/src/infrastructure/contentPlanner/index';
+import { competitorsFromScoreData } from '@/src/infrastructure/contentPlanner/fromArticleInputs';
+import { benchmarkDocsFromCompetitors } from '@/src/core/domain/benchmark/fromCompetitors';
 import {
   extractRawKnowledge,
   sentencesToCanonicalizeInputs,
@@ -25,7 +25,7 @@ import {
   buildKnowledgeGraph,
   canonicalizeClaims,
   getEmbeddingProvider,
-} from '../../../lib/knowledgeEngine';
+} from '@/src/infrastructure/knowledgeEngine/index';
 import type {
   AdaptiveOutline,
   ArticleBlueprint,
@@ -35,8 +35,8 @@ import type {
   ReaderModel,
   SectionBrief,
   TargetKnowledgeGraph,
-} from '../../../lib/contentPlanner/types';
-import type { CanonicalClaim } from '../../../lib/knowledgeEngine/types';
+} from '@/src/core/domain/contentPlanner/types';
+import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 
 const emptyBudget: CompetitorBenchmark = {
   averageWords: 3000,

@@ -3,14 +3,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { publishToWordPress, publishToNextJs } from '../../../lib/wordpressPublish';
-import { getArticleIdSql } from '../../../lib/articleSql';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { publishToWordPress, publishToNextJs } from '@/src/infrastructure/wordpress/wordpressPublish';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { getErrorMessage } from '../../../lib/errors';
-import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryOne, queryRows, ArticleRow } from '@/src/infrastructure/db/query';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -43,7 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
       // Publish gate: refresh CCM if content drifted (07-runtime) — non-blocking on failure
-      const ccmGate = await import('../../../lib/intelligence/compileAfterArticleChange')
+      const ccmGate = await import('@/src/core/intelligence/compileAfterArticleChange')
          .then((m) =>
             m.compileIfStale({
                articleId: Number(articleId),

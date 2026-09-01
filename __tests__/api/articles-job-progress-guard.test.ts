@@ -5,19 +5,19 @@ jest.mock('../../database/database', () => ({
 }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
-jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn() }));
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({ assertArticleAccess: jest.fn() }));
 jest.mock('../../utils/verifyDomainOwnership', () => ({ verifyDomainOwnershipById: jest.fn() }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({
   withOrgPaymentAccess: (handler: import('next').NextApiHandler) => handler,
 }));
-jest.mock('../../lib/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import handler from '../../pages/api/articles/job-progress';
 import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
-import { assertArticleAccess } from '../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { verifyDomainOwnershipById } from '../../utils/verifyDomainOwnership';
 
 const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;

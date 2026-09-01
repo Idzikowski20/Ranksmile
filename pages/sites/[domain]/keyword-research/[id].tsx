@@ -12,8 +12,8 @@ import { KeywordIntentBadge } from '../../../../components/koala/product/helpers
 import { useKeywordResearchRun } from '../../../../services/keywordResearch';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
-import { AUDIT_COUNTRIES } from '../../../../lib/countryLang';
-import { buildKwClusters, fmtNum, INTENTS, kwIntentToSearchIntent, type KwCluster, type KwIntent } from '../../../../lib/keywordResearchView';
+import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
+import { buildKwClusters, fmtNum, INTENTS, kwIntentToSearchIntent, type KwCluster, type KwIntent } from '@/src/infrastructure/keywords/keywordResearchView';
 
 const FONT = 'var(--font-family-primary)';
 const TEXT = '#18181B';

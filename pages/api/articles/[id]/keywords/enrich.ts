@@ -1,14 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../../database/database';
 import verifyUser from '../../../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../../../lib/ensureArticlesTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getAdwordsCredentials, getKeywordsVolume } from '../../../../../utils/adwords';
-import { computeRelevanceScore, checkCoverage } from '../../../../../lib/keywordEnrichment';
+import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../../lib/tenancy';
-import { queryOne } from '../../../../../lib/db/query';
-import type { ArticleRow } from '../../../../../lib/db/query';
-import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { queryOne } from '@/src/infrastructure/db/query';
+import type { ArticleRow } from '@/src/infrastructure/db/query';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const isPostgres = !!process.env.DATABASE_URL;
 

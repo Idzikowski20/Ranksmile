@@ -1,4 +1,4 @@
-import { buildStructuralBenchmark, toPlannerTargets } from '../../../lib/benchmarkIntelligence';
+import { buildStructuralBenchmark, toPlannerTargets } from '@/src/infrastructure/benchmarkIntelligence/index';
 
 describe('Benchmark Intelligence', () => {
   it('uses median not mean when outlier present', () => {

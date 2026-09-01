@@ -1,7 +1,7 @@
 import {
   chooseStrategyFromDiagnosis,
   resolveOptimizationPolicy,
-} from '../../../lib/ao/optimizationPolicy';
+} from '@/src/infrastructure/ao/optimizationPolicy';
 
 describe('weak article strategy routing', () => {
   it('routes very weak content to deep_optimize (not auto whole_article)', () => {

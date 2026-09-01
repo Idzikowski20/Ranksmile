@@ -4,7 +4,7 @@ jest.mock('../../database/database', () => ({
 }));
 
 import db from '../../database/database';
-import { ensureTenancyTables } from '../../lib/ensureTenancyTables';
+import { ensureTenancyTables } from '@/src/infrastructure/persistence/schema/ensureTenancyTables';
 
 const mockQuery = db.query as jest.Mock;
 
@@ -36,7 +36,7 @@ describe('ensureTenancyTables', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     // Fresh module instance so the lazy-init guard state is reset.
     // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
-    const { ensureTenancyTables: fresh } = require('../../lib/ensureTenancyTables');
+    const { ensureTenancyTables: fresh } = require('@/src/infrastructure/persistence/schema/ensureTenancyTables');
     await Promise.all([fresh(), fresh(), fresh()]);
     const ownerWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('TENANCY_OWNER_USER_ID is unset'));
     expect(ownerWarns).toHaveLength(1);
@@ -51,7 +51,7 @@ describe('ensureTenancyTables', () => {
     delete process.env.TENANCY_OWNER_USER_ID;
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
-    const { ensureTenancyTables: fresh } = require('../../lib/ensureTenancyTables');
+    const { ensureTenancyTables: fresh } = require('@/src/infrastructure/persistence/schema/ensureTenancyTables');
     await fresh();
     const ownerWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('TENANCY_OWNER_USER_ID is unset'));
     expect(ownerWarns).toHaveLength(0);

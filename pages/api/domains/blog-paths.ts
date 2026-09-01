@@ -5,8 +5,8 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../utils/verifyDomainOwnership';
-import { normalizeBlogPaths } from '../../../lib/blogPaths';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { normalizeBlogPaths } from '@/src/core/domain/blog/blogPaths';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
