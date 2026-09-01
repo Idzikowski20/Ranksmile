@@ -12,7 +12,7 @@
  * our writer. Same contract Surfer's brief has.
  */
 import type { ApprovedOutlineHeading } from './applyApprovedOutline';
-import type { ContentPlannerBundle, SectionBrief, TargetClaim } from './types';
+import type { ContentPlannerBundle, SectionBrief, TargetClaim } from '@/src/core/domain/contentPlanner/types';
 
 /**
  * Terms are handed to the model as phrases to weave in, and the NLP list is not written

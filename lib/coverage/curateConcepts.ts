@@ -1,5 +1,5 @@
-import type { CoverageItem, Importance } from '../aiCoverage';
-import { normalizeTerm } from '../termUtils';
+import type { CoverageItem, Importance } from '../ai/aiCoverage';
+import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 export type TermLike = {
   term: string;

@@ -35,11 +35,11 @@ import { validatePlanForWrite } from './validators/planValidators';
 import { titleizeH1 } from './sectionLabels';
 import type {
   CompetitorBenchmark, ContentPlannerBundle, ValidationIssue, ValidationResult,
-} from './types';
-import { KNOWLEDGE_COVERAGE_MIN_PCT } from './types';
-import type { KnowledgeGraph, TopicBlock } from '../knowledgeEngine/types';
+} from '@/src/core/domain/contentPlanner/types';
+import { KNOWLEDGE_COVERAGE_MIN_PCT } from '@/src/core/domain/contentPlanner/types';
+import type { KnowledgeGraph, TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
 import { knowledgeGraphToTargetKg } from '../knowledgeEngine/toTargetKg';
-import type { PlannerTargets } from '../benchmarkIntelligence/types';
+import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
 
 export type RunContentPlannerInput = {
   keyword: string;

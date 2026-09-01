@@ -16,7 +16,7 @@ import { useWorkspaces } from '../../services/workspaces';
 import { useQuery, useQueryClient } from 'react-query';
 import { getErrorMessage } from '../../lib/errors';
 import { deriveActiveId } from '../../lib/activeWorkspace';
-import { buildArticleWorkspaceLinks } from '../../lib/articleWorkspaceLinks';
+import { buildArticleWorkspaceLinks } from '../../lib/articles/articleWorkspaceLinks';
 
 type ArticleRow = {
   id: number | string;

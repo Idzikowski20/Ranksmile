@@ -6,7 +6,7 @@ import {
   ensureCorrelationId,
   type BillingDecision,
   type BillingEventKind,
-} from '../../../lib/billingAudit';
+} from '../../../lib/billing/billingAudit';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';

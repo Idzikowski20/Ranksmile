@@ -1,5 +1,5 @@
 import { isReviewOutlineHtml, reviewOutlineToHtml } from '../../../lib/contentPlanner/reviewOutline';
-import { isUsableArticleHtml } from '../../../lib/articleHtmlUsable';
+import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 
 const OUTLINE = reviewOutlineToHtml([
   { level: 1, text: 'Prywatny detektyw Warszawa – licencjonowana agencja dla osób prywatnych i firm' },

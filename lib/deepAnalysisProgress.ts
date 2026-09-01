@@ -1,4 +1,4 @@
-import type { AnalysisPhases } from './analysisPhases';
+import type { AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
 
 export type StepVisualStatus = 'pending' | 'running' | 'done';
 

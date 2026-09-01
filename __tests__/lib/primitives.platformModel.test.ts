@@ -7,7 +7,7 @@ import {
   observationsFromCoverage,
   runFeatures,
 } from '../../lib/features/featureEngine';
-import type { CoverageSnapshot } from '../../lib/aiCoverage';
+import type { CoverageSnapshot } from '../../lib/ai/aiCoverage';
 
 function stubSnapshot(overrides?: Partial<CoverageSnapshot>): CoverageSnapshot {
   return {

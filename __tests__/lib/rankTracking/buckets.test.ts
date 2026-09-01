@@ -2,7 +2,7 @@ import {
   exclusiveVisibilityPercents,
   summarizeCumulativeBuckets,
   summarizeExclusiveBuckets,
-} from '../../../lib/rankTracking/buckets';
+} from '@/src/core/domain/rankTracking/buckets';
 import type { RankTrackingDeviceResult } from '../../../lib/types/rankTracking';
 
 describe('rankTracking/buckets', () => {

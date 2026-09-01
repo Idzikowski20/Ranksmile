@@ -3,18 +3,18 @@ import { Badge, type BadgeAppearance } from '../koala/core/badge/badge';
 import { useOpenReveal } from '../../lib/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/contentScore';
-import { AiVisibilitySummary } from '../../lib/aiSearchScore';
-import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
+import { AiVisibilitySummary } from '../../lib/ai/aiSearchScore';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/ai/aiCoverage';
 import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicGroup } from '../../lib/infoToCoverTopics';
 import { faviconUrl } from '../../lib/faviconUrl';
 import DomainFavicon from '../common/DomainFavicon';
 import ScoreTrio from './ScoreTrio';
 import EffortChecklist from './EffortChecklist';
 import SourceExplorer from './SourceExplorer';
-import { buildEffortChecklist } from '../../lib/contentEffort';
+import { buildEffortChecklist } from '@/src/core/domain/terms/contentEffort';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 import type { Action } from '../../lib/primitives/types';
-import type { CanonicalClaim } from '../../lib/knowledgeEngine/types';
+import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 
 const F = 'var(--font-family-primary)';
 
@@ -67,8 +67,8 @@ interface Props {
   onOptimizeAction?: (action: Action) => void;
   domainSlug?: string;
   /** CIE immutable Knowledge Graph (optional — enables Knowledge Coverage UI). */
-  knowledgeGraph?: import('../../lib/knowledgeEngine/types').KnowledgeGraph | null;
-  knowledgeCoverageReport?: import('../../lib/knowledgeEngine/types').KnowledgeCoverageReport | null;
+  knowledgeGraph?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeGraph | null;
+  knowledgeCoverageReport?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeCoverageReport | null;
 };
 
 /* ── Reusable: hover tooltip (portal → never clipped by the panel overflow) ── */

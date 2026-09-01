@@ -1,4 +1,4 @@
-import type { DistributionStats } from './types';
+import type { DistributionStats } from '@/src/core/domain/benchmark/types';
 
 function sortedCopy(xs: number[]): number[] {
   return [...xs].filter((n) => Number.isFinite(n)).sort((a, b) => a - b);

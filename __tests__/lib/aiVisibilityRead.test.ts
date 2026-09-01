@@ -1,7 +1,7 @@
 // buildOverview/loadScanResultRows touch the DB; parseCitations + mapDbRowsToResultRows are pure.
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
 
-import { parseCitations, parseBrands, mapDbRowsToResultRows, parseFanOut } from '../../lib/aiVisibilityRead';
+import { parseCitations, parseBrands, mapDbRowsToResultRows, parseFanOut } from '../../lib/aiVisibility/aiVisibilityRead';
 
 describe('parseFanOut', () => {
    it('parses a JSON string (SQLite) and an array (Postgres jsonb)', () => {

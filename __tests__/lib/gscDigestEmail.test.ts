@@ -1,4 +1,4 @@
-import { buildGscDigest, DomainDigest } from '../../lib/gscDigestEmail';
+import { buildGscDigest, DomainDigest } from '../../lib/gsc/gscDigestEmail';
 
 const domain: DomainDigest = {
   domain: 'soze.pl',

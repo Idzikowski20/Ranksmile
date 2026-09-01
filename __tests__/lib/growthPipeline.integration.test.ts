@@ -12,7 +12,7 @@ import { actionsFromObservations } from '../../lib/observations/actionsFromObser
 import { scopeFromAction, auditIssueIdFromAction } from '../../lib/observations/optimizeActionScope';
 import { applyStrategy, prioritizeActions } from '../../lib/primitives/prioritizeActions';
 import { persistCoverageFeatureRun } from '../../lib/persistCoverageFeatureRun';
-import type { CoverageSnapshot } from '../../lib/aiCoverage';
+import type { CoverageSnapshot } from '../../lib/ai/aiCoverage';
 
 function stubSnapshot(overall = 40): CoverageSnapshot {
   return {

@@ -12,8 +12,7 @@ import {
 } from './issues';
 import type { PageBucket, SiteAuditOverviewPayload, ThematicReport } from './types';
 import type { SiteAuditLimitInfo } from './pageLimit';
-import { getPreviousCrawlMetrics } from './crawlSnapshot';
-import { crawlVsPreviousDeltas } from './crawlDeltas';
+import { computeCrawlDeltas } from '@/src/composition/siteAudit';
 
 const BENCHMARK_HEALTH = 92;
 
@@ -190,11 +189,12 @@ export async function buildSiteAuditOverview(
       ? 'Some pages need optimization for AI search'
       : 'Improve structure and metadata for AI search visibility';
 
-  const previous = await getPreviousCrawlMetrics(domainId);
-  const deltas = crawlVsPreviousDeltas(
-    { siteHealth, pagesCrawled: rows.length, errors, warnings },
-    previous,
-  );
+  const deltas = await computeCrawlDeltas(domainId, {
+    siteHealth,
+    pagesCrawled: rows.length,
+    errors,
+    warnings,
+  });
 
   return {
     domain,

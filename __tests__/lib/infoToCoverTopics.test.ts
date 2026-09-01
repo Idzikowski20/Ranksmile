@@ -1,6 +1,6 @@
 import { buildInfoToCoverTopics } from '../../lib/infoToCoverTopics';
-import type { CoverageItem } from '../../lib/aiCoverage';
-import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
+import type { CoverageItem } from '../../lib/ai/aiCoverage';
+import type { AiVisibilitySummary } from '../../lib/ai/aiSearchScore';
 
 describe('buildInfoToCoverTopics', () => {
   it('falls back to aiSummary citations when coverageItems are empty', () => {

@@ -1,11 +1,10 @@
 import type Stripe from 'stripe';
 import {
-  formatPaymentMethodLabel,
   groupInvoicesByDate,
   mapInvoiceStatus,
-  mapStripeInvoice,
   type BillingInvoice,
-} from '../../lib/billingInvoiceModel';
+} from '@/src/core/domain/billing/invoice';
+import { formatPaymentMethodLabel, mapStripeInvoice } from '@/src/infrastructure/billing/stripe/stripeInvoiceMapper';
 
 function inv(partial: Partial<BillingInvoice> & Pick<BillingInvoice, 'id' | 'createdAt'>): BillingInvoice {
   return {

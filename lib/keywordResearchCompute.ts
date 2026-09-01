@@ -11,13 +11,13 @@
 import { isDataForSeoConfigured } from './dataforseo';
 import { getKeywordIdeas, getKeywordSuggestions } from './seo/keywordData';
 import { getRankedKeywords } from './dataforseo';
-import { langForCountry } from './countryLang';
+import { langForCountry } from '@/src/core/domain/audit/country';
 import {
    assembleResult,
    clusterKeywords,
    type EnrichedKeyword,
 } from './topicClustering';
-import type { KeywordResearchResult, KeywordResearchStats } from './keywordResearchTypes';
+import type { KeywordResearchResult, KeywordResearchStats } from '@/src/core/domain/keywords/types';
 
 async function expandKeywords(seed: string, country: string): Promise<EnrichedKeyword[]> {
    if (!isDataForSeoConfigured()) {

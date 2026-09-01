@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ScoreGauge from './ScoreGauge';
-import { computeOverallContentScore } from '../../lib/aiSearchScore';
+import { computeOverallContentScore } from '../../lib/ai/aiSearchScore';
 
 const F = 'var(--font-family-primary)';
 

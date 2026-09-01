@@ -1,6 +1,6 @@
 import { assignGuidelinesToSections } from '../../lib/optimizeGuidelineRouting';
 import type { Guideline } from '../../lib/recommendationEngine';
-import type { Section } from '../../lib/articleSections';
+import type { Section } from '../../lib/articles/articleSections';
 
 const g = (over: Partial<Guideline>): Guideline => ({
   id: 'guideline-x', coverageItemId: 'x', group: 'knowledge', title: 'X', instruction: 'Do X.',

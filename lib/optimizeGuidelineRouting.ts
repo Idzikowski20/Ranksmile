@@ -1,6 +1,6 @@
 import type { Guideline } from './recommendationEngine';
-import type { Section } from './articleSections';
-import type { Importance } from './aiCoverage';
+import type { Section } from './articles/articleSections';
+import type { Importance } from './ai/aiCoverage';
 import { countOccurrences } from './contentScore';
 
 export interface RoutedGuideline {

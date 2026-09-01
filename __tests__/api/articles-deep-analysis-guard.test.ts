@@ -15,11 +15,11 @@ jest.mock('../../utils/verifyDomainOwnership', () => ({
   firstAccessibleDomainId: jest.fn().mockResolvedValue(null),
 }));
 jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 jest.mock('../../lib/contentScore', () => ({ computeContentScore: jest.fn() }));
 jest.mock('../../lib/seo/keywordData', () => ({ getAiSearchInfo: jest.fn() }));
-jest.mock('../../lib/aiVisibilityStore', () => ({ persistAiVisibilityRun: jest.fn() }));
-jest.mock('../../lib/aiSearchScore', () => ({}));
+jest.mock('../../lib/aiVisibility/aiVisibilityStore', () => ({ persistAiVisibilityRun: jest.fn() }));
+jest.mock('../../lib/ai/aiSearchScore', () => ({}));
 jest.mock('../../lib/sidecar', () => ({ callSidecar: jest.fn(), sidecarBase: jest.fn() }));
 jest.mock('../../lib/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://safe.example/post')) }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));

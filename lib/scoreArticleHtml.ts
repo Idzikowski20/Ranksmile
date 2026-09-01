@@ -4,8 +4,8 @@
  */
 import { computeContentScore, countOccurrences, type ScoreData } from './contentScore';
 import { liveCoverageItems } from './liveCoverage';
-import { computeCoverageScores, type CoverageItem, type CoverageSnapshot } from './aiCoverage';
-import { computeOverallContentScore } from './aiSearchScore';
+import { computeCoverageScores, type CoverageItem, type CoverageSnapshot } from './ai/aiCoverage';
+import { computeOverallContentScore } from './ai/aiSearchScore';
 
 export type UnifiedArticleScores = {
   seo: number;

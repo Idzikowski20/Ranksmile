@@ -1,6 +1,6 @@
-import { CoverageItem, CoverageResult, CoverageSnapshot, computeCoverageScores } from './aiCoverage';
+import { CoverageItem, CoverageResult, CoverageSnapshot, computeCoverageScores } from './ai/aiCoverage';
 import { safeJsonParse } from './safeJson';
-import { normalizeTerm } from './termUtils';
+import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 
 export interface CoverageSources {
   paa: CoverageItem[];

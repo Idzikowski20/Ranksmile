@@ -2,7 +2,7 @@
  * Minimal E2E-style unit checks for abandoned conversion guard + attempt UUID.
  * Full Stripe network E2E is gated in docs/stripe-event-matrix.md TEST GATE.
  */
-import { shouldSendAbandonedForSubscription } from '../../lib/billingAbandoned';
+import { shouldSendAbandonedForSubscription } from '../../lib/billing/billingAbandoned';
 import { isCheckoutAttemptId, newCheckoutAttemptId } from '../../lib/checkoutAttemptId';
 import type Stripe from 'stripe';
 

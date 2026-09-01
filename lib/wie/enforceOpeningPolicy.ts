@@ -2,7 +2,7 @@
  * Enforce WIE opening policy on final HTML (Expected → Observed).
  * Used by AO after edit loop and by Writer judge.
  */
-import { splitSections } from '../articleSections';
+import { splitSections } from '../articles/articleSections';
 import { detectOpeningStyle, type OpeningStyle } from './eval/policyCompliance';
 
 export type OpeningEnforcementResult = {

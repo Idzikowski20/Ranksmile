@@ -7,7 +7,7 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articleSql';
+import { getArticleIdSql } from '../../../lib/articles/articleSql';
 import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
 import { buildGradedCoverageSnapshot } from '../../../lib/buildCoverageSnapshot';
 import { dedupePaaQuestions } from '../../../lib/curateCoverageItems';
@@ -20,12 +20,12 @@ import {
   filterUsefulNlpTerms,
   hasMinCompetitorDomains,
   scaleTermRangesToWordCount,
-} from '../../../lib/competitorTermCalibration';
-import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
-import { computeOverallContentScore, resolveAiScore } from '../../../lib/aiSearchScore';
-import type { ArticleFact } from '../../../lib/articleFacts';
+} from '@/src/core/domain/competitors/termCalibration';
+import { runArticleAiPipeline } from '../../../lib/articles/articleAiPipeline';
+import { computeOverallContentScore, resolveAiScore } from '../../../lib/ai/aiSearchScore';
+import type { ArticleFact } from '../../../lib/articles/articleFacts';
 import { safeJsonParse } from '../../../lib/safeJson';
-import { carriedScoreData } from '../../../lib/carriedScoreData';
+import { carriedScoreData } from '@/src/core/domain/articles/carriedScoreData';
 
 type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: number };
 import {
@@ -34,30 +34,31 @@ import {
   hostFromUrl,
   mergeNlpTerms,
   saveArticleKeywords,
-} from '../../../lib/articleKeywordDiscovery';
+} from '../../../lib/articles/articleKeywordDiscovery';
 import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPageKeyword';
 import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
-import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
+import { persistAiVisibilityRun } from '../../../lib/aiVisibility/aiVisibilityStore';
 import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
-import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
+import { AiVisibilitySummary } from '../../../lib/ai/aiSearchScore';
 import { sidecarBase, nextjsUrl } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
-import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
-import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
+import { resolveOrgId, orgBudgetBlocked } from '../../../lib/ai/aiBudget';
+import { getOrgUsage5h, recordAiTokens } from '../../../lib/ai/aiTokenUsage';
 import { getErrorMessage } from '../../../lib/errors';
 import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
 import { buildRankingSourcesPayload } from '../../../lib/rankingSources';
 import { enrichTermsWithSalience } from '../../../lib/termSalience';
 import { filterNlpTermsForAnalysis } from '../../../lib/topicRelevance';
-import { buildAuditResult, computeSeoScoreFromAudit } from '../../../lib/auditCompute';
+import { buildAuditResult } from '../../../lib/auditCompute';
+import { computeSeoScoreFromAudit } from '@/src/core/domain/audit/seoScore';
 import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articleAnalysisStorage';
+import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articles/articleAnalysisStorage';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { publicDeepAnalysisError } from '../../../lib/deepAnalysisErrors';
+import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
 
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -114,7 +115,7 @@ function buildScoreData(
   opts?: {
     scoringModel?: 'competitor' | 'legacy';
     contentTargets?: { avgWords: number; avgHeadings: number; avgPs: number };
-    auditResult?: import('../../../lib/auditTypes').AuditResult;
+    auditResult?: import('@/src/core/domain/audit/types').AuditResult;
     seoScore?: number;
     competitorWordSpread?: { min: number; max: number };
   },
@@ -811,7 +812,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Baseline content-effort estimate (heuristic). LLM refine is available in Pre-Publish.
     {
-      const { heuristicContentEffort } = await import('../../../lib/contentEffort');
+      const { heuristicContentEffort } = await import('@/src/core/domain/terms/contentEffort');
       const effort = heuristicContentEffort({
         html: pageContent || '',
         plainText,

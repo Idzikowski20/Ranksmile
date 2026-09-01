@@ -6,8 +6,8 @@ import type {
   ArticleExecutionPlan,
   ContentPlannerBundle,
   ExecutionPlanSection,
-} from './types';
-import { PLANNER_VERSION } from './types';
+} from '@/src/core/domain/contentPlanner/types';
+import { PLANNER_VERSION } from '@/src/core/domain/contentPlanner/types';
 
 function stableStringify(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);

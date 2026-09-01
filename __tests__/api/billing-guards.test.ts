@@ -5,7 +5,7 @@ jest.mock('../../utils/getUser', () => ({
 }));
 jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn() }));
 jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn() }));
-jest.mock('../../lib/billingPlanLock', () => ({
+jest.mock('../../lib/billing/billingPlanLock', () => ({
   getLockedCheckoutPlanSlug: jest.fn((
     billing: { planSlug?: string | null; subscriptionStatus?: string | null } | null | undefined,
   ) => {
@@ -39,7 +39,7 @@ jest.mock('../../lib/stripeMode', () => ({
 jest.mock('../../lib/stripeBillingSync', () => ({ syncSubscriptionToOrg: jest.fn() }));
 jest.mock('../../lib/stripeCustomer', () => ({ ensureStripeCustomer: jest.fn() }));
 jest.mock('../../lib/stripePrices', () => ({ getStripePriceId: jest.fn().mockReturnValue('price_growth') }));
-jest.mock('../../lib/billingPlans', () => ({
+jest.mock('../../lib/billing/billingPlans', () => ({
   getCheckoutPlan: jest.fn().mockReturnValue({ slug: 'growth', name: 'Growth', priceMonthly: 59 }),
 }));
 jest.mock('../../lib/getBootstrap', () => ({

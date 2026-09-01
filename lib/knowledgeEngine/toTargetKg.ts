@@ -7,9 +7,9 @@ import type {
   TargetClaim,
   TargetKnowledgeGraph,
   TargetQuestion,
-} from '../contentPlanner/types';
+} from '@/src/core/domain/contentPlanner/types';
 import { KNOWLEDGE_CONSENSUS_MIN } from './constants';
-import type { CanonicalClaim, KnowledgeGraph } from './types';
+import type { CanonicalClaim, KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 
 function gainFromConsensus(c: number): GainClass {
   if (c >= 0.6) return 'core';

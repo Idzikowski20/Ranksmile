@@ -8,18 +8,18 @@ import {
   termScoreFraction,
   type RealAuditData,
 } from './auditCompute';
-import type { CompetitorScoreTargets, RichTerm } from './competitorContentScore';
-import { calibrateTermRangesFromCorpus } from './competitorTermCalibration';
+import type { CompetitorScoreTargets, RichTerm } from '@/src/core/domain/competitors/contentScore';
+import { calibrateTermRangesFromCorpus } from '@/src/core/domain/competitors/termCalibration';
 import { enrichTermsWithSalience } from './termSalience';
 
-export type { CompetitorScoreTargets, RichTerm } from './competitorContentScore';
+export type { CompetitorScoreTargets, RichTerm } from '@/src/core/domain/competitors/contentScore';
 export {
   auditContentScore,
   computeCompetitorContentScore,
   termCoverageFraction,
   termRangeCoverageFraction,
   termScoreFraction,
-} from './competitorContentScore';
+} from '@/src/core/domain/competitors/contentScore';
 
 const MAX_COMPETITORS = 8;
 

@@ -5,9 +5,9 @@ import db from '../../../database/database';
 import Domain from '../../../database/models/domain';
 import { getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../../utils/searchConsole';
 import { ensureGscSnapshotTables } from '../../../lib/ensureGscSnapshotTables';
-import { captureWeeklySnapshot, getSnapshot, weekStartFor, shiftWeek } from '../../../lib/gscSnapshots';
-import { computeDrops } from '../../../lib/gscDrops';
-import { buildGscDigest, type DomainDigest } from '../../../lib/gscDigestEmail';
+import { captureWeeklySnapshot, weekStartFor } from '../../../lib/gsc/gscSnapshots';
+import { getWeeklyDrops } from '../../../src/composition/gsc';
+import { buildGscDigest, type DomainDigest } from '../../../lib/gsc/gscDigestEmail';
 import { sendMail } from '../../../lib/sendMail';
 import { queryRows, type ArticleRow } from '../../../lib/db/query';
 import { getErrorMessage } from '../../../lib/errors';
@@ -60,7 +60,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       try {
          await ensureGscSnapshotTables();
          const thisWeek = weekStartFor(new Date());
-         const lastWeek = shiftWeek(thisWeek, -1);
 
          const [domRows] = await db.query('SELECT d."ID" AS id, d.domain, d.workspace_id FROM domain d');
          const allDomains = domRows as Array<{ id: number; domain: string; workspace_id: number | null }>;
@@ -81,10 +80,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                );
                const digests: DomainDigest[] = [];
                for (const d of oDomRows as Array<{ id: number; domain: string }>) {
-                  const now = await getSnapshot(d.id, thisWeek);
-                  const prev = await getSnapshot(d.id, lastWeek);
-                  if (prev.size === 0) continue;
-                  const r = computeDrops(now, prev);
+                  const r = await getWeeklyDrops(d.id);
+                  if (!r.hadBaseline) continue;
                   if (r.hasDrops) digests.push({ domain: d.domain, summary: r.summary, tiers: r.tiers });
                }
                if (digests.length === 0) continue;

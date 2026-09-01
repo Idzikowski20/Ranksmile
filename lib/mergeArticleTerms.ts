@@ -1,7 +1,7 @@
 import type { NlpTerm } from './contentScore';
-import { filterUsefulNlpTerms } from './competitorTermCalibration';
+import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
 import { mergeNlpTerms } from './pickArticleTerms';
-import type { ArticleTermRow } from './articleTerms';
+import type { ArticleTermRow } from './articles/articleTerms';
 
 /** Merge score_data.terms with article_terms — never prefer the thinner list. */
 export function mergeArticleTermSources(opts: {

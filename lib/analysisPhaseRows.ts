@@ -1,4 +1,4 @@
-import type { AnalysisPhases, CrawlPhase, SimplePhase } from './analysisPhases';
+import type { AnalysisPhases, CrawlPhase, SimplePhase } from '@/src/core/domain/articles/analysisPhases';
 
 export type RowState = 'done' | 'active' | 'pending' | 'error';
 export type PhaseRow = { id: string; label: string; state: RowState; detail?: string };

@@ -5,7 +5,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { queryRows } from '../../../../lib/db/query';
-import type { AuditCardDTO, AuditStatus } from '../../../../lib/auditTypes';
+import type { AuditCardDTO, AuditStatus } from '@/src/core/domain/audit/types';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type ListRow = {

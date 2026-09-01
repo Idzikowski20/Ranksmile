@@ -24,11 +24,11 @@ import {
   type SectionBrief,
   type TargetKnowledgeGraph,
   type ValidationResult,
-} from './types';
-import type { TopicBlock } from '../knowledgeEngine/types';
-import type { PlannerTargets } from '../benchmarkIntelligence/types';
-import type { KnowledgeGraph } from '../knowledgeEngine/types';
-import type { PlannerQualityMetrics } from '../knowledgeEngine/types';
+} from '@/src/core/domain/contentPlanner/types';
+import type { TopicBlock } from '@/src/core/domain/knowledgeEngine/types';
+import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
+import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
+import type { PlannerQualityMetrics } from '@/src/core/domain/knowledgeEngine/types';
 import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
 
 export type OutlineLoopResult = {

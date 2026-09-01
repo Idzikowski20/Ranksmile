@@ -1,4 +1,4 @@
-import { PLANNER_VERSION } from './contentPlanner/types';
+import { PLANNER_VERSION } from '@/src/core/domain/contentPlanner/types';
 
 /** Bump when the planner or writer changes in a way that should be measurable later. */
 export const PIPELINE_VERSION = `planner-${PLANNER_VERSION}`;

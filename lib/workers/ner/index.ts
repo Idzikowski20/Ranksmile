@@ -1,5 +1,5 @@
 import type { PipelineWorker } from '../types';
-import type { CoverageItem } from '../../aiCoverage';
+import type { CoverageItem } from '../../ai/aiCoverage';
 
 /** Async NER worker — ENTITY coverage only; never from TF-IDF. */
 export const nerWorker: PipelineWorker = {
