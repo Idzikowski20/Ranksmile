@@ -19,6 +19,7 @@ under `components/`. `pages/api/**` are the thin controllers.
 - **`arch`** — the clean-arch boundary-test tooling.
 - **`cia`** — the CIA-zone boundary-test tooling (scanner + zone rules).
 - **`navigation/routeAliases.cjs`** — required via CommonJS by `next.config.js`.
+- **`bannerDismissal.ts`** — per-viewer localStorage helper for the app banner (used by `components/koala/shell/AppBanner.tsx`); a presentation-only utility, pending a move under `components/`.
 
 ## Layers
 
