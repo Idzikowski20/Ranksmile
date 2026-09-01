@@ -1,0 +1,35 @@
+src/core/domain/terms/termUtils.ts
+  s_4134d8bafd16e7::t_f238a1f5546a95 2
+lib/arch/layerRules.ts
+  s_4134d8bafd16e7::t_e5f203c1208ca4 35-40,47,52,55-57,62
+  s_4134d8bafd16e7::t_a72bc074c17dcb 58-61,63
+  s_4134d8bafd16e7::t_1ab0c0d9c638ef 11-17
+__tests__/architecture/clean-arch-boundaries.test.ts
+  s_4134d8bafd16e7::t_7c0f9afb3906d9 21,25-64
+  s_4134d8bafd16e7::t_c5fa0c76a34d8a 3
+lib/arch/scanLayerImports.ts
+  s_4134d8bafd16e7::t_b95d05d1ea5c42 37-38
+src/core/domain/aiVisibility/metricsOverview.ts
+  s_4134d8bafd16e7::t_320504da1dd6fd 55
+  s_4134d8bafd16e7::t_f68c03fde3e0eb 3-5
+src/core/domain/terms/plDiacritics.ts
+  s_4134d8bafd16e7::t_596a9f52222254 1-8
+src/core/domain/terms/termMatch.ts
+  s_4134d8bafd16e7::t_73eb2d4f520ad3 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "20541b3c5f5bc546761119525b72bad612114254",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
