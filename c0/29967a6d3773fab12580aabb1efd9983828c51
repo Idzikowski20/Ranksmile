@@ -1,0 +1,43 @@
+components/articles/ResearchOutlinePanel.tsx
+  s_e8c3822b427cc8::t_807d6f8a7e7525 317
+components/articles/RanksmileMessage.tsx
+  s_e8c3822b427cc8::t_8636cce5786b4e 23-24
+components/articles/AnalysisProgressPanel.tsx
+  s_e8c3822b427cc8::t_0adac553ec62eb 56
+components/articles/PipelineStatusStrip.tsx
+  s_e8c3822b427cc8::t_3b86c069792b46 105,111,114-115
+  s_e8c3822b427cc8::t_6ad5add4a74db2 125,129-131
+components/articles/ProgressCard.tsx
+  s_e8c3822b427cc8::t_af698a3dd0823e 108-111
+  s_e8c3822b427cc8::t_b001c7b510ddbb 124,129-163
+lib/arch/scanLayerImports.ts
+  s_e8c3822b427cc8::t_7f8c770436fa1a 21-25,30-35
+components/articles/ContentOptimizerNodeView.tsx
+  s_e8c3822b427cc8::t_f3d1f3e45b4afc 80-83
+  s_e8c3822b427cc8::t_60f193cdd79585 34-39
+  s_e8c3822b427cc8::t_bbdd5a85950e18 115
+components/koala/shell/AppBanner.tsx
+  s_e8c3822b427cc8::t_a246c13e12bdbc 120,126,129,132-136
+components/articles/PlagiarismScanningModal.tsx
+  s_e8c3822b427cc8::t_53f89c24780afd 50-52
+components/articles/OptimizeSavedBanner.tsx
+  s_e8c3822b427cc8::t_19aa69de73e774 68
+  s_e8c3822b427cc8::t_afc45fa7391221 77-78
+  s_e8c3822b427cc8::t_c9fa8ef099cd9b 99-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c029967a6d3773fab12580aabb1efd9983828c51",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
