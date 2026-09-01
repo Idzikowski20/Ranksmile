@@ -97,15 +97,21 @@ const Dashed = styled.span`
   opacity: 0.7;
 `;
 
-const Marker = ({ state }: { state: ProgressState }) => {
+const Marker = ({ state, silent }: { state: ProgressState; silent?: boolean }) => {
   const cls = `progress-row-marker progress-row-marker--${state}`;
   if (state === 'done') {
-    return <Icon name="CheckCircle" size={20} weight="fill" color="var(--koala-status-success)" className={cls} />;
+    return <Icon name="CheckCircle" size={20} weight="fill" color="var(--koala-status-success)" className={cls} aria-hidden={silent || undefined} />;
   }
   if (state === 'error') {
-    return <Icon name="XCircle" size={20} weight="fill" color="var(--koala-status-danger)" className={cls} />;
+    return <Icon name="XCircle" size={20} weight="fill" color="var(--koala-status-danger)" className={cls} aria-hidden={silent || undefined} />;
   }
-  if (state === 'active') return <Ring className={cls} role="status" aria-label="In progress" />;
+  // `silent`: caller (e.g. AnalysisProgressPanel) already announces progress through one
+  // live region, so drop role="status" here to avoid a duplicate screen-reader announcement.
+  if (state === 'active') {
+    return silent
+      ? <Ring className={cls} aria-hidden="true" />
+      : <Ring className={cls} role="status" aria-label="In progress" />;
+  }
   return <Dashed className={cls} aria-hidden="true" />;
 };
 
@@ -118,17 +124,27 @@ export type ProgressCardRow = {
   ariaLabel?: string;
 };
 
-const ProgressCard = ({ title, icon, trailing, rows }: {
+const ProgressCard = ({ title, icon, trailing, rows, headingLevel, silentMarkers }: {
   title?: React.ReactNode;
   icon?: React.ReactNode;
   trailing?: React.ReactNode;
   rows: ProgressCardRow[];
+  /** Render the title as a heading at this level so groups are navigable by AT. */
+  headingLevel?: number;
+  /** Hide row markers from AT — for callers that announce progress via their own live region. */
+  silentMarkers?: boolean;
 }) => (
   <Card>
     {title ? (
       <Header>
         {icon}
-        <span style={{ flex: 1, minWidth: 0 }}>{title}</span>
+        <span
+          style={{ flex: 1, minWidth: 0 }}
+          role={headingLevel ? 'heading' : undefined}
+          aria-level={headingLevel}
+        >
+          {title}
+        </span>
         {trailing}
       </Header>
     ) : null}
@@ -144,7 +160,7 @@ const ProgressCard = ({ title, icon, trailing, rows }: {
             {row.label}
             {row.detail ? <Detail>{row.detail}</Detail> : null}
           </Label>
-          <Marker state={row.state} />
+          <Marker state={row.state} silent={silentMarkers} />
         </Row>
       ))}
     </Rows>

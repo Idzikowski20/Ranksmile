@@ -21,7 +21,7 @@ const Thinking = ({ text }: { text: string }) => {
         type="button" onClick={() => setOpen((o) => !o)}
         style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 4px', margin: '-2px -4px', borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--koala-text-tertiary)', fontSize: 12.5, fontWeight: 500, fontFamily: 'var(--font-family-primary)', transition: 'color 150ms ease' }}
         onMouseEnter={(e) => { e.currentTarget.style.color = '#52525c'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = '#9f9fa9'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-tertiary)'; }}
       >
         <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M9 18l6-6-6-6" /></svg>
         Thinking
