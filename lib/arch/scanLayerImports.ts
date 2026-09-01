@@ -19,7 +19,6 @@ export function extractSpecifiers(source: string): string[] {
 
 const EXT = new Set(['.ts', '.tsx']);
 function walk(dir: string, acc: string[] = []): string[] {
-  if (!fs.existsSync(dir)) return acc;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, acc);
@@ -28,17 +27,40 @@ function walk(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-/** Scan every configured layer root and return specifiers that violate its rule. */
+/** Repo-relative resolution of an internal specifier; null for bare (npm/node:) imports. */
+function resolveInternal(spec: string, fileAbs: string, rootDir: string): string | null {
+  let abs: string;
+  if (spec.startsWith('@/')) abs = path.resolve(rootDir, spec.slice(2));
+  else if (spec.startsWith('.')) abs = path.resolve(path.dirname(fileAbs), spec);
+  else return null;
+  return path.relative(rootDir, abs).replace(/\\/g, '/');
+}
+
+/**
+ * Scan every configured layer root and return specifiers that violate its rule.
+ * Throws if a configured root is missing so a rename can't silently disable the
+ * boundary check (fail closed).
+ */
 export function findLayerViolations(rootDir: string): LayerViolation[] {
   const out: LayerViolation[] = [];
+  const seen = new Set<string>();
   for (const rule of LAYER_RULES) {
     const base = path.join(rootDir, rule.root);
+    if (!fs.existsSync(base)) {
+      throw new Error(`Layer root not found: ${rule.root} — rename it in lib/arch/layerRules.ts or the boundary check silently passes.`);
+    }
     for (const file of walk(base)) {
-      const specs = extractSpecifiers(fs.readFileSync(file, 'utf8'));
-      for (const spec of specs) {
-        if (rule.forbid.some((re) => re.test(spec))) {
-          out.push({ file: path.relative(rootDir, file).replace(/\\/g, '/'), specifier: spec, layer: rule.label });
-        }
+      const rel = path.relative(rootDir, file).replace(/\\/g, '/');
+      for (const spec of extractSpecifiers(fs.readFileSync(file, 'utf8'))) {
+        const resolved = resolveInternal(spec, file, rootDir);
+        const bad = resolved === null
+          ? rule.forbidBare.some((re) => re.test(spec))
+          : !rule.allowInternal.some((re) => re.test(resolved));
+        if (!bad) continue;
+        const key = `${rel}\0${spec}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ file: rel, specifier: spec, layer: rule.label });
       }
     }
   }

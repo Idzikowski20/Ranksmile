@@ -22,15 +22,15 @@ The billing consolidation (commit `154c855a`) is the template. Repeat per family
    importers (`../lib/x` → `../lib/family/x`), a moved file's imports of
    non-moved siblings (`./orgBilling` → `../orgBilling`), and moved-to-moved
    (`../x` → `./x`). See the billing codemod in the commit history.
-3. **Fix `jest.mock()` string paths** — the codemod only catches
-   `from`/`import`/`require`, so `jest.mock('../../lib/x', …)` needs a separate
-   pass (tsconfig excludes `__tests__`, so tsc won't flag these).
+3. **Check `jest.mock()` string paths** — `scripts/move-lib-family.mjs` already
+   rewrites them alongside `from`/`import`/`require`; just verify (tsconfig excludes
+   `__tests__`, so tsc won't flag a missed one).
 4. **Verify green:** `npx tsc --noEmit` (app code) **and** `npx jest <family>`
    (test-file imports). Do not commit red.
 5. **One family = one commit.** Small, reviewable, revertible.
 
-> Tip: generalize the billing codemod into `scripts/move-family.mjs` taking a
-> family prefix + target dir, so each family is one script run + one test run.
+> Tip: use the existing `scripts/move-lib-family.mjs` (family prefix + target dir),
+> so each family is one script run + one test run.
 
 ## Done so far
 
