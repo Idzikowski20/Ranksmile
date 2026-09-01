@@ -1,0 +1,21 @@
+ARCHITECTURE.md
+  s_4134d8bafd16e7::t_7a99414a285573 22
+lib/arch/layerRules.ts
+  s_4134d8bafd16e7::t_eb9f6047816c7f 63-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7cdf9f9e52c6702b5bb291caab4293ae90f191c6",
+  "prompts": {},
+  "sessions": {
+    "s_4134d8bafd16e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaa40422-98e6-4da3-bafd-5060bf3fe672",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
