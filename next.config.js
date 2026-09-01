@@ -37,6 +37,13 @@ const nextConfig = {
   // style-only ESLint rules. The codebase's inline-style density (per DESIGN.md)
   // intentionally trips max-len/quotes/etc., and `next build` type-checks via tsc anyway.
   eslint: { ignoreDuringBuilds: true },
+  // `next build` collects page data by requiring every page's server bundle in worker
+  // processes. The shared _app bundle (~1.3 MB) takes ~20s just to resolve+eval its
+  // hundreds of node_modules requires (Windows fs stat is slow), and the build fans out
+  // one worker per CPU — under that contention a single eval routinely crosses the default
+  // 60s limit, failing the whole build with page-data-collection-timeout. The work is
+  // finite, so give it headroom rather than masking a hang (there is none).
+  staticPageGenerationTimeout: 180,
   // Fonts are loaded via a <link> in _document.tsx and resolved at runtime. Disable
   // Next's build-time font inlining so the build doesn't fetch Google Fonts (which
   // hangs/times-out the page-data collection in restricted-network build environments).
@@ -128,10 +135,14 @@ const nextConfig = {
 
 module.exports = nextConfig;
 
-// Sentry: on in production by default; set SENTRY_ENABLED=false to disable.
-// Non-prod requires SENTRY_ENABLED=true.
+// Sentry build integration (source-map upload) — needs SENTRY_AUTH_TOKEN, which only CI has.
+// Without a token the webpack plugin can't upload maps, and it still injects the Sentry SDK
+// into the server bundles, enlarging them and adding to the already-slow page-data eval. So
+// the production default requires the token; `SENTRY_ENABLED=true` still forces it, and
+// runtime error reporting (instrumentation.ts) is gated separately.
 const SENTRY_ENABLED = process.env.SENTRY_ENABLED === 'true'
-  || (process.env.NODE_ENV === 'production' && process.env.SENTRY_ENABLED !== 'false');
+  || (process.env.NODE_ENV === 'production' && process.env.SENTRY_ENABLED !== 'false'
+      && Boolean(process.env.SENTRY_AUTH_TOKEN));
 
 if (SENTRY_ENABLED) {
   // Injected content via Sentry wizard below
