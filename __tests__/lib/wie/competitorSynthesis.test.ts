@@ -2,12 +2,12 @@ import {
   formatCompetitorSynthesisForPrompt,
   heuristicCompetitorSynthesis,
   parseCompetitorSynthesis,
-} from '../../../lib/wie/competitorSynthesis';
-import { evaluateRxQualityGate } from '../../../lib/wie/rxQualityGate';
-import { buildHeuristicReaderBrief, formatReaderBriefForPrompt } from '../../../lib/wie/readerBrief';
-import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '../../../lib/ao/editPlan';
-import { makeCandidate } from '../../../lib/ao/editCandidate';
-import { buildIntentProfile } from '../../../lib/ao/intentProfile';
+} from '@/src/infrastructure/wie/competitorSynthesis';
+import { evaluateRxQualityGate } from '@/src/infrastructure/wie/rxQualityGate';
+import { buildHeuristicReaderBrief, formatReaderBriefForPrompt } from '@/src/core/domain/wie/readerBrief';
+import { buildPrecisionEditPlan, buildPrecisionStepPrompt } from '@/src/infrastructure/ao/editPlan';
+import { makeCandidate } from '@/src/core/domain/optimize/editCandidate';
+import { buildIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 
 describe('WIE competitorSynthesis', () => {
   it('parses valid synthesis and rejects empty', () => {

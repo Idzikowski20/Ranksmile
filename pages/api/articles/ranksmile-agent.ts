@@ -5,20 +5,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { streamText, isStepCount } from 'ai';
 import verifyUser from '../../../utils/verifyUser';
-import { chatLlm, deepseek } from '../../../lib/ai/deepseek';
-import { makeWorkingDoc, stripDataImages, restoreDataImages, stripSids } from '../../../lib/ai/workingDoc';
-import { buildTools } from '../../../lib/ai/tools';
-import { buildSystemPrompt } from '../../../lib/ai/systemPrompt';
-import { sseEvent } from '../../../lib/ai/sse';
-import { extractJsonObject, isRanksmileReplyShape } from '../../../lib/ai/extractJson';
-import { splitRanksmileThinkingAndMessage, stripEmoji } from '../../../lib/ai/text';
+import { chatLlm, deepseek } from '@/src/infrastructure/ai/deepseek';
+import { makeWorkingDoc, stripDataImages, restoreDataImages, stripSids } from '@/src/infrastructure/ai/workingDoc';
+import { buildTools } from '@/src/infrastructure/ai/tools';
+import { buildSystemPrompt } from '@/src/infrastructure/ai/systemPrompt';
+import { sseEvent } from '@/src/infrastructure/ai/sse';
+import { extractJsonObject, isRanksmileReplyShape } from '@/src/infrastructure/ai/extractJson';
+import { splitRanksmileThinkingAndMessage, stripEmoji } from '@/src/infrastructure/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
-import { getOrgUsage5h, recordAiTokens } from '../../../lib/ai/aiTokenUsage';
-import type { ToolCtx } from '../../../lib/ai/types';
-import { getErrorMessage } from '../../../lib/errors';
-import { flushSse } from '../../../lib/types/api';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
+import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
+import type { ToolCtx } from '@/src/infrastructure/ai/types';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { flushSse } from '@/src/core/shared/types/api';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 export const config = { api: { responseLimit: '10mb' } };
 

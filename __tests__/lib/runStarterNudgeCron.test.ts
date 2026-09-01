@@ -1,22 +1,22 @@
 /**
  * @jest-environment node
  */
-import { hasNonTerminalStripeSubscription } from '../../lib/orgBilling';
+import { hasNonTerminalStripeSubscription } from '@/src/infrastructure/billing/orgBilling';
 import {
   isOrgInStarterNudgeAgeWindow,
   runStarterNudgeCron,
-} from '../../lib/emails/runStarterNudgeCron';
+} from '@/src/infrastructure/email/runStarterNudgeCron';
 
-jest.mock('../../lib/ensureBillingTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => ({
   ensureBillingTables: jest.fn(async () => undefined),
 }));
 
-jest.mock('../../lib/db/query', () => ({
+jest.mock('@/src/infrastructure/db/query', () => ({
   queryRows: jest.fn(),
 }));
 
-jest.mock('../../lib/orgBilling', () => {
-  const actual = jest.requireActual('../../lib/orgBilling') as typeof import('../../lib/orgBilling');
+jest.mock('@/src/infrastructure/billing/orgBilling', () => {
+  const actual = jest.requireActual('@/src/infrastructure/billing/orgBilling') as typeof import('@/src/infrastructure/billing/orgBilling');
   return {
     ...actual,
     getOrgBillingState: jest.fn(),
@@ -24,7 +24,7 @@ jest.mock('../../lib/orgBilling', () => {
   };
 });
 
-jest.mock('../../lib/emails/sendStarterNudgeEmail', () => ({
+jest.mock('@/src/infrastructure/email/sendStarterNudgeEmail', () => ({
   sendStarterNudgeEmail: jest.fn(),
 }));
 
@@ -33,9 +33,9 @@ jest.mock('../../database/database', () => ({
   default: { query: jest.fn() },
 }));
 
-import { queryRows } from '../../lib/db/query';
-import { getOrgBillingState, updateOrgBillingState } from '../../lib/orgBilling';
-import { sendStarterNudgeEmail } from '../../lib/emails/sendStarterNudgeEmail';
+import { queryRows } from '@/src/infrastructure/db/query';
+import { getOrgBillingState, updateOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { sendStarterNudgeEmail } from '@/src/infrastructure/email/sendStarterNudgeEmail';
 import db from '../../database/database';
 
 const mockQueryRows = queryRows as jest.MockedFunction<typeof queryRows>;

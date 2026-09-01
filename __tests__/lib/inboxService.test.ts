@@ -1,11 +1,11 @@
 /**
  * mark-read / unreadCount / no-downgrade — stateful in-memory mock.
  */
-jest.mock('../../lib/ensureNotificationTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureNotificationTables', () => ({
   ensureNotificationTables: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 1 }),
   getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([9]),
 }));
@@ -129,7 +129,7 @@ jest.mock('../../database/database', () => ({
   },
 }));
 
-import { listInboxForUser, markInboxRead } from '../../lib/notifications/inboxService';
+import { listInboxForUser, markInboxRead } from '@/src/infrastructure/notifications/inboxService';
 
 const E1 = 'optimization_recommendation:domain:1';
 

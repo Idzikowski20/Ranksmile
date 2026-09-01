@@ -1,4 +1,4 @@
-import { pickLinkTargets, titleFromSlug } from '../../lib/sitemapLinkTargets';
+import { pickLinkTargets, titleFromSlug } from '@/src/core/domain/seo/sitemapLinkTargets';
 
 const KEYWORD = 'prywatny detektyw warszawa';
 

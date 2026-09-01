@@ -1,6 +1,6 @@
 import React from 'react';
 import { Icon } from '../koala/icons';
-import type { FactorName, ScoreFactor } from '../../lib/aiScore/factors';
+import type { FactorName, ScoreFactor } from '@/src/core/domain/aiScore/factors';
 
 const LABELS: Record<FactorName, string> = {
   FACTS_COVERAGE: 'Facts covered',

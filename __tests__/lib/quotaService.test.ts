@@ -1,11 +1,11 @@
 /**
  * Stateful in-memory mock of quota tables — concurrency / idempotency without live Postgres.
  */
-jest.mock('../../lib/ensurePlanQuotaTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensurePlanQuotaTables', () => ({
   ensurePlanQuotaTables: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('../../lib/orgBilling', () => ({
+jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   getOrgBillingState: jest.fn().mockResolvedValue({
     planSlug: 'starter',
     subscriptionStatus: 'active',
@@ -200,8 +200,8 @@ import {
   commitReservation,
   releaseReservation,
   reserveQuota,
-} from '../../lib/quota/quotaService';
-import { PlanLimitError } from '../../lib/quota/errors';
+} from '@/src/infrastructure/quota/quotaService';
+import { PlanLimitError } from '@/src/infrastructure/quota/errors';
 
 beforeAll(() => {
   if (!process.env.DATABASE_URL) process.env.DATABASE_URL = 'postgres://test';

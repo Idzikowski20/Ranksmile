@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from 'react-query';
-import type { InboxListResponse } from '../lib/notifications/types';
+import type { InboxListResponse } from '@/src/infrastructure/notifications/types';
 
 const KEY = 'inbox';
 

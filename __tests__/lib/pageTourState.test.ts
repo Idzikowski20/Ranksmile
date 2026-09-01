@@ -14,7 +14,7 @@ async function load() {
   query.mockReset();
   // CREATE TABLE, then the tour_seen_at ALTER migration.
   query.mockResolvedValueOnce(rows([])).mockResolvedValueOnce(rows([]));
-  const state = await import('../../lib/onboardingState');
+  const state = await import('@/src/infrastructure/identity/onboardingState');
   return { query, ...state };
 }
 
@@ -79,7 +79,7 @@ describe('page tour state', () => {
     ['read-only database', { message: 'attempt to write a readonly database' }, false],
     ['not an object', 'nope', false],
   ])('isDuplicateColumn: %s', async (_label, err, expected) => {
-    const { isDuplicateColumn } = await import('../../lib/onboardingState');
+    const { isDuplicateColumn } = await import('@/src/infrastructure/identity/onboardingState');
     expect(isDuplicateColumn(err)).toBe(expected);
   });
 
@@ -90,7 +90,7 @@ describe('page tour state', () => {
     query.mockReset();
     query.mockResolvedValueOnce(rows([]));
     query.mockRejectedValueOnce(new Error('attempt to write a readonly database'));
-    const { isPageTourSeen } = await import('../../lib/onboardingState');
+    const { isPageTourSeen } = await import('@/src/infrastructure/identity/onboardingState');
     await expect(isPageTourSeen('u1')).rejects.toThrow('readonly');
   });
 
@@ -102,7 +102,7 @@ describe('page tour state', () => {
     query.mockReset();
     query.mockResolvedValueOnce(rows([]));
     query.mockRejectedValueOnce(new Error('duplicate column name: tour_seen_at'));
-    const { isPageTourSeen } = await import('../../lib/onboardingState');
+    const { isPageTourSeen } = await import('@/src/infrastructure/identity/onboardingState');
     query.mockResolvedValueOnce(rows([]));
     await expect(isPageTourSeen('u1')).resolves.toBe(false);
   });

@@ -1,15 +1,15 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' }, QueryTypes: { INSERT: 'INSERT', SELECT: 'SELECT' } }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
-jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(false) }));
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(false) }));
 jest.mock('../../utils/verifyDomainOwnership', () => ({ verifyDomainOwnershipById: jest.fn().mockResolvedValue(false) }));
-jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
-jest.mock('../../lib/db/query', () => ({ queryOne: jest.fn() }));
-jest.mock('../../lib/sidecar', () => ({ callSidecar: jest.fn() }));
-jest.mock('../../lib/ai/aiBudget', () => ({ resolveOrgId: jest.fn(), orgBudgetBlocked: jest.fn(), recordAiTokens: jest.fn() }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('@/src/infrastructure/db/query', () => ({ queryOne: jest.fn() }));
+jest.mock('@/src/infrastructure/http/sidecar', () => ({ callSidecar: jest.fn() }));
+jest.mock('@/src/infrastructure/ai/aiBudget', () => ({ resolveOrgId: jest.fn(), orgBudgetBlocked: jest.fn(), recordAiTokens: jest.fn() }));
 jest.mock('axios', () => ({ __esModule: true, default: { post: jest.fn() } }));
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -20,10 +20,10 @@ import internalLinksHandler from '../../pages/api/articles/suggest-internal-link
 import plagiarismHandler from '../../pages/api/articles/plagiarism';
 import publishTargetsHandler from '../../pages/api/articles/publish-targets';
 import keywordsHandler from '../../pages/api/articles/[id]/keywords';
-import { assertArticleAccess } from '../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { verifyDomainOwnershipById } from '../../utils/verifyDomainOwnership';
-import { queryOne } from '../../lib/db/query';
-import { callSidecar } from '../../lib/sidecar';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { callSidecar } from '@/src/infrastructure/http/sidecar';
 
 const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;
 const mockAssertArticleAccess = assertArticleAccess as jest.MockedFunction<typeof assertArticleAccess>;

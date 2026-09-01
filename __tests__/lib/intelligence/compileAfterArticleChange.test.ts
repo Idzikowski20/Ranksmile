@@ -2,8 +2,8 @@ import {
   compileAfterArticleChange,
   compileIfStale,
   isCcmStale,
-} from '../../../lib/intelligence/compileAfterArticleChange';
-import { InMemoryCompileStore } from '../../../lib/intelligence/compileStore';
+} from '@/src/core/intelligence/compileAfterArticleChange';
+import { InMemoryCompileStore } from '@/src/core/intelligence/compileStore';
 
 const FIXED_AT = '2026-08-03T14:00:00.000Z';
 const HTML = '<h1>Wojna hybrydowa</h1><p>Rosja anektowała Krym w 2014 roku.</p>';

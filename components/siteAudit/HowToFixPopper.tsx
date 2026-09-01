@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { getCatalogEntry } from '../../lib/siteAudit/issueCatalog';
-import type { SiteAuditIssueSummary } from '../../lib/siteAudit/types';
+import { getCatalogEntry } from '@/src/infrastructure/siteAudit/issueCatalog';
+import type { SiteAuditIssueSummary } from '@/src/infrastructure/siteAudit/types';
 import { useAnchorDismiss } from './useAnchorDismiss';
 
 const FONT = 'var(--font-family-primary)';

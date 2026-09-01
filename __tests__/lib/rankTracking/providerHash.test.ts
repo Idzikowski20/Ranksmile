@@ -1,4 +1,4 @@
-import { providerResponseHash, canonicalJson } from '../../../lib/rankTracking/providerHash';
+import { providerResponseHash, canonicalJson } from '@/src/infrastructure/rankTracking/providerHash';
 
 describe('providerResponseHash', () => {
   it('is deterministic for same inputs', () => {

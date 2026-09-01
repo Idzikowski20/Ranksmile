@@ -1,9 +1,9 @@
-import { compile } from '../../../lib/compiler/compile';
-import { graphQuery } from '../../../lib/ccm/graphQuery';
+import { compile } from '@/src/core/compiler/compile';
+import { graphQuery } from '@/src/core/ccm/graphQuery';
 import {
   buildInvalidationGraph,
   getDependencyGraph,
-} from '../../../lib/compiler/incremental';
+} from '@/src/core/compiler/incremental';
 
 const AT = '2026-08-03T12:00:00.000Z';
 

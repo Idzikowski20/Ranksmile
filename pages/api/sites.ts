@@ -3,14 +3,14 @@ import { auth, searchconsole_v1 } from '@googleapis/searchconsole';
 import Cryptr from 'cryptr';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getScopedWorkspaceIds, ForbiddenWorkspaceError } from '../../lib/tenancy';
+import { getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
 import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
-import { buildOAuthClientFromAccount } from '../../lib/gsc/gscAccounts';
+import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
 import { readLocalSCData, getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../utils/searchConsole';
-import { getErrorMessage } from '../../lib/errors';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type GSCSite = {
   siteUrl: string;

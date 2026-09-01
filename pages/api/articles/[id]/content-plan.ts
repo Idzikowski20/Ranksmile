@@ -5,13 +5,13 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../lib/tenancy';
-import { getErrorMessage } from '../../../../lib/errors';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
-import { safeJsonParse } from '../../../../lib/safeJson';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import {
   aiIntelFromScoreData,
   competitorsFromScoreData,
@@ -20,20 +20,20 @@ import {
   enrichWithCorpusClaims,
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
-} from '../../../../lib/contentPlanner/fromArticleInputs';
-import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlanner';
-import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
-import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
-import { readContentSettings } from '../../../../lib/contentSettings';
-import { readArticleTerms } from '../../../../lib/articles/articleTerms';
-import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/ai/aiBudget';
-import { mergedPlannerQuestions } from '../../../../lib/coverageStore';
-import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
+} from '@/src/infrastructure/contentPlanner/fromArticleInputs';
+import { runContentPlanner } from '@/src/infrastructure/contentPlanner/runContentPlanner';
+import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
+import { importantTermsFromScoreData } from '@/src/infrastructure/articles/mergeArticleTerms';
+import { readContentSettings } from '@/src/infrastructure/stores/contentSettings';
+import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
+import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageStore';
+import { parseApprovedOutline } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
 import {
   benchmarkDocsFromCompetitors,
   buildStructuralBenchmark,
   toPlannerTargets,
-} from '../../../../lib/benchmarkIntelligence';
+} from '@/src/infrastructure/benchmarkIntelligence/index';
 import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 import type { PlannerTargets, StructuralBenchmark } from '@/src/core/domain/benchmark/types';
 

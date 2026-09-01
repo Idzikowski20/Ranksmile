@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { queryOne } from '../../../../../lib/db/query';
-import type { RankCheckRunRow } from '../../../../../lib/types/rankTracking';
-import { resolveRankTrackingApi } from '../../../../../lib/rankTracking/apiAuth';
-import { getConfig } from '../../../../../lib/rankTracking/service';
-import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
+import { queryOne } from '@/src/infrastructure/db/query';
+import type { RankCheckRunRow } from '@/src/core/shared/types/rankTracking';
+import { resolveRankTrackingApi } from '@/src/infrastructure/rankTracking/apiAuth';
+import { getConfig } from '@/src/infrastructure/rankTracking/service';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);

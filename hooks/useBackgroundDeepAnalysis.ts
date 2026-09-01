@@ -7,7 +7,7 @@ import {
   readAnalyzeSession,
   type DeepAnalysisUiState,
   type JobProgressSnapshot,
-} from '../lib/deepAnalysisProgress';
+} from '@/src/core/domain/articles/deepAnalysisProgress';
 
 interface Options {
   articleId: number | null;

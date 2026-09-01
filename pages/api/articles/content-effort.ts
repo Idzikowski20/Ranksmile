@@ -3,17 +3,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
-import { callSidecar } from '../../../lib/sidecar';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { callSidecar } from '@/src/infrastructure/http/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { getErrorMessage } from '../../../lib/errors';
-import { queryOne, ArticleRow } from '../../../lib/db/query';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
 import { heuristicContentEffort, type ContentEffortInsight } from '@/src/core/domain/terms/contentEffort';
-import { safeJsonParse } from '../../../lib/safeJson';
-import type { ScoreData } from '../../../lib/contentScore';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type EffortBody = { score?: unknown; reasons?: unknown; source?: unknown };
 

@@ -9,9 +9,9 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { runDeepAnalysisForUrl, DeepResult } from '../../../../lib/deepAnalysis';
-import { getDomainLocale } from '../../../../lib/domainLanguage';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { runDeepAnalysisForUrl, DeepResult } from '@/src/infrastructure/articles/deepAnalysis';
+import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 

@@ -5,16 +5,16 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { affectedRows } from '../../../lib/queueRunner';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
 import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
-import { safeJsonParse } from '../../../lib/safeJson';
-import { MAX_STREAM_CHARS } from '../../../lib/streamText';
-import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
-import { staleFinalizationSql } from '../../../lib/staleFinalization';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
+import { MAX_STREAM_CHARS } from '@/src/core/shared/streamText';
+import { sanitizeArticleHtml } from '@/src/infrastructure/http/sanitizeHtml';
+import { staleFinalizationSql } from '@/src/infrastructure/articles/staleFinalization';
 
 import {
   mergePhases, phasesFromStage, type AnalysisPhases, type AnalysisPhasesPatch,
@@ -57,7 +57,7 @@ async function failStaleFinalization(job: JobAccessRow): Promise<boolean> {
     );
     if (affectedRows(claim) === 0) return false;
     if (job.article_id) {
-      const { getArticleIdSql } = await import('../../../lib/articles/articleSql');
+      const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
       const articleIdSql = await getArticleIdSql();
       await db.query(
         `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
@@ -67,7 +67,7 @@ async function failStaleFinalization(job: JobAccessRow): Promise<boolean> {
     return true;
   });
   if (recovered && job.job_type === 'domain_setup' && job.domain_id) {
-    const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+    const { releaseSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
     await releaseSiteAuditRun(Number(job.domain_id), job.id).catch(() => {});
   }
   return recovered;
@@ -83,7 +83,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       && typeof internalToken === 'string'
       && internalToken === process.env.INTERNAL_PIPELINE_TOKEN,
   );
-  const { assertCronSecret } = await import('../../../lib/cronAuth');
+  const { assertCronSecret } = await import('@/src/infrastructure/cron/cronAuth');
   const isCron = assertCronSecret(req);
 
   if (!isInternal && !isCron) {
@@ -204,19 +204,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const domainId = jrows[0]?.domain_id;
       const genArticleId = jrows[0]?.article_id;
       if (status === 'done' && jt === 'domain_setup' && domainId) {
-        const { materializeDomainSetup } = await import('../../../lib/domainPipeline');
+        const { materializeDomainSetup } = await import('@/src/infrastructure/cron/domainPipeline');
         try {
           await materializeDomainSetup(Number(domainId), result || {});
-          const { closeSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+          const { closeSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
           await closeSiteAuditRun(Number(domainId), jobId).catch(() => {});
-          void import('../../../lib/siteAudit/crawlSnapshot')
+          void import('@/src/infrastructure/siteAudit/crawlSnapshot')
             .then((m) => m.saveCrawlSnapshot(Number(domainId)))
             .catch((err) => { console.warn('[job-progress] crawl snapshot failed (non-fatal):', err); });
           // Fire-and-forget: pre-scan the shared Organic Competitors store for the
           // domain's top keywords so they're ready in the audit/editor modal.
-          void import('../../../lib/competitorPrescan')
+          void import('@/src/infrastructure/competitors/competitorPrescan')
             .then((m) => m.prescanDomainCompetitors(Number(domainId)))
-            .then(() => import('../../../lib/scoreDomainPages').then((m) => m.scoreDomainPages(Number(domainId))))
+            .then(() => import('@/src/infrastructure/cron/scoreDomainPages').then((m) => m.scoreDomainPages(Number(domainId))))
             .catch((err) => { console.warn('[job-progress] domain page scoring failed (non-fatal):', err); });
         } catch (e) {
           // Materialization (delete+insert tx) failed — DON'T leave the job 'running'
@@ -228,16 +228,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
              WHERE id = ? AND status = 'finalizing'`,
             { replacements: [`materialize failed: ${msg}`, jobId] },
           );
-          const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+          const { releaseSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
           await releaseSiteAuditRun(Number(domainId), jobId).catch(() => {});
           return res.status(500).json({ error: 'materialization failed' });
         }
       } else if (status === 'failed' && jt === 'domain_setup' && domainId) {
-        const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+        const { releaseSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
         await releaseSiteAuditRun(Number(domainId), jobId).catch(() => {});
       }
       if (jt === 'article_generate' && genArticleId) {
-        const { getArticleIdSql } = await import('../../../lib/articles/articleSql');
+        const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
         const articleIdSql = await getArticleIdSql();
         if (status === 'done') {
           // articles.content is the canonical body rendered by the editor, preview and
@@ -259,9 +259,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           }
           const plain = stripHtmlToPlain(html);
           const wordCount = plain.split(/\s+/).filter(Boolean).length;
-          const { reconcilePostGenerateArticle } = await import('../../../lib/reconcilePostGenerateArticle');
+          const { reconcilePostGenerateArticle } = await import('@/src/infrastructure/articles/reconcilePostGenerateArticle');
           const sidecarScore = (result?.score_data && typeof result.score_data === 'object')
-            ? result.score_data as import('../../../lib/contentScore').ScoreData
+            ? result.score_data as import('@/src/infrastructure/articles/contentScore').ScoreData
             : { terms: [], words_target: 2000, words_min: 1500, words_max: 2500, headings_target: 15, headings_min: 10, headings_max: 20 };
           const reconciled = await reconcilePostGenerateArticle({
             articleId: Number(genArticleId),

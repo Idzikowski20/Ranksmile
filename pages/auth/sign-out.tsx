@@ -1,7 +1,7 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import React, { useEffect } from 'react';
-import { signOut } from '../../lib/auth/fetchAuth';
+import { signOut } from '@/src/infrastructure/auth/fetchAuth';
 import { authSubtitleStyle, authTitleStyle } from '../../components/auth/authStyles';
 import AuthPageLayout from '../../components/auth/AuthPageLayout';
 import AuthShell from '../../components/auth/AuthShell';

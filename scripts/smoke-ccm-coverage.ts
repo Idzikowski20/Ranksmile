@@ -2,10 +2,10 @@
  * Smoke Etap 27: compileIfStale → ai_info_to_cover.judgeVersion includes ccm-projection.
  * Usage: npx tsx --env-file=.env.local scripts/smoke-ccm-coverage.ts [articleId]
  */
-import { compileIfStale } from '../lib/intelligence/compileAfterArticleChange';
-import { queryOne } from '../lib/db/query';
-import { getArticleIdSql } from '../lib/articles/articleSql';
-import { parseSnapshot } from '../lib/coverageStore';
+import { compileIfStale } from '@/src/core/intelligence/compileAfterArticleChange';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
 
 const articleId = Number(process.argv[2] || 167);
 

@@ -5,9 +5,9 @@ import { getCurrentUserId } from '../../utils/getUser';
 import {
   cronRefreshSearchConsoleData,
   getDomainSearchConsoleData,
-} from '../../lib/gsc/domainSearchData';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
-import { assertCronSecret } from '../../lib/cronAuth';
+} from '@/src/infrastructure/gsc/domainSearchData';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { assertCronSecret } from '@/src/infrastructure/cron/cronAuth';
 
 /**
  * Legacy alias — same handler as /api/gsc/search-data.

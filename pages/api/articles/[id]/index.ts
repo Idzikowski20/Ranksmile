@@ -4,21 +4,21 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { assertArticleAccess } from '../../../../lib/tenancy';
-import { getErrorMessage } from '../../../../lib/errors';
-import { queryOne, queryRows } from '../../../../lib/db/query';
-import type { ArticleRow } from '../../../../lib/db/query';
-import type { AiVisibilitySummary } from '../../../../lib/ai/aiSearchScore';
-import { computeAiSearchScore } from '../../../../lib/ai/aiSearchScore';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
+import type { ArticleRow } from '@/src/infrastructure/db/query';
+import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
+import { computeAiSearchScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import {
   buildAiRankingSources,
   buildGoogleRankingSourcesFromRows,
   parseRankingSources,
-} from '../../../../lib/rankingSources';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+} from '@/src/infrastructure/articles/rankingSources';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -124,7 +124,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
      && scoreDataObj.knowledge_graph
    ) {
      try {
-       const { applyKnowledgeCoverageOverlay } = await import('../../../../lib/knowledgeEngine');
+       const { applyKnowledgeCoverageOverlay } = await import('@/src/infrastructure/knowledgeEngine/index');
        const overlay = await applyKnowledgeCoverageOverlay(scoreDataObj, content);
        scoreDataObj = overlay.scoreData;
      } catch (err: unknown) {
@@ -203,8 +203,8 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
       // v7 live_score queue on content save (fire-and-forget)
       if (content && scoreDataJson) {
          try {
-            const { enqueueLiveScoreOnSave } = await import('../../../../lib/pipeline/enqueueFromDeepAnalysis');
-            const { recordScoreFeedback } = await import('../../../../lib/learning/scoreFeedback');
+            const { enqueueLiveScoreOnSave } = await import('@/src/infrastructure/pipeline/enqueueFromDeepAnalysis');
+            const { recordScoreFeedback } = await import('@/src/infrastructure/learning/scoreFeedback');
             const userId = await getCurrentUserId(req, res);
             const sd = scoreDataObj || {};
             const after = Number(
@@ -233,7 +233,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
 
       // CIA: refresh CCM if content drifted (07-runtime editor save) — non-fatal, no UI
       if (typeof content === 'string' && content.trim().length > 80) {
-         void import('../../../../lib/intelligence/compileAfterArticleChange')
+         void import('@/src/core/intelligence/compileAfterArticleChange')
             .then((m) =>
                m.compileIfStale({
                   articleId: Number(id),
@@ -264,7 +264,7 @@ async function deleteArticle(id: string, res: NextApiResponse, userId: string | 
          [id],
       );
       if (!article) return res.status(404).json({ error: 'Article not found' });
-      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('../../../../lib/quota');
+      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
       const orgId = await getOrgIdForDomain(article.domain_id);
       await db.transaction(async (tx) => {
          await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id], transaction: tx });

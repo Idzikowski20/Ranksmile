@@ -5,9 +5,9 @@ import {
   getEmbeddingProvider,
   patchExecutionPlanFromCoverage,
   plansDiffer,
-} from '../../../lib/knowledgeEngine';
+} from '@/src/infrastructure/knowledgeEngine/index';
 import type { ArticleExecutionPlan } from '@/src/core/domain/contentPlanner/types';
-import type { CanonicalClaim } from '../../../lib/knowledgeEngine';
+import type { CanonicalClaim } from '@/src/infrastructure/knowledgeEngine/index';
 
 function sampleClaim(overrides: Partial<CanonicalClaim> = {}): CanonicalClaim {
   return {
@@ -189,7 +189,7 @@ describe('aoPlanPatch', () => {
 
 describe('applyKnowledgeCoverageOverlay', () => {
   it('persists report and patches plan for missing claims', async () => {
-    const { applyKnowledgeCoverageOverlay } = await import('../../../lib/knowledgeEngine');
+    const { applyKnowledgeCoverageOverlay } = await import('@/src/infrastructure/knowledgeEngine/index');
     const claim = sampleClaim({
       id: 'CLAIM_miss',
       statement: 'Linkowanie wewnętrzne poprawia indeksowanie podstron witryny.',

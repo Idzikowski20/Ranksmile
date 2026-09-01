@@ -9,7 +9,7 @@ jest.mock('../../database/database', () => ({
 const loadFresh = async () => {
   let mod: { ensureAiVisibilityTables: () => Promise<void> };
   await jest.isolateModulesAsync(async () => {
-    mod = await import('../../lib/ensureAiVisibilityTables');
+    mod = await import('@/src/infrastructure/persistence/schema/ensureAiVisibilityTables');
   });
   return mod!;
 };

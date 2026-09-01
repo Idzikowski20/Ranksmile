@@ -1,4 +1,4 @@
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 jest.mock('../../utils/verifyUser', () => ({
   __esModule: true,
@@ -13,16 +13,16 @@ const mockSync = jest.fn().mockResolvedValue(undefined);
 const mockList = jest.fn();
 const mockMark = jest.fn().mockResolvedValue(undefined);
 
-jest.mock('../../lib/notifications/syncOptimizationInbox', () => ({
+jest.mock('@/src/infrastructure/notifications/syncOptimizationInbox', () => ({
   syncOptimizationInbox: (...args: unknown[]) => mockSync(...args),
 }));
 
-jest.mock('../../lib/notifications/inboxService', () => ({
+jest.mock('@/src/infrastructure/notifications/inboxService', () => ({
   listInboxForUser: (...args: unknown[]) => mockList(...args),
   markInboxRead: (...args: unknown[]) => mockMark(...args),
 }));
 
-jest.mock('../../lib/tenancy', () => ({
+jest.mock('@/src/infrastructure/identity/tenancy', () => ({
   ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5 }),
   getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([9, 10]),
 }));

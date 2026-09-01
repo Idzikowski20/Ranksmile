@@ -1,9 +1,9 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
-jest.mock('../../lib/ensureBillingTables', () => ({ ensureBillingTables: jest.fn(async () => undefined) }));
+jest.mock('@/src/infrastructure/persistence/schema/ensureBillingTables', () => ({ ensureBillingTables: jest.fn(async () => undefined) }));
 
 import type Stripe from 'stripe';
 import db from '../../database/database';
-import { claimStripeEvent, releaseStripeEvent } from '../../lib/stripeWebhookEvents';
+import { claimStripeEvent, releaseStripeEvent } from '@/src/infrastructure/billing/stripeWebhookEvents';
 
 const mockQuery = db.query as jest.MockedFunction<typeof db.query>;
 

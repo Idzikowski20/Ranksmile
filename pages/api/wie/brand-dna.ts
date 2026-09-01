@@ -1,9 +1,9 @@
 // GET/POST /api/wie/brand-dna — Brand DNA onboarding + version rollback
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { getBrandDnaSummary, onboardBrandDna } from '../../../lib/wie/brandDnaOnboarding';
-import { listDnaVersions, rollbackDnaVersion } from '../../../lib/wie/patternStore';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getBrandDnaSummary, onboardBrandDna } from '@/src/infrastructure/wie/brandDnaOnboarding';
+import { listDnaVersions, rollbackDnaVersion } from '@/src/infrastructure/wie/patternStore';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

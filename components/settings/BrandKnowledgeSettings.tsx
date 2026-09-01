@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
-import { getErrorMessage } from '../../lib/errors';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { Button, Input, Textarea } from '../koala/core';
 import { KoalaSettingsSection, KoalaSettingsRow } from '../koala/layout';
 

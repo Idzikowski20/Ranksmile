@@ -6,8 +6,8 @@ import type {
   ParagraphGoal,
   ParagraphPlan,
   PipelineManifest,
-} from '../../../lib/contentPlanner/knowledgePack/types';
-import { validateSemantic } from '../../../lib/contentPlanner/knowledgePack/validateSemantic';
+} from '@/src/infrastructure/contentPlanner/knowledgePack/types';
+import { validateSemantic } from '@/src/infrastructure/contentPlanner/knowledgePack/validateSemantic';
 
 const emptyManifest: PipelineManifest = {
   plannerVersion: '1',

@@ -8,8 +8,8 @@ import {
   refreshAccountProfileFromGoogle,
   verifyAccountToken,
   type GscAccountRecord,
-} from '../../../lib/gsc/gscAccounts';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+} from '@/src/infrastructure/gsc/gscAccounts';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type GscAccountsResponse = {
   accounts?: ReturnType<typeof normalizeAccount>[];

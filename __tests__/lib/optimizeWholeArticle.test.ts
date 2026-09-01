@@ -1,7 +1,7 @@
-import { buildWholeArticlePrompt } from '../../lib/optimizeWholeArticle';
+import { buildWholeArticlePrompt } from '@/src/infrastructure/ao/optimizeWholeArticle';
 import { buildEffortOptimizeGuidance } from '@/src/core/domain/terms/contentEffort';
-import type { ArticleContext } from '../../lib/articles/articleContext';
-import type { ScoreData } from '../../lib/contentScore';
+import type { ArticleContext } from '@/src/infrastructure/articles/articleContext';
+import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 
 function ctxWithTerms(terms: ScoreData['terms']): ArticleContext {
   return {

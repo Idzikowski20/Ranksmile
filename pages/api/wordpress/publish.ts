@@ -6,14 +6,14 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
-import { getConnectionForWorkspace } from '../../../lib/wpConnection';
-import { wpRestFetch } from '../../../lib/wpRest';
-import { permalinkHash } from '../../../lib/wpDraft';
-import { cleanHtmlForWordPress } from '../../../lib/wpContentClean';
-import { logRun } from '../../../lib/optimizeLog';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
+import { wpRestFetch } from '@/src/infrastructure/wordpress/wpRest';
+import { permalinkHash } from '@/src/infrastructure/wordpress/wpDraft';
+import { cleanHtmlForWordPress } from '@/src/infrastructure/wordpress/wpContentClean';
+import { logRun } from '@/src/infrastructure/ao/optimizeLog';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type ArticleRow = {
    id: number; domain_id: number; title: string | null; content: string | null;

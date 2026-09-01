@@ -6,7 +6,7 @@
  * list. None of them is a claim about the subject, and each one spent a slot in the brief
  * that a real fact should have had.
  */
-import { isCorpusNoiseSentence } from '../../lib/corpusNoiseFilter';
+import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 
 const PAGE_CHROME = [
   'od 9:00 do 21:00 ul.',

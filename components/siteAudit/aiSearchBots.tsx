@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChatGptIcon, GoogleG, PerplexityIcon } from '../aiVisibility/modelIcons';
+import { ChatGptIcon, GoogleG, PerplexityIcon } from '@/components/aiVisibility/modelIcons';
 
 export type AiBotStatus = 'good' | 'blocked';
 

@@ -1,8 +1,8 @@
-import { compile } from '../../../lib/compiler/compile';
-import { isFactNode } from '../../../lib/ccm/types/graph';
-import { enrichCcmWithDaFacts } from '../../../lib/intelligence/enrichCcmWithDaFacts';
-import { citationsToDaFactSeeds } from '../../../lib/intelligence/loadDaFactSeeds';
-import { projectCcmToCoverageSnapshot } from '../../../lib/intelligence/ccmToCoverageSnapshot';
+import { compile } from '@/src/core/compiler/compile';
+import { isFactNode } from '@/src/core/ccm/types/graph';
+import { enrichCcmWithDaFacts } from '@/src/core/intelligence/enrichCcmWithDaFacts';
+import { citationsToDaFactSeeds } from '@/src/core/intelligence/loadDaFactSeeds';
+import { projectCcmToCoverageSnapshot } from '@/src/core/intelligence/ccmToCoverageSnapshot';
 
 const FIXED_AT = '2026-08-03T16:00:00.000Z';
 

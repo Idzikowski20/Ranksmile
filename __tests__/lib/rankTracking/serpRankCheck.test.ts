@@ -1,7 +1,7 @@
-import { buildRankCheckResult } from '../../../lib/rankTracking/serpRankCheck';
-import { estimateRankCheckCostUsd } from '../../../lib/rankTracking/cost';
-import { exportRankRows } from '../../../lib/rankTracking/exporter';
-import type { RankTrackingRow } from '../../../lib/types/rankTracking';
+import { buildRankCheckResult } from '@/src/infrastructure/rankTracking/serpRankCheck';
+import { estimateRankCheckCostUsd } from '@/src/infrastructure/rankTracking/cost';
+import { exportRankRows } from '@/src/infrastructure/rankTracking/exporter';
+import type { RankTrackingRow } from '@/src/core/shared/types/rankTracking';
 
 describe('buildRankCheckResult', () => {
   it('marks found when organic domain matches target', () => {

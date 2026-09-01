@@ -3,7 +3,7 @@
  * Marketing tiers mirror the reference (Discovery / Standard / Pro / Peace of Mind / Enterprise);
  * CTAs go to sign-up. Icons reused from /ai-tracking + /content-editor.
  */
-import { LEGAL_COMPANY } from '../../lib/legal/company';
+import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || LEGAL_COMPANY.website).replace(/\/$/, '');
 export const SUPPORT_EMAIL = LEGAL_COMPANY.supportEmail;

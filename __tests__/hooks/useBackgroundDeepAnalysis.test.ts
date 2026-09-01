@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import { renderHook, waitFor } from '@testing-library/react';
 import { jobArticleId, useBackgroundDeepAnalysis } from '../../hooks/useBackgroundDeepAnalysis';
-import { writeAnalyzeSession } from '../../lib/deepAnalysisProgress';
+import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProgress';
 
 const fetchMock = jest.fn();
 

@@ -1,5 +1,5 @@
 import { kdDotColor } from '../../components/koala/product/helpers/KeywordDifficultyDot';
-import { kwIntentToSearchIntent } from '../../lib/keywordResearchView';
+import { kwIntentToSearchIntent } from '@/src/infrastructure/keywords/keywordResearchView';
 
 describe('product helpers + research intent map', () => {
   it('maps KD bands', () => {

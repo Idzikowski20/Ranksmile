@@ -1,12 +1,12 @@
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
-jest.mock('../../lib/serviceUrls', () => ({ sidecarUrl: jest.fn(() => 'http://sidecar.test') }));
-jest.mock('../../lib/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://example.com')) }));
+jest.mock('@/src/infrastructure/config/serviceUrls', () => ({ sidecarUrl: jest.fn(() => 'http://sidecar.test') }));
+jest.mock('@/src/infrastructure/http/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://example.com')) }));
 jest.mock('axios', () => ({ __esModule: true, default: { post: jest.fn() } }));
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 import handler from '../../pages/api/brand-knowledge';
-import { assertPublicUrl } from '../../lib/ssrfGuard';
+import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 
 const mockAxiosPost = axios.post as jest.MockedFunction<typeof axios.post>;
 const mockAssertPublicUrl = assertPublicUrl as jest.MockedFunction<typeof assertPublicUrl>;

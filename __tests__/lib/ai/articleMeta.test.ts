@@ -2,13 +2,13 @@ jest.mock('../../../database/database', () => ({
   __esModule: true,
   default: { query: jest.fn() },
 }));
-jest.mock('../../../lib/articles/articleSql', () => ({
+jest.mock('@/src/infrastructure/articles/articleSql', () => ({
   __esModule: true,
   getArticleIdSql: jest.fn().mockResolvedValue('"ID"'),
 }));
 
 import db from '../../../database/database';
-import { resolveArticleSeoMeta } from '../../../lib/ai/articleMeta';
+import { resolveArticleSeoMeta } from '@/src/infrastructure/ai/articleMeta';
 
 const mockedQuery = (db as any).query as jest.Mock;
 

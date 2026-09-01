@@ -2,7 +2,7 @@ import {
   emptyPhases, mergePhases, phasesFromStage,
   type AnalysisPhases, type AnalysisPhasesPatch,
 } from '@/src/core/domain/articles/analysisPhases';
-import { safeJsonParse } from '../../lib/safeJson';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 
 /**
  * The handler is thin; what matters is the merge contract it must follow — an explicit

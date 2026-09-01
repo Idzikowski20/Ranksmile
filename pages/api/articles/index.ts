@@ -5,15 +5,15 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '../../../lib/tenancy';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
-import { getErrorMessage } from '../../../lib/errors';
-import { queryOne, type ArticleRow } from '../../../lib/db/query';
-import type { SqlReplacements } from '../../../lib/types/db';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryOne, type ArticleRow } from '@/src/infrastructure/db/query';
+import type { SqlReplacements } from '@/src/core/shared/types/db';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { domainIdsCache } from '../../../lib/domainIdsCache';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -179,7 +179,7 @@ async function createArticle(req: NextApiRequest, res: NextApiResponse, userId: 
    }
 
    try {
-      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('../../../lib/quota');
+      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
       const orgId = await getOrgIdForDomain(parseInt(domain_id, 10));
       if (!orgId) return res.status(400).json({ error: 'Domain has no organization' });
       await ensureOrgQuotaBalances(orgId);
@@ -218,7 +218,7 @@ async function createArticle(req: NextApiRequest, res: NextApiResponse, userId: 
       });
       return res.status(200).json({ articleId, title });
    } catch (error) {
-      const { isPlanLimitError, planLimitBody } = await import('../../../lib/quota');
+      const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
       if (isPlanLimitError(error)) return res.status(402).json(planLimitBody(error));
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
@@ -246,7 +246,7 @@ async function deleteArticle(req: NextApiRequest, res: NextApiResponse, userId: 
          return res.status(403).json({ error: 'Access denied.' });
       }
 
-      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('../../../lib/quota');
+      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
       const orgId = await getOrgIdForDomain(article.domain_id);
       await db.transaction(async (tx) => {
          await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id], transaction: tx });

@@ -1,5 +1,5 @@
-import { scopeFromAction, auditIssueIdFromAction } from '../../lib/observations/optimizeActionScope';
-import type { Action } from '../../lib/primitives/types';
+import { scopeFromAction, auditIssueIdFromAction } from '@/src/infrastructure/observations/optimizeActionScope';
+import type { Action } from '@/src/core/primitives/types';
 
 const base = (over: Partial<Action> & Pick<Action, 'id' | 'type' | 'title'>): Action => ({
   instruction: over.instruction || over.title,

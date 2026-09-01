@@ -4,8 +4,8 @@ import { useQuery } from 'react-query';
 import { Button, Toggle } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
-import fetchJson from '../../lib/fetchJson';
-import { getPlanCheckoutHref } from '../../lib/billing/billingPlans';
+import fetchJson from '@/src/infrastructure/http/fetchJson';
+import { getPlanCheckoutHref } from '@/src/core/domain/billing/plans';
 import type { ExpiredSummary } from '../../pages/api/billing/expired-summary';
 
 /**

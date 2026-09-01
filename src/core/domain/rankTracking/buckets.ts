@@ -1,4 +1,4 @@
-import type { RankDevice, RankTrackingConfigRow, RankTrackingDeviceResult, RankTrackingRow } from '@/lib/types/rankTracking';
+import type { RankDevice, RankTrackingConfigRow, RankTrackingDeviceResult, RankTrackingRow } from '@/src/core/shared/types/rankTracking';
 
 export function activeRankDevice(config: RankTrackingConfigRow): RankDevice {
   return config.devices === 'mobile' ? 'mobile' : 'desktop';

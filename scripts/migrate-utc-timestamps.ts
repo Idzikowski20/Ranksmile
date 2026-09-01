@@ -16,7 +16,7 @@ dotenv.config({ path: '.env' });
 
 async function main(): Promise<void> {
   // Imported after dotenv so the connection picks up DATABASE_URL.
-  const { ensureUtcTimestamps, findNaiveTimestampColumns } = await import('../lib/ensureUtcTimestamps');
+  const { ensureUtcTimestamps, findNaiveTimestampColumns } = await import('@/src/infrastructure/persistence/schema/ensureUtcTimestamps');
 
   const before = await findNaiveTimestampColumns();
   console.log(`[utc-timestamps] naive columns before: ${before.length}`);

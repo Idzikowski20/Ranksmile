@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../../utils/getUser';
-import { finishWorkspaceSetup } from '../../../../lib/workspaces';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { finishWorkspaceSetup } from '@/src/infrastructure/identity/workspaces';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);
@@ -15,7 +15,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       await finishWorkspaceSetup(userId, wsId, brandName, brandKnowledge || '');
    } catch (e) {
       if ((e as { message?: string }).message === 'WORKSPACE_NOT_FOUND') return res.status(404).json({ error: 'Workspace not found' });
-      const { isPlanLimitError, planLimitBody } = await import('../../../../lib/quota');
+      const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
       if (isPlanLimitError(e)) return res.status(402).json(planLimitBody(e));
       throw e;
    }
@@ -29,7 +29,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
       const domainId = drows[0]?.id;
       if (domainId) {
-         const { enqueueDomainSetup, kickDomainSetup } = await import('../../../../lib/domainPipeline');
+         const { enqueueDomainSetup, kickDomainSetup } = await import('@/src/infrastructure/cron/domainPipeline');
          const jobId = await enqueueDomainSetup(Number(domainId));
          void kickDomainSetup(jobId);
          // Warm Performance cache — domain.search_console is set during configure when GSC site was picked.

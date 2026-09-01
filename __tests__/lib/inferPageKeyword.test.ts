@@ -1,5 +1,5 @@
 import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
-import { resolveAnalysisSeedKeyword } from '../../lib/inferPageKeyword';
+import { resolveAnalysisSeedKeyword } from '@/src/infrastructure/keywords/inferPageKeyword';
 
 describe('isDictionaryQueryNoise', () => {
   it('rejects Polish dictionary-query spam', () => {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
 import toast from 'react-hot-toast';
-import { authClient } from '../../lib/auth/client';
+import { authClient } from '@/src/infrastructure/auth/client';
 
 // ──────────────────────────────────────────────
 // Shared button base classes (Ranksmile canonical)

@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { assertCronSecret } from '../../../lib/cronAuth';
-import { latestCronRuns } from '../../../lib/cronWatchdog';
+import { assertCronSecret } from '@/src/infrastructure/cron/cronAuth';
+import { latestCronRuns } from '@/src/infrastructure/cron/cronWatchdog';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getCallerRole } from '../../../lib/members';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
-import { getErrorMessage } from '../../../lib/errors';
+import { getCallerRole } from '@/src/infrastructure/identity/members';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

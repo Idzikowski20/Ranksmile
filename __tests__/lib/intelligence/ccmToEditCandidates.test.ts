@@ -1,9 +1,9 @@
-import { compile } from '../../../lib/compiler/compile';
-import { buildActionGraph } from '../../../lib/planner/actionGraphBuilder';
-import { summarizeRecommendations } from '../../../lib/intelligence/ccmRecommendations';
-import { ccmRecommendationsToEditCandidates } from '../../../lib/intelligence/ccmToEditCandidates';
-import { collectPrecisionCandidates } from '../../../lib/ao/runPrecisionOptimize';
-import { buildProfileFromContext } from '../../../lib/ao/runPrecisionOptimize';
+import { compile } from '@/src/core/compiler/compile';
+import { buildActionGraph } from '@/src/core/planner/actionGraphBuilder';
+import { summarizeRecommendations } from '@/src/core/intelligence/ccmRecommendations';
+import { ccmRecommendationsToEditCandidates } from '@/src/core/intelligence/ccmToEditCandidates';
+import { collectPrecisionCandidates } from '@/src/infrastructure/ao/runPrecisionOptimize';
+import { buildProfileFromContext } from '@/src/infrastructure/ao/runPrecisionOptimize';
 
 const FIXED_AT = '2026-08-03T22:00:00.000Z';
 

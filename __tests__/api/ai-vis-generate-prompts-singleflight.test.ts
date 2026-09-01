@@ -6,29 +6,29 @@ jest.mock('../../database/database', () => ({
   default: { query: jest.fn().mockResolvedValue([]) },
 }));
 
-jest.mock('../../lib/db/query', () => ({ queryOne: jest.fn() }));
+jest.mock('@/src/infrastructure/db/query', () => ({ queryOne: jest.fn() }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
 jest.mock('../../utils/verifyDomainOwnership', () => ({
   verifyDomainOwnershipBySlug: jest.fn().mockResolvedValue({ ID: 7 }),
 }));
-jest.mock('../../lib/ensureAiVisibilityTables', () => ({
+jest.mock('@/src/infrastructure/persistence/schema/ensureAiVisibilityTables', () => ({
   ensureAiVisibilityTables: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('../../lib/domainLanguage', () => ({
+jest.mock('@/src/infrastructure/config/domainLanguage', () => ({
   getDomainLocale: jest.fn().mockResolvedValue({ languageCode: 'pl', countryCode: 'PL' }),
   looksLikeLanguage: () => true,
   promptTemplatesForLocale: () => [{ text: 'szablon', provenance: ['template'] }],
 }));
-jest.mock('../../lib/dataforseo', () => ({
+jest.mock('@/src/infrastructure/dataforseo/dataforseo', () => ({
   isDataForSeoConfigured: () => true,
   getPeopleAlsoAsk: jest.fn(),
 }));
-jest.mock('../../lib/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h }));
 
 import db from '../../database/database';
-import { queryOne } from '../../lib/db/query';
-import { getPeopleAlsoAsk } from '../../lib/dataforseo';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { getPeopleAlsoAsk } from '@/src/infrastructure/dataforseo/dataforseo';
 import handler from '../../pages/api/ai-visibility/[slug]/generate-prompts';
 
 const dbQuery = db.query as jest.Mock;

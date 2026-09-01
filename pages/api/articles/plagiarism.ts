@@ -1,15 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
-import { callSidecar } from '../../../lib/sidecar';
-import { getErrorMessage } from '../../../lib/errors';
-import { queryOne } from '../../../lib/db/query';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { callSidecar } from '@/src/infrastructure/http/sidecar';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
-import { resolveContentLocale } from '../../../lib/domainLanguage';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
+import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

@@ -2,11 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../../utils/verifyDomainOwnership';
-import { ensurePipelineTables } from '../../../../../lib/ensurePipelineTables';
-import { buildCrawledPagesReport } from '../../../../../lib/siteAudit/buildPageReport';
-import { resolveSiteAuditPageLimit } from '../../../../../lib/siteAudit/pageLimit';
-import type { CrawledPagesReport } from '../../../../../lib/siteAudit/types';
-import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
+import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
+import { buildCrawledPagesReport } from '@/src/infrastructure/siteAudit/buildPageReport';
+import { resolveSiteAuditPageLimit } from '@/src/infrastructure/siteAudit/pageLimit';
+import type { CrawledPagesReport } from '@/src/infrastructure/siteAudit/types';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(
   req: NextApiRequest,

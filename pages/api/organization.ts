@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../utils/getUser';
-import { readOrganization, writeOrganization } from '../../lib/organization';
+import { readOrganization, writeOrganization } from '@/src/infrastructure/identity/organization';
 import ORG_NAME_MAX_LENGTH from '@/src/core/domain/organization/limits';
-import { parseDataUrl, uploadImageBuffer } from '../../lib/uploadToBlob';
-import { assertCanManage } from '../../lib/members';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { parseDataUrl, uploadImageBuffer } from '@/src/infrastructure/http/uploadToBlob';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 // Logo data URLs can be a few MB — raise the JSON body limit above the 1mb default.
 export const config = { api: { bodyParser: { sizeLimit: '6mb' } } };

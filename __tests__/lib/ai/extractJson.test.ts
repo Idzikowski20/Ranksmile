@@ -1,4 +1,4 @@
-import { extractJsonObject, isRanksmileReplyShape, stripCodeFence } from '../../../lib/ai/extractJson';
+import { extractJsonObject, isRanksmileReplyShape, stripCodeFence } from '@/src/infrastructure/ai/extractJson';
 
 describe('extractJsonObject', () => {
   it('parses a ```json-fenced reply blob (the bug: bare JSON.parse threw on the fence)', () => {

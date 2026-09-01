@@ -1,4 +1,4 @@
-import { stopCrawlOnDomain, serpCrawlBudget, DFS_SERP_PAA, DFS_SERP_AI_ELEMENT } from '../../lib/dataforseoBudget';
+import { stopCrawlOnDomain, serpCrawlBudget, DFS_SERP_PAA, DFS_SERP_AI_ELEMENT } from '@/src/infrastructure/dataforseo/dataforseoBudget';
 
 describe('dataforseoBudget', () => {
    it('PAA uses single-page shallow crawl', () => {

@@ -1,4 +1,4 @@
-import type { ContentIr, FactCandidate } from '../../../lib/ccm/types/ir';
+import type { ContentIr, FactCandidate } from '@/src/core/ccm/types/ir';
 
 describe('ccm IR types', () => {
   it('accepts empty ContentIr', () => {

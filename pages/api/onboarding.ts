@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { isOnboardingCompleted, markOnboardingCompleted } from '../../lib/onboardingState';
+import { isOnboardingCompleted, markOnboardingCompleted } from '@/src/infrastructure/identity/onboardingState';
 import { getCurrentUserId } from '../../utils/getUser';
-import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 /**
  * Onboarding state for the logged-in user.

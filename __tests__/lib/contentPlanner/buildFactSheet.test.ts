@@ -1,4 +1,4 @@
-import { buildFactSheet } from '../../../lib/contentPlanner/briefWriter';
+import { buildFactSheet } from '@/src/infrastructure/contentPlanner/briefWriter';
 import type { TargetClaim } from '@/src/core/domain/contentPlanner/types';
 
 function claim(over: Partial<TargetClaim> & { id: string }): TargetClaim {

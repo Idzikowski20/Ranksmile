@@ -3,15 +3,15 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { readLocalSCData } from '../../../utils/searchConsole';
 import { buildGscUrlKeywordMap, normalizeUrlForMatch } from '../../../utils/gsc';
 import Domain from '../../../database/models/domain';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
-import { getErrorMessage } from '../../../lib/errors';
-import { queryRows } from '../../../lib/db/query';
-import { queryAffected } from '../../../lib/types/db';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryRows } from '@/src/infrastructure/db/query';
+import { queryAffected } from '@/src/core/shared/types/db';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

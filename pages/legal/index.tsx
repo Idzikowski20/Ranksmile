@@ -2,7 +2,7 @@ import type { NextPage } from 'next';
 import Link from 'next/link';
 import styled from '@emotion/styled';
 import LegalLayout from '../../components/legal/LegalLayout';
-import { LEGAL_COMPANY, LEGAL_DOCS } from '../../lib/legal/company';
+import { LEGAL_COMPANY, LEGAL_DOCS } from '@/src/core/domain/legal/company';
 
 const Intro = styled.p`
   margin: 0 0 8px;

@@ -1,4 +1,4 @@
-import { shouldSkipFreshGenerate } from '../../lib/generateResume';
+import { shouldSkipFreshGenerate } from '@/src/core/domain/articles/generateResume';
 
 describe('shouldSkipFreshGenerate', () => {
   const realHtml = `<h1>Title</h1><p>${'Lorem ipsum dolor sit amet. '.repeat(8)}</p>`;

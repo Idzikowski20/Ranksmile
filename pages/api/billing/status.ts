@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getOrgBillingState } from '../../../lib/orgBilling';
-import { isStripeConfigured } from '../../../lib/stripe';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { isStripeConfigured } from '@/src/infrastructure/billing/stripe';
+import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

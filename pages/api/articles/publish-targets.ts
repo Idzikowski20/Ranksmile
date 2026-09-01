@@ -6,11 +6,11 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { queryOne } from '../../../lib/db/query';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { queryOne } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
-import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

@@ -2,10 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
-import { processQueuedForDomain } from '../../../../lib/keywordResearchRunner';
-import { getErrorMessage } from '../../../../lib/errors';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
+import { processQueuedForDomain } from '@/src/infrastructure/keywords/keywordResearchRunner';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await ensureKeywordResearchTables();

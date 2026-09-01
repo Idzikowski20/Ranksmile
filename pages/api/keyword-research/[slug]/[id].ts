@@ -3,10 +3,10 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
-import { queryOne, KeywordResearchRunRow } from '../../../../lib/db/query';
+import { ensureKeywordResearchTables } from '@/src/infrastructure/persistence/schema/ensureKeywordResearchTables';
+import { queryOne, KeywordResearchRunRow } from '@/src/infrastructure/db/query';
 import type { KeywordResearchResult } from '@/src/core/domain/keywords/types';
-import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await ensureKeywordResearchTables();

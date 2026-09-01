@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from '@emotion/styled';
 import { Icon } from '../koala/icons';
-import { useEntrance } from '../../lib/motion/useEntrance';
+import { useEntrance } from '@/components/motion/useEntrance';
 
 export type OutlineGenerateBarProps = {
   /** Outline is being planned — nothing to review or cancel yet. */

@@ -1,6 +1,6 @@
-import { asObjectId, asPredicateId, asSubjectId } from '../../../lib/ccm/ids';
-import type { ActionGraph } from '../../../lib/ccm/types/actionGraph';
-import type { RecommendationOp } from '../../../lib/ccm/types/recommendationDsl';
+import { asObjectId, asPredicateId, asSubjectId } from '@/src/core/ccm/ids';
+import type { ActionGraph } from '@/src/core/ccm/types/actionGraph';
+import type { RecommendationOp } from '@/src/core/ccm/types/recommendationDsl';
 
 describe('ActionGraph + branded Recommendation DSL', () => {
   it('ADD_FACT uses branded SubjectId / PredicateId / ObjectId', () => {

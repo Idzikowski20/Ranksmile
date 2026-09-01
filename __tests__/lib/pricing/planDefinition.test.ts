@@ -5,7 +5,7 @@ import {
   ctaLabel,
   billingSavePercentLabel,
   PLAN_DEFINITIONS,
-} from '../../../lib/pricing/planDefinition';
+} from '@/src/core/domain/pricing/planDefinition';
 
 describe('planDefinition hierarchy + CTA', () => {
   it('resolves previous / next along PlanHierarchy (Starter retired)', () => {

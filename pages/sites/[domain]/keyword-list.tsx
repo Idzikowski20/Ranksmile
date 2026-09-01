@@ -24,8 +24,8 @@ import {
 } from '../../../components/koala/core';
 import { PageHeader } from '../../../components/koala/layout';
 import { DataToolbar } from '../../../components/koala/product';
-import type { OrganicFilters } from '../../../lib/organicResearch/filter';
-import { filterKeywords, paginateKeywords, sortKeywords, type OrganicSortKey } from '../../../lib/organicResearch/filter';
+import type { OrganicFilters } from '@/src/infrastructure/organicResearch/filter';
+import { filterKeywords, paginateKeywords, sortKeywords, type OrganicSortKey } from '@/src/infrastructure/organicResearch/filter';
 import { useFetchDomains } from '../../../services/domains';
 import { organicExportUrl, useOrganicDataset } from '../../../services/organicResearch';
 import { slugToDomain } from '../../../utils/slugToDomain';
