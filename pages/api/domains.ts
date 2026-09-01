@@ -11,6 +11,7 @@ import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import { checkSerchConsoleIntegration, removeLocalSCData } from '../../utils/searchConsole';
 import { removeFromRetryQueue } from '../../utils/scraper';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { clearDomainIdsCache } from '../../lib/domainIdsCache';
 
 type DomainsGetRes = {
    domains: DomainType[]
@@ -113,6 +114,7 @@ export const addDomain = async (req: NextApiRequest, res: NextApiResponse<Domain
          const dup = await Domain.findOne({ where: { domain: names }, attributes: ['domain'] });
          if (dup) return res.status(409).json({ domains: [], error: `Domain already exists: ${dup.domain}` });
          const newDomains:Domain[] = await Domain.bulkCreate(domainsToAdd);
+         clearDomainIdsCache();
          const formattedDomains = newDomains.map((el) => el.get({ plain: true }));
          return res.status(201).json({ domains: formattedDomains });
       } catch (error) {
@@ -139,6 +141,7 @@ export const deleteDomain = async (req: NextApiRequest, res: NextApiResponse<Dom
       // Delete the verified domain row by its ID (not by name) so a same-named row in another
       // workspace can never be caught by the destroy.
       const removedDomCount: number = await Domain.destroy({ where: { ID: owns.ID } });
+      clearDomainIdsCache();
       const removedKeywordCount: number = await Keyword.destroy({ where: { domain } });
       const SCDataRemoved = await removeLocalSCData(domain as string);
 
