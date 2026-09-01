@@ -571,6 +571,33 @@ przykładów "z naszej praktyki" w artykułach."""
         return {"brand_name": "", "brand_knowledge": raw}
 
 
+def _parse_link_suggestions(raw: str) -> list[dict]:
+    """Parse the link-suggestion JSON, salvaging a truncated array.
+
+    The model returns a JSON array of {anchorText, url, articleTitle}. When the response
+    is cut off mid-array (token budget), the closing bracket is missing and a whole-array
+    parse yields nothing — so fall back to collecting every complete {...} object that
+    still parsed, keeping the links the model did finish.
+    """
+    m = re.search(r"\[[\s\S]*\]", raw)
+    if m:
+        try:
+            arr = json.loads(m.group(0))
+            if isinstance(arr, list):
+                return [s for s in arr if isinstance(s, dict) and s.get("anchorText") and s.get("url")]
+        except Exception:
+            pass
+    out: list[dict] = []
+    for obj in re.findall(r"\{[^{}]*\}", raw):
+        try:
+            s = json.loads(obj)
+        except Exception:
+            continue
+        if isinstance(s, dict) and s.get("anchorText") and s.get("url"):
+            out.append(s)
+    return out
+
+
 async def suggest_internal_links(
     article_html: str,
     site_url: str,
@@ -634,20 +661,18 @@ If no natural links found, return: []"""
             print("[internal-links] No OPENROUTER_API_KEY — skipping")
             return []
 
+        # 4096, not 2048: a rich link pool makes the model emit 12-16 suggestions, and the
+        # smaller budget truncated the JSON array mid-object — the closing ] never arrived,
+        # so the array parse found nothing and the run shipped 0 links.
         raw = (
             await _chat(
                 prompt,
-                max_tokens=2048,
+                max_tokens=4096,
                 system="You suggest internal links. Reply with JSON only — no markdown fences.",
             )
         ).strip()
 
-        json_match = re.search(r"\[[\s\S]*\]", raw)
-        if not json_match:
-            print(f"[internal-links] No JSON array in response: {raw[:200]}")
-            return []
-
-        suggestions = json.loads(json_match[0])
+        suggestions = _parse_link_suggestions(raw)
         print(f"[internal-links] Found {len(suggestions)} suggestions")
         return suggestions
 
