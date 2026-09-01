@@ -1,0 +1,24 @@
+lib/arch/layerRules.ts
+  s_e8c3822b427cc8::t_1a1dd3df330bbc 66,69,74,77
+  s_e8c3822b427cc8::t_59bd2d6e40e649 11-12,19-21,24-29,32-36,38,40
+components/koala/shell/AppBanner.tsx
+  s_e8c3822b427cc8::t_009459a1caaa42 120-124,128,130-131,134-135,140-141
+lib/arch/scanLayerImports.ts
+  s_e8c3822b427cc8::t_2939c9c9bbcc8c 60-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "13fe019f46a8df292655f7f7df2f1a5bcb33f092",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
