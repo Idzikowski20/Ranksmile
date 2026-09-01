@@ -121,8 +121,9 @@ export function AppBanner() {
   // announcement, then clears it), and a shared key meant dismissing one un-dismissed
   // the other when it reappeared.
   const [dismissedKeys, setDismissedKeys] = useState<ReadonlySet<string>>(() => new Set());
-  const addDismissed = (key: string) =>
+  const addDismissed = useCallback((key: string) => {
     setDismissedKeys((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+  }, []);
   // Dismissal is keyed on the stable identity, not the rendered text.
   const closeKey = banner?.dismissKey ?? banner?.message ?? '';
   const persist = banner?.persistDismiss ?? false;
@@ -131,7 +132,7 @@ export function AppBanner() {
   // mismatch the server-rendered null.
   useEffect(() => {
     if (persist && closeKey && isBannerDismissed(closeKey)) addDismissed(closeKey);
-  }, [persist, closeKey]);
+  }, [persist, closeKey, addDismissed]);
 
   if (!banner || (banner.dismissible && dismissedKeys.has(closeKey))) return null;
 
