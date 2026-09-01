@@ -18,6 +18,9 @@ describe('topicIdeasToWriteRecs', () => {
     ]));
     expect(recs.map((r) => r.keyword)).toEqual(['high', 'low']);
     expect(recs[0]).toMatchObject({ type: 'create', keyword: 'high', searchVolume: 900, keywordDifficulty: 20, score: 8 });
+    // Surfer-shape write fields: a headline title and the topic-map cluster name.
+    expect(recs[0].title).toBe('High');
+    expect(recs[0].topicTitle).toBe('t');
     expect(recs.some((r) => r.keyword === 'not recommended')).toBe(false);
   });
 
