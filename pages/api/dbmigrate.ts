@@ -25,7 +25,7 @@ function getSequelizeForMigrations(): Sequelize {
    if (DATABASE_URL) {
       return new Sequelize(DATABASE_URL, {
          dialect: 'postgres',
-         dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },
+         dialectOptions: { ssl: { require: true, rejectUnauthorized: true } },
          logging: false,
       });
    }

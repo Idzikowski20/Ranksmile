@@ -1,4 +1,4 @@
-import { queryRows } from '../db/query';
+﻿import { queryRows } from '../db/query';
 import type { ComparePeriod, RankDevice, RankSnapshotRow } from '../types/rankTracking';
 
 function comparePeriodDays(period: ComparePeriod): number {
@@ -10,23 +10,26 @@ function comparePeriodDays(period: ComparePeriod): number {
   return 90;
 }
 
-// Everything except raw_items (full SERP payload) — list views never read it, and it
+// Everything except raw_items (full SERP payload) — no read path consumes it, and it
 // dominates row size, so SELECT * here multiplied transfer for nothing.
 const SNAPSHOT_COLS = 'id, config_id, run_id, tracking_keyword_id, device, found, position, '
   + 'ranking_url, ranking_title, ranking_description, ranking_domain, serp_features, '
   + 'provider, provider_version, provider_response_hash, checked_at';
+
+/** What SNAPSHOT_COLS actually selects — keeps callers honest about raw_items being absent. */
+export type RankSnapshotListRow = Omit<RankSnapshotRow, 'raw_items'>;
 
 /** One windowed query instead of 2N round trips (works on Postgres and SQLite 3.25+). */
 async function latestPerKeywordDevice(
   configId: number,
   keywordIds: number[],
   beforeIso?: string,
-): Promise<Map<string, RankSnapshotRow>> {
-  const out = new Map<string, RankSnapshotRow>();
+): Promise<Map<string, RankSnapshotListRow>> {
+  const out = new Map<string, RankSnapshotListRow>();
   if (!keywordIds.length) return out;
 
   const placeholders = keywordIds.map(() => '?').join(',');
-  const rows = await queryRows<RankSnapshotRow>(
+  const rows = await queryRows<RankSnapshotListRow>(
     `SELECT ${SNAPSHOT_COLS} FROM (
        SELECT *, ROW_NUMBER() OVER (
          PARTITION BY tracking_keyword_id, device ORDER BY checked_at DESC) AS rn
@@ -42,7 +45,7 @@ async function latestPerKeywordDevice(
 export async function getLatestSnapshots(
   configId: number,
   keywordIds: number[],
-): Promise<Map<string, RankSnapshotRow>> {
+): Promise<Map<string, RankSnapshotListRow>> {
   return latestPerKeywordDevice(configId, keywordIds);
 }
 
@@ -50,7 +53,7 @@ export async function getSnapshotsBeforeDate(
   configId: number,
   keywordIds: number[],
   beforeIso: string,
-): Promise<Map<string, RankSnapshotRow>> {
+): Promise<Map<string, RankSnapshotListRow>> {
   return latestPerKeywordDevice(configId, keywordIds, beforeIso);
 }
 
@@ -65,8 +68,8 @@ export async function getKeywordHistory(
   trackingKeywordId: number,
   device: RankDevice,
   limit = 365,
-): Promise<RankSnapshotRow[]> {
-  return queryRows<RankSnapshotRow>(
+): Promise<RankSnapshotListRow[]> {
+  return queryRows<RankSnapshotListRow>(
     `SELECT ${SNAPSHOT_COLS} FROM rank_snapshots
      WHERE config_id = ? AND tracking_keyword_id = ? AND device = ?
      ORDER BY checked_at ASC LIMIT ?`,
