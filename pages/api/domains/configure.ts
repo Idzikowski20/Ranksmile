@@ -63,6 +63,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          } as CreationAttributes<Domain>,
       });
 
+      // A brand-new domain is bound to this workspace by the defaults above — invalidate the
+      // articles domain-id cache (keyed on workspace IDs) so GET /api/articles sees it at once,
+      // matching the attach branch below and domains.ts addDomain.
+      if (created) clearDomainIdsCache();
+
       if (!created && userId && workspaceId) {
          const existingWs = (domain as unknown as { workspace_id: number | null }).workspace_id;
          const wsIds = await getAccessibleWorkspaceIds(userId);
