@@ -101,9 +101,8 @@ const WpLogo = <svg width={20} height={20} viewBox="0 0 20 20" fill="none"><path
 const IcoExternal = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const IcoManage = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M5 6h7M16 6h3M5 12h3M12 12h7M5 18h9M18 18h1" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" /><circle cx="14" cy="6" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="10" cy="12" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="16" cy="18" r="2" stroke="currentColor" strokeWidth={1.7} /></svg>;
 
-const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, isDone, onMarkDone, readOnly, onBack, saveState }: Props) => {
+const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, readOnly, onBack, saveState }: Props) => {
   const router = useRouter();
-  const [doneCardOpen, setDoneCardOpen] = useState(true);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -219,7 +218,7 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
                     style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: 'var(--koala-text-secondary)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>Replace</button>
                   <button type="button" onClick={() => onFeaturedImageChange?.(null)}
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: '#e5484d', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: 'var(--koala-status-danger)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-status-danger-bg)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>Remove</button>
                 </div>
               )}
@@ -342,27 +341,6 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
           </button>
         </div>
 
-        {/* Time to move on? */}
-        {!isDone && doneCardOpen && (
-          <div style={{ padding: '4px 16px 16px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--koala-border-primary)', borderRadius: 12, padding: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: F }}>Time to move on?</span>
-                <button type="button" title="Dismiss" onClick={() => setDoneCardOpen(false)}
-                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: 'var(--koala-text-secondary)', display: 'inline-flex', lineHeight: 1 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-primary)'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}>
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
-                </button>
-              </div>
-              <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F }}>Update the article status or keep going to complete the process</span>
-              <button type="button" onClick={onMarkDone}
-                style={{ alignSelf: 'flex-start', padding: '7px 16px', borderRadius: 6, border: 'none', background: 'var(--koala-bg-secondary)', color: 'var(--koala-text-primary)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-border-primary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}>
-                Mark as done
-              </button>
-            </div>
-          </div>
-        )}
       </div>
       {wpModalOpen && articleId && (
         <WordPressExportModal articleId={articleId} onClose={() => setWpModalOpen(false)} />

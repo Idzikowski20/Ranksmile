@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
+import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Button } from '../../components/koala/core';
 import { useAppBanner } from '../../components/koala/shell';
 import { Icon } from '../../components/koala/icons';
-import { Spinner } from '../../components/koala/primitives';
+import ProgressCard, { type ProgressState } from '../../components/articles/ProgressCard';
 
 /** Transient failures dominate here; three tries five seconds apart, then stop. */
 const AUTO_RETRY_MAX = 3;
@@ -24,6 +25,13 @@ const STEPS = [
 ] as const;
 
 type StepStatus = 'pending' | 'running' | 'done' | 'error';
+
+const STEP_STATE: Record<StepStatus, ProgressState> = {
+  pending: 'pending',
+  running: 'active',
+  done: 'done',
+  error: 'error',
+};
 
 interface StepState {
   key: string;
@@ -125,58 +133,9 @@ function markFailedStep(
   ));
 }
 
-const StepIcon = ({ status }: { status: StepStatus }) => {
-  if (status === 'done') {
-    return (
-      <Icon
-        name="CheckCircle"
-        size={20}
-        weight="fill"
-        color="color-mix(in srgb, var(--koala-status-success) 50%, var(--koala-text-primary))"
-        className="deep-analysis-step-icon__done"
-      />
-    );
-  }
-  if (status === 'error') {
-    return (
-      <Icon
-        name="XCircle"
-        size={20}
-        weight="fill"
-        color="color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary))"
-        className="deep-analysis-step-icon__error"
-      />
-    );
-  }
-  if (status === 'running') {
-    return <Spinner size={18} label="Running" />;
-  }
-  return (
-    <Icon
-      name="Circle"
-      size={18}
-      weight="bold"
-      color="var(--koala-text-secondary)"
-      className="deep-analysis-step-icon__pending"
-    />
-  );
-};
-
-const StepRow = ({ step }: { step: StepState }) => (
-  <div className={`deep-analysis-step deep-analysis-step--${step.status}`}>
-    <div className="deep-analysis-step-icon">
-      <StepIcon status={step.status} />
-    </div>
-    <span className="deep-analysis-step-label">{step.label}</span>
-    {step.errorMessage && (
-      <span className="deep-analysis-step-error">— {step.errorMessage}</span>
-    )}
-  </div>
-);
-
 const DeepAnalysisPage: NextPage = () => {
   const router = useRouter();
-  const { url, keywords: kwParam, country, domainId: domainIdParam, flow: flowParam, language: languageParam } = router.query;
+  const { url, keywords: kwParam, country, domainId: domainIdParam, flow: flowParam, language: languageParam, mode: modeParam } = router.query;
 
   const [steps, setSteps] = useState<StepState[]>(
     STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })),
@@ -198,6 +157,14 @@ const DeepAnalysisPage: NextPage = () => {
   const kwStr = (kwParam as string || '');
   const keywords = kwStr ? kwStr.split(',').filter(Boolean) : [];
   const flow = (flowParam as string) || 'new';
+  // Express skips the content-type / context / writing-mode steps and hands the article
+  // straight to the editor's outline review, which is where generation runs.
+  const express = modeParam === 'express';
+  const nextHref = useCallback((id: number | string) => (express
+    ? articleOutlineReviewHref(id, {
+      contentType: 'article', internalLinks: true, externalLinks: true, express: true,
+    })
+    : `/articles/content-type?articleId=${id}`), [express]);
   const languageStr = (languageParam as string) || '';
   const domainIdStr = (domainIdParam as string || '').trim();
   const runSessionKey = useMemo(
@@ -398,10 +365,10 @@ const DeepAnalysisPage: NextPage = () => {
   useEffect(() => {
     if (!allDone || !articleId) return undefined;
     const t = setTimeout(() => {
-      router.replace(`/articles/content-type?articleId=${articleId}`);
+      router.replace(nextHref(articleId));
     }, 600);
     return () => clearTimeout(t);
-  }, [allDone, articleId, router]);
+  }, [allDone, articleId, router, nextHref]);
 
   const subtitle = useMemo(() => {
     if (allDone) return 'Analysis complete — opening your article…';
@@ -412,7 +379,7 @@ const DeepAnalysisPage: NextPage = () => {
   const canContinue = articleId !== null && jobId !== null && !overallError;
   const continueToContentType = () => {
     if (!articleId) return;
-    router.push(`/articles/content-type?articleId=${articleId}`);
+    router.push(nextHref(articleId));
   };
 
   const runRetry = () => {
@@ -470,8 +437,8 @@ const DeepAnalysisPage: NextPage = () => {
     ? {
       variant: 'error',
       message: retryIn !== null && retriesLeft > 0
-        ? `${overallError} — ponawiam za ${retryIn} s (próba ${autoAttempts + 1} z ${AUTO_RETRY_MAX})`
-        : `${overallError} — nie udało się po ${AUTO_RETRY_MAX} próbach.`,
+        ? `${overallError} — retrying in ${retryIn}s (attempt ${autoAttempts + 1} of ${AUTO_RETRY_MAX})`
+        : `${overallError} — failed after ${AUTO_RETRY_MAX} attempts.`,
       busy: retryIn !== null && retriesLeft > 0,
       // Stable across the countdown ticks, fresh for each run. Keyed on the message it
       // would rotate every second; keyed on the error alone, dismissing once suppressed
@@ -495,7 +462,7 @@ const DeepAnalysisPage: NextPage = () => {
       title="Deep analysis"
       footer={(
         <WizardNextButton
-          label="Content type"
+          label={express ? 'Open editor' : 'Content type'}
           disabled={!canContinue}
           onClick={continueToContentType}
         />
@@ -506,10 +473,15 @@ const DeepAnalysisPage: NextPage = () => {
         <p className="koala-wizard-subtitle">{subtitle}</p>
       </div>
 
-      <div className="deep-analysis-steps" aria-label="Deep analysis progress" aria-live="polite">
-        {steps.map((step) => (
-          <StepRow key={step.key} step={step} />
-        ))}
+      <div aria-label="Deep analysis progress" aria-live="polite">
+        <ProgressCard
+          rows={steps.map((step) => ({
+            id: step.key,
+            label: step.label,
+            detail: step.errorMessage,
+            state: STEP_STATE[step.status],
+          }))}
+        />
       </div>
 
       {/* The message itself is the banner above the topbar; only the choices stay here.

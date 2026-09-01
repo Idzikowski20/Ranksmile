@@ -225,7 +225,7 @@ export function compileWritePlan(
   }
 
   const flow = planFlow(knowledgePacks, paragraphPlansBySection.flat());
-  const paragraphPlans = allocateTerms(flow.paragraphs, importantTerms);
+  const paragraphPlans = allocateTerms(flow.paragraphs, importantTerms, flow.packs);
   const finalPacks = allocateNoBrandMentionConstraints(flow.packs, allowBrandNiche);
   const graph = buildGraph(plan, plan.builtAt);
   if (opts?.researchVersion) {

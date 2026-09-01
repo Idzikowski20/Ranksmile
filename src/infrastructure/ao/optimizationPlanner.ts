@@ -151,7 +151,7 @@ export function buildOptimizationPlan(input: PlanInput): Plan {
   const phase = input.phase ?? 'first_run';
   const mode = input.mode ?? selectOptimizeMode(input.seoScore, input.aiScore, phase);
   const followUp = phase === 'follow_up';
-  const aiTakeover = followUp || mode === 'ai-only' || mode === 'minimal'
+  const aiTakeover = mode === 'ai-only' || mode === 'minimal'
     || (input.seoScore >= SEO_HIGH && (input.seoScore - input.aiScore) > AI_GAP_LEGACY);
   const seoOnly = mode === 'seo-first';
   const snapshot = input.context.coverage;
@@ -192,8 +192,10 @@ export function buildOptimizationPlan(input: PlanInput): Plan {
     let editMode: EditMode = snapshot
       ? selectMode({ section, expectedLift, rgs: filteredRgs, snapshot, aiTakeover })
       : 'normal';
-    if (mode === 'ai-only' || mode === 'minimal' || followUp) editMode = 'less';
-    if (mode === 'full' && focus === 'expand' && !followUp) editMode = 'expand';
+    // Mode already encodes the ambition — follow_up forcing 'less' here made every
+    // second run cosmetic regardless of how weak the article had become.
+    if (mode === 'ai-only' || mode === 'minimal') editMode = 'less';
+    if (mode === 'full' && focus === 'expand') editMode = 'expand';
 
     const draft: PlanStep = {
       ...base, focus, expectedLift,
@@ -263,10 +265,16 @@ function focusBlock(step: PlanStep): string {
   switch (step.focus) {
     case 'seo-terms': {
       const list = step.missingTerms.map((t) => `"${t}"`).join(', ');
-      return list ? `FOCUS — weave in these MISSING NLP terms VERBATIM where natural (exact form, no inflection/synonyms): ${list}` : '';
+      // Natural inflections, not exact-match: the scorer matches lemma variants
+      // (term_words_regexps), and demanding verbatim forms produced keyword-parroting
+      // sentences ("jestem szantażowany" as a clause 12 times).
+      return list ? `FOCUS — weave in these MISSING NLP terms where natural, in their natural grammatical form (inflections count; never force a phrase that reads as broken language): ${list}` : '';
     }
     case 'ai-coverage':
-      return `FOCUS — improve AI-search answer readiness. Apply these guidelines:\n${bullets}`;
+      // Coverage Booster: each guideline names a fact or question the AI engines expect.
+      // Insert the missing information itself, contextually, where the section already
+      // touches the topic — one or two factual sentences, not a new heading.
+      return `FOCUS — cover the missing facts below. For each, INSERT the fact itself into the text where it fits naturally (one or two factual sentences; no new headings, no bullet dumps):\n${bullets}`;
     case 'expand':
       return `FOCUS — deepen this section; it is currently shallow. Apply:\n${bullets}`;
     case 'readability':

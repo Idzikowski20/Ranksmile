@@ -5,6 +5,7 @@ Chunks competitor pages by headings, caches per (keyword, chunk_hash),
 extracts with concurrency-limited parallelism (asyncio.Semaphore(5)).
 """
 import asyncio
+import os
 import hashlib
 import json
 import re
@@ -79,22 +80,22 @@ def _build_chunks(texts: list[str]) -> list[tuple[str, str]]:
     return chunks
 
 
-async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: str) -> list[dict]:
+async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: str, language: str = "pl") -> list[dict]:
     """
     Extract semantic terms from competitor page texts using DeepSeek.
     Chunks each text by headings, caches per chunk, aggregates results.
     Returns top 50 terms as [{term, target_count, type}].
     """
     if not texts:
-        return _fallback_terms(texts, keyword)
+        return _fallback_terms(texts, keyword, language)
 
-    if not deepseek_key:
-        return _fallback_terms(texts, keyword)
+    if not deepseek_key and not (os.getenv("OPENROUTER_API_KEY") or "").strip():
+        return _fallback_terms(texts, keyword, language)
 
     # 1. Chunk texts by headings (or whole plain snippets)
     chunks = _build_chunks(texts)
     if not chunks:
-        return _fallback_terms(texts, keyword)
+        return _fallback_terms(texts, keyword, language)
 
     # 2. Cache hits vs misses
     uncached: list[tuple[str, str]] = []
@@ -118,7 +119,7 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
             all_terms.extend(terms)
 
     if not all_terms:
-        return _fallback_terms(texts, keyword)
+        return _fallback_terms(texts, keyword, language)
 
     # 4. Aggregate: doc_freq, avg relevance, dominant type
     term_groups: dict[str, dict] = {}
@@ -156,12 +157,35 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
         else:
             target_count = max(1, round(chunk_hits * avg_relevance * 3))
 
-        # Suggested range = spread of real per-competitor occurrence counts (Ranksmile
-        # shows e.g. "1-4"): min/max across the pages that actually use the term.
-        per_doc = [lt.count(term) for lt in lower_texts]
+        # Suggested range from how densely the ranking pages actually use the term.
+        #
+        # This was `lt.count(term)`, a raw substring count with no word boundary, and the
+        # min/max of the result became the range the article is graded against. "emocjonalne"
+        # matches inside "emocjonalnego" and "emocjonalnej", so it scored 37 hits on the
+        # thinnest page and 91 on the heaviest — and article 84 was told to use one adjective
+        # between 37 and 91 times. Counting whole words fixes the inflation; scaling by
+        # document length fixes the rest, because an absolute count taken from a 6000-word
+        # competitor does not transfer to a 2000-word brief.
+        per_doc = [_count_whole_word(lt, term) for lt in lower_texts]
         nonzero = [c for c in per_doc if c > 0]
-        s_min = max(1, min(nonzero)) if nonzero else 1
-        s_max = max(nonzero) if nonzero else target_count
+        if nonzero:
+            densities = sorted(
+                c / max(1, len(lt.split()))
+                for c, lt in zip(per_doc, lower_texts) if c > 0
+            )
+            median_density = densities[len(densities) // 2]
+            typical_words = sum(len(lt.split()) for lt in lower_texts) / len(lower_texts)
+            expected = median_density * typical_words
+            s_min = max(1, round(expected * 0.6))
+            # The ceiling scales with document length instead of a flat 15: Surfer's own
+            # guideline for this keyword allows "szantaż: 44-87" against ~2500 words
+            # (~3.5% density), and a flat cap flattened exactly the core terms. The
+            # density model already tames a stray high-frequency page via the median.
+            density_cap = max(15, round(typical_words * 0.035))
+            s_max = min(density_cap, max(s_min + 1, round(expected * 1.4)))
+        else:
+            s_min = 1
+            s_max = max(1, target_count)
 
         aggregated.append({
             "term": term,
@@ -180,8 +204,26 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
     min_docs = 1 if n_docs <= 6 else max(2, round(0.3 * n_docs))
     aggregated = [t for t in aggregated if t["chunk_hits"] >= min_docs]
 
+    # Not just "empty": a thin harvest is the same failure with a softer face. Individual
+    # chunk calls fail silently (empty completion, timeout, a provider hiccup), so the same
+    # 6-competitor cohort produced 132 terms one run and 13 the next — and 13 terms means a
+    # weak guideline, a weak score and almost no internal-link targets. Below the floor the
+    # deterministic entity/TF-IDF terms top the list up.
+    MIN_TERMS = 25
+    if len(aggregated) < MIN_TERMS:
+        print(f"[semantic_terms] thin LLM harvest ({len(aggregated)}) — topping up from the deterministic path")
+        fallback = _fallback_terms(texts, keyword, language)
+        have = {t["term"].lower() for t in aggregated}
+        for t in fallback:
+            if t["term"].lower() in have:
+                continue
+            aggregated.append({**t, "chunk_hits": 1, "relevance": t.get("relevance", 0.6)})
+            have.add(t["term"].lower())
+            if len(aggregated) >= 60:
+                break
+
     if not aggregated:
-        return _fallback_terms(texts, keyword)
+        return _fallback_terms(texts, keyword, language)
 
     aggregated.sort(key=lambda t: (t["chunk_hits"] * t["relevance"]), reverse=True)
 
@@ -213,7 +255,17 @@ def _merge_nlp_terms(semantic: list[dict], texts: list[str], keyword: str) -> li
     """
     seen = {t["term"] for t in semantic}
     extra = [t for t in _fallback_terms(texts, keyword) if t["term"] not in seen]
-    return (semantic + extra)[:MAX_TERMS]
+    seen.update(t["term"] for t in extra)
+    # Collocations third: the natural word-pairs ranking pages repeat ("poczucia winy",
+    # "wlasnych granic") are the bulk of Surfer's own term list, and neither the LLM
+    # entity path nor TF-IDF surfaces them.
+    from analyzers.competitor_terms import extract_collocations, extract_content_singles
+    collocations = [t for t in extract_collocations(texts) if t["term"] not in seen]
+    seen.update(t["term"] for t in collocations)
+    # Fourth shape from the reference guideline: bare high-frequency content lemmas
+    # ("poczucie", "relacji", "granice") with wide bands.
+    singles = [t for t in extract_content_singles(texts) if t["term"] not in seen]
+    return (semantic + extra + collocations + singles)[:MAX_TERMS]
 
 
 async def _extract_chunk(keyword: str, chunk_text: str, chunk_hash: str, api_key: str) -> list[dict]:
@@ -237,18 +289,15 @@ TEXT:
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
+            from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+            cfg = chat_config() or {
+                "url": "https://api.deepseek.com/v1/chat/completions",
+                "key": api_key, "model": "deepseek-chat", "extra": {},
+            }
             resp = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key}",
-                },
-                json={
-                    "model": "deepseek-chat",
-                    "max_tokens": 1024,
-                    "temperature": 0.1,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
+                cfg["url"],
+                headers=chat_headers(cfg),
+                json=chat_payload(cfg, [{"role": "user", "content": prompt}], 1024),
             )
             resp.raise_for_status()
             data = resp.json()
@@ -273,7 +322,52 @@ TEXT:
         return []
 
 
-def _fallback_terms(texts: list[str], keyword: str) -> list[dict]:
+def _entity_terms(texts: list[str], language: str) -> list[dict]:
+    """NER entities across the cohort — relationship-bearing phrases, not TF-IDF shingles.
+
+    spaCy when the model is installed, regex capitalized-span fallback otherwise. Only
+    entities at least two pages mention survive: a name one page drops is that page's
+    business, not the topic's vocabulary."""
+    from analyzers.ner import extract_entities
+    from analyzers.competitor_terms import is_useful_phrase
+
+    docs_with: dict[str, int] = {}
+    occurrences: dict[str, int] = {}
+    display: dict[str, str] = {}
+    for text in texts:
+        spans = extract_entities(text, language=language, max_spans=60).get("spans", [])
+        seen_here: set[str] = set()
+        lower = text.lower()
+        for span in spans:
+            raw = (span.get("text") or "").strip()
+            key = raw.lower()
+            if len(key) < 4 or len(key) > 60 or not is_useful_phrase(key):
+                continue
+            display.setdefault(key, raw)
+            if key not in seen_here:
+                docs_with[key] = docs_with.get(key, 0) + 1
+                occurrences[key] = occurrences.get(key, 0) + max(1, lower.count(key))
+                seen_here.add(key)
+    n_docs = max(1, len(texts))
+    out = []
+    for key, df in sorted(docs_with.items(), key=lambda kv: (-kv[1], kv[0])):
+        if df < 2 and n_docs >= 3:
+            continue
+        avg = max(1, round(occurrences[key] / df))
+        out.append({
+            "term": display[key], "target_count": min(avg, 5), "type": "entity",
+            "relevance": 0.7, "doc_freq": df,
+            "suggested_min": 1, "suggested_max": min(avg + 1, 6),
+        })
+    return out[:40]
+
+
+def _count_whole_word(text: str, term: str) -> int:
+    """Occurrences of `term` as a whole word/phrase — not as a substring of a longer form."""
+    return len(re.findall(rf"(?<!\w){re.escape(term)}(?!\w)", text))
+
+
+def _fallback_terms(texts: list[str], keyword: str, language: str = "pl") -> list[dict]:
     """TF-IDF phrase extraction when DeepSeek is unavailable — Ranksmile-style n-grams.
 
     `doc_freq` passes straight through and means the same thing on both paths: the number
@@ -285,7 +379,26 @@ def _fallback_terms(texts: list[str], keyword: str) -> list[dict]:
     if not texts:
         return [{"term": keyword, "target_count": 3, "type": "core"}] if keyword else []
 
+    # Entities lead, n-grams fill: a Surfer-style guideline is built from entities and
+    # their co-occurrence, and pure TF-IDF was the step where quality fell off a cliff
+    # whenever the LLM extractor was unavailable.
+    entity_terms = _entity_terms(texts, language)
     tfidf_terms = extract_nlp_terms(texts, keyword)
+    if entity_terms:
+        seen = {t["term"].lower() for t in entity_terms}
+        for t in tfidf_terms:
+            if len(entity_terms) >= 50:
+                break
+            if t["term"].lower() in seen:
+                continue
+            entity_terms.append({
+                "term": t["term"], "target_count": t["target_count"], "type": "supporting",
+                "relevance": 0.6, "doc_freq": t.get("doc_freq", 1),
+                "suggested_min": max(1, t["target_count"] - 1),
+                "suggested_max": max(t["target_count"], t["target_count"] + 2),
+            })
+            seen.add(t["term"].lower())
+        return entity_terms
     if tfidf_terms:
         return [
             {

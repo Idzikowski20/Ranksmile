@@ -12,6 +12,24 @@ import { termWeight } from '@/src/core/domain/terms/termWeight';
 import { countOccurrences, normalizePl, tokenize, wordMatch } from '@/src/core/domain/terms/termMatch';
 
 export { countOccurrences } from '@/src/core/domain/terms/termMatch';
+
+/**
+ * Write the AI Search score and its calculated_at together, so they cannot drift.
+ *
+ * Bug 146 was exactly a drift: ai_score was overwritten by a later async pass while the
+ * timestamp signal that would have flagged the stale read did not exist. Surfer stamps
+ * every subscore with `calculated_at`; this is that stamp, written atomically with the
+ * value at each authoritative write site.
+ */
+export function setAiScore(scoreData: { ai_score?: number; _ai_score_at?: number }, value: number, at = Date.now()): void {
+   scoreData.ai_score = value;
+   scoreData._ai_score_at = at;
+}
+
+export function setSeoScore(scoreData: { seo_score?: number; _seo_score_at?: number }, value: number, at = Date.now()): void {
+   scoreData.seo_score = value;
+   scoreData._seo_score_at = at;
+}
 import type { NlpTerm } from '@/src/core/domain/terms/types';
 export type { NlpTerm };
 
@@ -29,6 +47,9 @@ export type { NlpTerm };
 export interface ScoreData {
    terms: NlpTerm[];
    words_target: number;
+   images_target?: number;
+   images_min?: number;
+   images_max?: number;
    words_min: number;
    words_max: number;
    headings_target: number;
@@ -50,6 +71,11 @@ export interface ScoreData {
    seo_score?: number;
    /** AI Search score (Facts + Intent) — persisted after deep-analysis. */
    ai_score?: number;
+   /** Epoch ms when seo_score / ai_score were last written. Surfer-style freshness
+    *  (their per-subscore `calculated_at`): a consumer can tell a score's age and which
+    *  pass produced it, so a stale read like bug 146 is detectable rather than silent. */
+   _seo_score_at?: number;
+   _ai_score_at?: number;
    /** Typed AI factors with the sentence that earned each one — shown under the score. */
    ai_factors?: import('@/src/core/domain/aiScore/factors').ScoreFactor[];
    /** Persisted gauge values (not part of scoring formula). */
@@ -308,6 +334,22 @@ export function collectScoreSlots(
       push('terms', 'NLP terms', termsRatio * 25, 25, 'Use the suggested terms at their target counts (see Keywords & Terms)');
    }
 
+   // Heading terms — Surfer scores whether the terms it marked for headings actually
+   // land in an H2/H3 (its `in_headings_count`). Only appears when the SERP flagged
+   // some, so an article without heading terms is scored exactly as before.
+   if (html && scoreData.terms?.length) {
+      const headingTerms = scoreData.terms.filter((t) => t.in_headings);
+      if (headingTerms.length) {
+         const headingText = (html.match(/<h[2-4][^>]*>[\s\S]*?<\/h[2-4]>/gi) || [])
+            .join(' ')
+            .replace(/<[^>]+>/g, ' ')
+            .toLowerCase();
+         const placed = headingTerms.filter((t) => headingText.includes(t.term.toLowerCase())).length;
+         push('headingTerms', 'Heading terms', (placed / headingTerms.length) * 5, 5,
+            `${placed}/${headingTerms.length} heading terms in a heading`);
+      }
+   }
+
    if (scoreData.paragraphs_target && paragraphCount !== undefined) {
       push('paragraphs', 'Paragraphs', Math.min(paragraphCount / Math.max(scoreData.paragraphs_target, 1), 1) * 5, 5,
          `Aim for ~${scoreData.paragraphs_target} paragraphs`);
@@ -338,6 +380,12 @@ export function collectScoreSlots(
 
    // ── HTML-only signals ──
    if (html) {
+      // Image frequency vs the cohort (Surfer-style). Zero-image cohorts emit no target.
+      if (scoreData.images_target && scoreData.images_target > 0) {
+         const imgCount = (html.match(/<img\b/gi) || []).length;
+         push('images', 'Images', Math.min(imgCount / scoreData.images_target, 1) * 4, 4,
+            `Add images toward ~${scoreData.images_target} (ranking pages average that many)`);
+      }
       const imgScore = _imageAltCoverage(html);
       if (imgScore !== null) push('imageAlt', 'Image alt text', imgScore, 4, 'Add descriptive alt text to every image');
       push('lists', 'Lists', _listUsage(html), 3, 'Add a bullet or numbered list with 3+ items');

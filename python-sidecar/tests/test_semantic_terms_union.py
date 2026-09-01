@@ -62,3 +62,55 @@ def test_every_row_keeps_the_range_contract():
     for row in terms:
         assert row["suggested_min"] <= row["suggested_max"], row
         assert row["target_count"] >= 1, row
+
+
+def test_count_whole_word_does_not_match_inside_a_longer_form():
+    """`lt.count("emocjonalne")` matched inside "emocjonalnego" and set a 37-91 target."""
+    from analyzers.semantic_terms import _count_whole_word
+    text = "emocjonalnego szantazu, emocjonalnej presji, ale emocjonalne reakcje"
+    assert _count_whole_word(text, "emocjonalne") == 1
+    assert _count_whole_word(text, "emocjonalnego") == 1
+
+
+def test_ranges_are_recalibrated_with_the_lemma_patterns_the_scorer_uses():
+    """Article 97: range 6-12 derived on one inflected form, scored 112 on the lemma
+    group — an automatic overshoot penalty on every core term."""
+    from analyzers.term_lemmas import attach_lemma_regexps, recalibrate_ranges_with_lemmas
+    text = ("szantaz emocjonalny rani. przemoc emocjonalna niszczy. "
+            "emocjonalnego nacisku unikaj. reakcje emocjonalne wracaja. ") * 25
+    terms = [{"term": "emocjonalnego", "target_count": 1, "suggested_min": 1, "suggested_max": 2}]
+    attach_lemma_regexps(terms, [text], "pl")
+    recalibrate_ranges_with_lemmas(terms, [text])
+    # 4 lemma matches per 16-word sentence-block: the range must reflect the group count.
+    assert terms[0]["suggested_min"] <= terms[0]["suggested_max"]
+    assert terms[0]["suggested_max"] > 2
+
+
+def test_collocations_surface_the_word_pairs_surfer_lists():
+    """16% selection overlap with the reference guideline — the missing bulk was
+    collocations like "poczucie winy" that entity/TF-IDF paths filtered as generic."""
+    from analyzers.competitor_terms import extract_collocations
+    texts = [
+        "szantaz wywoluje poczucie winy. stawianie wlasnych granic pomaga.",
+        "poczucie winy jest narzedziem presji. wlasnych granic trzeba bronic.",
+        "zachowanie spokoju wobec szantazysty. poczucie winy paralizuje.",
+    ]
+    terms = {t["term"] for t in extract_collocations(texts)}
+    assert "poczucie winy" in terms
+    assert "wlasnych granic" in terms
+
+
+def test_collocations_cover_the_reference_guideline_shapes():
+    """3-4-grams with an interior grammar word, and singles — the two shapes that kept
+    selection overlap at 21% of the reference list."""
+    from analyzers.competitor_terms import extract_collocations, extract_content_singles
+    texts = [
+        "szantaz emocjonalny w zwiazku niszczy. poczucie winy wraca. granice stawiaj." * 2,
+        "mechanizmow szantazu emocjonalnego wiele. poczucia winy unikaj. granice buduj." * 2,
+        "szantaz emocjonalny w zwiazku trwa. poczucie winy trwa. granice znikaja." * 2,
+    ]
+    colls = {t["term"] for t in extract_collocations(texts)}
+    assert "szantaz emocjonalny w zwiazku" in colls
+    assert "poczucie winy" in colls
+    singles = {t["term"] for t in extract_content_singles(texts)}
+    assert "granice" in singles

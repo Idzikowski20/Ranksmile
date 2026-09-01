@@ -7,6 +7,10 @@ import { getSiteAuditPageLimit, resolvePlanSlug } from '@/src/infrastructure/bil
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { getOptimizeRecommendations } from '@/src/core/application/recommendations/getOptimizeRecommendations';
+import { createSnapshotRepository } from '@/src/infrastructure/gsc/snapshotRepository';
+import { priorityFromScore } from '@/src/core/domain/recommendations/opportunityScore';
+import { loadWriteRecommendations } from '@/src/infrastructure/recommendations/loadWriteRecommendations';
 
 export type StageKey = 'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations';
 export const STAGE_ORDER: StageKey[] = ['gsc', 'keywords', 'topics', 'competitors', 'recommendations'];
@@ -94,8 +98,23 @@ export async function claimJob(jobId: string, token: string): Promise<boolean> {
    return back.length > 0 && back[0].status === 'running' && back[0].locked_by === token;
 }
 
+/** GSC path (no host, no query/hash, no trailing slash) — the key both recs and snapshots share. */
+function recPath(url: string | null | undefined): string {
+   return (url || '').replace(/^https?:\/\/[^/]+/i, '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+}
+
 /** Single materialization point — one transaction, delete-first, then insert. */
 export async function materializeDomainSetup(domainId: number, result: DomainResult): Promise<void> {
+   // Surfer-parity opportunity ranking: score the domain's optimize recs by GSC striking
+   // distance (position 4–20 + traffic + recent slippage), so the queue's priority reflects
+   // where a re-optimize actually moves rankings — not content score alone. Built before the
+   // transaction; defensive — no GSC snapshots yet leaves the analyzer's own ranking intact.
+   const oppByPath = new Map<string, number>();
+   try {
+      const opp = await getOptimizeRecommendations(createSnapshotRepository(), domainId);
+      for (const o of opp) oppByPath.set(recPath(o.page), o.score);
+   } catch { /* no GSC baseline — keep analyzer ranking */ }
+
    await db.transaction(async (tx: Transaction) => {
       const q = (sql: string, repl: unknown[]) => db.query(sql, { replacements: repl, transaction: tx });
       for (const t of ['domain_keywords', 'domain_topics', 'domain_competitors', 'domain_recommendations']) {
@@ -149,8 +168,43 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
                await q(`DELETE FROM page_audits WHERE domain_id=? AND url=?`, [domainId, url]);
       }
 
-      for (const r of result.recommendations || [])
-         await q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, r.topic_index != null ? topicIds[r.topic_index] ?? null : null, r.title, r.rationale || '', r.priority || 'medium', r.type || 'content', r.url ?? null, r.score ?? null]);
+      type RecCols = {
+         title: string; topicId: number | null; rationale: string; priority: string; type: string;
+         url: string | null; score: number | null; vol: number | null; kd: number | null;
+         keyword: string | null; topicTitle: string | null; optimizationStatus: string | null;
+      };
+      const insertRec = (c: RecCols) =>
+         q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, search_volume, keyword_difficulty, keyword, topic_title, optimization_status, article_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [domainId, c.topicId, c.title, c.rationale, c.priority, c.type, c.url, c.score, c.vol, c.kd, c.keyword, c.topicTitle, c.optimizationStatus, null]);
+
+      for (const r of result.recommendations || []) {
+         // Optimize recs with a GSC opportunity score take their priority/score from it;
+         // everything else keeps the analyzer's own values. Opportunity is 0–10; store ×10 so
+         // the INTEGER score column keeps one decimal of striking-distance ordering.
+         const isOptimize = (r.type ?? 'content') === 'optimize';
+         const opp = isOptimize ? oppByPath.get(recPath(r.url)) : undefined;
+         const priority = opp != null ? priorityFromScore(opp) : (r.priority || 'medium');
+         const score = opp != null ? Math.round(opp * 10) : (r.score ?? null);
+         await insertRec({
+            title: r.title, topicId: r.topic_index != null ? topicIds[r.topic_index] ?? null : null,
+            rationale: r.rationale || '', priority, type: r.type || 'content', url: r.url ?? null,
+            score, vol: null, kd: null, keyword: r.url ? recPath(r.url).split('/').pop() || null : null,
+            topicTitle: null, optimizationStatus: isOptimize ? 'not_started' : null,
+         });
+      }
+
+      // Surfer-parity `write` recs from the domain's latest keyword-research run: an article
+      // title + head keyword + topic cluster + search volume + difficulty + opportunity score.
+      // Deduped against analyzer create recs by keyword so the Content Ideas tab has no dupes.
+      const existingTitles = new Set((result.recommendations || []).map((r) => (r.title || '').trim().toLowerCase()));
+      for (const w of await loadWriteRecommendations(domainId, { limit: 25 })) {
+         if (existingTitles.has(w.keyword.trim().toLowerCase())) continue;
+         await insertRec({
+            title: w.title, topicId: null, rationale: '', priority: priorityFromScore(w.score),
+            type: 'create', url: null, score: Math.round(w.score * 10), vol: w.searchVolume,
+            kd: w.keywordDifficulty, keyword: w.keyword, topicTitle: w.topicTitle, optimizationStatus: null,
+         });
+      }
    });
 }
 

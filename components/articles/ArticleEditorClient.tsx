@@ -38,12 +38,12 @@ export default function ArticleEditorClient(props: EditorProps) {
           alignItems: 'center',
           justifyContent: 'center',
           gap: 12,
-          background: '#fff',
+          background: 'var(--koala-bg-primary)',
           fontFamily: 'var(--font-family-primary)',
           padding: 24,
         }}
       >
-        <p style={{ margin: 0, fontSize: 15, color: '#18181B' }}>Could not load the editor.</p>
+        <p style={{ margin: 0, fontSize: 15, color: 'var(--koala-text-primary)' }}>Could not load the editor.</p>
         <p style={{ margin: 0, fontSize: 13, color: '#71717A', textAlign: 'center' }}>{error}</p>
         <button
           type="button"
@@ -54,8 +54,8 @@ export default function ArticleEditorClient(props: EditorProps) {
             padding: '0 14px',
             borderRadius: 8,
             border: 'none',
-            background: '#2F2F34',
-            color: '#fff',
+            background: 'var(--koala-bg-inverse)',
+            color: 'var(--koala-text-on-inverse)',
             fontSize: 14,
             fontWeight: 600,
             cursor: 'pointer',

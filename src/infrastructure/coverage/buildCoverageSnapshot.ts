@@ -21,10 +21,25 @@ const JUDGEABLE_TYPES = new Set<CoverageItem['type']>([
   'paa', 'fact', 'definition', 'comparison', 'example', 'intent',
 ]);
 
+/**
+ * The text the introduction judge grades: the article's opening prose.
+ *
+ * `splitSections(html)[0]` is everything before the first H2, which for a generated
+ * article is the H1 and nothing else — the writer opens `<h1>…</h1><h2>…</h2><p>lead`.
+ * The judge was handed a bare 100-character title, so `answerStartsEarly` could only
+ * ever come back false and all five intent rows graded against a document with no
+ * sentences in it. That cost the 15-point early-answer bonus plus the intent bucket,
+ * on articles whose lead answers the question in its first sentence.
+ *
+ * A section with no real prose in it is therefore not an intro: fall back to the body.
+ */
+const MIN_INTRO_CHARS = 200;
+
 export function introPlainTextFromHtml(html: string, plainTextFallback = ''): string {
   const introSection = splitSections(html)[0];
   if (introSection?.html) {
-    return introSection.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const text = introSection.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (text.length >= MIN_INTRO_CHARS) return text;
   }
   return plainTextFallback.slice(0, 2500);
 }
@@ -34,6 +49,7 @@ export async function assembleCoverageItems(opts: {
   keyword: string;
   paaQuestions?: PaaQuestion[];
   llmQuestions?: Array<{ question: string; sources: import('@/src/core/domain/coverage/aiCoverage').LlmCoverageSource[] }>;
+  competitorTopics?: string[];
   introPlain: string;
   languageCode?: string;
 }): Promise<{ items: CoverageItem[]; answersMainQuestionEarly: boolean }> {
@@ -42,6 +58,7 @@ export async function assembleCoverageItems(opts: {
     keyword,
     llmQuestions: opts.llmQuestions,
     paaQuestions: opts.paaQuestions,
+    competitorTopics: opts.competitorTopics,
   });
   const intentResult = await analyzeIntroduction(opts.introPlain, keyword, deepseekIntroJudge);
   const serpQuestions = [
@@ -146,6 +163,9 @@ export async function buildGradedCoverageSnapshot(opts: {
     keyword: opts.keyword,
     paaQuestions: opts.paaQuestions,
     llmQuestions: opts.llmQuestions,
+    // Topic titles already arrive with harvestTopics (used for UI grouping); score them
+    // too, the way Surfer scores its topics pool.
+    competitorTopics: opts.harvestTopics?.map((t) => t.title).filter(Boolean),
     introPlain,
     languageCode: opts.languageCode,
   });

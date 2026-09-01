@@ -122,3 +122,46 @@ export function dedupeUsefulTerms<T extends MinimalTerm>(terms: T[]): T[] {
 
   return [...best.values()];
 }
+
+/**
+ * Fallback ceiling when the article's word target is unknown.
+ *
+ * Both `article_terms` writers derived the range as `target_count * 0.7 … * 1.5`, and
+ * `target_count` from the TF-IDF path is a corpus occurrence total, not a per-article
+ * target: article 86 was told to use "szantaż" between 41 and 95 times because a raw
+ * substring count leaked into the range. That bug is fixed at the source (whole-word,
+ * density-scaled counts), so this cap is a sanity guard, not the model.
+ */
+export const MAX_TERM_OCCURRENCES = 12;
+
+/**
+ * Highest share of an article one phrase can be asked to occupy. Surfer's own guideline
+ * for this exact keyword allows "szantaż: 44-87" against 2200-2530 words — ~3.5% at the
+ * top. A cap has to scale with length the same way or it degenerates: clamping a 41-95
+ * range to a hard 12 produced `need 12-12`, a band the article can only overshoot.
+ */
+const MAX_TERM_DENSITY = 0.035;
+
+/** The occurrence range an article is graded against for one term. */
+export function suggestedTermRange(
+  term: {
+    target_count?: number;
+    suggested_min?: number;
+    suggested_max?: number;
+  },
+  wordsTarget?: number,
+): { min: number; max: number } {
+  const target = Math.max(1, term.target_count || 1);
+  const rawMin = term.suggested_min ?? Math.max(1, Math.round(target * 0.7));
+  const rawMax = term.suggested_max ?? Math.max(rawMin, Math.round(target * 1.5));
+  const cap = wordsTarget && wordsTarget > 0
+    ? Math.max(MAX_TERM_OCCURRENCES, Math.round(wordsTarget * MAX_TERM_DENSITY))
+    : MAX_TERM_OCCURRENCES;
+  const max = Math.min(cap, Math.max(1, rawMax));
+  // Keep the band's proportions when the cap bites — flattening min onto max turned a
+  // wide range into an unhittable point target.
+  const min = rawMax > max
+    ? Math.max(1, Math.round(rawMin * (max / rawMax)))
+    : Math.max(1, rawMin);
+  return { min: Math.min(min, max), max };
+}

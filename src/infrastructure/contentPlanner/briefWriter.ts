@@ -99,6 +99,8 @@ export type BriefWriterInput = {
   brandName?: string;
   /** NLP terms the article has to carry, strongest first. */
   importantTerms?: string[];
+  /** Terms the competitor cohort itself puts in H2/H3 — steer them into headings. */
+  headingTerms?: string[];
   /** H2/H3 titles of the pages that rank — what the topic requires, in their words. */
   competitorHeadings?: string[];
   language?: string;
@@ -163,8 +165,17 @@ export function buildFactSheet(claims: readonly TargetClaim[]): string {
   const factsByTopic = new Map<string, string[]>();
   for (const claim of factCandidates) {
     const topic = asEvidence(claim.topic || '') || 'inne';
-    const fact = asEvidence(claim.statement);
-    if (fact) {
+    // The best source travels WITH the fact. Without it the brief could only say
+    // "cite a source" in the abstract, and the writer invented none — the reference
+    // article names the police case and links the statute.
+    const source = [...(claim.sources || [])]
+      .filter((src) => /^https?:\/\//i.test(src.url || ''))
+      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+    const sourceSuffix = source
+      ? ` [źródło: ${asEvidence(source.label || source.url)} — ${asEvidence(source.url)}]`
+      : '';
+    const fact = asEvidence(claim.statement) + sourceSuffix;
+    if (fact.trim()) {
       const group = factsByTopic.get(topic) ?? [];
       group.push(fact);
       factsByTopic.set(topic, group);
@@ -246,7 +257,19 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
   // asEvidence, like every other scraped value in this prompt: terms come from stored NLP
   // output, and a newline or a `<` in one would let it close the evidence wrapper and read
   // as a fresh instruction to the model.
+  // The target keyword never goes on the weave list. It already leads every heading, and
+  // listing it here made the writer repeat it verbatim ("jestem szantażowany" 12×) —
+  // first-person queries turned into sentences. The scorer matches inflections
+  // (term_words_regexps), so natural variants count without parroting.
+  const kwFolded = (input.keyword || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const headingTerms = briefPhraseTerms(input.headingTerms || [], 10)
+    .map(asEvidence)
+    .filter(Boolean);
   const phraseTerms = briefPhraseTerms(input.importantTerms || [], TERMS)
+    .filter((t) => {
+      const folded = t.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+      return folded !== kwFolded && !kwFolded.includes(folded);
+    })
     .map(asEvidence)
     .filter(Boolean);
 
@@ -280,6 +303,13 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'HEADINGS: each section arrives with a ROLE, not a title. Write the real H2 for it.',
     'A heading names what the section covers and carries the keyword or a close variant —',
     '"Jak działa prywatny detektyw w Warszawie — od pierwszej rozmowy do raportu", not "Kim jesteśmy".',
+    'A first- or second-person query keyword is NEVER quoted verbatim in a heading:',
+    '"jestem szantażowany" becomes "Co zrobić, gdy jesteś szantażowany" — the natural',
+    'phrasing a person would write, with the same words inflected.',
+    ...(headingTerms.length ? [
+      'HEADING TERMS: the ranking pages use these inside their own H2/H3 — work each'
+        + ` into a heading where it fits the role: ${headingTerms.join(', ')}.`,
+    ] : []),
     'Keep the given order and count, one heading per role. FAQ and the closing section keep their plain names.',
     'RANKING PAGES shows how the pages already ranking title their sections: match that level of',
     'specificity and cover what they cover. Never reuse a title that names a company.',
@@ -293,11 +323,20 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'EXCEPTION for section 1: its first bullet must tell the writer to answer the',
     'keyword\'s main question directly in the first two sentences of the article —',
     'the reader and the AI engines get the answer before any context.',
+    'BRAND PRESENCE (hard rule): when the BRAND section carries any company fact,',
+    'section 1 gets one bullet telling the writer to say, in one natural clause, that',
+    'we help with exactly this (name the service, from BRAND). The CLOSING section',
+    'gets one bullet with a concrete next step for the reader — contact us / how we',
+    'work — again from BRAND facts only. One clause each, never a sales paragraph.',
     'A "must answer" question is answered inside a bullet\'s instruction — tell the',
     'writer what the answer is to cover, never just to restate the question.',
     'Middle bullets: "Punkt o <temat>: <konkretne wyliczenie>" — name the actual services,',
     'registries, documents, courts, districts or steps, not the category they belong to.',
-    'Last bullet: "Wpleć frazy: ..." listing the exact phrases from the terms above.',
+    'Last bullet: "Wpleć frazy: ..." listing phrases from the terms above. Tell the writer',
+    'to use them in their NATURAL grammatical form — inflections and reordered variants',
+    'count; never demand a phrase verbatim when it would read as broken Polish.',
+    'Never list the target keyword itself there, and never a first-person query',
+    '("jestem szantażowany") — the writer addresses the reader, not the search box.',
     'Never tell the writer to copy a competitor; say what to cover, from the BRAND section.',
     'Address the writer directly, in the imperative. Never write about them in the third person',
     '("autor powinien", "writer should") — the bullet IS the instruction.',
@@ -323,9 +362,19 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     'bullet names its columns — "Tabela: kolumny Sytuacja | Sygnał | Reakcja, 4-6 wierszy".',
     'A section listing symptoms, mistakes or signals MUST be given a bulleted list with a count.',
     'A section describing a procedure MUST be given numbered steps.',
+    'FAQ SHAPE (hard rule): every question is its own block — the question as a bolded',
+    'standalone line, then a 2-4 sentence answer paragraph under it. One bullet per Q&A',
+    'pair. NEVER let the writer merge several questions and answers into one paragraph.',
     'Ask for the key term or verdict to be bolded so the answer is scannable, and say it in',
     'plain editorial language ("pogrub kluczowy termin"). Never name an HTML tag: the brief',
     'is read by a writer, and "<strong>" leaked into instructions as stray markup.',
+    'CITED EVIDENCE (hard rule): at least TWO bullets across the article instruct the',
+    'writer to name a concrete real case or statistic from the FACT SHEET and link its',
+    '[źródło: …] URL as a Markdown link. Pick facts that carry a source; NEVER invent a',
+    'case, number or URL — a fact sheet without sources yields zero such bullets, not fakes.',
+    'NAMED FRAMEWORKS: when a recognised conceptual model covers the mechanism of a section',
+    '(e.g. the FOG model — Fear, Obligation, Guilt — for emotional blackmail), one bullet',
+    'tells the writer to NAME it and unpack it; a named framework reads as expertise.',
     'ORIGINAL DATA: at least one bullet per article asks for something the ranking pages do not',
     'have — our own case figure, our own checklist, a worked example with real numbers, or a',
     'decision rule. Take it from the BRAND section; if BRAND has nothing to support it, ask for a',

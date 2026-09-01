@@ -21,7 +21,6 @@ type JobsResponse = {
   jobs: PipelineJob[];
 };
 
-const STORAGE_KEY = (articleId: number) => `ranksmile:pipeline-active:${articleId}`;
 
 const QUEUE_LABEL: Record<string, string> = {
   serp: 'SERP',
@@ -79,21 +78,8 @@ export function dedupeActiveJobs(jobs: PipelineJob[]): PipelineJob[] {
 export default function PipelineStatusStrip(props: { articleId: number | string | null | undefined }) {
   const articleId = props.articleId != null ? Number(props.articleId) : null;
   const [data, setData] = useState<JobsResponse | null>(null);
-  const [resumeHint, setResumeHint] = useState(false);
   const [enterAnim, setEnterAnim] = useState(false);
   const prevActive = useRef(false);
-
-  useEffect(() => {
-    if (!articleId || Number.isNaN(articleId)) return undefined;
-    try {
-      if (window.localStorage.getItem(STORAGE_KEY(articleId)) === '1') {
-        setResumeHint(true);
-      }
-    } catch {
-      /* ignore */
-    }
-    return undefined;
-  }, [articleId]);
 
   useEffect(() => {
     if (!articleId || Number.isNaN(articleId)) return undefined;
@@ -106,16 +92,8 @@ export default function PipelineStatusStrip(props: { articleId: number | string 
         const json = (await res.json()) as JobsResponse;
         if (cancelled) return;
         setData(json);
-        setResumeHint(false);
 
         const active = (json.activeCount ?? 0) > 0;
-        try {
-          if (active) window.localStorage.setItem(STORAGE_KEY(articleId), '1');
-          else window.localStorage.removeItem(STORAGE_KEY(articleId));
-        } catch {
-          /* ignore */
-        }
-
         if (active && !prevActive.current) setEnterAnim(true);
         prevActive.current = active;
       } catch {
@@ -124,18 +102,18 @@ export default function PipelineStatusStrip(props: { articleId: number | string 
     };
 
     void tick();
-    const activePoll = (data?.activeCount ?? 0) > 0 || resumeHint;
+    const activePoll = (data?.activeCount ?? 0) > 0;
     const id = window.setInterval(() => void tick(), activePoll ? 1500 : 4000);
     return () => {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [articleId, data?.activeCount, resumeHint]);
+  }, [articleId, data?.activeCount]);
 
   if (!articleId) return null;
-
-  const waitingForResume = resumeHint && !data?.latest;
-  if (!data?.latest && !waitingForResume) return null;
+  // The strip appears only for jobs that are actually running — the old "Wznawiam
+  // pipeline…" resume hint read as a broken/loading state, so it was removed.
+  if (!data?.latest) return null;
 
   const latest = data?.latest;
   const visibleJobs = dedupeActiveJobs(data?.jobs ?? []);
@@ -144,15 +122,13 @@ export default function PipelineStatusStrip(props: { articleId: number | string 
     || (latestVisible != null && isActiveStatus(latestVisible.status));
 
   // Hide idle / failed / live_score-only strip — only show while visible queues run.
-  if (!active && !waitingForResume) return null;
+  if (!active) return null;
 
   const status = latestVisible?.status ?? 'queued';
   const queue = latestVisible?.queue ?? 'pipeline';
-  const label = waitingForResume
-    ? 'Wznawiam pipeline…'
-    : status === 'queued'
-      ? `W kolejce · ${queueLabel(queue)}`
-      : `W tle · ${queueLabel(queue)}`;
+  const label = status === 'queued'
+    ? `W kolejce · ${queueLabel(queue)}`
+    : `W tle · ${queueLabel(queue)}`;
 
   const activeJobs = visibleJobs;
 

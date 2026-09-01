@@ -67,3 +67,28 @@ export function toPlannerTargets(b: StructuralBenchmark): PlannerTargets {
     h2SoftCeiling: h2,
   };
 }
+
+/**
+ * Hold the planner's word target to the scorer's.
+ *
+ * Two scrapes measure "competitor length": the sidecar's SERP analyzer, which sets
+ * scoreData.words_target — the number the SEO scorer grades against (2157 on the
+ * reference keyword, agreeing with Surfer's own 2200-2530 guideline) — and the
+ * benchmarkIntelligence page profiles, which swallow portal boilerplate and measured
+ * the same SERP at 3300+. The base formula stays calibrated against a real Surfer
+ * export on another keyword; this clamp reconciles the two sources where they meet,
+ * so the plan is priced against the same words the article will be scored on.
+ */
+export function clampPlannerWordsToScorer(
+  targets: PlannerTargets | null,
+  scorerWordsTarget: number | null | undefined,
+): PlannerTargets | null {
+  if (!targets || !scorerWordsTarget || scorerWordsTarget <= 0) return targets;
+  const cap = Math.round(scorerWordsTarget * 1.15);
+  if (targets.words <= cap) return targets;
+  return {
+    ...targets,
+    words: cap,
+    wordsSoftCeiling: Math.min(targets.wordsSoftCeiling, Math.round(cap * 1.12)),
+  };
+}

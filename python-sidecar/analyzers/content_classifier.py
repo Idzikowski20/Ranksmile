@@ -80,8 +80,9 @@ async def classify(html: str, url: str = "") -> dict:
         is_thin = True
         thin_reason = "js_shell"
 
-    deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
-    if not deepseek_key:
+    from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+    cfg = chat_config()
+    if cfg is None:
         return _fallback_classification(word_count, has_author, has_date, has_schema_article, is_thin, thin_reason)
 
     prompt = f"""Analyze this webpage content for SEO quality. Return JSON:
@@ -107,17 +108,9 @@ Pre-extracted: word_count={word_count}, has_author={has_author}, has_date={has_d
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {deepseek_key}",
-                },
-                json={
-                    "model": "deepseek-chat",
-                    "max_tokens": 512,
-                    "temperature": 0.1,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
+                cfg["url"],
+                headers=chat_headers(cfg),
+                json=chat_payload(cfg, [{"role": "user", "content": prompt}], 512),
             )
             resp.raise_for_status()
             data = resp.json()

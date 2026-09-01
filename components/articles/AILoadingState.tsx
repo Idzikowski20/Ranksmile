@@ -83,7 +83,7 @@ export default function AILoadingState({
               fontFamily: MONO,
               fontSize: 12,
               scrollBehavior: 'smooth',
-              background: '#FFFFFF',
+              background: 'var(--koala-bg-primary)',
               border: '1px solid #dbded4',
             }}
           >
@@ -105,7 +105,7 @@ export default function AILoadingState({
                       userSelect: 'none',
                       paddingRight: 12,
                       textAlign: 'right',
-                      color: '#9F9FA9',
+                      color: 'var(--koala-text-tertiary)',
                       flexShrink: 0,
                     }}
                   >

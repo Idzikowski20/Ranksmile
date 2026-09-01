@@ -62,6 +62,9 @@ export interface CoverageItem {
   readonly provenance?: CoverageProvenance;
   /** LLM engines that generated/surfaced this question (AI Search checklist). */
   readonly llmSources?: readonly LlmCoverageSource[];
+  /** Source websites behind this item — the pages the engines cited, shown as favicons
+   *  with a hover-to-source link (Surfer's per-fact source row). */
+  readonly webSources?: readonly { readonly url: string; readonly domain: string }[];
 }
 
 export interface CoverageVerdict {
@@ -238,6 +241,12 @@ const INTENT_ITEMS: ReadonlyArray<Omit<CoverageItem, 'covered' | 'quality'>> = [
   { id: 'intent-who',          label: "Identify who it's for",                type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
   { id: 'intent-why',          label: 'Explain why it matters to the reader', type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
 ];
+
+/** Ids of the five fixed intro-intent checkpoints. They are graded by the introduction
+ *  judge against the article's opening, never by looking for their English rubric label
+ *  in the body — a presence check on "Answer the main question early" can only ever
+ *  fail, which silently zeroed the whole intent bucket after every regrade. */
+export const FIXED_INTENT_IDS: ReadonlySet<string> = new Set(INTENT_ITEMS.map((i) => i.id));
 
 /** The 5 fixed search intents, fresh each call. */
 export function intentItems(): CoverageItem[] {

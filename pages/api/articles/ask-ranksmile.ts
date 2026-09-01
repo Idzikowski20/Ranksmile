@@ -89,7 +89,10 @@ function buildScoreContext(scoreData: ScoreData, plainText: string, htmlContent:
   let missingCount = 0;
 
   for (const t of scoreData.terms) {
-    const actual = countOccurrences(plainText, t.term);
+    // Pass term_words_regexps like every other scoring consumer, so the count is the
+    // lemma-aware (declined-form) match the real scorer uses, not the fuzzy fallback that
+    // overmatches (e.g. "detektyw" counting "detektywistyczne").
+    const actual = countOccurrences(plainText, t.term, t.term_words_regexps);
     const min = Math.max(1, Math.round(t.target_count * 0.7));
     const max = Math.round(t.target_count * 1.5);
     const covered = actual >= min && actual <= max;
@@ -104,7 +107,7 @@ function buildScoreContext(scoreData: ScoreData, plainText: string, htmlContent:
   const totalTerms = scoreData.terms.length;
   const totalScore = Math.round(wordScore + headingScore + paraScore +
     (scoreData.terms.reduce((sum, t) => {
-      const actual = countOccurrences(plainText, t.term);
+      const actual = countOccurrences(plainText, t.term, t.term_words_regexps);
       return sum + Math.min(actual / Math.max(t.target_count, 1), 1);
     }, 0) / totalTerms) * termsWeight);
 

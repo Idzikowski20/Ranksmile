@@ -5,19 +5,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import axios from 'axios';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { readContentSettings } from '@/src/infrastructure/stores/contentSettings';
 import { getDomainVoices } from '@/src/infrastructure/seo/domainVoices';
-import { getCurrentUserId } from '../../../../utils/getUser';
+import { getDomainTemplates } from '@/src/infrastructure/seo/domainTemplates';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { mergedPlannerQuestions } from '@/src/infrastructure/coverage/coverageStore';
 import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { getResearchedFacts, withResearchedFacts } from '@/src/infrastructure/contentPlanner/researchFacts';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { llmGateway } from '@/src/infrastructure/ai/llmGateway';
@@ -45,6 +44,7 @@ import {
   buildStructuralBenchmark,
   benchmarkDocsFromCompetitors,
   toPlannerTargets,
+  clampPlannerWordsToScorer,
 } from '@/src/infrastructure/benchmarkIntelligence/index';
 import {
   runKnowledgeEngine,
@@ -55,10 +55,20 @@ import type { StructuralBenchmark, PlannerTargets } from '@/src/infrastructure/b
 import { importantTermsFromScoreData } from '@/src/infrastructure/articles/mergeArticleTerms';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
 import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 /** Bounds the brief LLM call: nothing else force-kills this request, so an unbounded
  *  completion would hang it forever and starve the compile and the sidecar kickoff. */
 const BRIEF_TIMEOUT_MS = 25_000;
+
+/** Readable title from a URL's last path segment — page_audits often stores a null title. */
+function titleFromSlug(url: string): string {
+  const seg = url.replace(/^https?:\/\/[^/]+/i, '').replace(/[?#].*$/, '').replace(/\/+$/, '').split('/').pop() || '';
+  const words = seg.replace(/-/g, ' ').trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : url;
+}
 
 /** A claimed job with no update this long is presumed dead (killed function, timeout) and reclaimable. */
 const GENERATE_STALE_MINUTES = 10;
@@ -105,7 +115,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const articleId = req.query.id;
   const {
     language, tone = 'professional',
-    contentType, instructions = '', voiceId = 'serp',
+    contentType, instructions = '', voiceId = 'serp', templateId = '',
     internalLinks = true, externalLinks = true, reviewOutline = false,
     approvedOutline = null,
   } = req.body || {};
@@ -214,7 +224,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // 2. Domain
     const domainRows = await db.query<{ domain: string }>(
-      `SELECT domain FROM domain WHERE "ID" = ? LIMIT 1`,
+      'SELECT domain FROM domain WHERE "ID" = ? LIMIT 1',
       { replacements: [article.domain_id], type: QueryTypes.SELECT },
     );
     const domainName = domainRows[0]?.domain || '';
@@ -236,6 +246,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const domainVoices = await getDomainVoices(article.domain_id);
     const selectedVoice = voiceId && voiceId !== 'serp' ? domainVoices.find((v) => v.id === voiceId) : undefined;
     const voiceTone = selectedVoice?.description || '';
+    // Content template: reusable reference content whose structure the article mirrors.
+    // Explicit id, else the domain default (Surfer's default:true), else none.
+    const domainTemplates = await getDomainTemplates(article.domain_id);
+    const selectedTemplate = templateId
+      ? domainTemplates.find((t) => t.id === templateId)
+      : domainTemplates.find((t) => t.isDefault);
+    const templateReference = selectedTemplate?.referenceText || '';
     const allowBrandNiche = false;
     // 5. Planner First — build + validate Article Execution Plan (Writer never decides structure).
     const scoreData = safeJsonParse<Record<string, unknown>>(article.score_data, {}) || {};
@@ -248,14 +265,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       competitors,
       scoreData.competitor_synthesis ?? null,
     );
-    const ai = aiIntelFromScoreData(scoreData);
+    const researchedFacts = await getResearchedFacts({
+      keyword,
+      language: lang,
+      scoreData,
+    });
+    const ai = withResearchedFacts(aiIntelFromScoreData(scoreData), researchedFacts);
     // Coverage-judge questions lead — the AI Search score grades against exactly these.
     // Shared helper so review and straight-generate plan from an identical question set.
     const paa = mergedPlannerQuestions(article.ai_info_to_cover, scoreData.paa_questions);
 
     // 5a. CIE — Benchmark + Knowledge Engine (never blocks generate on failure).
-    const useKnowledgeEngine =
-      process.env.USE_KNOWLEDGE_ENGINE === 'true'
+    const useKnowledgeEngine = process.env.USE_KNOWLEDGE_ENGINE === 'true'
       || process.env.USE_KNOWLEDGE_ENGINE === '1';
     let structuralBenchmark: StructuralBenchmark | null = null;
     let plannerTargets: PlannerTargets | null = null;
@@ -276,7 +297,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       structuralBenchmark = storedBenchmark
         ?? (benchDocs.length ? buildStructuralBenchmark(benchDocs) : null);
       if (structuralBenchmark) {
-        plannerTargets = toPlannerTargets(structuralBenchmark);
+        plannerTargets = clampPlannerWordsToScorer(
+          toPlannerTargets(structuralBenchmark),
+          typeof scoreData.words_target === 'number' ? scoreData.words_target : null,
+        );
       }
       if (useKnowledgeEngine) {
         const extraTexts: Array<{ text: string; url: string; kind?: string }> = [];
@@ -366,6 +390,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       keyword,
       year: new Date().getFullYear(),
       allowBrandNiche,
+      brandName: cs.brandName,
       competitors,
       ai,
       paaQuestions: paa,
@@ -433,17 +458,39 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // brief and the compiled plan cannot be written against different vocabularies.
     const tableTerms = await readArticleTerms(articleIdNum).catch(() => []);
 
-    // A domain that has not published through Ranksmile yet has nothing here, so the
-    // Writer's allowlist was empty and the article shipped without a single internal
-    // link. The client's own pages are in the sitemap the audit already reads.
-    if (domainArticles.length < 3 && domainName) {
+    // Always enrich the writer's link allowlist from the client's own sitemap, not only
+    // when Ranksmile has published nothing yet. Surfer links a fresh draft to ~15 of the
+    // client's existing pages; gating this on `domainArticles.length < 3` starved every
+    // established domain (which already has a few Ranksmile pages) back down to a handful
+    // of internal links. Merge deduped so the writer sees the client's real topical pages.
+    if (domainName) {
       try {
-        const sitemapUrls = await gatherBlogUrls(article.domain_id, domainName);
         const known = new Set(domainArticles.map((a) => a.url.replace(/\/+$/, '')));
+
+        // The client's own crawled pages (page_audits) are the richest, most on-topic link
+        // pool — the site's whole topical map, already stored, no fetch. Surfer links a fresh
+        // draft to ~15 of these. The suggester matches anchors on title, so when the crawl
+        // left the title null we derive a readable one from the slug.
+        try {
+          const audited = await db.query<{ url: string; title: string | null }>(
+            `SELECT url, title FROM page_audits WHERE domain_id = ? LIMIT 100`,
+            { replacements: [article.domain_id], type: QueryTypes.SELECT },
+          );
+          for (const p of audited) {
+            const key = p.url.replace(/\/+$/, '');
+            if (!p.url || known.has(key)) continue;
+            known.add(key);
+            domainArticles.push({ id: 0, title: p.title || titleFromSlug(p.url), url: p.url });
+          }
+        } catch (err) {
+          console.warn('[articles/[id]/generate] page_audits link pool skipped:', getErrorMessage(err));
+        }
+
+        const sitemapUrls = await gatherBlogUrls(article.domain_id, domainName);
         // Terms, not just the keyword: the client's topical pages rarely repeat the query
         // in their slug, and ranking on the keyword alone found exactly one page.
         const linkTerms = importantTermsFromScoreData(scoreData, { tableTerms });
-        for (const target of pickLinkTargets({ urls: sitemapUrls, keyword, terms: linkTerms })) {
+        for (const target of pickLinkTargets({ urls: sitemapUrls, keyword, terms: linkTerms, limit: 16 })) {
           if (!known.has(target.url.replace(/\/+$/, ''))) domainArticles.push(target);
         }
       } catch (err) {
@@ -458,7 +505,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         bundle: finalized.bundle,
         brandKnowledge,
         brandName: cs.brandName,
-        importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
+        importantTerms: importantTermsFromScoreData(scoreData, { tableTerms, max: 120 }),
+        // Heading terms, same as /content-plan: the SERP-flagged terms the brief writer
+        // works into H2/H3. Omitting them here let the express path (no outline review)
+        // ignore heading placement entirely, which the scorer now measures.
+        headingTerms: (Array.isArray(scoreData.terms) ? scoreData.terms : [])
+          .filter((t): t is { term: string; in_headings?: boolean } => Boolean(t?.in_headings))
+          .map((t) => t.term)
+          .slice(0, 10),
         language: lang,
         competitorHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
         // Cron runs resolve no org and skip the budget gate entirely, so there is nothing
@@ -483,7 +537,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const compiledResult = compileAndValidateWritePlan(writePlan, {
-      importantTerms: importantTermsFromScoreData(scoreData, { tableTerms }),
+      importantTerms: importantTermsFromScoreData(scoreData, { tableTerms, max: 120 }),
       allowBrandNiche,
     });
     if (!compiledResult.ok) {
@@ -517,8 +571,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       internal_links: internalLinks,
       external_links: externalLinks,
       review_outline: reviewOutline,
-      brand_knowledge: allowBrandNiche ? brandKnowledge : '',
+      // Always. allowBrandNiche gates the PLANNER's niche-topic selection; wiring it to
+      // this field silently stripped brand knowledge from every generation, so articles
+      // never named the agency ("nawiąż do nas" bullets had nothing to draw on).
+      brand_knowledge: brandKnowledge,
+      // The name separately from the knowledge blob: "name the company as written in
+      // the block" left the model to fish it out of 700 chars of prose, and 3 of 7
+      // articles shipped without it. An explicit field also powers the deterministic
+      // closing-CTA fallback in the sidecar.
+      brand_name: cs.brandName || '',
       voice_tone: voiceTone,
+      template_reference: templateReference,
       compiled_write_plan: compiledWritePlan,
     };
 
@@ -545,7 +608,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const e = kickoffErr as { response?: { data?: unknown }; message?: string };
       const detail = e?.response?.data || e?.message || 'sidecar unavailable';
       console.error('[articles/[id]/generate] kickoff failed:', detail);
-      await db.query(`UPDATE analysis_jobs SET status = 'failed', error = ? WHERE id = ?`, { replacements: [String(detail).slice(0, 500), jobId] });
+      await db.query('UPDATE analysis_jobs SET status = \'failed\', error = ? WHERE id = ?', { replacements: [String(detail).slice(0, 500), jobId] });
       await db.query(`UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`, { replacements: [articleId] });
       return res.status(502).json({ error: 'Generation service unavailable', detail });
     }

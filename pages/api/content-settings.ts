@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../utils/verifyUser';
 import { readContentSettings, writeContentSettings } from '@/src/infrastructure/stores/contentSettings';
 import { getDomainVoices, setDomainVoices } from '@/src/infrastructure/seo/domainVoices';
+import { getDomainTemplates, setDomainTemplates } from '@/src/infrastructure/seo/domainTemplates';
 import { getCurrentUserId } from '../../utils/getUser';
 import { getActiveWorkspaceId } from '@/src/infrastructure/identity/tenancy';
 import db from '../../database/database';
@@ -31,25 +32,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const domainId = await getActiveDomainId(req, userId);
     const { brandKnowledge, brandName } = await readContentSettings();
     const voices = domainId ? await getDomainVoices(domainId) : [];
-    return res.status(200).json({ voices, brandKnowledge, brandName });
+    const templates = domainId ? await getDomainTemplates(domainId) : [];
+    return res.status(200).json({ voices, templates, brandKnowledge, brandName });
   }
 
   if (req.method === 'PUT') {
-    const { brandName, brandKnowledge, voices } = req.body || {};
+    const { brandName, brandKnowledge, voices, templates } = req.body || {};
 
-    if (Array.isArray(voices)) {
-      const domainId = await getActiveDomainId(req, userId);
-      if (domainId) await setDomainVoices(domainId, voices);
-    }
+    const domainId = await getActiveDomainId(req, userId);
+    if (Array.isArray(voices) && domainId) await setDomainVoices(domainId, voices);
+    if (Array.isArray(templates) && domainId) await setDomainTemplates(domainId, templates);
 
     const partial: Partial<{ brandName: string; brandKnowledge: string }> = {};
     if (brandName !== undefined) partial.brandName = String(brandName);
     if (brandKnowledge !== undefined) partial.brandKnowledge = String(brandKnowledge);
     const settings = Object.keys(partial).length ? await writeContentSettings(partial) : await readContentSettings();
 
-    const domainId = await getActiveDomainId(req, userId);
     const savedVoices = domainId ? await getDomainVoices(domainId) : (Array.isArray(voices) ? voices : []);
-    return res.status(200).json({ voices: savedVoices, brandKnowledge: settings.brandKnowledge, brandName: settings.brandName });
+    const savedTemplates = domainId ? await getDomainTemplates(domainId) : (Array.isArray(templates) ? templates : []);
+    return res.status(200).json({ voices: savedVoices, templates: savedTemplates, brandKnowledge: settings.brandKnowledge, brandName: settings.brandName });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

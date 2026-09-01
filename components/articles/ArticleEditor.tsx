@@ -107,6 +107,9 @@ interface Props {
   highlightTerms?: boolean;
   /** Fired with true when Ranksmile is processing, false when done */
   onAiActivity?: (active: boolean) => void;
+  /** Fires while the outline planner or the article writer is running — the page locks
+   *  its own chrome (side-panel actions, Publish) off the same signal as the toolbar. */
+  onGeneratingChange?: (busy: boolean) => void;
   /** Target keyword for Ranksmile scoring context */
   articleKeyword?: string;
   /** Plagiarised sentences to underline in red (view-only; from the Plagiarism panel). */
@@ -1102,7 +1105,7 @@ const ImportBar = ({ url, onChange, onImport, onClose, busy }: { url: string; on
   </form>
 );
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, resumeOutlineReview, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl, bottomBarRightReserve = 0 }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, resumeOutlineReview, highlightTerms, onAiActivity, onGeneratingChange, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl, bottomBarRightReserve = 0 }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -1731,7 +1734,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       editor.setEditable(!readOnly && !outlineBusy && !generateBusy);
     }, [editor, readOnly, outlineBusy, generateBusy]);
 
-    const toolbarLocked = !!formattingSuspended || !!readOnly;
+    // Generation and outline planning lock the toolbar too: the document is being
+    // written under the user's cursor, and a bold toggle mid-stream lands inside
+    // content that is about to be replaced.
+    const toolbarLocked = !!formattingSuspended || !!readOnly || outlineBusy || generateBusy;
+    useEffect(() => { onGeneratingChange?.(outlineBusy || generateBusy); }, [outlineBusy, generateBusy]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const ranksmileHlRangeRef = useRef<{ from: number; to: number } | null>(null);
     useEffect(() => {
@@ -1963,6 +1970,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       try {
         let instructions = '';
         let voiceId = 'serp';
+        let templateId = '';
         try {
           const artRes = await fetch(`/api/articles/${articleId}`);
           const artData = await artRes.json() as {
@@ -1970,9 +1978,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           };
           if (!isCurrentRun()) return;
           if (artData.article?.wizard_state) {
-            const ws = JSON.parse(artData.article.wizard_state) as { instructions?: string; voiceId?: string };
+            const ws = JSON.parse(artData.article.wizard_state) as { instructions?: string; voiceId?: string; templateId?: string };
             instructions = ws.instructions || '';
             voiceId = ws.voiceId || 'serp';
+            templateId = ws.templateId || '';
           }
         } catch { /* ignore — generate with defaults */ }
 
@@ -2008,6 +2017,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               contentType: opts?.contentType || 'blog',
               instructions,
               voiceId,
+              templateId,
               internalLinks: opts?.internalLinks ?? true,
               externalLinks: opts?.externalLinks ?? true,
               reviewOutline: false,
@@ -2286,6 +2296,23 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         contentType: typeof router.query.type === 'string' ? router.query.type : 'blog',
       });
     };
+
+    /**
+     * Express mode (`?express=1`): the outline is still planned, it just is not a
+     * checkpoint — as soon as the planner lands, the article is written from it.
+     * Guarded by a ref so a re-render mid-run cannot start a second generation.
+     */
+    const expressAutoRan = useRef(false);
+    useEffect(() => {
+      if (router.query.express !== '1' || !outlineReviewMode || !editor) return;
+      if (outlineBusy || generateBusy || expressAutoRan.current) return;
+      if (!collectApprovedOutline(editor.getJSON()).length) return;
+      expressAutoRan.current = true;
+      handleOutlineGenerate();
+      // handleOutlineGenerate reads the live editor doc; re-running on doc identity would
+      // only re-enter the guard.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [router.query.express, outlineReviewMode, editor, outlineBusy, generateBusy]);
 
     const handleStartOutlineReview = () => {
       setOutlineReviewMode(true);

@@ -250,3 +250,24 @@ describe('scoreDeltaGate', () => {
     expect(scoreDeltaGate(70.4, 71.6)).toEqual({ animate: true, delta: 2 });
   });
 });
+
+describe('fixed intro-intent checkpoints', () => {
+  it('keep the judge verdict instead of being presence-checked against Polish text', () => {
+    // Their labels are English rubric text; faqAnswerDepth can only ever miss them,
+    // which silently zeroed the highest-weighted bucket after every regrade.
+    const graded = [{
+      id: 'intent-answer-early',
+      label: 'Answer the main question early',
+      type: 'intent' as const,
+      category: 'intent' as const,
+      importance: 'critical' as const,
+      source: 'llm' as const,
+      covered: true,
+      quality: 4,
+    }];
+    const html = '<h1>Szantaż emocjonalny</h1><p>Szantaż emocjonalny to presja przez emocje.</p>';
+    const live = liveCoverageItems(graded, 'Szantaż emocjonalny to presja przez emocje.', html);
+    expect(live[0].covered).toBe(true);
+    expect(live[0].quality).toBe(4);
+  });
+});

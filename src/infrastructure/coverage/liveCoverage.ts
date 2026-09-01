@@ -2,6 +2,7 @@
 // Pure client-side re-score core. Re-derives presence-checkable CoverageItem.covered from the
 // current editor text/HTML between LLM judge passes, without mutating the graded snapshot.
 import type { CoverageItem, CoverageType, BucketScore } from '@/src/core/domain/coverage/aiCoverage';
+import { FIXED_INTENT_IDS } from '@/src/core/domain/coverage/aiCoverage';
 import { countOccurrences } from '@/src/infrastructure/articles/contentScore';
 import { livePresenceQualityCap } from '@/src/core/domain/optimize/coverageState';
 
@@ -19,6 +20,11 @@ export function liveCoverageItems(
   html: string,
 ): readonly CoverageItem[] {
   return snapshotItems.map((it) => {
+    // The five fixed intro-intent checkpoints carry the introduction judge's verdict.
+    // Their labels are English rubric text ("Answer the main question early"), so the
+    // presence check below could only ever fail on a Polish article and overwrite a
+    // graded `covered: true` with false — zeroing the highest-weighted bucket.
+    if (FIXED_INTENT_IDS.has(it.id)) return it;
     if (!PRESENCE_CHECKABLE.has(it.type)) return it;
     const presence = presenceSignal(it, plainText, html);
     if (!presence.covered) {

@@ -15,6 +15,8 @@ export type OutlineReviewInput = {
   content?: string | null;
   /** Parsed or raw `score_data`; the planner bundle inside it is what is read. */
   scoreData?: Record<string, unknown> | string | null;
+  /** `articles.status`; the planner writes 'review' when it stores an outline. */
+  status?: string | null;
 };
 
 function hasPlannerBundle(scoreData: OutlineReviewInput['scoreData']): boolean {
@@ -34,6 +36,9 @@ export function isOutlineAwaitingReview(article: OutlineReviewInput | null | und
   // itself first — that also rescues articles whose outline was persisted into content
   // by an earlier build, before autosave was suspended during review.
   if (isReviewOutlineHtml(html)) return true;
+  // The step as the planner recorded it. Everything below infers review from the shape of
+  // the row, which is what rows written before this status existed still need.
+  if (article.status === 'review' && !stripHtmlToPlain(html).length) return true;
   // Emptiness, not usability. `isUsableArticleHtml` demands 80 plain characters, so a
   // short but deliberately authored draft on an article that also has planner metadata
   // was reopened in outline review and its autosave suspended. Anything the author has

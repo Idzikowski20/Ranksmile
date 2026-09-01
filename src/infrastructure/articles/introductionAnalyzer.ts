@@ -1,6 +1,6 @@
 import { CoverageItem, intentItems } from '@/src/core/domain/coverage/aiCoverage';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
-import { chatLlm } from '@/src/infrastructure/ai/deepseek';
+import { llmGateway } from '@/src/infrastructure/ai/llmGateway';
 
 export interface IntroVerdict {
   intentConfirmed: boolean;
@@ -28,7 +28,12 @@ export async function analyzeIntroduction(
   if (!introText.trim()) return SAFE_DEFAULT;
   try {
     return await judge.run(introText, targetKeyword);
-  } catch {
+  } catch (err) {
+    // All-false is indistinguishable from a genuine "the intro does none of this", and
+    // it costs the 15-point early-answer bonus plus the whole intent bucket. An article
+    // whose lead answered the question directly scored answersMainQuestionEarly=false
+    // for weeks because the judge's provider was returning 402 and nobody could see it.
+    console.error('[intro-judge] failed, scoring the intro as all-false:', err);
     return SAFE_DEFAULT;
   }
 }
@@ -48,7 +53,10 @@ export function introCoverageItems(verdict: IntroVerdict): CoverageItem[] {
   });
 }
 
-const INTRO_MODEL = 'deepseek-chat';
+// No model pin: it is the gateway's job to name the model each provider in the chain
+// actually serves. "deepseek-chat" was sent verbatim to OpenRouter, which does not have
+// it, so every call failed past OpenRouter and landed on the Gemini fallback.
+const INTRO_MODEL = 'gateway-default';
 const INTRO_TEMPERATURE = 0;
 const INTRO_PROMPT_VERSION = 'v1';
 
@@ -69,23 +77,19 @@ export const deepseekIntroJudge: IntroductionJudge = {
       '- goalMentioned: the intro explains why this matters / what the reader gains\n' +
       '- expectationsSet: the intro previews the article structure or scope\n\n' +
       '=== INTRO ===\n' + introText + '\n=== END ===';
-    const llm = chatLlm();
-    const res = await fetch(llm.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${llm.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: llm.model, temperature: INTRO_TEMPERATURE, seed: 7,
-        response_format: { type: 'json_object' },
-        messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-      }),
-      signal: AbortSignal.timeout(20_000),
+    // Through the gateway, like the coverage judge next to it: the direct DeepSeek POST
+    // this replaced had no fallback, so a 402 on that account sent every intro to
+    // SAFE_DEFAULT and zeroed the intent bucket on articles that read perfectly well.
+    const gw = await llmGateway({
+      provider: 'openrouter',
+      temperature: INTRO_TEMPERATURE,
+      seed: 7,
+      responseFormat: 'json_object',
+      maxTokens: 800,
+      jobType: 'intro_judge',
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     });
-    if (!res.ok) throw new Error(`${llm.provider} intro judge failed: ${res.status}`);
-    const data = await res.json().catch(() => ({} as { choices?: Array<{ message?: { content?: string } }> }));
-    const parsed = safeJsonParse<Partial<IntroVerdict>>(data?.choices?.[0]?.message?.content ?? '', {});
+    const parsed = safeJsonParse<Partial<IntroVerdict>>(gw.text ?? '', {});
     return {
       intentConfirmed: !!parsed.intentConfirmed,
       answerStartsEarly: !!parsed.answerStartsEarly,

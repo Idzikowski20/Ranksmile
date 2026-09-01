@@ -16,6 +16,7 @@ import McpApiSettings from './McpApiSettings';
 import ProfileSettings from './ProfileSettings';
 import BrandKnowledgeSettings from './BrandKnowledgeSettings';
 import CustomVoicesSettings from './CustomVoicesSettings';
+import ContentTemplatesSettings from './ContentTemplatesSettings';
 import WorkspaceGeneralSettings from './WorkspaceGeneralSettings';
 import WorkspaceMembersSettings from './WorkspaceMembersSettings';
 import { useFetchSettings } from '../../services/settings';
@@ -54,6 +55,7 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
   members: 'Members',
   workspace_general: 'Workspace',
   custom_voices: 'Custom Voices',
+  content_templates: 'Content Templates',
   profile: 'Account',
   notifications: 'Notifications',
   masterclass: 'Masterclass',
@@ -63,6 +65,7 @@ const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
   notifications: 'Manage notifications from Ranksmile or other organization members.',
   brand_knowledge: 'Brand profile plus writing examples that train Brand DNA.',
   custom_voices: 'Manage Custom Voices for Content Editor, Humanizer, and Ranksmile AI.',
+  content_templates: 'Manage reusable Content Templates that shape the structure of generated articles.',
   billing_details: 'Manage your billing information and payment methods.',
   billing_subscription: 'View and change your Ranksmile plan.',
   billing_usage: 'See how your workspace is using plan limits.',
@@ -146,6 +149,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     if (currentPage === 'members') return <WorkspaceMembersSettings />;
     if (currentPage === 'brand_knowledge') return <BrandKnowledgeSettings />;
     if (currentPage === 'custom_voices') return <CustomVoicesSettings />;
+    if (currentPage === 'content_templates') return <ContentTemplatesSettings />;
     if (currentPage === 'notifications') return <AccountNotificationSettings />;
     if (currentPage === 'google_search_console') {
       return (

@@ -15,19 +15,10 @@ import { useWorkspaces } from '../../../services/workspaces';
 import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
 import { useTrafficAlerts } from '@/hooks/useTrafficAlerts';
 import { slugToDomain } from '../../../utils/slugToDomain';
-import { kwScore } from '../../../utils/gsc';
+import { aggregateGscPages, kwScore, toPath } from '../../../utils/gsc';
 import AddPagesModal, { AvailablePage } from '../../../components/domains/AddPagesModal';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
 import { computePortfolioPruning } from '@/src/core/domain/terms/contentEffort';
-
-// Normalize a full URL or path down to its pathname (e.g. "https://x.pl/blog/" -> "/blog").
-function toPath(url: string): string {
-   if (!url) return '';
-   try {
-      const p = (url.startsWith('http') ? new URL(url).pathname : url).replace(/\/+$/, '');
-      return p === '' ? '/' : p;
-   } catch { return url; }
-}
 
 const StatusBadge = ({ status }: { status: string }) => {
    const variant = status === 'published' ? 'success' : status === 'draft' || status === 'review' || status === 'analyzing' ? 'muted' : status === 'error' ? 'danger' : 'muted';
@@ -192,19 +183,7 @@ const ContentAuditPage: NextPage = () => {
          ...rows.map((r) => toPath(r.url)),
          ...pending.map((p) => p.path),
       ].filter(Boolean));
-      const map = new Map<string, { clicks: number; impressions: number; url: string; keyword: string; best: number }>();
-      items.forEach((it) => {
-         if (!it.page) return;
-         const path = toPath(it.page);
-         if (!path || exclude.has(path)) return;
-         const e = map.get(path) || { clicks: 0, impressions: 0, url: it.page, keyword: it.keyword || '', best: -1 };
-         e.clicks += it.clicks || 0;
-         e.impressions += it.impressions || 0;
-         const score = (it.clicks || 0) * 10 + (it.impressions || 0);
-         if (score > e.best) { e.best = score; e.keyword = it.keyword || e.keyword; e.url = it.page; }
-         map.set(path, e);
-      });
-      return [...map.entries()].map(([path, v]) => ({ path, clicks: v.clicks, impressions: v.impressions, url: v.url, keyword: v.keyword }));
+      return aggregateGscPages(items, exclude);
    }, [scData, rows, pending]);
 
    const absUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : `https://${domain}${u.startsWith('/') ? '' : '/'}${u}`);

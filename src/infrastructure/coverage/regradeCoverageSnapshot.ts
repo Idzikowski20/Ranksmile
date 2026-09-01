@@ -2,8 +2,8 @@ import {
   computeCoverageScores,
   type CoverageSnapshot,
 } from '@/src/core/domain/coverage/aiCoverage';
-import { analyzeIntroduction, deepseekIntroJudge } from '@/src/infrastructure/articles/introductionAnalyzer';
-import { citationIntentItems, remapLegacyCitationItem } from '@/src/infrastructure/articles/citationPrompts';
+import { analyzeIntroduction, deepseekIntroJudge, introCoverageItems } from '@/src/infrastructure/articles/introductionAnalyzer';
+import { citationIntentItems, remapLegacyCitationItem, isUsefulCitationPrompt } from '@/src/infrastructure/articles/citationPrompts';
 import { liveCoverageItems } from '@/src/infrastructure/coverage/liveCoverage';
 import { compactCoverageSnapshotItems, AI_COVERAGE_MAX } from '@/src/infrastructure/coverage/curateCoverageItems';
 import {
@@ -22,6 +22,11 @@ export function needsCoverageRegrade(snap: CoverageSnapshot, plainText: string):
     (i.type === 'paa' || i.type === 'intent') && /\b(kiedy|oskarżyć|oskarzyc|zachowania|zgłosić|zglosic)\b/i.test(i.label),
   );
   if (hasMisalignedCommercialIntent) return true;
+  // No intent rows at all: the snapshot was graded in keyword-only mode (deep analysis
+  // before any article existed), where the intro analyzer has nothing to read. Intent is
+  // the highest-weighted bucket and answersMainQuestionEarly is worth +15, so a written
+  // article scored against this snapshot is structurally capped — regrade on the real text.
+  if (!snap.items.some((i) => i.category === 'intent' || i.type === 'intent')) return true;
   if (snap.overall > 0) return false;
   const gradedCoverage = snap.items.some((i) => i.covered && i.quality > 0);
   return !gradedCoverage;
@@ -33,9 +38,26 @@ export async function regradeCoverageSnapshot(opts: {
   plainText: string;
   html: string;
   keyword: string;
+  /** Post-generation: the article body just changed wholesale — regrade unconditionally. */
+  force?: boolean;
 }): Promise<CoverageSnapshot | null> {
-  if (!needsCoverageRegrade(opts.snapshot, opts.plainText) && opts.snapshot.items.length <= AI_COVERAGE_MAX) return null;
-  if (!chatLlm().apiKey) return null;
+  // The heuristic gate exists for cheap paths (autosave, reload). It cannot see that a
+  // snapshot's intent rows were graded in keyword-mode before any article existed —
+  // article 36 kept answersMainQuestionEarly=false from an empty-text verdict over an
+  // intro that answers in its first sentence, because 2 stale intent rows blocked the
+  // regrade. A fresh generation always regrades.
+  if (!opts.force && !needsCoverageRegrade(opts.snapshot, opts.plainText) && opts.snapshot.items.length <= AI_COVERAGE_MAX) return null;
+  if (!chatLlm().apiKey) {
+    // Without a chat key the intro judge and the coverage judge never run: the intent
+    // bucket stays at its stale keyword-mode rows and answersMainQuestionEarly stays
+    // false forever — the AI Search score is then structurally capped near ~35. Silent
+    // null here cost days of "why is AI stuck" debugging; say it every time.
+    console.warn(
+      '[coverage] regrade skipped: no chat LLM key in the Next.js environment '
+      + '(set DEEPSEEK_API_KEY or OPENROUTER_API_KEY) — AI Search cannot be graded.',
+    );
+    return null;
+  }
 
   const compacted = compactCoverageSnapshotItems(opts.snapshot.items, opts.keyword)
     .map(remapLegacyCitationItem);
@@ -48,9 +70,27 @@ export async function regradeCoverageSnapshot(opts: {
   const serpQuestions = workingSnap.items
     .filter((i) => i.type === 'paa' || i.category === 'knowledge')
     .map((i) => i.label);
-  const intentGraded = citationIntentItems(opts.keyword, intentResult.detectedMainQuestion, { serpQuestions });
+  // The 5 fixed intent rows graded straight from the intro verdict lead the bucket —
+  // deterministic, never judged away. Citation prompts only top the bucket up: built
+  // from serpQuestions they duplicate the knowledge rows, and downstream synthetic
+  // filters ate them (article 35 shipped with ONE intent row and an AI score capped
+  // at 28 because the intent bucket's max was 2).
+  const introRows = introCoverageItems(intentResult);
+  const citationRows = citationIntentItems(opts.keyword, intentResult.detectedMainQuestion, { serpQuestions })
+    .slice(0, 3);
+  const intentGraded = [...introRows, ...citationRows];
+  // SERP questions must still be about THIS article's keyword.
+  //
+  // Deep analysis runs against the domain (prodetektyw.pl), so its PAA harvest is about
+  // detective pricing; the CCM projection then carries those rows forward by source, and
+  // they are never re-checked against the keyword the article is written for. Article 93
+  // was graded on 23 variants of "Ile kosztuje detektyw za godzinę?" while writing about
+  // emotional blackmail — knowledge fell to 37 and the AI score to 43, against 84 for the
+  // same pipeline on a clean harvest. Only `paa` rows are gated: a harvested fact or
+  // entity ("poczucie winy") is legitimately about the topic without naming the keyword.
   const knowledgeItems = workingSnap.items
     .filter((i) => i.category !== 'intent' && i.type !== 'intent')
+    .filter((i) => i.type !== 'paa' || isUsefulCitationPrompt(i.label, opts.keyword))
     .map(remapLegacyCitationItem);
   const itemsToJudge = [...intentGraded, ...knowledgeItems];
 

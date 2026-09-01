@@ -240,7 +240,7 @@ const RecommendationsPage: NextPage = () => {
       ['domainRecs', slug],
       async () => {
          const r = await fetch(`/api/domains/${slug}/recommendations`);
-         return r.json() as Promise<{ recommendations: Array<{ id: number; title: string; type: string | null; url: string | null; score: number | null; word_count: number | null }> }>;
+         return r.json() as Promise<{ recommendations: Array<{ id: number; title: string; type: string | null; url: string | null; score: number | null; word_count: number | null; content_score: number | null; keyword: string | null; search_volume: number | null; keyword_difficulty: number | null; topic_title: string | null; optimization_status: string | null; article_id: number | null }> }>;
       },
       { enabled: !!slug, staleTime: 60_000 },
    );
@@ -340,12 +340,14 @@ const RecommendationsPage: NextPage = () => {
                id: `rec_${r.id}`,
                title: r.title,
                url: r.url || '',
-               keyword: sc?.keyword || '',
-               content_score: r.score ?? 0,
+               keyword: r.keyword || sc?.keyword || '',
+               // Real page content score (Surfer's content_score); fall back to the opportunity
+               // score only when the crawl hasn't scored the page yet.
+               content_score: r.content_score ?? r.score ?? 0,
                position: sc?.position ?? 0,
                clicks: sc?.clicks ?? 0,
                impressions: sc?.impressions ?? 0,
-               status: 'not_started',
+               status: r.optimization_status || 'not_started',
                source: 'audit',
                meta_title: null,
                word_count: r.word_count ?? 0,
@@ -484,6 +486,18 @@ const RecommendationsPage: NextPage = () => {
             return;
          }
          writeAnalyzeSession(articleId, { url: pageUrl, keywords, country: IMPORT_COUNTRY });
+         // Link the imported article to its recommendation and mark it in progress, so
+         // Content Audit shows the page as being worked on (Surfer's optimization_status).
+         if (typeof row.id === 'string' && row.id.startsWith('rec_')) {
+            const recId = Number(row.id.slice(4));
+            if (Number.isInteger(recId)) {
+               void fetch(`/api/domains/${slug}/recommendations`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: recId, articleId, status: 'in_progress' }),
+               }).catch(() => {});
+            }
+         }
          await router.push(workspaceHref(wsId, `/articles/${articleId}`));
       } catch {
          toast.error('Import failed');

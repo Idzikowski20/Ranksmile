@@ -94,7 +94,7 @@ def test_prompt_omits_sections_with_nothing_to_say():
 
 def test_prompt_scopes_the_model_to_a_single_paragraph():
     """Handed a heading and a brief, the model will happily write the whole section."""
-    assert "Write only this paragraph" in _prompt(PARAGRAPH, CONTEXT)
+    assert "Write only this block's content" in _prompt(PARAGRAPH, CONTEXT)
 
 
 #: Every spelling of a closing fence tag a model would honour, not just the literal one.
@@ -131,7 +131,7 @@ def test_scraped_context_can_neither_close_the_fence_nor_escape_it(escape):
     assert any(INJECTION in line for line in inside)
     assert not any(INJECTION in line for line in above)
     # The rules sit above the fence, out of reach of anything scraped.
-    assert any("Write only this paragraph" in line for line in above)
+    assert any("Write only this block's content" in line for line in above)
 
 
 def test_prompt_does_not_claim_a_reviewer_approved_the_outline():
@@ -158,7 +158,7 @@ def test_list_style_paragraph_asks_for_a_labelled_bullet_list():
 
     assert "bullet list" in prompt
     assert "bold label" in prompt
-    assert "Write ONE paragraph" not in prompt
+    assert "Write this content block" not in prompt
 
 
 def test_table_style_paragraph_asks_for_a_markdown_table():
@@ -166,11 +166,11 @@ def test_table_style_paragraph_asks_for_a_markdown_table():
     prompt = _prompt(plan, CONTEXT)
 
     assert "comparison table" in prompt
-    assert "Write ONE paragraph" not in prompt
+    assert "Write this content block" not in prompt
 
 
 def test_plain_paragraph_prompt_is_unchanged():
-    assert "Write ONE paragraph" in _prompt(PARAGRAPH, CONTEXT)
+    assert "Write this content block" in _prompt(PARAGRAPH, CONTEXT)
 
 
 def test_authority_sources_resolve_and_gate_the_link_rule():
@@ -180,7 +180,8 @@ def test_authority_sources_resolve_and_gate_the_link_rule():
     prompt = _prompt(plan, ctx)
 
     assert "Authority sources: art. 191 kk -> https://isap.sejm.gov.pl/kk.pdf" in prompt
-    assert "AT MOST one" in prompt
+    # Sources present → the paragraph MUST cite exactly one, naming what it backs.
+    assert "cite EXACTLY ONE" in prompt
     # No sources on the plan -> no link permission in the prompt.
     assert "AT MOST one" not in _prompt(PARAGRAPH, CONTEXT)
 
@@ -210,7 +211,7 @@ def test_prompt_states_a_hard_word_ceiling():
     prompt = _prompt({"id": "p1", "goal": "intro", "expected_words": 100, "style": {}})
 
     assert "Target words: 100" in prompt
-    assert "write at most 130 words — do not exceed it" in prompt
+    assert "write at most 120 words — do not exceed it" in prompt
 
 
 def test_the_ceiling_is_stated_above_the_context_fence():
@@ -222,10 +223,86 @@ def test_the_ceiling_is_stated_above_the_context_fence():
     """
     prompt = _prompt({"id": "p1", "goal": "intro", "expected_words": 100, "style": {}})
 
-    assert prompt.index("write at most 130 words") < prompt.index("<context>")
+    assert prompt.index("write at most 120 words") < prompt.index("<context>")
 
 
 def test_no_ceiling_without_a_budget():
     prompt = _prompt({"id": "p1", "goal": "intro", "style": {}})
 
     assert "write at most" not in prompt
+
+
+def test_brand_moments_are_instructions_not_just_context():
+    """A BRAND block in the prompt is context; the lead and closing need an explicit
+    instruction to use it, or the article never names the agency that ordered it."""
+    plan = {"id": "p1", "objective": "x", "section_id": "s1"}
+    lead = _prompt(plan, {**CONTEXT, "is_lead": True})
+    closing = _prompt(plan, {**CONTEXT, "is_closing": True})
+    middle = _prompt(plan, {**CONTEXT})
+
+    assert "ONE natural clause saying we" in lead
+    assert "one concrete next step" in closing
+    assert "ONE natural clause saying we" not in middle
+    assert "one concrete next step" not in middle
+
+
+def test_faq_paragraph_gets_its_question_bolded_when_the_model_omits_it():
+    """A real article bolded 2 of 4 FAQ questions and ran the rest together as prose."""
+    plan = {
+        "id": "p1",
+        "section_id": "s1",
+        "questions": [{"question_id": "q1"}],
+    }
+    ctx = {
+        "heading": "FAQ - najczęściej zadawane pytania",
+        "index": {"questions": {"q1": "Czy szantaż emocjonalny jest przestępstwem"}},
+    }
+
+    async def gen(_prompt: str) -> str:
+        return "Zalezy od okolicznosci. Kodeks karny nie zna takiego typu czynu."
+
+    result = asyncio.run(write_paragraph(plan, gen, ctx))
+    assert result.markdown.startswith("**Czy szantaż emocjonalny jest przestępstwem?**")
+
+
+def test_faq_paragraph_the_model_formatted_correctly_is_left_alone():
+    plan = {"id": "p1", "section_id": "s1", "questions": [{"question_id": "q1"}]}
+    ctx = {"heading": "FAQ", "index": {"questions": {"q1": "Inne pytanie"}}}
+
+    async def gen(_prompt: str) -> str:
+        return "**Czy to szantaz?**\n\nTak, gdy pojawia sie grozba."
+
+    result = asyncio.run(write_paragraph(plan, gen, ctx))
+    assert result.markdown.startswith("**Czy to szantaz?**")
+
+
+def test_strips_trailing_deliberation_the_model_wrote_into_the_body():
+    """Article 87 shipped this verbatim in its closing paragraph."""
+    from pipeline.section_writer import _strip_deliberation
+    prose = "Szantaz emocjonalny to presja oparta na poczuciu winy. Zglos sie do specjalisty."
+    leaked = (
+        prose + " This inflates but okay. current has it exact."
+        " Final count likely 105 due link not counted as words generally."
+        " At most 104 words whitespace. Let's compose 97."
+    )
+    assert _strip_deliberation(leaked) == prose
+
+
+def test_leaves_ordinary_prose_alone():
+    from pipeline.section_writer import _strip_deliberation
+    prose = "Ofiara czuje sie winna. Sprawca przenosi odpowiedzialnosc za swoje emocje."
+    assert _strip_deliberation(prose) == prose
+
+
+def test_brand_cta_is_appended_when_the_article_never_names_the_brand():
+    from pipeline.article_pipeline import ensure_brand_mention
+    html = "<h1>T</h1><p>Wstep.</p><p>Zakonczenie z CTA.</p>"
+    out = ensure_brand_mention(html, "ProDetektyw", "pl")
+    assert "ProDetektyw" in out
+    assert out.rindex("ProDetektyw") < out.rindex("</p>")
+
+
+def test_brand_cta_is_not_duplicated_when_the_name_is_already_there():
+    from pipeline.article_pipeline import ensure_brand_mention
+    html = "<p>ProDetektyw pomaga w takich sprawach.</p>"
+    assert ensure_brand_mention(html, "ProDetektyw", "pl") == html

@@ -202,8 +202,15 @@ function sse(res: NextApiResponse, event: string, data: object) {
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-   const authorized = await verifyUser(req, res);
-   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+   // Cron secret, same as deep-analysis / content-plan / generate: Surfer exposes
+   // Auto-Optimize over API for bulk workflows, and ours was the one pipeline stage
+   // that could only be driven from a browser session.
+   const { assertCronSecret } = await import('@/src/infrastructure/cron/cronAuth');
+   const isCron = assertCronSecret(req);
+   if (!isCron) {
+      const authorized = await verifyUser(req, res);
+      if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+   }
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
    const { content, articleId, scoreData, targetScore, maxRounds, optimizationStrategy: strategyRaw } = req.body as {
@@ -225,7 +232,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    let userId: string | null = null;
    try { userId = await getCurrentUserId(req, res); } catch { userId = null; }
 
-   if (articleId !== undefined) {
+   // Cron runs resolve no session user — same shape as content-plan and generate.
+   if (articleId !== undefined && !isCron) {
       if (!(await assertArticleAccess(userId, Number(articleId)))) {
          return res.status(403).json({ error: 'Access denied.' });
       }
@@ -342,6 +350,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          aoMeta,
          hasPriorAutoOptimizeVersion: (aoMeta?.runs ?? 0) >= 1,
       });
+      // Surfer-model routing, from CURRENT scores: weak article -> rebuild toward its
+      // own content plan; strong SEO -> touch-ups; strong SEO + weak AI -> AI only.
+      const liveMode = selectOptimizeMode(initialSeo, initialAi, phase);
+      const rebuild = liveMode === 'full';
+      const plannedHeadings: string[] = (() => {
+         const sd = (ctx?.scoreData ?? scoreData) as Record<string, unknown> | undefined;
+         // The planner's own field is `heading`; reading `title` (which does not exist
+            // on OutlineSection) silently produced an empty list on every run.
+            const planner = sd?.content_planner_v2 as
+            | { bundle?: { outline?: { sections?: Array<{ heading?: string; title?: string }> } } }
+            | undefined;
+         return (planner?.bundle?.outline?.sections ?? [])
+            .map((x) => (x?.heading || x?.title || '').trim())
+            .filter((t) => t.length >= 8);
+      })();
+
       const TARGET_SEO_SCORE = phase === 'first_run'
          ? Math.min(100, Math.max(TARGET_SEO, Number(targetScore) || TARGET_SEO))
          : Math.min(100, Math.max(85, Number(targetScore) || 90));
@@ -374,8 +398,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       const originalHtml = content;
 
-      // P0 safety no-op: targets already met → zero LLM (before candidates / FAQ)
-      if (shouldSkipOptimize(initialSeo, initialAi)) {
+      // P0 safety no-op: targets already met → zero LLM (before candidates / FAQ).
+      // Judged against the REQUESTED targets: an express run asking for 100 on an
+      // article already at 90/85 must still work, not return already_optimal.
+      if (shouldSkipOptimize(initialSeo, initialAi)
+         && initialSeo >= TARGET_SEO_SCORE && initialAi >= TARGET_AI_SCORE) {
          sse(res, 'meta', {
             total: MAX_ROUNDS,
             targetSeo: TARGET_SEO_SCORE,
@@ -464,8 +491,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                latestAiFallback: latestAi,
                visibilityPrompts,
                extraCandidates: ccmExtra,
+               rebuild,
+               plannedHeadings,
                policy: aoPolicy,
                maxSteps: aoPolicy.maxSteps,
+               targetSeo: TARGET_SEO_SCORE,
+               targetAi: TARGET_AI_SCORE,
                signal: controller.signal,
                llmEdit: async (prompt) => {
                   const { wieLlmComplete, wieWriterSystemPrompt } = await import('@/src/infrastructure/wie/writer');

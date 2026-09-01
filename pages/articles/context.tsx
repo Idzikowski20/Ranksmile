@@ -14,6 +14,7 @@ import { parseRankingSources, buildAiRankingSources } from '@/src/infrastructure
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
 interface Voice { id: string; name: string; description: string; isDefault: boolean; }
+interface Template { id: string; name: string; referenceText: string; isDefault: boolean; }
 
 const label: React.CSSProperties = {
   fontSize: 14,
@@ -30,6 +31,8 @@ const ContextPage: NextPage = () => {
   const [brandOn, setBrandOn] = useState(true);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voiceId, setVoiceId] = useState('serp');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templateId, setTemplateId] = useState('');
   const [instructions, setInstructions] = useState('');
   const [showNew, setShowNew] = useState(true);
   const [panel, setPanel] = useState<'ranking' | 'brand' | null>(null);
@@ -48,9 +51,12 @@ const ContextPage: NextPage = () => {
     if (!contentSettings || settingsSeeded.current) return;
     settingsSeeded.current = true;
     setVoices(contentSettings.voices as Voice[]);
+    setTemplates(contentSettings.templates as Template[]);
     setBrandText(contentSettings.brandKnowledge || '');
     const def = contentSettings.voices.find((v) => v.isDefault);
     if (def) setVoiceId(def.id);
+    const defTpl = (contentSettings.templates || []).find((t) => t.isDefault);
+    if (defTpl) setTemplateId(defTpl.id);
   }, [contentSettings]);
 
   // Load ranking content gathered during deep analysis + prefill saved wizard
@@ -70,10 +76,11 @@ const ContextPage: NextPage = () => {
     setRankAi(ai);
     if (art?.wizard_state) {
       try {
-        const ws = JSON.parse(art.wizard_state);
+        const ws = JSON.parse(art.wizard_state) as { brandOn?: boolean; instructions?: string; voiceId?: string; templateId?: string };
         if (typeof ws.brandOn === 'boolean') setBrandOn(ws.brandOn);
         if (typeof ws.instructions === 'string') setInstructions(ws.instructions);
         if (ws.voiceId) setVoiceId(ws.voiceId);
+        if (ws.templateId) setTemplateId(ws.templateId);
       } catch { /* ignore */ }
     }
     setHydrated(true);
@@ -82,9 +89,9 @@ const ContextPage: NextPage = () => {
   // Persist progress so the draft can be resumed if the user leaves.
   useEffect(() => {
     if (!hydrated || !articleId) return undefined;
-    const t = setTimeout(() => saveWizardState(articleId, { step: 'context', voiceId, instructions, brandOn }), 400);
+    const t = setTimeout(() => saveWizardState(articleId, { step: 'context', voiceId, templateId, instructions, brandOn }), 400);
     return () => clearTimeout(t);
-  }, [hydrated, articleId, voiceId, instructions, brandOn]);
+  }, [hydrated, articleId, voiceId, templateId, instructions, brandOn]);
 
   const voiceOptions: SelectOption[] = [
     { value: 'serp', label: 'SERP based' },
@@ -98,6 +105,20 @@ const ContextPage: NextPage = () => {
       return;
     }
     setVoiceId(String(opt.value));
+  };
+
+  const templateOptions: SelectOption[] = [
+    { value: '', label: 'No template' },
+    ...templates.map((t) => ({ value: t.id, label: t.name })),
+    { value: '__add__', label: '+ Add Content Template' },
+  ];
+
+  const onTemplateChange = (opt: SelectOption) => {
+    if (opt.value === '__add__') {
+      void router.push('/settings/content_templates');
+      return;
+    }
+    setTemplateId(String(opt.value));
   };
 
   const saveBrand = async () => {
@@ -126,11 +147,11 @@ const ContextPage: NextPage = () => {
       {[68, 82, 74, 90, 78].map((w, i) => (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 16, height: 16, borderRadius: 4, background: '#EFEFF1', animation: 'rkPulse 1.4s ease-in-out infinite' }} />
-            <span style={{ width: 88, height: 10, borderRadius: 4, background: '#EFEFF1', animation: 'rkPulse 1.4s ease-in-out infinite' }} />
-            <span style={{ width: 24, height: 10, borderRadius: 4, background: '#EFEFF1', animation: 'rkPulse 1.4s ease-in-out infinite' }} />
+            <span style={{ width: 16, height: 16, borderRadius: 4, background: 'var(--koala-bg-secondary)', animation: 'rkPulse 1.4s ease-in-out infinite' }} />
+            <span style={{ width: 88, height: 10, borderRadius: 4, background: 'var(--koala-bg-secondary)', animation: 'rkPulse 1.4s ease-in-out infinite' }} />
+            <span style={{ width: 24, height: 10, borderRadius: 4, background: 'var(--koala-bg-secondary)', animation: 'rkPulse 1.4s ease-in-out infinite' }} />
           </div>
-          <span style={{ width: `${w}%`, height: 14, borderRadius: 5, background: '#EFEFF1', animation: 'rkPulse 1.4s ease-in-out infinite' }} />
+          <span style={{ width: `${w}%`, height: 14, borderRadius: 5, background: 'var(--koala-bg-secondary)', animation: 'rkPulse 1.4s ease-in-out infinite' }} />
         </div>
       ))}
     </div>
@@ -210,6 +231,25 @@ const ContextPage: NextPage = () => {
         </div>
       </div>
 
+      {/* Template */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <label style={label}>Template</label>
+        <div style={{ width: '100%', display: 'grid' }}>
+          <CompactSelect
+            size="md"
+            value={templateId}
+            options={templateOptions}
+            onChange={onTemplateChange}
+            menuWidth="100%"
+            menuMinWidth="100%"
+            triggerLabel={
+              templateOptions.find((o) => o.value === templateId && o.value !== '__add__')?.label
+              || 'No template'
+            }
+          />
+        </div>
+      </div>
+
       {/* Instructions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <span style={label}>Add context &amp; instructions <span style={{ color: 'var(--koala-text-tertiary)', fontWeight: 400 }}>(optional)</span></span>
@@ -250,12 +290,12 @@ const ContextPage: NextPage = () => {
 
         {rankTab === 'google' && (
           !hydrated ? rankSkeleton : rankGoogle.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>No ranking sources gathered yet.</p>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: 'var(--font-family-primary)' }}>No ranking sources gathered yet.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {rankGoogle.map((s) => (
                 <div key={`g-${s.rank}-${s.domain}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
                     <DomainFavicon domain={s.domain} size={16} />
                     <span>{s.domain}</span>
                     <span style={{ color: '#D4D4D8' }}>·</span>
@@ -265,12 +305,12 @@ const ContextPage: NextPage = () => {
                       <path d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33Z" fill="#FBBC05" />
                       <path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z" fill="#EA4335" />
                     </svg>
-                    <span style={{ fontWeight: 600, color: '#18181B' }}>#{s.rank}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--koala-text-primary)' }}>#{s.rank}</span>
                   </div>
                   {s.title ? (
-                    <a href={s.url} target="_blank" rel="noreferrer noopener" style={{ fontSize: 14, fontWeight: 600, color: '#18181B', textDecoration: 'none', lineHeight: '20px', fontFamily: 'var(--font-family-primary)' }}>{s.title}</a>
+                    <a href={s.url} target="_blank" rel="noreferrer noopener" style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', textDecoration: 'none', lineHeight: '20px', fontFamily: 'var(--font-family-primary)' }}>{s.title}</a>
                   ) : (
-                    <span style={{ fontSize: 13, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>Couldn&apos;t reach the source</span>
+                    <span style={{ fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: 'var(--font-family-primary)' }}>Couldn&apos;t reach the source</span>
                   )}
                 </div>
               ))}
@@ -280,19 +320,19 @@ const ContextPage: NextPage = () => {
 
         {rankTab === 'ai' && (
           !hydrated ? rankSkeleton : rankAi.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>No AI citations found for this keyword.</p>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: 'var(--font-family-primary)' }}>No AI citations found for this keyword.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {rankAi.map((s, i) => (
                 <div key={`ai-${i}-${s.domain}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
                     <DomainFavicon domain={s.domain} size={16} />
                     <span>{s.domain}</span>
                     <span style={{ color: '#D4D4D8' }}>·</span>
-                    <span style={{ color: '#F84416', fontWeight: 600 }}>cited in AI Overview</span>
+                    <span style={{ color: 'var(--koala-text-brand)', fontWeight: 600 }}>cited in AI Overview</span>
                   </div>
                   {s.title && (
-                    <a href={s.url} target="_blank" rel="noreferrer noopener" style={{ fontSize: 14, fontWeight: 600, color: '#18181B', textDecoration: 'none', lineHeight: '20px', fontFamily: 'var(--font-family-primary)' }}>{s.title}</a>
+                    <a href={s.url} target="_blank" rel="noreferrer noopener" style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', textDecoration: 'none', lineHeight: '20px', fontFamily: 'var(--font-family-primary)' }}>{s.title}</a>
                   )}
                 </div>
               ))}
@@ -310,7 +350,7 @@ const ContextPage: NextPage = () => {
           rows={12}
           resize="vertical"
         />
-        <p style={{ margin: '12px 0 16px', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+        <p style={{ margin: '12px 0 16px', fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
           Changes will be saved to Brand Knowledge and reflected across everything we create and recommend for you.
         </p>
         <Button type="button" variant="primary" size="md" disabled={savingBrand} busy={savingBrand} onClick={saveBrand}>

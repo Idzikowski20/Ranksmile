@@ -2,6 +2,7 @@ import db from '@/database/database';
 import { countOccurrences } from '@/src/infrastructure/articles/contentScore';
 import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import type { SerpCompetitor } from '@/src/core/shared/types/sidecar';
+import { suggestedTermRange } from '@/src/core/domain/terms/termUtils';
 
 /** Replace an article's stored SERP terms atomically. */
 export async function replaceArticleTerms(
@@ -24,8 +25,8 @@ export async function replaceArticleTerms(
       'topic',
       'serp',
       countOccurrences(plainText, t.term),
-      t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
-      t.suggested_max ?? Math.max(1, Math.round((t.target_count || 1) * 1.5)),
+      suggestedTermRange(t).min,
+      suggestedTermRange(t).max,
       t.target_count || 1,
     ]);
 

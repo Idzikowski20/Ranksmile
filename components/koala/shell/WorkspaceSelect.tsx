@@ -15,7 +15,17 @@ import {
   useCreateSetupWorkspace,
 } from '../../../services/workspaces';
 import DomainFaviconAvatar from '../../common/DomainFaviconAvatar';
+import { Avatar } from '../primitives/Avatar';
+import Modal, { ModalBody, ModalHeader } from '../primitives/Modal';
 import { Flag } from '../icons/Flag';
+
+/** Static language picker — no persistence yet, English is the default. */
+const LANGUAGES = [
+  { code: 'en', label: 'English', flag: 'US' },
+  { code: 'pl', label: 'Polski', flag: 'PL' },
+] as const;
+
+type LanguageCode = (typeof LANGUAGES)[number]['code'];
 
 /**
  * Koala workspace / org select — Figma Product Sidebar header (`4903:6905`).
@@ -29,6 +39,8 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [lang, setLang] = useState<LanguageCode>('en');
+  const [langOpen, setLangOpen] = useState(false);
 
   const { data: org } = useOrganization();
   const { data: domainsData } = useFetchDomains(router, false);
@@ -49,6 +61,8 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
 
   const avatarDomain = activeDomain?.domain ?? activeWorkspace?.domain ?? null;
   const label = activeWorkspace?.name || org?.name?.trim() || 'Workspace';
+  const orgName = org?.name?.trim() || label;
+  const activeLang = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
   const meta = `${workspaces.length} ${workspaces.length === 1 ? 'workspace' : 'workspaces'}`;
 
   const close = useCallback(() => setOpen(false), []);
@@ -142,7 +156,7 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
         <span className="koala-ws-select__avatar-wrap">
           <DomainFaviconAvatar domain={avatarDomain} size={compact ? 24 : 28} className="koala-ws-select__avatar" />
           <span className="koala-ws-select__badge koala-ws-select__badge--flag" aria-hidden="true">
-            <Flag code="US" size={compact ? 10 : 12} />
+            <Flag code={activeLang.flag} size={compact ? 10 : 12} />
           </span>
         </span>
         <span className="koala-ws-select__text">
@@ -167,9 +181,9 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
             <MenuList
               header={(
                 <div className="koala-ws-select__menu-head" style={{ border: 'none', padding: 0 }}>
-                  <DomainFaviconAvatar domain={avatarDomain} size={28} />
+                  <Avatar src={org?.logoUrl} name={orgName} size={28} />
                   <div className="koala-ws-select__menu-meta">
-                    <span className="koala-ws-select__menu-name">{org?.name?.trim() || label}</span>
+                    <span className="koala-ws-select__menu-name">{orgName}</span>
                     <span className="koala-ws-select__menu-sub">{meta}</span>
                   </div>
                 </div>
@@ -187,6 +201,16 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
               <MenuListItem as="a" href="/settings/general" label="Organization Settings" onClick={(e) => { e.preventDefault(); nav('/settings/general'); }} />
               <MenuListItem as="a" href="/settings/people" label="Members" onClick={(e) => { e.preventDefault(); nav('/settings/people'); }} />
               <MenuListItem as="a" href="/settings/billing_subscription" label="Usage & Billing" onClick={(e) => { e.preventDefault(); nav('/settings/billing_subscription'); }} />
+              <MenuListItem
+                label="Language"
+                trailingItems={(
+                  <span className="koala-ws-select__lang-value">
+                    <Flag code={activeLang.flag} size={18} />
+                    {activeLang.label}
+                  </span>
+                )}
+                onClick={() => { close(); setLangOpen(true); }}
+              />
               <div className="koala-ws-select__divider" role="separator" />
               {workspaces.map((w) => {
                 const isActive = w.id === activeId;
@@ -212,6 +236,23 @@ export default function WorkspaceSelect({ compact = false }: { compact?: boolean
           </div>
         </ShellPortal>
       ) : null}
+
+      <Modal open={langOpen} onClose={() => setLangOpen(false)} aria-label="Choose language">
+        <ModalHeader>Language</ModalHeader>
+        <ModalBody>
+          <div className="koala-lang-dialog__list">
+            {LANGUAGES.map((l) => (
+              <MenuListItem
+                key={l.code}
+                label={l.label}
+                leadingItems={<Flag code={l.flag} size={22} />}
+                trailingItems={l.code === lang ? <Icon name="Check" size={18} color="#F84416" /> : undefined}
+                onClick={() => { setLang(l.code); setLangOpen(false); }}
+              />
+            ))}
+          </div>
+        </ModalBody>
+      </Modal>
     </div>
   );
 }

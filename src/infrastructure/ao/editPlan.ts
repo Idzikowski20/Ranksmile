@@ -144,8 +144,25 @@ export function buildPrecisionStepPrompt(
     narrative?: NarrativePlan | null;
     /** Extra hint for A/B variant B */
     variantHint?: string;
+    /** Missing/underused NLP terms — a section rewrite weaves the ones that fit, closing
+     *  several term gaps in one edit (how Surfer's AO lifts SEO) instead of one per step. */
+    missingTerms?: readonly string[];
   },
 ): string {
+  // A section-scope rewrite can carry SEO terms; a one-sentence insert or FAQ cannot.
+  const WEAVE_ACTIONS = new Set([
+    'rewrite_section', 'expand_section', 'expand_existing_paragraph',
+    'add_missing_section', 'add_facts', 'improve_direct_answer',
+  ]);
+  const weaveTerms = (opts?.missingTerms ?? []).filter(Boolean).slice(0, 15);
+  const weaveBlock = WEAVE_ACTIONS.has(step.action) && weaveTerms.length
+    ? [
+      'SEO TERMS — weave the ones that fit THIS section topic, as exact phrases, naturally',
+      '(no keyword stuffing; skip any that do not belong here — do not force all of them):',
+      weaveTerms.map((t) => `- ${t}`).join('\n'),
+    ].join('\n')
+    : '';
+
   const how =
     step.action === 'add_faq'
       ? 'Add concise FAQ Q&A only for unanswered questions.'
@@ -154,8 +171,16 @@ export function buildPrecisionStepPrompt(
         : step.action === 'expand_section' || step.action === 'expand_existing_paragraph'
           ? 'Expand only as needed to satisfy the objective. Do not pad to a word count.'
           : step.action === 'add_missing_section'
-            ? 'Create a new focused section/block for the missing topic (do not dump into intro).'
-            : step.action === 'improve_direct_answer'
+            // ONLY the new section. The runtime appends it after the anchor
+            // (see runPrecisionOptimizeV4) — asking the model to echo the anchor back
+            // made it merge the topic into that section instead, so the step was
+            // accepted and the article still had the same number of H2s.
+            ? `Write ONLY a brand new section — nothing else, do not repeat the section `
+              + `you were shown. Start with <h2>${step.targetGap.claimOrQuestion}</h2>, then `
+              + `2-4 short paragraphs (a list where it genuinely helps). `
+              + `Let the heading set the length: one promising a quick or short answer gets `
+              + `a few sentences, never the longest block on the page.`
+          : step.action === 'improve_direct_answer'
               ? 'Add or strengthen a clear direct answer to the question/gap.'
               : step.action === 'add_facts'
                 ? 'Add supporting facts/entities relevant to the gap.'
@@ -203,6 +228,7 @@ export function buildPrecisionStepPrompt(
     narrativeBlock,
     synthBlock,
     coverageBlock,
+    weaveBlock,
     voiceLines,
     opts?.variantHint || '',
     'Improve the assigned objective without removing or weakening already-correct high-value content unless replacement is required for correctness.',

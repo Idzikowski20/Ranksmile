@@ -9,6 +9,7 @@ import {
   type CoverageTopicGroup,
   type CoverageType,
   type Importance,
+  type LlmCoverageSource,
 } from '@/src/core/domain/coverage/aiCoverage';
 import type { CanonicalContentModel } from '@/src/core/ccm/types/ccm';
 import { graphQuery } from '@/src/core/ccm/graphQuery';
@@ -36,6 +37,32 @@ function isCovered(status: CoverageStatus): boolean {
 function factType(statement: string): CoverageType {
   if (/\d|%|\b(?:19|20)\d{2}\b/.test(statement)) return 'statistic';
   return 'fact';
+}
+
+function domainOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+/** Source websites a fact references — its CCM citation neighbours, for the panel's favicon row. */
+function factWebSources(
+  q: ReturnType<typeof graphQuery>,
+  factId: string,
+): { url: string; domain: string }[] {
+  const out: { url: string; domain: string }[] = [];
+  const seen = new Set<string>();
+  for (const node of q.neighbors(factId, 'references', 'out')) {
+    if (node.kind !== 'citation' || !node.url) continue;
+    const domain = domainOf(node.url) || node.label;
+    if (!domain || seen.has(domain)) continue;
+    seen.add(domain);
+    out.push({ url: node.url, domain });
+    if (out.length >= 6) break;
+  }
+  return out;
 }
 
 function toImportance(v: Importance | string): Importance {
@@ -78,18 +105,23 @@ export function projectCcmToCoverageSnapshot(
   }
 
   for (const fact of facts) {
+    const webSources = factWebSources(q, fact.id);
+    // fact.engines uses the same taxonomy as LlmCoverageSource — the engine icons.
+    const llmSources: readonly LlmCoverageSource[] = fact.engines ?? [];
     const item: CoverageItem = {
       id: fact.id,
       label: fact.statement,
       type: factType(fact.statement),
       category: 'knowledge',
       importance: toImportance(fact.importance),
-      source: 'manual',
+      source: llmSources?.length ? 'llm' : 'manual',
       covered: isCovered(fact.status),
       quality: statusToQuality(fact.status),
       confidence: fact.confidence,
       sectionId: fact.sectionId,
       reason: 'ccm',
+      ...(webSources.length ? { webSources } : {}),
+      ...(llmSources?.length ? { llmSources } : {}),
     };
     labelIndex.set(normalizeFactKey(item.label), items.length);
     items.push(item);
@@ -104,12 +136,24 @@ export function projectCcmToCoverageSnapshot(
     const idx = labelIndex.get(key);
     if (idx != null) {
       const cur = items[idx];
-      if (prev.llmSources?.length && !cur.llmSources?.length) {
-        items[idx] = { ...cur, llmSources: prev.llmSources };
+      const carryLlm = prev.llmSources?.length && !cur.llmSources?.length;
+      const carryWeb = prev.webSources?.length && !cur.webSources?.length;
+      if (carryLlm || carryWeb) {
+        items[idx] = {
+          ...cur,
+          ...(carryLlm ? { llmSources: prev.llmSources } : {}),
+          ...(carryWeb ? { webSources: prev.webSources } : {}),
+        };
       }
       continue;
     }
     const keepExtra =
+      // Intent rows ALWAYS survive. The CCM graph models facts and questions, not the
+      // five intro-intent checkpoints the coverage judge grades — so a projection that
+      // dropped them left the intent bucket at max 0 with weight 3, capping AI Search
+      // near ~35 on every generated article no matter how good the intro was.
+      prev.category === 'intent' ||
+      prev.type === 'intent' ||
       (prev.llmSources?.length ?? 0) > 0 ||
       prev.source === 'paa' ||
       prev.source === 'serp' ||

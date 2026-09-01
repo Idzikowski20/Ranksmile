@@ -104,6 +104,7 @@ async function runEnsureTenancyTables(): Promise<void> {
    try { await db.query('ALTER TABLE domain ADD COLUMN language TEXT'); } catch (e) { ignoreExisting('add domain.language', e); }
    try { await db.query('ALTER TABLE domain ADD COLUMN logo_url TEXT'); } catch (e) { ignoreExisting('add domain.logo_url', e); }
    try { await db.query("ALTER TABLE domain ADD COLUMN voices TEXT DEFAULT '[]'"); } catch (e) { ignoreExisting('add domain.voices', e); }
+   try { await db.query("ALTER TABLE domain ADD COLUMN content_templates TEXT DEFAULT '[]'"); } catch (e) { ignoreExisting('add domain.content_templates', e); }
    try { await db.query("ALTER TABLE domain ADD COLUMN blog_paths TEXT DEFAULT '[]'"); } catch (e) { ignoreExisting('add domain.blog_paths', e); }
 
    // Production-only: locally this fired on every route module re-eval (dev hot

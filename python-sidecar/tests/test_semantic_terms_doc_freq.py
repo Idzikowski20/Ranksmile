@@ -40,3 +40,27 @@ def test_doc_freq_counts_documents_not_chunks():
 
     row = next(t for t in terms if t["term"] == TERM)
     assert row["doc_freq"] == 1, f"one page used it, got doc_freq={row['doc_freq']}"
+
+
+def test_thin_llm_harvest_is_topped_up_from_the_deterministic_path(monkeypatch):
+    """A handful of failed chunk calls must not ship a 13-term guideline: the same
+    6-competitor cohort produced 132 terms one run and 13 the next."""
+    import asyncio
+    from analyzers import semantic_terms
+
+    texts = [
+        "Szantaż emocjonalny wykorzystuje poczucie winy oraz lęk. Kodeks Karny opisuje groźby bezprawne. "
+        + " wypelniacz" * 200,
+        "Policja przyjmuje zawiadomienie o przestępstwie. Manipulacja emocjonalna niszczy relacje. "
+        + " wypelniacz" * 200,
+        "Prokuratura Rejonowa prowadzi postępowanie. Presja emocjonalna bywa uporczywa. " + " tekst" * 200,
+    ]
+
+    async def _one_term(keyword, chunk_text, ch, key):
+        return [{"term": "jedyny termin", "relevance": 0.9, "type": "core", "occurrence_count": 2}]
+
+    monkeypatch.setattr(semantic_terms, "_extract_chunk", _one_term)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key-unused")
+
+    terms = asyncio.run(semantic_terms.extract_semantic_terms("szantaż emocjonalny", texts, "test-key"))
+    assert len(terms) > 5, f"thin harvest was not topped up: {len(terms)} terms"

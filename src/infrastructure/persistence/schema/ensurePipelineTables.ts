@@ -62,8 +62,19 @@ export async function ensurePipelineTables(): Promise<void> {
    // status is open vocabulary (triaged|deep now; queued|failed|outdated reserved) — plain
    // TEXT, no DB enum, so future states need no migration.
 
-   // domain_recommendations: optimize recs carry a page url + snapshot score
-   const recCols: Array<[string, string]> = [['url', 'TEXT'], ['score', 'INTEGER']];
+   // domain_recommendations: optimize recs carry a page url + score (score is 0–100:
+   // content score for legacy recs, opportunity×10 for GSC-ranked optimize recs); write
+   // ("create") recs carry DataForSEO search_volume + keyword_difficulty like Surfer.
+   const recCols: Array<[string, string]> = [
+      ['url', 'TEXT'], ['score', 'INTEGER'],
+      ['search_volume', 'INTEGER'], ['keyword_difficulty', 'INTEGER'],
+      // Surfer parity: optimize carries a keyword; write ("create") carries its topic-map
+      // cluster name. `title` (existing) holds the page/headline title on both.
+      ['keyword', 'TEXT'], ['topic_title', 'TEXT'],
+      // Surfer-style optimize lifecycle: not_started → in_progress, linked to the article
+      // that opens as its "Content Editor" once the user hits Optimize.
+      ['optimization_status', 'TEXT'], ['article_id', 'INTEGER'],
+   ];
    for (const [col, type] of recCols) {
       try { await db.query(`ALTER TABLE domain_recommendations ADD COLUMN ${col} ${type}`); } catch (e) { ignoreExisting(`add domain_recommendations.${col}`, e); }
    }

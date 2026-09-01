@@ -11,6 +11,8 @@ import type { OptimizationStrategy } from '@/src/infrastructure/ao/optimizationP
 
 export type BuildCandidatesInput = {
   profile: ArticleIntentProfile;
+  /** Common competitor H2 titles — sections the ranking pages carry (Surfer-style). */
+  competitorHeadings?: string[];
   termGaps?: TermUsageGap[];
   coverageItems?: readonly CoverageItem[];
   paaQuestions?: string[];
@@ -20,6 +22,10 @@ export type BuildCandidatesInput = {
   strategy?: OptimizationStrategy;
   seoStrong?: boolean;
   aiWeak?: boolean;
+  /** Mode 'full': the article is weak enough to rebuild toward the plan. */
+  rebuild?: boolean;
+  /** H2 titles the content plan intended — the generator's own outline. */
+  plannedHeadings?: string[];
 };
 
 function slug(s: string): string {
@@ -41,6 +47,23 @@ function priorityFromImportance(
 function countWords(html: string): number {
   const t = (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   return t ? t.split(/\s+/).length : 0;
+}
+
+/** Meaningful words of a heading — used to match a planned heading against a live section. */
+function headingWords(title: string): string[] {
+  return (title || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 3);
+}
+
+/** The live section that corresponds to a planned heading (word overlap, same 0.6 rule
+ *  as the "already covered" check below). */
+function findSectionForHeading(sections: Section[], title: string): Section | undefined {
+  const words = headingWords(title);
+  if (!words.length) return undefined;
+  return sections.find((sec) => {
+    const text = (sec.headingText || '').toLowerCase();
+    if (!text) return false;
+    return words.filter((w) => text.includes(w)).length / words.length >= 0.6;
+  });
 }
 
 /** Evaluate section — strong gets no section_quality candidate. */
@@ -213,5 +236,80 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
     }
   }
 
-  return sortCandidatesByPriority(out);
+    // Missing sections, the way Surfer adds them: a topic the ranking pages share a
+  // heading for and the article does not cover gets a whole new section, not a
+  // sentence squeezed into an existing one. Capped hard — two per run keeps AO from
+  // rebuilding the article's shape wholesale.
+  // Planned headings first: when the article drifted from its own content plan
+  // (imported, damaged, heavily edited), the plan is the strongest statement of what
+  // sections should exist — the same outline the generator writes from. Competitor
+  // headings top up after. Precision strategy is no longer excluded: that exclusion
+  // made section rebuild dead code, since precision is the default strategy.
+  const plannedTitles = input.plannedHeadings ?? [];
+  const headingSources = [
+    ...plannedTitles.map((t, i) => ({ title: t, planned: true, plannedIndex: i })),
+    ...(input.competitorHeadings ?? []).map((t) => ({ title: t, planned: false, plannedIndex: -1 })),
+  ];
+  const missingCap = input.rebuild ? 5 : 3;
+  if (headingSources.length && input.sections?.length) {
+    const sections = input.sections;
+    const articleText = sections.map((sec) => sec.html).join(' ')
+      .replace(/<[^>]+>/g, ' ')
+      .toLowerCase();
+    const lastSection = sections[sections.length - 1];
+
+    // A restored section belongs where the plan put it, not at the end of the article.
+    // Anchor it after the nearest EARLIER planned heading the article still has; when
+    // nothing before it survived, put it right after the opening section. Anchoring every
+    // missing section to the last one is why repaired sections always landed at the very
+    // bottom, after the summary and FAQ.
+    //
+    // ponytail: ceiling = two consecutive missing planned sections both anchor to the same
+    // surviving heading, so they can land in reverse order relative to each other. Upgrade =
+    // re-anchor against the working HTML between steps instead of once at candidate build.
+    const anchorForPlanned = (plannedIndex: number): Section => {
+      for (let j = plannedIndex - 1; j >= 0; j -= 1) {
+        const prev = findSectionForHeading(sections, plannedTitles[j]);
+        if (prev) return prev;
+      }
+      return sections[0];
+    };
+
+    let added = 0;
+    for (const { title: rawTitle, planned, plannedIndex } of headingSources) {
+      if (added >= missingCap) break;
+      // A section the PLAN intended is structural damage whatever the score or strategy
+      // says — the degraded-article test sat at SEO 68 (mode seo-first, strategy
+      // precision) with seven planned sections gone, and both prior gates skipped the
+      // rebuild entirely. Competitor-heading suggestions stay behind the old gate:
+      // they are a nice-to-have, not the article's own contract.
+      if (!planned && !(input.rebuild || strategy !== 'precision')) continue;
+      const title = (rawTitle || '').trim();
+      if (title.length < 8 || title.length > 90) continue;
+      if (textHitsForbidden(title, profile)) continue;
+      // Covered when the heading's meaningful words already appear in the article.
+      const words = title.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 3);
+      if (!words.length) continue;
+      const hits = words.filter((w) => articleText.includes(w)).length;
+      if (hits / words.length >= 0.6) continue;
+      out.push(
+        makeCandidate({
+          id: `missing-section-${slug(title)}`,
+          gapId: `section:missing:${slug(title)}`,
+          source: 'missing_section',
+          targetSectionId: (planned && plannedIndex >= 0 ? anchorForPlanned(plannedIndex) : lastSection).id,
+          targetGap: title,
+          reason: planned
+            ? `The content plan has a section "${title}"; the article lost or never had it`
+            : `Ranking pages cover "${title}"; the article has no section for it`,
+          priority: planned ? 'critical' : 'recommended',
+          suggestedAction: 'add_missing_section',
+          expectedOutcome: { type: 'generic', id: `section:missing:${slug(title)}` },
+        }),
+      );
+      added += 1;
+    }
+  }
+
+return sortCandidatesByPriority(out);
 }

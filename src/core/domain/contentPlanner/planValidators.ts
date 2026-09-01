@@ -23,12 +23,17 @@ export function validateBlueprint(bp: ArticleBlueprint): ValidationResult {
   if (bp.targetH2 < 5) {
     issues.push({ code: 'h2_too_low', message: 'targetH2 below minimum 5' });
   }
-  if (bp.targetClaims < 5) {
-    issues.push({ code: 'claims_too_low', message: 'targetClaims below minimum 5' });
+  // 2, not 5. Thin SERPs are real (a one-word definitional keyword can leave a single
+  // readable competitor) and Surfer degrades to PAA + model knowledge instead of
+  // refusing. Below 2 there is genuinely nothing to plan from; between 2 and 4 the
+  // planner works with what it has and the brief leans on PAA/brand facts.
+  if (bp.targetClaims < 2) {
+    issues.push({ code: 'claims_too_low', message: 'targetClaims below minimum 2' });
   }
-  if (!bp.requiredSections.length) {
-    issues.push({ code: 'no_sections', message: 'requiredSections empty' });
-  }
+  // No blueprint-level "requiredSections empty" gate any more. Informational topics carry
+  // no forced skeleton — the outline is built from competitor topical headings — and
+  // validateOutline below already rejects an outline that ends up with too few H2, which
+  // is the real requirement. Keeping this check forced the machine-guide scaffolding back.
   if (bp.budget.words !== bp.targetWords) {
     issues.push({ code: 'budget_mismatch', message: 'budget.words must equal targetWords' });
   }

@@ -72,6 +72,7 @@ export function enrichCcmWithDaFacts(
       status,
       verification: 'asserted',
       sectionId: blockId,
+      ...(seed.citedBy?.length ? { engines: seed.citedBy } : {}),
     };
     nodes.push(fact);
     added += 1;
@@ -100,13 +101,18 @@ export function enrichCcmWithDaFacts(
       }
     }
 
-    if (seed.url || seed.domain) {
-      const cid = `dac_${seed.id}`;
+    // One citation node per source website (Surfer stacks several favicons on one fact),
+    // falling back to the single url/domain when the harvest gave only one.
+    const seedUrls = seed.sourceUrls?.length
+      ? seed.sourceUrls
+      : (seed.url ? [seed.url] : []);
+    seedUrls.forEach((u, ci) => {
+      const cid = `dac_${seed.id}_${ci}`;
       const citation: CitationNode = {
         id: cid,
         kind: 'citation',
-        label: seed.domain || seed.url || 'source',
-        url: seed.url,
+        label: (() => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return seed.domain || u || 'source'; } })(),
+        url: u,
         importance: 'optional',
         confidence: 0.6,
         status: 'covered',
@@ -119,7 +125,7 @@ export function enrichCcmWithDaFacts(
         to: cid,
         confidence: 0.6,
       });
-    }
+    });
 
     if (status === 'covered' || status === 'partial') {
       const snippet = seed.statement.slice(0, 160);

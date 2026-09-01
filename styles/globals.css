@@ -2847,8 +2847,8 @@ html.editor-route .app-content {
 }
 .koala-menu-list-item:hover { background: var(--koala-btn-ghost-bg-hover); }
 .koala-menu-list-item--primary { color: var(--koala-text-brand); }
-/* status-danger alone fails text contrast on light/cream — same blend used
-   at .deep-analysis-step-icon__error for readable danger text on a surface. */
+/* status-danger alone fails text contrast on light/cream — blended for readable
+   danger text on a surface. */
 .koala-menu-list-item--danger { color: color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary)); }
 .koala-menu-list-item:disabled, .koala-menu-list-item[aria-disabled="true"] { opacity: 0.5; cursor: default; }
 .koala-menu-list-item-leading, .koala-menu-list-item-trailing { flex-shrink: 0; display: flex; align-items: center; }
@@ -4612,58 +4612,6 @@ html.editor-route .app-content {
 }
 
 /* Deep analysis (article import / new content) — Koala semantic tokens */
-.deep-analysis-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.deep-analysis-step {
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border: 1px solid var(--koala-border-primary);
-  border-radius: var(--radius-xl);
-  background: var(--koala-bg-secondary);
-  box-sizing: border-box;
-}
-.deep-analysis-step-icon {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.deep-analysis-step-label {
-  min-width: 0;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
-  color: var(--koala-text-primary);
-  font-family: var(--font-family-primary);
-}
-.deep-analysis-step--pending .deep-analysis-step-label {
-  color: var(--koala-text-secondary);
-}
-.deep-analysis-step--running .deep-analysis-step-label {
-  font-weight: 600;
-}
-.deep-analysis-step--error {
-  border-color: var(--koala-status-danger);
-}
-.deep-analysis-step--error .deep-analysis-step-label {
-  color: color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary));
-}
-.deep-analysis-step-error {
-  min-width: 0;
-  font-size: 12px;
-  line-height: 16px;
-  color: color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary));
-  font-family: var(--font-family-primary);
-  overflow-wrap: anywhere;
-}
 .deep-analysis-actions {
   display: flex;
   flex-wrap: wrap;
@@ -4671,10 +4619,6 @@ html.editor-route .app-content {
   margin-top: 12px;
 }
 
-/* Step status icons use Phosphor + CSS vars */
-.deep-analysis-step-icon__done { color: color-mix(in srgb, var(--koala-status-success) 50%, var(--koala-text-primary)); }
-.deep-analysis-step-icon__error { color: color-mix(in srgb, var(--koala-status-danger) 50%, var(--koala-text-primary)); }
-.deep-analysis-step-icon__pending { color: var(--koala-text-secondary); }
 
 /* ??? New Content ? generating (article preview stage) ????????????????????? */
 .nc-gen {
@@ -7752,7 +7696,20 @@ html.koala-shell[data-theme="cream"] .app-content {
   margin: 6px 0;
   background: #e5e5e5;
 }
-.koala-ws-select__menu .koala-menu-list-item {
+.koala-ws-select__lang-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--koala-text-tertiary);
+}
+.koala-lang-dialog__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.koala-ws-select__menu .koala-menu-list-item,
+.koala-lang-dialog__list .koala-menu-list-item {
   color: var(--koala-text-primary);
   width: 100%;
   border: none;
@@ -7767,7 +7724,8 @@ html.koala-shell[data-theme="cream"] .app-content {
   gap: 8px;
   text-decoration: none;
 }
-.koala-ws-select__menu .koala-menu-list-item:hover {
+.koala-ws-select__menu .koala-menu-list-item:hover,
+.koala-lang-dialog__list .koala-menu-list-item:hover {
   background: var(--koala-bg-secondary);
 }
 .koala-ws-select__menu .koala-menu-list-item--primary {
@@ -9221,6 +9179,10 @@ html.koala-shell[data-theme="cream"] .app-content {
 .koala-wizard-shell__column:has(.koala-content-type) {
   max-width: 636px;
   gap: 24px;
+}
+/* Short chooser steps sit in the middle of the canvas, not pinned to the top. */
+.koala-wizard-shell__body:has(.koala-content-type--centered) {
+  justify-content: center;
 }
 .koala-content-type {
   display: flex;

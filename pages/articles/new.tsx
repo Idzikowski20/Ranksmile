@@ -5,10 +5,11 @@ import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId, resolveActiveDomain } from '@/src/core/domain/navigation/activeWorkspace';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
-import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
+import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
 import { Button, CompactSelect } from '../../components/koala/core';
 import type { SelectOption } from '../../components/koala/core';
 import { Flag } from '../../components/koala';
+import { Icon } from '../../components/koala/icons/Icon';
 
 const LANGUAGES = [
   { value: 'pl', label: 'Polski' },
@@ -30,6 +31,8 @@ const NewContentPage: NextPage = () => {
   const { data: domainsData } = useFetchDomains(router);
   const domains: DomainType[] = domainsData?.domains || [];
 
+  const [step, setStep] = useState<'keyword' | 'mode'>('keyword');
+  const [mode, setMode] = useState<'express' | 'custom'>('express');
   const [keywords, setKeywords] = useState<string[]>([]);
   const [language, setLanguage] = useState('pl');
   const [trackedKeywords, setTrackedKeywords] = useState<TrackedKeyword[]>([]);
@@ -78,14 +81,31 @@ const NewContentPage: NextPage = () => {
 
   const goNext = () => {
     if (!canNext) return;
+    if (step === 'keyword') { setStep('mode'); return; }
     const q = new URLSearchParams();
     q.set('domainId', String(domainId));
     q.set('keywords', keywords.join(','));
     q.set('country', LANG_TO_COUNTRY[language] || 'US');
     q.set('language', language);
     q.set('flow', 'new');
+    q.set('mode', mode);
     router.push(`/articles/deep-analysis?${q.toString()}`);
   };
+
+  const MODES = [
+    {
+      id: 'express' as const,
+      icon: 'Lightning',
+      title: 'Express',
+      desc: 'Skip the setup steps — we research, outline and write the article, then open it in the editor.',
+    },
+    {
+      id: 'custom' as const,
+      icon: 'SlidersHorizontal',
+      title: 'Custom',
+      desc: 'Walk through content type, context and writing mode before anything is generated.',
+    },
+  ];
 
   const languageOptions: SelectOption[] = LANGUAGES.map((l) => ({
     value: l.value,
@@ -94,12 +114,65 @@ const NewContentPage: NextPage = () => {
     leadingItems: <Flag code={LANG_TO_COUNTRY[l.value]} size={18} />,
   }));
 
+  if (step === 'mode') {
+    return (
+      <WizardShell
+        title="New Content"
+        footer={(
+          <>
+            <WizardBackButton onClick={() => setStep('keyword')} />
+            <WizardNextButton label={mode === 'express' ? 'Generate article' : 'Deep research'} onClick={goNext} />
+          </>
+        )}
+      >
+        <div className="koala-content-type koala-content-type--centered">
+          <header className="koala-content-type__header">
+            <span className="koala-content-type__header-icon" aria-hidden="true">
+              <Icon name="Sparkle" size={24} weight="bold" color="var(--koala-text-secondary)" />
+            </span>
+            <h2 className="koala-content-type__title">Select generation mode</h2>
+            <p className="koala-content-type__subtitle">
+              Choose how much of the setup you want to go through.
+            </p>
+          </header>
+
+          <section className="koala-content-type__section">
+            <div className="koala-template-card-grid" role="listbox" aria-label="Generation mode">
+              {MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`koala-template-card${mode === m.id ? ' koala-template-card--selected' : ''}`}
+                  aria-pressed={mode === m.id}
+                  onClick={() => setMode(m.id)}
+                >
+                  <span className="koala-template-card__icon" aria-hidden="true">
+                    <Icon name={m.icon} size={24} weight="bold" color="var(--koala-text-primary)" />
+                  </span>
+                  {mode === m.id ? (
+                    <span className="koala-template-card__badge" aria-hidden="true">
+                      <Icon name="Check" size={20} weight="bold" color="var(--koala-text-primary)" />
+                    </span>
+                  ) : null}
+                  <span className="koala-template-card__text">
+                    <span className="koala-template-card__title">{m.title}</span>
+                    <span className="koala-template-card__desc">{m.desc}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      </WizardShell>
+    );
+  }
+
   return (
     <WizardShell
       title="New Content"
       footer={(
         <WizardNextButton
-          label="Deep research"
+          label="Continue"
           disabled={!canNext}
           onClick={goNext}
         />

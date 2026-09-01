@@ -54,49 +54,33 @@ export function localizedRequiredSections(
         'Contact',
       ];
   }
-  if (lang === 'pl') {
-    if (articleType === 'step-by-step' || articleType === 'guide') {
-      const steps = [
-        'Szybka odpowiedź',
-        'Pierwsze kroki',
-        'Plan działania',
-        'Najczęstsze błędy',
-        ...(cost ? ['Koszty i opcje'] : []),
-        'FAQ',
-        'Podsumowanie',
-      ];
-      return steps;
-    }
-    return [
-      'Szybki start',
-      'Podstawy',
-      'Checklista',
-      'Najczęstsze błędy',
-      ...(cost ? ['Koszty'] : []),
-      'FAQ',
-      'Podsumowanie',
-    ];
-  }
-  if (articleType === 'step-by-step') {
-    return [
-      'Quick Answer',
-      'First steps',
-      'Action plan',
-      'Common Mistakes',
-      ...(cost ? ['Cost'] : []),
-      'FAQ',
-      'Summary',
-    ];
-  }
-  return [
-    'Quick Start',
-    'Foundation',
-    'Checklist',
-    'Common Mistakes',
-    ...(cost ? ['Cost'] : []),
-    'FAQ',
-    'Summary',
-  ];
+  // Informational topics carry NO forced skeleton. Surfer's generated article for this
+  // exact keyword has eight sections and every one is topical — "Czym jest…", "Jak
+  // rozpoznać…", "Mechanizmy…", "Kto pada ofiarą…" — with zero "Szybka odpowiedź / Plan
+  // działania / FAQ / Podsumowanie" scaffolding. Those seven generic headings were the
+  // single biggest source of both the inflated H2 count and the machine-guide feel: they
+  // crowded out the competitor topical headings the outline builder already has, and read
+  // as advice for doing the investigator's job yourself. Returning nothing lets the real
+  // competitor headings (headingFillersFromCompetitors) drive the whole outline, exactly
+  // as the reference tool does; `cost` no longer forces a section — a paragraph covers it.
+  void cost;
+  return [];
+}
+
+/**
+ * Brand sections, Surfer-parity. The reference article for "szantaż emocjonalny"
+ * dedicates a third of its body to the brand: a services section ("Wsparcie
+ * ProDetektyw w sprawach szantażu") and anonymized case studies ("Studium
+ * przypadku: realne sprawy"). Our planner treated brand as mentions, not
+ * sections — these two H2s close that gap. Injected before FAQ/summary, only
+ * when a brand document exists (briefWriter refuses to invent brand facts).
+ */
+export function brandSections(brandName: string, lang: OutlineLang): string[] {
+  const name = brandName.trim();
+  if (!name) return [];
+  return lang === 'pl'
+    ? [`Jak ${name} pomaga w takich sprawach`, 'Studium przypadku: przykladowe sprawy']
+    : [`How ${name} helps in cases like this`, 'Case studies'];
 }
 
 /** Human H1 — never raw keyword alone. */

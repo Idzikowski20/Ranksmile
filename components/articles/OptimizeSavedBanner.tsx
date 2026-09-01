@@ -33,7 +33,7 @@ const OptimizeSavedBanner: React.FC<OptimizeSavedBannerProps> = ({ open, onOpenH
             zIndex: 10000,
             width: 320,
             maxWidth: 'calc(100vw - 32px)',
-            background: '#FFFFFF',
+            background: 'var(--koala-bg-primary)',
             border: '1px solid #F4F4F5',
             borderRadius: 12,
             boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09), 0px 2px 6px 0px rgba(17,24,39,0.06)',
@@ -51,10 +51,10 @@ const OptimizeSavedBanner: React.FC<OptimizeSavedBannerProps> = ({ open, onOpenH
             </span>
 
             <div style={{ flex: 1, minWidth: 0 }}>
-               <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', fontWeight: 600, color: '#18181B', fontFamily: FONT }}>
+               <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: FONT }}>
                   Your changes have been saved
                </p>
-               <p style={{ margin: '2px 0 0', fontSize: 13, lineHeight: '18px', color: '#52525C', fontFamily: FONT }}>
+               <p style={{ margin: '2px 0 0', fontSize: 13, lineHeight: '18px', color: 'var(--koala-text-secondary)', fontFamily: FONT }}>
                   You can see your changes in the Version History
                </p>
 
@@ -65,8 +65,8 @@ const OptimizeSavedBanner: React.FC<OptimizeSavedBannerProps> = ({ open, onOpenH
                      marginTop: 12,
                      fontSize: 13,
                      fontWeight: 600,
-                     color: '#FFFFFF',
-                     background: '#2F2F34',
+                     color: 'var(--koala-text-on-inverse)',
+                     background: 'var(--koala-bg-inverse)',
                      border: 'none',
                      borderRadius: 8,
                      cursor: 'pointer',
@@ -74,8 +74,8 @@ const OptimizeSavedBanner: React.FC<OptimizeSavedBannerProps> = ({ open, onOpenH
                      padding: '6px 14px',
                      transition: 'background 0.15s ease',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-brand)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-inverse)'; }}
                >
                   Version History
                </button>
@@ -92,12 +92,12 @@ const OptimizeSavedBanner: React.FC<OptimizeSavedBannerProps> = ({ open, onOpenH
                   padding: 4,
                   margin: '-4px -4px 0 0',
                   cursor: 'pointer',
-                  color: '#9F9FA9',
+                  color: 'var(--koala-text-tertiary)',
                   display: 'inline-flex',
                   transition: 'color 0.15s ease',
                }}
-               onMouseEnter={(e) => { e.currentTarget.style.color = '#52525C'; }}
-               onMouseLeave={(e) => { e.currentTarget.style.color = '#9F9FA9'; }}
+               onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}
+               onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-tertiary)'; }}
             >
                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

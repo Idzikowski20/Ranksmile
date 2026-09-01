@@ -133,3 +133,57 @@ describe('projection preserves the grading rubric', () => {
     expect(snap.answersMainQuestionEarly).toBe(true);
   });
 });
+
+describe('intent rows from a previous LLM grade', () => {
+  it('survive the projection even though CCM models no intents', () => {
+    const { model } = compile({
+      articleId: 'proj-intent',
+      compiledAt: FIXED_AT,
+      source: {
+        kind: 'plain',
+        text: '# Szantaż emocjonalny\n\n## Objawy\n\nSprawca wywiera presję przez poczucie winy i lęk.\n',
+      },
+    });
+    const previous: CoverageSnapshot = {
+      schemaVersion: 1,
+      judgeVersion: 'v1|deepseek-chat|0',
+      promptVersion: 'v1',
+      model: 'deepseek-chat',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      items: [
+        {
+          id: 'intent-answer-early',
+          label: 'Answer the main question early',
+          type: 'intent',
+          category: 'intent',
+          importance: 'critical',
+          source: 'llm',
+          covered: true,
+          quality: 5,
+        },
+        {
+          id: 'intent-who',
+          label: "Identify who it's for",
+          type: 'intent',
+          category: 'intent',
+          importance: 'recommended',
+          source: 'llm',
+          covered: true,
+          quality: 5,
+        },
+      ],
+      buckets: [],
+      answersMainQuestionEarly: true,
+      overall: 60,
+    };
+
+    const snap = projectCcmToCoverageSnapshot(model, { createdAt: FIXED_AT, previous });
+
+    // Without this, the intent bucket lands at max 0 with weight 3 and the AI Search
+    // score is structurally capped no matter how well the intro answers the query.
+    const carried = snap.items.filter((i) => i.id.startsWith('intent-'));
+    expect(carried).toHaveLength(2);
+    const intentBucket = snap.buckets.find((b) => b.key === 'intent');
+    expect(intentBucket?.max).toBeGreaterThan(0);
+  });
+});

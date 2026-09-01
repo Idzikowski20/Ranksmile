@@ -11,7 +11,11 @@ import {
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { llmGateway } from '@/src/infrastructure/ai/llmGateway';
 
-const COVERAGE_MODEL = 'deepseek-chat';
+// Not a model id any more — see introductionAnalyzer: pinning "deepseek-chat" while
+// asking for OpenRouter sent a model that provider does not serve, and every grade came
+// from the Gemini fallback. Kept only so the prompt-version string still changes when
+// the grading setup does.
+const COVERAGE_MODEL = 'gateway-default';
 const COVERAGE_TEMPERATURE = 0;
 const COVERAGE_PROMPT_VERSION = 'v1';
 
@@ -33,8 +37,10 @@ export const deepseekJudge: CoverageJudge = {
       'JSON: {"items":[{"id","covered","quality","confidence","needsExpansion","missing":[],"reason","sectionId"}],' +
       '"answersMainQuestionEarly"}.\n\n=== ARTICLE ===\n' + plainText + '\n=== END ===';
     const gw = await llmGateway({
-      provider: 'deepseek',
-      model: COVERAGE_MODEL,
+      // OpenRouter first: the deepseek account can run out of balance (402) and its
+      // direct endpoint then fails every judge call; the gateway falls back through
+      // deepseek/gemini automatically when openrouter is unavailable.
+      provider: 'openrouter',
       temperature: COVERAGE_TEMPERATURE,
       seed: 7,
       responseFormat: 'json_object',

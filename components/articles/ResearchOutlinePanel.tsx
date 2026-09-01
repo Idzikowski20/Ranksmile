@@ -298,7 +298,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                       <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
                         {[
                           { color: 'var(--koala-status-success)', label: 'Covered' },
-                          { color: '#efa00d', label: 'Expand' },
+                          { color: 'var(--koala-status-warning)', label: 'Expand' },
                           { color: 'var(--koala-status-danger)', label: 'Missing' },
                         ].map(({ color, label }) => (
                           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -314,7 +314,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                   <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 220, overflowY: 'auto' }} className="styled-scrollbar">
                     {generatedHeadings.map((h, i) => {
                       const status = classifyHeadingStatus(h, currentHeadings);
-                      const dotColor = status === 'covered' ? 'var(--koala-status-success)' : status === 'expand' ? '#efa00d' : 'var(--koala-status-danger)';
+                      const dotColor = status === 'covered' ? 'var(--koala-status-success)' : status === 'expand' ? 'var(--koala-status-warning)' : 'var(--koala-status-danger)';
                       const textColor = status === 'covered' ? 'var(--koala-text-disabled)' : status === 'expand' ? 'var(--koala-text-secondary)' : 'var(--koala-text-primary)';
                       const fontWeight = status === 'missing' && h.level <= 2 ? 700 : h.level <= 2 ? 500 : 400;
                       return (

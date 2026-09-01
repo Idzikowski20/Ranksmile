@@ -1,5 +1,6 @@
 import {
   selectOptimizeMode,
+  SEO_REBUILD_BELOW,
   shouldSkipOptimize,
   SEO_READY,
   SEO_WEAK,
@@ -19,8 +20,12 @@ describe('selectOptimizeMode', () => {
     expect(selectOptimizeMode(SEO_READY, TARGET_AI - 1, 'first_run')).toBe('ai-only');
   });
 
-  it('routes to seo-first when SEO is below ready threshold', () => {
-    expect(selectOptimizeMode(50, 70, 'first_run')).toBe('seo-first');
+  it('routes to seo-first in the 60-79 band, rebuild (full) below 60', () => {
+    // Surfer-model bars: "strong" is 80, and a weak article (below 60) gets rebuilt
+    // toward its own content plan rather than patched.
+    expect(selectOptimizeMode(70, 70, 'first_run')).toBe('seo-first');
+    expect(selectOptimizeMode(SEO_REBUILD_BELOW, 70, 'first_run')).toBe('seo-first');
+    expect(selectOptimizeMode(SEO_REBUILD_BELOW - 1, 70, 'first_run')).toBe('full');
   });
 
   it('routes to minimal only when SEO is ready and AI hits target', () => {
@@ -31,8 +36,10 @@ describe('selectOptimizeMode', () => {
     expect(selectOptimizeMode(SEO_WEAK - 5, SEO_WEAK - 5, 'first_run')).toBe('full');
   });
 
-  it('forces minimal on follow_up regardless of scores', () => {
-    expect(selectOptimizeMode(30, 20, 'follow_up')).toBe('minimal');
+  it('follow_up no longer forces minimal — mode comes from current scores', () => {
+    // One prior AO run (even a no-op) used to lock the article out of real work
+    // forever: a degraded article at SEO 68 got mode minimal and one cosmetic edit.
+    expect(selectOptimizeMode(30, 20, 'follow_up')).toBe('full');
     expect(selectOptimizeMode(SEO_READY, TARGET_AI, 'follow_up')).toBe('minimal');
   });
 });

@@ -28,6 +28,9 @@ export type KgNodeKind =
   | 'citation'
   | 'evidence_span';
 
+/** AI engines that cited a fact (Surfer `cited_by`) — same values as LlmCoverageSource. */
+export type CitedEngine = 'ai_overview' | 'chat_gpt' | 'gemini' | 'perplexity' | 'reddit';
+
 export interface FactNode {
   readonly id: string;
   readonly kind: 'fact';
@@ -43,6 +46,8 @@ export interface FactNode {
   readonly status: CoverageStatus;
   readonly verification: FactVerification;
   readonly sectionId?: string;
+  /** AI engines that cited this fact — drives the panel's engine-icon row. */
+  readonly engines?: readonly CitedEngine[];
 }
 
 export interface EntityNode {

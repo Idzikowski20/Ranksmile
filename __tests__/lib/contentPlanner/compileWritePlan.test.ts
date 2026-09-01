@@ -202,7 +202,7 @@ describe('compileWritePlan', () => {
    * articles rendered without a single list. The reference article's recurring shape
    * is intro → bold-labelled list → closing paragraph.
    */
-  it('gives a mixed-block section its list blocks between intro and summary', () => {
+  it('gives a mixed-block section its list blocks after the intro', () => {
     const plan = sampleExecutionPlan({
       sections: [sampleSection({ blocks: ['example', 'checklist', 'steps', 'pro_tip'] })],
     });
@@ -210,12 +210,13 @@ describe('compileWritePlan', () => {
     const compiled = compileWritePlan(plan);
     const paragraphs = compiled.paragraphPlans.filter((p) => p.sectionId === 'sec-intro');
 
-    expect(paragraphs.map((p) => p.goal)).toEqual(['intro', 'checklist', 'steps', 'summary']);
+    // No per-section summary: Surfer sections end on their last substantive point.
+    expect(paragraphs.map((p) => p.goal)).toEqual(['intro', 'checklist', 'steps']);
     expect(paragraphs[1].style.list).toBe(true);
     expect(paragraphs[2].style.list).toBe(true);
   });
 
-  it('marks a comparison block as a table', () => {
+  it('renders a comparison block as a bullet contrast, never a table', () => {
     const plan = sampleExecutionPlan({
       sections: [sampleSection({ blocks: ['example', 'comparison'] })],
     });
@@ -223,8 +224,9 @@ describe('compileWritePlan', () => {
     const compiled = compileWritePlan(plan);
     const paragraphs = compiled.paragraphPlans.filter((p) => p.sectionId === 'sec-intro');
 
-    expect(paragraphs.map((p) => p.goal)).toEqual(['intro', 'comparison', 'summary']);
-    expect(paragraphs[1].style.table).toBe(true);
+    expect(paragraphs.map((p) => p.goal)).toEqual(['intro', 'comparison']);
+    expect(paragraphs[1].style.list).toBe(true);
+    expect(paragraphs[1].style.table).toBeUndefined();
   });
 
   /**
@@ -279,13 +281,13 @@ describe('compileWritePlan', () => {
     expect(urls).toEqual(['https://uj.edu.pl/kierunki']);
   });
 
-  it('splits ordinary sections into intro/definition/summary by expectedWords', () => {
+  it('splits ordinary sections into intro/definition by expectedWords', () => {
     const plan = sampleExecutionPlan({
       sections: [sampleSection({ blocks: ['definition'], expectedWords: 300 })],
     });
     const compiled = compileWritePlan(plan);
     const paragraphs = compiled.paragraphPlans.filter((p) => p.sectionId === 'sec-intro');
-    expect(paragraphs.map((p) => p.goal)).toEqual(['intro', 'definition', 'summary']);
+    expect(paragraphs.map((p) => p.goal)).toEqual(['intro', 'definition']);
     const totalWords = paragraphs.reduce((sum, p) => sum + p.expectedWords, 0);
     expect(totalWords).toBe(300);
   });

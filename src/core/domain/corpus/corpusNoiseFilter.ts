@@ -60,6 +60,16 @@ const CORPUS_NOISE: RegExp[] = [
   /\bbezpłatn\w*\s+konsultacj/i,
   // Stock-photo credits sit directly under the lead image and get scraped with it.
   /\bshutterstock\b|\bgetty images\b|\bunsplash\b|\bistock\b|\badobe stock\b/i,
+  // Narration, not a claim about the topic — a competitor walking its reader through a
+  // scenario: "Zastanówmy się jak wygląda mechanizm…", "Sytuacja nie jest realna, ale
+  // przewidujemy…", "Kiedy kręgosłup się łamie, wiemy, że nie jest dobrze."
+  // Folded, not raw: `\bzastanówmy się\b` can never fire, because a trailing ASCII `\b`
+  // after `ę` has no word character to bound — the exact trap this file's header documents.
+  /\bzastanówmy się\b/i,
+  /\bprzewidujemy\b/i,
+  /\bzałóżmy\b/i,
+  /\bnie wiem\b/i,
+  /\bwiemy, że\b/i,
 ].map((re) => new RegExp(foldPolishLetters(re.source), re.flags));
 
 /**
@@ -92,6 +102,38 @@ const CORPUS_NOISE_RAW: RegExp[] = [
   // never matches and the Wednesday branch was dead — exactly the limitation this file's
   // header documents, reintroduced. "Środa od 9:00 do 21:00" was passing straight through.
   /(?<![\p{L}\p{N}_])(pon|wt|śr|czw|pt|sob|niedz)\p{L}*[\s\S]{0,40}?\d{1,2}:\d{2}\D{0,40}\d{1,2}:\d{2}/iu,
+
+  // ── Scrape artefacts that reached the writer as "facts to cover" ──
+  // Article 147 planned 75 claims; more than half were these. The writer is told to cover
+  // each one, so a reference list became "obowiazku, forward, forward s." in the body and
+  // a competitor's case study became a paragraph about a woman named Beata.
+  //
+  // A bibliography row, and the up-arrow Wikipedia puts before a backlink: ", Kontrola
+  // emocji u ofiar… „Innowacje Psychologiczne” (I), 2005 ." / "↑ Przemoc wobec dzieci".
+  // A claim is a statement, and a statement never opens with a comma.
+  /^\s*[,↑]/,
+  // Wikipedia footnote markers and section furniture, scraped inline: "…przemocy
+  // emocjonalnej [ 4 ] [ 5 ]", "Wpływ… [ edytuj | edytuj kod ]", "[online] [dostęp 2018-10-26]".
+  /\[\s*\d+\s*\]/,
+  /\[\s*(?:edytuj|online|dostęp)/i,
+  // The table of contents, scraped as one run-on line.
+  /^spis treści\b/i,
+  // A worked example from someone else's article — "Przykład nr 2: Ola ma 17 lat."
+  /^(?:przykład|case)\s*(?:nr\s*)?\d*\s*[:.]/i,
+  // Court-document furniture and result-page lead-ins, not findings: "Sygn. akt IV KK
+  // 100/20. WYROK. W IMIENIU RZECZYPOSPOLITEJ POLSKIEJ…", "Treść do orzeczenia w sprawie…".
+  /\bsygn\.\s*akt\b|\bw imieniu rzeczypospolitej\b/i,
+  /^(?:treść do orzeczenia|poznaj poglądy sądów)/i,
+  // Cut mid-sentence by the scraper, which splits on the period of an abbreviation:
+  // "…robi to z premedytacją i z wyrachowania, jak np." and "…, Szantaż emocjonalny , D."
+  // Only when it ENDS there — the same abbreviation mid-sentence is ordinary prose.
+  /(?:^|\s)(?:np|tj|itd|itp|ang|pol|ok|por|zob|red|wyd)\.\s*$/i,
+  /\s\p{Lu}\.\s*$/u,
+  // The same story told about a named person: "Beata od 6 miesięcy jest w związku z
+  // mężczyzną, który samotnie wychowuje syna." A name plus a duration is not enough on its
+  // own — "Ustawa ma 3 lata i nadal obowiązuje" has the same shape and is a real claim — so
+  // the sentence must also place that person in a private life for this to be biography.
+  /^\p{Lu}\p{Ll}+\s+(?:ma|miała|od)\s+\d+\s*(?:lat|miesi|rok|tygod)[\s\S]{0,120}?(?:związku|ciąży|mieszka|wychowuje|dziecko|dzieci|małżeństwie|mężczyzną|kobietą|chłopakiem|dziewczyną|partnerem|partnerką)/iu,
   /**
    * A word that starts lowercase and then shouts — "MAM eMOCje", a book cover rendered as
    * text in a sidebar list. Case-sensitive, so it stays out of the folded list above.

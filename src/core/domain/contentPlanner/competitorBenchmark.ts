@@ -47,7 +47,11 @@ export function synthesizeCompetitors(profiles: CompetitorProfile[]): Competitor
   const words = profiles.map((p) => p.wordCount);
   const avgWords = mean(words);
   const medWords = median(words);
-  const recommendedWords = round(Math.max(avgWords, medWords) * 1.05);
+  // Median, not max(avg, med): one 6000-word outlier drags the mean and the planner
+  // then prices every article against it — article 103 planned ~3300 words while the
+  // scorer (and Surfer's own guideline for the same keyword: 2200-2530) targets the
+  // median-shaped ~2200. The median IS what ranks typically looks like.
+  const recommendedWords = round(medWords * 1.05);
 
   const commonClaims = frequencyTopPerProfile(
     profiles, (p) => p.claims, Math.max(2, Math.ceil(n * 0.4)), 40,
@@ -105,8 +109,18 @@ export function buildCompetitorBenchmark(
   // that. Folded into the Math.max it also overrode SERPs that were measured perfectly
   // well but simply run short (median 920 on the keyword this was tuned against), which
   // is the SERP telling us what ranks, not a gap to paper over.
-  const measured = Math.max(synth.recommendedWords, synth.averageWords * 1.02);
-  const targetWords = Math.round(measured > 0 ? measured : BENCHMARK_WORDS_FLOOR);
+  // recommendedWords alone: the old Math.max with averageWords re-imported the outlier
+  // inflation the median-based recommendation exists to avoid.
+  // Ceiling as well as floor on the competitor median. An earlier 2000 cap was set against
+  // a hand-picked Surfer article (~1767 words); but Surfer's own generator (ai_article__generate)
+  // writes ~2657 words / 13 H2 for this same SERP, so the focused-length assumption undershot
+  // parity. Cap near that real output — h2FromWords then lifts targetH2 to ~12 to match.
+  const WORDS_CEIL = 2800;
+  const measured = synth.recommendedWords;
+  const targetWords = Math.min(
+    WORDS_CEIL,
+    Math.round(measured > 0 ? measured : BENCHMARK_WORDS_FLOOR),
+  );
   // A ceiling as well as a floor. `averageH2` counts every heading a competitor renders —
   // H3s, nav, footer — so a SERP of long pages asked for 22 top-level sections, and the
   // outline builder padded to match at ~100 words each. The reference tool reports the
@@ -134,10 +148,11 @@ export function buildCompetitorBenchmark(
   };
 }
 
-/** Adaptive H2 count from word budget. */
+/** Adaptive H2 count from word budget.
+ *
+ * ~1 H2 per 230 words, matching Surfer's generated article (1767 words → 8 H2) rather than
+ * the old step curve, which jumped to 11 for anything over 1400 words and gave a
+ * ~1900-word article eleven thin sections against Surfer's eight. */
 export function h2FromWords(words: number): number {
-  if (words <= 1400) return 7;
-  if (words <= 2800) return 11;
-  if (words <= 4800) return 16;
-  return 22;
+  return Math.min(22, Math.max(6, Math.round(words / 230)));
 }

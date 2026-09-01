@@ -1,4 +1,5 @@
 import db from '@/database/database';
+import { suggestedTermRange } from '@/src/core/domain/terms/termUtils';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { readArticleTerms } from '@/src/infrastructure/articles/articleTerms';
@@ -8,12 +9,12 @@ import { termsForOptimize } from '@/src/infrastructure/articles/mergeArticleTerm
 import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import { filterUsefulNlpTerms, isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
-import { countOccurrences, computeContentScore, type NlpTerm, type ScoreData } from '@/src/infrastructure/articles/contentScore';
+import { countOccurrences, computeContentScore, setAiScore, setSeoScore, type NlpTerm, type ScoreData } from '@/src/infrastructure/articles/contentScore';
 import { factsCoverageFactor } from '@/src/core/domain/aiScore/factors';
 import { scoreIntroduction } from '@/src/core/domain/aiScore/introductionFactors';
 import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
 import { liveCoverageItems } from '@/src/infrastructure/coverage/liveCoverage';
-import { filterNlpTermsForAnalysis } from '@/src/core/domain/relevance/topicRelevance';
+import { filterNlpTermsForAnalysis, dropNoisyTerms, dropSuggestionTailsWhenCorpusRich } from '@/src/core/domain/relevance/topicRelevance';
 import { needsCoverageRegrade, regradeCoverageSnapshot } from '@/src/infrastructure/coverage/regradeCoverageSnapshot';
 import { persistCoverageFeatureRun } from '@/src/infrastructure/coverage/persistCoverageFeatureRun';
 import { sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
@@ -37,13 +38,16 @@ function readerAudienceTerms(scoreData: ScoreData): string[] {
   return persona ? persona.split(/\s+/).filter(Boolean) : [];
 }
 
-function normalizeTerms(terms: NlpTerm[], plainText: string): NlpTerm[] {
-  return terms.map((t) => ({
-    ...t,
-    suggested_min: t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
-    suggested_max: t.suggested_max ?? Math.max(t.suggested_min ?? 1, Math.round((t.target_count || 1) * 1.5)),
-    current_count: countOccurrences(plainText, t.term),
-  }));
+function normalizeTerms(terms: NlpTerm[], plainText: string, wordsTarget?: number): NlpTerm[] {
+  return terms.map((t) => {
+    const range = suggestedTermRange(t, wordsTarget);
+    return {
+      ...t,
+      suggested_min: range.min,
+      suggested_max: range.max,
+      current_count: countOccurrences(plainText, t.term),
+    };
+  });
 }
 
 async function syncArticleTerms(articleId: number, terms: NlpTerm[], plainText: string): Promise<void> {
@@ -59,8 +63,8 @@ async function syncArticleTerms(articleId: number, terms: NlpTerm[], plainText: 
           'topic',
           'serp',
           countOccurrences(plainText, t.term),
-          t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
-          t.suggested_max ?? Math.max(1, Math.round((t.target_count || 1) * 1.5)),
+          t.suggested_min ?? suggestedTermRange(t).min,
+          t.suggested_max ?? suggestedTermRange(t).max,
           t.target_count || 1,
         ],
       },
@@ -147,7 +151,11 @@ export async function reconcilePostGenerateArticle(opts: {
     });
   }
 
-  terms = normalizeTerms(terms, plainText);
+  terms = normalizeTerms(
+    terms,
+    plainText,
+    incomingScore.words_target || existingScore.words_target || undefined,
+  );
 
   const scoreData: ScoreData = {
     ...existingScore,
@@ -172,8 +180,12 @@ export async function reconcilePostGenerateArticle(opts: {
       plainText,
       html: opts.html,
       keyword,
+      force: true,
     }).catch((err) => {
-      console.warn('[reconcile] coverage regrade failed:', err instanceof Error ? err.message : err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('[reconcile] coverage regrade failed:', message);
+      // Same observability contract as job-progress: the reason ships in score_data.
+      (scoreData as unknown as Record<string, unknown>)._regrade_error = message;
       return null;
     });
     if (regaded) {
@@ -194,7 +206,7 @@ export async function reconcilePostGenerateArticle(opts: {
     };
     aiInfoToCover = JSON.stringify(updatedSnap);
     coverageItems = [...liveItems];
-    scoreData.ai_score = overall;
+    setAiScore(scoreData, overall);
   }
 
   scoreData.ai_factors = [
@@ -219,7 +231,7 @@ export async function reconcilePostGenerateArticle(opts: {
     undefined,
     coverageItems,
   );
-  scoreData.seo_score = seoScore;
+  setSeoScore(scoreData, seoScore);
   scoreData._computed_score = computeOverallContentScore(seoScore, scoreData.ai_score ?? 0);
   scoreData._content_score = scoreData._computed_score;
   scoreData._heading_count = headingCount;
@@ -325,7 +337,16 @@ async function enrichTermsForArticle(opts: {
   const country = countryForLanguage(opts.language);
   const languageCode = (opts.language || 'pl').toLowerCase().split(/[-_]/)[0];
 
-  let terms = opts.terms;
+  // Filter BEFORE deciding whether the list needs topping up. Every filter below this
+  // point used to sit behind the early return, so a list that was merely long came
+  // through untouched: article 89 was graded on "szantaż emocjonalny empik", "…
+  // teściowej" and "foch szantaż emocjonalny" because 88 rows counted as "rich". A
+  // polluted list is not a rich one, and if cleaning it leaves the list thin, the
+  // enrichment below is exactly what should run.
+  let terms = dropSuggestionTailsWhenCorpusRich(
+    filterNlpTermsForAnalysis(filterUsefulNlpTerms(opts.terms), opts.keyword),
+    opts.keyword,
+  );
   if (!needsEnrichment(terms, opts.keyword)) return terms;
 
   terms = await enrichNlpTermsIfNeeded({
@@ -351,6 +372,8 @@ async function enrichTermsForArticle(opts: {
     if (corpusTerms.length) {
       terms = mergeNlpTerms(filterUsefulNlpTerms(terms), filterUsefulNlpTerms(corpusTerms));
       // Corpus scrape is the authoritative source — do not re-filter with seed-token rules.
+      // Noise still goes: topicality is not the same claim as "an article can use this".
+      terms = dropNoisyTerms(terms, opts.keyword);
       if (terms.length >= 12) return terms;
     }
   }
@@ -367,11 +390,26 @@ async function enrichTermsForArticle(opts: {
     terms = filterNlpTermsForAnalysis(filterUsefulNlpTerms(terms), opts.keyword);
   }
 
-  return terms;
+  // At the exit too, not just the entry: every enrichment branch above can re-add the
+  // same suggestion tails the entry filter removed — article 101 left with 85 rows and
+  // 36 of them at zero coverage, all re-imported after the entry pass.
+  return dropSuggestionTailsWhenCorpusRich(terms, opts.keyword);
 }
 
+/**
+ * Terms below which a guideline is not worth grading an article against.
+ *
+ * `isWeakTermList` treats 12 rows as acceptable, which is a floor for "catastrophically
+ * thin", not for "useful": article 94 finished with exactly 12 terms, covered all of
+ * them and scored 89 on SEO — a number that says nothing, because the reference tool
+ * lists 30-60. Raised only here, at the enrichment decision. `isWeakTermList` itself is
+ * also used to CHOOSE between two candidate lists, and moving its threshold would change
+ * which list wins rather than whether one gets topped up.
+ */
+const MIN_USEFUL_TERMS = 25;
+
 function needsEnrichment(terms: NlpTerm[], keyword: string): boolean {
-  return isWeakTermList(terms, keyword);
+  return terms.length < MIN_USEFUL_TERMS || isWeakTermList(terms, keyword);
 }
 
 /** Fix articles where generate overwrote deep-analysis terms with thin sidecar SERP splits. */

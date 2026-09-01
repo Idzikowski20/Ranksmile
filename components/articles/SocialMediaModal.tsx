@@ -64,13 +64,13 @@ const SocialMediaModal = ({ articleId, onClose }: Props) => {
       <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 64px)', overflow: 'hidden', fontFamily: F }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '20px 24px 12px' }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#18181b' }}>Create Post</h2>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Create Post</h2>
           <Button type="button" variant="transparent" size="sm" onClick={onClose} aria-label="Close" icon={<IcoX />} />
         </div>
 
         {step === 'intro' && (
           <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px 20px', fontSize: 14, lineHeight: '21px', color: '#3f3f47' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 24px 20px', fontSize: 14, lineHeight: '21px', color: 'var(--koala-text-secondary)' }}>
               <span>Promoting your blog content on social media helps it rank higher.</span>
               <span>We&apos;ll generate 3 post variants to promote this article, using proven templates and your AI model. Run it on a ready-to-publish article.</span>
             </div>
@@ -85,12 +85,12 @@ const SocialMediaModal = ({ articleId, onClose }: Props) => {
         {step === 'variants' && (
           <>
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 24px 16px', display: 'flex', flexDirection: 'column', gap: 14 }} className="styled-scrollbar">
-              <span style={{ fontSize: 14, color: '#52525c' }}>Pick the variant you like and publish it on social media.</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>Pick the variant you like and publish it on social media.</span>
 
               {/* Variant selector */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
-                <span style={{ fontSize: 14, color: '#3f3f47' }}>Variants:</span>
-                <div style={{ display: 'inline-flex', gap: 2, background: '#f4f4f5', borderRadius: 8, padding: 4 }}>
+                <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>Variants:</span>
+                <div style={{ display: 'inline-flex', gap: 2, background: 'var(--koala-bg-secondary)', borderRadius: 8, padding: 4 }}>
                   {[0, 1, 2].map((i) => {
                     const sel = selected === i;
                     const ready = !loading && variants[i] !== undefined;
@@ -112,9 +112,9 @@ const SocialMediaModal = ({ articleId, onClose }: Props) => {
               </div>
 
               {/* Content area */}
-              <div style={{ border: '1px solid #e4e4e7', borderRadius: 12, minHeight: 246, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ border: '1px solid var(--koala-border-primary)', borderRadius: 12, minHeight: 246, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {loading ? (
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#52525c', fontSize: 14, padding: 24 }}>Generating your content…</div>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--koala-text-secondary)', fontSize: 14, padding: 24 }}>Generating your content…</div>
                 ) : (
                   <div
                     ref={areaRef}

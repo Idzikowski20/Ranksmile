@@ -26,8 +26,16 @@ function llmSourceToInfo(src: LlmCoverageSource): InfoSource {
 }
 
 function sourcesFromItem(item: CoverageItem): InfoSource[] {
-  if (!item.llmSources?.length) return [];
-  return item.llmSources.map(llmSourceToInfo);
+  const engines = (item.llmSources ?? []).map(llmSourceToInfo);
+  // Source websites behind the fact — rendered as favicons with a hover-to-source link,
+  // next to the engine icons (Surfer's per-fact source row).
+  const web: InfoSource[] = (item.webSources ?? []).map((s) => ({
+    key: s.domain,
+    url: s.url,
+    domain: s.domain,
+    kind: 'web' as const,
+  }));
+  return [...engines, ...web];
 }
 
 export type InfoFact = {

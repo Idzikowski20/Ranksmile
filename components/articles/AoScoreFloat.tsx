@@ -42,7 +42,7 @@ const AoScoreFloat = ({ label, onDone }: Props) => {
         position: 'absolute',
         pointerEvents: 'none',
         zIndex: 60,
-        color: '#1AB25E',
+        color: 'var(--koala-status-success)',
         fontWeight: 600,
         fontFamily: 'var(--font-family-primary)',
         fontVariantNumeric: 'tabular-nums',

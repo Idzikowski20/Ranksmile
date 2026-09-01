@@ -48,3 +48,37 @@ export function buildGscUrlKeywordMap(rows: GscKeywordRow[]): Map<string, GscKey
 export function buildGscUrlKeywordStrings(rows: GscKeywordRow[]): Map<string, string> {
    return new Map([...buildGscUrlKeywordMap(rows).entries()].map(([k, v]) => [k, v.keyword]));
 }
+
+/** Full URL or path → pathname ("https://x.pl/blog/" → "/blog"). */
+export function toPath(url: string): string {
+   if (!url) return '';
+   try {
+      const p = (url.startsWith('http') ? new URL(url).pathname : url).replace(/\/+$/, '');
+      return p === '' ? '/' : p;
+   } catch { return url; }
+}
+
+export type GscPage = { path: string; url: string; keyword: string; clicks: number; impressions: number };
+
+/**
+ * GSC query rows → one row per page: clicks/impressions summed across queries and the
+ * best-performing query kept as the page's keyword. `exclude` drops already-tracked paths.
+ */
+export function aggregateGscPages(
+   items: Array<{ page?: string; keyword?: string; clicks?: number; impressions?: number }>,
+   exclude?: Set<string>,
+): GscPage[] {
+   const map = new Map<string, GscPage & { best: number }>();
+   items.forEach((it) => {
+      if (!it.page) return;
+      const path = toPath(it.page);
+      if (!path || exclude?.has(path)) return;
+      const e = map.get(path) || { path, url: it.page, keyword: it.keyword || '', clicks: 0, impressions: 0, best: -1 };
+      e.clicks += it.clicks || 0;
+      e.impressions += it.impressions || 0;
+      const score = (it.clicks || 0) * 10 + (it.impressions || 0);
+      if (score > e.best) { e.best = score; e.keyword = it.keyword || e.keyword; e.url = it.page; }
+      map.set(path, e);
+   });
+   return [...map.values()].map(({ best, ...page }) => page);
+}
