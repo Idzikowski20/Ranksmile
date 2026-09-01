@@ -6,7 +6,6 @@ import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 const font = 'var(--font-family-primary)';
 const MCP_URL = 'https://mcp.ranksmile.pl/mcp';
-const MCP_PROMPT = `Connect to ${MCP_URL}`;
 const DOCS_URL = 'https://ranksmile.pl';
 
 type Tab = 'mcp' | 'api';
@@ -83,7 +82,7 @@ const ZapierMark = () => (
 );
 
 const GoogleMark = () => (
-  <svg width="20" height="20" viewBox="0 0 186.59 298.85" fill="none" aria-hidden="true">
+  <svg width="20" height="20" viewBox="-56.13 0 298.85 298.85" fill="none" aria-hidden="true">
     <path d="M92.3,0c-14.97,0-26.19,11.22-26.19,26.19,0,4.99,1.25,9.98,4.99,14.97l11.22-11.22v-3.74c0-6.24,4.99-11.22,11.22-11.22s11.22,4.99,11.22,11.22-4.99,11.22-11.22,11.22h-3.74l-11.22,9.98c12.47,7.48,28.7,4.99,36.17-7.48,7.48-12.47,4.99-28.7-7.48-36.17C103.53,1.27,98.54.02,92.3.02v-.02Z" fill="#AECBFA" />
     <path d="M82.32,76.09c0-8.73-2.49-17.46-7.48-24.94l-14.97,14.97c1.25,3.74,2.49,6.24,2.49,9.98,0,6.24-2.49,11.22-6.24,14.97l7.48,19.97c12.47-7.48,18.71-21.2,18.71-34.92l.02-.03Z" fill="#5E97F6" />
     <path d="M42.4,97.29c-11.22,0-21.2-8.73-21.2-19.97s8.73-21.2,19.97-21.2c3.74,0,8.73,1.25,12.47,3.74l14.97-13.72c-8.73-7.48-17.46-11.22-27.44-11.22C18.71,34.92,0,53.64,0,76.09s17.46,41.17,41.17,41.17c2.49,0,6.24,0,8.73-1.25l-7.48-18.71h-.02Z" fill="#5E97F6" />
@@ -113,10 +112,10 @@ const cardStyle: React.CSSProperties = {
 };
 
 const McpTab = () => {
-  const copyPrompt = async () => {
+  const copyUrl = async () => {
     try {
-      await navigator.clipboard.writeText(MCP_PROMPT);
-      toast.success('Skopiowano do schowka');
+      await navigator.clipboard.writeText(MCP_URL);
+      toast.success('Skopiowano adres do schowka');
     } catch {
       toast.error('Nie udało się skopiować');
     }
@@ -154,19 +153,19 @@ const McpTab = () => {
               color: 'var(--koala-text-primary)',
             }}
           >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{MCP_PROMPT}</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{MCP_URL}</span>
           </div>
           <Button
             type="button"
             variant="secondary"
             size="sm"
-            onClick={copyPrompt}
+            onClick={copyUrl}
             aria-label="Skopiuj adres MCP"
             icon={<Icon name="Copy" size={18} weight="regular" />}
           />
         </div>
         <div style={{ fontSize: 14, color: 'var(--koala-text-tertiary)' }}>
-          Skopiuj ten prompt i przekaż go swojemu agentowi albo połącz się ręcznie, używając tego adresu URL.
+          Skopiuj ten adres i wklej go w konfiguracji MCP swojego agenta.
         </div>
       </div>
     </div>
