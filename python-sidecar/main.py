@@ -13,6 +13,10 @@ from dotenv import load_dotenv
 # was removed from git — without this the scheduler sends an empty x-internal-token.
 _ROOT = Path(__file__).resolve().parent.parent
 for _env_file in (
+    # .env.local FIRST — it is where the sidecar's own secrets actually live
+    # (.gitignore keeps *.local out of git); the loader listing only ".env" meant
+    # a fully populated python-sidecar/.env.local was silently ignored.
+    Path(__file__).resolve().parent / ".env.local",
     Path(__file__).resolve().parent / ".env",
     _ROOT / ".env.local",
     _ROOT / ".env",
@@ -129,7 +133,9 @@ class GenerateRequest(BaseModel):
     external_links: bool = True
     review_outline: bool = False
     brand_knowledge: str = ""   # shared Brand Knowledge (context for the model)
+    brand_name: str = ""        # the company name, verbatim — powers the closing-CTA guarantee
     voice_tone: str = ""        # selected Custom Voice reference text — drives tone/style
+    template_reference: str = ""  # selected Content Template reference — drives structure/format
     # Planner First — immutable Article Execution Plan (Write Engine executes only).
     execution_plan: dict | None = None
     compiled_write_plan: dict | None = None
@@ -215,7 +221,9 @@ async def _generate_article(req: GenerateRequest, on_status=None):
         instructions=req.instructions,
         external_links=req.external_links,
         brand_knowledge=req.brand_knowledge,
+        brand_name=req.brand_name,
         voice_tone=req.voice_tone,
+        template_reference=req.template_reference,
         execution_plan=req.execution_plan,
         compiled_write_plan=req.compiled_write_plan,
         existing_articles=domain_articles,
@@ -267,12 +275,18 @@ async def _generate_article(req: GenerateRequest, on_status=None):
     print(f"[generate] Generating meta...")
     meta = generate_meta(article_html, req.keyword, req.language)
 
-    # 5. Internal links (skip when disabled in the wizard)
+    # 5. Internal links (skip when disabled in the wizard). Suggestions are INJECTED
+    # into the body deterministically — the writer's per-paragraph quota alone kept
+    # shipping 2 links against the reference's ~10.
     links = await suggest_internal_links(
         article_html=article_html,
         site_url=req.url,
         existing_articles=domain_articles,
     ) if req.internal_links else []
+    if links:
+        from pipeline.internal_links import inject_suggestions
+        article_html, injected = inject_suggestions(article_html, links)
+        print(f"[generate] Injected {injected} internal links from {len(links)} suggestions")
 
     import datetime as dt
 
@@ -449,7 +463,7 @@ async def extract_terms_from_urls(body: dict):
         return {"terms": []}
 
     deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
-    terms = await extract_semantic_terms(keyword, texts, deepseek_key)
+    terms = await extract_semantic_terms(keyword, texts, deepseek_key, body.get("language", "pl"))
     if len(terms) < 12:
         tfidf = extract_nlp_terms(texts, keyword)
         seen = {t["term"] for t in terms}
@@ -458,10 +472,21 @@ async def extract_terms_from_urls(body: dict):
                 terms.append(t)
                 seen.add(t["term"])
 
-    from analyzers.term_lemmas import attach_lemma_regexps
+    from analyzers.term_lemmas import attach_lemma_regexps, recalibrate_ranges_with_lemmas
     terms = attach_lemma_regexps(terms, texts, body.get("language", "pl"))
+    terms = recalibrate_ranges_with_lemmas(terms, texts)
     print(f"[extract-terms-from-urls] Extracted {len(terms)} terms")
     return {"terms": terms[:80]}
+
+
+@app.post("/research-facts")
+async def research_facts_endpoint(body: dict):
+    """Authority facts with sources for the brief's fact sheet (Surfer Facts-style)."""
+    from analyzers.serp_analyzer import research_authority_facts
+    keyword = (body.get("keyword") or "").strip()
+    if not keyword:
+        raise HTTPException(status_code=400, detail="keyword is required")
+    return await research_authority_facts(keyword, body.get("language", "pl"))
 
 
 @app.post("/competitor-outlines")
