@@ -5,8 +5,8 @@ import { semantic } from '../koala/tokens/semantic';
 import { Icon } from '../koala/icons';
 
 /**
- * Progress card — the landing page's brand-setup widget (components/landing/sections/Solution.tsx)
- * reused for live pipelines: a stacked list where each row carries its own state marker.
+ * Progress card — a stacked list where each row carries its own state marker. Used for live
+ * pipeline/analysis panels in components/articles/ (e.g. AnalysisProgressPanel).
  */
 
 export type ProgressState = 'pending' | 'active' | 'done' | 'error';
@@ -97,7 +97,7 @@ const Dashed = styled.span`
   opacity: 0.7;
 `;
 
-const Marker = ({ state }: { state: ProgressState }) => {
+const Marker = ({ state, silent }: { state: ProgressState; silent: boolean }) => {
   const cls = `progress-row-marker progress-row-marker--${state}`;
   if (state === 'done') {
     return <Icon name="CheckCircle" size={20} weight="fill" color="var(--koala-status-success)" className={cls} />;
@@ -105,10 +105,15 @@ const Marker = ({ state }: { state: ProgressState }) => {
   if (state === 'error') {
     return <Icon name="XCircle" size={20} weight="fill" color="var(--koala-status-danger)" className={cls} />;
   }
-  // Presentation-only: the row's own accessible name (ariaLabel) carries the state, and
-  // panels that use this card announce the active step themselves — a status role here
-  // double-announced "In progress" alongside the panel's own live summary.
-  if (state === 'active') return <Ring className={cls} aria-hidden="true" />;
+  // When the row already carries the state in its own accessible name (ariaLabel), the marker
+  // is presentation-only — otherwise a status role here double-announced alongside the panel's
+  // live summary. But when the row has NO ariaLabel, this marker is the ONLY thing that voices
+  // "in progress", so it keeps a status role in that case.
+  if (state === 'active') {
+    return silent
+      ? <Ring className={cls} aria-hidden="true" />
+      : <Ring className={cls} role="status" aria-label="In progress" />;
+  }
   return <Dashed className={cls} aria-hidden="true" />;
 };
 
@@ -154,7 +159,7 @@ const ProgressCard = ({ title, icon, trailing, rows, headingLevel }: {
               {row.label}
               {row.detail ? <Detail>{row.detail}</Detail> : null}
             </Label>
-            <Marker state={row.state} />
+            <Marker state={row.state} silent={Boolean(row.ariaLabel)} />
           </Row>
         ))}
       </Rows>

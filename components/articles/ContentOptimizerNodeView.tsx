@@ -2,6 +2,7 @@ import React from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
 import { optimizeStore } from './optimizeStore';
+import { resolveNodeOp } from './resolveNodeOp';
 import { sanitizeArticleHtml } from '@/src/infrastructure/http/sanitizeHtml';
 import { WHOLE_ARTICLE_ID } from '@/src/infrastructure/ao/optimizeWholeArticle';
 import { renderStructuredDiffHtml } from '@/src/infrastructure/ao/optimizeWordDiff';
@@ -32,10 +33,9 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
     const pos = typeof getPos === 'function' ? getPos() : null;
     if (pos == null) return;
     const range = { from: pos, to: pos + node.nodeSize };
-    // An empty chosen side is a real outcome, not a no-op: accepting a section deletion
-    // (newHtml empty) or undoing a section addition (oldHtml empty) both mean "remove this
-    // node". Deleting the range does that; returning early left the suggestion node stranded.
-    if (html) editor.chain().insertContentAt(range, html).run();
+    // An empty chosen side removes the node (accept a deletion / undo an addition); any HTML
+    // replaces it. See resolveNodeOp (unit-tested) — returning early stranded the node.
+    if (resolveNodeOp(html) === 'insert') editor.chain().insertContentAt(range, html).run();
     else editor.chain().deleteRange(range).run();
     optimizeStore.notifyDocChange();
   };
