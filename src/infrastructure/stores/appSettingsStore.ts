@@ -2,11 +2,6 @@ import db from '@/database/database';
 
 let checked = false;
 
-function ignoreExisting(label: string, e: unknown): void {
-   const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-   if (!/exist|duplicate|already/i.test(m)) console.warn(`[app-settings] ${label} failed:`, m);
-}
-
 /**
  * Single-row app settings blob. Replaces the local file `data/settings.json`
  * (SMTP/notification + GSC service-account creds) so settings persist on a
@@ -22,7 +17,12 @@ export async function ensureAppSettingsTable(): Promise<void> {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
          )
       `);
-   } catch (e) { ignoreExisting('create table', e); }
+   } catch (e) {
+      const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
+      // "already exists" still means the table is there; anything else (transient
+      // outage) must NOT mark the table ready — rethrow so the next call retries.
+      if (!/exist|duplicate|already/i.test(m)) throw e;
+   }
    checked = true;
 }
 

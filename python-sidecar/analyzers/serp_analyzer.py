@@ -48,7 +48,37 @@ def domain_from_url(url: str) -> str:
         return ""
 
 
-def _competitors_from_results(serp_results: list[dict], limit: int = 10) -> list[dict]:
+# Reference sites, not competitors. A one-word definitional keyword ("szantaż") returns
+# dictionaries, translators and music databases — benchmarking an article against them
+# poisons everything downstream: junk NLP terms (cookie banners, URL fragments), word
+# targets from 400-word dictionary stubs, and planner sections about etymology and
+# pronunciation. These domains can never be the article's real competition.
+_REFERENCE_DOMAINS = (
+    "dictionary.cambridge.org", "sjp.pwn.pl", "sjp.pl", "wsjp.pl", "pl.wiktionary.org",
+    "wiktionary.org", "bab.la", "glosbe.com", "diki.pl", "translate.google.",
+    "ling.pl", "dict.cc", "reverso.net", "linguee.", "pons.com", "collinsdictionary.com",
+    "merriam-webster.com", "dictionary.com", "thefreedictionary.com",
+    "discogs.com", "genius.com", "tekstowo.pl", "spotify.com", "music.apple.com",
+    "youtube.com", "youtu.be", "soundcloud.com", "last.fm", "rateyourmusic.com",
+)
+
+
+def _is_reference_domain(url: str) -> bool:
+    host = domain_from_url(url).lower()
+    return any(host == d or host.endswith("." + d) or d in host for d in _REFERENCE_DOMAINS)
+
+
+def _filter_reference_results(serp_results: list[dict]) -> list[dict]:
+    """Drop dictionary/translator/music results, unless that starves the benchmark
+    (< 3 left) — a definitional SERP with nothing else is still the only data there is."""
+    kept = [r for r in serp_results if not _is_reference_domain(r.get("link", ""))]
+    dropped = len(serp_results) - len(kept)
+    if dropped:
+        print(f"[serp_analyzer] dropped {dropped} reference-site results (dictionary/music)")
+    return kept if len(kept) >= 3 else serp_results
+
+
+def _competitors_from_results(serp_results: list[dict], limit: int = 20) -> list[dict]:
     """SERP URLs/titles/snippets — always returned even when page scrape fails."""
     return [
         {
@@ -92,7 +122,7 @@ def _serp_snippet_texts(serp_results: list[dict]) -> list[str]:
 async def analyze_serp(
     keyword: str,
     language: str = "pl",
-    num_results: int = 10,
+    num_results: int = 20,
     include_texts: bool = False,
     on_page=None,
 ) -> dict:
@@ -103,6 +133,7 @@ async def analyze_serp(
         return {**_placeholder_score_data(keyword, language), "competitors": [], "paa_questions": []}
 
     serp_results, paa_questions = await _fetch_serp_results(keyword, language, num_results, serper_key)
+    serp_results = _filter_reference_results(serp_results)
     competitors = _competitors_from_results(serp_results)
     if not serp_results:
         print(f"[serp_analyzer] No SERP results for {keyword!r}")
@@ -133,13 +164,26 @@ async def analyze_serp(
         serp_texts = serp_texts + snippet_texts
 
     deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
-    nlp_terms = await extract_semantic_terms(keyword, serp_texts, deepseek_key) if serp_texts else []
+    nlp_terms = await extract_semantic_terms(keyword, serp_texts, deepseek_key, language) if serp_texts else []
     if len(nlp_terms) < 3:
         existing = {t["term"] for t in nlp_terms}
         nlp_terms = nlp_terms + [t for t in _keyword_seed_terms(keyword) if t["term"] not in existing]
     # After the fallback merge, so seed terms get their inflections too.
-    from analyzers.term_lemmas import attach_lemma_regexps
+    from analyzers.term_lemmas import attach_lemma_regexps, recalibrate_ranges_with_lemmas
     nlp_terms = attach_lemma_regexps(nlp_terms, serp_texts, language)
+    # Ranges re-derived with the lemma patterns the scorer uses — see the helper's doc.
+    nlp_terms = recalibrate_ranges_with_lemmas(nlp_terms, serp_texts)
+    # Surfer separates "terms for headings": a term the cohort itself puts into H2/H3
+    # belongs in the article's structure, not only its body.
+    heading_text = " ".join(
+        tag.get_text(" ", strip=True).lower()
+        for soup in (soups or [])
+        for tag in soup.select("h2,h3")
+    )
+    if heading_text:
+        for t in nlp_terms:
+            if t.get("term") and t["term"].lower() in heading_text:
+                t["in_headings"] = True
     targets = _compute_targets(serp_texts, soups if soups else None)
 
     result = {
@@ -250,12 +294,12 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
     }
     negatives = negatives_by_lang.get(language, negatives_by_lang["en"])
 
-    async def _serper_search(query: str) -> dict:
+    async def _serper_search(query: str, page: int = 1) -> dict:
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(
                 "https://google.serper.dev/search",
                 headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
-                json={"q": query, "hl": language, "gl": gl, "num": num + 5},
+                json={"q": query, "hl": language, "gl": gl, "num": num + 5, "page": page},
             )
             if response.status_code >= 400:
                 print(
@@ -272,6 +316,7 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
         return [], []
 
     organic = data.get("organic") or []
+    used_query = f"{keyword} {negatives}"
     if not organic:
         # Negatives sometimes over-filter; retry the bare keyword once.
         print(
@@ -281,9 +326,33 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
         try:
             data = await _serper_search(keyword)
             organic = data.get("organic") or []
+            used_query = keyword
         except Exception as exc:
             print(f"[serp_analyzer] serper.dev retry error: {exc}")
             return [], []
+
+    # Deep cohort: Surfer benchmarks against ~19 competitors, but Google returns only
+    # ~8-10 organic per page for many keywords, so one page yielded a thinner, easier
+    # term set than Surfer's. Pull pages 2-3 as well (deduped by link) when a deep sample
+    # was asked for — page 1 (~9) + 2 (~10) + 3 gets the raw pool to ~19 like Surfer, and
+    # bands (serp_usage) + word/heading targets come from that same Surfer-sized cohort.
+    if num > 10:
+        seen_links = {i.get("link") for i in organic}
+        for page in (2, 3):
+            try:
+                extra = await _serper_search(used_query, page=page)
+            except Exception as exc:
+                print(f"[serp_analyzer] page-{page} fetch skipped: {exc}")
+                continue
+            page_organic = extra.get("organic") or []
+            if not page_organic:
+                break  # no deeper results — stop paging
+            for it in page_organic:
+                if it.get("link") and it["link"] not in seen_links:
+                    seen_links.add(it["link"])
+                    organic.append(it)
+            if len(organic) >= num:
+                break  # enough for the requested cohort
 
     blocked_domains = {
         "allegro.pl", "olx.pl", "amazon.com", "amazon.de", "ebay.com", "etsy.com",
@@ -377,17 +446,32 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
     else:
         heading_counts = [max(5, wc // 150) for wc in word_counts]
         paragraph_counts = [max(5, wc // 120) for wc in word_counts]
+    image_counts = [len(soup.select("img")) for soup in soups] if soups else []
 
+    # Floors: a SERP of dictionary stubs and thin listicles must not cap a real article.
+    # An article longer than everything that ranks is not a defect — never grade words
+    # against a max lower than what a competent guide needs.
+    # ponytail: fixed floors; derive from content type if service pages ever need less.
+    avg_words = int(sum(word_counts) / len(word_counts))
     return {
         "words_min": int(min(word_counts)),
-        "words_max": int(max(word_counts)),
-        "words_target": int(sum(word_counts) / len(word_counts)),
+        "words_max": max(int(max(word_counts)), 1200),
+        "words_target": max(avg_words, 800),
         "headings_min": max(3, min(heading_counts)),
-        "headings_max": max(8, max(heading_counts)),
-        "headings_target": int(sum(heading_counts) / len(heading_counts)),
+        # Floored like words: a reference article carries 12-15 H2s, and a cohort of
+        # short pages must not turn a well-structured article into a penalty.
+        "headings_max": max(12, max(heading_counts)),
+        "headings_target": max(8, int(sum(heading_counts) / len(heading_counts))),
         "paragraphs_min": max(5, min(paragraph_counts)),
         "paragraphs_max": max(20, max(paragraph_counts)),
         "paragraphs_target": int(sum(paragraph_counts) / len(paragraph_counts)),
+        # Image frequency from the cohort (Surfer measures it; zero-image cohorts emit
+        # target 0 and the scorer skips the slot).
+        **({
+            "images_min": min(image_counts),
+            "images_max": max(3, max(image_counts)),
+            "images_target": int(round(sum(image_counts) / len(image_counts))),
+        } if image_counts else {}),
     }
 
 
@@ -456,6 +540,9 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
 
     # Fetch more results than needed so we can skip thin/error pages
     results, _ = await _fetch_serp_results(keyword, language, num * 2, serper_key)
+    # Same reference filter as analyze_serp: the outlines feed the Competitors panel and
+    # the planner, and dictionary/translator pages poisoned both for one-word keywords.
+    results = _filter_reference_results(results)
 
     async def _fetch_one(result: dict, serp_position: int):
         url = result["link"]
@@ -513,3 +600,234 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
     # Filter thin/failed pages, keep top `num` by original SERP order
     valid = [o for o in all_outlines if o is not None]
     return valid[:num]
+
+
+# ── Authority fact research (Surfer "Facts"-style) ──────────────────────────
+# Real cases and statistics with their sources, found on the open web — the fact
+# sheet pairs each with [źródło: …] so the writer can cite a named case instead of
+# writing an article with zero evidence. Deterministic: Serper snippets only, no LLM.
+
+_AUTHORITY_HOSTS = (
+    ".gov.pl", "policja.gov.pl", "prokuratura", "sejm.gov.pl", "uokik.gov.pl",
+    "nask.pl", "cert.pl", "rpo.gov.pl", "stat.gov.pl", ".edu.pl", "europa.eu",
+)
+
+
+def _authority_confidence(url: str) -> float:
+    host = domain_from_url(url).lower()
+    return 0.85 if any(h in host for h in _AUTHORITY_HOSTS) else 0.6
+
+
+async def _ai_surface_facts(keyword: str, language: str, serper_key: str) -> tuple[list[str], list[dict]]:
+    """
+    Facts from Google's own answer surfaces — the closest thing to Surfer's AI-engine
+    facts that the available keys reach.
+
+    Surfer harvests facts from Google AI Overviews / AI Mode, Gemini, OpenAI and
+    Perplexity. We have Serper (Google) and OpenRouter, but no OpenAI/Perplexity keys,
+    so full four-engine parity is out of reach. What we CAN read is Google's featured
+    answer, knowledge panel and People-Also-Ask answers — Google's surfaced facts,
+    already sourced, no model hallucination. Honest partial coverage.
+    """
+    gl = {"pl": "pl", "en": "us", "de": "de", "fr": "fr", "es": "es"}.get(language, "us")
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(
+                "https://google.serper.dev/search",
+                headers={"X-API-KEY": serper_key, "Content-Type": "application/json"},
+                json={"q": keyword, "hl": language, "gl": gl},
+            )
+        if resp.status_code != 200:
+            return [], []
+        data = resp.json()
+    except Exception as exc:
+        print(f"[fact-research] AI-surface fetch failed: {exc}")
+        return [], []
+
+    claims: list[str] = []
+    sources: list[dict] = []
+    seen: set[str] = set()
+
+    def _add(text: str, url: str, label: str) -> None:
+        text = " ".join(str(text or "").split())
+        if len(text) < 40 or text.lower() in seen:
+            return
+        seen.add(text.lower())
+        claims.append(text[:240])
+        sources.append({"url": url or "", "source_urls": [url] if url else [], "label": (label or "Google")[:80], "confidence": 0.8, "cited_by": ["google"]})
+
+    box = data.get("answerBox") or {}
+    _add(box.get("answer") or box.get("snippet"), box.get("link", ""), box.get("title") or "Google answer")
+    kg = data.get("knowledgeGraph") or {}
+    _add(kg.get("description"), kg.get("descriptionLink", ""), kg.get("title") or "Google knowledge panel")
+    for paa in (data.get("peopleAlsoAsk") or [])[:6]:
+        _add(paa.get("snippet"), paa.get("link", ""), paa.get("question") or "People also ask")
+
+    if claims:
+        print(f"[fact-research] {keyword!r}: {len(claims)} facts from Google answer surfaces")
+    return claims, sources
+
+
+# Surfer harvests facts each AI engine cites when answering the query. OpenRouter reaches
+# the same engines through one key: perplexity (native web+citations) and gpt-4o-mini /
+# gemini-flash with the `:online` web-search plugin. Each returns `annotations` with the
+# source URLs the model cited — the same signal as Surfer's `cited_by`.
+_AI_ENGINES = (
+    ("perplexity", "perplexity/sonar"),
+    ("openai", "openai/gpt-4o-mini:online"),
+    ("gemini", "google/gemini-2.5-flash:online"),
+)
+
+
+async def _ai_engine_facts(keyword: str, language: str, openrouter_key: str) -> tuple[list[str], list[dict]]:
+    """Facts perplexity / openai / gemini cite for the query, each tagged with its engine
+    (Surfer `cited_by` parity). One OpenRouter key; models do the web search themselves."""
+    if not openrouter_key or not keyword.strip():
+        return [], []
+    lang_hint = "Odpowiedz po polsku." if language.startswith("pl") else ""
+    prompt = (
+        f'Wypisz 6 konkretnych, sprawdzalnych faktów o temacie: "{keyword}". '
+        f"Każdy fakt w osobnej linii — jedno zdanie, z liczbą, definicją lub konkretem. "
+        f"Bez wstępu i bez numeracji. {lang_hint}"
+    )
+
+    async def _one(engine: str, model: str) -> tuple[list[str], list[dict]]:
+        try:
+            async with httpx.AsyncClient(timeout=45) as client:
+                resp = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {openrouter_key}", "Content-Type": "application/json"},
+                    json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 700},
+                )
+            if resp.status_code != 200:
+                print(f"[fact-research] {engine} HTTP {resp.status_code}: {resp.text[:120]}")
+                return [], []
+            message = resp.json()["choices"][0]["message"]
+        except Exception as exc:
+            print(f"[fact-research] {engine} failed: {exc}")
+            return [], []
+        content = message.get("content") or ""
+        urls = [
+            a.get("url_citation", {}).get("url")
+            for a in (message.get("annotations") or [])
+            if isinstance(a, dict) and a.get("url_citation", {}).get("url")
+        ]
+        claims: list[str] = []
+        sources: list[dict] = []
+        for line in content.split("\n"):
+            stripped = re.sub(r"^[\s\-\*\d\.\)\]]+", "", line)
+            # `[n]` markers map a sentence to the engine's nth citation (perplexity/OpenRouter
+            # style). Collect those specific sources before stripping the markers off the text.
+            marker_urls = [
+                urls[int(n) - 1]
+                for n in re.findall(r"\[(\d+)\]", stripped)
+                if 0 < int(n) <= len(urls)
+            ]
+            text = re.sub(r"\[\d+\]", "", stripped).strip()
+            if len(text) < 40:
+                continue
+            # Fall back to the response's cited URLs when a sentence carries no explicit marker.
+            fact_urls = list(dict.fromkeys(marker_urls or urls))
+            claims.append(text[:240])
+            sources.append({
+                "url": fact_urls[0] if fact_urls else "",
+                "source_urls": fact_urls[:6],
+                "label": engine,
+                "confidence": 0.85,
+                "cited_by": [engine],
+            })
+        return claims, sources
+
+    results = await asyncio.gather(*[_one(e, m) for e, m in _AI_ENGINES])
+    claims: list[str] = []
+    sources: list[dict] = []
+    seen: dict[str, dict] = {}
+    for engine_claims, engine_sources in results:
+        for claim, src in zip(engine_claims, engine_sources):
+            key = " ".join(claim.lower().split())[:120]
+            if key in seen:
+                # Same fact from another engine — merge attribution (engines + source URLs)
+                # instead of duplicating, exactly as Surfer stacks icons on one fact.
+                prev = seen[key]
+                for e in src["cited_by"]:
+                    if e not in prev["cited_by"]:
+                        prev["cited_by"].append(e)
+                merged = list(dict.fromkeys(prev.get("source_urls", []) + src.get("source_urls", [])))
+                prev["source_urls"] = merged[:8]
+                if not prev.get("url") and merged:
+                    prev["url"] = merged[0]
+                continue
+            seen[key] = src
+            claims.append(claim)
+            sources.append(src)
+    if claims:
+        by = {}
+        for s in sources:
+            for e in s["cited_by"]:
+                by[e] = by.get(e, 0) + 1
+        print(f"[fact-research] {keyword!r}: {len(claims)} AI-engine facts {by}")
+    return claims, sources
+
+
+async def research_authority_facts(keyword: str, language: str = "pl") -> dict:
+    """AI-engine facts (perplexity/openai/gemini) + Google surfaces + focused SERP searches."""
+    serper_key = os.getenv("SERPER_API_KEY", "")
+    if not serper_key or not keyword.strip():
+        return {"claims": [], "sources": []}
+
+    # Real 4-engine harvest: the AI engines via OpenRouter, then Google's own answer surfaces.
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    engine_claims, engine_sources = await _ai_engine_facts(keyword, language, openrouter_key)
+    surface_claims, surface_sources = await _ai_surface_facts(keyword, language, serper_key)
+    ai_claims = engine_claims + surface_claims
+    ai_sources = engine_sources + surface_sources
+
+    # Three profiles, matching the reference guideline's fact mix: legal cases,
+    # statistics, and the psychology declaratives ("skutki", "mechanizmy") that made up
+    # most of the 14 reference facts our harvest was missing.
+    suffixes = (
+        [
+            "policja OR prokuratura OR sąd OR wyrok",
+            "statystyki OR raport OR badania",
+            "skutki OR objawy OR mechanizmy OR przyczyny",
+        ]
+        if language.startswith("pl")
+        else [
+            "police OR court OR case",
+            "statistics OR report OR study",
+            "effects OR symptoms OR mechanisms OR causes",
+        ]
+    )
+    claims: list[str] = list(ai_claims)
+    sources: list[dict] = list(ai_sources)
+    seen_urls: set[str] = set()
+    for suffix in suffixes:
+        try:
+            results, _ = await _fetch_serp_results(f"{keyword} {suffix}", language, 6, serper_key)
+        except Exception as exc:
+            print(f"[fact-research] search failed: {exc}")
+            continue
+        for row in results:
+            url = row.get("link") or ""
+            snippet = (row.get("snippet") or "").replace(chr(10), " ").strip()
+            if not url or url in seen_urls or len(snippet) < 60:
+                continue
+            authority = any(h in domain_from_url(url).lower() for h in _AUTHORITY_HOSTS)
+            has_numbers = bool(re.search(r"\d", snippet))
+            if not authority and not has_numbers:
+                continue
+            seen_urls.add(url)
+            claims.append(snippet[:220])
+            sources.append({
+                "url": url,
+                "source_urls": [url],
+                "label": row.get("title", "")[:80] or domain_from_url(url),
+                "confidence": _authority_confidence(url),
+                "cited_by": ["serp"],
+            })
+            if len(claims) >= 18:
+                break
+        if len(claims) >= 18:
+            break
+    print(f"[fact-research] {keyword!r}: {len(claims)} sourced facts")
+    return {"claims": claims, "sources": sources}

@@ -180,3 +180,68 @@ def enforce_internal_links(html: str, allowed: set[str], site_url: str) -> tuple
     # Polish prose as "ofert&eogon;" — and because the untouched path returns `html`
     # verbatim, it only ever corrupted articles that actually had a link removed.
     return soup.decode(formatter="minimal"), removed
+
+
+def inject_suggestions(html: str, suggestions: list[dict], cap: int = 16) -> tuple[str, int]:
+    """Deterministically link suggestion anchors in the article body.
+
+    The writer's per-paragraph quota is a request, not a guarantee — articles kept
+    shipping with 2 internal links against the reference's ~10. Suggestions already
+    name anchors that appear VERBATIM in the text, so linking them is mechanical:
+    first plain-text occurrence, outside existing links and headings, one per target
+    URL, capped. Returns (html, inserted_count)."""
+    from bs4 import BeautifulSoup, NavigableString
+
+    if not suggestions:
+        return html, 0
+    soup = BeautifulSoup(html, "html.parser")
+    already = {a.get("href", "") for a in soup.find_all("a")}
+    inserted = 0
+    for sug in suggestions:
+        if inserted >= cap:
+            break
+        anchor = (sug.get("anchorText") or "").strip()
+        url = (sug.get("url") or "").strip()
+        if not anchor or not url or url in already:
+            continue
+        # The model promises the anchor appears verbatim and routinely inflects it or
+        # invents a paraphrase: a real run injected 0 of 2 suggestions. Fall back to the
+        # longest word-run of the anchor that IS present, so a near-miss still links.
+        candidates = [anchor]
+        words = anchor.split()
+        for take in range(len(words) - 1, 1, -1):
+            for start in range(0, len(words) - take + 1):
+                candidates.append(" ".join(words[start:start + take]))
+
+        target = None
+        matched = ""
+        for ci, candidate in enumerate(candidates):
+            # The length floor guards the SHORTENED fallbacks only — a genuine one-word
+            # anchor ("sextortion") is the model's own suggestion and stays eligible.
+            if ci > 0 and len(candidate) < 12:
+                break
+            for node in soup.find_all(string=True):
+                if not isinstance(node, NavigableString):
+                    continue
+                parent_names = {p.name for p in node.parents if getattr(p, "name", None)}
+                if parent_names & {"a", "h1", "h2", "h3", "h4", "script", "style"}:
+                    continue
+                if candidate.lower() in str(node).lower():
+                    target = node
+                    matched = candidate
+                    break
+            if target is not None:
+                break
+        if target is None:
+            continue
+        text = str(target)
+        idx = text.lower().index(matched.lower())
+        anchor = matched
+        link = soup.new_tag("a", href=url)
+        link.string = text[idx:idx + len(anchor)]
+        target.replace_with(
+            NavigableString(text[:idx]), link, NavigableString(text[idx + len(anchor):]),
+        )
+        already.add(url)
+        inserted += 1
+    return str(soup), inserted

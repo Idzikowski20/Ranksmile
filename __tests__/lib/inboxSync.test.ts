@@ -230,11 +230,20 @@ describe('syncOptimizationInbox', () => {
   });
 
   it('acquires org advisory lock during sync', async () => {
-    store.snapshot = [{
-      domain_id: 42, workspace_id: WS, domain: 'a.com', slug: 'a-com', org_id: ORG,
-      current_count: 1, latest_at: '2026-01-15T12:00:00.000Z',
-    }];
-    await syncOptimizationInbox(ORG, [WS]);
-    expect(store.lockCalls).toBeGreaterThan(0);
+    // The advisory lock is deliberately a no-op without DATABASE_URL (SQLite dev) —
+    // pin the Postgres path for this assertion, restore afterwards.
+    const prev = process.env.DATABASE_URL;
+    process.env.DATABASE_URL = prev || 'postgres://unit-test';
+    try {
+      store.snapshot = [{
+        domain_id: 42, workspace_id: WS, domain: 'a.com', slug: 'a-com', org_id: ORG,
+        current_count: 1, latest_at: '2026-01-15T12:00:00.000Z',
+      }];
+      await syncOptimizationInbox(ORG, [WS]);
+      expect(store.lockCalls).toBeGreaterThan(0);
+    } finally {
+      if (prev === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = prev;
+    }
   });
 });
