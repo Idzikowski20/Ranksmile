@@ -23,6 +23,13 @@ const OUTER = [
   /(?:^|[\\/])composition[\\/]/,
   /(?:^|[\\/])pages[\\/]/,
 ];
+// Inner-layer specifiers, so the denylist can enforce the dependency DIRECTION,
+// not just keep outer layers out. Matched on the specifier, so a domain file that
+// imports `../../application/x` (an inverted dependency) is caught the same as a
+// vendor import. A layer never lists its own segment — that would forbid its
+// files from importing each other.
+const APPLICATION = [/(?:^|[\\/])application[\\/]/];
+const DOMAIN = [/(?:^|[\\/])domain[\\/]/];
 // Forbid lib/* EXCEPT lib/types/* — the pure type-declaration barrel (db.ts,
 // sidecar.ts, rankTracking.ts, …) has no runtime/vendor coupling, so core may
 // import types from it transitionally. Those types fold into src/core during the
@@ -35,12 +42,18 @@ export const LAYER_RULES: LayerRule[] = [
     root: 'src/core/domain',
     label: 'domain',
     // domain may import only src/core/domain + src/core/shared
-    forbid: [...VENDORS, ...OUTER, ...LIB],
+    forbid: [...VENDORS, ...OUTER, ...LIB, ...APPLICATION],
   },
   {
     root: 'src/core/application',
     label: 'application',
     // application may import only src/core/domain + src/core/shared
     forbid: [...VENDORS, ...OUTER, ...LIB],
+  },
+  {
+    root: 'src/core/shared',
+    label: 'shared',
+    // shared is the innermost leaf — pure primitives, may import only src/core/shared
+    forbid: [...VENDORS, ...OUTER, ...LIB, ...APPLICATION, ...DOMAIN],
   },
 ];
