@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../utils/getUser';
 import { readOrganization, writeOrganization } from '../../lib/organization';
-import ORG_NAME_MAX_LENGTH from '@/src/core/domain/organization/limits';
+import ORG_NAME_MAX_LENGTH from '../../lib/organizationLimits';
 import { parseDataUrl, uploadImageBuffer } from '../../lib/uploadToBlob';
 import { assertCanManage } from '../../lib/members';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';

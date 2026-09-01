@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
+import { getArticleIdSql } from '../../../lib/articleSql';
 import { readLocalSCData } from '../../../utils/searchConsole';
 import { buildGscUrlKeywordMap, normalizeUrlForMatch } from '../../../utils/gsc';
 import Domain from '../../../database/models/domain';

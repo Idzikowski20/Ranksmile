@@ -1,7 +1,7 @@
 import { STOP_SLOP_RULES, withStopSlop } from '../../lib/stopSlopPrompt';
 import { buildStepPrompt } from '../../lib/optimizationPlanner';
 import type { PlanStep } from '../../lib/optimizationPlanner';
-import type { ArticleContext } from '../../lib/articles/articleContext';
+import type { ArticleContext } from '../../lib/articleContext';
 
 describe('stopSlopPrompt', () => {
   it('exports HUMAN PROSE rules from Stop Slop', () => {

@@ -4,8 +4,8 @@
  *
  * Starter is retired from sale; legacy orgs may still have plan_slug=starter in DB.
  */
-import { getCheckoutPlan } from '../billing/billingPlans';
-import type { BillingPeriod } from '../billing/billingPlans';
+import { getCheckoutPlan } from '../billingPlans';
+import type { BillingPeriod } from '../billingPlans';
 
 export type PlanSlug = 'growth' | 'scale' | 'agency';
 /** DB / Stripe may still report Starter for existing subscriptions. */

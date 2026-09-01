@@ -1,4 +1,4 @@
-import { CoverageItem, intentItems } from './ai/aiCoverage';
+import { CoverageItem, intentItems } from './aiCoverage';
 import { safeJsonParse } from './safeJson';
 import { chatLlm } from './ai/deepseek';
 

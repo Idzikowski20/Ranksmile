@@ -17,8 +17,8 @@ import {
   splitFactSentences,
   fetchArticleFacts,
   type ArticleFact,
-} from '../../lib/articles/articleFacts';
-import type { AiVisibilitySummary } from '../../lib/ai/aiSearchScore';
+} from '../../lib/articleFacts';
+import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 
 const mockPaa = getPeopleAlsoAsk as jest.MockedFunction<typeof getPeopleAlsoAsk>;
 const mockCached = cached as jest.MockedFunction<typeof cached>;

@@ -1,4 +1,4 @@
-import { resolveGscPostOAuthRedirect } from '../../lib/gsc/gscOAuthRedirect';
+import { resolveGscPostOAuthRedirect } from '../../lib/gscOAuthRedirect';
 
 describe('resolveGscPostOAuthRedirect', () => {
   it('maps legacy plugin redirect=/wordpress to GSC settings', () => {

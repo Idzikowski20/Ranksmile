@@ -1,4 +1,4 @@
-import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
+import { isDictionaryQueryNoise } from '../../lib/termUtils';
 import { resolveAnalysisSeedKeyword } from '../../lib/inferPageKeyword';
 
 describe('isDictionaryQueryNoise', () => {

@@ -1,5 +1,5 @@
 // __tests__/lib/detectBlogPaths.test.ts
-import { rankBlogSegments } from '@/src/core/domain/blog/detectBlogPaths';
+import { rankBlogSegments } from '../../lib/detectBlogPaths';
 
 describe('rankBlogSegments', () => {
   it('ranks segments with many deep slug-like children highest', () => {

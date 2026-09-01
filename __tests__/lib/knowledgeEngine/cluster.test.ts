@@ -1,5 +1,5 @@
 import { buildTopicBlocks } from '../../../lib/knowledgeEngine/cluster';
-import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
+import type { CanonicalClaim } from '../../../lib/knowledgeEngine/types';
 import { getEmbeddingProvider } from '../../../lib/knowledgeEngine/embeddingProvider';
 
 const claim = (id: string, statement: string): CanonicalClaim => ({

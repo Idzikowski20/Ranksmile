@@ -3,7 +3,7 @@ import {
   decideBillingChange,
   ensureCorrelationId,
   isEntitledStatus,
-} from '../../lib/billing/billingAuditShared';
+} from '../../lib/billingAuditShared';
 
 describe('decideBillingChange', () => {
   it('SKIP when plan/status not touched', () => {

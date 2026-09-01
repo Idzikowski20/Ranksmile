@@ -1,7 +1,7 @@
 import { computeContentScore, countOccurrences, type ScoreData } from './contentScore';
 import { liveCoverageItems, remainingOpportunities } from './liveCoverage';
-import { computeCoverageScores, type BucketScore, type CoverageItem, type CoverageSnapshot } from './ai/aiCoverage';
-import { computeOverallContentScore, resolveAiScore, type AiVisibilitySummary } from './ai/aiSearchScore';
+import { computeCoverageScores, type BucketScore, type CoverageItem, type CoverageSnapshot } from './aiCoverage';
+import { computeOverallContentScore, resolveAiScore, type AiVisibilitySummary } from './aiSearchScore';
 import { paragraphCountFromHtml, scoreArticleHtml } from './scoreArticleHtml';
 
 export interface LiveArticleScoresInput {

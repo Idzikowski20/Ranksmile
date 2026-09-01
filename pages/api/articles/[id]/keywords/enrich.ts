@@ -3,7 +3,7 @@ import db from '../../../../../database/database';
 import verifyUser from '../../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../../lib/ensureArticlesTables';
 import { getAdwordsCredentials, getKeywordsVolume } from '../../../../../utils/adwords';
-import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
+import { computeRelevanceScore, checkCoverage } from '../../../../../lib/keywordEnrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
 import { queryOne } from '../../../../../lib/db/query';

@@ -1,4 +1,4 @@
-import type { SourceKind } from '@/src/core/domain/knowledgeEngine/types';
+import type { SourceKind } from './types';
 
 export const KNOWLEDGE_SCHEMA_VERSION = 1;
 export const KNOWLEDGE_CONSENSUS_MIN = 0.75;

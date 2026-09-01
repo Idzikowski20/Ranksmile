@@ -1,7 +1,7 @@
 import {
   computeCoverageScores,
   type CoverageSnapshot,
-} from './ai/aiCoverage';
+} from './aiCoverage';
 import { analyzeIntroduction, deepseekIntroJudge } from './introductionAnalyzer';
 import { citationIntentItems, remapLegacyCitationItem } from './citationPrompts';
 import { liveCoverageItems } from './liveCoverage';

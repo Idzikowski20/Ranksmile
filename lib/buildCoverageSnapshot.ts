@@ -5,15 +5,15 @@ import {
   type CoverageResult,
   type CoverageSnapshot,
   type CoverageTopicGroup,
-} from './ai/aiCoverage';
-import { deepseekJudge } from './ai/aiCoverageJudge';
+} from './aiCoverage';
+import { deepseekJudge } from './aiCoverageJudge';
 import { analyzeIntroduction, deepseekIntroJudge } from './introductionAnalyzer';
-import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
+import { normalizeTerm } from './termUtils';
 import { citationIntentItems } from './citationPrompts';
 import { curateAiCoverageItems, dedupePaaQuestions } from './curateCoverageItems';
 import { mergeCoverageItems, buildSnapshot } from './coverageStore';
 import { liveCoverageItems } from './liveCoverage';
-import { splitSections } from './articles/articleSections';
+import { splitSections } from './articleSections';
 
 export type PaaQuestion = { question: string; answer?: string };
 
@@ -33,7 +33,7 @@ export function introPlainTextFromHtml(html: string, plainTextFallback = ''): st
 export async function assembleCoverageItems(opts: {
   keyword: string;
   paaQuestions?: PaaQuestion[];
-  llmQuestions?: Array<{ question: string; sources: import('./ai/aiCoverage').LlmCoverageSource[] }>;
+  llmQuestions?: Array<{ question: string; sources: import('./aiCoverage').LlmCoverageSource[] }>;
   introPlain: string;
   languageCode?: string;
 }): Promise<{ items: CoverageItem[]; answersMainQuestionEarly: boolean }> {
@@ -136,7 +136,7 @@ export async function buildGradedCoverageSnapshot(opts: {
   plainText: string;
   html: string;
   paaQuestions?: PaaQuestion[];
-  llmQuestions?: Array<{ question: string; sources: import('./ai/aiCoverage').LlmCoverageSource[] }>;
+  llmQuestions?: Array<{ question: string; sources: import('./aiCoverage').LlmCoverageSource[] }>;
   languageCode?: string;
   /** Optional harvested topic buckets (titles + questions) for snapshot.topics */
   harvestTopics?: Array<{ title: string; questions: Array<{ question: string }> }>;

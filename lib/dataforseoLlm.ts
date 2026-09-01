@@ -11,15 +11,14 @@ import axios from 'axios';
 import { z } from 'zod';
 import { withBreaker } from './circuitBreaker';
 import { locationCodeFor, isDataForSeoConfigured } from './dataforseo';
-import { toDfsLanguageCode } from '@/src/core/shared/language';
-import { filterCitations } from '@/src/core/domain/aiVisibility/blockedDomains';
+import { toDfsLanguageCode } from './domainLanguagePrompts';
+import { filterCitations } from './aiVisibilityBlockedDomains';
 import { DFS_SERP_AI_ELEMENT } from './dataforseoBudget';
 
 const BASE = 'https://api.dataforseo.com/v3';
 
 export type AiModel = 'ai_overview' | 'ai_mode' | 'chat_gpt' | 'perplexity' | 'gemini';
-import type { LlmCitation } from '@/src/core/domain/aiVisibility/citation';
-export type { LlmCitation };
+export type LlmCitation = { url: string, domain: string, title: string };
 export type LlmAnswer = { text: string, citations: LlmCitation[], fanOutQueries: string[], costUsd: number };
 
 /** llm_responses/live is only for these three; the two Google engines route to SERP. */

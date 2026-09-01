@@ -1,17 +1,17 @@
-import type { ArticleContext } from './articles/articleContext';
+import type { ArticleContext } from './articleContext';
 import type { Guideline } from './recommendationEngine';
 import {
   computeTermUsageGaps,
   type TermUsageGap,
 } from './optimizeSectionEdit';
 import { selectOptimizeMode, type OptimizeMode } from './optimizeMode';
-import type { OptimizePhase } from '@/src/core/domain/optimize/runPhase';
+import type { OptimizePhase } from './optimizeRunPhase';
 import type { EditMode, StepFocus } from './optimizationPlanner';
-import { buildEffortOptimizeGuidance } from '@/src/core/domain/terms/contentEffort';
+import { buildEffortOptimizeGuidance } from './contentEffort';
 import { buildWhatsMissingOptimizeGuidance } from './contentScore';
-import { countOccurrences } from '@/src/core/domain/terms/termMatch';
+import { countOccurrences } from './termMatch';
 import { STOP_SLOP_RULES } from './stopSlopPrompt';
-import { isUncoveredAiSearchItem } from './ai/aiCoverage';
+import { isUncoveredAiSearchItem } from './aiCoverage';
 
 export { computeMissingTerms, computeOverusedTerms } from './optimizeSectionEdit';
 export const WHOLE_ARTICLE_ID = 'article-whole';

@@ -9,7 +9,7 @@ import type {
   ArticleExecutionPlan,
   ExecutionPlanClaim,
   ExecutionPlanSection,
-} from '@/src/core/domain/contentPlanner/types';
+} from './types';
 import { hashExecutionPlanPayload } from './executionPlan';
 
 export type ApprovedOutlineHeading = {

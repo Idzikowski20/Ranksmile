@@ -1,4 +1,4 @@
-import { stripHtmlToPlain, isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
+import { stripHtmlToPlain, isUsableArticleHtml } from '../../lib/articleHtmlUsable';
 
 describe('isUsableArticleHtml', () => {
   it('rejects empty and tiny stubs', () => {

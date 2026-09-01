@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import styled from '@emotion/styled';
-import ORG_NAME_MAX_LENGTH, { ORG_LOGO_MAX_BYTES, ORG_LOGO_MAX_LABEL } from '@/src/core/domain/organization/limits';
+import ORG_NAME_MAX_LENGTH, { ORG_LOGO_MAX_BYTES, ORG_LOGO_MAX_LABEL } from '../../lib/organizationLimits';
 import Button from '../koala/primitives/Button';
 import Input from '../koala/primitives/Input';
 import { Icon } from '../koala/icons/Icon';

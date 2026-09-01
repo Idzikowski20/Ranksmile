@@ -5,7 +5,7 @@ import { inviteEmailHtml } from '../lib/inviteEmail';
 import { paymentFailedEmailHtml, paymentFailedEmailSubject } from '../lib/emails/paymentFailedEmail';
 import { abandonedCheckoutEmailHtml, ABANDONED_CHECKOUT_SUBJECT } from '../lib/emails/abandonedCheckoutEmail';
 import { starterNudgeEmailHtml, STARTER_NUDGE_SUBJECT } from '../lib/emails/starterNudgeEmail';
-import { buildGscDigest } from '../lib/gsc/gscDigestEmail';
+import { buildGscDigest } from '../lib/gscDigestEmail';
 
 function escAttr(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');

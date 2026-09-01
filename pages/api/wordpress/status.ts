@@ -5,7 +5,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
+import { getArticleIdSql } from '../../../lib/articleSql';
 import { getConnectionForWorkspace } from '../../../lib/wpConnection';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

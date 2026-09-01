@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { mintBillingConfirmationToken } from '../../../lib/billing/billingConfirmationToken';
+import { mintBillingConfirmationToken } from '../../../lib/billingConfirmationToken';
 import { assertCanManage } from '../../../lib/members';
 import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';

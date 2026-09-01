@@ -2,7 +2,7 @@ jest.mock('../../../database/database', () => ({
   __esModule: true,
   default: { query: jest.fn() },
 }));
-jest.mock('../../../lib/articles/articleSql', () => ({
+jest.mock('../../../lib/articleSql', () => ({
   __esModule: true,
   getArticleIdSql: jest.fn().mockResolvedValue('"ID"'),
 }));

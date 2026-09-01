@@ -5,7 +5,7 @@ jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResol
 jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
-jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('../../lib/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 
 import handler from '../../pages/api/articles/accept';
 

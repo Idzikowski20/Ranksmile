@@ -1,6 +1,6 @@
 /** Ranksmile-style Auto-Optimize routing — SEO vs AI Search focus. */
 
-import type { OptimizePhase } from '@/src/core/domain/optimize/runPhase';
+import type { OptimizePhase } from './optimizeRunPhase';
 
 export type OptimizeMode = 'full' | 'ai-only' | 'seo-first' | 'minimal';
 

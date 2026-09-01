@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import ORG_NAME_MAX_LENGTH, { ORG_LOGO_MAX_BYTES, ORG_LOGO_MAX_LABEL } from '@/src/core/domain/organization/limits';
+import ORG_NAME_MAX_LENGTH, { ORG_LOGO_MAX_BYTES, ORG_LOGO_MAX_LABEL } from '../../lib/organizationLimits';
 import { useOrganization, useUpdateOrganization } from '../../services/organization';
 import { usePeople } from '../../services/people';
 import { Button, Input } from '../koala/core';

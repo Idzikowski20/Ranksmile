@@ -6,7 +6,7 @@ import type {
   AdaptiveOutline,
   ArticleBlueprint,
   TargetKnowledgeGraph,
-} from '@/src/core/domain/contentPlanner/types';
+} from '../../../lib/contentPlanner/types';
 
 function outline(): AdaptiveOutline {
   const mk = (id: string, role: string, heading: string, words: number) => ({

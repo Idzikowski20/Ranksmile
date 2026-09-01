@@ -15,7 +15,7 @@ import {
   pickDeviceResult,
   summarizeExclusiveBuckets,
   summarizeUiBuckets,
-} from '@/src/core/domain/rankTracking/buckets';
+} from './buckets';
 import { buildRankResultsPage } from './results';
 
 const isPg = !!process.env.DATABASE_URL;

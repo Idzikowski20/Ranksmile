@@ -13,7 +13,7 @@ import {
   dedupePaaQuestions,
   scorePaaQuestion,
 } from '../../lib/curateCoverageItems';
-import type { CoverageItem } from '../../lib/ai/aiCoverage';
+import type { CoverageItem } from '../../lib/aiCoverage';
 
 describe('citationPrompts', () => {
   const keyword = 'prywatny detektyw Warszawa';

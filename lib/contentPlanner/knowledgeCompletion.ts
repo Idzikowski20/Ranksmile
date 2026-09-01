@@ -7,10 +7,10 @@ import type {
   RewriteStep,
   TargetKnowledgeGraph,
   ValidationResult,
-} from '@/src/core/domain/contentPlanner/types';
+} from './types';
 import type { ClaimValidationItem } from './validators/postWriteValidators';
 import { stubWriteSection } from './sectionWriter';
-import type { SectionBrief } from '@/src/core/domain/contentPlanner/types';
+import type { SectionBrief } from './types';
 
 export function buildRewritePlan(opts: {
   outline: AdaptiveOutline;

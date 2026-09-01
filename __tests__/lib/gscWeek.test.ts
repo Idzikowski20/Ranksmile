@@ -1,4 +1,4 @@
-import { weekStartFor, aggregateSevenDays } from '@/src/core/domain/gsc/week';
+import { weekStartFor, aggregateSevenDays } from '../../lib/gscWeek';
 
 describe('weekStartFor', () => {
   it('returns the Monday of the PREVIOUS full week (UTC)', () => {

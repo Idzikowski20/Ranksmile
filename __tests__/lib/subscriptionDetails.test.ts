@@ -1,8 +1,8 @@
 import {
   formatMoney,
   formatUpcomingTotal,
-} from '@/src/core/shared/money';
-import type { UpcomingPaymentDetails } from '@/src/core/shared/money';
+} from '../../lib/subscriptionFormat';
+import type { UpcomingPaymentDetails } from '../../lib/subscriptionFormat';
 
 const sampleUpcoming: UpcomingPaymentDetails = {
   planName: 'Growth',

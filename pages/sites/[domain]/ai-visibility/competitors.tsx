@@ -6,7 +6,7 @@ import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import CompetitorsTable, { CompetitorRow } from '../../../../components/aiVisibility/CompetitorsTable';
 import { SkeletonRows } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { useAiVisCompetitors, useAiVisData } from '../../../../services/aiVisibility';
-import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
+import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 
 const CompetitorDetailModal = dynamic(
   () => import('../../../../components/aiVisibility/CompetitorDetailModal'),

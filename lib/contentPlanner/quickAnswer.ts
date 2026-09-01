@@ -1,7 +1,7 @@
 /**
  * Quick Answer — LLM action-first lead (Planner owns this; Writer only embeds it).
  */
-import type { IntentBlueprint, ReaderModel } from '@/src/core/domain/contentPlanner/types';
+import type { IntentBlueprint, ReaderModel } from './types';
 
 export async function generateQuickAnswer(opts: {
   keyword: string;

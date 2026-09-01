@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
+import { AUDIT_COUNTRIES } from '../../lib/countryLang';
 import { Button, Chip } from '../koala/core';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import CountryFlag from './CountryFlag';

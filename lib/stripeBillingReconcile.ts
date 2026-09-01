@@ -1,6 +1,6 @@
 import type Stripe from 'stripe';
 import db from '../database/database';
-import { BillingSource, newBillingCorrelationId } from './billing/billingAudit';
+import { BillingSource, newBillingCorrelationId } from './billingAudit';
 import { ensureBillingTables } from './ensureBillingTables';
 import { getStripe, isStripeConfigured } from './stripe';
 import { orgIdFromMetadata, syncSubscriptionToOrg } from './stripeBillingSync';

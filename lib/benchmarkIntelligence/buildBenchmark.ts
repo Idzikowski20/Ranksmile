@@ -1,5 +1,5 @@
 import { distributionFrom, flattenLengths } from './distributions';
-import type { BenchmarkDocInput, StructuralBenchmark } from '@/src/core/domain/benchmark/types';
+import type { BenchmarkDocInput, StructuralBenchmark } from './types';
 
 export function buildStructuralBenchmark(docs: BenchmarkDocInput[]): StructuralBenchmark {
   const sectionLens = flattenLengths(docs.map((d) => d.sectionLens));

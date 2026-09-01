@@ -21,7 +21,7 @@ import {
   formatConfirmationDateLabel,
   resolveNextBillingUnix,
   resolvePaymentMethodLabel,
-} from '../../lib/billing/billingConfirmation';
+} from '../../lib/billingConfirmation';
 
 describe('formatConfirmationDateLabel', () => {
   it('formats unix trial_end (not “today” when trial is 7 days)', () => {

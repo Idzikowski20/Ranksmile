@@ -12,7 +12,7 @@ import type {
   IntentBlueprint,
   ReaderModel,
   TargetKnowledgeGraph,
-} from '@/src/core/domain/contentPlanner/types';
+} from './types';
 
 export function buildArticleBudget(
   benchmark: CompetitorBenchmark,

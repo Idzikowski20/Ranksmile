@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { CompactSelect, type SelectOption } from '../../koala/core';
 import { Flag } from '../../koala/icons/Flag';
 import { Icon } from '../../koala/icons/Icon';
-import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
+import { AUDIT_COUNTRIES } from '../../../lib/countryLang';
 import { formatCompact } from './OrganicKpiRow';
 
 const FONT = 'var(--font-family-primary)';

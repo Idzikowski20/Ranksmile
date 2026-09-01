@@ -8,7 +8,7 @@
  *
  * One implementation so those three cannot disagree.
  */
-import { stripHtmlToPlain } from '@/src/core/domain/articles/htmlUsable';
+import { stripHtmlToPlain } from './articleHtmlUsable';
 import { isReviewOutlineHtml } from './contentPlanner/reviewOutline';
 
 export type OutlineReviewInput = {

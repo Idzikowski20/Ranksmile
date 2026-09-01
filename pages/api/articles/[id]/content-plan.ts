@@ -6,7 +6,7 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
+import { getArticleIdSql } from '../../../../lib/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../lib/errors';
@@ -25,8 +25,8 @@ import { runContentPlanner } from '../../../../lib/contentPlanner/runContentPlan
 import { writeOutlineBrief } from '../../../../lib/contentPlanner/briefWriter';
 import { importantTermsFromScoreData } from '../../../../lib/mergeArticleTerms';
 import { readContentSettings } from '../../../../lib/contentSettings';
-import { readArticleTerms } from '../../../../lib/articles/articleTerms';
-import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/ai/aiBudget';
+import { readArticleTerms } from '../../../../lib/articleTerms';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../../lib/aiBudget';
 import { mergedPlannerQuestions } from '../../../../lib/coverageStore';
 import { parseApprovedOutline } from '../../../../lib/contentPlanner/applyApprovedOutline';
 import {
@@ -34,8 +34,8 @@ import {
   buildStructuralBenchmark,
   toPlannerTargets,
 } from '../../../../lib/benchmarkIntelligence';
-import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
-import type { PlannerTargets, StructuralBenchmark } from '@/src/core/domain/benchmark/types';
+import type { KnowledgeGraph } from '../../../../lib/knowledgeEngine/types';
+import type { PlannerTargets, StructuralBenchmark } from '../../../../lib/benchmarkIntelligence/types';
 
 type ArticlePlanRow = {
   id: number;

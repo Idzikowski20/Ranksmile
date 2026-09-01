@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQueryClient } from 'react-query';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
-import { SETUP_LOCATIONS, type SetupLocation } from '@/src/core/domain/setup/locations';
+import { SETUP_LOCATIONS, type SetupLocation } from '../lib/setupLocations';
 import BlogPathsField from '../components/domains/BlogPathsField';
 import DomainFavicon from '../components/common/DomainFavicon';
 import {

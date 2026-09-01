@@ -1,7 +1,7 @@
 /**
  * Corpus Diff — v1→v2 structural/URL/term changes → planner signals (not planner logic).
  */
-import { serpChangeRatio } from '@/src/core/domain/corpus/serpChange';
+import { serpChangeRatio } from '../corpus/serpChange';
 
 export type CorpusDiffInput = {
   prevUrls: string[];

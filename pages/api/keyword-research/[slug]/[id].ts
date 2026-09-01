@@ -5,7 +5,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
 import { queryOne, KeywordResearchRunRow } from '../../../../lib/db/query';
-import type { KeywordResearchResult } from '@/src/core/domain/keywords/types';
+import type { KeywordResearchResult } from '../../../../lib/keywordResearchTypes';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

@@ -4,7 +4,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
 import GscAccount from '../../../database/models/gscAccount';
-import { buildOAuthClientFromAccount } from '../../../lib/gsc/gscAccounts';
+import { buildOAuthClientFromAccount } from '../../../lib/gscAccounts';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 

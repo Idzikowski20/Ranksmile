@@ -5,7 +5,7 @@ import { Button, Toggle } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 import fetchJson from '../../lib/fetchJson';
-import { getPlanCheckoutHref } from '../../lib/billing/billingPlans';
+import { getPlanCheckoutHref } from '../../lib/billingPlans';
 import type { ExpiredSummary } from '../../pages/api/billing/expired-summary';
 
 /**

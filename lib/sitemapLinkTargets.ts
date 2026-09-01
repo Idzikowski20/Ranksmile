@@ -10,7 +10,7 @@
  * Pure on purpose: `gatherBlogUrls` reaches the database, and importing it here would
  * pull sequelize into the unit tests for this ranking.
  */
-import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
+import { normalizeTerm } from './termUtils';
 
 export type LinkTarget = { id: number; title: string; url: string };
 

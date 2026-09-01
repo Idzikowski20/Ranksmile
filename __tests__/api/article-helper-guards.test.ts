@@ -6,10 +6,10 @@ jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolv
 jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(false) }));
 jest.mock('../../utils/verifyDomainOwnership', () => ({ verifyDomainOwnershipById: jest.fn().mockResolvedValue(false) }));
 jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
+jest.mock('../../lib/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 jest.mock('../../lib/db/query', () => ({ queryOne: jest.fn() }));
 jest.mock('../../lib/sidecar', () => ({ callSidecar: jest.fn() }));
-jest.mock('../../lib/ai/aiBudget', () => ({ resolveOrgId: jest.fn(), orgBudgetBlocked: jest.fn(), recordAiTokens: jest.fn() }));
+jest.mock('../../lib/aiBudget', () => ({ resolveOrgId: jest.fn(), orgBudgetBlocked: jest.fn(), recordAiTokens: jest.fn() }));
 jest.mock('axios', () => ({ __esModule: true, default: { post: jest.fn() } }));
 
 import type { NextApiRequest, NextApiResponse } from 'next';

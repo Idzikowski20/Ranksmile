@@ -4,11 +4,11 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
-import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '../../../../lib/aiVisibility/aiVisibilityScan';
+import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '../../../../lib/aiVisibilityScan';
 import { queryOne } from '../../../../lib/db/query';
 import { callSidecar } from '../../../../lib/sidecar';
 import { getErrorMessage } from '../../../../lib/errors';
-import { manualRefreshCooldownDays, refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
+import { manualRefreshCooldownDays, refreshIntervalDays } from '../../../../lib/aiVisibility';
 import { nextjsUrl } from '../../../../lib/serviceUrls';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

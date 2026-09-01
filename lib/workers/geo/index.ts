@@ -12,7 +12,7 @@ export const geoWorker: PipelineWorker = {
     const html = String(ctx.payload.html || '');
     const plain = String(ctx.payload.plainText || html.replace(/<[^>]+>/g, ' '));
     if (!html && !plain.trim()) return { ok: false, error: 'html required' };
-    const { computeGeoCues } = await import('@/src/core/domain/geo/geoCues');
+    const { computeGeoCues } = await import('../../geo/geoCues');
     const cues = computeGeoCues(html, plain);
     return {
       ok: true,

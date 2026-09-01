@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
+import { normalizeTerm } from '../termUtils';
 import type { LlmCoverageSource } from '../llmCoverageQuestions';
 import { computeQuestionScore, maxSourceWeight } from './questionScore';
 

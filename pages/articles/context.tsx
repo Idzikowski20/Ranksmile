@@ -11,7 +11,7 @@ import { useArticle } from '../../services/article';
 import DomainFavicon from '../../components/common/DomainFavicon';
 import SidePanel from '../../components/common/SidePanel';
 import { parseRankingSources, buildAiRankingSources } from '../../lib/rankingSources';
-import type { AiVisibilitySummary } from '../../lib/ai/aiSearchScore';
+import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 
 interface Voice { id: string; name: string; description: string; isDefault: boolean; }
 

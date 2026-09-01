@@ -4,7 +4,7 @@
  */
 import { compileIfStale } from '../lib/intelligence/compileAfterArticleChange';
 import { queryOne } from '../lib/db/query';
-import { getArticleIdSql } from '../lib/articles/articleSql';
+import { getArticleIdSql } from '../lib/articleSql';
 import { parseSnapshot } from '../lib/coverageStore';
 
 const articleId = Number(process.argv[2] || 167);

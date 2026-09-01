@@ -1,5 +1,5 @@
 import type { NlpTerm } from './contentScore';
-import { filterUsefulNlpTerms, isWeakTermList } from '@/src/core/domain/competitors/termCalibration';
+import { filterUsefulNlpTerms, isWeakTermList } from './competitorTermCalibration';
 import { filterNlpTermsForAnalysis, filterOnTopicTerms } from './topicRelevance';
 
 export function mergeNlpTerms(existing: NlpTerm[], incoming: NlpTerm[]): NlpTerm[] {

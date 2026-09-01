@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { findTermRangesBatch } from '../../lib/contentScore';
-import { AuditTerm } from '@/src/core/domain/audit/types';
+import { AuditTerm } from '../../lib/auditTypes';
 
 const FONT = 'var(--font-family-primary)';
 

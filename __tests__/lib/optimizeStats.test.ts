@@ -1,4 +1,4 @@
-import { computeOptimizeStats } from '@/src/core/domain/optimize/stats';
+import { computeOptimizeStats } from '../../lib/optimizeStats';
 
 describe('computeOptimizeStats', () => {
   it('returns zeroed stats for an empty changed list', () => {

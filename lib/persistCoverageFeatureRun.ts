@@ -1,5 +1,5 @@
-import type { CoverageSnapshot } from './ai/aiCoverage';
-import type { ArticleContext } from './articles/articleContext';
+import type { CoverageSnapshot } from './aiCoverage';
+import type { ArticleContext } from './articleContext';
 import { runFeatures } from './features/featureEngine';
 import {
   getFeatureStoreOrNull,

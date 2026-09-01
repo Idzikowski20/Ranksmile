@@ -1,6 +1,6 @@
 import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
-import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
-import type { CompetitorDocument, SourceKind } from '@/src/core/domain/knowledgeEngine/types';
+import { foldPolishLetters } from '../termUtils';
+import type { CompetitorDocument, SourceKind } from './types';
 
 export type RawSentence = {
   text: string;

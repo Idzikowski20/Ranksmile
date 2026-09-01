@@ -7,7 +7,7 @@ import axios from 'axios';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
+import { getArticleIdSql } from '../../../lib/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, ArticleRow } from '../../../lib/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
