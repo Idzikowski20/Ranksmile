@@ -267,6 +267,103 @@ def _surfer_style_alt(heading: str, keyword: str, language: str = "pl") -> str:
     )[:400]
 
 
+# The reference tool illustrates with real, bright, clean stock photography — a tired
+# person at a laptop, someone comforting another on a sofa — not the dark AI-generated
+# confrontation scenes flux was giving us. Pixabay is real stock we already have a key for,
+# so a topical search there beats generating, and only falls back to flux when it is empty.
+_STOCK_MODEL = "openai/gpt-5.4-nano"
+
+
+async def _stock_query_and_alt(keyword: str, title: str, language: str) -> tuple[str, str]:
+    """gpt-5.4-nano turns a heading into a stock-photo search query + an alt sentence."""
+    from analyzers.llm_chat import chat_config, chat_headers, chat_payload
+    cfg = chat_config()
+    if not cfg:
+        return "", ""
+    # nano's minimal-reasoning budget would otherwise eat the whole completion and return
+    # empty content, so drop the reasoning extra and give it real room.
+    cfg = {**cfg, "model": _STOCK_MODEL, "extra": {}}
+    alt_lang = _language_name(language)
+    system = (
+        "You pick real stock photography for article sections. Output two lines only.\n"
+        "QUERY: 2-4 English keywords for a bright, authentic lifestyle stock photo that fits "
+        "this section — real people in the situation, clean and hopeful, never dark or grim. "
+        "Concrete nouns (e.g. 'woman stressed laptop home', 'couple support sofa', "
+        "'person thinking window light'). No brand names, no abstract words.\n"
+        f"ALT: one {alt_lang} sentence, 90-140 chars, describing a realistic scene for this "
+        "section and naming the topic; never start with 'Zdjecie'/'Obraz'/'Image'."
+    )
+    user = f'Heading: "{_inert(title)}"\nArticle topic: "{_inert(keyword)}"'
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                cfg["url"], headers=chat_headers(cfg),
+                json=chat_payload(cfg, [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ], max_tokens=220, temperature=0.4),
+            )
+        if resp.status_code != 200:
+            print(f"[image] stock query LLM HTTP {resp.status_code}")
+            return "", ""
+        raw = (resp.json()["choices"][0]["message"].get("content") or "").strip()
+    except Exception as exc:
+        print(f"[image] stock query failed: {exc}")
+        return "", ""
+    query, alt = "", ""
+    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+    for ln in lines:
+        if ln.upper().startswith("QUERY:"):
+            query = ln.split(":", 1)[1].strip().strip('"').strip("'")
+        elif ln.upper().startswith("ALT:"):
+            alt = ln.split(":", 1)[1].strip().strip('"').strip("'")
+    # nano drops the labels and sometimes swaps the order, so fall back on language: the
+    # English keyword line (no Polish diacritics) is the query, the Polish line is the alt.
+    if (not query or not alt) and lines:
+        pl = "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"
+        english = [ln for ln in lines if not any(c in pl for c in ln)]
+        polish = [ln for ln in lines if any(c in pl for c in ln)]
+        if not query:
+            query = (english[0] if english else lines[0]).strip('"').strip("'")
+        if not alt:
+            alt = (polish[0] if polish else (lines[1] if len(lines) > 1 else "")).strip('"').strip("'")
+    return query, alt
+
+
+async def _pexels_photo(query: str) -> dict | None:
+    """Best real stock photo for `query` from Pexels, or None. Pexels is already curated to
+    the authentic, people-in-the-situation look we want, so we just take a landscape hit."""
+    key = os.getenv("PEXELS_API_KEY", "").strip()
+    if not key or not query.strip():
+        return None
+    params = {"query": query.strip(), "orientation": "landscape", "size": "large", "per_page": "15"}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(
+                "https://api.pexels.com/v1/search",
+                params=params, headers={"Authorization": key},
+            )
+        if resp.status_code != 200:
+            print(f"[image] pexels HTTP {resp.status_code}")
+            return None
+        photos = (resp.json() or {}).get("photos") or []
+    except Exception as exc:
+        print(f"[image] pexels search failed: {exc}")
+        return None
+    if not photos:
+        return None
+    # Deterministic spread across the top few relevant hits so repeated headings on one page
+    # don't all land on Pexels' #1 result.
+    idx = int(hashlib.md5(query.encode()).hexdigest()[:6], 16) % min(6, len(photos))
+    pick = photos[idx]
+    src = pick.get("src") or {}
+    return {
+        "url": src.get("large2x") or src.get("large") or src.get("original"),
+        "width": pick.get("width") or 1920,
+        "height": pick.get("height") or 1080,
+    }
+
+
 async def generate_article_image_for_embed(
     keyword: str,
     article_title: str,
@@ -274,9 +371,21 @@ async def generate_article_image_for_embed(
     language: str = "pl",
 ) -> dict:
     """
-    For mid-article <img src>: return Pollinations CDN URL (not base64).
-    Warm the cache with one server GET (fail-soft — URL still returned).
+    For mid-article <img src>: prefer a real Pexels stock photo (GPT-5.4 Nano turns the
+    heading into a search query); fall back to Pollinations/flux only when Pexels is empty.
     """
+    stock_query, stock_alt = await _stock_query_and_alt(keyword, article_title, language)
+    photo = await _pexels_photo(stock_query) if stock_query else None
+    if photo and photo.get("url"):
+        return {
+            "url": photo["url"],
+            "alt": stock_alt or _surfer_style_alt(article_title, keyword, language),
+            "width": photo["width"],
+            "height": photo["height"],
+            "source": "pexels",
+        }
+
+    # No Pexels hit — fall back to generated art.
     enriched, ai_alt = await _enrich_prompt_with_ai(keyword, article_title, language)
     if enriched:
         prompt = (
