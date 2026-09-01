@@ -1,0 +1,49 @@
+components/articles/PublishExportPanel.tsx
+  s_e8c3822b427cc8::t_7c64044e3efe44 104
+__tests__/lib/contentPlanner/sectionLabels.test.ts
+  s_e8c3822b427cc8::t_4787804c66930c 31-38,69,107-111
+src/core/domain/contentPlanner/brandSections.test.ts
+  s_e8c3822b427cc8::t_a696858b4c96e0 1-49
+src/core/domain/contentPlanner/types.ts
+  s_e8c3822b427cc8::t_a2179613597889 385
+__tests__/lib/contentPlanner/brandSections.test.ts
+  s_e8c3822b427cc8::t_4787804c66930c 33,36-38,40
+__tests__/lib/contentPlanner/competitorHeadingTitles.test.ts
+  s_e8c3822b427cc8::t_1c22040258972c 1
+  s_e8c3822b427cc8::t_cb47f864a5d70b 2-25
+src/core/domain/seo/sitemapLinkTargets.ts
+  s_e8c3822b427cc8::t_4787804c66930c 102,105-113
+components/articles/PipelineStatusStrip.tsx
+  s_e8c3822b427cc8::t_4462d26ff90c42 137-140
+src/core/domain/contentPlanner/sectionLabels.test.ts
+  s_e8c3822b427cc8::t_a696858b4c96e0 1-233
+__tests__/lib/contentPlanner/contentPlanner.test.ts
+  s_e8c3822b427cc8::t_a2179613597889 115-119,209-211
+src/infrastructure/contentPlanner/fromArticleInputs.ts
+  s_e8c3822b427cc8::t_38d08142567836 281-283
+  s_e8c3822b427cc8::t_a2179613597889 278-280,284,306
+src/core/domain/contentPlanner/planValidators.ts
+  s_e8c3822b427cc8::t_4787804c66930c 33-36
+src/core/domain/contentPlanner/contentPlanner.test.ts
+  s_e8c3822b427cc8::t_402cf2e4cd7b8e 1-230
+src/core/domain/contentPlanner/outlineBuilder.ts
+  s_e8c3822b427cc8::t_fd53944f879dc6 158,161-167
+src/core/domain/contentPlanner/sectionLabels.ts
+  s_e8c3822b427cc8::t_4787804c66930c 57-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e5b7ead6251710e6ae495a32859cb495fdf021ea",
+  "prompts": {},
+  "sessions": {
+    "s_e8c3822b427cc8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c915c01d-89f2-43d4-a46e-9025373df428",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <patryk.idzikowski@interia.pl>"
+    }
+  }
+}
