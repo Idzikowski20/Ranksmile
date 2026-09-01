@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { useGSAP } from '@gsap/react';
 import { registerMotionPlugins } from '../../lib/motion/gsap';
 import { useRouteTransition } from '../../lib/motion/useRouteTransition';
-import { AppBanner, KoalaHeader, KoalaSidebar } from '../koala/shell';
+import { AppBanner, KoalaHeader, KoalaSidebar, useAppBanner } from '../koala/shell';
 import MobileSidebar from './MobileSidebar';
 
 type AppShellProps = {
@@ -32,6 +33,19 @@ const AppShell = ({
   contentClassName = '',
 }: AppShellProps) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { pathname } = useRouter();
+  // Purchase/upgrade flows shouldn't carry the marketing announcement — keep the plan
+  // and checkout pages focused.
+  const suppressAnnouncement = pathname.startsWith('/billing') || pathname.startsWith('/plans');
+  // Standing announcement: Polish is available. Yields to any page-level banner
+  // (a warning/error published later wins), and stays gone once dismissed.
+  useAppBanner(suppressAnnouncement ? null : {
+    message: 'Ranksmile jest teraz dostępny w języku polskim.',
+    variant: 'brand',
+    dismissible: true,
+    persistDismiss: true,
+    dismissKey: 'locale-pl-announcement',
+  });
   useGSAP(() => { registerMotionPlugins(); });
   const contentRef = useRouteTransition<HTMLElement>();
 

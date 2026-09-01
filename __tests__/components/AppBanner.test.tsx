@@ -44,6 +44,24 @@ describe('AppBanner', () => {
     expect(container.querySelector('.koala-app-banner')).toBeNull();
   });
 
+  it('persists dismissal across remounts when persistDismiss is set', () => {
+    localStorage.clear();
+    const banner: AppBannerState = {
+      message: 'Ranksmile jest teraz dostępny w języku polskim.',
+      dismissible: true,
+      persistDismiss: true,
+      dismissKey: 'locale-pl-announcement',
+    };
+
+    const first = render(<Harness banner={banner} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(first.container.querySelector('.koala-app-banner')).toBeNull();
+    first.unmount();
+
+    const second = render(<Harness banner={banner} />);
+    expect(second.container.querySelector('.koala-app-banner')).toBeNull();
+  });
+
   /**
    * Two consumers can be mounted at once — a page and a wizard inside it — and their
    * banners can serialise identically. Cleanup used to call setBanner(null) whatever was
@@ -72,5 +90,35 @@ describe('AppBanner', () => {
     );
 
     expect(screen.getByText('Ten sam komunikat')).toBeInTheDocument();
+  });
+
+  /**
+   * Regression: dismissal is tracked per closeKey. A single shared "last dismissed"
+   * key meant dismissing a page-level banner replaced the announcement's key, so when
+   * the page banner cleared the announcement came back even though it was dismissed.
+   */
+  it('dismissing one banner does not un-dismiss another', () => {
+    const ann: AppBannerState = { message: 'PL announcement', dismissible: true, dismissKey: 'ann' };
+    const err: AppBannerState = { message: 'Boom', dismissible: true };
+    const Duo = ({ b }: { b: AppBannerState | null }) => (
+      <AppBannerProvider>
+        <AppBanner />
+        <Publisher banner={ann} />
+        <Publisher banner={b} />
+      </AppBannerProvider>
+    );
+
+    const { rerender } = render(<Duo b={null} />);
+    // Announcement is showing — dismiss it.
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+    // A page-level error is published; it wins as the most recent entry. Dismiss it too.
+    rerender(<Duo b={err} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Boom');
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+    // Error clears → announcement is the active entry again, and must stay dismissed.
+    rerender(<Duo b={null} />);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

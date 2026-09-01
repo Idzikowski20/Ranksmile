@@ -62,7 +62,7 @@ export const SETTINGS_NAV_GROUPS: NavGroup[] = [
     items: [
       { slug: 'google_search_console', label: 'Search Console', icon: 'MagnifyingGlass', href: '/settings/google_search_console' },
       { slug: 'wordpress', label: 'WordPress', icon: 'Globe', href: '/settings/wordpress' },
-      { slug: 'api', label: 'API', icon: 'Code', href: '/settings/api' },
+      { slug: 'api', label: 'MCP i API', icon: 'PlugsConnected', href: '/settings/api' },
     ],
   },
   {
