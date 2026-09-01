@@ -134,8 +134,10 @@ export default function PipelineStatusStrip(props: { articleId: number | string 
 
   if (!articleId) return null;
 
-  const waitingForResume = resumeHint && !data?.latest;
-  if (!data?.latest && !waitingForResume) return null;
+  // The "Wznawiam pipeline…" resume hint is not shown — it read as a broken/loading state
+  // in the editor. The strip appears only for jobs that are actually running.
+  const waitingForResume = false;
+  if (!data?.latest) return null;
 
   const latest = data?.latest;
   const visibleJobs = dedupeActiveJobs(data?.jobs ?? []);

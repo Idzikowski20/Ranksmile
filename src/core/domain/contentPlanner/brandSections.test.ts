@@ -30,14 +30,15 @@ const kg = { claims: [], questions: [], entities: [] } as unknown as TargetKnowl
 const intent = { keyword: 'szantaż emocjonalny', articleType: 'guide', yearHint: '' } as unknown as IntentBlueprint;
 
 describe('brand sections in the blueprint', () => {
-  it('adds services + case-study brand sections', () => {
+  it('adds services + case-study sections before the FAQ tail', () => {
     const bp = buildArticleBlueprint({ benchmark, kg, intent, reader, brandName: 'ProDetektyw' });
     const sections = bp.requiredSections;
-    // Brand still gets its two sections; the generic FAQ/Podsumowanie scaffolding is gone,
-    // so these are now the only forced sections and topical competitor headings fill the rest.
-    expect(sections.some((h) => h.includes('ProDetektyw'))).toBe(true);
+    const services = sections.findIndex((h) => h.includes('ProDetektyw'));
+    const faq = sections.findIndex((h) => /faq/i.test(h));
+
+    expect(services).toBeGreaterThanOrEqual(0);
     expect(sections.some((h) => /studium przypadku/i.test(h))).toBe(true);
-    expect(sections.some((h) => /faq|podsum/i.test(h))).toBe(false);
+    expect(faq).toBeGreaterThan(services);
   });
 
   it('adds nothing without a brand name', () => {

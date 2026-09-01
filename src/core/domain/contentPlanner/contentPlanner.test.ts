@@ -112,11 +112,8 @@ describe('Content Planner v2 — Competitor Benchmark', () => {
     const synth = synthesizeCompetitors(profiles);
     const bench = buildCompetitorBenchmark(synth);
     expect(synth.competitorCount).toBe(3);
-    // Focused length, capped at 2000: Surfer writes ~1767 for a SERP whose competitors run
-    // far longer, and our writer lands near there whatever the target says. Chasing the
-    // competitor median only inflated the H2 count into thin sections.
-    expect(bench.targetWords).toBe(2000);
-    expect(h2FromWords(bench.targetWords)).toBe(9);
+    expect(bench.targetWords).toBeGreaterThanOrEqual(3400);
+    expect(h2FromWords(bench.targetWords)).toBeGreaterThanOrEqual(11);
     expect(synth.commonClaims.some((c) => c.includes('ssl'))).toBe(true);
   });
 });
@@ -206,9 +203,8 @@ describe('Content Planner v2 — Planning gates + article', () => {
     expect(result.outlineValidation.ok).toBe(true);
     expect(result.briefValidation.ok).toBe(true);
     expect(result.bundle.reader.readerPersona).toBe('beginner');
-    // Focused length (capped 2000) and fewer, fuller sections — Surfer parity.
-    expect(result.bundle.blueprint.targetWords).toBe(2000);
-    expect(result.bundle.outline?.sections.length).toBeGreaterThanOrEqual(8);
+    expect(result.bundle.blueprint.targetWords).toBeGreaterThan(3000);
+    expect(result.bundle.outline?.sections.length).toBeGreaterThanOrEqual(11);
     expect(result.bundle.targetKg.claims.length).toBeGreaterThan(5);
     expect(result.bundle.targetKg.questions.length).toBeGreaterThan(3);
 
