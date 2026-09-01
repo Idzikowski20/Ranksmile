@@ -7,7 +7,7 @@ import { hashCompileSource } from '../compiler/contentHash';
 import { compileArticle, resolveCompileSource } from './runtimeApi';
 import type { CompileStore } from './compileStore';
 import { recordCcmCompileMetric, type CcmCompileOutcome } from './ccmCompileMetrics';
-import type { CoverageSnapshot } from '../ai/aiCoverage';
+import type { CoverageSnapshot } from '../aiCoverage';
 
 export type CompileAfterResult =
   | {
@@ -58,7 +58,7 @@ async function resolveHtml(
 ): Promise<string> {
   if (contentHtml != null && contentHtml !== '') return contentHtml;
   const { queryOne } = await import('../db/query');
-  const { getArticleIdSql } = await import('../articles/articleSql');
+  const { getArticleIdSql } = await import('../articleSql');
   const articleIdSql = await getArticleIdSql();
   const row = await queryOne<{ content: string | null }>(
     `SELECT content FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,

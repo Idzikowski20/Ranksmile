@@ -2,16 +2,16 @@
  * Planner Validator — plan quality (≠ Knowledge Verifier schema checks).
  */
 import { MAX_CLAIMS_PER_SECTION } from '../knowledgeEngine/constants';
-import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
-import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
+import type { PlannerTargets } from '../benchmarkIntelligence/types';
+import type { KnowledgeGraph } from '../knowledgeEngine/types';
 import type {
   AdaptiveOutline,
   SectionBrief,
   TargetKnowledgeGraph,
   ValidationIssue,
   ValidationResult,
-} from '@/src/core/domain/contentPlanner/types';
-import type { PlannerQualityMetrics } from '@/src/core/domain/knowledgeEngine/types';
+} from './types';
+import type { PlannerQualityMetrics } from '../knowledgeEngine/types';
 
 export type PlannerValidateInput = {
   outline: AdaptiveOutline | null;

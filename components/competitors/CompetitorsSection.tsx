@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CompetitorDTO } from '@/src/core/domain/competitors/competitor';
+import { CompetitorDTO } from '../../lib/competitorTypes';
 import { useCompetitors, useScanCompetitors, useSelectCompetitors } from '../../services/competitors';
 import { Gauge } from '../koala/core';
 import { Toggle } from '../koala/core';

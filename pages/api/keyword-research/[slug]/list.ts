@@ -4,7 +4,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
 import { queryRows } from '../../../../lib/db/query';
-import type { KeywordResearchCardDTO, KeywordResearchStats, KeywordResearchStatus } from '@/src/core/domain/keywords/types';
+import type { KeywordResearchCardDTO, KeywordResearchStats, KeywordResearchStatus } from '../../../../lib/keywordResearchTypes';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type ListRow = {

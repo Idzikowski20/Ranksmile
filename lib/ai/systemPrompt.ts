@@ -1,4 +1,4 @@
-import { ANTI_HALLUCINATION_RULES } from '@/src/core/domain/seo/antiHallucinationRules';
+import { ANTI_HALLUCINATION_RULES } from '../seo/antiHallucinationRules';
 import { STOP_SLOP_RULES } from '../stopSlopPrompt';
 import type { ToolCtx } from './types';
 

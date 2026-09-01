@@ -2,7 +2,7 @@
  * Heuristic Entity Resolver — canonicalize NER spans (no spaCy runtime in Node).
  * Real spaCy/GLiNER runs in sidecar; this resolves aliases for pipeline artifacts.
  */
-import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
+import { normalizeTerm } from '../termUtils';
 
 export type RawEntitySpan = {
   text: string;

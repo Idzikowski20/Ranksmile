@@ -1,12 +1,12 @@
 import type Stripe from 'stripe';
-import type { BillingPeriod } from './billing/billingPlans';
-import { isPaidLikeStatus } from './billing/billingEntitlement';
+import type { BillingPeriod } from './billingPlans';
+import { isPaidLikeStatus } from './billingEntitlement';
 import {
   BillingSource,
   emitBillingEvent,
   ensureCorrelationId,
   type BillingAuditContext,
-} from './billing/billingAudit';
+} from './billingAudit';
 import {
   getOrgBillingState,
   isTerminalSubscriptionStatus,

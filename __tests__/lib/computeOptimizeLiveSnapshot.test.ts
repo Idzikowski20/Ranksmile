@@ -3,8 +3,8 @@ import {
   computeAiSearchScore,
   computeOverallContentScore,
   type AiVisibilitySummary,
-} from '../../lib/ai/aiSearchScore';
-import type { CoverageItem } from '../../lib/ai/aiCoverage';
+} from '../../lib/aiSearchScore';
+import type { CoverageItem } from '../../lib/aiCoverage';
 import type { ScoreData } from '../../lib/contentScore';
 
 const coverageItems: CoverageItem[] = [

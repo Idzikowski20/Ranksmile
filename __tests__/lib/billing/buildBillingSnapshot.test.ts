@@ -24,7 +24,7 @@ jest.mock('../../../lib/orgBilling', () => ({
   })),
 }));
 
-jest.mock('@/src/composition/billing', () => ({
+jest.mock('../../../lib/billingInvoices', () => ({
   listOrgBillingInvoices: jest.fn(async () => []),
 }));
 

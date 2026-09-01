@@ -10,9 +10,9 @@
  * every claim came from, and a brand shows up in its own hostname (`agencjatemida.pl`
  * contains `temida`).
  */
-import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
+import { foldPolishLetters } from '../termUtils';
 import { tokensShareStem } from '../topicRelevance';
-import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
+import type { CanonicalClaim } from './types';
 
 /** Below this a token matches hostnames by accident ("pl", "biz", "osob"). */
 const MIN_BRAND_TOKEN = 5;

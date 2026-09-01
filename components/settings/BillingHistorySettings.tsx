@@ -8,7 +8,7 @@ import {
   groupInvoicesByDate,
   type BillingInvoice,
   type BillingInvoiceStatus,
-} from '@/src/core/domain/billing/invoice';
+} from '../../lib/billingInvoiceModel';
 
 const FONT = 'var(--font-family-primary)';
 const BORDER = 'var(--koala-border-primary)';

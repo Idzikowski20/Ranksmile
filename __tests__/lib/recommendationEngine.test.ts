@@ -1,5 +1,5 @@
 import { buildInstruction, effortOf, buildGuidelines, groupGuidelines, isFullyCovered } from '../../lib/recommendationEngine';
-import type { CoverageItem, CoverageSnapshot } from '../../lib/ai/aiCoverage';
+import type { CoverageItem, CoverageSnapshot } from '../../lib/aiCoverage';
 
 const it_ = (over: Partial<CoverageItem>): CoverageItem =>
   ({ id: 'x', label: 'What is X?', type: 'paa', category: 'knowledge',

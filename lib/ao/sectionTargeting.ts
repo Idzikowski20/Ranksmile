@@ -5,7 +5,7 @@
  */
 import type { CriticalContentMap } from './criticalContentMap';
 import type { EditCandidate } from './editCandidate';
-import type { Section } from '../articles/articleSections';
+import type { Section } from '../articleSections';
 
 export type SectionTargetScore = {
   sectionId: string;

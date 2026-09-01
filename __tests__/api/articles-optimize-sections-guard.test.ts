@@ -16,7 +16,7 @@ jest.mock('../../lib/wie/enforceOpeningPolicy', () => ({
   heuristicProblemFirstInject: jest.fn((html: string) => html),
 }));
 
-jest.mock('../../lib/articles/articleContext', () => ({
+jest.mock('../../lib/articleContext', () => ({
   buildArticleContext: jest.fn(async () => ({
     articleId: 1, keyword: 'k', scoreData: { terms: [], words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 },
     breakdown: null,
@@ -25,7 +25,7 @@ jest.mock('../../lib/articles/articleContext', () => ({
   })),
 }));
 const recordAiTokens = jest.fn(async (_orgId: number | null | undefined, _tokens: number) => {});
-jest.mock('../../lib/ai/aiTokenUsage', () => ({
+jest.mock('../../lib/aiTokenUsage', () => ({
   __esModule: true,
   AI_TOKEN_LIMIT_5H: 500000,
   getOrgUsage5h: jest.fn(async () => ({ used: 0, limit: 500000, resetsAt: 0, over: false })),
@@ -33,13 +33,13 @@ jest.mock('../../lib/ai/aiTokenUsage', () => ({
 }));
 
 const mockEnrichNlpTermsIfNeeded = jest.fn(async (opts: { terms: { term: string; target_count: number }[] }) => opts.terms);
-jest.mock('../../lib/articles/articleKeywordDiscovery', () => ({
+jest.mock('../../lib/articleKeywordDiscovery', () => ({
   __esModule: true,
   needsTermEnrichment: jest.fn(() => false),
   enrichNlpTermsIfNeeded: (opts: { terms: { term: string; target_count: number }[] }) => mockEnrichNlpTermsIfNeeded(opts),
 }));
 
-jest.mock('../../lib/articles/articleSql', () => ({
+jest.mock('../../lib/articleSql', () => ({
   getArticleIdSql: jest.fn(async () => 'id'),
 }));
 
@@ -47,9 +47,9 @@ import handler from '../../pages/api/articles/optimize-sections';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../lib/tenancy';
-import { getOrgUsage5h } from '../../lib/ai/aiTokenUsage';
-import { buildArticleContext } from '../../lib/articles/articleContext';
-import { needsTermEnrichment } from '../../lib/articles/articleKeywordDiscovery';
+import { getOrgUsage5h } from '../../lib/aiTokenUsage';
+import { buildArticleContext } from '../../lib/articleContext';
+import { needsTermEnrichment } from '../../lib/articleKeywordDiscovery';
 
 const mockNeedsTermEnrichment = needsTermEnrichment as jest.MockedFunction<typeof needsTermEnrichment>;
 const mockBuildArticleContext = buildArticleContext as jest.MockedFunction<typeof buildArticleContext>;

@@ -2,7 +2,7 @@ import type { NextApiRequest } from 'next';
 import type { Transaction } from 'sequelize';
 import db from '../database/database';
 import { ensureTenancyTables } from './ensureTenancyTables';
-import { getArticleIdSql } from './articles/articleSql';
+import { getArticleIdSql } from './articleSql';
 
 import type { DbRow, SqlReplacements } from './types/db';
 

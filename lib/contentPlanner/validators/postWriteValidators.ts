@@ -10,7 +10,7 @@ import type {
   TargetQuestion,
   ValidationIssue,
   ValidationResult,
-} from '@/src/core/domain/contentPlanner/types';
+} from '../types';
 
 function plain(html: string): string {
   return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();

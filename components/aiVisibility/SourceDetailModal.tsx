@@ -4,7 +4,7 @@ import { SourceStatusBadge, type SourceStatusKind } from '../koala/product/helpe
 import { SourceRow, splitSourceUrl } from './SourcesTable';
 import MetricTrendChart from './MetricTrendChart';
 import { SkeletonBox } from './SkeletonBlocks';
-import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
+import { AI_VIS_MODEL_LABEL } from '../../lib/aiVisibility';
 import { useAiVisSourceDetail } from '../../services/aiVisibility';
 import DomainFavicon from '../common/DomainFavicon';
 import { AiVisSlidePortal, aiVisOverlayZ } from './AiVisSlidePortal';

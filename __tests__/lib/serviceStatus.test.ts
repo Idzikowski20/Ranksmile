@@ -1,4 +1,4 @@
-import { buildServiceStatus, levelCss } from '@/src/core/shared/serviceStatus';
+import { buildServiceStatus, levelCss } from '../../lib/serviceStatus';
 
 describe('buildServiceStatus', () => {
   it('all green when health + ready OK', () => {

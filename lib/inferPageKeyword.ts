@@ -1,6 +1,6 @@
 import { normalizeUrlForMatch } from '../utils/gsc';
-import { tokenize } from '@/src/core/domain/terms/termMatch';
-import { isDictionaryQueryNoise } from '@/src/core/domain/terms/termUtils';
+import { tokenize } from './termMatch';
+import { isDictionaryQueryNoise } from './termUtils';
 import { isKeywordOnTopic } from './topicRelevance';
 
 function bestTokenOverlap(query: string, candidates: string[], fallback: string): string {

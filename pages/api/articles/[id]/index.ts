@@ -5,14 +5,14 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
-import { getArticleIdSql } from '../../../../lib/articles/articleSql';
+import { getArticleIdSql } from '../../../../lib/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
 import type { ArticleRow } from '../../../../lib/db/query';
-import type { AiVisibilitySummary } from '../../../../lib/ai/aiSearchScore';
-import { computeAiSearchScore } from '../../../../lib/ai/aiSearchScore';
+import type { AiVisibilitySummary } from '../../../../lib/aiSearchScore';
+import { computeAiSearchScore } from '../../../../lib/aiSearchScore';
 import {
   buildAiRankingSources,
   buildGoogleRankingSourcesFromRows,

@@ -8,7 +8,7 @@ import {
   pickDeviceResult,
   summarizeExclusiveBuckets,
   summarizeUiBuckets,
-} from '@/src/core/domain/rankTracking/buckets';
+} from './buckets';
 import {
   getLatestSummary,
   listSummaryChartPoints,

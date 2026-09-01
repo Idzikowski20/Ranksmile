@@ -18,7 +18,7 @@ import { slugToDomain } from '../../../utils/slugToDomain';
 import { kwScore } from '../../../utils/gsc';
 import AddPagesModal, { AvailablePage } from '../../../components/domains/AddPagesModal';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
-import { computePortfolioPruning } from '@/src/core/domain/terms/contentEffort';
+import { computePortfolioPruning } from '../../../lib/contentEffort';
 
 // Normalize a full URL or path down to its pathname (e.g. "https://x.pl/blog/" -> "/blog").
 function toPath(url: string): string {

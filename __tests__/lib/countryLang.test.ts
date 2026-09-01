@@ -1,4 +1,4 @@
-import { langForCountry, countryForLang } from '@/src/core/domain/audit/country';
+import { langForCountry, countryForLang } from '../../lib/countryLang';
 
 describe('countryLang', () => {
   it('maps country to language', () => {

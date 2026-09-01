@@ -1,7 +1,7 @@
 /**
  * Load DA / AI-visibility citation seeds for Fact Engine v2 (no LLM in compile).
  */
-import { hashId } from '../ai/aiCoverage';
+import { hashId } from '../aiCoverage';
 import { factReadinessScore } from '../factReadiness';
 
 export type DaFactSeed = {

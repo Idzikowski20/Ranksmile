@@ -3,9 +3,9 @@
  * scores / terms / AI Search coverage.
  */
 import { countOccurrences, termCoverage, type ScoreData } from '../contentScore';
-import type { AiVisibilitySummary } from '../ai/aiSearchScore';
-import { computeOverallContentScore } from '../ai/aiSearchScore';
-import type { BucketScore, CoverageItem, CoverageSnapshot } from '../ai/aiCoverage';
+import type { AiVisibilitySummary } from '../aiSearchScore';
+import { computeOverallContentScore } from '../aiSearchScore';
+import type { BucketScore, CoverageItem, CoverageSnapshot } from '../aiCoverage';
 import { scoreArticleHtml } from '../scoreArticleHtml';
 
 export type DeveloperReportArticleMeta = {

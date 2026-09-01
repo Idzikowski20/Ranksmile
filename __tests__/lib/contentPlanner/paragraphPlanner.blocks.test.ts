@@ -1,5 +1,5 @@
 import { planParagraphs } from '../../../lib/contentPlanner/knowledgePack/paragraphPlanner';
-import type { ExecutionPlanSection } from '@/src/core/domain/contentPlanner/types';
+import type { ExecutionPlanSection } from '../../../lib/contentPlanner/types';
 
 function section(blocks: string[]): ExecutionPlanSection {
   return {

@@ -1,6 +1,6 @@
 import type { NextApiRequest } from 'next';
 import { makeRes, callHandler, type MockRes } from '../../test-utils/apiHandler';
-import ORG_NAME_MAX_LENGTH from '@/src/core/domain/organization/limits';
+import ORG_NAME_MAX_LENGTH from '../../lib/organizationLimits';
 import { writeOrganization } from '../../lib/organization';
 import { uploadImageBuffer } from '../../lib/uploadToBlob';
 import { getCurrentUserId } from '../../utils/getUser';

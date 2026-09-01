@@ -13,7 +13,7 @@ jest.mock('../../lib/cache/fileCache', () => ({
 }));
 
 import { getRankedKeywords } from '../../lib/dataforseo';
-import { needsTermEnrichment, mergeNlpTerms, discoverRankingKeywords } from '../../lib/articles/articleKeywordDiscovery';
+import { needsTermEnrichment, mergeNlpTerms, discoverRankingKeywords } from '../../lib/articleKeywordDiscovery';
 import type { NlpTerm } from '../../lib/contentScore';
 
 const mockGetRankedKeywords = getRankedKeywords as jest.MockedFunction<typeof getRankedKeywords>;

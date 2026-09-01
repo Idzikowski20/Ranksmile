@@ -5,7 +5,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { getDomainLocale } from '../../../../lib/domainLanguage';
-import { topicsNeedLocalization } from '@/src/core/shared/language';
+import { topicsNeedLocalization } from '../../../../lib/domainLanguagePrompts';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

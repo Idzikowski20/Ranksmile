@@ -1,5 +1,5 @@
 import { locationCodeFor } from '../dataforseo';
-import { AUDIT_COUNTRIES, langForCountry } from '@/src/core/domain/audit/country';
+import { AUDIT_COUNTRIES, langForCountry } from '../countryLang';
 import type { RankDevices, RankTrackingConfigRow, ScheduleInterval } from '../types/rankTracking';
 import { createConfig, listConfigs } from './repository';
 import { queryOne } from '../db/query';

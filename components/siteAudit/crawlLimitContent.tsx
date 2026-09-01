@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '../koala/core';
-import { getPlanCheckoutHref } from '../../lib/billing/billingPlans';
+import { getPlanCheckoutHref } from '../../lib/billingPlans';
 
 export function WarningIcon() {
   return (

@@ -1,4 +1,4 @@
-import { checkKeywordArticleIntent } from '@/src/core/domain/keywords/articleIntentGate';
+import { checkKeywordArticleIntent } from '../../lib/harvest/keywordArticleIntentGate';
 
 describe('checkKeywordArticleIntent', () => {
   it('flags military keyword on business hybrid-war article', () => {

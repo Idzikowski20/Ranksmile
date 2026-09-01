@@ -8,7 +8,7 @@ import { assertArticleAccess } from '../../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../../lib/errors';
 import { ensureArticlesTables } from '../../../../../lib/ensureArticlesTables';
 import { ensureCcmTables } from '../../../../../lib/ensureCcmTables';
-import { getArticleIdSql } from '../../../../../lib/articles/articleSql';
+import { getArticleIdSql } from '../../../../../lib/articleSql';
 import { queryOne } from '../../../../../lib/db/query';
 import type { ArticleRow } from '../../../../../lib/db/query';
 import { SqlCompileStore } from '../../../../../lib/intelligence/sqlCompileStore';

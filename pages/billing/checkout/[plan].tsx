@@ -21,10 +21,10 @@ import {
   CheckoutPlan,
   getCheckoutPlan,
   getTrialEndDateLabel,
-} from '../../../lib/billing/billingPlans';
-import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billing/billingPlanLock';
-import { resolveCheckoutMode } from '../../../lib/billing/billingTrial';
-import { isAllowedSubscriptionChange, type UpgradePreview } from '../../../lib/billing/billingUpgrade';
+} from '../../../lib/billingPlans';
+import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billingPlanLock';
+import { resolveCheckoutMode } from '../../../lib/billingTrial';
+import { isAllowedSubscriptionChange, type UpgradePreview } from '../../../lib/billingUpgrade';
 import { getOrgBillingState } from '../../../lib/orgBilling';
 import type { SubscriptionDetails } from '../../../lib/subscriptionDetails';
 import { ensureUserTenancy } from '../../../lib/tenancy';

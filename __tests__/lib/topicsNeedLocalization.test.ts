@@ -1,4 +1,4 @@
-import { topicsNeedLocalization } from '@/src/core/shared/language';
+import { topicsNeedLocalization } from '../../lib/domainLanguagePrompts';
 
 describe('topicsNeedLocalization', () => {
   it('flags English topic titles for Polish domains', () => {

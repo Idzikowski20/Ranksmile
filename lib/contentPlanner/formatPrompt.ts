@@ -1,7 +1,7 @@
 /**
  * Format Content Planner bundle into WIE / Writer prompt blocks.
  */
-import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
+import type { ContentPlannerBundle } from './types';
 
 export function formatContentPlannerForPrompt(bundle: ContentPlannerBundle | null | undefined): string {
   if (!bundle) return '';

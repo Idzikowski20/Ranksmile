@@ -1,5 +1,5 @@
 import type { GetServerSideProps, NextPage } from 'next';
-import { resolveGscPostOAuthRedirect } from '../../lib/gsc/gscOAuthRedirect';
+import { resolveGscPostOAuthRedirect } from '../../lib/gscOAuthRedirect';
 
 /** Legacy workspace route `/wordpress` → Settings (GSC OAuth used this as post-connect landing). */
 export const getServerSideProps: GetServerSideProps = async (ctx) => {

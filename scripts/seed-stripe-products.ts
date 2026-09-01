@@ -4,7 +4,7 @@
  * Requires STRIPE_SECRET_KEY in environment (or stripe CLI logged in via `stripe config`).
  */
 import Stripe from 'stripe';
-import { CHECKOUT_PLANS } from '../lib/billing/billingPlans';
+import { CHECKOUT_PLANS } from '../lib/billingPlans';
 import { DEFAULT_STRIPE_TAX_CODE } from '../lib/billing/stripeTaxPreview';
 
 const PLANS = CHECKOUT_PLANS.map((plan) => ({

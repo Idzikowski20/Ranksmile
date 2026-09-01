@@ -1,7 +1,7 @@
-import type { CoverageItem } from './ai/aiCoverage';
-import { hashId } from './ai/aiCoverage';
+import type { CoverageItem } from './aiCoverage';
+import { hashId } from './aiCoverage';
 import { isNewCoverageIdsEnabled } from './featureFlags';
-import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
+import { normalizeTerm } from './termUtils';
 import { isKeywordOnTopic, seedTokens } from './topicRelevance';
 
 export const CITATION_INTENT_COUNT = 8;

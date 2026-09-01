@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { normalizeHtmlForDiff } from '../articles/articleSections';
+import { normalizeHtmlForDiff } from '../articleSections';
 import type { AoScores } from './aoScoreDelta';
 
 export type AoBaseline = {

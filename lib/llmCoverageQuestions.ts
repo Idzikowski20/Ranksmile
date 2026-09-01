@@ -10,7 +10,7 @@ import { getPeopleAlsoAsk, isDataForSeoConfigured } from './dataforseo';
 import { runModelPrompt, type AiModel } from './dataforseoLlm';
 import { isUsefulCitationPrompt } from './citationPrompts';
 import { isKeywordOnTopic } from './topicRelevance';
-import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
+import { normalizeTerm } from './termUtils';
 
 export type LlmCoverageSource = 'ai_overview' | 'chat_gpt' | 'gemini' | 'perplexity' | 'reddit';
 

@@ -4,7 +4,7 @@ import { getEmbeddingProvider } from './embeddingProvider';
 import { semanticMatchScore } from './semanticMatch';
 import { CANONICALIZE_SIM_MIN } from './constants';
 import { tokensShareStem } from '../topicRelevance';
-import type { CanonicalClaim, KnowledgeGap, TopicBlock, TopicBlockRole } from '@/src/core/domain/knowledgeEngine/types';
+import type { CanonicalClaim, KnowledgeGap, TopicBlock, TopicBlockRole } from './types';
 
 function blockId(title: string): string {
   return `TB_${createHash('sha1').update(title.toLowerCase()).digest('hex').slice(0, 8)}`;

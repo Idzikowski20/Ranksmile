@@ -13,7 +13,7 @@
  */
 import { isCorpusNoiseSentence } from '../corpusNoiseFilter';
 import { seedTokens, tokensShareStem } from '../topicRelevance';
-import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
+import { foldPolishLetters } from '../termUtils';
 
 /**
  * Claims kept per competitor document — enough for gain frequency, short of a dump.

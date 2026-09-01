@@ -3,7 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { auth } from '@googleapis/searchconsole';
-import { GOOGLE_OAUTH_SCOPES } from '../../../lib/gsc/gscAccounts';
+import { GOOGLE_OAUTH_SCOPES } from '../../../lib/gscAccounts';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { getCurrentUserId } from '../../../utils/getUser';

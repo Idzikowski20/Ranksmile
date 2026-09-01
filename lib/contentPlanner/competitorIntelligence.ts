@@ -1,7 +1,7 @@
 /**
  * Competitor Intelligence — structural profiles from measurable inputs.
  */
-import type { CompetitorProfile } from '@/src/core/domain/contentPlanner/types';
+import type { CompetitorProfile } from './types';
 
 export type CompetitorRawInput = {
   url: string;

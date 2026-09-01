@@ -3,11 +3,11 @@ import {
   introMayExpand, buildStepPromptForMode, userInstructionForMode,
 } from '../../lib/optimizationPlanner';
 import type { PlanInput, PlanStep } from '../../lib/optimizationPlanner';
-import type { Section } from '../../lib/articles/articleSections';
+import type { Section } from '../../lib/articleSections';
 import type { Guideline } from '../../lib/recommendationEngine';
-import type { ArticleContext } from '../../lib/articles/articleContext';
+import type { ArticleContext } from '../../lib/articleContext';
 import type { RoutedGuideline } from '../../lib/optimizeGuidelineRouting';
-import type { CoverageSnapshot } from '../../lib/ai/aiCoverage';
+import type { CoverageSnapshot } from '../../lib/aiCoverage';
 
 const sec = (html: string): Section => ({ id: 's', index: 0, headingText: '', html });
 

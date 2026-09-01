@@ -3,7 +3,7 @@ import {
   enrichTermsWithSalienceFromZones,
   termSalienceWeight,
   type SalienceZones,
-} from '@/src/core/domain/terms/salienceCore';
+} from '../../lib/termSalienceCore';
 import { extractSalienceZones } from '../../lib/termSalience';
 
 describe('termSalience', () => {

@@ -19,7 +19,7 @@ jest.mock('../../lib/readRawBody', () => ({
   readRawBody: jest.fn(),
 }));
 
-jest.mock('../../lib/billing/billingEmailClaim', () => ({
+jest.mock('../../lib/billingEmailClaim', () => ({
   claimBillingEmailAndEnqueue: jest.fn(),
 }));
 
@@ -85,7 +85,7 @@ import billingSubscriptionHandler from '../../pages/api/billing/subscription';
 import db from '../../database/database';
 import { getStripe, getStripeWebhookSecret } from '../../lib/stripe';
 import { readRawBody } from '../../lib/readRawBody';
-import { claimBillingEmailAndEnqueue } from '../../lib/billing/billingEmailClaim';
+import { claimBillingEmailAndEnqueue } from '../../lib/billingEmailClaim';
 import { syncSubscriptionToOrg } from '../../lib/stripeBillingSync';
 import { getOrgBillingState } from '../../lib/orgBilling';
 import { ensureUserTenancy, getAccessibleWorkspaceIds } from '../../lib/tenancy';

@@ -5,7 +5,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { queryOne, AuditRunRow } from '../../../../lib/db/query';
-import type { AuditResult } from '@/src/core/domain/audit/types';
+import type { AuditResult } from '../../../../lib/auditTypes';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

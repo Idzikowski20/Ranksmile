@@ -9,7 +9,7 @@ import type {
   StageTimingsMs,
   VerifierResult,
   PriorityClass,
-} from '@/src/core/domain/knowledgeEngine/types';
+} from './types';
 
 export function buildKnowledgeGraph(opts: {
   claims: CanonicalClaim[];

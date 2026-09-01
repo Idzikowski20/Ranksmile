@@ -10,7 +10,7 @@ import type {
   PriorityClass,
   SourceDiversity,
   SourceKind,
-} from '@/src/core/domain/knowledgeEngine/types';
+} from './types';
 import type { RawSentence } from './extract';
 
 export type CanonicalizeInput = {

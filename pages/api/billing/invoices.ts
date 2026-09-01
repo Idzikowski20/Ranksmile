@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { listOrgBillingInvoices } from '../../../src/composition/billing';
+import { listOrgBillingInvoices } from '../../../lib/billingInvoices';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';

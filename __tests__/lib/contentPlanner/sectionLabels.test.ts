@@ -10,7 +10,7 @@ import { buildAdaptiveOutline } from '../../../lib/contentPlanner/outlineBuilder
 import { buildIntentBlueprint } from '../../../lib/contentPlanner/intentBlueprint';
 import { buildReaderModel } from '../../../lib/contentPlanner/readerModel';
 import { buildArticleBlueprint } from '../../../lib/contentPlanner/budgetEngine';
-import type { TargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/types';
+import type { TargetKnowledgeGraph } from '../../../lib/contentPlanner/types';
 
 const emptyKg: TargetKnowledgeGraph = {
   claims: [],

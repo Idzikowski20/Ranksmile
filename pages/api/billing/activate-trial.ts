@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { activateTrialFromSetupIntent } from '../../../lib/billing/billingActivateTrial';
-import { BillingSource } from '../../../lib/billing/billingAudit';
-import { mintBillingConfirmationToken } from '../../../lib/billing/billingConfirmationToken';
+import { activateTrialFromSetupIntent } from '../../../lib/billingActivateTrial';
+import { BillingSource } from '../../../lib/billingAudit';
+import { mintBillingConfirmationToken } from '../../../lib/billingConfirmationToken';
 import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
 import { assertStripeModeOrThrow } from '../../../lib/stripeMode';

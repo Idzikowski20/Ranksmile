@@ -1,4 +1,4 @@
-import { tokenize } from '@/src/core/domain/terms/termMatch';
+import { tokenize } from './termMatch';
 
 const AI_STOP = new Set([
   'jak', 'czy', 'co', 'ile', 'gdzie', 'kiedy', 'dlaczego', 'które', 'która', 'który',

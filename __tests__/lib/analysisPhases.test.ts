@@ -1,6 +1,6 @@
 import {
   emptyPhases, mergePhases, phasesFromStage,
-} from '@/src/core/domain/articles/analysisPhases';
+} from '../../lib/analysisPhases';
 
 describe('mergePhases', () => {
   it('starts every phase as NEW', () => {

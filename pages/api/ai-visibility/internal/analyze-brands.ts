@@ -4,7 +4,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
-import { findConfigsNeedingBrands, runBrandChunk } from '../../../../lib/aiVisibility/aiVisibilityBrands';
+import { findConfigsNeedingBrands, runBrandChunk } from '../../../../lib/aiVisibilityBrands';
 import { getErrorMessage } from '../../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 

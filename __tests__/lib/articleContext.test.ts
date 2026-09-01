@@ -1,13 +1,13 @@
 // Local sequelize-chain mock (mirror __tests__/utils/verifyDomainOwnership.test.ts) — NEVER touch global jest infra.
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
-jest.mock('../../lib/articles/articleSql', () => ({ getArticleIdSql: jest.fn(async () => 'id') }));
-jest.mock('../../lib/articles/articleTerms', () => ({ readArticleTerms: jest.fn(async () => []) }));
+jest.mock('../../lib/articleSql', () => ({ getArticleIdSql: jest.fn(async () => 'id') }));
+jest.mock('../../lib/articleTerms', () => ({ readArticleTerms: jest.fn(async () => []) }));
 jest.mock('../../lib/contentSettings', () => ({ readContentSettings: jest.fn(async () => ({ brandName: '', brandKnowledge: '', voices: [] })) }));
 jest.mock('../../lib/domainVoices', () => ({ getDomainVoices: jest.fn(async () => []) }));
 
 import db from '../../database/database';
-import { buildArticleContext } from '../../lib/articles/articleContext';
-import { readArticleTerms } from '../../lib/articles/articleTerms';
+import { buildArticleContext } from '../../lib/articleContext';
+import { readArticleTerms } from '../../lib/articleTerms';
 import { readContentSettings } from '../../lib/contentSettings';
 import { getDomainVoices } from '../../lib/domainVoices';
 

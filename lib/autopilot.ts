@@ -48,7 +48,7 @@ export async function createAutopilotDraft(domainId: number, keyword: string): P
    // Jest suite that touches this module (uuid ESM is not transformed).
    const { QueryTypes } = await import('sequelize');
    const { ensureArticlesTables } = await import('./ensureArticlesTables');
-   const { getArticleIdSql } = await import('./articles/articleSql');
+   const { getArticleIdSql } = await import('./articleSql');
    const { getDomainLocale } = await import('./domainLanguage');
    await ensureArticlesTables();
    const articleIdSql = await getArticleIdSql();
@@ -76,7 +76,7 @@ export async function createAutopilotDraft(domainId: number, keyword: string): P
 
 /** Roll back a seed whose analysis never started — the row is an empty skeleton. */
 export async function discardAutopilotDraft(articleId: number): Promise<void> {
-   const { getArticleIdSql } = await import('./articles/articleSql');
+   const { getArticleIdSql } = await import('./articleSql');
    const articleIdSql = await getArticleIdSql();
    await db.query(
       `DELETE FROM articles WHERE ${articleIdSql} = ? AND status = 'analyzing' AND (content IS NULL OR content = '')`,
@@ -189,7 +189,7 @@ const GENERATE_ACTIVE_STATUSES = "'queued', 'running', 'finalizing'";
  * `limit`-sized page of already-done rows starve genuinely actionable ones behind them.
  */
 async function loadCandidates(limit: number): Promise<CandidateRow[]> {
-   const { getArticleIdSql } = await import('./articles/articleSql');
+   const { getArticleIdSql } = await import('./articleSql');
    const articleIdSql = await getArticleIdSql();
    const stalePredicate = isPg
       ? `j.updated_at < NOW() - INTERVAL '${STALE_ANALYSIS_MINUTES} minutes'`

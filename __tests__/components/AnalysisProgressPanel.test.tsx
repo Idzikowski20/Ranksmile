@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import AnalysisProgressPanel from '../../components/articles/AnalysisProgressPanel';
-import { emptyPhases, mergePhases } from '@/src/core/domain/articles/analysisPhases';
+import { emptyPhases, mergePhases } from '../../lib/analysisPhases';
 
 describe('AnalysisProgressPanel', () => {
   it('shows both groups', () => {

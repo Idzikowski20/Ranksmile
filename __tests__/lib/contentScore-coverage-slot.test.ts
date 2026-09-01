@@ -1,5 +1,5 @@
 import { collectScoreSlots, ScoreData } from '../../lib/contentScore';
-import type { CoverageItem } from '../../lib/ai/aiCoverage';
+import type { CoverageItem } from '../../lib/aiCoverage';
 
 const entity = (label: string, covered: boolean): CoverageItem => ({
    id: `entity-${label}`,

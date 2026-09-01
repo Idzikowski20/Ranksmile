@@ -7,14 +7,14 @@ import { plainText } from './optimizationPlanner';
 import {
   enrichTermsWithSalienceFromZones,
   type SalienceZones,
-} from '@/src/core/domain/terms/salienceCore';
+} from './termSalienceCore';
 
-export type { SalienceZones } from '@/src/core/domain/terms/salienceCore';
+export type { SalienceZones } from './termSalienceCore';
 export {
   computeTermSalienceScore,
   enrichTermsWithSalienceFromZones,
   termSalienceWeight,
-} from '@/src/core/domain/terms/salienceCore';
+} from './termSalienceCore';
 
 const BOLD_WEIGHT_RE = /font-weight\s*:\s*(bold|[6-9]00)/i;
 

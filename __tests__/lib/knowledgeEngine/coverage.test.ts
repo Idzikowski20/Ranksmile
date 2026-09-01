@@ -6,7 +6,7 @@ import {
   patchExecutionPlanFromCoverage,
   plansDiffer,
 } from '../../../lib/knowledgeEngine';
-import type { ArticleExecutionPlan } from '@/src/core/domain/contentPlanner/types';
+import type { ArticleExecutionPlan } from '../../../lib/contentPlanner/types';
 import type { CanonicalClaim } from '../../../lib/knowledgeEngine';
 
 function sampleClaim(overrides: Partial<CanonicalClaim> = {}): CanonicalClaim {

@@ -1,4 +1,4 @@
-import type { BillingPeriod } from './billing/billingPlans';
+import type { BillingPeriod } from './billingPlans';
 import db from '../database/database';
 import {
   BillingSource,
@@ -8,7 +8,7 @@ import {
   ensureCorrelationId,
   isEntitledStatus,
   type BillingAuditContext,
-} from './billing/billingAudit';
+} from './billingAudit';
 import { ensureBillingTables } from './ensureBillingTables';
 import { queryOne } from './db/query';
 import type { LegacyPlanSlug } from './stripePrices';

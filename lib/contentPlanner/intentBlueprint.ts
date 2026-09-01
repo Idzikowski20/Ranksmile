@@ -1,7 +1,7 @@
 /**
  * Intent Blueprint — search intent before competitor scrape.
  */
-import type { ArticleType, IntentBlueprint } from '@/src/core/domain/contentPlanner/types';
+import type { ArticleType, IntentBlueprint } from './types';
 
 // Stem through inflection (PL: cennika, porównanie) — Unicode letter boundary, not \b after stem.
 const HOWTO_RE = /(?:^|[^\p{L}])(?:jak|how\s+to|guide|przewodnik|krok)\p{L}*/iu;

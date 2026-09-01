@@ -21,7 +21,7 @@ import type {
   KnowledgeCoverageReport,
   SectionBrief,
   TargetKnowledgeGraph,
-} from '@/src/core/domain/contentPlanner/types';
+} from '../../../lib/contentPlanner/types';
 
 function sampleBrief(partial?: Partial<SectionBrief>): SectionBrief {
   return {

@@ -24,7 +24,7 @@ import {
   importanceLabel,
   importanceScoreHeuristic,
 } from './canonicalize';
-import type { CanonicalClaim, ClaimEvidence } from '@/src/core/domain/knowledgeEngine/types';
+import type { CanonicalClaim, ClaimEvidence } from './types';
 
 /** Returns raw model text; the caller owns provider choice, retries and telemetry. */
 export type ClaimCompletion = (prompt: string) => Promise<string>;

@@ -8,7 +8,7 @@ import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/
 import DomainFavicon from '../../../../components/common/DomainFavicon';
 import { HoverTooltip, Button, Modal, SegmentedControl } from '../../../../components/koala/core';
 import { MetricWidget } from '../../../../components/koala/product';
-import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
+import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '../../../../lib/aiVisibility';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
 
 const CompetitorBarChart = dynamic(() => import('../../../../components/aiVisibility/CompetitorBarChart'), { ssr: false });

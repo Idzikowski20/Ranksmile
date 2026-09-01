@@ -1,7 +1,7 @@
 /**
  * DataForSEO Labs ranked_keywords — raw fetch + map to provider rows (not domain OrganicKeyword).
  */
-import { toDfsLanguageCode } from '@/src/core/shared/language';
+import { toDfsLanguageCode } from '../../lib/domainLanguagePrompts';
 import type {
   OrganicItemType,
   PositionBucketKey,

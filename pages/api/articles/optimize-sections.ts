@@ -3,8 +3,8 @@ import { chatLlm } from '../../../lib/ai/deepseek';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
-import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '../../../lib/ai/aiTokenUsage';
-import { splitSections, normalizeHtmlForDiff } from '../../../lib/articles/articleSections';
+import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '../../../lib/aiTokenUsage';
+import { splitSections, normalizeHtmlForDiff } from '../../../lib/articleSections';
 import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
 import { buildWholeArticlePrompt } from '../../../lib/optimizeWholeArticle';
 import {
@@ -16,11 +16,11 @@ import {
    computeTermUsageGaps,
 } from '../../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../../lib/contentScore';
-import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '../../../lib/ai/aiSearchScore';
-import { buildArticleContext } from '../../../lib/articles/articleContext';
-import type { ArticleContext } from '../../../lib/articles/articleContext';
-import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articles/articleKeywordDiscovery';
-import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
+import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '../../../lib/aiSearchScore';
+import { buildArticleContext } from '../../../lib/articleContext';
+import type { ArticleContext } from '../../../lib/articleContext';
+import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articleKeywordDiscovery';
+import { filterUsefulNlpTerms } from '../../../lib/competitorTermCalibration';
 import { termsForOptimize } from '../../../lib/mergeArticleTerms';
 import { liveCoverageItems } from '../../../lib/liveCoverage';
 import {
@@ -34,9 +34,9 @@ import { buildCriticalContentMap } from '../../../lib/ao/criticalContentMap';
 import { countWordsFromHtml } from '../../../lib/ao/aoBaseline';
 import type { AoScores } from '../../../lib/ao/aoScoreDelta';
 import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '../../../lib/ao/aoRunOutcome';
-import { structureIssues } from '@/src/core/domain/articles/validateStructure';
+import { structureIssues } from '../../../lib/validateArticleStructure';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
-import { getArticleIdSql } from '../../../lib/articles/articleSql';
+import { getArticleIdSql } from '../../../lib/articleSql';
 import db from '../../../database/database';
 import { buildGuidelines } from '../../../lib/recommendationEngine';
 import {
@@ -51,7 +51,7 @@ import {
    resolveOptimizePhase,
    targetContentForPhase,
    type AoMeta,
-} from '@/src/core/domain/optimize/runPhase';
+} from '../../../lib/optimizeRunPhase';
 import { getErrorMessage } from '../../../lib/errors';
 import { throwIfAborted } from '../../../lib/abortSignal';
 import { queryOne } from '../../../lib/db/query';

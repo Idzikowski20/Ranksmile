@@ -1,5 +1,5 @@
-import type { CoverageItem } from './ai/aiCoverage';
-import { computeCompetitorContentScore } from '@/src/core/domain/competitors/contentScore';
+import type { CoverageItem } from './aiCoverage';
+import { computeCompetitorContentScore } from './competitorContentScore';
 import {
    aiExtractabilityScore,
    datesAuthorScore,
@@ -7,13 +7,11 @@ import {
    keywordStuffingScore,
    thinOriginalityScore,
    titleQueryScore,
-} from '@/src/core/domain/terms/contentEffort';
-import { termWeight } from '@/src/core/domain/terms/termWeight';
-import { countOccurrences, normalizePl, tokenize, wordMatch } from '@/src/core/domain/terms/termMatch';
+} from './contentEffort';
+import { termWeight } from './termWeight';
+import { countOccurrences, normalizePl, tokenize, wordMatch } from './termMatch';
 
-export { countOccurrences } from '@/src/core/domain/terms/termMatch';
-import type { NlpTerm } from '@/src/core/domain/terms/types';
-export type { NlpTerm };
+export { countOccurrences } from './termMatch';
 
 // Content Score formula — targets derived from average of top-10 competitor pages.
 //
@@ -25,6 +23,24 @@ export type { NlpTerm };
 //
 // Missing signals reduce the denominator, so the score stays normalised to 100.
 // Score is always capped at 100.
+
+export interface NlpTerm {
+   term: string;
+   target_count: number;
+   current_count?: number;
+   /** Competitor-derived usage range (Ranksmile "suggested" column). */
+   suggested_min?: number;
+   suggested_max?: number;
+   relevance?: number;
+   doc_freq?: number;
+   /** 0–100 prominence from competitor H2/bold/font-weight zones (Ranksmile NLP salience v2). */
+   salience?: number;
+   /** Per-word inflection alternations from the sidecar (term_lemmas.py) — Surfer-style
+    *  lemma matching. Absent on pre-existing analyses; countOccurrences falls back. */
+   term_words_regexps?: string[];
+   /** Stem-sequence identity: equal keys are the same term in different inflections. */
+   lemma_key?: string;
+}
 
 export interface ScoreData {
    terms: NlpTerm[];
@@ -45,7 +61,7 @@ export interface ScoreData {
    scoring_model?: 'competitor' | 'legacy';
    content_targets?: { avgWords: number; avgHeadings: number; avgPs: number };
    /** Full Ranksmile-style audit payload (factors, terms, internal links). */
-   audit_result?: import('@/src/core/domain/audit/types').AuditResult;
+   audit_result?: import('./auditTypes').AuditResult;
    /** On-page SEO score from audit factor verdicts. */
    seo_score?: number;
    /** AI Search score (Facts + Intent) — persisted after deep-analysis. */
@@ -76,15 +92,56 @@ export interface ScoreData {
    /** WIE Think hints from Deep Analysis (policy / narrative / explainability) */
    wie_policy_hints?: Record<string, unknown>;
    /** CIE — immutable Knowledge Graph snapshot (when USE_KNOWLEDGE_ENGINE passes gate). */
-   knowledge_graph?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeGraph;
+   knowledge_graph?: import('./knowledgeEngine/types').KnowledgeGraph;
    /** CIE — coverage overlay report (never written into frozen graph). */
-   knowledge_coverage_report?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeCoverageReport;
-   structural_benchmark?: import('@/src/core/domain/benchmark/types').StructuralBenchmark;
+   knowledge_coverage_report?: import('./knowledgeEngine/types').KnowledgeCoverageReport;
+   structural_benchmark?: import('./benchmarkIntelligence/types').StructuralBenchmark;
 }
 
-// Term-coverage helpers now live in the terms domain; re-exported for back-compat.
-export { findTermRangesBatch, termCoverage, termUsageHint } from '@/src/core/domain/terms/coverage';
-export type { Coverage } from '@/src/core/domain/terms/coverage';
+/**
+ * For a single text node, return each term's match ranges (char offsets into
+ * `text`) using the same inflection-tolerant matching as countOccurrences. Tokenizes
+ * the text once for all terms — used by the editor's term-highlight decorations.
+ * normalizePl is length-preserving, so indices map straight back onto `text`.
+ */
+export function findTermRangesBatch(text: string, terms: string[]): Array<{ term: string; ranges: Array<[number, number]> }> {
+   if (!text || !terms.length) return [];
+   const norm = normalizePl(text);
+   const toks: Array<{ w: string; start: number; end: number }> = [];
+   const re = /[a-z0-9]+/g;
+   let m: RegExpExecArray | null = re.exec(norm);
+   while (m !== null) { toks.push({ w: m[0], start: m.index, end: m.index + m[0].length }); m = re.exec(norm); }
+   if (!toks.length) return terms.map((term) => ({ term, ranges: [] }));
+   return terms.map((term) => {
+      const Q = tokenize(term);
+      const ranges: Array<[number, number]> = [];
+      if (Q.length) {
+         for (let i = 0; i + Q.length <= toks.length; i += 1) {
+            let ok = true;
+            for (let j = 0; j < Q.length; j += 1) { if (!wordMatch(toks[i + j].w, Q[j])) { ok = false; break; } }
+            if (ok) ranges.push([toks[i].start, toks[i + Q.length - 1].end]);
+         }
+      }
+      return { term, ranges };
+   });
+}
+
+/** Coverage status of a term vs. its target — shared by the panel chips and the editor highlight. */
+export type Coverage = 'red' | 'yellow' | 'green';
+export function termCoverage(t: { current_count?: number; target_count: number }): Coverage {
+   const cur = t.current_count ?? 0;
+   if (cur === 0) return 'red';
+   if (cur < t.target_count) return 'yellow';
+   return 'green';
+}
+/** Human usage hint shown in the term tooltip (panel + editor highlight). */
+export function termUsageHint(t: { current_count?: number; target_count: number }): string {
+   const cur = t.current_count ?? 0;
+   const tgt = Math.max(t.target_count, 1);
+   if (cur >= tgt) return "Good job. You're in optimal range.";
+   if (cur === 0) return tgt > 1 ? `Use ${tgt} times. Currently used 0 times.` : 'Use at least once. Currently used 0 times.';
+   return `Use ${tgt} time${tgt !== 1 ? 's' : ''}. Currently used ${cur} time${cur !== 1 ? 's' : ''}.`;
+}
 
 // ── Signal helpers ────────────────────────────────────────────────────────────
 

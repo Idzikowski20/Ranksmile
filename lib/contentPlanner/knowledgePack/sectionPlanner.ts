@@ -1,4 +1,4 @@
-import type { ExecutionPlanSection } from '@/src/core/domain/contentPlanner/types';
+import type { ExecutionPlanSection } from '../types';
 import type { KnowledgePack, ParagraphPlan } from './types';
 
 export function buildKnowledgePack(

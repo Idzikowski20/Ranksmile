@@ -2,7 +2,7 @@ import {
   KNOWLEDGE_CONSENSUS_MIN,
   PLANNER_CLAIMS_FLOOR,
 } from './constants';
-import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
+import type { KnowledgeGraph } from './types';
 
 export type {
   ClaimEvidence,
@@ -27,7 +27,7 @@ export type {
   ClaimCoverageItem,
   PriorityClass,
   EvidenceRole,
-} from '@/src/core/domain/knowledgeEngine/types';
+} from './types';
 
 export {
   KNOWLEDGE_SCHEMA_VERSION,

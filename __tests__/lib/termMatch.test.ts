@@ -1,5 +1,5 @@
-import { countOccurrences } from '@/src/core/domain/terms/termMatch';
-import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
+import { countOccurrences } from '../../lib/termMatch';
+import { filterUsefulNlpTerms } from '../../lib/competitorTermCalibration';
 import type { NlpTerm } from '../../lib/contentScore';
 
 /** Shape produced by python-sidecar/analyzers/term_lemmas.py. */

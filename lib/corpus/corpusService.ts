@@ -230,7 +230,7 @@ export async function getFingerprint(corpusId: string): Promise<FingerprintMetri
 }
 
 /** Fraction of URLs that changed vs previous corpus (0–1). */
-export { serpChangeRatio, shouldForceRefresh } from '@/src/core/domain/corpus/serpChange';
+export { serpChangeRatio, shouldForceRefresh } from './serpChange';
 
 export function contentHash(text: string): string {
   return createHash('sha256').update(text).digest('hex').slice(0, 16);

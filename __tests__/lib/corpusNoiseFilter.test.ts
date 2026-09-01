@@ -1,5 +1,5 @@
 import { isCorpusNoiseSentence } from '../../lib/corpusNoiseFilter';
-import { foldPolishLetters } from '@/src/core/domain/terms/termUtils';
+import { foldPolishLetters } from '../../lib/termUtils';
 
 /** Every form the same sentence can reach us in from a scrape. */
 const forms = (sentence: string) => ({

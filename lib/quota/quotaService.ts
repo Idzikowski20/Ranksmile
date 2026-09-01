@@ -1,7 +1,7 @@
 import type { Transaction } from 'sequelize';
 import db from '../../database/database';
 import { ensurePlanQuotaTables } from '../ensurePlanQuotaTables';
-import { hasActiveBillingEntitlement } from '../billing/billingEntitlement';
+import { hasActiveBillingEntitlement } from '../billingEntitlement';
 import { getOrgBillingState } from '../orgBilling';
 import {
   ACTIVE_PERIOD_KEY,

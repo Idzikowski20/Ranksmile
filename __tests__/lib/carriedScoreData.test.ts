@@ -1,4 +1,4 @@
-import { carriedScoreData } from '@/src/core/domain/articles/carriedScoreData';
+import { carriedScoreData } from '../../lib/carriedScoreData';
 
 /**
  * Article 17 shipped with `knowledge_graph: null`, no `content_planner_v2` and no

@@ -1,5 +1,5 @@
 import type { PipelineWorker } from '../types';
-import type { CoverageItem } from '../../ai/aiCoverage';
+import type { CoverageItem } from '../../aiCoverage';
 
 /** Coverage materialize — Coverage → Gap → Reco; Feature Store write. */
 export const coverageWorker: PipelineWorker = {

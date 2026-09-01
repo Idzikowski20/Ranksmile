@@ -1,6 +1,6 @@
 import { queryOne } from './db/query';
-import { countryForLang } from '@/src/core/domain/audit/country';
-import { toDfsLanguageCode } from '@/src/core/shared/language';
+import { countryForLang } from './countryLang';
+import { toDfsLanguageCode } from './domainLanguagePrompts';
 
 export type DomainLocale = {
   languageCode: string;
@@ -84,4 +84,4 @@ export function languageDisplayName(code: string): string {
   return LANG_NAMES[code.toLowerCase().slice(0, 2)] || 'English';
 }
 
-export { looksPolish, looksLikeLanguage, polishPromptTemplates, promptTemplatesForLocale, toDfsLanguageCode, languageInstructionForLlm, topicsNeedLocalization } from '@/src/core/shared/language';
+export { looksPolish, looksLikeLanguage, polishPromptTemplates, promptTemplatesForLocale, toDfsLanguageCode, languageInstructionForLlm, topicsNeedLocalization } from './domainLanguagePrompts';

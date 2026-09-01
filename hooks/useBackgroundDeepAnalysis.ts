@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
+import type { AnalysisPhases } from '../lib/analysisPhases';
 import {
   clearAnalyzeSession,
   deriveDeepAnalysisUi,
