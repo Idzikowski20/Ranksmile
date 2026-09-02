@@ -2416,6 +2416,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           /* TipTap wraps list text in <p>; without this, p+li margins stack into huge gaps. */
           .art-editor-scroll .ProseMirror li > p { margin: 0; }
           .art-editor-scroll .ProseMirror ul, .art-editor-scroll .ProseMirror ol { padding-left: 24px; margin: 10px 0; color: var(--koala-text-secondary); }
+          /* Markers: the app reset (globals list-style:none / Tailwind preflight) strips them,
+             so bullets/numbers were invisible in the editor. Set them explicitly; nested levels
+             mirror browser defaults (disc → circle → square). taskList opts out below. */
+          .art-editor-scroll .ProseMirror ul:not([data-type="taskList"]) { list-style-type: disc; }
+          .art-editor-scroll .ProseMirror ul:not([data-type="taskList"]) ul { list-style-type: circle; }
+          .art-editor-scroll .ProseMirror ul:not([data-type="taskList"]) ul ul { list-style-type: square; }
+          .art-editor-scroll .ProseMirror ol { list-style-type: decimal; }
+          .art-editor-scroll .ProseMirror li { display: list-item; }
           .art-editor-scroll .ProseMirror li { margin: 2px 0; line-height: 1.65; color: var(--koala-text-secondary); font-size: 14px; }
           .art-editor-scroll .ProseMirror strong { font-weight: 700; color: var(--koala-text-primary); }
           .art-editor-scroll .ProseMirror em { font-style: italic; }

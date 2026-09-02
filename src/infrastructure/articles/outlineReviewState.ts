@@ -44,7 +44,15 @@ export function isOutlineAwaitingReview(article: OutlineReviewInput | null | und
   // was reopened in outline review and its autosave suspended. Anything the author has
   // actually written counts as written.
   if (stripHtmlToPlain(html).length > 0) return false;
-  // Nothing written yet. A planner bundle means an outline was produced for this article
-  // and never turned into an article; without one there is simply nothing to review.
+  // A row that carries an explicit status is fully classified by the status branches
+  // above — the only status that means "awaiting review" is 'review'. The planner bundle
+  // lives in score_data for the article's whole life (planning writes it; it survives
+  // generation), so it does NOT mean "never written". A finalized 'draft' whose content
+  // is momentarily empty (a lost/failed persist) must not be pushed into review: that
+  // suspends autosave, which keeps content empty — a deadlock that stranded article 162
+  // as "review outline / Generate content" over a body that had already been generated.
+  if (article.status) return false;
+  // Legacy rows only — written before the 'review' status existed. A planner bundle then
+  // is the only signal that an outline was produced and never turned into an article.
   return hasPlannerBundle(article.scoreData);
 }
