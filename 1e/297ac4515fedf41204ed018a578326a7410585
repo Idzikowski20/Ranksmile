@@ -1,0 +1,20 @@
+components/articles/WordPressExportModal.tsx
+  s_8a599cee1c9d24::t_93c96dcd2aa6c7 115-125
+  s_8a599cee1c9d24::t_455ebc6ace953f 64-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1e297ac4515fedf41204ed018a578326a7410585",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
