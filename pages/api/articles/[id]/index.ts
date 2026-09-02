@@ -172,15 +172,27 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
       // the resolved value (>= stored), so it cannot regress finalize's score. A score-only
       // refresh sends just this (no content/meta/image), so it never rewrites the article.
       if (score_override && typeof score_override === 'object') {
-         const so = score_override as { seo?: number; ai?: number; overall?: number };
+         const so = score_override as { seo?: unknown; ai?: unknown; overall?: unknown };
+         const clamp01 = (v: unknown): number | null =>
+            (Number.isFinite(Number(v)) ? Math.max(0, Math.min(100, Math.round(Number(v)))) : null);
          scoreDataObj = { ...(scoreDataObj ?? storedScoreData ?? {}) };
-         if (Number.isFinite(so.seo)) scoreDataObj.seo_score = Number(so.seo);
-         if (Number.isFinite(so.ai)) scoreDataObj.ai_score = Number(so.ai);
-         if (Number.isFinite(so.overall)) {
-            scoreDataObj._content_score = Number(so.overall);
-            scoreDataObj._computed_score = Number(so.overall);
-            contentScore = Number(so.overall);
+         const seoOv = clamp01(so.seo);
+         const aiOv = clamp01(so.ai);
+         const overallOv = clamp01(so.overall);
+         if (seoOv != null) scoreDataObj.seo_score = seoOv;
+         if (aiOv != null) {
+            // ai_score is server-authoritative; the override only RAISES it (the panel ships
+            // max(stored, resolved)), so a stale/lowball client can never regress finalize.
+            const storedAi = Number(storedScoreData?.ai_score);
+            scoreDataObj.ai_score = Number.isFinite(storedAi) ? Math.max(storedAi, aiOv) : aiOv;
          }
+         if (overallOv != null) {
+            scoreDataObj._content_score = overallOv;
+            scoreDataObj._computed_score = overallOv;
+         }
+         // Never zero content_score on a partial override (only seo/ai sent): recompute it
+         // from the merged blob / prior value instead of leaving contentScore at 0.
+         contentScore = Number(scoreDataObj._content_score ?? scoreDataObj._computed_score ?? beforeScore ?? contentScore) || contentScore;
       }
 
       const scoreDataJson = scoreDataObj ? JSON.stringify(scoreDataObj) : (score_data ? JSON.stringify(score_data) : null);
