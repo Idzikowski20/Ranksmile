@@ -3,6 +3,7 @@ import type { ResultRow } from './metricsTypes';
 // Single source of host normalization — shared with citation blocking so the two
 // never drift on the same input.
 import { normCitationDomain as norm } from './blockedDomains';
+import { presenceScore } from './presence';
 
 const pairScore = (r: ResultRow): number => (
   r.ownCited && r.ownPosition ? Math.max(0, 100 - (r.ownPosition - 1) * 15) : 0
@@ -17,15 +18,24 @@ export function ownDomainPosition(citations: LlmCitation[], ownDomain: string): 
   return idx === -1 ? null : idx + 1;
 }
 
+/** mentionRate (%) + avgPosition for a set of pairs, the two inputs presence is built on. */
+function rateAndPosition(rows: ResultRow[]): { mentionRate: number; avgPosition: number | null } {
+  const cited = rows.filter((r) => r.ownCited && r.ownPosition);
+  return {
+    mentionRate: rows.length ? Math.round((cited.length / rows.length) * 100) : 0,
+    avgPosition: cited.length ? Math.round(mean(cited.map((r) => r.ownPosition as number)) * 10) / 10 : null,
+  };
+}
+
 export function computeOverview(rows: ResultRow[]) {
-  const perModelMap = new Map<string, number[]>();
+  const perModelMap = new Map<string, ResultRow[]>();
   for (const r of rows) {
     const list = perModelMap.get(r.model) ?? [];
-    list.push(pairScore(r));
+    list.push(r);
     perModelMap.set(r.model, list);
   }
-  const scores = rows.map(pairScore);
   const cited = rows.filter((r) => r.ownCited && r.ownPosition);
+  const { mentionRate, avgPosition } = rateAndPosition(rows);
 
   const ownUrls = new Set<string>();
   let directCitations = 0;
@@ -36,12 +46,17 @@ export function computeOverview(rows: ResultRow[]) {
   }
 
   return {
-    visibilityScore: Math.round(mean(scores)),
-    mentionRate: rows.length ? Math.round((cited.length / rows.length) * 100) : 0,
-    avgPosition: cited.length ? Math.round(mean(cited.map((r) => r.ownPosition as number)) * 10) / 10 : null,
+    // One calibrated model for every surface (own gauge, per-engine, brand profiles) so the
+    // numbers stay comparable with the reference tool — see domain/aiVisibility/presence.
+    visibilityScore: presenceScore({ mentionRate, avgPosition }),
+    mentionRate,
+    avgPosition,
     directCitations,
     pages: ownUrls.size,
-    perModel: Array.from(perModelMap.entries()).map(([model, list]) => ({ model, score: Math.round(mean(list)) })),
+    perModel: Array.from(perModelMap.entries()).map(([model, list]) => ({
+      model,
+      score: presenceScore(rateAndPosition(list)),
+    })),
   };
 }
 

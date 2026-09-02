@@ -15,6 +15,7 @@ import db from '@/database/database';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { parseBrands } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import type { BrandMention } from '@/src/core/domain/aiVisibility/metricsTypes';
+import { presenceScore } from '@/src/core/domain/aiVisibility/presence';
 
 export type ProfileChunkResult = { done: number; remaining: number };
 export const AI_VIS_PROFILE_CHUNK = 25;
@@ -24,7 +25,6 @@ type Agg = {
    domain: string;
    mentions: number;
    posSum: number;
-   scoreSum: number;
    sentiments: BrandMention['sentiment'][];
 };
 
@@ -41,10 +41,9 @@ function dominantSentiment(list: BrandMention['sentiment'][]): string {
 /**
  * Build up to `limit` missing brand profiles for a scan.
  *
- * presence_score mirrors the locked visibility model: a mention at position p is worth
- * max(0, 100 - (p-1)*15), averaged over EVERY (prompt × model) pair of the scan — so a
- * brand named first in half the answers scores about half of a brand named first in all
- * of them, the same way our own visibilityScore is built.
+ * presence_score uses the shared calibrated model (domain/aiVisibility/presence), the same
+ * one the own-brand gauge reads, so a competitor's number and ours are on one scale — and
+ * on the reference tool's scale.
  */
 export async function runProfileChunk(scanId: number, limit = AI_VIS_PROFILE_CHUNK): Promise<ProfileChunkResult> {
    const pairsRow = await queryOne<{ n: number }>('SELECT COUNT(*) AS n FROM ai_vis_results WHERE scan_id = ?', [scanId]);
@@ -62,10 +61,9 @@ export async function runProfileChunk(scanId: number, limit = AI_VIS_PROFILE_CHU
       for (const b of parseBrands(r.brands)) {
          const key = b.brand.trim().toLowerCase();
          if (!key) continue;
-         const e = agg.get(key) ?? { brand: b.brand.trim(), domain: b.domain, mentions: 0, posSum: 0, scoreSum: 0, sentiments: [] };
+         const e = agg.get(key) ?? { brand: b.brand.trim(), domain: b.domain, mentions: 0, posSum: 0, sentiments: [] };
          e.mentions += 1;
          e.posSum += b.pos;
-         e.scoreSum += Math.max(0, 100 - (b.pos - 1) * 15);
          if (!e.domain && b.domain) e.domain = b.domain;
          e.sentiments.push(b.sentiment);
          agg.set(key, e);
@@ -79,7 +77,8 @@ export async function runProfileChunk(scanId: number, limit = AI_VIS_PROFILE_CHU
 
    for (const [, e] of batch) {
       const avgPosition = e.mentions ? Math.round((e.posSum / e.mentions) * 10) / 10 : null;
-      const presence = Math.round(e.scoreSum / pairs);
+      const mentionRate = Math.round((e.mentions / pairs) * 100);
+      const presence = presenceScore({ mentionRate, avgPosition });
       // eslint-disable-next-line no-await-in-loop -- one small INSERT per brand; the unique
       // index on (scan_id, brand) makes a concurrent tick a no-op rather than a duplicate.
       await db.query(

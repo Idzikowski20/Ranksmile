@@ -28,14 +28,17 @@ describe('ownDomainPosition', () => {
 describe('computeOverview', () => {
    it('computes score, rate, position, citations, pages', () => {
       const o = computeOverview(rows);
-      // scores: 100 (p1) + 0 + 70 (p3) + 0 = 170/4 = 42.5 → 43
-      expect(o.visibilityScore).toBe(43);
+      // Calibrated presence (domain/aiVisibility/presence), not the old pairScore mean:
+      // mentionRate 50 @ avgPosition 2 → 0.7242*50 - 3.285*2 + 32.948 = 62.6 → 63.
+      expect(o.visibilityScore).toBe(63);
       expect(o.mentionRate).toBe(50);
       expect(o.avgPosition).toBe(2);
       expect(o.directCitations).toBe(2);
       expect(o.pages).toBe(2);
       const byModel = Object.fromEntries(o.perModel.map((m) => [m.model, m.score]));
-      expect(byModel).toEqual({ chat_gpt: 85, gemini: 0 });
+      // Per-engine uses the same calibrated presence: chat_gpt is cited in both of its
+      // answers (100% @ avgPosition 2) → 99; gemini never cites us → 0.
+      expect(byModel).toEqual({ chat_gpt: 99, gemini: 0 });
    });
    it('handles empty input', () => {
       const o = computeOverview([]);
@@ -67,7 +70,7 @@ describe('aggregateCompetitors', () => {
 describe('buildSnapshot', () => {
    it('bundles overview, sources, and the set of prompts where own was cited', () => {
       const snap = buildSnapshot(rows, 'idztech.pl');
-      expect(snap.overview.visibilityScore).toBe(43);
+      expect(snap.overview.visibilityScore).toBe(63); // calibrated presence — see computeOverview test
       expect(snap.sources.find((s) => s.domain === 'oracle.com')?.timesShown).toBe(3);
       // prompt 1 (chat_gpt cited) and prompt 2 (chat_gpt cited) → both cited; unique + sorted
       expect(snap.citedPromptIds).toEqual([1, 2]);
@@ -80,7 +83,7 @@ describe('buildSnapshot', () => {
 describe('snapshotForDomain', () => {
    it('equals buildSnapshot when domain === own', () => {
       const snap = snapshotForDomain(rows, 'idztech.pl');
-      expect(snap.overview.visibilityScore).toBe(43);
+      expect(snap.overview.visibilityScore).toBe(63); // calibrated presence — see computeOverview test
       expect(snap.citedPromptIds).toEqual([1, 2]);
       expect(snap.prompts.find((p) => p.promptId === 1)?.score).toBe(50);
    });
@@ -196,8 +199,8 @@ describe('computeDelta', () => {
 
    it('reports score delta with direction', () => {
       const d = computeDelta(current, previous);
-      // current p1 score 100, p2 0 → 50; previous p1 70, p2 0 → 35
-      expect(d.visibilityScore).toEqual({ current: 50, previous: 35, delta: 15, trend: 'up' });
+      // Calibrated presence: current = 50% @ pos 1 → 66; previous = 50% @ pos 3 → 59.
+      expect(d.visibilityScore).toEqual({ current: 66, previous: 59, delta: 7, trend: 'up' });
    });
    it('reports sources added and removed (by domain, deduped)', () => {
       const d = computeDelta(current, previous);
