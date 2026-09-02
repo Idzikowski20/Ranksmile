@@ -275,7 +275,7 @@ const sourceBadgeShell: React.CSSProperties = {
   marginRight: -5, overflow: 'hidden',
 };
 
-/** Brand logo from /public/engine-icons inside the round badge shell. */
+/** Brand logo from /public/ai-tracking (small, badge-sized) inside the round badge shell. */
 const EngineLogo = ({ src, label }: { src: string; label: string }) => (
   <span style={sourceBadgeShell}>
     <img src={src} alt={label} width={13} height={13} style={{ objectFit: 'contain' }} loading="lazy" />
@@ -301,13 +301,13 @@ const SourceIcon = ({ source }: { source: InfoSource }) => {
     );
   }
   if (source.kind === 'openai') {
-    return <Tip text="ChatGPT / OpenAI"><EngineLogo src="/engine-icons/chatgpt.webp" label="ChatGPT" /></Tip>;
+    return <Tip text="ChatGPT / OpenAI"><EngineLogo src="/ai-tracking/engine-chatgpt.svg" label="ChatGPT" /></Tip>;
   }
   if (source.kind === 'gemini') {
-    return <Tip text="Google Gemini"><EngineLogo src="/engine-icons/gemini.webp" label="Gemini" /></Tip>;
+    return <Tip text="Google Gemini"><EngineLogo src="/ai-tracking/engine-gemini.png" label="Gemini" /></Tip>;
   }
   if (source.kind === 'perplexity') {
-    return <Tip text="Perplexity"><EngineLogo src="/engine-icons/perplexity.svg" label="Perplexity" /></Tip>;
+    return <Tip text="Perplexity"><EngineLogo src="/ai-tracking/engine-perplexity.svg" label="Perplexity" /></Tip>;
   }
   if (source.kind === 'reddit') {
     return (

@@ -115,10 +115,7 @@ export interface ScoreData {
    structural_benchmark?: import('@/src/core/domain/benchmark/types').StructuralBenchmark;
    /** Facts mined from competitor bodies, each with the pages that asserted it (Surfer's
     *  fact sheet). Carried across score writes so the sheet survives analysis. */
-   researched_facts?: {
-      claims?: string[];
-      sources?: Array<{ url?: string; source_urls?: string[]; label?: string; confidence?: number; cited_by?: string[] }>;
-   };
+   researched_facts?: import('@/src/core/shared/types/sidecar').ResearchedFacts;
 }
 
 // Term-coverage helpers now live in the terms domain; re-exported for back-compat.

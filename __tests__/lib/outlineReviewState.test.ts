@@ -134,10 +134,8 @@ describe('the recorded status', () => {
    * signal; content-plan only sets it while content is empty, so a 'draft' is never one.
    */
   it('does not push an empty-content draft with a stale planner bundle into review', () => {
+    // The status-less empty+bundle legacy case is already covered above ("recognises an
+    // empty draft that already has a planner bundle"); this only adds the new 'draft' guard.
     expect(isOutlineAwaitingReview({ content: '', scoreData: WITH_PLAN, status: 'draft' })).toBe(false);
-  });
-
-  it('still recognises a legacy empty+bundle row that has no status at all', () => {
-    expect(isOutlineAwaitingReview({ content: '', scoreData: WITH_PLAN })).toBe(true);
   });
 });

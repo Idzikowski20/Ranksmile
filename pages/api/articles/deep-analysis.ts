@@ -828,10 +828,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // read 75 in the list while the editor and Auto-Optimize recomputed 86 from the same
     // HTML — two numbers for one article, and the optimizer chasing the wrong one.
     const linkCount = (pageContent.match(/<a\s[^>]*href=/gi) || []).length;
-    const seoScore = seoScoreFromAudit ?? computeContentScore(
-      plainText, wordCount, headingCount, scoreData, paragraphCount, linkCount,
-      pageContent, resolvedKeyword || '',
-    );
+    // The audit-score branch short-circuits computeContentScore, so without this the stored
+    // score omitted the internal-link bonus the editor/Auto-Optimize add — two numbers for
+    // one article. Apply the same min(2, links) bonus so both branches agree.
+    const seoScore = seoScoreFromAudit != null
+      ? Math.min(100, seoScoreFromAudit + Math.min(2, linkCount))
+      : computeContentScore(
+        plainText, wordCount, headingCount, scoreData, paragraphCount, linkCount,
+        pageContent, resolvedKeyword || '',
+      );
     // Keyword mode creates an EMPTY draft — a score computed on empty content is a
     // misleading 0 that the editor panel would prefer over its live computation.
     // Leave the numeric scores unset so the gauge scores the generated content.

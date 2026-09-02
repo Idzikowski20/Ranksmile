@@ -2423,6 +2423,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror ul:not([data-type="taskList"]) ul { list-style-type: circle; }
           .art-editor-scroll .ProseMirror ul:not([data-type="taskList"]) ul ul { list-style-type: square; }
           .art-editor-scroll .ProseMirror ol { list-style-type: decimal; }
+          .art-editor-scroll .ProseMirror ol ol { list-style-type: lower-alpha; }
+          .art-editor-scroll .ProseMirror ol ol ol { list-style-type: lower-roman; }
           .art-editor-scroll .ProseMirror li { display: list-item; }
           .art-editor-scroll .ProseMirror li { margin: 2px 0; line-height: 1.65; color: var(--koala-text-secondary); font-size: 14px; }
           .art-editor-scroll .ProseMirror strong { font-weight: 700; color: var(--koala-text-primary); }

@@ -35,13 +35,16 @@ describe('competitorHeadingTitles — service-page chrome', () => {
       'Najnowsze wpisy',
       'Zapraszamy do naszych biur',
       'Porozmawiaj ze specjalistą. Działamy na terenie całej Polski',
-      'Kontakt',
-      'O nas',
+      'Kontakt z nami',
+      'O naszej firmie',
       'Jak wykrywanie podsłuchów chroni ofiary szantażu',
+      'Kontakt z dzieckiem po rozwodzie',
     ]));
     expect(out).toContain('Zakres usług detektywistycznych w Warszawie');
     expect(out).toContain('Jak wykrywanie podsłuchów chroni ofiary szantażu');
-    for (const chrome of ['Godziny otwarcia', 'Najnowsze wpisy', 'Zapraszamy do naszych biur', 'Porozmawiaj ze specjalistą. Działamy na terenie całej Polski', 'Kontakt', 'O nas']) {
+    // Topical heading that merely starts with "Kontakt" must survive (not chrome).
+    expect(out).toContain('Kontakt z dzieckiem po rozwodzie');
+    for (const chrome of ['Godziny otwarcia', 'Najnowsze wpisy', 'Zapraszamy do naszych biur', 'Porozmawiaj ze specjalistą. Działamy na terenie całej Polski', 'Kontakt z nami', 'O naszej firmie']) {
       expect(out).not.toContain(chrome);
     }
   });

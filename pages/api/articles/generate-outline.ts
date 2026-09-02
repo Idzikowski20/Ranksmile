@@ -220,7 +220,7 @@ H2: [topical section]
     // forbids it, because the brand context outweighs the instruction. Strip that framing
     // so the H1 stays topical, the way Surfer titles it.
     const h1 = headings.find((h) => h.level === 1);
-    if (h1) h1.text = topicalizeH1(h1.text, keyword, locale.languageCode === 'pl' ? 'pl' : 'en');
+    if (h1) h1.text = topicalizeH1(h1.text, keyword);
 
     return res.status(200).json({ headings, usedBrand: !!(brandKnowledge || voiceTone), competitorCount: compList.length });
   } catch (err) {

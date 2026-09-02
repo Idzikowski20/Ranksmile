@@ -102,7 +102,7 @@ const H1_OFFTOPIC_FRAMING = /poufn\w* pomoc|pomoc detektywistyczn|dla os[oó]b p
  * framing is returned unchanged. Falls back to the bare keyword only if nothing topical
  * survives — a plain topical H1 beats a branded one.
  */
-export function topicalizeH1(rawH1: string, keyword: string, lang: OutlineLang): string {
+export function topicalizeH1(rawH1: string, keyword: string): string {
   const h1 = (rawH1 || '').trim();
   if (!h1) return capitalizeSentence(keyword.trim());
   if (!H1_OFFTOPIC_FRAMING.test(h1)) return h1;
@@ -110,7 +110,7 @@ export function topicalizeH1(rawH1: string, keyword: string, lang: OutlineLang):
     .split(/\s[—–-]\s|:\s|,\s/)
     .map((p) => p.trim())
     .filter((p) => p.length > 0 && !H1_OFFTOPIC_FRAMING.test(p));
-  const rebuilt = kept.join(lang === 'pl' ? ' – ' : ' – ').trim();
+  const rebuilt = kept.join(' – ').trim();
   return rebuilt.length >= 3 ? rebuilt : capitalizeSentence(keyword.trim());
 }
 

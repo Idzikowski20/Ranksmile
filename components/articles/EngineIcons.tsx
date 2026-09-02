@@ -23,7 +23,7 @@ const Badge: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div style={BADGE}>{children}</div>
 );
 
-/** Brand logo from /public/engine-icons — webp (ChatGPT, Gemini) and svg (Perplexity). */
+/** Brand logo from /public/ai-tracking (small, badge-sized assets). */
 const EngineImg: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
   <img src={src} alt={alt} width={13} height={13} style={{ objectFit: 'contain' }} loading="lazy" />
 );
@@ -45,10 +45,10 @@ const GoogleMark = () => (
 /** Decorative: the group title already says which sources these are. */
 export const AiEngineIcons: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'row' }} aria-hidden="true">
-    <Badge><EngineImg src="/engine-icons/chatgpt.webp" alt="ChatGPT" /></Badge>
+    <Badge><EngineImg src="/ai-tracking/engine-chatgpt.svg" alt="ChatGPT" /></Badge>
     <Badge><GoogleMark /></Badge>
-    <Badge><EngineImg src="/engine-icons/perplexity.svg" alt="Perplexity" /></Badge>
-    <Badge><EngineImg src="/engine-icons/gemini.webp" alt="Gemini" /></Badge>
+    <Badge><EngineImg src="/ai-tracking/engine-perplexity.svg" alt="Perplexity" /></Badge>
+    <Badge><EngineImg src="/ai-tracking/engine-gemini.png" alt="Gemini" /></Badge>
   </div>
 );
 

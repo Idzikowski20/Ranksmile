@@ -13,20 +13,18 @@ describe('topicalizeH1', () => {
     expect(topicalizeH1(
       'Szantaż emocjonalny — poufna pomoc detektywistyczna dla osób prywatnych i firm z Warszawy',
       'szantaż emocjonalny',
-      'pl',
     )).toBe('Szantaż emocjonalny');
   });
 
   it('leaves a genuinely topical, Surfer-style H1 untouched', () => {
     const good = 'Szantaż emocjonalny: jak go rozpoznać, przerwać i zadbać o swoje bezpieczeństwo';
-    expect(topicalizeH1(good, 'szantaż emocjonalny', 'pl')).toBe(good);
+    expect(topicalizeH1(good, 'szantaż emocjonalny')).toBe(good);
   });
 
   it('keeps the topical clause and drops only the branded tail', () => {
     expect(topicalizeH1(
       'Szantaż emocjonalny w rodzinie — jak pomóc osobom prywatnym',
       'szantaż emocjonalny',
-      'pl',
     )).toBe('Szantaż emocjonalny w rodzinie');
   });
 
@@ -34,24 +32,22 @@ describe('topicalizeH1', () => {
     expect(topicalizeH1(
       'Poufna pomoc detektywistyczna dla firm z Warszawy',
       'szantaż emocjonalny',
-      'pl',
     )).toBe('Szantaż emocjonalny');
   });
 
   it('keeps a reader-benefit "jak pomóc <topic>" clause (not audience framing)', () => {
     const good = 'Szantaż emocjonalny: jak pomóc ofierze szantażu';
-    expect(topicalizeH1(good, 'szantaż emocjonalny', 'pl')).toBe(good);
+    expect(topicalizeH1(good, 'szantaż emocjonalny')).toBe(good);
   });
 
   it('still strips audience "jak pomóc firmom/osobom prywatnym"', () => {
     expect(topicalizeH1(
       'Szantaż emocjonalny w rodzinie — jak pomóc firmom',
       'szantaż emocjonalny',
-      'pl',
     )).toBe('Szantaż emocjonalny w rodzinie');
   });
 
   it('handles an empty H1', () => {
-    expect(topicalizeH1('', 'szantaż emocjonalny', 'pl')).toBe('Szantaż emocjonalny');
+    expect(topicalizeH1('', 'szantaż emocjonalny')).toBe('Szantaż emocjonalny');
   });
 });
