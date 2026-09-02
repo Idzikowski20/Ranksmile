@@ -5,7 +5,8 @@ const clamp = (n: number) => Math.max(0, Math.min(n, 100));
 
 export function scoreBand(score: number): ScoreBand {
   const s = clamp(score);
-  if (s >= 66) return 'high';
+  // Green only at 70+ (SEO, AI and the blended centre gauge all read this band).
+  if (s >= 70) return 'high';
   if (s >= 33) return 'mid';
   return 'low';
 }
