@@ -26,44 +26,20 @@ export function localizedRequiredSections(
   lang: OutlineLang,
   opts?: { hasCostFear?: boolean },
 ): string[] {
-  const cost = opts?.hasCostFear === true;
-  // Hiring intent gets a service page, not a tutorial. Mirrors what ranks for these
-  // queries: who you are, who you help, what you do, how the work runs, why you, contact.
-  // The generic guide skeleton ("Pierwsze kroki", "Plan działania") answers a how-to
-  // nobody asked, and reads as advice for doing the job yourself.
-  if (articleType === 'service') {
-    return lang === 'pl'
-      ? [
-        'Kim jesteśmy',
-        'Komu pomagamy',
-        'Zakres usług',
-        'Jak wygląda współpraca',
-        ...(cost ? ['Cennik i wycena'] : []),
-        'Dlaczego my',
-        'FAQ',
-        'Kontakt',
-      ]
-      : [
-        'Who we are',
-        'Who we help',
-        'What we do',
-        'How we work',
-        ...(cost ? ['Pricing'] : []),
-        'Why us',
-        'FAQ',
-        'Contact',
-      ];
-  }
-  // Informational topics carry NO forced skeleton. Surfer's generated article for this
-  // exact keyword has eight sections and every one is topical — "Czym jest…", "Jak
-  // rozpoznać…", "Mechanizmy…", "Kto pada ofiarą…" — with zero "Szybka odpowiedź / Plan
-  // działania / FAQ / Podsumowanie" scaffolding. Those seven generic headings were the
-  // single biggest source of both the inflated H2 count and the machine-guide feel: they
-  // crowded out the competitor topical headings the outline builder already has, and read
-  // as advice for doing the investigator's job yourself. Returning nothing lets the real
-  // competitor headings (headingFillersFromCompetitors) drive the whole outline, exactly
-  // as the reference tool does; `cost` no longer forces a section — a paragraph covers it.
-  void cost;
+  // No article type carries a forced skeleton — not even hiring intent. The service
+  // branch used to return a fixed "Kim jesteśmy / Zakres usług / Dlaczego my / Kontakt"
+  // page, and it read as a landing page, not an article: article 160 shipped exactly
+  // those headings for "prywatny detektyw warszawa". Every Surfer content editor in this
+  // detective-agency workspace is instead a topical article — "szantaż emocjonalny",
+  // "kradzież z włamaniem" — with the agency woven in as one section, never a service CV.
+  //
+  // So the outline is driven entirely by the real competitor + PAA headings for every
+  // type, exactly as the reference tool does. The single brand-help section still arrives
+  // via brandSections() in the blueprint; the query's commercial intent shapes the angle
+  // of the topical headings, not a canned structure. `hasCostFear` no longer forces a
+  // "Cennik" heading — a paragraph covers price.
+  void articleType;
+  void opts;
   return [];
 }
 
