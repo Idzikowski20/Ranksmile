@@ -5,6 +5,9 @@ import { fetchJson, toastError, jsonPost } from './http';
 export type AiVisScanStatus = {
    status: 'idle' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled',
    progressDone: number, progressTotal: number, costUsd: number, finishedAt: string | null,
+   /** Follow-on phases, drained by the sidecar after the answers land: cited pages read,
+    *  brand mentions still to extract, brand profiles written. */
+   sourcesTotal: number, sourcesRead: number, brandsPending: number, profilesBuilt: number,
 };
 
 export function useAiVisData<T>(slug: string | undefined, view: string) {
@@ -31,9 +34,16 @@ export function useAiVisScanStatus(slug: string | undefined) {
       () => fetchJson<AiVisScanStatus>(`/api/ai-visibility/${slug}/scan-status`),
       {
          enabled: !!slug,
+         // Keep polling through the follow-on phases too: they run after the scan row flips
+         // to `completed`, so stopping at that point froze the progress bar mid-pipeline.
          refetchInterval: (data) => (
             data?.status === 'running' ? 3000
             : data?.status === 'queued' ? 5000
+            : data?.status === 'completed' && (
+               data.brandsPending > 0
+               || (data.sourcesTotal > 0 && data.sourcesRead < data.sourcesTotal)
+               || data.profilesBuilt === 0
+            ) ? 5000
             : false
          ),
       },

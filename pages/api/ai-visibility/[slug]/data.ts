@@ -71,8 +71,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                .map((s) => ({ ...s, compMentioned: true }));
          }
 
+         // Enrich with what the "reading sources" phase actually found on each page: the
+         // real <title>, the HTTP status, and whether the page itself names our brand.
+         // Additive — rows the phase has not reached yet are returned unchanged.
+         const verified = await queryRows<{ url: string; title: string | null; http_status: number | null; own_mentioned: number }>(
+            'SELECT url, title, http_status, own_mentioned FROM ai_vis_sources WHERE scan_id = ?',
+            [scan.id],
+         );
+         const verifiedByUrl = new Map(verified.map((v) => [v.url, v]));
+         const sources = aggregateSources(all, ownBrand).map((s) => {
+            const v = verifiedByUrl.get(s.url);
+            if (!v) return s;
+            return {
+               ...s,
+               title: v.title ?? undefined,
+               httpStatus: v.http_status ?? undefined,
+               pageMentionsBrand: v.own_mentioned === 1,
+            };
+         });
+
          return res.status(200).json({
-            sources: aggregateSources(all, ownBrand),
+            sources,
             gapCards: selected.map((d) => domainMentionGap(all, d, domain.domain)),
             gapCandidates: candidates,
             ownLabel: NORM(domain.domain),

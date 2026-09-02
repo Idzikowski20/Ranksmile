@@ -5,7 +5,7 @@ import AppShell from '../common/AppShell';
 import DomainSubLayout from '../domains/DomainSubLayout';
 import AiVisibilityToolbar from './AiVisibilityToolbar';
 import AiVisExportMenu from './AiVisExportMenu';
-import ScanProgressBar from './ScanProgressBar';
+import ScanProgressBar, { isScanBusy } from './ScanProgressBar';
 import { SkeletonBars } from './SkeletonBlocks';
 import { Button, ToolRibbon } from '../koala/core';
 import type { PromptOption } from './types';
@@ -61,7 +61,9 @@ const AiVisPageShell = ({
 
   const { ready } = useAiVisibilityGuard(slug);
   const { data: scan } = useAiVisScanStatus(ready ? slug : undefined);
-  const crunching = scan?.status === 'queued' || scan?.status === 'running';
+  // Sources/brands/profiles are drained after the scan row says `completed`, so the bar
+  // must outlive that flip — isScanBusy covers every outstanding phase.
+  const crunching = isScanBusy(scan);
 
   const headerActions = (
     <>

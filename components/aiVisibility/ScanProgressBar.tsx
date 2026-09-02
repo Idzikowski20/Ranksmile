@@ -62,17 +62,33 @@ const Pending = ({ size = 20 }: { size?: number }) => (
 );
 
 /**
- * The phases we can report truthfully from the scan record.
+ * The four phases the pipeline actually runs, each with the counter its own table can
+ * prove — nothing here is fabricated:
+ *   1. answers  — scan row's progress_done/total, i.e. (prompt × model) pairs
+ *   2. sources  — ai_vis_sources rows fetched / queued
+ *   3. brands   — answers still awaiting brand extraction
+ *   4. profiles — ai_vis_brand_profiles rows written (the Competitors view)
  *
- * `progress_done / progress_total` counts (prompt × model) pairs — the only measured
- * signal the scan row carries. Brand extraction runs after the answers land (the sidecar
- * drains `analyze-brands` over its ticks), so it is shown as the follow-on phase rather
- * than with a fabricated counter. Nothing here invents a step the pipeline does not run.
+ * Phases 2–4 are drained by the sidecar AFTER the scan row flips to `completed`, so the
+ * bar stays up past that point (see isScanBusy).
  */
 function buildSteps(scan?: AiVisScanStatus): Step[] {
    const total = scan?.progressTotal ?? 0;
    const done = scan?.progressDone ?? 0;
+   const sTotal = scan?.sourcesTotal ?? 0;
+   const sRead = scan?.sourcesRead ?? 0;
+   const brandsPending = scan?.brandsPending ?? 0;
+   const profiles = scan?.profilesBuilt ?? 0;
+
    const answersIn = total > 0 && done >= total;
+   // A scan whose answers cited nothing never gets source rows; profiles being written is
+   // then the only proof the pipeline moved past this phase.
+   const sourcesIn = answersIn && (sTotal > 0 ? sRead >= sTotal : profiles > 0);
+   const brandsIn = sourcesIn && brandsPending === 0;
+   const profilesIn = brandsIn && profiles > 0;
+
+   const phase = (reached: boolean, complete: boolean): StepState => (!reached ? 'idle' : complete ? 'done' : 'active');
+
    return [
       {
          label: 'Querying AI models',
@@ -80,15 +96,34 @@ function buildSteps(scan?: AiVisScanStatus): Step[] {
          detail: total > 0 ? `${done} / ${total} answers` : undefined,
       },
       {
-         label: 'Analyzing brand mentions',
-         state: answersIn ? 'active' : 'idle',
+         label: 'Reading sources',
+         state: phase(answersIn, sourcesIn),
+         detail: sTotal > 0 ? `${sRead} / ${sTotal} sources` : undefined,
+      },
+      {
+         label: 'Extracting brand mentions',
+         state: phase(sourcesIn, brandsIn),
+         detail: brandsPending > 0 ? `${brandsPending} answers left` : undefined,
+      },
+      {
+         label: 'Building brand profiles',
+         state: phase(brandsIn, profilesIn),
+         detail: profiles > 0 ? `${profiles} brands` : undefined,
       },
    ];
 }
 
-/** Label of the phase currently feeding the panels, or null when nothing is running. */
+/** True while any phase is still outstanding — including the ones that run after the scan
+ *  row reports `completed`, which is when sources/brands/profiles are drained. */
+export function isScanBusy(scan?: AiVisScanStatus): boolean {
+   if (!scan || scan.status === 'idle' || scan.status === 'failed' || scan.status === 'cancelled') return false;
+   if (scan.status === 'queued' || scan.status === 'running') return true;
+   return buildSteps(scan).some((s) => s.state !== 'done');
+}
+
+/** Label of the phase currently feeding the panels, or null when nothing is outstanding. */
 export function currentScanStage(scan?: AiVisScanStatus): string | null {
-   if (scan?.status !== 'running' && scan?.status !== 'queued') return null;
+   if (!isScanBusy(scan)) return null;
    return buildSteps(scan).find((s) => s.state === 'active')?.label ?? null;
 }
 

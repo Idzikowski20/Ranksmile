@@ -74,12 +74,20 @@ async def _tick(nextjs_url: str) -> None:
 
         # Backfill brand extraction for scans that still have un-analysed answers
         # (best-effort; Sources just shows "no brands yet" until this drains).
-        try:
-            brand_url = f"{nextjs_url.rstrip('/')}/api/ai-visibility/internal/analyze-brands"
-            async with httpx.AsyncClient(timeout=60) as client:
-                await client.post(brand_url, headers=headers, json={})
-        except Exception as exc:  # noqa: BLE001 - never let backfill break the tick
-            print(f"[ai_vis_scheduler] analyze-brands failed: {exc}")
+        # Follow-on phases, in the order the UI reports them: read the cited pages, extract
+        # the brands each answer names, then aggregate those into per-brand profiles. Each
+        # call drains one chunk per scan, so a big scan needs several ticks — fine, the UI
+        # shows what is left. Best-effort: a failure here never breaks the tick.
+        for label, path in (
+            ("read-sources", "/api/ai-visibility/internal/read-sources"),
+            ("analyze-brands", "/api/ai-visibility/internal/analyze-brands"),
+            ("build-profiles", "/api/ai-visibility/internal/build-profiles"),
+        ):
+            try:
+                async with httpx.AsyncClient(timeout=120) as client:
+                    await client.post(f"{nextjs_url.rstrip('/')}{path}", headers=headers, json={})
+            except Exception as exc:  # noqa: BLE001 - never let a follow-on break the tick
+                print(f"[ai_vis_scheduler] {label} failed: {exc}")
 
 
 async def scheduler_loop(nextjs_url: str) -> None:

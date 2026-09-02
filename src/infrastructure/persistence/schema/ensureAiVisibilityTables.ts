@@ -119,6 +119,36 @@ async function createAll(): Promise<boolean> {
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_vis_results_scan ON ai_vis_results (scan_id)'); } catch (e) { ignoreExisting('idx results', e); }
    try { await db.query(`ALTER TABLE ai_vis_results ADD COLUMN brands ${JSON_T}`); } catch (e) { ignoreExisting('ai_vis_results.brands', e); }
    try { await db.query(`ALTER TABLE ai_vis_results ADD COLUMN fan_out_queries ${JSON_T}`); } catch (e) { ignoreExisting('ai_vis_results.fan_out_queries', e); }
+   // One row per cited URL of a scan — the "reading sources" phase fetches each page once
+   // and records what it found, so Sources shows a verified title instead of whatever the
+   // model claimed, and we know which pages actually mention the brand.
+   await db.query(`CREATE TABLE IF NOT EXISTS ai_vis_sources (
+      id ${PK},
+      scan_id INTEGER NOT NULL,
+      url TEXT NOT NULL,
+      domain TEXT NOT NULL,
+      title TEXT,
+      http_status INTEGER,
+      own_mentioned INTEGER DEFAULT 0,
+      fetched_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('ai_vis_sources', e));
+   try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_vis_sources_scan_url ON ai_vis_sources (scan_id, url)'); } catch (e) { ignoreExisting('idx sources url', e); }
+
+   // Aggregated profile per brand mentioned in a scan's answers — what the Competitors
+   // view reads. Built by the "building brand profiles" phase from ai_vis_results.brands.
+   await db.query(`CREATE TABLE IF NOT EXISTS ai_vis_brand_profiles (
+      id ${PK},
+      scan_id INTEGER NOT NULL,
+      brand TEXT NOT NULL,
+      domain TEXT,
+      mentions INTEGER DEFAULT 0,
+      avg_position REAL,
+      presence_score INTEGER,
+      sentiment TEXT,
+      updated_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('ai_vis_brand_profiles', e));
+   try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_vis_profiles_scan_brand ON ai_vis_brand_profiles (scan_id, brand)'); } catch (e) { ignoreExisting('idx profiles brand', e); }
+
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_vis_prompts_config ON ai_vis_prompts (config_id)'); } catch (e) { ignoreExisting('idx prompts', e); }
    try { await db.query("ALTER TABLE ai_vis_configs ADD COLUMN priority TEXT DEFAULT 'long_tail'"); } catch (e) { ignoreExisting('ai_vis_configs.priority', e); }
 

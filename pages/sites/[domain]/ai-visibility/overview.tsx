@@ -11,7 +11,7 @@ import { MetricWidget } from '../../../../components/koala/product';
 import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
 import ScanStagePill from '../../../../components/aiVisibility/ScanStagePill';
-import { currentScanStage } from '../../../../components/aiVisibility/ScanProgressBar';
+import { currentScanStage, isScanBusy } from '../../../../components/aiVisibility/ScanProgressBar';
 
 const CompetitorBarChart = dynamic(() => import('../../../../components/aiVisibility/CompetitorBarChart'), { ssr: false });
 const TrendLineChart = dynamic(() => import('../../../../components/aiVisibility/TrendLineChart'), { ssr: false });
@@ -109,7 +109,7 @@ const AiVisibilityOverview: NextPage = () => {
    // Refresh button — which lives in the toolbar, above the children render — can
    // reflect the crunching state without threading it back up from the shell.
    const scanStatusQ = useAiVisScanStatus(slug);
-   const crunchingTop = scanStatusQ.data?.status === 'running' || scanStatusQ.data?.status === 'queued';
+   const crunchingTop = isScanBusy(scanStatusQ.data);
    // Which phase is still filling these panels — shown as a quiet pill on each metric.
    const scanStage = currentScanStage(scanStatusQ.data);
 
