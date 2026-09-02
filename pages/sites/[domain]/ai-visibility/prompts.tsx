@@ -74,8 +74,8 @@ const AiVisibilityPrompts: NextPage = () => {
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                      <StatCard label="Visibility score" value={String(ov?.visibilityScore ?? 0)} hint="Your average visibility across all tracked prompts and models" pending={pending} />
-                     <StatCard label="Mention rate" value={`${ov?.mentionRate ?? 0}%`} hint="Share of prompt/model answers that cite your domain" pending={pending} />
-                     <StatCard label="Average position" value={ov?.avgPosition != null ? ov.avgPosition.toFixed(1) : '—'} hint="Your average citation rank when cited" pending={pending} />
+                     <StatCard label="Mention rate" value={`${ov?.mentionRate ?? 0}%`} hint="Share of prompt/model answers that name your brand" pending={pending} />
+                     <StatCard label="Average position" value={ov?.avgPosition != null ? ov.avgPosition.toFixed(1) : '—'} hint="How early your brand appears in the answers that name it" pending={pending} />
                   </div>
 
                   {pending ? (

@@ -60,6 +60,69 @@ export function computeOverview(rows: ResultRow[]) {
   };
 }
 
+/** Brand names compare on letters and digits only: "Pro Detektyw" === "ProDetektyw". */
+const brandKey = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+/** 1-based appearance position of the tracked brand in an answer, or null if unnamed. */
+export function ownBrandPosition(row: ResultRow, ownBrand: string): number | null {
+  const want = brandKey(ownBrand);
+  if (!want) return null;
+  const hit = row.brands.find((b) => brandKey(b.brand) === want);
+  return hit ? hit.pos : null;
+}
+
+export type BrandOverview = {
+  visibilityScore: number;
+  mentionRate: number;
+  avgPosition: number | null;
+  mentions: number;
+  pairs: number;
+  perModel: Array<{ model: string; score: number }>;
+};
+
+/** Rate + position of the tracked BRAND over the answers whose brands are extracted. */
+function brandRateAndPosition(rows: ResultRow[], ownBrand: string): { mentionRate: number; avgPosition: number | null; mentions: number; pairs: number } {
+  // A row whose brands column is still NULL has not been through the extraction phase —
+  // counting it as "not mentioned" would understate the rate while that phase runs, so it
+  // is left out of the denominator and the rate converges as extraction progresses.
+  const scored = rows.filter((r) => r.brandsAnalyzed !== false);
+  const positions = scored.map((r) => ownBrandPosition(r, ownBrand)).filter((p): p is number => p != null);
+  return {
+    mentions: positions.length,
+    pairs: scored.length,
+    // Kept to one decimal, like the reference tool — a 30-answer scan moves in 3.3% steps.
+    mentionRate: scored.length ? Math.round((positions.length / scored.length) * 1000) / 10 : 0,
+    avgPosition: positions.length ? Math.round(mean(positions) * 10) / 10 : null,
+  };
+}
+
+/**
+ * The tracked brand's own headline metric: how often the ANSWERS NAME THE BRAND and where
+ * in the answer, which is what the reference tool reports and what the brand rows in
+ * Competitors are scored on. Distinct from computeOverview, which measures citations of a
+ * DOMAIN and stays the basis of the per-domain snapshots, source overlap and gap views.
+ */
+export function computeBrandOverview(rows: ResultRow[], ownBrand: string): BrandOverview {
+  const perModelMap = new Map<string, ResultRow[]>();
+  for (const r of rows) {
+    const list = perModelMap.get(r.model) ?? [];
+    list.push(r);
+    perModelMap.set(r.model, list);
+  }
+  const { mentionRate, avgPosition, mentions, pairs } = brandRateAndPosition(rows, ownBrand);
+  return {
+    visibilityScore: presenceScore({ mentionRate, avgPosition }),
+    mentionRate,
+    avgPosition,
+    mentions,
+    pairs,
+    perModel: Array.from(perModelMap.entries()).map(([model, list]) => ({
+      model,
+      score: presenceScore(brandRateAndPosition(list, ownBrand)),
+    })),
+  };
+}
+
 export function isOwnDomainCitation(citationDomain: string, ownDomain: string): boolean {
   const own = norm(ownDomain);
   if (!own) return false;

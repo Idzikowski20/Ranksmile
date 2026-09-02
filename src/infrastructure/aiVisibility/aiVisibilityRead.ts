@@ -66,6 +66,7 @@ export const mapDbRowsToResultRows = (dbRows: DbResultRow[]): ResultRow[] => dbR
    topic: r.topic ?? '',
    text: r.text ?? '',
    brands: parseBrands(r.brands),
+   brandsAnalyzed: r.brands != null,
    fanOutQueries: parseFanOut(r.fan_out_queries),
 }));
 
@@ -106,7 +107,9 @@ export async function loadScanCitationRowsForScans(scanIds: number[]): Promise<M
    );
    for (const r of dbRows) {
       const list = out.get(r.scan_id) ?? [];
-      const [mapped] = mapDbRowsToResultRows([{ ...r, brands: [], fan_out_queries: [] }]);
+      // brands stays NULL, not []: this loader does not read the column, so the rows must
+      // report "brands unknown" rather than "no brands named" (see ResultRow.brandsAnalyzed).
+      const [mapped] = mapDbRowsToResultRows([{ ...r, brands: null, fan_out_queries: [] }]);
       if (mapped) list.push(mapped);
       out.set(r.scan_id, list);
    }

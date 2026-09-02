@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
-import { aggregateSources, buildSnapshotsForScan, rankCompetitors, rankBrandProfiles, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '@/src/core/domain/aiVisibility/metrics';
+import { aggregateSources, buildSnapshotsForScan, rankCompetitors, rankBrandProfiles, snapshotForDomain, computeDelta, computeOverview, computeBrandOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '@/src/core/domain/aiVisibility/metrics';
 import { loadScanResultRows, loadScanCitationRows, getDisplayScan, getPreviousDisplayScan } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import { refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
@@ -146,7 +146,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const entityRows = entity(latestAll); // unscoped-by-engine → drives the engine dropdown + title
          if (!entityRows.length) return res.status(200).json({ pending: false, title: query, overview: null, engines: [], series: [], brands: [], fanout: [] });
          const scoped = engine ? entityRows.filter((r) => r.model === engine) : entityRows;
-         const overview = computeOverview(scoped);
+         // Same brand metric as the prompt row this modal was opened from, so the two agree.
+         const overview = computeBrandOverview(scoped, ownBrand);
 
          const engines = Array.from(new Set(entityRows.map((r) => r.model)));
 
@@ -156,7 +157,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
              WHERE c.domain_id = ? AND s.status = 'completed' ORDER BY s.id DESC LIMIT 24`, [domain.ID]);
          const series: Array<{ finishedAt: string | null, visibilityScore: number, mentionRate: number, avgPosition: number | null }> = [];
          for (const s of scans.slice().reverse()) {
-            const ov = computeOverview(s.id === scan.id ? scoped : scope(await loadScanResultRows(s.id)));
+            const ov = computeBrandOverview(s.id === scan.id ? scoped : scope(await loadScanResultRows(s.id)), ownBrand);
             series.push({ finishedAt: s.finished_at, visibilityScore: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition });
          }
 
@@ -308,10 +309,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // Topic-grouped prompts for the tracked domain: per-prompt + per-topic
          // visibility / mention rate / avg position, plus the brand favicon stack.
          const all = filterRows(await loadScanResultRows(scan.id));
+         // The favicon stack shows the brands the answers put FIRST, capped at five, which
+         // is the same slice the reference tool returns per prompt (brand + avg position).
          const brandDomains = (rows2: ResultRow[]): string[] => {
-            const set = new Set<string>();
-            for (const r of rows2) for (const b of r.brands) if (b.domain) set.add(NORM(b.domain));
-            return Array.from(set);
+            const posByDomain = new Map<string, { sum: number; n: number }>();
+            for (const r of rows2) for (const b of r.brands) {
+               if (!b.domain) continue;
+               const d = NORM(b.domain);
+               const e = posByDomain.get(d) ?? { sum: 0, n: 0 };
+               e.sum += b.pos; e.n += 1;
+               posByDomain.set(d, e);
+            }
+            return Array.from(posByDomain.entries())
+               .sort((a, b) => (a[1].sum / a[1].n) - (b[1].sum / b[1].n))
+               .slice(0, 5)
+               .map(([d]) => d);
          };
          const byPrompt = new Map<number, ResultRow[]>();
          for (const r of all) { const l = byPrompt.get(r.promptId) ?? []; l.push(r); byPrompt.set(r.promptId, l); }
@@ -320,18 +332,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const byTopic = new Map<string, ResultRow[]>();
          for (const r of all) { const l = byTopic.get(r.topic) ?? []; l.push(r); byTopic.set(r.topic, l); }
 
+         // Prompt/topic metrics are the tracked BRAND's, from the mentions in each answer —
+         // matching the reference tool, whose per-prompt average position is the brand's own
+         // entry in that prompt's brand list. Domain citations drive the Sources views.
          const topics = Array.from(byTopic.entries()).map(([topic, topicRows]) => {
-            const ov = computeOverview(topicRows);
+            const ov = computeBrandOverview(topicRows, ownBrand);
             const promptIds = Array.from(new Set(topicRows.map((r) => r.promptId)));
             const prompts = promptIds.map((id) => {
                const pr = byPrompt.get(id) || [];
-               const pov = computeOverview(pr);
+               const pov = computeBrandOverview(pr, ownBrand);
                return { id, text: promptMeta.get(id)?.text || '', visibility: pov.visibilityScore, mentionRate: pov.mentionRate, avgPosition: pov.avgPosition, brands: brandDomains(pr) };
             });
             return { topic, promptCount: prompts.length, visibility: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition, brands: brandDomains(topicRows), prompts };
          }).sort((a, b) => b.visibility - a.visibility);
 
-         const overall = computeOverview(all);
+         const overall = computeBrandOverview(all, ownBrand);
          return res.status(200).json({
             overview: { visibilityScore: overall.visibilityScore, mentionRate: overall.mentionRate, avgPosition: overall.avgPosition },
             topics,

@@ -19,7 +19,8 @@ import type {
 } from '@/src/core/domain/aiVisibility/metricsTypes';
 
 export type { BrandMention, GapCard, ResultRow, SourceBrand, SourceDetailBrand } from '@/src/core/domain/aiVisibility/metricsTypes';
-export { ownDomainPosition, computeOverview } from '@/src/core/domain/aiVisibility/metricsOverview';
+export { ownDomainPosition, computeOverview, computeBrandOverview, ownBrandPosition } from '@/src/core/domain/aiVisibility/metricsOverview';
+export type { BrandOverview } from '@/src/core/domain/aiVisibility/metricsOverview';
 
 // AI grounding / redirect proxies, not real competitors — excluded from the ranking.
 export const COMPETITOR_NOISE: string[] = [...BLOCKED_CITATION_DOMAINS];
