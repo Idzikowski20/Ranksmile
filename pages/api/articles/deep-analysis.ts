@@ -815,8 +815,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     scoreData._heading_count = headingCount;
     scoreData._paragraph_count = paragraphCount;
+    // Same link count reconcilePostGenerateArticle feeds the scorer. Passing `undefined`
+    // here dropped the internal-link bonus from the *stored* score only, so an article
+    // read 75 in the list while the editor and Auto-Optimize recomputed 86 from the same
+    // HTML — two numbers for one article, and the optimizer chasing the wrong one.
+    const linkCount = (pageContent.match(/<a\s[^>]*href=/gi) || []).length;
     const seoScore = seoScoreFromAudit ?? computeContentScore(
-      plainText, wordCount, headingCount, scoreData, paragraphCount, undefined,
+      plainText, wordCount, headingCount, scoreData, paragraphCount, linkCount,
       pageContent, resolvedKeyword || '',
     );
     // Keyword mode creates an EMPTY draft — a score computed on empty content is a
