@@ -59,6 +59,20 @@ describe('sectionLabels + outline fixes', () => {
     expect(narrativeOrder[narrativeOrder.length - 1]).toBe('3');
   });
 
+  it('places the brand help + case-study sections at the tail of the body, before FAQ', () => {
+    // Surfer keeps the agency section near the end (section 10 of 12), after every
+    // topical section and before FAQ/summary. brandSections were seeded first, so the
+    // article opened with "Jak ProDetektyw pomaga…" instead of leading with the topic.
+    const ordered = orderSectionsFaqLast([
+      { id: 'brand', role: 'jak_prodetektyw_pomaga_w_takich_sprawach', heading: 'Jak ProDetektyw pomaga w takich sprawach' },
+      { id: 'case', role: 'studium_przypadku', heading: 'Studium przypadku: przykladowe sprawy' },
+      { id: 'topic', role: 'foundation', heading: 'Czym jest szantaż emocjonalny' },
+      { id: 'faq', role: 'faq', heading: 'FAQ' },
+      { id: 'sum', role: 'summary', heading: 'Podsumowanie' },
+    ]);
+    expect(ordered.sections.map((s) => s.id)).toEqual(['topic', 'brand', 'case', 'faq', 'sum']);
+  });
+
   it('only treats a whole-word contact/summary as the sign-off', () => {
     const ordered = orderSectionsFaqLast([
       { id: 'c', role: 'body', heading: 'Contactless payments' },

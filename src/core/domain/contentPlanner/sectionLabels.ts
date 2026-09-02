@@ -84,9 +84,15 @@ function capitalizeSentence(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// The brand help + case-study sections (see brandSections). They belong near the end,
+// after the topical body and before FAQ/summary — Surfer keeps the agency section at
+// position 10 of 12 — but they were seeded first and led the article. Matching our own
+// brandSections strings (not competitor headings) routes them to the body tail.
+const BRAND_TAIL = /pomaga w takich sprawach|studium przypadku|helps in cases like this|^case studies$/i;
+
 export function isTailSectionRole(role: string, heading: string): boolean {
   const blob = `${role} ${heading}`.toLowerCase();
-  return TAIL_ROLES.test(role) || /\bfaq\b/.test(blob) || SIGN_OFF.test(blob);
+  return TAIL_ROLES.test(role) || /\bfaq\b/.test(blob) || SIGN_OFF.test(blob) || BRAND_TAIL.test(heading);
 }
 
 /** FAQ then the sign-off (summary / contact) always last; order among tails preserved. */
