@@ -9,6 +9,9 @@ const F = 'var(--font-family-primary)';
    is NOT drawn here — it's an overlay pill in ScoreTrio that spans this side AND the
    centre content-score gauge (Ranksmile-style). This button only reports hover intent
    and handles the click. */
+/** Article content-score green floor (Surfer parity). Shared gauges keep the default 66. */
+const ARTICLE_GREEN_AT = 70;
+
 const SideGauge = ({ score, label, align, pending, onClick, onHover, delta, deltaPlacement }: {
   score: number; label: string; align: 'start' | 'end'; pending?: boolean;
   onClick?: () => void; onHover?: (on: boolean) => void;
@@ -17,7 +20,7 @@ const SideGauge = ({ score, label, align, pending, onClick, onHover, delta, delt
   const content = (
     <span style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'end' ? 'flex-end' : 'flex-start', gap: 6 }}>
       <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: F }}>{label}</span>
-      <ScoreGauge score={score} size={38} pending={pending} delta={delta} deltaPlacement={deltaPlacement} />
+      <ScoreGauge score={score} size={38} pending={pending} delta={delta} deltaPlacement={deltaPlacement} greenAt={ARTICLE_GREEN_AT} />
     </span>
   );
   const justify = align === 'end' ? 'flex-end' : 'flex-start';
@@ -64,7 +67,7 @@ const ScoreTrio = ({ seo, ai, hasAi, content, onSeoClick, onAiClick, deltas }: {
         <div style={{ ...overlayBase, right: 0, borderRadius: '50px 12px 12px 50px', opacity: hovered === 'ai' ? 1 : 0 }} />
         <SideGauge label="SEO" align="start" score={seo} delta={deltas?.seo} deltaPlacement="right" onClick={onSeoClick} onHover={(on) => setHovered(on ? 'seo' : null)} />
         {/* Centre gauge: left arc = SEO, right arc = AI (Surfer-style), number = blend. */}
-        <div style={{ position: 'relative', zIndex: 10, flexShrink: 0 }}><ScoreGauge score={overall} halves={hasAi ? { left: seo, right: ai } : undefined} size={100} delta={deltas?.overall} deltaPlacement="below" /></div>
+        <div style={{ position: 'relative', zIndex: 10, flexShrink: 0 }}><ScoreGauge score={overall} halves={hasAi ? { left: seo, right: ai } : undefined} size={100} delta={deltas?.overall} deltaPlacement="below" greenAt={ARTICLE_GREEN_AT} /></div>
         <SideGauge label="AI Search" align="end" score={ai} pending={!hasAi} delta={deltas?.ai} deltaPlacement="left" onClick={onAiClick} onHover={(on) => setHovered(on ? 'ai' : null)} />
       </div>
     </div>

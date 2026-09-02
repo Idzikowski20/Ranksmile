@@ -15,6 +15,9 @@ interface Props {
    *  by its own value. The centre number stays `score` (the blend). Surfer draws its
    *  content-score gauge this way — left arc SEO, right arc AI. Omit for a single value. */
   halves?: { left: number; right: number };
+  /** Green (high-band) floor. Defaults to the shared 66; the article content-score trio
+   *  passes 70 (Surfer parity) without recolouring site-audit / other gauges. */
+  greenAt?: number;
 }
 
 // Split dual-arc gauge (left + right half), each with a grey track and a coloured
@@ -110,7 +113,7 @@ const CountUpNumber = ({ value, font }: { value: number; font: number }) => {
   );
 };
 
-const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlacement = 'below', halves }: Props) => {
+const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlacement = 'below', halves, greenAt }: Props) => {
   const reduced = useReducedMotion();
   const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n || 0)));
   const s = clamp(score);
@@ -118,8 +121,8 @@ const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlace
   // it both arcs mirror the single score, as before.
   const leftS = clamp(halves ? halves.left : score);
   const rightS = clamp(halves ? halves.right : score);
-  const leftColor = scoreColor(leftS);
-  const rightColor = scoreColor(rightS);
+  const leftColor = scoreColor(leftS, greenAt);
+  const rightColor = scoreColor(rightS, greenAt);
   // No data yet → grey track only, no coloured fill, "—" in the centre.
   const leftOffset = pending ? ARC : ARC * (1 - leftS / 100);
   const rightOffset = pending ? ARC : ARC * (1 - rightS / 100);
