@@ -43,6 +43,16 @@ describe('articleFacts', () => {
     expect(high).toBeGreaterThanOrEqual(40);
   });
 
+  it('credits inflected/paraphrased facts (Polish), not just verbatim tokens', () => {
+    // Same content, different inflection: szantazysci≠szantazysta, wykorzystuja≠wykorzystuje,
+    // ofiar≠ofiary. Exact token-set intersection credited only 2/5 (40) and gated it out;
+    // wordMatch's prefix≥4 match — how the SEO term scorer already handles Polish — credits
+    // all five.
+    const article = 'Szantazysci wykorzystuja poczucie winy u ofiar.';
+    const fact = 'Szantazysta wykorzystuje poczucie winy ofiary.';
+    expect(factReadinessScore(article, fact)).toBeGreaterThanOrEqual(65);
+  });
+
   it('maps facts to coverage items with knowledge category', () => {
     const facts: ArticleFact[] = [
       { id: 'f1', text: 'Detektyw prywatny moze prowadzic sprawy cywilne.', sourceFrequency: 2, sources: [{ kind: 'paa' }] },
