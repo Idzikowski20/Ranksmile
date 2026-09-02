@@ -1,0 +1,23 @@
+__tests__/fixtures/serpTerms.detective.json
+  s_8a599cee1c9d24::t_bc6076da10e285 1-421
+__tests__/lib/topicRelevanceCorpusEvidence.test.ts
+  s_8a599cee1c9d24::t_93a73ddbd1383c 1-75
+src/core/domain/relevance/topicRelevance.ts
+  s_8a599cee1c9d24::t_56b12263357098 262-271,274-285,382-387,395-396,398-403
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1614397c44db8317e421520fccfa8c73b7a707d0",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
