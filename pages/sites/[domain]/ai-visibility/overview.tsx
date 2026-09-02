@@ -10,6 +10,8 @@ import { HoverTooltip, Button, Modal, SegmentedControl } from '../../../../compo
 import { MetricWidget } from '../../../../components/koala/product';
 import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
+import ScanStagePill from '../../../../components/aiVisibility/ScanStagePill';
+import { currentScanStage } from '../../../../components/aiVisibility/ScanProgressBar';
 
 const CompetitorBarChart = dynamic(() => import('../../../../components/aiVisibility/CompetitorBarChart'), { ssr: false });
 const TrendLineChart = dynamic(() => import('../../../../components/aiVisibility/TrendLineChart'), { ssr: false });
@@ -108,6 +110,8 @@ const AiVisibilityOverview: NextPage = () => {
    // reflect the crunching state without threading it back up from the shell.
    const scanStatusQ = useAiVisScanStatus(slug);
    const crunchingTop = scanStatusQ.data?.status === 'running' || scanStatusQ.data?.status === 'queued';
+   // Which phase is still filling these panels — shown as a quiet pill on each metric.
+   const scanStage = currentScanStage(scanStatusQ.data);
 
    const runScan = async (force: boolean) => {
       const res = await startScan.mutateAsync(force ? { force: true } : undefined);
@@ -259,6 +263,7 @@ const AiVisibilityOverview: NextPage = () => {
                         title={(
                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               AI Visibility Score
+                              {scanStage ? <ScanStagePill label={scanStage} /> : null}
                               {scoreHint ? <InfoHint text={scoreHint} /> : null}
                            </span>
                         )}
@@ -277,6 +282,7 @@ const AiVisibilityOverview: NextPage = () => {
                         title={(
                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               Mention Rate
+                              {scanStage ? <ScanStagePill label={scanStage} /> : null}
                               <InfoHint text="Share of prompt/model answers that cite your domain" />
                            </span>
                         )}
@@ -290,6 +296,7 @@ const AiVisibilityOverview: NextPage = () => {
                         title={(
                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               Avg Position
+                              {scanStage ? <ScanStagePill label={scanStage} /> : null}
                               <InfoHint text="Your average citation rank when cited (lower is better)" />
                            </span>
                         )}

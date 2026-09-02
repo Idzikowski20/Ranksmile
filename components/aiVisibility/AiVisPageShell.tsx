@@ -5,7 +5,7 @@ import AppShell from '../common/AppShell';
 import DomainSubLayout from '../domains/DomainSubLayout';
 import AiVisibilityToolbar from './AiVisibilityToolbar';
 import AiVisExportMenu from './AiVisExportMenu';
-import CrunchingBar from './CrunchingBar';
+import ScanProgressBar from './ScanProgressBar';
 import { SkeletonBars } from './SkeletonBlocks';
 import { Button, ToolRibbon } from '../koala/core';
 import type { PromptOption } from './types';
@@ -110,7 +110,7 @@ const AiVisPageShell = ({
         )}
       </DomainSubLayout>
 
-      <CrunchingBar visible={!!crunching} />
+      <ScanProgressBar visible={!!crunching} scan={scan} />
     </AppShell>
   );
 };

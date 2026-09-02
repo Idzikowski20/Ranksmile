@@ -1,0 +1,215 @@
+import React, { useState } from 'react';
+import type { AiVisScanStatus } from '../../services/aiVisibility';
+
+const FONT = 'var(--font-family-primary)';
+const SURFACE = 'var(--koala-bg-inverse)';
+const ON_SURFACE = 'var(--koala-text-on-inverse)';
+const LIFT = '0 16px 48px rgba(0,0,0,0.28)';
+
+type StepState = 'done' | 'active' | 'idle';
+type Step = { label: string; state: StepState; detail?: string };
+
+const Spinner = ({ size = 20 }: { size?: number }) => (
+   <span
+      aria-label="Loading"
+      role="status"
+      style={{
+         width: size,
+         height: size,
+         borderRadius: '50%',
+         border: '2px solid currentColor',
+         borderBottomColor: 'transparent',
+         display: 'inline-block',
+         animation: 'aiv-spin 0.8s linear infinite',
+      }}
+   />
+);
+
+const Check = ({ size = 20 }: { size?: number }) => (
+   <span
+      aria-hidden="true"
+      style={{
+         width: size,
+         height: size,
+         borderRadius: '50%',
+         background: 'var(--koala-status-success)',
+         color: 'var(--koala-text-on-brand)',
+         display: 'inline-flex',
+         alignItems: 'center',
+         justifyContent: 'center',
+         flexShrink: 0,
+      }}
+   >
+      <svg viewBox="0 0 24 24" width={size * 0.6} height={size * 0.6} fill="none" aria-hidden="true">
+         <path d="m4.5 12.75 6 6 9-13.5" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+   </span>
+);
+
+const Pending = ({ size = 20 }: { size?: number }) => (
+   <span
+      aria-hidden="true"
+      style={{
+         width: size,
+         height: size,
+         borderRadius: '50%',
+         border: '2px solid currentColor',
+         opacity: 0.35,
+         display: 'inline-block',
+         flexShrink: 0,
+      }}
+   />
+);
+
+/**
+ * The phases we can report truthfully from the scan record.
+ *
+ * `progress_done / progress_total` counts (prompt × model) pairs — the only measured
+ * signal the scan row carries. Brand extraction runs after the answers land (the sidecar
+ * drains `analyze-brands` over its ticks), so it is shown as the follow-on phase rather
+ * than with a fabricated counter. Nothing here invents a step the pipeline does not run.
+ */
+function buildSteps(scan?: AiVisScanStatus): Step[] {
+   const total = scan?.progressTotal ?? 0;
+   const done = scan?.progressDone ?? 0;
+   const answersIn = total > 0 && done >= total;
+   return [
+      {
+         label: 'Querying AI models',
+         state: answersIn ? 'done' : 'active',
+         detail: total > 0 ? `${done} / ${total} answers` : undefined,
+      },
+      {
+         label: 'Analyzing brand mentions',
+         state: answersIn ? 'active' : 'idle',
+      },
+   ];
+}
+
+/** Label of the phase currently feeding the panels, or null when nothing is running. */
+export function currentScanStage(scan?: AiVisScanStatus): string | null {
+   if (scan?.status !== 'running' && scan?.status !== 'queued') return null;
+   return buildSteps(scan).find((s) => s.state === 'active')?.label ?? null;
+}
+
+const StepRow = ({ step, last }: { step: Step; last: boolean }) => (
+   <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 20 }}>
+         {step.state === 'done' ? <Check /> : step.state === 'active' ? <Spinner /> : <Pending />}
+         {!last && <div aria-hidden="true" style={{ flex: 1, width: 1, minHeight: 8, margin: '4px 0', background: 'currentColor', opacity: 0.25 }} />}
+      </div>
+      <div style={{ minWidth: 0, flex: 1, paddingBottom: last ? 0 : 10 }}>
+         <div style={{ display: 'flex', gap: 12, alignItems: 'center', minHeight: 20 }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, opacity: step.state === 'idle' ? 0.6 : 1 }}>
+               {step.label}
+            </span>
+            {step.detail && (
+               <span style={{ flexShrink: 0, fontSize: 12, opacity: 0.75, fontVariantNumeric: 'tabular-nums' }}>{step.detail}</span>
+            )}
+         </div>
+      </div>
+   </div>
+);
+
+/**
+ * Scan progress for AI Visibility: a compact pill pinned to the bottom of the content
+ * column, which reveals the full phase timeline on hover or keyboard focus.
+ *
+ * The scan itself runs server-side — the sidecar drives `run-chunk` until every
+ * (prompt × model) pair is answered — so leaving the page does not stop it. The pill only
+ * polls the scan record; that is what the footer line promises.
+ */
+const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScanStatus }) => {
+   const [open, setOpen] = useState(false);
+   if (!visible) return null;
+
+   const steps = buildSteps(scan);
+   const activeIndex = steps.findIndex((s) => s.state === 'active');
+   const current = activeIndex >= 0 ? steps[activeIndex] : steps[steps.length - 1];
+   const doneCount = steps.filter((s) => s.state === 'done').length;
+   const total = scan?.progressTotal ?? 0;
+   const done = scan?.progressDone ?? 0;
+   const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+
+   return (
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 24, zIndex: 200, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+         <style>{'@keyframes aiv-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { [data-aiv-spin] { animation: none !important; } }'}</style>
+
+         <div style={{ position: 'relative', pointerEvents: 'auto', width: 'min(680px, calc(100vw - 48px))' }}>
+            {/* Timeline, above the pill */}
+            <div
+               role="region"
+               aria-label="Scan progress details"
+               style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 8px)',
+                  left: 0,
+                  right: 0,
+                  borderRadius: 16,
+                  background: SURFACE,
+                  color: ON_SURFACE,
+                  boxShadow: LIFT,
+                  fontFamily: FONT,
+                  overflow: 'hidden',
+                  opacity: open ? 1 : 0,
+                  transform: open ? 'translateY(0)' : 'translateY(4px)',
+                  transition: 'opacity 150ms ease, transform 150ms ease',
+                  pointerEvents: open ? 'auto' : 'none',
+               }}
+            >
+               <div style={{ padding: 20 }}>
+                  {steps.map((s, i) => <StepRow key={s.label} step={s} last={i === steps.length - 1} />)}
+               </div>
+               <div style={{ padding: '10px 20px', fontSize: 12, opacity: 0.75, borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+                  You can leave this page — the scan keeps running in the background.
+               </div>
+            </div>
+
+            {/* Collapsed pill */}
+            <button
+               type="button"
+               onMouseEnter={() => setOpen(true)}
+               onMouseLeave={() => setOpen(false)}
+               onFocus={() => setOpen(true)}
+               onBlur={() => setOpen(false)}
+               aria-expanded={open}
+               style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 20px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background: SURFACE,
+                  color: ON_SURFACE,
+                  fontFamily: FONT,
+                  textAlign: 'left',
+                  cursor: 'default',
+                  boxShadow: LIFT,
+               }}
+            >
+               <span data-aiv-spin style={{ display: 'inline-flex', flexShrink: 0 }}><Spinner size={24} /></span>
+               <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                     <span role="status" aria-live="polite" style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        Building your report
+                     </span>
+                     <span style={{ fontSize: 12, opacity: 0.7, flexShrink: 0 }}>
+                        {doneCount} of {steps.length} steps done
+                     </span>
+                  </span>
+                  <span style={{ fontSize: 12, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                     {current.label}{current.detail ? ` · ${current.detail}` : ''}
+                  </span>
+                  <span aria-hidden="true" style={{ display: 'block', height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
+                     <span style={{ display: 'block', height: '100%', width: `${pct}%`, borderRadius: 999, background: 'var(--koala-status-success)', transition: 'width 300ms ease-out' }} />
+                  </span>
+               </span>
+            </button>
+         </div>
+      </div>
+   );
+};
+
+export default ScanProgressBar;
