@@ -20,6 +20,19 @@ def test_doc_freq_dominates_quality():
     assert _term_quality(high_freq) > _term_quality(high_rel)
 
 
+def test_included_selection_is_deterministic_on_ties():
+    """Equal-quality terms must select by name, not extraction order, so the capped set is
+    stable run-to-run."""
+    base = {"doc_freq": 3, "relevance": 0.7, "type": "supporting"}
+    a = [dict(base, term="alpha"), dict(base, term="beta"), dict(base, term="gamma")]
+    b = list(reversed([dict(base, term="alpha"), dict(base, term="beta"), dict(base, term="gamma")]))
+    _mark_included(a, limit=2)
+    _mark_included(b, limit=2)
+    incl_a = {t["term"] for t in a if t["included"]}
+    incl_b = {t["term"] for t in b if t["included"]}
+    assert incl_a == incl_b == {"alpha", "beta"}
+
+
 def test_missing_fields_do_not_crash():
     terms = [{"term": "x"}, {"term": "y", "relevance": 0.7}]
     _mark_included(terms, limit=1)

@@ -79,6 +79,12 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
 
   useEffect(() => {
     let active = true;
+    // Reset per-request state on every articleId change: a mounted modal that switched
+    // articles after a no_wp_connection response would otherwise keep the stale connect
+    // CTA / old options for the new article.
+    setNotConnected(false);
+    setLoadError(null);
+    setOpts(null);
     fetch(`/api/wordpress/post-options?articleId=${articleId}`)
       .then(async (r) => {
         const d = await r.json();

@@ -13,6 +13,13 @@ import { countOccurrences, normalizePl, tokenize, wordMatch } from '@/src/core/d
 
 export { countOccurrences } from '@/src/core/domain/terms/termMatch';
 
+/** The curated working set (Surfer's ~80 `included`) when the analysis carries the flag;
+ *  every term otherwise (legacy analyses → zero regression). Shared across the score paths
+ *  so the SEO gauge grades exactly the set the panel displays. */
+export function includedTerms<T extends { included?: boolean }>(terms: T[]): T[] {
+  return terms.some((t) => t.included) ? terms.filter((t) => t.included) : terms;
+}
+
 /**
  * Write the AI Search score and its calculated_at together, so they cannot drift.
  *
@@ -106,6 +113,12 @@ export interface ScoreData {
    /** CIE — coverage overlay report (never written into frozen graph). */
    knowledge_coverage_report?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeCoverageReport;
    structural_benchmark?: import('@/src/core/domain/benchmark/types').StructuralBenchmark;
+   /** Facts mined from competitor bodies, each with the pages that asserted it (Surfer's
+    *  fact sheet). Carried across score writes so the sheet survives analysis. */
+   researched_facts?: {
+      claims?: string[];
+      sources?: Array<{ url?: string; source_urls?: string[]; label?: string; confidence?: number; cited_by?: string[] }>;
+   };
 }
 
 // Term-coverage helpers now live in the terms domain; re-exported for back-compat.
@@ -323,9 +336,7 @@ export function collectScoreSlots(
       // Surfer grades its curated working set (~80 `included`), not the whole ~350 pool.
       // Score against included when the analysis carries the flag; older analyses without
       // it score every term, exactly as before.
-      const scored = scoreData.terms.some((t) => t.included)
-         ? scoreData.terms.filter((t) => t.included)
-         : scoreData.terms;
+      const scored = includedTerms(scoreData.terms);
       // SERP-first termWeight (doc_freq) with salience fallback — Etap 1
       const corpusSize = Math.max(1, scoreData.competitor_count || 10);
       const totalWeight = scored.reduce(
@@ -344,7 +355,7 @@ export function collectScoreSlots(
    // land in an H2/H3 (its `in_headings_count`). Only appears when the SERP flagged
    // some, so an article without heading terms is scored exactly as before.
    if (html && scoreData.terms?.length) {
-      const headingTerms = scoreData.terms.filter((t) => t.in_headings);
+      const headingTerms = includedTerms(scoreData.terms).filter((t) => t.in_headings);
       if (headingTerms.length) {
          const headingText = (html.match(/<h[2-4][^>]*>[\s\S]*?<\/h[2-4]>/gi) || [])
             .join(' ')
@@ -450,7 +461,7 @@ export function computeContentScore(
          wordCount,
          headingCount,
          paragraphCount ?? 0,
-         scoreData.terms,
+         includedTerms(scoreData.terms),
          {
             ...scoreData.content_targets,
             headingsMin: scoreData.content_targets.headingsMin ?? scoreData.headings_min,

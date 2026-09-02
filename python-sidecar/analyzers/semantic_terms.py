@@ -259,7 +259,12 @@ def _term_quality(t: dict) -> float:
 def _mark_included(terms: list[dict], limit: int = INCLUDED_TERMS) -> list[dict]:
     """Flag the top `limit` terms by quality as the curated working set (Surfer's ~80).
     Mutates each term with `included`; the rest stay in the pool for the 'all' view."""
-    ranked = sorted(range(len(terms)), key=lambda i: _term_quality(terms[i]), reverse=True)
+    # Term-name tiebreak so equal-quality terms select deterministically regardless of
+    # extraction order (otherwise the capped 80 shifts run-to-run).
+    ranked = sorted(
+        range(len(terms)),
+        key=lambda i: (-_term_quality(terms[i]), terms[i].get("term", "")),
+    )
     keep = set(ranked[:limit])
     for i, t in enumerate(terms):
         t["included"] = i in keep

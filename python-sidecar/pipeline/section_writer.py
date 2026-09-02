@@ -186,9 +186,9 @@ def _prompt(
             # demonstracyjne ignorowanie... „Nie będę z tobą rozmawiać, dopóki nie"
             # przeprosisz."). Match whichever fits this section.
             "Each item is either a short sentence, or a bold lead term + en dash (–) + one",
-            "or two sentences, optionally ending with a realistic quoted example in Polish",
-            "quotation marks. Markdown only; never emit HTML. No heading, no prose before",
-            "the label or after the list.",
+            "or two sentences, optionally ending with a realistic quoted example using the",
+            "quotation marks of the article's own language. Markdown only; never emit HTML.",
+            "No heading, no prose before the label or after the list.",
         ]
     else:
         lines = [

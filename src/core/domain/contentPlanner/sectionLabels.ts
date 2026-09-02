@@ -91,7 +91,10 @@ function capitalizeSentence(s: string): string {
  * Warszawy". The outline prompt forbids it, but the brand context in that prompt wins
  * often enough that the H1 needs a deterministic guard on top of the instruction.
  */
-const H1_OFFTOPIC_FRAMING = /poufn\w* pomoc|pomoc detektywistyczn|dla os[oó]b prywatnych|dla firm\b|dla klient[oó]w|jak pom[oó]c|agencj\w* detektyw|osób prywatnych i firm|z warszaw|dla warszaw/i;
+// Only explicitly off-topic audience/service/brand framing. `jak pom[oó]c` is matched ONLY
+// when it targets an audience ("jak pomóc firmom / osobom prywatnym / klientom") — a bare
+// `jak pom[oó]c` also ate legitimate reader-benefit clauses ("…: jak pomóc ofierze").
+const H1_OFFTOPIC_FRAMING = /poufn\w* pomoc|pomoc detektywistyczn|dla os[oó]b prywatnych|dla firm\b|dla klient[oó]w|jak pom[oó]c \w*(?:firm|osob|klient|przedsi[eę]bior)|agencj\w* detektyw|osób prywatnych i firm|z warszaw|dla warszaw/i;
 
 /**
  * Strip brand/audience/service framing from an LLM-authored H1, keeping the topical part.

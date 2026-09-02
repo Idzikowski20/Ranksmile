@@ -494,9 +494,15 @@ async def competitor_outlines_endpoint(body: dict):
     """Research & Outline — zwraca heading structure konkurencyjnych stron."""
     keyword = body.get("keyword", "")
     language = body.get("language", "pl")
-    num = body.get("num", 10)
     if not keyword:
         raise HTTPException(status_code=400, detail="keyword is required")
+    # Validate + clamp: `num` is doubled and drives concurrent external scrapes, so an
+    # unbounded or malformed value must fail as a 422, not spawn unbounded work / a 500.
+    try:
+        num = int(body.get("num", 10))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="num must be an integer")
+    num = max(1, min(num, 20))
     print(f"[competitor-outlines] Fetching top {num} for: {keyword}")
     try:
         outlines = await extract_competitor_outlines(keyword, language, num)

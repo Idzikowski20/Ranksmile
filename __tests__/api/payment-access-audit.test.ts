@@ -27,15 +27,6 @@ function isSkipped(posixRel: string): boolean {
   if (exact.has(posixRel)) return true;
   if (posixRel.startsWith('pages/api/auth/')) return true;
   if (posixRel.startsWith('pages/api/invitations/')) return true;
-  // MCP speaks OAuth 2.1 to third-party agents, not the app session the payment gate
-  // reads, and the protocol fixes what each route may answer. Discovery, registration,
-  // token and revocation are unauthenticated by RFC 8414 / 7591 / 7009. /api/mcp itself
-  // must answer 401 with a WWW-Authenticate challenge — a billing redirect there breaks
-  // the client's discovery flow instead of telling the user to pay. Consent and the
-  // connection list are session-authenticated, and revoking an agent's access is exactly
-  // what must keep working when a plan lapses. Entitlement belongs inside the tools,
-  // where it can be enforced per call, not at this boundary.
-  if (posixRel.startsWith('pages/api/mcp/')) return true;
   return false;
 }
 

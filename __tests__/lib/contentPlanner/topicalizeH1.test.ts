@@ -38,6 +38,19 @@ describe('topicalizeH1', () => {
     )).toBe('Szantaż emocjonalny');
   });
 
+  it('keeps a reader-benefit "jak pomóc <topic>" clause (not audience framing)', () => {
+    const good = 'Szantaż emocjonalny: jak pomóc ofierze szantażu';
+    expect(topicalizeH1(good, 'szantaż emocjonalny', 'pl')).toBe(good);
+  });
+
+  it('still strips audience "jak pomóc firmom/osobom prywatnym"', () => {
+    expect(topicalizeH1(
+      'Szantaż emocjonalny w rodzinie — jak pomóc firmom',
+      'szantaż emocjonalny',
+      'pl',
+    )).toBe('Szantaż emocjonalny w rodzinie');
+  });
+
   it('handles an empty H1', () => {
     expect(topicalizeH1('', 'szantaż emocjonalny', 'pl')).toBe('Szantaż emocjonalny');
   });

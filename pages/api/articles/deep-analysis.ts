@@ -766,6 +766,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       competitorWordSpread,
     });
 
+    // Competitor-body facts (with per-page sources) mined by scrape_serp — Surfer's fact
+    // sheet. Set on scoreData itself (not just the first write) so it survives the two
+    // later coverage-path score writes, which also spread scoreData. Only when non-empty,
+    // so a barren run never clobbers a prior sheet.
+    if (serp.researched_facts?.claims?.length) {
+      scoreData.researched_facts = serp.researched_facts;
+    }
+
     if (suggestionQuestions.length) {
       const have = new Set((scoreData.paa_questions ?? []).map((q: string) => q.toLowerCase()));
       scoreData.paa_questions = [
@@ -988,14 +996,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       pageContent,
       featuredImage,
       wordCount || classify.word_count_estimate || 0,
-      JSON.stringify({
-        ...carried,
-        ...scoreData,
-        // Competitor-body facts (with per-page sources) mined by scrape_serp — Surfer's
-        // fact-sheet model. Only when the harvest produced something, so an empty run
-        // never clobbers a prior sheet.
-        ...(serp.researched_facts?.claims?.length ? { researched_facts: serp.researched_facts } : {}),
-      }),
+      JSON.stringify({ ...carried, ...scoreData }),
       isKeywordMode ? null : (seoScore || ruleBase),
     ];
 
