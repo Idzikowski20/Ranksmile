@@ -23,3 +23,26 @@ describe('competitorHeadingTitles — encyclopedia furniture', () => {
     expect(out.some((h) => /przypisy|bibliografia|zobacz też|linki zewnętrzne/i.test(h))).toBe(false);
   });
 });
+
+describe('competitorHeadingTitles — service-page chrome', () => {
+  it('drops nav/footer/CTA headings a service SERP carries, keeps topical ones', () => {
+    // The exact headings that leaked into article 160's outline from the
+    // "prywatny detektyw warszawa" SERP — nav, footer, contact and CTA blocks that sit
+    // in <section>/<div> containers the nav/footer strip never reached.
+    const out = competitorHeadingTitles(cache([
+      'Zakres usług detektywistycznych w Warszawie',
+      'Godziny otwarcia',
+      'Najnowsze wpisy',
+      'Zapraszamy do naszych biur',
+      'Porozmawiaj ze specjalistą. Działamy na terenie całej Polski',
+      'Kontakt',
+      'O nas',
+      'Jak wykrywanie podsłuchów chroni ofiary szantażu',
+    ]));
+    expect(out).toContain('Zakres usług detektywistycznych w Warszawie');
+    expect(out).toContain('Jak wykrywanie podsłuchów chroni ofiary szantażu');
+    for (const chrome of ['Godziny otwarcia', 'Najnowsze wpisy', 'Zapraszamy do naszych biur', 'Porozmawiaj ze specjalistą. Działamy na terenie całej Polski', 'Kontakt', 'O nas']) {
+      expect(out).not.toContain(chrome);
+    }
+  });
+});

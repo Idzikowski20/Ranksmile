@@ -280,7 +280,14 @@ export function parseCompetitorCacheJson(raw: string | null | undefined): Compet
 // art153 shipped a "Przypisy do informacji o szantażu emocjonalnym" heading.
 // No trailing \b — an ASCII word boundary after "też"/"treści" never fires, the trap
 // documented across this codebase. Start-anchored is enough for a section heading.
-const HEADING_FURNITURE = /^(przypisy|bibliografia|zobacz (też|również)|linki zewnętrzne|uwagi|galeria|kategori|spis treści|references|see also|external links|further reading|notes|bibliography|contents)/i;
+// Two kinds of non-topical heading a scraped competitor page carries. Encyclopedia
+// furniture (Wikipedia section tails) and service-page chrome — nav, footer, contact and
+// CTA blocks. The latter sits in <section>/<div> widgets that the nav/footer/aside strip
+// in the scraper never reaches, so it survives into the heading list; article 160's
+// outline led with "Godziny otwarcia", "Najnowsze wpisy", "Zapraszamy do naszych biur".
+// Anchored at start so a topical heading that merely contains one of these words
+// ("Kontakt z dzieckiem po rozwodzie") is kept.
+const HEADING_FURNITURE = /^(przypisy|bibliografia|zobacz (też|również)|linki zewnętrzne|uwagi|galeria|kategori|spis treści|references|see also|external links|further reading|notes|bibliography|contents|kontakt|skontaktuj|napisz do nas|zadzwoń|o nas|o mnie|o firmie|godziny (otwarcia|pracy)|najnowsze (wpisy|artykuły|posty)|ostatnie (wpisy|artykuły|posty)|powiązane (wpisy|artykuły|posty|tematy)|podobne (wpisy|artykuły|posty)|polecane (wpisy|artykuły)|zapraszamy|porozmawiaj ze specjalist|umów (się|wizytę|spotkanie)|newsletter|zapisz się|nasze biur|nasi (detektywi|specjaliści|eksperci)|opinie (klientów|naszych)|polityka (prywatności|cookie)|menu|nawigacja|home\b|strona główna|wróć do|czytaj (też|również|więcej)|sprawdź (też|również)|obserwuj nas|śledź nas|social media|media społecznościowe|newsy|aktualności)/i;
 
 export function competitorHeadingTitles(raw: string | null | undefined): string[] {
   if (!raw) return [];
