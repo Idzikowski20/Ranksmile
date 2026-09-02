@@ -259,12 +259,30 @@ export function filterOnTopicTerms<T extends { term: string }>(terms: T[], seedK
 
 /**
  * Competitor documents a term must appear in before the corpus itself counts as proof
- * of topicality. Two is the smallest number that means "more than one page thought this
- * mattered". It only means that while `doc_freq` really is a distinct-document count —
- * `semantic_terms.py` used to fill it with a per-heading chunk count, so one page saying
- * something twice bought a free pass past every topic check.
+ * of topicality. It only means anything while `doc_freq` really is a distinct-document
+ * count — `semantic_terms.py` used to fill it with a per-heading chunk count, so one
+ * page saying something twice bought a free pass past every topic check.
+ *
+ * Two used to be the bar, on the reasoning that "more than one page thought this
+ * mattered". Measured against a live SERP that reasoning is backwards: boilerplate is
+ * exactly what repeats across competitors. A detective-services term set carried
+ * `e mail` (5 docs), `zobacz` (5), `numer` (4) and a competitor's street name — footers
+ * and nav, present on every page of every site, so `doc_freq` is *maximal* for the
+ * junk. Only near-universal presence separates a corpus topic from a corpus template.
  */
 const CORPUS_EVIDENCE_MIN_DOCS = 2;
+const CORPUS_EVIDENCE_RATIO = 0.8;
+
+/**
+ * How many documents the corpus actually spans, inferred from the most widespread term.
+ * An absolute floor cannot work across SERP sizes: six of ten competitors is evidence,
+ * six of six is a template. Nothing passes the term list its corpus size, and the
+ * busiest term is a sound proxy for it.
+ */
+function corpusEvidenceFloor(terms: ReadonlyArray<TermEvidence>): number {
+  const widest = terms.reduce((max, t) => Math.max(max, t.doc_freq ?? 0), 0);
+  return Math.max(CORPUS_EVIDENCE_MIN_DOCS, Math.ceil(widest * CORPUS_EVIDENCE_RATIO));
+}
 
 /**
  * Longest phrase a content term ever is. Beyond this it is a search suggestion, not
@@ -361,6 +379,12 @@ export function filterNlpTermsForAnalysis<
   }
   const relatedSeeds = [...seeds, ...strictSeeds];
 
+  const evidenceFloor = corpusEvidenceFloor(terms);
+  // Whether the extraction handed us any corpus evidence at all. With it, `doc_freq` is
+  // the signal to judge an off-seed term by; without it (older analyses, and any path
+  // that never counted documents) length is the only thing left to fall back on.
+  const hasCorpusEvidence = terms.some((t) => (t.doc_freq ?? 0) > 0);
+
   const soft = terms.filter((t) => {
     if (strictTerms.has(t.term)) return false;
     const term = normalizeTerm(t.term);
@@ -368,11 +392,15 @@ export function filterNlpTermsForAnalysis<
     if (isWeakKeywordLongTail(term, seedKeyword, t)) return false;
     const words = term.split(/\s+/).filter((w) => w.length >= 3);
     if (!words.length) return false;
-    // Several competitors used it — that is the corpus establishing the topic, not us.
-    if ((t.doc_freq ?? 0) >= CORPUS_EVIDENCE_MIN_DOCS) return true;
+    // Near every competitor used it — that is the corpus establishing the topic, not us.
+    if ((t.doc_freq ?? 0) >= evidenceFloor) return true;
     if (sharesAnySeedToken(words, relatedSeeds)) return true;
-    // Single-document term with no seed overlap: keep only longer unigrams, and only
-    // once the strict pass proved the extraction itself was sane.
+    // Last resort: a lone long word, kept only once the strict pass proved the
+    // extraction was sane. Length carries no topical test, so it applies only where the
+    // corpus told us nothing — with document counts in hand this rule was a noise pump,
+    // admitting eighteen terms on a live SERP (`Całodobowo`, `mazowieckie`,
+    // `profesjonalne`, `Jesteśmy`) against two worth keeping.
+    if (hasCorpusEvidence) return false;
     return words.length === 1 && words[0].length >= 8 && strict.length > 0;
   });
 
