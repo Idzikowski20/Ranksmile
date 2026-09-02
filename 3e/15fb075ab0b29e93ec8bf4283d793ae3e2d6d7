@@ -1,0 +1,28 @@
+python-sidecar/analyzers/semantic_terms.py
+  s_8a599cee1c9d24::t_c1be9e513ba18b 242-266
+  s_8a599cee1c9d24::t_b82386e4e6ab72 291
+src/infrastructure/articles/contentScore.ts
+  s_8a599cee1c9d24::t_79f2736bb75293 323-328,331,335
+src/core/domain/terms/types.ts
+  s_8a599cee1c9d24::t_cd43c9159afc9c 20-23
+python-sidecar/tests/test_included_terms.py
+  s_8a599cee1c9d24::t_c07c122418740a 1-26
+components/articles/ContentScorePanel.tsx
+  s_8a599cee1c9d24::t_59b540e77e7e77 385-390
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3e15fb075ab0b29e93ec8bf4283d793ae3e2d6d7",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
