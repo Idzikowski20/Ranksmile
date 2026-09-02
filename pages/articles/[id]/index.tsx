@@ -1002,12 +1002,15 @@ const ArticleEditorPage: NextPage = () => {
       _heading_count: scored.headings,
       _paragraph_count: scored.paragraphs,
     };
-    const contentScore = scored.seo;
+    // Persist the LIVE seo/ai and their blend so the list gauge shows the same number as
+    // the editor's Content Score. Previously only ai_score was stored and _content_score
+    // held SEO-only, so the list blended a stale seo_score and diverged (50 vs 73).
+    const persistAi = scored.liveItems.length > 0 || scoreData.ai_score != null;
+    updatedScoreData.seo_score = scored.seo;
+    if (persistAi) updatedScoreData.ai_score = scored.ai;
+    const contentScore = persistAi ? computeOverallContentScore(scored.seo, scored.ai) : scored.seo;
     updatedScoreData._computed_score = contentScore;
     updatedScoreData._content_score = contentScore;
-    if (scored.liveItems.length > 0 || scoreData.ai_score != null) {
-      updatedScoreData.ai_score = scored.ai;
-    }
     if (versionMeta) updatedScoreData._ao_meta = versionMeta;
 
     // Persist internal links panel state from localStorage
@@ -1121,6 +1124,23 @@ const ArticleEditorPage: NextPage = () => {
     if (autoTimer.current) clearTimeout(autoTimer.current);
     void autoSave(sig, { unload });
   };
+
+  // One-time score refresh on open. Articles scored before the current SEO/AI model kept
+  // stale score_data.seo_score/ai_score, so the list gauge (which blends the stored pair)
+  // lagged the editor's live number — 50 in the list vs 73 in the editor. Persist the
+  // freshly computed scores once per article; content is unchanged, so only the score
+  // fields refresh. Skipped while a review/optimize save-suspend is active or the doc is
+  // not a usable article.
+  const scoreSyncedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = String(id ?? '');
+    if (isLoading || !article || saveSuspended || !key) return;
+    if (!isUsableArticleHtml(editorHtml)) return;
+    if (scoreSyncedRef.current === key) return;
+    scoreSyncedRef.current = key;
+    void doSave();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, article, editorHtml, isLoading, saveSuspended]);
 
   // Flush pending edits immediately on tab-hide / close, in-app navigation, and Cmd/Ctrl+S —
   // so changes are never lost to the debounce window (the main gap vs. Ranksmile-style autosave).
