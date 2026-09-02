@@ -1,0 +1,36 @@
+src/infrastructure/articles/contentScore.ts
+  s_8a599cee1c9d24::t_7e83a07d3bdd59 67
+  s_8a599cee1c9d24::t_8d1d060fe9ca15 440-441,448-452
+src/core/domain/competitors/contentScore.ts
+  s_8a599cee1c9d24::t_9dd9ab4c98af02 24-30,35-66
+  s_8a599cee1c9d24::t_598099aaadfec4 130
+src/infrastructure/competitors/competitorAuditScore.ts
+  s_8a599cee1c9d24::t_c2aad0a5b04d8b 100-101,104-108,111
+  s_8a599cee1c9d24::t_26f7b85df2fa6d 11-16
+src/infrastructure/siteAudit/auditCompute.ts
+  s_8a599cee1c9d24::t_3d6a27ba52a1dd 358,361
+  s_8a599cee1c9d24::t_eb3e202d5742e3 12,16
+  s_8a599cee1c9d24::t_8beffdc495dd19 42
+__tests__/lib/structureBandFraction.test.ts
+  s_8a599cee1c9d24::t_c248424984f3dc 1-50
+src/infrastructure/siteAudit/auditEnrich.ts
+  s_8a599cee1c9d24::t_e432bf9a2d161e 8
+  s_8a599cee1c9d24::t_3efb5373b67f47 85-86,88-97
+  s_8a599cee1c9d24::t_b549fe2c9d2835 109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8fbc3506a9420ed576f3732d2a67d261cacd5bba",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
