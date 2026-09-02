@@ -153,8 +153,7 @@ def _format_execution_plan(plan: dict) -> str:
         lines.append(
             f"{i}. H2: {s.get('heading')}\n"
             f"   objective: {s.get('objective')}\n"
-            f"   priority: {s.get('priority')} | words≈{s.get('expected_words')}"
-            f" | h3_subheadings: {s.get('subheadings') or 0}\n"
+            f"   priority: {s.get('priority')} | words≈{s.get('expected_words')}\n"
             f"   must_answer: {s.get('must_answer') or []}\n"
             f"   questions: {s.get('questions') or []}\n"
             f"   claims: {claim_txt}\n"
@@ -385,9 +384,6 @@ WYMAGANIA:
 - Natychmiast po H1 wstaw Quick Answer z planu jako 1–2 <p> (action-first)
 - Dla KAŻDEJ sekcji z planu: dokładnie jedno <h2> z heading z planu, w tej kolejności
 - Pokryj must_answer, claims i blocks z planu; nie dodawaj obcych H2
-- h3_subheadings sekcji = ile <h3> wstawić WEWNĄTRZ tej sekcji (0 = brak). Każdy <h3> to
-  konkretna podteza z must_answer/questions TEJ sekcji, nie ogólnik ani nowy temat.
-  Konkurenci trzymają ~93 słowa na nagłówek dzięki zagnieżdżaniu — H3 dzielą sekcję
 - Paragrafy 3-5 zdań; listy gdzie blocks wymagają
 {ext_req}
 - TYLKO HTML (h1,h2,h3,p,ul,ol,strong,em,a,table) — bez <html>,<body>,<head>""", max_tokens=8000)
@@ -402,16 +398,14 @@ Keyword: "{keyword}". Language: {language}. ~{plan_words} words.
 {tone_directive}
 PLAN:
 {plan_block[:6000]}
-Start with <h1>. Use ONLY planned H2 headings in order; inside each, add as many <h3>
-subheadings as its h3_subheadings says, drawn from that section's must_answer/questions.
-Only article HTML.{links_block}""",
+Start with <h1>. Use ONLY planned H2 headings in order. Only article HTML.{links_block}""",
                 max_tokens=8000,
             ))
 
         # Intra-section review only — never change H2/outline/narrative.
         reviewed = _strip_code_fences(await _chat(f"""Zreviewuj STYL wewnątrz sekcji artykułu SEO dla keyword "{keyword}".
 DOZWOLONE: popraw przejścia między akapitami, powtórzenia, keyword stuffing, klarowność zdań.
-ZABRONIONE: zmieniać, dodawać, usuwać lub przestawiać H2 ani H3; zmieniać narrację/outline; wymyślać nowe sekcje.
+ZABRONIONE: zmieniać, dodawać, usuwać lub przestawiać H2; zmieniać narrację/outline; wymyślać nowe sekcje.
 
 Zwróć POPRAWIONY HTML (tylko HTML):
 

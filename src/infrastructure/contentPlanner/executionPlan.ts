@@ -8,7 +8,6 @@ import type {
   ExecutionPlanSection,
 } from '@/src/core/domain/contentPlanner/types';
 import { PLANNER_VERSION } from '@/src/core/domain/contentPlanner/types';
-import { subheadingsForSection } from '@/src/core/domain/contentPlanner/competitorBenchmark';
 
 function stableStringify(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -150,10 +149,6 @@ export function toSidecarExecutionPlan(plan: ArticleExecutionPlan): Record<strin
       objective: s.objective,
       priority: s.priority,
       expected_words: s.expectedWords,
-      // How many H3s this section should carry. The scorer grades heading count against
-      // competitor body density (~93 words per heading) and the writer emitted none, so
-      // the slot was unreachable — see subheadingsForSection.
-      subheadings: subheadingsForSection(s.expectedWords),
       claims: s.claims.map((c) => ({
         id: c.id,
         statement: c.statement,

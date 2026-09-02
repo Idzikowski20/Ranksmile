@@ -11,7 +11,6 @@ import type {
   ValidationIssue,
   ValidationResult,
 } from '@/src/core/domain/contentPlanner/types';
-import { subheadingsForSection } from '@/src/core/domain/contentPlanner/competitorBenchmark';
 
 function plain(html: string): string {
   return (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -157,24 +156,6 @@ export function validateSeoAgainstBlueprint(
       message: `Lists ${lists} below expected`,
       missing: Math.ceil(blueprint.targetLists * 0.4) - lists,
     });
-  }
-  // Nesting. The scorer grades total heading count against competitor body density, and
-  // for a long time the writer emitted no H3 at all — a 1264-word article shipped ten
-  // headings against a target of fourteen and there was nothing to catch it. Sections
-  // short enough to stay flat expect zero, so this only fires where the plan asked for
-  // subheadings and the article came back flat.
-  const perSection = blueprint.targetH2 > 0 ? blueprint.targetWords / blueprint.targetH2 : 0;
-  const subsPerSection = subheadingsForSection(perSection);
-  if (subsPerSection > 0) {
-    const h3 = (html.match(/<h3\b/gi) || []).length;
-    const expected = Math.ceil(blueprint.targetH2 * subsPerSection * 0.5);
-    if (h3 < expected) {
-      issues.push({
-        code: 'h3_below',
-        message: `H3 ${h3} below expected ${expected} for ${Math.round(perSection)}-word sections`,
-        missing: expected - h3,
-      });
-    }
   }
   return { ok: issues.length === 0, issues };
 }
