@@ -84,6 +84,33 @@ function capitalizeSentence(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * Brand / audience / service / city framing that must never be in the H1. Surfer titles
+ * for the reader ("Szantaż emocjonalny: jak go rozpoznać…"); ours kept producing
+ * "Szantaż emocjonalny — poufna pomoc detektywistyczna dla osób prywatnych i firm z
+ * Warszawy". The outline prompt forbids it, but the brand context in that prompt wins
+ * often enough that the H1 needs a deterministic guard on top of the instruction.
+ */
+const H1_OFFTOPIC_FRAMING = /poufn\w* pomoc|pomoc detektywistyczn|dla os[oó]b prywatnych|dla firm\b|dla klient[oó]w|jak pom[oó]c|agencj\w* detektyw|osób prywatnych i firm|z warszaw|dla warszaw/i;
+
+/**
+ * Strip brand/audience/service framing from an LLM-authored H1, keeping the topical part.
+ * Splits on the title's separators and drops any segment that is framing; an H1 with no
+ * framing is returned unchanged. Falls back to the bare keyword only if nothing topical
+ * survives — a plain topical H1 beats a branded one.
+ */
+export function topicalizeH1(rawH1: string, keyword: string, lang: OutlineLang): string {
+  const h1 = (rawH1 || '').trim();
+  if (!h1) return capitalizeSentence(keyword.trim());
+  if (!H1_OFFTOPIC_FRAMING.test(h1)) return h1;
+  const kept = h1
+    .split(/\s[—–-]\s|:\s|,\s/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0 && !H1_OFFTOPIC_FRAMING.test(p));
+  const rebuilt = kept.join(lang === 'pl' ? ' – ' : ' – ').trim();
+  return rebuilt.length >= 3 ? rebuilt : capitalizeSentence(keyword.trim());
+}
+
 // The brand help + case-study sections (see brandSections). They belong near the end,
 // after the topical body and before FAQ/summary — Surfer keeps the agency section at
 // position 10 of 12 — but they were seeded first and led the article. Matching our own

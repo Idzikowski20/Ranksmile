@@ -18,6 +18,7 @@ import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { resolveContentLocale, languageDisplayName } from '@/src/infrastructure/config/domainLanguage';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
+import { topicalizeH1 } from '@/src/core/domain/contentPlanner/sectionLabels';
 
 type CachedOutlines = { competitors?: CompetitorOutline[] };
 
@@ -213,6 +214,13 @@ H2: [topical section]
       console.error('[generate-outline] could not parse output:', text.slice(0, 300));
       return res.status(500).json({ error: 'Could not parse generated outline — unexpected AI response format.' });
     }
+
+    // Deterministic guard: the model keeps titling the H1 for the brand ("…poufna pomoc
+    // detektywistyczna dla osób prywatnych i firm z Warszawy") even when the prompt
+    // forbids it, because the brand context outweighs the instruction. Strip that framing
+    // so the H1 stays topical, the way Surfer titles it.
+    const h1 = headings.find((h) => h.level === 1);
+    if (h1) h1.text = topicalizeH1(h1.text, keyword, locale.languageCode === 'pl' ? 'pl' : 'en');
 
     return res.status(200).json({ headings, usedBrand: !!(brandKnowledge || voiceTone), competitorCount: compList.length });
   } catch (err) {
