@@ -156,3 +156,46 @@ export function buildCompetitorBenchmark(
 export function h2FromWords(words: number): number {
   return Math.min(22, Math.max(6, Math.round(words / 230)));
 }
+
+/**
+ * Words a competitor spends per content heading, measured rather than chosen. The SERP
+ * analyzer strips nav/footer/header/aside before counting, so this is body structure:
+ * a "prywatny detektyw warszawa" cohort ran ~1307 words across ~14 headings.
+ */
+const COMPETITOR_WORDS_PER_HEADING = 93;
+
+/**
+ * Shortest subsection worth its own heading, taken from the measured density above
+ * rather than picked. An earlier guess of 120 blocked every split the planner could
+ * actually offer: h2FromWords hands out ~218-word sections, so a 120 floor meant no
+ * section ever qualified and the whole rule was inert.
+ */
+const MIN_SUBSECTION_WORDS = 95;
+
+/** More than this inside one H2 stops being a section and becomes a list of sections. */
+const MAX_SUBHEADINGS = 3;
+
+/**
+ * H3 subheadings a section of this length should carry.
+ *
+ * The scorer grades an article's heading count against that competitor density, and we
+ * were losing the slot outright: nothing in the planner or the writer ever emitted an H3,
+ * so a 1264-word article shipped ten headings against a target of fourteen, and the
+ * score hint literally advised "use H3 inside H2 sections" — advice no code path could
+ * follow.
+ *
+ * Raising the H2 count instead would hit the density and lose the article: h2FromWords
+ * keeps ~230 words per top-level section deliberately, because padding to competitor
+ * heading counts produced eleven thin sections where the reference tool briefs eight.
+ * Competitors reach ~93 words per heading by nesting, and so should we — the top-level
+ * outline stays as planned and the granularity arrives underneath it.
+ */
+export function subheadingsForSection(expectedWords: number): number {
+  if (!Number.isFinite(expectedWords) || expectedWords < MIN_SUBSECTION_WORDS * 2) return 0;
+  const headings = Math.round(expectedWords / COMPETITOR_WORDS_PER_HEADING);
+  // One of those headings is the H2 itself; the rest are subsections, and each still has
+  // to clear the minimum on its own.
+  const byDensity = headings - 1;
+  const byMinimum = Math.floor(expectedWords / MIN_SUBSECTION_WORDS) - 1;
+  return Math.max(0, Math.min(MAX_SUBHEADINGS, byDensity, byMinimum));
+}
