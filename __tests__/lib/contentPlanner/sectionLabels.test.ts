@@ -28,14 +28,17 @@ describe('sectionLabels + outline fixes', () => {
     expect(h1.length).toBeGreaterThan(10);
   });
 
-  it('informational topics carry no forced skeleton', () => {
-    // Surfer's article for this keyword is eight topical sections with no "Szybka
-    // odpowiedź / Plan działania / FAQ / Podsumowanie" scaffolding — the outline is driven
-    // entirely by competitor topical headings.
+  it('no article type carries a forced skeleton — competitor headings drive the outline', () => {
+    // Every Surfer content editor in this workspace, for a detective agency, is a topical
+    // article: "szantaż emocjonalny", "kradzież z włamaniem" — the brand appears as one
+    // section, never a "Kim jesteśmy / Zakres usług / Kontakt" service page. The service
+    // branch used to force that CV skeleton and it read as a landing page, not an article.
+    // Now hiring intent is driven by the same competitor + PAA headings as everything else,
+    // with brandSections adding the single brand-help section.
     expect(localizedRequiredSections('step-by-step', 'pl')).toEqual([]);
     expect(localizedRequiredSections('guide', 'pl')).toEqual([]);
-    // Hiring intent keeps its service-page structure.
-    expect(localizedRequiredSections('service', 'pl').length).toBeGreaterThan(0);
+    expect(localizedRequiredSections('service', 'pl')).toEqual([]);
+    expect(localizedRequiredSections('service', 'en')).toEqual([]);
   });
 
   it('orderSectionsFaqLast puts FAQ and Summary at end', () => {
@@ -54,6 +57,20 @@ describe('sectionLabels + outline fixes', () => {
     ]);
     expect(narrativeOrder[narrativeOrder.length - 2]).toBe('1');
     expect(narrativeOrder[narrativeOrder.length - 1]).toBe('3');
+  });
+
+  it('places the brand help + case-study sections at the tail of the body, before FAQ', () => {
+    // Surfer keeps the agency section near the end (section 10 of 12), after every
+    // topical section and before FAQ/summary. brandSections were seeded first, so the
+    // article opened with "Jak ProDetektyw pomaga…" instead of leading with the topic.
+    const ordered = orderSectionsFaqLast([
+      { id: 'brand', role: 'jak_prodetektyw_pomaga_w_takich_sprawach', heading: 'Jak ProDetektyw pomaga w takich sprawach' },
+      { id: 'case', role: 'studium_przypadku', heading: 'Studium przypadku: przykladowe sprawy' },
+      { id: 'topic', role: 'foundation', heading: 'Czym jest szantaż emocjonalny' },
+      { id: 'faq', role: 'faq', heading: 'FAQ' },
+      { id: 'sum', role: 'summary', heading: 'Podsumowanie' },
+    ]);
+    expect(ordered.sections.map((s) => s.id)).toEqual(['topic', 'brand', 'case', 'faq', 'sum']);
   });
 
   it('only treats a whole-word contact/summary as the sign-off', () => {
@@ -148,14 +165,12 @@ describe('service-page skeleton for hiring intent', () => {
     expect(buildIntentBlueprint({ keyword, language: 'pl' }).articleType).toBe(type);
   });
 
-  it('plans a service page instead of a tutorial', () => {
-    const sections = localizedRequiredSections('service', 'pl');
-
-    expect(sections).toEqual([
-      'Kim jesteśmy', 'Komu pomagamy', 'Zakres usług', 'Jak wygląda współpraca',
-      'Dlaczego my', 'FAQ', 'Kontakt',
-    ]);
-    expect(sections).not.toContain('Pierwsze kroki');
+  it('does not force a service-page skeleton — hiring intent still writes a topical article', () => {
+    // Intent is still classified 'service' (the query IS commercial), but that no longer
+    // pins a "Kim jesteśmy / Zakres usług / Kontakt" CV onto the outline. Those headings
+    // read as a landing page; Surfer writes topical articles for this workspace and lets
+    // competitor + PAA headings drive, with the brand as one section.
+    expect(localizedRequiredSections('service', 'pl')).toEqual([]);
   });
 
   it('keeps Kontakt after the FAQ', () => {

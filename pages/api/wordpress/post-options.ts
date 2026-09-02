@@ -43,7 +43,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    const [drows] = await db.query('SELECT workspace_id FROM domain WHERE "ID" = ? LIMIT 1', { replacements: [article.domain_id] });
    const workspaceId = (drows as Array<{ workspace_id: number }>)[0]?.workspace_id;
    const conn = workspaceId ? await getConnectionForWorkspace(workspaceId) : null;
-   if (!conn) return res.status(400).json({ error: 'No WordPress site is connected to this workspace.' });
+   // `code` lets the export modal tell "connect WordPress first" (an expected, actionable
+   // empty state) apart from a real failure, and render the friendly panel instead of a
+   // red error string.
+   if (!conn) return res.status(400).json({ error: 'No WordPress site is connected to this workspace.', code: 'no_wp_connection' });
 
    let data: Record<string, unknown> = {};
    try {

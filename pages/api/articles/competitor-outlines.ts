@@ -22,7 +22,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   await ensureArticlesTables();
-  const { keyword, language, num = 5, articleId } = req.body;
+  const { keyword, language, num = 10, articleId } = req.body;
   if (!keyword) return res.status(400).json({ error: 'keyword is required' });
 
   const locale = await resolveContentLocale({
@@ -48,8 +48,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
       const cached = row?.competitor_outlines_cache;
       if (cached) {
-        console.log(`[competitor-outlines] serving cache for article ${articleId}`);
-        return res.status(200).json(JSON.parse(cached));
+        // A cache written by an older run (or the editor preload) can hold fewer than the
+        // requested `num` competitors. Serve it only when it already satisfies the request;
+        // otherwise fall through and re-fetch a fuller set.
+        const parsed = JSON.parse(cached) as { competitors?: unknown[] };
+        if (Array.isArray(parsed.competitors) && parsed.competitors.length >= num) {
+          console.log(`[competitor-outlines] serving cache for article ${articleId}`);
+          return res.status(200).json(parsed);
+        }
+        console.log(`[competitor-outlines] cache has ${parsed.competitors?.length ?? 0} < ${num} — refetching`);
       }
     } catch (e) {
       console.warn('[competitor-outlines] cache read failed:', getErrorMessage(e));

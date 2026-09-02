@@ -21,9 +21,49 @@ export type CompetitorScoreTargets = {
   avgWords: number;
   avgHeadings: number;
   avgPs: number;
+  /**
+   * Lower edge of the competitor band. Reaching it is full credit; the average above is
+   * a suggestion. Optional because score_data written before the band existed carries
+   * only the averages, and those articles fall back to the proportional grade.
+   */
+  headingsMin?: number;
+  psMin?: number;
 };
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+
+/** Smallest positive value in a cohort — the band floor. Undefined when nothing is measured. */
+export function cohortMin(xs: number[]): number | undefined {
+  const positive = xs.filter((n) => Number.isFinite(n) && n > 0);
+  return positive.length ? Math.min(...positive) : undefined;
+}
+
+function bandFraction(value: number, min: number | undefined, avg: number): number {
+  const floor = min !== undefined && min > 0 ? min : avg;
+  if (!(floor > 0)) return 0;
+  return Math.min(1, value / floor);
+}
+
+/**
+ * Structure grade: headings and paragraphs against the cohort's band floor.
+ *
+ * This divided by the cohort average, so an article with 13 headings against a
+ * 23-heading average kept 57% of the slot. Surfer grades the same article at 100:
+ * its guideline is a per-word ratio with a min/avg/max, the average is the number it
+ * *shows*, and anything at or above the minimum passes — 13 clears a floor of 12.3.
+ * Same for paragraphs (44 against a floor of 5.5 and a suggested 75). The four call
+ * sites that each had a copy of the old formula all route here now.
+ */
+export function structureFraction(
+  headingCount: number,
+  paragraphCount: number,
+  targets: CompetitorScoreTargets,
+): number {
+  return (
+    bandFraction(headingCount, targets.headingsMin, targets.avgHeadings)
+    + bandFraction(paragraphCount, targets.psMin, targets.avgPs)
+  ) / 2;
+}
 
 /** 60% term coverage + 25% word depth vs peers + 15% structure. */
 export function auditContentScore(coverageFrac: number, wordFrac: number, structFrac: number): number {
@@ -61,10 +101,19 @@ export function termRangeCoverageFraction(
   return weightSum > 0 ? scoreSum / weightSum : 0;
 }
 
+/**
+ * Coverage the score is built on: presence.
+ *
+ * This used to route to termRangeCoverageFraction whenever a term carried a usage band,
+ * so an article was docked for every term it used fewer times than the competitors'
+ * average. Surfer does not: measured on its editor for "szantaż emocjonalny", 21 of 80
+ * recommended terms sat below their band — `drugą osobę` 3/8, `manipulacji` 6/10 — and
+ * the SEO score was 100. Its own guidance calls the band "a suggestion, not a goal, and
+ * no input to the score". Ours was the input, and it cost a third of the terms slot on
+ * articles the reference tool scores as perfect. The band stays for the editor's
+ * under/over-use hints (termRangeCoverageFraction); it no longer decides the number.
+ */
 export function termScoreFraction(bodyText: string, terms: RichTerm[]): number {
-  if (!terms.length) return 0;
-  const ranged = terms.filter((t) => t.suggested_min != null || t.suggested_max != null);
-  if (ranged.length) return termRangeCoverageFraction(bodyText, ranged);
   return termCoverageFraction(bodyText, terms);
 }
 
@@ -78,9 +127,5 @@ export function computeCompetitorContentScore(
 ): number {
   const cov = terms.length ? termScoreFraction(bodyText, terms) : 0;
   const wordFrac = targets.avgWords > 0 ? wordCount / targets.avgWords : 0;
-  const structFrac = (
-    (targets.avgHeadings > 0 ? Math.min(1, headingCount / targets.avgHeadings) : 0)
-    + (targets.avgPs > 0 ? Math.min(1, paragraphCount / targets.avgPs) : 0)
-  ) / 2;
-  return auditContentScore(cov, wordFrac, structFrac);
+  return auditContentScore(cov, wordFrac, structureFraction(headingCount, paragraphCount, targets));
 }

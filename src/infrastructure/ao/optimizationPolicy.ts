@@ -152,13 +152,19 @@ export function resolveOptimizationPolicy(opts: {
   });
 
   let strategy = opts.strategy;
-  if (!strategy || strategy === 'precision') {
-    // 'precision' is also the resolver's DEFAULT ("policy resolver overrides by
-    // diagnosis" — line 51), but this branch only re-diagnosed on undefined, so the
-    // endpoint's defaulted 'precision' pinned every run to 3-6 steps with
-    // allowNewHeading=false. A degraded article (7 planned sections gone, SEO 68)
-    // could never route to deep_optimize and never rebuild. Diagnosis now runs for
-    // 'precision' too; explicitly requested enrichment/deep/whole still win.
+  if (!strategy) {
+    // Absent strategy means nobody chose one, so the diagnosis owns the decision. That
+    // is the normal path: the editor sends no strategy at all, and runPrecisionOptimize
+    // passes none either, so a degraded article (7 planned sections gone, SEO 68) still
+    // routes to deep_optimize and rebuilds.
+    //
+    // This branch also used to fire for `strategy === 'precision'`, meaning to catch the
+    // resolver's own default. It caught explicit requests instead — the two arrive as the
+    // same string — so `precision` was the one strategy a caller could not ask for, while
+    // enrichment, deep_optimize and whole_article_fallback were all honoured. The endpoint
+    // already sends `undefined` when the body named nothing, so re-diagnosing here bought
+    // nothing and silently upgraded a bounded, deliberate edit into a 20-step rebuild with
+    // allowNewHeading.
     strategy = chooseStrategyFromDiagnosis({
       scores: opts.scores,
       structural,

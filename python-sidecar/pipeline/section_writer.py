@@ -170,9 +170,25 @@ def _prompt(
         marker = "a NUMBERED list (1. 2. 3.)" if style.get("ordered") else "a bullet list"
         lines = [
             "Write ONE Markdown block: a short bold label line ending with a colon,",
-            f"like `**Co zrobić natychmiast:**`, then {marker} of 3-6 items.",
-            "Each item is one sentence of at most 20 words. Markdown only; never emit",
-            "HTML. No heading, no prose before the label or after the list.",
+            f"then {marker} of 3-7 items.",
+            # The label must NAME what the list holds, drawn from this section's own
+            # subject — the reference article uses "Możliwe, że ktoś cię szantażuje"
+            # emocjonalnie, jeśli:", "Oto przykłady komunikatów...:", "Cechy często"
+            # spotykane u szantażystów emocjonalnych:". A generic do-this-now label
+            # ("Co zrobić natychmiast / dalej / w praktyce") was copied onto every
+            # section from an example that used to sit here; never use one.
+            "The bold label describes what the list contains, taken from this section's",
+            "topic — never a generic call to action such as 'Co zrobić' / 'What to do'.",
+            # Surfer's list items are not uniform one-liners. A checklist of signs is a
+            # short second-person sentence ("Czujesz ciągłe poczucie winy..."); a list of
+            # techniques or traits leads with the term in bold, an en dash, one or two
+            # explanatory sentences, and often a short quoted example ("Karanie ciszą –
+            # demonstracyjne ignorowanie... „Nie będę z tobą rozmawiać, dopóki nie"
+            # przeprosisz."). Match whichever fits this section.
+            "Each item is either a short sentence, or a bold lead term + en dash (–) + one",
+            "or two sentences, optionally ending with a realistic quoted example using the",
+            "quotation marks of the article's own language. Markdown only; never emit HTML.",
+            "No heading, no prose before the label or after the list.",
         ]
     else:
         lines = [

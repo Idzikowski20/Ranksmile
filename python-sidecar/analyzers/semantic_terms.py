@@ -239,8 +239,36 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
 
 
 # The reference tool ships two term sets side by side — a curated ~80 it asks you to
-# include, and a ~290-strong NLP set — and grades against the union.
-MAX_TERMS = 150
+# include, and a ~290-strong NLP set. We keep the whole pool and flag the curated subset;
+# the SEO score grades the included set (see _mark_included).
+MAX_TERMS = 350
+INCLUDED_TERMS = 80
+
+
+def _term_quality(t: dict) -> float:
+    """Curation score: how much this term looks like one Surfer would ask you to include.
+    Distinct-page frequency dominates (a term many ranking pages use is topical), lifted by
+    LLM relevance and a bonus for the primary-topic type."""
+    doc_freq = t.get("doc_freq") or 0
+    relevance = t.get("relevance")
+    relevance = 0.6 if relevance is None else relevance
+    type_bonus = 1.5 if t.get("type") == "core" else (0.5 if t.get("type") == "entity" else 0.0)
+    return doc_freq * 1.0 + relevance * 2.0 + type_bonus
+
+
+def _mark_included(terms: list[dict], limit: int = INCLUDED_TERMS) -> list[dict]:
+    """Flag the top `limit` terms by quality as the curated working set (Surfer's ~80).
+    Mutates each term with `included`; the rest stay in the pool for the 'all' view."""
+    # Term-name tiebreak so equal-quality terms select deterministically regardless of
+    # extraction order (otherwise the capped 80 shifts run-to-run).
+    ranked = sorted(
+        range(len(terms)),
+        key=lambda i: (-_term_quality(terms[i]), terms[i].get("term", "")),
+    )
+    keep = set(ranked[:limit])
+    for i, t in enumerate(terms):
+        t["included"] = i in keep
+    return terms
 
 
 def _merge_nlp_terms(semantic: list[dict], texts: list[str], keyword: str) -> list[dict]:
@@ -265,7 +293,7 @@ def _merge_nlp_terms(semantic: list[dict], texts: list[str], keyword: str) -> li
     # Fourth shape from the reference guideline: bare high-frequency content lemmas
     # ("poczucie", "relacji", "granice") with wide bands.
     singles = [t for t in extract_content_singles(texts) if t["term"] not in seen]
-    return (semantic + extra + collocations + singles)[:MAX_TERMS]
+    return _mark_included((semantic + extra + collocations + singles)[:MAX_TERMS])
 
 
 async def _extract_chunk(keyword: str, chunk_text: str, chunk_hash: str, api_key: str) -> list[dict]:

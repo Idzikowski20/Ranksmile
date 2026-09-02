@@ -2,18 +2,11 @@ import { callSidecar, isSidecarConfigured } from '@/src/infrastructure/http/side
 import { getErrorMessage } from '@/src/core/shared/errors';
 import type { AiSearchIntelInput } from '@/src/core/domain/contentPlanner/knowledgeIntelligence';
 
-type ResearchedFacts = {
-  claims: string[];
-  sources: Array<{
-    url: string;
-    label?: string;
-    confidence?: number;
-    /** AI engines that cited this fact (4-engine harvest). */
-    cited_by?: string[];
-    /** All source websites behind the fact. */
-    source_urls?: string[];
-  }>;
-};
+import type { ResearchedFacts as ResearchedFactsShape } from '@/src/core/shared/types/sidecar';
+
+// One canonical shape (see core/shared/types/sidecar) so the wire type and this cache type
+// cannot drift. This module always normalises to non-null claims/sources below.
+type ResearchedFacts = Required<Pick<ResearchedFactsShape, 'claims' | 'sources'>> & ResearchedFactsShape;
 
 /**
  * Real cases and statistics with sources, researched on the open web — what separates
@@ -60,6 +53,8 @@ export function withResearchedFacts(ai: AiSearchIntelInput, facts: ResearchedFac
   return {
     ...ai,
     claims: [...(ai.claims ?? []), ...facts.claims],
-    sources: [...(ai.sources ?? []), ...facts.sources],
+    // The intel input requires a concrete url; a body-sourced fact may carry only
+    // source_urls, so fall back to the first of those (or empty).
+    sources: [...(ai.sources ?? []), ...facts.sources.map((s) => ({ ...s, url: s.url ?? s.source_urls?.[0] ?? '' }))],
   };
 }

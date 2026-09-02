@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Badge, Checkbox, Gauge, HoverTooltip, TableLoadMore } from '../koala/core';
+import { Badge, Checkbox, HoverTooltip, TableLoadMore } from '../koala/core';
+import ScoreGauge from './ScoreGauge';
+import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import { ARTICLE_GREEN_AT } from '@/src/infrastructure/config/scoreColor';
 import { Icon } from '../koala/icons/Icon';
 import GeneratingStage from './GeneratingStage';
 
@@ -25,6 +28,8 @@ interface Props {
     status: string;
     score_data?: string;
     content_score?: number;
+    seo_score?: number | null;
+    ai_score?: number | null;
     target_keyword: string;
     word_count: number | null;
     publish_target: string | null;
@@ -345,8 +350,19 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
     <div className="article-list" style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', minWidth: 0, maxWidth: '100%', paddingTop: 20 }}>
       {articles.map((article) => {
         const time = mounted ? timeAgo(article.updated_at || article.created_at) : null;
-        // Content score from dedicated column (synced with editor via PUT /api/articles/[id])
-        const score = typeof article.content_score === 'number' ? article.content_score : null;
+        // Match the editor's centre gauge: the overall is the SEO+AI blend the API surfaces
+        // as seo_score/ai_score, not the stored content_score column (SEO-only/stale — it
+        // read 50 while the editor showed 73). Fall back to the column only when the split
+        // isn't available.
+        // Guard against null → Number(null) is 0 (finite), which would fake a 0/0 blend and
+        // hide the valid content_score fallback. Require both to be real numbers first.
+        const hasBlend = article.seo_score != null && article.ai_score != null
+          && Number.isFinite(Number(article.seo_score)) && Number.isFinite(Number(article.ai_score));
+        const seo = Number(article.seo_score);
+        const ai = Number(article.ai_score);
+        const score = hasBlend
+          ? computeOverallContentScore(seo, ai)
+          : (typeof article.content_score === 'number' ? article.content_score : null);
 
         // Analyzing state â€” nc-gen mini stage (same language as /generating)
         if (article.status === 'analyzing') {
@@ -473,7 +489,12 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
             <div className="article-list-card-gauge">
               <div style={{ width: 48 }}>
                 <div className="article-gauge-default">
-                  <Gauge score={score ?? 0} size="sm" />
+                  <ScoreGauge
+                    score={score ?? 0}
+                    size={44}
+                    greenAt={ARTICLE_GREEN_AT}
+                    halves={hasBlend ? { left: seo, right: ai } : undefined}
+                  />
                 </div>
                 <div className="article-gauge-checkbox hidden">
                   <Checkbox

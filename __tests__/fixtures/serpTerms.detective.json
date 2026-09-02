@@ -1,0 +1,421 @@
+{
+  "seedKeyword": "prywatny detektyw warszawa",
+  "terms": [
+    {
+      "term": "Ministerstwo Spraw Wewnętrznych i Administracji",
+      "target_count": 1
+    },
+    {
+      "term": "centralnego biura śledczego policji",
+      "target_count": 1
+    },
+    {
+      "term": "agnieszka prymak-sawic usługi",
+      "target_count": 1
+    },
+    {
+      "term": "anna sas-adamczyk prywatny",
+      "target_count": 1
+    },
+    {
+      "term": "biuro detektywistyczne warszawa",
+      "target_count": 1
+    },
+    {
+      "term": "detektyw prywatny warszawa",
+      "target_count": 2
+    },
+    {
+      "term": "Detektyw Warszawa Świętokrzyska",
+      "target_count": 4
+    },
+    {
+      "term": "detektyw warszawa zdrada",
+      "target_count": 2
+    },
+    {
+      "term": "detektyw warszawa zdrady",
+      "target_count": 2
+    },
+    {
+      "term": "detektywi pl sp.",
+      "target_count": 13
+    },
+    {
+      "term": "Prywatny Detektyw Warszawa",
+      "target_count": 4
+    },
+    {
+      "term": "wykrywanie podsłuchów warszawa",
+      "target_count": 4
+    },
+    {
+      "term": "11 lipca",
+      "target_count": 4
+    },
+    {
+      "term": "12 lipca",
+      "target_count": 4
+    },
+    {
+      "term": "13 lipca",
+      "target_count": 4
+    },
+    {
+      "term": "agencja detektywistyczna",
+      "target_count": 8
+    },
+    {
+      "term": "anna sas-adamczyk",
+      "target_count": 3
+    },
+    {
+      "term": "biuro detektywistyczne",
+      "target_count": 8
+    },
+    {
+      "term": "detektyw warszawa",
+      "target_count": 5
+    },
+    {
+      "term": "prywatny detektyw",
+      "target_count": 9
+    },
+    {
+      "term": "usługi detektywistyczne",
+      "target_count": 8
+    },
+    {
+      "term": "wykrywanie podsłuchów",
+      "target_count": 5
+    },
+    {
+      "term": "agencja",
+      "target_count": 10
+    },
+    {
+      "term": "Analiza",
+      "target_count": 2
+    },
+    {
+      "term": "Badania",
+      "target_count": 2
+    },
+    {
+      "term": "biuro",
+      "target_count": 12
+    },
+    {
+      "term": "Całodobowo",
+      "target_count": 8
+    },
+    {
+      "term": "danych",
+      "target_count": 2
+    },
+    {
+      "term": "detektywi",
+      "target_count": 27
+    },
+    {
+      "term": "detektywistyczne",
+      "target_count": 24
+    },
+    {
+      "term": "doświadczenia",
+      "target_count": 6
+    },
+    {
+      "term": "dowody",
+      "target_count": 6
+    },
+    {
+      "term": "dyskrecję",
+      "target_count": 5
+    },
+    {
+      "term": "dyskretna",
+      "target_count": 7
+    },
+    {
+      "term": "działania",
+      "target_count": 5
+    },
+    {
+      "term": "informacji",
+      "target_count": 6
+    },
+    {
+      "term": "Informatyka",
+      "target_count": 2
+    },
+    {
+      "term": "Jesteśmy",
+      "target_count": 3
+    },
+    {
+      "term": "klientów",
+      "target_count": 10
+    },
+    {
+      "term": "konsultacja",
+      "target_count": 5
+    },
+    {
+      "term": "kontrolowana",
+      "target_count": 1
+    },
+    {
+      "term": "mazowieckie",
+      "target_count": 15
+    },
+    {
+      "term": "obserwacja",
+      "target_count": 5
+    },
+    {
+      "term": "Ochrona",
+      "target_count": 2
+    },
+    {
+      "term": "OSINT",
+      "target_count": 3
+    },
+    {
+      "term": "pełną",
+      "target_count": 2
+    },
+    {
+      "term": "podsłuchów",
+      "target_count": 7
+    },
+    {
+      "term": "Policji",
+      "target_count": 1
+    },
+    {
+      "term": "polskich",
+      "target_count": 3
+    },
+    {
+      "term": "poszukiwania",
+      "target_count": 4
+    },
+    {
+      "term": "poznaniu",
+      "target_count": 2
+    },
+    {
+      "term": "profesjonalne",
+      "target_count": 5
+    },
+    {
+      "term": "prywatny",
+      "target_count": 12
+    },
+    {
+      "term": "Skuteczne",
+      "target_count": 2
+    },
+    {
+      "term": "usług",
+      "target_count": 21
+    },
+    {
+      "term": "warszawie",
+      "target_count": 31
+    },
+    {
+      "term": "wykrywanie",
+      "target_count": 8
+    },
+    {
+      "term": "zdrady",
+      "target_count": 6
+    },
+    {
+      "term": "wywiad gospodarczy",
+      "doc_freq": 7,
+      "salience": 45,
+      "relevance": 0.45,
+      "target_count": 3
+    },
+    {
+      "term": "sprawy",
+      "doc_freq": 6,
+      "salience": 44,
+      "relevance": 0.44,
+      "target_count": 23
+    },
+    {
+      "term": "wywiad",
+      "doc_freq": 7,
+      "salience": 38,
+      "relevance": 0.38,
+      "target_count": 4
+    },
+    {
+      "term": "terenie całej polski",
+      "doc_freq": 6,
+      "salience": 37,
+      "relevance": 0.37,
+      "target_count": 2
+    },
+    {
+      "term": "terenie całej",
+      "doc_freq": 6,
+      "salience": 33,
+      "relevance": 0.33,
+      "target_count": 2
+    },
+    {
+      "term": "całej polski",
+      "doc_freq": 7,
+      "salience": 32,
+      "relevance": 0.32,
+      "target_count": 2
+    },
+    {
+      "term": "polski",
+      "doc_freq": 7,
+      "salience": 30,
+      "relevance": 0.3,
+      "target_count": 4
+    },
+    {
+      "term": "polsce",
+      "doc_freq": 4,
+      "salience": 30,
+      "relevance": 0.3,
+      "target_count": 2
+    },
+    {
+      "term": "poszukiwanie osób",
+      "doc_freq": 7,
+      "salience": 29,
+      "relevance": 0.29,
+      "target_count": 4
+    },
+    {
+      "term": "działa",
+      "doc_freq": 4,
+      "salience": 23,
+      "relevance": 0.23,
+      "target_count": 3
+    },
+    {
+      "term": "google",
+      "doc_freq": 2,
+      "salience": 16,
+      "relevance": 0.16,
+      "target_count": 9
+    },
+    {
+      "term": "mswia",
+      "doc_freq": 3,
+      "salience": 13,
+      "relevance": 0.13,
+      "target_count": 4
+    },
+    {
+      "term": "kontakt",
+      "doc_freq": 7,
+      "salience": 10,
+      "relevance": 0.1,
+      "target_count": 6
+    },
+    {
+      "term": "dnia 6 lipca 2001 r.",
+      "doc_freq": 2,
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 2
+    },
+    {
+      "term": "prywatny detektyw warszawa cena",
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 1
+    },
+    {
+      "term": "prywatny detektyw warszawa cennik",
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 1
+    },
+    {
+      "term": "prywatny detektyw warszawa opinie",
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 1
+    },
+    {
+      "term": "prywatny detektyw warszawa praca",
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 1
+    },
+    {
+      "term": "prywatny detektyw warszawa zdrada",
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 1
+    },
+    {
+      "term": "e mail",
+      "doc_freq": 5,
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 2
+    },
+    {
+      "term": "zobacz",
+      "doc_freq": 5,
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 5
+    },
+    {
+      "term": "numer",
+      "doc_freq": 4,
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 3
+    },
+    {
+      "term": "empatia",
+      "doc_freq": 2,
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 2
+    },
+    {
+      "term": "english",
+      "doc_freq": 2,
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 1
+    },
+    {
+      "term": "europy",
+      "doc_freq": 2,
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 1
+    },
+    {
+      "term": "napisz",
+      "doc_freq": 2,
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 2
+    },
+    {
+      "term": "żurawia",
+      "doc_freq": 2,
+      "salience": 0,
+      "relevance": 0,
+      "target_count": 1
+    }
+  ]
+}

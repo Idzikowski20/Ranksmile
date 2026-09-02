@@ -125,4 +125,17 @@ describe('the recorded status', () => {
   it('never overrides a written article', () => {
     expect(isOutlineAwaitingReview({ content: ARTICLE, scoreData: WITH_PLAN, status: 'review' })).toBe(false);
   });
+
+  /**
+   * Article 162: a 'draft' whose content persisted empty (a lost generation) still carries
+   * the planner bundle it got at planning time. The bundle branch treated that as
+   * "outline, never written" and pushed it into review — which suspends autosave, which
+   * keeps content empty: a deadlock. The 'review' status is the ONLY awaiting-review
+   * signal; content-plan only sets it while content is empty, so a 'draft' is never one.
+   */
+  it('does not push an empty-content draft with a stale planner bundle into review', () => {
+    // The status-less empty+bundle legacy case is already covered above ("recognises an
+    // empty draft that already has a planner bundle"); this only adds the new 'draft' guard.
+    expect(isOutlineAwaitingReview({ content: '', scoreData: WITH_PLAN, status: 'draft' })).toBe(false);
+  });
 });

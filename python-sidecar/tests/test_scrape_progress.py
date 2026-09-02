@@ -37,11 +37,11 @@ def test_scrape_survives_a_failing_progress_callback(monkeypatch):
     async def on_page(finished, total, url):
         raise RuntimeError("node is down")
 
-    texts, soups = asyncio.run(serp._scrape_pages(["https://example.pl/a"], on_page))
+    texts, soups, _ = asyncio.run(serp._scrape_pages(["https://example.pl/a"], on_page))
     assert len(texts) == 1
 
 
 def test_no_callback_still_scrapes(monkeypatch):
     monkeypatch.setattr(serp, "ssrf_safe_get", _fake_get)
-    texts, soups = asyncio.run(serp._scrape_pages(["https://example.pl/a"]))
+    texts, soups, _ = asyncio.run(serp._scrape_pages(["https://example.pl/a"]))
     assert len(texts) == 1

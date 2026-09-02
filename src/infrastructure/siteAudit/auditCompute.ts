@@ -9,9 +9,11 @@ import { findTermRangesBatch, ScoreData, computeContentScore } from '@/src/infra
 import { countOccurrences } from '@/src/core/domain/terms/termMatch';
 import {
    auditContentScore,
+   structureFraction,
    termCoverageFraction,
    termRangeCoverageFraction,
    termScoreFraction,
+   type CompetitorScoreTargets,
    type RichTerm,
 } from '@/src/core/domain/competitors/contentScore';
 import { plainText, wordCount } from '@/src/infrastructure/ao/optimizationPlanner';
@@ -37,7 +39,7 @@ export interface RealAuditData {
    terms: RichTerm[];
    // Competitor-set averages used to score "You" the same way (word/heading/paragraph
    // frac). Set by enrichAudit alongside the calibrated competitor content scores.
-   contentTargets?: { avgWords: number; avgHeadings: number; avgPs: number };
+   contentTargets?: CompetitorScoreTargets;
 }
 
 /**
@@ -353,11 +355,10 @@ export function buildAuditResult(html: string, url: string, keyword: string, tim
    // otherwise the phase-1 estimate from extractFactorValues.
    let youScore = page.contentScore;
    if (real && real.terms.length && real.contentTargets) {
-      const { avgWords, avgHeadings, avgPs } = real.contentTargets;
+      const { avgWords } = real.contentTargets;
       const cov = termScoreFraction(page.bodyText, real.terms);
       const wordFrac = avgWords > 0 ? page.values.word_count_body / avgWords : 0;
-      const structFrac = ((avgHeadings > 0 ? Math.min(1, page.values.h2_h6_count / avgHeadings) : 0)
-         + (avgPs > 0 ? Math.min(1, page.values.p_count / avgPs) : 0)) / 2;
+      const structFrac = structureFraction(page.values.h2_h6_count, page.values.p_count, real.contentTargets);
       youScore = auditContentScore(cov, wordFrac, structFrac);
    }
 

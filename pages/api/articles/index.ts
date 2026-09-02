@@ -10,6 +10,7 @@ import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/en
 import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, type ArticleRow } from '@/src/infrastructure/db/query';
 import type { SqlReplacements } from '@/src/core/shared/types/db';
@@ -112,14 +113,24 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
 
       const [articles] = await db.query(
          `SELECT ${articleIdSql} AS id, domain_id, title, slug, status, target_keyword, meta_title, word_count,
-                 published_at, publish_target, publish_url, meta_url, created_at, updated_at, content_score
+                 published_at, publish_target, publish_url, meta_url, created_at, updated_at, content_score, score_data
           FROM articles ${where}
           ORDER BY ${orderBy}
           LIMIT ? OFFSET ?`,
          { replacements: [...replacements, limit, offset] },
       );
 
-      let result = articles as unknown[];
+      // Surface seo_score/ai_score so the list gauge shows the SAME SEO+AI blend as the
+      // editor's Content Score (dialect-safe: parse in Node, not SQL). Drop the score_data
+      // blob from the payload — the list never needs the full 200KB+ planner bundle.
+      const num = (v: unknown): number | null => (Number.isFinite(Number(v)) ? Number(v) : null);
+      let result = (articles as Array<Record<string, unknown>>).map((a) => {
+         const sd = typeof a.score_data === 'string'
+            ? safeJsonParse<{ seo_score?: number; ai_score?: number }>(a.score_data, {})
+            : {};
+         const { score_data: _drop, ...rest } = a;
+         return { ...rest, seo_score: num(sd.seo_score), ai_score: num(sd.ai_score) };
+      });
 
       if (resolvedDomainId && offset === 0 && !search) {
          const [scRows] = await db.query(
@@ -151,6 +162,8 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
             created_at: sc.created_at,
             updated_at: sc.created_at,
             content_score: 0,
+            seo_score: null,
+            ai_score: null,
             source: 'site_context',
          }));
          result = [...result, ...merged];

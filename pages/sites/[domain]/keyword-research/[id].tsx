@@ -7,6 +7,7 @@ import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
 import KeywordClusterModal from '../../../../components/keywordResearch/KeywordClusterModal';
 import ScoreGauge from '../../../../components/articles/ScoreGauge';
+import { ARTICLE_GREEN_AT } from '@/src/infrastructure/config/scoreColor';
 import { Button } from '../../../../components/koala/core';
 import { KeywordIntentBadge } from '../../../../components/koala/product/helpers/KeywordIntentBadge';
 import { useKeywordResearchRun } from '../../../../services/keywordResearch';
@@ -231,7 +232,7 @@ const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor }: {
          )}
          {hasArticle && (
             <div style={{ position: 'absolute', bottom: 24, right: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, zIndex: 6 }}>
-               <ScoreGauge score={0} pending size={52} />
+               <ScoreGauge score={0} pending size={52} greenAt={ARTICLE_GREEN_AT} />
                <div style={{ position: 'relative' }} ref={menuRef}>
                   <button type="button" aria-label="Article actions" onClick={() => setMenuOpen((o) => !o)} style={{ width: 42, height: 42, borderRadius: '50%', background: '#2F2F34', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 12px rgba(9,9,11,0.24)', transition: 'background 150ms ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}>
                      <KebabIcon />

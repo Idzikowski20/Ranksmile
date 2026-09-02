@@ -13,6 +13,13 @@ import { countOccurrences, normalizePl, tokenize, wordMatch } from '@/src/core/d
 
 export { countOccurrences } from '@/src/core/domain/terms/termMatch';
 
+/** The curated working set (Surfer's ~80 `included`) when the analysis carries the flag;
+ *  every term otherwise (legacy analyses → zero regression). Shared across the score paths
+ *  so the SEO gauge grades exactly the set the panel displays. */
+export function includedTerms<T extends { included?: boolean }>(terms: T[]): T[] {
+  return terms.some((t) => t.included) ? terms.filter((t) => t.included) : terms;
+}
+
 /**
  * Write the AI Search score and its calculated_at together, so they cannot drift.
  *
@@ -64,7 +71,7 @@ export interface ScoreData {
    paa_questions?: string[];
    /** When set, content score uses Ranksmile-style competitor benchmarking. */
    scoring_model?: 'competitor' | 'legacy';
-   content_targets?: { avgWords: number; avgHeadings: number; avgPs: number };
+   content_targets?: { avgWords: number; avgHeadings: number; avgPs: number; headingsMin?: number; psMin?: number };
    /** Full Ranksmile-style audit payload (factors, terms, internal links). */
    audit_result?: import('@/src/core/domain/audit/types').AuditResult;
    /** On-page SEO score from audit factor verdicts. */
@@ -106,6 +113,9 @@ export interface ScoreData {
    /** CIE — coverage overlay report (never written into frozen graph). */
    knowledge_coverage_report?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeCoverageReport;
    structural_benchmark?: import('@/src/core/domain/benchmark/types').StructuralBenchmark;
+   /** Facts mined from competitor bodies, each with the pages that asserted it (Surfer's
+    *  fact sheet). Carried across score writes so the sheet survives analysis. */
+   researched_facts?: import('@/src/core/shared/types/sidecar').ResearchedFacts;
 }
 
 // Term-coverage helpers now live in the terms domain; re-exported for back-compat.
@@ -320,13 +330,17 @@ export function collectScoreSlots(
       const earned = Math.round((covered / entityItems.length) * 25);
       push('terms', 'NLP terms', earned, 25, `${covered}/${entityItems.length} terms covered`);
    } else if (scoreData.terms?.length) {
+      // Surfer grades its curated working set (~80 `included`), not the whole ~350 pool.
+      // Score against included when the analysis carries the flag; older analyses without
+      // it score every term, exactly as before.
+      const scored = includedTerms(scoreData.terms);
       // SERP-first termWeight (doc_freq) with salience fallback — Etap 1
       const corpusSize = Math.max(1, scoreData.competitor_count || 10);
-      const totalWeight = scoreData.terms.reduce(
+      const totalWeight = scored.reduce(
         (s, t) => s + Math.max(t.target_count, 1) * termWeight({ ...t, corpusSize }),
         0,
       );
-      const termsRatio = scoreData.terms.reduce((s, t) => {
+      const termsRatio = scored.reduce((s, t) => {
          const actual = countOccurrences(plainText, t.term, t.term_words_regexps);
          const w = Math.max(t.target_count, 1) * termWeight({ ...t, corpusSize });
          return s + Math.min(actual / Math.max(t.target_count, 1), 1) * w;
@@ -338,7 +352,7 @@ export function collectScoreSlots(
    // land in an H2/H3 (its `in_headings_count`). Only appears when the SERP flagged
    // some, so an article without heading terms is scored exactly as before.
    if (html && scoreData.terms?.length) {
-      const headingTerms = scoreData.terms.filter((t) => t.in_headings);
+      const headingTerms = includedTerms(scoreData.terms).filter((t) => t.in_headings);
       if (headingTerms.length) {
          const headingText = (html.match(/<h[2-4][^>]*>[\s\S]*?<\/h[2-4]>/gi) || [])
             .join(' ')
@@ -437,13 +451,19 @@ export function computeContentScore(
       && scoreData.content_targets
       && scoreData.terms?.length
    ) {
+      // The band floor decides the structure grade. Analyses written before the floor
+      // was stored still carry the SERP cohort's own minimums, so they get it too.
       const base = computeCompetitorContentScore(
          plainText,
          wordCount,
          headingCount,
          paragraphCount ?? 0,
-         scoreData.terms,
-         scoreData.content_targets,
+         includedTerms(scoreData.terms),
+         {
+            ...scoreData.content_targets,
+            headingsMin: scoreData.content_targets.headingsMin ?? scoreData.headings_min,
+            psMin: scoreData.content_targets.psMin ?? scoreData.paragraphs_min,
+         },
       );
       let bonus = 0;
       if (html && keyword) {

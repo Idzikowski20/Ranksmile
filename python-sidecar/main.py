@@ -458,7 +458,7 @@ async def extract_terms_from_urls(body: dict):
     from analyzers.competitor_terms import extract_nlp_terms
 
     print(f"[extract-terms-from-urls] Scraping {len(urls)} pages for: {keyword}")
-    texts, _ = await _scrape_pages(urls)
+    texts, _, _ = await _scrape_pages(urls)
     if not texts:
         return {"terms": []}
 
@@ -494,9 +494,15 @@ async def competitor_outlines_endpoint(body: dict):
     """Research & Outline — zwraca heading structure konkurencyjnych stron."""
     keyword = body.get("keyword", "")
     language = body.get("language", "pl")
-    num = body.get("num", 5)
     if not keyword:
         raise HTTPException(status_code=400, detail="keyword is required")
+    # Validate + clamp: `num` is doubled and drives concurrent external scrapes, so an
+    # unbounded or malformed value must fail as a 422, not spawn unbounded work / a 500.
+    try:
+        num = int(body.get("num", 10))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="num must be an integer")
+    num = max(1, min(num, 20))
     print(f"[competitor-outlines] Fetching top {num} for: {keyword}")
     try:
         outlines = await extract_competitor_outlines(keyword, language, num)

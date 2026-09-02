@@ -24,6 +24,8 @@ type ArticleRow = {
   status: string;
   score_data?: string;
   content_score?: number;
+  seo_score?: number | null;
+  ai_score?: number | null;
   target_keyword: string;
   word_count: number | null;
   publish_target: string | null;

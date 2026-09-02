@@ -1,5 +1,5 @@
 import React from 'react';
-import { scoreColor } from '@/src/infrastructure/config/scoreColor';
+import { scoreColor, ARTICLE_GREEN_AT } from '@/src/infrastructure/config/scoreColor';
 
 // Tiny split dual-arc gauge (no ticks) — used in the editor sub-panel headers.
 const ARC = 111.70107212763709;
@@ -8,7 +8,7 @@ const RIGHT = 'M 56.94592710667722,89.39231012048832 A 40,40 0 0,0 56.9459271066
 
 const MiniGauge = ({ score }: { score: number }) => {
   const s = Math.max(0, Math.min(100, Math.round(score || 0)));
-  const color = scoreColor(s);
+  const color = scoreColor(s, ARTICLE_GREEN_AT);
   const offset = ARC * (1 - s / 100);
   return (
     <div style={{ position: 'relative', width: 36, height: 36 }}>

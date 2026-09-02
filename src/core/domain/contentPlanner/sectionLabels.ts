@@ -26,44 +26,20 @@ export function localizedRequiredSections(
   lang: OutlineLang,
   opts?: { hasCostFear?: boolean },
 ): string[] {
-  const cost = opts?.hasCostFear === true;
-  // Hiring intent gets a service page, not a tutorial. Mirrors what ranks for these
-  // queries: who you are, who you help, what you do, how the work runs, why you, contact.
-  // The generic guide skeleton ("Pierwsze kroki", "Plan działania") answers a how-to
-  // nobody asked, and reads as advice for doing the job yourself.
-  if (articleType === 'service') {
-    return lang === 'pl'
-      ? [
-        'Kim jesteśmy',
-        'Komu pomagamy',
-        'Zakres usług',
-        'Jak wygląda współpraca',
-        ...(cost ? ['Cennik i wycena'] : []),
-        'Dlaczego my',
-        'FAQ',
-        'Kontakt',
-      ]
-      : [
-        'Who we are',
-        'Who we help',
-        'What we do',
-        'How we work',
-        ...(cost ? ['Pricing'] : []),
-        'Why us',
-        'FAQ',
-        'Contact',
-      ];
-  }
-  // Informational topics carry NO forced skeleton. Surfer's generated article for this
-  // exact keyword has eight sections and every one is topical — "Czym jest…", "Jak
-  // rozpoznać…", "Mechanizmy…", "Kto pada ofiarą…" — with zero "Szybka odpowiedź / Plan
-  // działania / FAQ / Podsumowanie" scaffolding. Those seven generic headings were the
-  // single biggest source of both the inflated H2 count and the machine-guide feel: they
-  // crowded out the competitor topical headings the outline builder already has, and read
-  // as advice for doing the investigator's job yourself. Returning nothing lets the real
-  // competitor headings (headingFillersFromCompetitors) drive the whole outline, exactly
-  // as the reference tool does; `cost` no longer forces a section — a paragraph covers it.
-  void cost;
+  // No article type carries a forced skeleton — not even hiring intent. The service
+  // branch used to return a fixed "Kim jesteśmy / Zakres usług / Dlaczego my / Kontakt"
+  // page, and it read as a landing page, not an article: article 160 shipped exactly
+  // those headings for "prywatny detektyw warszawa". Every Surfer content editor in this
+  // detective-agency workspace is instead a topical article — "szantaż emocjonalny",
+  // "kradzież z włamaniem" — with the agency woven in as one section, never a service CV.
+  //
+  // So the outline is driven entirely by the real competitor + PAA headings for every
+  // type, exactly as the reference tool does. The single brand-help section still arrives
+  // via brandSections() in the blueprint; the query's commercial intent shapes the angle
+  // of the topical headings, not a canned structure. `hasCostFear` no longer forces a
+  // "Cennik" heading — a paragraph covers price.
+  void articleType;
+  void opts;
   return [];
 }
 
@@ -108,9 +84,45 @@ function capitalizeSentence(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * Brand / audience / service / city framing that must never be in the H1. Surfer titles
+ * for the reader ("Szantaż emocjonalny: jak go rozpoznać…"); ours kept producing
+ * "Szantaż emocjonalny — poufna pomoc detektywistyczna dla osób prywatnych i firm z
+ * Warszawy". The outline prompt forbids it, but the brand context in that prompt wins
+ * often enough that the H1 needs a deterministic guard on top of the instruction.
+ */
+// Only explicitly off-topic audience/service/brand framing. `jak pom[oó]c` is matched ONLY
+// when it targets an audience ("jak pomóc firmom / osobom prywatnym / klientom") — a bare
+// `jak pom[oó]c` also ate legitimate reader-benefit clauses ("…: jak pomóc ofierze").
+const H1_OFFTOPIC_FRAMING = /poufn\w* pomoc|pomoc detektywistyczn|dla os[oó]b prywatnych|dla firm\b|dla klient[oó]w|jak pom[oó]c \w*(?:firm|osob|klient|przedsi[eę]bior)|agencj\w* detektyw|osób prywatnych i firm|z warszaw|dla warszaw/i;
+
+/**
+ * Strip brand/audience/service framing from an LLM-authored H1, keeping the topical part.
+ * Splits on the title's separators and drops any segment that is framing; an H1 with no
+ * framing is returned unchanged. Falls back to the bare keyword only if nothing topical
+ * survives — a plain topical H1 beats a branded one.
+ */
+export function topicalizeH1(rawH1: string, keyword: string): string {
+  const h1 = (rawH1 || '').trim();
+  if (!h1) return capitalizeSentence(keyword.trim());
+  if (!H1_OFFTOPIC_FRAMING.test(h1)) return h1;
+  const kept = h1
+    .split(/\s[—–-]\s|:\s|,\s/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0 && !H1_OFFTOPIC_FRAMING.test(p));
+  const rebuilt = kept.join(' – ').trim();
+  return rebuilt.length >= 3 ? rebuilt : capitalizeSentence(keyword.trim());
+}
+
+// The brand help + case-study sections (see brandSections). They belong near the end,
+// after the topical body and before FAQ/summary — Surfer keeps the agency section at
+// position 10 of 12 — but they were seeded first and led the article. Matching our own
+// brandSections strings (not competitor headings) routes them to the body tail.
+const BRAND_TAIL = /pomaga w takich sprawach|studium przypadku|helps in cases like this|^case studies$/i;
+
 export function isTailSectionRole(role: string, heading: string): boolean {
   const blob = `${role} ${heading}`.toLowerCase();
-  return TAIL_ROLES.test(role) || /\bfaq\b/.test(blob) || SIGN_OFF.test(blob);
+  return TAIL_ROLES.test(role) || /\bfaq\b/.test(blob) || SIGN_OFF.test(blob) || BRAND_TAIL.test(heading);
 }
 
 /** FAQ then the sign-off (summary / contact) always last; order among tails preserved. */

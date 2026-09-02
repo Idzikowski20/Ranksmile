@@ -565,7 +565,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           body: JSON.stringify({
             keyword: pipelineKeyword,
             language: finalArticleLanguage,
-            num: 5,
+            num: 10,
           }),
         });
         if (earlyOutlineRes.ok) {
@@ -766,6 +766,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       competitorWordSpread,
     });
 
+    // Competitor-body facts (with per-page sources) mined by scrape_serp — Surfer's fact
+    // sheet. Set on scoreData itself (not just the first write) so it survives the two
+    // later coverage-path score writes, which also spread scoreData. Only when non-empty,
+    // so a barren run never clobbers a prior sheet.
+    if (serp.researched_facts?.claims?.length) {
+      scoreData.researched_facts = serp.researched_facts;
+    }
+
     if (suggestionQuestions.length) {
       const have = new Set((scoreData.paa_questions ?? []).map((q: string) => q.toLowerCase()));
       scoreData.paa_questions = [
@@ -815,10 +823,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     scoreData._heading_count = headingCount;
     scoreData._paragraph_count = paragraphCount;
-    const seoScore = seoScoreFromAudit ?? computeContentScore(
-      plainText, wordCount, headingCount, scoreData, paragraphCount, undefined,
-      pageContent, resolvedKeyword || '',
-    );
+    // Same link count reconcilePostGenerateArticle feeds the scorer. Passing `undefined`
+    // here dropped the internal-link bonus from the *stored* score only, so an article
+    // read 75 in the list while the editor and Auto-Optimize recomputed 86 from the same
+    // HTML — two numbers for one article, and the optimizer chasing the wrong one.
+    const linkCount = (pageContent.match(/<a\s[^>]*href=/gi) || []).length;
+    // The audit-score branch short-circuits computeContentScore, so without this the stored
+    // score omitted the internal-link bonus the editor/Auto-Optimize add — two numbers for
+    // one article. Apply the same min(2, links) bonus so both branches agree.
+    const seoScore = seoScoreFromAudit != null
+      ? Math.min(100, seoScoreFromAudit + Math.min(2, linkCount))
+      : computeContentScore(
+        plainText, wordCount, headingCount, scoreData, paragraphCount, linkCount,
+        pageContent, resolvedKeyword || '',
+      );
     // Keyword mode creates an EMPTY draft — a score computed on empty content is a
     // misleading 0 that the editor panel would prefer over its live computation.
     // Leave the numeric scores unset so the gauge scores the generated content.
@@ -1018,7 +1036,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           body: JSON.stringify({
             keyword: outlineKeyword,
             language: finalArticleLanguage,
-            num: 5,
+            num: 10,
           }),
         });
         if (outlineRes.ok) {

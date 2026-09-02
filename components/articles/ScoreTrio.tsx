@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ScoreGauge from './ScoreGauge';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import { ARTICLE_GREEN_AT } from '@/src/infrastructure/config/scoreColor';
 
 const F = 'var(--font-family-primary)';
 
@@ -17,7 +18,7 @@ const SideGauge = ({ score, label, align, pending, onClick, onHover, delta, delt
   const content = (
     <span style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'end' ? 'flex-end' : 'flex-start', gap: 6 }}>
       <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: F }}>{label}</span>
-      <ScoreGauge score={score} size={38} pending={pending} delta={delta} deltaPlacement={deltaPlacement} />
+      <ScoreGauge score={score} size={38} pending={pending} delta={delta} deltaPlacement={deltaPlacement} greenAt={ARTICLE_GREEN_AT} />
     </span>
   );
   const justify = align === 'end' ? 'flex-end' : 'flex-start';
@@ -63,7 +64,8 @@ const ScoreTrio = ({ seo, ai, hasAi, content, onSeoClick, onAiClick, deltas }: {
         {/* Right highlight pill: centre + AI side */}
         <div style={{ ...overlayBase, right: 0, borderRadius: '50px 12px 12px 50px', opacity: hovered === 'ai' ? 1 : 0 }} />
         <SideGauge label="SEO" align="start" score={seo} delta={deltas?.seo} deltaPlacement="right" onClick={onSeoClick} onHover={(on) => setHovered(on ? 'seo' : null)} />
-        <div style={{ position: 'relative', zIndex: 10, flexShrink: 0 }}><ScoreGauge score={overall} size={100} delta={deltas?.overall} deltaPlacement="below" /></div>
+        {/* Centre gauge: left arc = SEO, right arc = AI (Surfer-style), number = blend. */}
+        <div style={{ position: 'relative', zIndex: 10, flexShrink: 0 }}><ScoreGauge score={overall} halves={hasAi ? { left: seo, right: ai } : undefined} size={100} delta={deltas?.overall} deltaPlacement="below" greenAt={ARTICLE_GREEN_AT} /></div>
         <SideGauge label="AI Search" align="end" score={ai} pending={!hasAi} delta={deltas?.ai} deltaPlacement="left" onClick={onAiClick} onHover={(on) => setHovered(on ? 'ai' : null)} />
       </div>
     </div>

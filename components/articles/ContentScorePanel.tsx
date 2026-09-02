@@ -114,6 +114,9 @@ interface Props {
   /** Live scores from optimize re-score — overrides gauge values during a run. */
   /** AO-8b: live post-optimize scores — seo, ai, and overall from one synchronous pass. */
   optimizeLiveScores?: { seo?: number; ai?: number; overall?: number };
+  /** Emits the exact SEO/AI/overall the gauge displays, so the page can persist the same
+   *  numbers the editor shows (the articles list reads them). */
+  onLiveScores?: (s: { seo: number; ai: number | null; overall: number }) => void;
   /** Background deep analysis (import flow) — replaces panel with progress UI. */
   /** Bump from editor chrome to open Publish or Export (toolbar Publish button). */
   openPublishSignal?: number;
@@ -332,6 +335,7 @@ const ContentScorePanel = ({
   initialAiReadability,
   scoreDeltas,
   optimizeLiveScores,
+  onLiveScores,
   domainSlug,
   openPublishSignal,
 }: Props) => {
@@ -382,7 +386,12 @@ const ContentScorePanel = ({
 
   useEffect(() => {
     if (!scoreData?.terms) return;
-    const updated = scoreData.terms.map((t) => ({
+    // Show the curated working set (Surfer's ~80 `included`) rather than the full ~350
+    // pool; older analyses without the flag show every term, as before.
+    const working = scoreData.terms.some((t) => t.included)
+      ? scoreData.terms.filter((t) => t.included)
+      : scoreData.terms;
+    const updated = working.map((t) => ({
       ...t,
       current_count: countOccurrences(plainText, t.term, t.term_words_regexps),
     }));
@@ -594,6 +603,14 @@ const ContentScorePanel = ({
   const displayAi = optimizeLiveScores?.ai ?? baseAiScore;
   const displayContent = optimizeLiveScores?.overall
     ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
+
+  // Surface the exact displayed trio so the page can persist the same numbers the editor
+  // shows — the articles list reads them and must not diverge.
+  useEffect(() => {
+    // AI is null when the gauge is SEO-only (no AI coverage) so the list keeps its
+    // content_score fallback instead of blending against a fake 0.
+    onLiveScores?.({ seo: displaySeo, ai: hasAi ? displayAi : null, overall: displayContent });
+  }, [displaySeo, displayAi, displayContent, hasAi, onLiveScores]);
 
   const historyDelta = useCoverageHistoryDelta(articleId);
   const trioDeltas = scoreDeltas ?? (historyDelta ? { ai: historyDelta.delta } : undefined);

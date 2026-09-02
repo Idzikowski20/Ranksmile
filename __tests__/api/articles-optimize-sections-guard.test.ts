@@ -83,6 +83,10 @@ const makeReq = (overrides: Record<string, unknown> = {}) => ({
   body: { content: '<h2>x</h2><p>body</p>', articleId: 123 },
   query: {},
   cookies: {},
+  // Next always populates headers, and assertCronSecret reads authorization off them —
+  // but only once a CRON_SECRET exists, so omitting this passed on a machine with no
+  // secret configured and threw on one whose .env.local defines it.
+  headers: {},
   on: jest.fn(),
   off: jest.fn(),
   ...overrides,

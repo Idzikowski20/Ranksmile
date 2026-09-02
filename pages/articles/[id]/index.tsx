@@ -403,6 +403,23 @@ const ArticleEditorPage: NextPage = () => {
   const lastSavedSig = useRef<string | null>(null);
   const lastVersionAt = useRef(0);
   const flushRef = useRef<((unload?: boolean) => void) | null>(null);
+  // The exact SEO/AI/overall the ContentScorePanel gauge shows, so doSave persists the same
+  // numbers the editor displays (the articles list reads them). A ref, so save closures
+  // captured in timeouts always read the latest without re-creating them.
+  const panelScoresRef = useRef<{ seo: number; ai: number | null; overall: number } | null>(null);
+  // Signature of the emitted trio, so the open-time sync re-arms when the score changes
+  // (e.g. the AI-visibility summary arrives after the first render and lifts AI).
+  const [panelScoresSig, setPanelScoresSig] = useState('');
+  const handlePanelScores = useCallback((s: { seo: number; ai: number | null; overall: number }) => {
+    panelScoresRef.current = s;
+    setPanelScoresSig(`${Math.round(s.seo)}|${s.ai == null ? 'x' : Math.round(s.ai)}|${Math.round(s.overall)}`);
+  }, []);
+  // Switching articles without a remount must not carry the previous article's scores into
+  // the new one's sync — reset until the panel re-emits for the new id.
+  useEffect(() => {
+    panelScoresRef.current = null;
+    setPanelScoresSig('');
+  }, [id]);
   const [article, setArticle] = useState<Article | null>(null);
   const [highlightTerms, setHighlightTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -986,7 +1003,8 @@ const ArticleEditorPage: NextPage = () => {
     // Update current_count for each term + store computed score so list view stays in sync
     const updatedTerms = scoreData.terms.map((t) => ({
       ...t,
-      current_count: countOccurrences(text, t.term),
+      // Lemma-aware count (same as the scorer) — plain t.term drops inflected forms.
+      current_count: countOccurrences(text, t.term, t.term_words_regexps),
     }));
     const keyword = article?.target_keyword || '';
     const scored = scoreArticleHtml({
@@ -1002,12 +1020,25 @@ const ArticleEditorPage: NextPage = () => {
       _heading_count: scored.headings,
       _paragraph_count: scored.paragraphs,
     };
-    const contentScore = scored.seo;
+    // Persist the SAME numbers the editor's Content Score gauge shows so the list matches.
+    // scoreArticleHtml.ai is coverage-only and undercounts vs the panel's AI (which also
+    // reads the AI-visibility summary via resolveAiScore) — 68/52 blended to 61 in the list
+    // while the editor showed 68/78→73. Prefer the panel's emitted trio; fall back to the
+    // recomputed scores when the panel isn't mounted (review/write views).
+    // AO "save run" passes contentOverride and calls doSave before the panel re-emits for
+    // the resolved article, so its ref is stale — ignore the panel there and score the
+    // final override html directly.
+    const panel = contentOverride ? null : panelScoresRef.current;
+    const hasAiData = panel ? panel.ai != null : (scored.liveItems.length > 0 || scoreData.ai_score != null);
+    const seoOut = panel ? panel.seo : scored.seo;
+    const aiOut = panel ? (panel.ai ?? scored.ai) : scored.ai;
+    updatedScoreData.seo_score = seoOut;
+    if (hasAiData) updatedScoreData.ai_score = aiOut;
+    const contentScore = panel
+      ? panel.overall
+      : (hasAiData ? computeOverallContentScore(scored.seo, scored.ai) : scored.seo);
     updatedScoreData._computed_score = contentScore;
     updatedScoreData._content_score = contentScore;
-    if (scored.liveItems.length > 0 || scoreData.ai_score != null) {
-      updatedScoreData.ai_score = scored.ai;
-    }
     if (versionMeta) updatedScoreData._ao_meta = versionMeta;
 
     // Persist internal links panel state from localStorage
@@ -1025,6 +1056,9 @@ const ArticleEditorPage: NextPage = () => {
         content: html,
         word_count: scored.words,
         score_data: updatedScoreData,
+        // The exact gauge numbers, allowed to refresh the server-authoritative ai_score.
+        // Omit ai when SEO-only so the list keeps its content_score fallback.
+        ...(panel ? { score_override: { seo: panel.seo, overall: panel.overall, ...(panel.ai != null ? { ai: panel.ai } : {}) } } : {}),
         featured_image: featuredImage?.url ?? null,
         target_keyword: article?.target_keyword,
         meta_title: article?.meta_title,
@@ -1121,6 +1155,39 @@ const ArticleEditorPage: NextPage = () => {
     if (autoTimer.current) clearTimeout(autoTimer.current);
     void autoSave(sig, { unload });
   };
+
+  // One-time score refresh on open. Articles scored before the current SEO/AI model kept
+  // stale score_data.seo_score/ai_score, so the list gauge (which blends the stored pair)
+  // lagged the editor's live number — 50 in the list vs 73 in the editor. Persist the
+  // freshly computed scores once per article; content is unchanged, so only the score
+  // fields refresh. Skipped while a review/optimize save-suspend is active or the doc is
+  // not a usable article.
+  const scoreSyncedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = String(id ?? '');
+    if (isLoading || !article || saveSuspended || !key) return;
+    if (!isUsableArticleHtml(editorHtml)) return;
+    const ps = panelScoresRef.current;
+    if (!ps || !panelScoresSig) return;
+    // Re-arm per (article, trio): re-sync when the emitted score changes, not only once,
+    // so a late AI lift reaches the list.
+    const syncKey = `${key}:${panelScoresSig}`;
+    if (scoreSyncedRef.current === syncKey) return;
+    scoreSyncedRef.current = syncKey;
+    // Score-ONLY refresh: send just score_override, never content/meta/image/terms, so an
+    // article scored before the current model catches up without rewriting the document.
+    // Omit ai when the gauge is SEO-only so the list keeps its content_score fallback.
+    const override: { seo: number; overall: number; ai?: number } = { seo: ps.seo, overall: ps.overall };
+    if (ps.ai != null) override.ai = ps.ai;
+    fetch(`/api/articles/${key}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score_override: override }),
+    })
+      .then((r) => { if (!r.ok) throw new Error(`score refresh HTTP ${r.status}`); })
+      .catch((err) => { scoreSyncedRef.current = null; console.warn('[score-refresh]', getErrorMessage(err)); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, article, editorHtml, isLoading, saveSuspended, panelScoresSig]);
 
   // Flush pending edits immediately on tab-hide / close, in-app navigation, and Cmd/Ctrl+S —
   // so changes are never lost to the debounce window (the main gap vs. Ranksmile-style autosave).
@@ -2316,6 +2383,7 @@ const ArticleEditorPage: NextPage = () => {
                       headingCount={headingCount}
                       scoreData={scoreData}
                       internalLinksCount={internalLinksCount}
+                      onLiveScores={handlePanelScores}
                       html={editorHtml}
                       scoreDeltas={aoScoresReady && aoLiveSnapshot ? (() => {
                         const aiBase = aiVisibilityBaselineRef.current;

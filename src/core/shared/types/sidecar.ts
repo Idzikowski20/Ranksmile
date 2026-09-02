@@ -1,6 +1,13 @@
 import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
+/** Canonical shape of the sourced fact sheet persisted at score_data.researched_facts.
+ *  Single definition so the sidecar wire type and the planner cache type cannot drift. */
+export type ResearchedFacts = {
+   claims?: string[];
+   sources?: Array<{ url?: string; source_urls?: string[]; label?: string; confidence?: number; cited_by?: string[] }>;
+};
+
 export type SerpCompetitor = {
    url: string;
    domain: string;
@@ -24,6 +31,9 @@ export type SerpAnalysis = {
    paragraphs_min?: number;
    paragraphs_max?: number;
    paragraphs_target?: number;
+   /** Facts mined from the competitor bodies, each with the pages that asserted it
+    *  (Surfer's fact sheet is built this way). Cached into score_data.researched_facts. */
+   researched_facts?: ResearchedFacts;
    _competitor_texts?: string[];
 };
 
