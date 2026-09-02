@@ -1,6 +1,10 @@
 // lib/scoreColor.ts
 export type ScoreBand = 'low' | 'mid' | 'high';
 
+/** Green floor for the ARTICLE content score (SEO / AI / blended), Surfer's editor bands.
+ *  Every article content-score gauge passes this; shared/site-audit gauges keep 66. */
+export const ARTICLE_GREEN_AT = 70;
+
 const clamp = (n: number) => Math.max(0, Math.min(n, 100));
 
 /**

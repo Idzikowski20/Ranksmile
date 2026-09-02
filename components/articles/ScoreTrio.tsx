@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ScoreGauge from './ScoreGauge';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import { ARTICLE_GREEN_AT } from '@/src/infrastructure/config/scoreColor';
 
 const F = 'var(--font-family-primary)';
 
@@ -9,9 +10,6 @@ const F = 'var(--font-family-primary)';
    is NOT drawn here — it's an overlay pill in ScoreTrio that spans this side AND the
    centre content-score gauge (Ranksmile-style). This button only reports hover intent
    and handles the click. */
-/** Article content-score green floor (Surfer parity). Shared gauges keep the default 66. */
-const ARTICLE_GREEN_AT = 70;
-
 const SideGauge = ({ score, label, align, pending, onClick, onHover, delta, deltaPlacement }: {
   score: number; label: string; align: 'start' | 'end'; pending?: boolean;
   onClick?: () => void; onHover?: (on: boolean) => void;

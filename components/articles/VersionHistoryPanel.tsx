@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ScoreGauge from './ScoreGauge';
+import { ARTICLE_GREEN_AT } from '@/src/infrastructure/config/scoreColor';
 
 interface Version {
   id: number;
@@ -148,7 +149,7 @@ const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Pr
             </div>
             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 14, lineHeight: '1.25rem', fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-primary)' }}>You</div>
-              <div className="vh-ring" style={{ flexShrink: 0, display: 'flex' }}><ScoreGauge score={currentScore} size={52} /></div>
+              <div className="vh-ring" style={{ flexShrink: 0, display: 'flex' }}><ScoreGauge score={currentScore} size={52} greenAt={ARTICLE_GREEN_AT} /></div>
             </div>
           </div>
         </div>
@@ -227,7 +228,7 @@ const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Pr
                         {versionTypeLabel(v.version_type)}
                       </span>
                       {v.score != null && (
-                        <div className="vh-ring" style={{ flexShrink: 0, display: 'flex' }}><ScoreGauge score={v.score} size={52} /></div>
+                        <div className="vh-ring" style={{ flexShrink: 0, display: 'flex' }}><ScoreGauge score={v.score} size={52} greenAt={ARTICLE_GREEN_AT} /></div>
                       )}
                     </div>
                   </div>
