@@ -354,9 +354,12 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
         // as seo_score/ai_score, not the stored content_score column (SEO-only/stale — it
         // read 50 while the editor showed 73). Fall back to the column only when the split
         // isn't available.
+        // Guard against null → Number(null) is 0 (finite), which would fake a 0/0 blend and
+        // hide the valid content_score fallback. Require both to be real numbers first.
+        const hasBlend = article.seo_score != null && article.ai_score != null
+          && Number.isFinite(Number(article.seo_score)) && Number.isFinite(Number(article.ai_score));
         const seo = Number(article.seo_score);
         const ai = Number(article.ai_score);
-        const hasBlend = Number.isFinite(seo) && Number.isFinite(ai);
         const score = hasBlend
           ? computeOverallContentScore(seo, ai)
           : (typeof article.content_score === 'number' ? article.content_score : null);

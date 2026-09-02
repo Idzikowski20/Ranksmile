@@ -99,7 +99,7 @@ async function getArticle(id: string, res: NextApiResponse) {
 }
 
 async function updateArticle(id: string, req: NextApiRequest, res: NextApiResponse) {
-   const { title, content, status, target_keyword, meta_title, meta_description, meta_url, word_count, score_data, featured_image, internal_links_cache, version_type } = req.body;
+   const { title, content, status, target_keyword, meta_title, meta_description, meta_url, word_count, score_data, featured_image, internal_links_cache, version_type, score_override } = req.body;
 
    // Extract content score from score_data
    let contentScore = 0;
@@ -166,6 +166,23 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
             if (storedScoreData[key] !== undefined) scoreDataObj[key] = storedScoreData[key];
          }
       }
+      // Explicit fresh editor scores (the number the gauge shows). Applied AFTER the
+      // authoritative restore so they may update seo_score/ai_score/content_score — this is
+      // the one route allowed to refresh the otherwise server-owned ai_score, and it ships
+      // the resolved value (>= stored), so it cannot regress finalize's score. A score-only
+      // refresh sends just this (no content/meta/image), so it never rewrites the article.
+      if (score_override && typeof score_override === 'object') {
+         const so = score_override as { seo?: number; ai?: number; overall?: number };
+         scoreDataObj = { ...(scoreDataObj ?? storedScoreData ?? {}) };
+         if (Number.isFinite(so.seo)) scoreDataObj.seo_score = Number(so.seo);
+         if (Number.isFinite(so.ai)) scoreDataObj.ai_score = Number(so.ai);
+         if (Number.isFinite(so.overall)) {
+            scoreDataObj._content_score = Number(so.overall);
+            scoreDataObj._computed_score = Number(so.overall);
+            contentScore = Number(so.overall);
+         }
+      }
+
       const scoreDataJson = scoreDataObj ? JSON.stringify(scoreDataObj) : (score_data ? JSON.stringify(score_data) : null);
       if (version_type && content !== undefined) {
          await db.query(

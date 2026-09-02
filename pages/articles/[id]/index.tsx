@@ -1001,7 +1001,8 @@ const ArticleEditorPage: NextPage = () => {
     // Update current_count for each term + store computed score so list view stays in sync
     const updatedTerms = scoreData.terms.map((t) => ({
       ...t,
-      current_count: countOccurrences(text, t.term),
+      // Lemma-aware count (same as the scorer) — plain t.term drops inflected forms.
+      current_count: countOccurrences(text, t.term, t.term_words_regexps),
     }));
     const keyword = article?.target_keyword || '';
     const scored = scoreArticleHtml({
@@ -1050,6 +1051,8 @@ const ArticleEditorPage: NextPage = () => {
         content: html,
         word_count: scored.words,
         score_data: updatedScoreData,
+        // The exact gauge numbers, allowed to refresh the server-authoritative ai_score.
+        ...(panel ? { score_override: panel } : {}),
         featured_image: featuredImage?.url ?? null,
         target_keyword: article?.target_keyword,
         meta_title: article?.meta_title,
@@ -1158,12 +1161,21 @@ const ArticleEditorPage: NextPage = () => {
     const key = String(id ?? '');
     if (isLoading || !article || saveSuspended || !key) return;
     if (!isUsableArticleHtml(editorHtml)) return;
-    // Wait for the panel to emit its displayed scores, else doSave would persist the
-    // coverage-only fallback and mark this article synced with the wrong number.
+    // Wait for the panel to emit its displayed scores.
     if (!panelScoresReady || !panelScoresRef.current) return;
     if (scoreSyncedRef.current === key) return;
     scoreSyncedRef.current = key;
-    void doSave();
+    // Score-ONLY refresh: send just score_override, never content/meta/image/terms, so an
+    // article scored before the current model catches up without rewriting the document
+    // (no image copy across navigation, no loader-rewritten HTML persisted). Clear the key
+    // on failure so a transient error can retry on the next open.
+    fetch(`/api/articles/${key}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score_override: panelScoresRef.current }),
+    })
+      .then((r) => { if (!r.ok) throw new Error(`score refresh HTTP ${r.status}`); })
+      .catch((err) => { scoreSyncedRef.current = null; console.warn('[score-refresh]', getErrorMessage(err)); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, article, editorHtml, isLoading, saveSuspended, panelScoresReady]);
 
