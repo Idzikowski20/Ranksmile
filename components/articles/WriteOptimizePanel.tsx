@@ -268,6 +268,20 @@ const AiOverviewIcon = () => (
   </svg>
 );
 
+/** Round badge shell shared by the AI-source icons. */
+const sourceBadgeShell: React.CSSProperties = {
+  display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center',
+  borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: 'var(--koala-bg-primary)',
+  marginRight: -5, overflow: 'hidden',
+};
+
+/** Brand logo from /public/engine-icons inside the round badge shell. */
+const EngineLogo = ({ src, label }: { src: string; label: string }) => (
+  <span style={sourceBadgeShell}>
+    <img src={src} alt={label} width={13} height={13} style={{ objectFit: 'contain' }} loading="lazy" />
+  </span>
+);
+
 const SourceIcon = ({ source }: { source: InfoSource }) => {
   const tip = source.url || source.domain || source.key;
   if (source.kind === 'ai_overview') {
@@ -287,25 +301,13 @@ const SourceIcon = ({ source }: { source: InfoSource }) => {
     );
   }
   if (source.kind === 'openai') {
-    return (
-      <Tip text="ChatGPT / OpenAI">
-        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: 'var(--koala-bg-primary)', marginRight: -5, fontSize: 9, fontWeight: 700, color: 'var(--koala-text-primary)' }}>AI</span>
-      </Tip>
-    );
+    return <Tip text="ChatGPT / OpenAI"><EngineLogo src="/engine-icons/chatgpt.webp" label="ChatGPT" /></Tip>;
   }
   if (source.kind === 'gemini') {
-    return (
-      <Tip text="Google Gemini">
-        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: 'var(--koala-bg-primary)', marginRight: -5, fontSize: 9, fontWeight: 700, color: '#3086FF' }}>G</span>
-      </Tip>
-    );
+    return <Tip text="Google Gemini"><EngineLogo src="/engine-icons/gemini.webp" label="Gemini" /></Tip>;
   }
   if (source.kind === 'perplexity') {
-    return (
-      <Tip text="Perplexity">
-        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: '#1a1a2e', marginRight: -5, fontSize: 8, fontWeight: 700, color: '#20B8CD' }}>P</span>
-      </Tip>
-    );
+    return <Tip text="Perplexity"><EngineLogo src="/engine-icons/perplexity.svg" label="Perplexity" /></Tip>;
   }
   if (source.kind === 'reddit') {
     return (
