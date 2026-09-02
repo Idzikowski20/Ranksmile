@@ -24,6 +24,12 @@ export type SerpAnalysis = {
    paragraphs_min?: number;
    paragraphs_max?: number;
    paragraphs_target?: number;
+   /** Facts mined from the competitor bodies, each with the pages that asserted it
+    *  (Surfer's fact sheet is built this way). Cached into score_data.researched_facts. */
+   researched_facts?: {
+      claims?: string[];
+      sources?: Array<{ url?: string; source_urls?: string[]; label?: string; confidence?: number; cited_by?: string[] }>;
+   };
    _competitor_texts?: string[];
 };
 

@@ -458,7 +458,7 @@ async def extract_terms_from_urls(body: dict):
     from analyzers.competitor_terms import extract_nlp_terms
 
     print(f"[extract-terms-from-urls] Scraping {len(urls)} pages for: {keyword}")
-    texts, _ = await _scrape_pages(urls)
+    texts, _, _ = await _scrape_pages(urls)
     if not texts:
         return {"terms": []}
 

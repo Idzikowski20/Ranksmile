@@ -988,7 +988,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       pageContent,
       featuredImage,
       wordCount || classify.word_count_estimate || 0,
-      JSON.stringify({ ...carried, ...scoreData }),
+      JSON.stringify({
+        ...carried,
+        ...scoreData,
+        // Competitor-body facts (with per-page sources) mined by scrape_serp — Surfer's
+        // fact-sheet model. Only when the harvest produced something, so an empty run
+        // never clobbers a prior sheet.
+        ...(serp.researched_facts?.claims?.length ? { researched_facts: serp.researched_facts } : {}),
+      }),
       isKeywordMode ? null : (seoScore || ruleBase),
     ];
 

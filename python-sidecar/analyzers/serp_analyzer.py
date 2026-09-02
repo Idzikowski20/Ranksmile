@@ -144,7 +144,7 @@ async def analyze_serp(
     if skipped:
         print(f"[serp_analyzer] skipping {skipped} non-HTML SERP URLs (pdf/docs)")
 
-    serp_texts, soups = await _scrape_pages(scrapeable, on_page) if scrapeable else ([], [])
+    serp_texts, soups, serp_urls = await _scrape_pages(scrapeable, on_page) if scrapeable else ([], [], [])
     snippet_texts = _serp_snippet_texts(serp_results)
 
     # Prefer scraped bodies; if thin/empty, fall back to SERP snippets so term extraction
@@ -186,10 +186,21 @@ async def analyze_serp(
                 t["in_headings"] = True
     targets = _compute_targets(serp_texts, soups if soups else None)
 
+    # Facts mined from the competitor bodies we just scraped — Surfer's fact sheet is built
+    # the same way (its "Karanie ciszą…" fact is sourced from medonet + wylecz.to, i.e. the
+    # ranking pages themselves), so each fact carries the competitor URLs that asserted it.
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    comp_pairs = list(zip(serp_urls, serp_texts))
+    fact_claims, fact_sources = (
+        await extract_competitor_facts_from_pages(comp_pairs, keyword, language, openrouter_key)
+        if comp_pairs and openrouter_key else ([], [])
+    )
+
     result = {
         "terms": nlp_terms,
         "paa_questions": paa_questions,
         "competitors": competitors,
+        "researched_facts": {"claims": fact_claims, "sources": fact_sources},
         **targets,
     }
     if include_texts:
@@ -205,10 +216,13 @@ async def analyze_serp(
 async def _scrape_pages(
     urls: list[str],
     on_page=None,
-) -> tuple[list[str], list[BeautifulSoup]]:
+) -> tuple[list[str], list[BeautifulSoup], list[str]]:
     """on_page(finished, total, url) fires as each page settles, so the editor can show
     "Crawling result 6/10". Pages are fetched concurrently, so the counter is arrival
-    order, not list order."""
+    order, not list order.
+
+    Returns texts, soups AND the kept URLs aligned with them — facts need to know which
+    competitor page asserted each one (Surfer stacks the source domains on a fact)."""
     scrape_headers = {
         "User-Agent": BROWSER_UA,
         "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
@@ -276,9 +290,11 @@ async def _scrape_pages(
         *(_fetch_and_report(url) for url in urls), return_exceptions=False,
     )
 
-    texts = [r[0] for r in results if r[1] is not None]
-    soups = [r[1] for r in results if r[1] is not None]
-    return texts, soups
+    kept = [(u, r) for u, r in zip(urls, results) if r[1] is not None]
+    texts = [r[0] for _, r in kept]
+    soups = [r[1] for _, r in kept]
+    kept_urls = [u for u, _ in kept]
+    return texts, soups, kept_urls
 
 
 async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: str) -> tuple[list[dict], list[str]]:
@@ -805,6 +821,109 @@ async def _ai_engine_facts(keyword: str, language: str, openrouter_key: str) -> 
             for e in s["cited_by"]:
                 by[e] = by.get(e, 0) + 1
         print(f"[fact-research] {keyword!r}: {len(claims)} AI-engine facts {by}")
+    return claims, sources
+
+
+def _normalize_fact(fact: str) -> str:
+    """Collapse whitespace + lowercase for dedup; trailing punctuation dropped so
+    'Karanie ciszą to technika.' and 'karanie ciszą to technika' collapse to one."""
+    return " ".join((fact or "").lower().split()).rstrip(".!?").strip()
+
+
+def _aggregate_competitor_facts(
+    per_page: list[tuple[str, list[str]]],
+) -> tuple[list[str], list[dict]]:
+    """Merge per-page facts into Surfer-shaped (claims, sources).
+
+    per_page = [(competitor_url, [fact, ...]), ...]. A fact asserted by several pages
+    collapses to ONE entry whose source_urls stack every page that stated it (Surfer shows
+    multiple source icons on such a fact). Pure — no I/O — so the merge is unit-tested
+    without a live LLM.
+    """
+    order: list[str] = []
+    by_key: dict[str, dict] = {}
+    for url, facts in per_page:
+        domain = domain_from_url(url) if url else ""
+        for fact in facts:
+            text = (fact or "").strip()
+            key = _normalize_fact(text)
+            if len(key) < 20:  # a real declarative sentence, not a fragment
+                continue
+            if key in by_key:
+                src = by_key[key]["src"]
+                if url and url not in src["source_urls"]:
+                    src["source_urls"].append(url)
+                if domain and domain not in src["cited_by"]:
+                    src["cited_by"].append(domain)
+                continue
+            order.append(key)
+            by_key[key] = {
+                "claim": text[:240],
+                "src": {
+                    "url": url,
+                    "source_urls": [url] if url else [],
+                    "label": domain or "serp",
+                    "confidence": 0.7,
+                    # Surfer tags body-sourced facts as `serp`; the domains ride in cited_by
+                    # too so the UI can stack them (medonet, wylecz.to…).
+                    "cited_by": ["serp"] + ([domain] if domain else []),
+                },
+            }
+    claims = [by_key[k]["claim"] for k in order]
+    sources = [by_key[k]["src"] for k in order]
+    return claims, sources
+
+
+async def extract_competitor_facts_from_pages(
+    pairs: list[tuple[str, str]],
+    keyword: str,
+    language: str,
+    openrouter_key: str,
+    max_pages: int = 8,
+    per_page: int = 8,
+) -> tuple[list[str], list[dict]]:
+    """Mine declarative facts from each competitor body (bodies already scraped for terms),
+    tagging every fact with the page that stated it. Concurrency-limited; a page that
+    fails contributes nothing rather than breaking the harvest."""
+    usable = [(u, t) for u, t in pairs if u and t and len(t.split()) >= 80][:max_pages]
+    if not usable or not openrouter_key:
+        return [], []
+    lang_hint = "Odpowiedz po polsku." if language.startswith("pl") else ""
+    model = _AI_ENGINES[0][1] if _AI_ENGINES else "openai/gpt-4o-mini"
+    sem = asyncio.Semaphore(4)
+
+    async def _one(url: str, text: str) -> tuple[str, list[str]]:
+        prompt = (
+            f'Z poniższego artykułu o temacie "{keyword}" wypisz do {per_page} samodzielnych, '
+            f"rzeczowych faktów — każdy jako jedno pełne zdanie twierdzące, sprawdzalne, bez "
+            f"cudzysłowów, bez numeracji, jeden na linię. Pomiń opinie, CTA i zdania o autorze. "
+            f"{lang_hint}\n\nARTYKUŁ:\n{text[:6000]}"
+        )
+        try:
+            async with sem:
+                async with httpx.AsyncClient(timeout=45) as client:
+                    resp = await client.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {openrouter_key}", "Content-Type": "application/json"},
+                        json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 700},
+                    )
+            if resp.status_code != 200:
+                print(f"[competitor-facts] {domain_from_url(url)} HTTP {resp.status_code}")
+                return url, []
+            content = resp.json()["choices"][0]["message"].get("content") or ""
+        except Exception as exc:
+            print(f"[competitor-facts] {domain_from_url(url)} failed: {exc}")
+            return url, []
+        facts = []
+        for line in content.split("\n"):
+            cleaned = re.sub(r"^[\s\-\*\d\.\)\]]+", "", line).strip()
+            if len(cleaned) >= 20:
+                facts.append(cleaned[:240])
+        return url, facts
+
+    results = await asyncio.gather(*(_one(u, t) for u, t in usable))
+    claims, sources = _aggregate_competitor_facts(results)
+    print(f"[competitor-facts] {keyword!r}: {len(claims)} facts from {len(usable)} competitor pages")
     return claims, sources
 
 
