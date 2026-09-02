@@ -2,6 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { computeSerpInsights, classifyHeadingStatus, isPaaCovered } from '@/src/infrastructure/keywords/researchUtils';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { Gauge, Badge } from '../koala/core';
+import DomainFavicon from '../common/DomainFavicon';
+
+/** Host from a competitor URL, www stripped — DomainFavicon fetches the real favicon via proxy. */
+function hostFromUrl(url: string): string {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+}
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 export interface CompetitorOutline {
@@ -485,11 +491,10 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, overflow: 'hidden', flex: 1, minWidth: 0 }}>
-                          <img
-                            alt=""
-                            src={comp.favicon}
-                            style={{ width: 20, height: 20, borderRadius: 4, marginTop: 2, flexShrink: 0 }}
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          <DomainFavicon
+                            domain={hostFromUrl(comp.url)}
+                            size={20}
+                            style={{ marginTop: 2 }}
                           />
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, textAlign: 'left', overflow: 'hidden', flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
