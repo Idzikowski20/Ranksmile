@@ -95,7 +95,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
     fetch('/api/articles/competitor-outlines', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keyword, num: 5, articleId, ...(language ? { language } : {}) }),
+      body: JSON.stringify({ keyword, num: 10, articleId, ...(language ? { language } : {}) }),
     })
       .then((r) => r.json())
       .then((data) => {

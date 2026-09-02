@@ -565,7 +565,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           body: JSON.stringify({
             keyword: pipelineKeyword,
             language: finalArticleLanguage,
-            num: 5,
+            num: 10,
           }),
         });
         if (earlyOutlineRes.ok) {
@@ -1030,7 +1030,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           body: JSON.stringify({
             keyword: outlineKeyword,
             language: finalArticleLanguage,
-            num: 5,
+            num: 10,
           }),
         });
         if (outlineRes.ok) {

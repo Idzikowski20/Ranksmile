@@ -588,7 +588,23 @@ def _placeholder_score_data(keyword: str = "", language: str = "pl") -> dict:
     }
 
 
-async def extract_competitor_outlines(keyword: str, language: str = "pl", num: int = 5) -> list[dict]:
+def _attach_competitor_scores(outlines: list[dict]) -> list[dict]:
+    """Per-competitor content score (0-100), cohort-relative — how comprehensive a page is
+    vs the median word/heading count of the set. Same shape as Surfer's per-competitor
+    score column. Domain authority (Surfer's domain_score) needs an external backlink
+    metric we don't have, so it is deliberately omitted rather than faked."""
+    words = sorted(o.get("word_count", 0) for o in outlines if o.get("word_count"))
+    heads = sorted(o.get("heading_count", 0) for o in outlines if o.get("heading_count"))
+    med_w = words[len(words) // 2] if words else 1
+    med_h = heads[len(heads) // 2] if heads else 1
+    for o in outlines:
+        w_score = min((o.get("word_count", 0) / max(1, med_w)) * 100, 100)
+        h_score = min((o.get("heading_count", 0) / max(1, med_h)) * 100, 100)
+        o["score"] = round(w_score * 0.6 + h_score * 0.4)
+    return outlines
+
+
+async def extract_competitor_outlines(keyword: str, language: str = "pl", num: int = 10) -> list[dict]:
     serper_key = os.getenv("SERPER_API_KEY", "")
     if not serper_key:
         return []
@@ -652,9 +668,9 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
     tasks = [_fetch_one(r, i + 1) for i, r in enumerate(results)]
     all_outlines = await asyncio.gather(*tasks, return_exceptions=False)
 
-    # Filter thin/failed pages, keep top `num` by original SERP order
-    valid = [o for o in all_outlines if o is not None]
-    return valid[:num]
+    # Filter thin/failed pages, keep top `num` by original SERP order, then score the set.
+    valid = [o for o in all_outlines if o is not None][:num]
+    return _attach_competitor_scores(valid)
 
 
 # ── Authority fact research (Surfer "Facts"-style) ──────────────────────────

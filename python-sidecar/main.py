@@ -494,7 +494,7 @@ async def competitor_outlines_endpoint(body: dict):
     """Research & Outline — zwraca heading structure konkurencyjnych stron."""
     keyword = body.get("keyword", "")
     language = body.get("language", "pl")
-    num = body.get("num", 5)
+    num = body.get("num", 10)
     if not keyword:
         raise HTTPException(status_code=400, detail="keyword is required")
     print(f"[competitor-outlines] Fetching top {num} for: {keyword}")
