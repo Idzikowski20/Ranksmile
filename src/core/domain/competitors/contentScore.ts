@@ -61,10 +61,19 @@ export function termRangeCoverageFraction(
   return weightSum > 0 ? scoreSum / weightSum : 0;
 }
 
+/**
+ * Coverage the score is built on: presence.
+ *
+ * This used to route to termRangeCoverageFraction whenever a term carried a usage band,
+ * so an article was docked for every term it used fewer times than the competitors'
+ * average. Surfer does not: measured on its editor for "szantaż emocjonalny", 21 of 80
+ * recommended terms sat below their band — `drugą osobę` 3/8, `manipulacji` 6/10 — and
+ * the SEO score was 100. Its own guidance calls the band "a suggestion, not a goal, and
+ * no input to the score". Ours was the input, and it cost a third of the terms slot on
+ * articles the reference tool scores as perfect. The band stays for the editor's
+ * under/over-use hints (termRangeCoverageFraction); it no longer decides the number.
+ */
 export function termScoreFraction(bodyText: string, terms: RichTerm[]): number {
-  if (!terms.length) return 0;
-  const ranged = terms.filter((t) => t.suggested_min != null || t.suggested_max != null);
-  if (ranged.length) return termRangeCoverageFraction(bodyText, ranged);
   return termCoverageFraction(bodyText, terms);
 }
 
