@@ -58,6 +58,9 @@ const toSelectOptions = (options: Opt[]) => options.map((o) => ({
 const WordPressExportModal = ({ articleId, onClose }: Props) => {
   const [opts, setOpts] = useState<Options | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // The workspace has no WordPress site linked yet — an expected, fixable state, not a
+  // failure. Rendered as a helpful panel with a connect CTA, never a red error.
+  const [notConnected, setNotConnected] = useState(false);
   const [step, setStep] = useState<'choose' | 'details' | 'success'>('choose');
   const [mode, setMode] = useState<'create' | 'update' | null>(null);
   const [showBanner, setShowBanner] = useState(true);
@@ -77,7 +80,14 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
   useEffect(() => {
     let active = true;
     fetch(`/api/wordpress/post-options?articleId=${articleId}`)
-      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d?.error || 'Could not load options'); return d as Options; })
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) {
+          if (d?.code === 'no_wp_connection') { const e = new Error(d.error); (e as Error & { code?: string }).code = 'no_wp_connection'; throw e; }
+          throw new Error(d?.error || 'Could not load options');
+        }
+        return d as Options;
+      })
       .then((d) => {
         if (!active) return;
         const dec = (arr: Opt[]) => (arr || []).map((o) => ({ value: o.value, label: decodeLabel(String(o.label ?? '')) }));
@@ -88,7 +98,11 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
         setType(d.types[0] ? String(d.types[0].value) : 'post');
         setAuthor(d.authors[0] ? String(d.authors[0].value) : '');
       })
-      .catch((e) => { if (active) setLoadError(e?.message || 'Could not load options'); });
+      .catch((e) => {
+        if (!active) return;
+        if ((e as Error & { code?: string })?.code === 'no_wp_connection') setNotConnected(true);
+        else setLoadError(e?.message || 'Could not load options');
+      });
     return () => { active = false; };
   }, [articleId]);
 
@@ -161,8 +175,21 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
 
         {/* Body */}
         <div className="styled-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 24px 8px' }}>
-          {loadError && <div style={{ fontSize: 14, color: 'var(--koala-status-danger)', padding: '12px 0' }}>{loadError}</div>}
-          {!opts && !loadError && (
+          {loadError && !notConnected && <div style={{ fontSize: 14, color: 'var(--koala-status-danger)', padding: '12px 0' }}>{loadError}</div>}
+
+          {notConnected && (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', background: '#eff6ff', borderRadius: 10, padding: 14, margin: '4px 0 8px' }}>
+              <span style={{ flexShrink: 0, color: '#2563eb', display: 'inline-flex', marginTop: 1 }}><IcoInfo /></span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>No WordPress connection</div>
+                <span style={{ fontSize: 13, lineHeight: '19px', color: 'var(--koala-text-secondary)' }}>
+                  This workspace has no WordPress site connected yet. Install the Ranksmile plugin on your site and connect it once — then you can publish articles straight from the editor, as a new post or an update to an existing one.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {!opts && !loadError && !notConnected && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '4px 0' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ width: 70, height: 12, borderRadius: 6, background: 'var(--koala-bg-secondary)', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
@@ -269,7 +296,15 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
 
         {/* Footer */}
         <div style={{ borderTop: '1px solid #f4f4f5', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          {step === 'choose' && (
+          {notConnected && (
+            <>
+              <Button type="button" variant="transparent" onClick={onClose}>Cancel</Button>
+              <Button type="button" variant="primary" onClick={() => window.open('/settings/wordpress', '_blank', 'noopener')}>
+                Connect WordPress <IcoArrowRight />
+              </Button>
+            </>
+          )}
+          {!notConnected && step === 'choose' && (
             <>
               <a href="/settings/wordpress" target="_blank" rel="noreferrer noopener" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)', textDecoration: 'none' }}>Manage WordPress Integrations <IcoChevronRight /></a>
               <div style={{ display: 'flex', gap: 10 }}>
