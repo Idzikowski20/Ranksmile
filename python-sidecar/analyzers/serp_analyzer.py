@@ -453,24 +453,63 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
     # against a max lower than what a competent guide needs.
     # ponytail: fixed floors; derive from content type if service pages ever need less.
     avg_words = int(sum(word_counts) / len(word_counts))
+    words_target = max(avg_words, 800)
+
+    # Structure as a per-word ratio, scaled to the word target — Surfer's model
+    # (`guidelines_baseline: word_count`): for "szantaż emocjonalny" its heading guideline
+    # is min 0.004735 / avg 0.008838 / max 0.021044 per word, which at 2600 words is a
+    # band of 12.3–54.7 and a suggested 23. Averaging raw counts let a 3000-word page
+    # with 60 headings and a 1000-word page with 5 vote as equals, so the target described
+    # neither the SERP's density nor the article about to be written against it. The
+    # ratio is measured on the same "real page" set as the word target: a snippet
+    # fallback has no structure and must not pull the floor to zero.
+    if soups:
+        page_words = [len(text.split()) for text in texts[: len(soups)]]
+        real = [i for i, n in enumerate(page_words) if n >= 200 and i < len(soups)]
+        if len(real) < 2:
+            real = [i for i in range(len(soups)) if page_words[i] > 0]
+
+        def band(counts: list[int]) -> tuple[int, int, int]:
+            ratios = [counts[i] / page_words[i] for i in real if i < len(counts)]
+            if not ratios:
+                return (0, 0, 0)
+            avg = sum(ratios) / len(ratios)
+            return (
+                int(round(avg * words_target)),
+                int(round(min(ratios) * words_target)),
+                int(round(max(ratios) * words_target)),
+            )
+
+        h_target, h_min, h_max = band(heading_counts)
+        p_target, p_min, p_max = band(paragraph_counts)
+        i_target, i_min, i_max = band(image_counts)
+    else:
+        h_target, h_min, h_max = (
+            int(sum(heading_counts) / len(heading_counts)), min(heading_counts), max(heading_counts),
+        )
+        p_target, p_min, p_max = (
+            int(sum(paragraph_counts) / len(paragraph_counts)), min(paragraph_counts), max(paragraph_counts),
+        )
+        i_target = i_min = i_max = 0
+
     return {
         "words_min": int(min(word_counts)),
         "words_max": max(int(max(word_counts)), 1200),
-        "words_target": max(avg_words, 800),
-        "headings_min": max(3, min(heading_counts)),
+        "words_target": words_target,
+        "headings_min": max(3, h_min),
         # Floored like words: a reference article carries 12-15 H2s, and a cohort of
         # short pages must not turn a well-structured article into a penalty.
-        "headings_max": max(12, max(heading_counts)),
-        "headings_target": max(8, int(sum(heading_counts) / len(heading_counts))),
-        "paragraphs_min": max(5, min(paragraph_counts)),
-        "paragraphs_max": max(20, max(paragraph_counts)),
-        "paragraphs_target": int(sum(paragraph_counts) / len(paragraph_counts)),
+        "headings_max": max(12, h_max),
+        "headings_target": max(8, h_target),
+        "paragraphs_min": max(5, p_min),
+        "paragraphs_max": max(20, p_max),
+        "paragraphs_target": p_target,
         # Image frequency from the cohort (Surfer measures it; zero-image cohorts emit
         # target 0 and the scorer skips the slot).
         **({
-            "images_min": min(image_counts),
-            "images_max": max(3, max(image_counts)),
-            "images_target": int(round(sum(image_counts) / len(image_counts))),
+            "images_min": i_min,
+            "images_max": max(3, i_max),
+            "images_target": i_target,
         } if image_counts else {}),
     }
 
