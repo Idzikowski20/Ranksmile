@@ -1,0 +1,20 @@
+src/infrastructure/config/scoreColor.ts
+  s_8a599cee1c9d24::t_1ec1ae45cea42d 14-16
+  s_8a599cee1c9d24::t_ace778fae957e8 5-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "48d2cb119524637ad249a7720b902098dac3e661",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
