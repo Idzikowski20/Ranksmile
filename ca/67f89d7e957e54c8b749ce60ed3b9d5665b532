@@ -1,0 +1,42 @@
+src/infrastructure/aiVisibility/aiVisibilityRead.ts
+  s_8a599cee1c9d24::t_dc9118051c5e49 69
+  s_8a599cee1c9d24::t_28b37a09271743 110-112
+pages/api/ai-visibility/[slug]/data.ts
+  s_8a599cee1c9d24::t_256c56d4fa408f 149-150
+  s_8a599cee1c9d24::t_29da4512d73671 160
+  s_8a599cee1c9d24::t_e75b2951561495 349
+  s_8a599cee1c9d24::t_d92b116fc4062f 312-313,315-326
+  s_8a599cee1c9d24::t_5c8f4fd3190bc5 9
+  s_8a599cee1c9d24::t_5ef2facc2baab1 335-337,339,343
+pages/sites/[domain]/ai-visibility/prompts.tsx
+  s_8a599cee1c9d24::t_ad77b2abadd784 77-78
+__tests__/lib/aiVisibilityRead.test.ts
+  s_8a599cee1c9d24::t_b0256aa33ba892 57-60
+src/core/domain/aiVisibility/metricsOverview.ts
+  s_8a599cee1c9d24::t_d7d145186a7d4c 63-83,85-88,90-104,106-111,113-120,122-125
+  s_8a599cee1c9d24::t_24bf96bc8be616 105,112
+  s_8a599cee1c9d24::t_b7e9a063633665 84,89
+  s_8a599cee1c9d24::t_066099f93bc2c0 121
+src/core/domain/aiVisibility/metricsTypes.ts
+  s_8a599cee1c9d24::t_a2e961259354c5 14-16
+src/core/domain/aiVisibility/metrics.ts
+  s_8a599cee1c9d24::t_3e5c895d6fc63c 22-23
+__tests__/lib/aiVisibilityBrandOverview.test.ts
+  s_8a599cee1c9d24::t_f51d581b258185 1-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ca67f89d7e957e54c8b749ce60ed3b9d5665b532",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
