@@ -61,6 +61,8 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
   // The workspace has no WordPress site linked yet — an expected, fixable state, not a
   // failure. Rendered as a helpful panel with a connect CTA, never a red error.
   const [notConnected, setNotConnected] = useState(false);
+  // Bumped to re-run the options fetch (articleId change or a tab-focus re-check).
+  const [reloadKey, setReloadKey] = useState(0);
   const [step, setStep] = useState<'choose' | 'details' | 'success'>('choose');
   const [mode, setMode] = useState<'create' | 'update' | null>(null);
   const [showBanner, setShowBanner] = useState(true);
@@ -110,7 +112,17 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
         else setLoadError(e?.message || 'Could not load options');
       });
     return () => { active = false; };
-  }, [articleId]);
+  }, [articleId, reloadKey]);
+
+  // Re-check when the user returns to this tab — e.g. after connecting WordPress in the
+  // settings tab the 'Connect WordPress' button opened — so the modal refreshes itself
+  // instead of forcing a close/reopen. Only while still showing the no-connection state.
+  useEffect(() => {
+    if (!notConnected) return undefined;
+    const onFocus = () => setReloadKey((k) => k + 1);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [notConnected]);
 
   const submit = async () => {
     if (submitting) return;
