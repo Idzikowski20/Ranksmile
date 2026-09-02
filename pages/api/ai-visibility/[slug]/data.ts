@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
-import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '@/src/core/domain/aiVisibility/metrics';
+import { aggregateSources, buildSnapshotsForScan, rankCompetitors, rankBrandProfiles, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '@/src/core/domain/aiVisibility/metrics';
 import { loadScanResultRows, loadScanCitationRows, getDisplayScan, getPreviousDisplayScan } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import { refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
@@ -249,19 +249,38 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          });
       }
       if (view === 'competitors') {
-         // Ranksmile-style ranking: every cited competitor DOMAIN with its full
-         // overview metrics, sorted by visibility desc. Respects prompt/model filters.
-         const all = filterRows(await loadScanCitationRows(scan.id));
-         const byDomain = buildSnapshotsForScan(all, domain.domain, { fullDetailTopCompetitors: 0 });
-         const ranked = rankCompetitors(byDomain, domain.domain);
-         return res.status(200).json({
-            competitors: ranked.map((c) => ({
-               domain: c.domain,
-               visibilityScore: c.snapshot.overview.visibilityScore,
-               mentionRate: c.snapshot.overview.mentionRate,
-               avgPosition: c.snapshot.overview.avgPosition,
-            })),
-         });
+         // Brand-keyed, like the reference tool: one row per brand the answers name (the
+         // tracked brand included), sorted by presence. Domain-keyed ranking still backs the
+         // citation-overlap views, where a site really is the unit.
+         const promptFilter = parseIds(req.query.prompts);
+         const modelFilter = parseList(req.query.models);
+
+         // Unfiltered view reads the profiles the "building brand profiles" phase wrote;
+         // any filter has to be scored live, since stored profiles cover the whole scan.
+         if (!promptFilter.length && !modelFilter.length) {
+            const stored = await queryRows<{ brand: string; domain: string | null; mentions: number; avg_position: number | null; presence_score: number | null }>(
+               `SELECT brand, domain, mentions, avg_position, presence_score
+                FROM ai_vis_brand_profiles WHERE scan_id = ? ORDER BY presence_score DESC, mentions DESC`,
+               [scan.id],
+            );
+            if (stored.length) {
+               const pairsRow = await queryOne<{ n: number }>('SELECT COUNT(*) AS n FROM ai_vis_results WHERE scan_id = ?', [scan.id]);
+               const pairs = Math.max(1, Number(pairsRow?.n ?? 0));
+               return res.status(200).json({
+                  competitors: stored.map((p) => ({
+                     brand: p.brand,
+                     domain: p.domain || '',
+                     mentions: p.mentions,
+                     mentionRate: Math.round((p.mentions / pairs) * 100),
+                     avgPosition: p.avg_position,
+                     visibilityScore: p.presence_score ?? 0,
+                  })),
+               });
+            }
+         }
+
+         const all = filterRows(await loadScanResultRows(scan.id));
+         return res.status(200).json({ competitors: rankBrandProfiles(all) });
       }
       if (view === 'competitor-detail') {
          const comp = typeof req.query.competitor === 'string' ? req.query.competitor : '';

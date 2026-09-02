@@ -175,7 +175,9 @@ export function useAiVisPromptTopics(slug: string | undefined, params: { prompts
       { enabled: !!slug, staleTime: 30_000, keepPreviousData: true });
 }
 
-export type CompetitorRow = { domain: string; visibilityScore: number; mentionRate: number; avgPosition: number | null };
+/** Brand-keyed competitor row (reference-tool parity): the brand is the identity, the
+ *  domain is optional context for the favicon and the domain-keyed detail modal. */
+export type CompetitorRow = { brand: string; domain: string; mentions?: number; visibilityScore: number; mentionRate: number; avgPosition: number | null };
 export function useAiVisCompetitors(slug: string | undefined, params: { prompts?: number[]; models?: string[] }) {
    const q = new URLSearchParams({ view: 'competitors' });
    if (params.prompts?.length) q.set('prompts', params.prompts.join(','));

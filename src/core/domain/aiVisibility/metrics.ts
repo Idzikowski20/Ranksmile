@@ -10,6 +10,7 @@
  */
 import { computeOverview, ownDomainPosition, mean, pairScore } from '@/src/core/domain/aiVisibility/metricsOverview';
 import { BLOCKED_CITATION_DOMAINS, isBlockedCitationDomain } from '@/src/core/domain/aiVisibility/blockedDomains';
+import { presenceScore } from '@/src/core/domain/aiVisibility/presence';
 import type {
   GapCard,
   ResultRow,
@@ -445,6 +446,56 @@ export function rankCompetitors(byDomain: Map<string, DomainSnapshot>, ownDomain
     .filter(([domain]) => domain !== own && !domain.endsWith(`.${own}`))
     .map(([domain, snapshot]) => ({ domain, snapshot }))
     .sort((a, b) => compositeScore(b.snapshot) - compositeScore(a.snapshot));
+}
+
+export type BrandProfile = {
+   brand: string,
+   domain: string,
+   mentions: number,
+   mentionRate: number,
+   avgPosition: number | null,
+   visibilityScore: number,
+};
+
+/**
+ * Brand-keyed ranking — one row per brand the answers name, which is how the reference
+ * tool reports competitors (its Konkurenci list is brand names, not domains, and it
+ * includes the tracked brand itself). Domain-keyed ranking (rankCompetitors) stays for the
+ * citation-overlap views, where the unit really is a site.
+ *
+ * The triple is the same one the own-brand gauge reports, so a competitor's number and
+ * ours are directly comparable: mention rate over every (prompt × model) pair, mean
+ * appearance position where mentioned, and the calibrated presence score.
+ */
+export function rankBrandProfiles(rows: ResultRow[]): BrandProfile[] {
+   const pairs = rows.length;
+   if (!pairs) return [];
+   const agg = new Map<string, { brand: string, domain: string, mentions: number, posSum: number }>();
+   for (const r of rows) {
+      for (const b of r.brands) {
+         const key = b.brand.trim().toLowerCase();
+         if (!key) continue;
+         const e = agg.get(key) ?? { brand: b.brand.trim(), domain: b.domain, mentions: 0, posSum: 0 };
+         e.mentions += 1;
+         e.posSum += b.pos;
+         if (!e.domain && b.domain) e.domain = b.domain;
+         agg.set(key, e);
+      }
+   }
+   return Array.from(agg.values())
+      .map((e) => {
+         const mentionRate = Math.round((e.mentions / pairs) * 100);
+         const avgPosition = e.mentions ? Math.round((e.posSum / e.mentions) * 10) / 10 : null;
+         return {
+            brand: e.brand,
+            domain: e.domain,
+            mentions: e.mentions,
+            mentionRate,
+            avgPosition,
+            visibilityScore: presenceScore({ mentionRate, avgPosition }),
+         };
+      })
+      .sort((a, b) => b.visibilityScore - a.visibilityScore || b.mentions - a.mentions);
 }
 
 export type DomainGapCard = { domain: string, gap: number, shared: number, you: number };

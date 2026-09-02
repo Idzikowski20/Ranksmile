@@ -36,7 +36,9 @@ const AiVisibilityCompetitors: NextPage = () => {
 
    const competitorsQ = useAiVisCompetitors(slug, { prompts: promptSel, models: modelSel });
    const competitors: CompetitorRow[] = useMemo(() => competitorsQ.data?.competitors || [], [competitorsQ.data]);
-   const domains = useMemo(() => competitors.map((c) => c.domain), [competitors]);
+   // Rows are brand-keyed now; only brands we saw cited carry a domain, and the detail
+   // modal is domain-keyed — so prev/next navigation walks the openable subset.
+   const domains = useMemo(() => competitors.map((c) => c.domain).filter(Boolean), [competitors]);
 
    // Resolve the open competitor by domain against the current list so re-sorting or
    // re-fetching the list can never make the modal jump to a different row.
