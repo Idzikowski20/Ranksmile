@@ -11,6 +11,10 @@ interface Props {
   delta?: number;
   /** Where the delta badge sits relative to the gauge. */
   deltaPlacement?: 'right' | 'left' | 'below';
+  /** Split the two arcs: left half = left score, right half = right score, each coloured
+   *  by its own value. The centre number stays `score` (the blend). Surfer draws its
+   *  content-score gauge this way — left arc SEO, right arc AI. Omit for a single value. */
+  halves?: { left: number; right: number };
 }
 
 // Split dual-arc gauge (left + right half), each with a grey track and a coloured
@@ -106,12 +110,19 @@ const CountUpNumber = ({ value, font }: { value: number; font: number }) => {
   );
 };
 
-const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlacement = 'below' }: Props) => {
+const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlacement = 'below', halves }: Props) => {
   const reduced = useReducedMotion();
-  const s = Math.max(0, Math.min(100, Math.round(score || 0)));
-  const color = scoreColor(s);
+  const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n || 0)));
+  const s = clamp(score);
+  // Each arc scores independently when `halves` is given (left = SEO, right = AI); without
+  // it both arcs mirror the single score, as before.
+  const leftS = clamp(halves ? halves.left : score);
+  const rightS = clamp(halves ? halves.right : score);
+  const leftColor = scoreColor(leftS);
+  const rightColor = scoreColor(rightS);
   // No data yet → grey track only, no coloured fill, "—" in the centre.
-  const offset = pending ? ARC : ARC * (1 - s / 100);
+  const leftOffset = pending ? ARC : ARC * (1 - leftS / 100);
+  const rightOffset = pending ? ARC : ARC * (1 - rightS / 100);
   const size = sizeProp ?? (compact ? 56 : 96);
   const numberFont = size <= 64 ? 16 : 24;
   // No overshooting cubic-bezier — overshoot on SVG stroke-dashoffset glitches in prod builds.
@@ -124,9 +135,9 @@ const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlace
       <svg viewBox="0 0 100 100" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
         <g>
           <path fill="none" strokeWidth={12} strokeLinecap="round" d={LEFT} stroke="var(--koala-border-primary)" strokeDasharray="111.70107212763709 9999" opacity={0.5} />
-          <path fill="none" strokeWidth={12} strokeLinecap="round" d={LEFT} stroke={color} strokeDasharray="111.70107212763709 9999" strokeDashoffset={offset} style={fillStyle} />
+          <path fill="none" strokeWidth={12} strokeLinecap="round" d={LEFT} stroke={leftColor} strokeDasharray="111.70107212763709 9999" strokeDashoffset={leftOffset} style={fillStyle} />
           <path fill="none" strokeWidth={12} strokeLinecap="round" d={RIGHT} stroke="var(--koala-border-primary)" strokeDasharray="111.70107212763709 9999" opacity={0.5} />
-          <path fill="none" strokeWidth={12} strokeLinecap="round" d={RIGHT} stroke={color} strokeDasharray="111.70107212763709 9999" strokeDashoffset={offset} style={fillStyle} />
+          <path fill="none" strokeWidth={12} strokeLinecap="round" d={RIGHT} stroke={rightColor} strokeDasharray="111.70107212763709 9999" strokeDashoffset={rightOffset} style={fillStyle} />
         </g>
         {TICKS.map((d) => (
           <path key={d} d={d} stroke="var(--koala-text-primary)" strokeOpacity={0.3} strokeWidth={1.5} strokeLinecap="butt" />

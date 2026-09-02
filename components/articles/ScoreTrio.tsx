@@ -63,7 +63,8 @@ const ScoreTrio = ({ seo, ai, hasAi, content, onSeoClick, onAiClick, deltas }: {
         {/* Right highlight pill: centre + AI side */}
         <div style={{ ...overlayBase, right: 0, borderRadius: '50px 12px 12px 50px', opacity: hovered === 'ai' ? 1 : 0 }} />
         <SideGauge label="SEO" align="start" score={seo} delta={deltas?.seo} deltaPlacement="right" onClick={onSeoClick} onHover={(on) => setHovered(on ? 'seo' : null)} />
-        <div style={{ position: 'relative', zIndex: 10, flexShrink: 0 }}><ScoreGauge score={overall} size={100} delta={deltas?.overall} deltaPlacement="below" /></div>
+        {/* Centre gauge: left arc = SEO, right arc = AI (Surfer-style), number = blend. */}
+        <div style={{ position: 'relative', zIndex: 10, flexShrink: 0 }}><ScoreGauge score={overall} halves={hasAi ? { left: seo, right: ai } : undefined} size={100} delta={deltas?.overall} deltaPlacement="below" /></div>
         <SideGauge label="AI Search" align="end" score={ai} pending={!hasAi} delta={deltas?.ai} deltaPlacement="left" onClick={onAiClick} onHover={(on) => setHovered(on ? 'ai' : null)} />
       </div>
     </div>
