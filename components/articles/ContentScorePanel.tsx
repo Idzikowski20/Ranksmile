@@ -114,6 +114,9 @@ interface Props {
   /** Live scores from optimize re-score — overrides gauge values during a run. */
   /** AO-8b: live post-optimize scores — seo, ai, and overall from one synchronous pass. */
   optimizeLiveScores?: { seo?: number; ai?: number; overall?: number };
+  /** Emits the exact SEO/AI/overall the gauge displays, so the page can persist the same
+   *  numbers the editor shows (the articles list reads them). */
+  onLiveScores?: (s: { seo: number; ai: number; overall: number }) => void;
   /** Background deep analysis (import flow) — replaces panel with progress UI. */
   /** Bump from editor chrome to open Publish or Export (toolbar Publish button). */
   openPublishSignal?: number;
@@ -332,6 +335,7 @@ const ContentScorePanel = ({
   initialAiReadability,
   scoreDeltas,
   optimizeLiveScores,
+  onLiveScores,
   domainSlug,
   openPublishSignal,
 }: Props) => {
@@ -599,6 +603,12 @@ const ContentScorePanel = ({
   const displayAi = optimizeLiveScores?.ai ?? baseAiScore;
   const displayContent = optimizeLiveScores?.overall
     ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
+
+  // Surface the exact displayed trio so the page can persist the same numbers the editor
+  // shows — the articles list reads them and must not diverge.
+  useEffect(() => {
+    onLiveScores?.({ seo: displaySeo, ai: displayAi, overall: displayContent });
+  }, [displaySeo, displayAi, displayContent, onLiveScores]);
 
   const historyDelta = useCoverageHistoryDelta(articleId);
   const trioDeltas = scoreDeltas ?? (historyDelta ? { ai: historyDelta.delta } : undefined);

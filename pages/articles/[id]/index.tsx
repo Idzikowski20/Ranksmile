@@ -403,6 +403,21 @@ const ArticleEditorPage: NextPage = () => {
   const lastSavedSig = useRef<string | null>(null);
   const lastVersionAt = useRef(0);
   const flushRef = useRef<((unload?: boolean) => void) | null>(null);
+  // The exact SEO/AI/overall the ContentScorePanel gauge shows, so doSave persists the same
+  // numbers the editor displays (the articles list reads them). A ref, so save closures
+  // captured in timeouts always read the latest without re-creating them.
+  const panelScoresRef = useRef<{ seo: number; ai: number; overall: number } | null>(null);
+  const [panelScoresReady, setPanelScoresReady] = useState(false);
+  const handlePanelScores = useCallback((s: { seo: number; ai: number; overall: number }) => {
+    panelScoresRef.current = s;
+    setPanelScoresReady(true);
+  }, []);
+  // Switching articles without a remount must not carry the previous article's scores into
+  // the new one's sync — reset until the panel re-emits for the new id.
+  useEffect(() => {
+    panelScoresRef.current = null;
+    setPanelScoresReady(false);
+  }, [id]);
   const [article, setArticle] = useState<Article | null>(null);
   const [highlightTerms, setHighlightTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -1002,13 +1017,20 @@ const ArticleEditorPage: NextPage = () => {
       _heading_count: scored.headings,
       _paragraph_count: scored.paragraphs,
     };
-    // Persist the LIVE seo/ai and their blend so the list gauge shows the same number as
-    // the editor's Content Score. Previously only ai_score was stored and _content_score
-    // held SEO-only, so the list blended a stale seo_score and diverged (50 vs 73).
-    const persistAi = scored.liveItems.length > 0 || scoreData.ai_score != null;
-    updatedScoreData.seo_score = scored.seo;
-    if (persistAi) updatedScoreData.ai_score = scored.ai;
-    const contentScore = persistAi ? computeOverallContentScore(scored.seo, scored.ai) : scored.seo;
+    // Persist the SAME numbers the editor's Content Score gauge shows so the list matches.
+    // scoreArticleHtml.ai is coverage-only and undercounts vs the panel's AI (which also
+    // reads the AI-visibility summary via resolveAiScore) — 68/52 blended to 61 in the list
+    // while the editor showed 68/78→73. Prefer the panel's emitted trio; fall back to the
+    // recomputed scores when the panel isn't mounted (review/write views).
+    const panel = panelScoresRef.current;
+    const persistAi = panel != null || scored.liveItems.length > 0 || scoreData.ai_score != null;
+    const seoOut = panel ? panel.seo : scored.seo;
+    const aiOut = panel ? panel.ai : scored.ai;
+    updatedScoreData.seo_score = seoOut;
+    if (persistAi) updatedScoreData.ai_score = aiOut;
+    const contentScore = panel
+      ? panel.overall
+      : (persistAi ? computeOverallContentScore(scored.seo, scored.ai) : scored.seo);
     updatedScoreData._computed_score = contentScore;
     updatedScoreData._content_score = contentScore;
     if (versionMeta) updatedScoreData._ao_meta = versionMeta;
@@ -1136,11 +1158,14 @@ const ArticleEditorPage: NextPage = () => {
     const key = String(id ?? '');
     if (isLoading || !article || saveSuspended || !key) return;
     if (!isUsableArticleHtml(editorHtml)) return;
+    // Wait for the panel to emit its displayed scores, else doSave would persist the
+    // coverage-only fallback and mark this article synced with the wrong number.
+    if (!panelScoresReady || !panelScoresRef.current) return;
     if (scoreSyncedRef.current === key) return;
     scoreSyncedRef.current = key;
     void doSave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, article, editorHtml, isLoading, saveSuspended]);
+  }, [id, article, editorHtml, isLoading, saveSuspended, panelScoresReady]);
 
   // Flush pending edits immediately on tab-hide / close, in-app navigation, and Cmd/Ctrl+S —
   // so changes are never lost to the debounce window (the main gap vs. Ranksmile-style autosave).
@@ -2336,6 +2361,7 @@ const ArticleEditorPage: NextPage = () => {
                       headingCount={headingCount}
                       scoreData={scoreData}
                       internalLinksCount={internalLinksCount}
+                      onLiveScores={handlePanelScores}
                       html={editorHtml}
                       scoreDeltas={aoScoresReady && aoLiveSnapshot ? (() => {
                         const aiBase = aiVisibilityBaselineRef.current;
