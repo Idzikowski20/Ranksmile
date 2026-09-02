@@ -1,0 +1,21 @@
+__tests__/lib/ao/strategyRoutingWeak.test.ts
+  s_8a599cee1c9d24::t_b9bc4e071f9716 40-68
+src/infrastructure/ao/optimizationPolicy.ts
+  s_8a599cee1c9d24::t_69808cebb2e27f 155-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3723580100e810bdb614e705bd05c18605a4dd65",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
