@@ -1,0 +1,21 @@
+pages/articles/[id]/index.tsx
+  s_8a599cee1c9d24::t_c0949134d2f66d 1005-1011
+  s_8a599cee1c9d24::t_77ec8f6ab11854 1134,1136-1137,1139-1140,1143
+  s_8a599cee1c9d24::t_fc630cc16ab851 1128-1133,1135,1138,1141-1142,1144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "bb67b9bf551e39388217f08e66718b86c1345e8c",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
