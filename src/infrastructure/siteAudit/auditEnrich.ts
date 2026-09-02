@@ -5,7 +5,7 @@
 // Injected into computeAudit; any failure degrades to null → placeholder result.
 import { getCompetitors, scanCompetitors } from '@/src/infrastructure/competitors/competitorScan';
 import { fetchPage, extractFactorValues, RealAuditData, auditContentScore, termScoreFraction } from '@/src/infrastructure/siteAudit/auditCompute';
-import type { RichTerm } from '@/src/core/domain/competitors/contentScore';
+import { cohortMin, structureFraction, type CompetitorScoreTargets, type RichTerm } from '@/src/core/domain/competitors/contentScore';
 import { getSearchVolumes } from '@/src/infrastructure/dataforseo/dataforseo';
 import { callSidecar } from '@/src/infrastructure/http/sidecar';
 import { isContentCompetitor } from '@/src/core/domain/competitors/relevance';
@@ -82,13 +82,19 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
    // competitor are scored by the SAME model. Competitor-set averages are shared back so
    // buildAuditResult can score "You" identically. Only when we actually have terms.
    const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+   const headingCounts = competitors.map((c) => c.values.h2_h6_count || 0);
+   const paragraphCounts = competitors.map((c) => c.values.p_count || 0);
    const avgWords = mean(competitors.map((c) => c.values.word_count_body || 0));
-   const avgHeadings = mean(competitors.map((c) => c.values.h2_h6_count || 0));
-   const avgPs = mean(competitors.map((c) => c.values.p_count || 0));
-   const structFrac = (v: Record<string, number>) => (
-      ((avgHeadings > 0 ? Math.min(1, (v.h2_h6_count || 0) / avgHeadings) : 0)
-         + (avgPs > 0 ? Math.min(1, (v.p_count || 0) / avgPs) : 0)) / 2
-   );
+   const avgHeadings = mean(headingCounts);
+   const avgPs = mean(paragraphCounts);
+   const contentTargets: CompetitorScoreTargets = {
+      avgWords,
+      avgHeadings,
+      avgPs,
+      headingsMin: cohortMin(headingCounts),
+      psMin: cohortMin(paragraphCounts),
+   };
+   const structFrac = (v: Record<string, number>) => structureFraction(v.h2_h6_count || 0, v.p_count || 0, contentTargets);
 
    const outCompetitors = competitors.map(({ bodyText, ...c }) => {
       if (!terms.length) return c;
@@ -100,6 +106,6 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
    return {
       competitors: outCompetitors,
       terms,
-      contentTargets: terms.length ? { avgWords, avgHeadings, avgPs } : undefined,
+      contentTargets: terms.length ? contentTargets : undefined,
    };
 }

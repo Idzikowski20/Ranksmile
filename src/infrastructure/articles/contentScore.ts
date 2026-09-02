@@ -64,7 +64,7 @@ export interface ScoreData {
    paa_questions?: string[];
    /** When set, content score uses Ranksmile-style competitor benchmarking. */
    scoring_model?: 'competitor' | 'legacy';
-   content_targets?: { avgWords: number; avgHeadings: number; avgPs: number };
+   content_targets?: { avgWords: number; avgHeadings: number; avgPs: number; headingsMin?: number; psMin?: number };
    /** Full Ranksmile-style audit payload (factors, terms, internal links). */
    audit_result?: import('@/src/core/domain/audit/types').AuditResult;
    /** On-page SEO score from audit factor verdicts. */
@@ -437,13 +437,19 @@ export function computeContentScore(
       && scoreData.content_targets
       && scoreData.terms?.length
    ) {
+      // The band floor decides the structure grade. Analyses written before the floor
+      // was stored still carry the SERP cohort's own minimums, so they get it too.
       const base = computeCompetitorContentScore(
          plainText,
          wordCount,
          headingCount,
          paragraphCount ?? 0,
          scoreData.terms,
-         scoreData.content_targets,
+         {
+            ...scoreData.content_targets,
+            headingsMin: scoreData.content_targets.headingsMin ?? scoreData.headings_min,
+            psMin: scoreData.content_targets.psMin ?? scoreData.paragraphs_min,
+         },
       );
       let bonus = 0;
       if (html && keyword) {

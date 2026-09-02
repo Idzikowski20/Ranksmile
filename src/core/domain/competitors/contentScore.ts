@@ -21,9 +21,49 @@ export type CompetitorScoreTargets = {
   avgWords: number;
   avgHeadings: number;
   avgPs: number;
+  /**
+   * Lower edge of the competitor band. Reaching it is full credit; the average above is
+   * a suggestion. Optional because score_data written before the band existed carries
+   * only the averages, and those articles fall back to the proportional grade.
+   */
+  headingsMin?: number;
+  psMin?: number;
 };
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+
+/** Smallest positive value in a cohort — the band floor. Undefined when nothing is measured. */
+export function cohortMin(xs: number[]): number | undefined {
+  const positive = xs.filter((n) => Number.isFinite(n) && n > 0);
+  return positive.length ? Math.min(...positive) : undefined;
+}
+
+function bandFraction(value: number, min: number | undefined, avg: number): number {
+  const floor = min !== undefined && min > 0 ? min : avg;
+  if (!(floor > 0)) return 0;
+  return Math.min(1, value / floor);
+}
+
+/**
+ * Structure grade: headings and paragraphs against the cohort's band floor.
+ *
+ * This divided by the cohort average, so an article with 13 headings against a
+ * 23-heading average kept 57% of the slot. Surfer grades the same article at 100:
+ * its guideline is a per-word ratio with a min/avg/max, the average is the number it
+ * *shows*, and anything at or above the minimum passes — 13 clears a floor of 12.3.
+ * Same for paragraphs (44 against a floor of 5.5 and a suggested 75). The four call
+ * sites that each had a copy of the old formula all route here now.
+ */
+export function structureFraction(
+  headingCount: number,
+  paragraphCount: number,
+  targets: CompetitorScoreTargets,
+): number {
+  return (
+    bandFraction(headingCount, targets.headingsMin, targets.avgHeadings)
+    + bandFraction(paragraphCount, targets.psMin, targets.avgPs)
+  ) / 2;
+}
 
 /** 60% term coverage + 25% word depth vs peers + 15% structure. */
 export function auditContentScore(coverageFrac: number, wordFrac: number, structFrac: number): number {
@@ -87,9 +127,5 @@ export function computeCompetitorContentScore(
 ): number {
   const cov = terms.length ? termScoreFraction(bodyText, terms) : 0;
   const wordFrac = targets.avgWords > 0 ? wordCount / targets.avgWords : 0;
-  const structFrac = (
-    (targets.avgHeadings > 0 ? Math.min(1, headingCount / targets.avgHeadings) : 0)
-    + (targets.avgPs > 0 ? Math.min(1, paragraphCount / targets.avgPs) : 0)
-  ) / 2;
-  return auditContentScore(cov, wordFrac, structFrac);
+  return auditContentScore(cov, wordFrac, structureFraction(headingCount, paragraphCount, targets));
 }

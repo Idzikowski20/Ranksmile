@@ -8,7 +8,12 @@ import {
   termScoreFraction,
   type RealAuditData,
 } from '@/src/infrastructure/siteAudit/auditCompute';
-import type { CompetitorScoreTargets, RichTerm } from '@/src/core/domain/competitors/contentScore';
+import {
+  cohortMin,
+  structureFraction,
+  type CompetitorScoreTargets,
+  type RichTerm,
+} from '@/src/core/domain/competitors/contentScore';
 import { calibrateTermRangesFromCorpus } from '@/src/core/domain/competitors/termCalibration';
 import { enrichTermsWithSalience } from '@/src/infrastructure/competitors/termSalience';
 
@@ -92,16 +97,18 @@ export async function buildCompetitorBenchmarks(
     calibratedTerms = enrichTermsWithSalience(calibratedTerms, corpusHtmls);
   }
 
+  const headingCounts = rows.map((c) => c.values.h2_h6_count || 0);
+  const paragraphCounts = rows.map((c) => c.values.p_count || 0);
   const targets: CompetitorScoreTargets = {
     avgWords: mean(rows.map((c) => c.values.word_count_body || 0)),
-    avgHeadings: mean(rows.map((c) => c.values.h2_h6_count || 0)),
-    avgPs: mean(rows.map((c) => c.values.p_count || 0)),
+    avgHeadings: mean(headingCounts),
+    avgPs: mean(paragraphCounts),
+    // The band floor: the average is what the editor suggests, the floor is what scores.
+    headingsMin: cohortMin(headingCounts),
+    psMin: cohortMin(paragraphCounts),
   };
 
-  const structFrac = (v: Record<string, number>) => (
-    ((targets.avgHeadings > 0 ? Math.min(1, (v.h2_h6_count || 0) / targets.avgHeadings) : 0)
-      + (targets.avgPs > 0 ? Math.min(1, (v.p_count || 0) / targets.avgPs) : 0)) / 2
-  );
+  const structFrac = (v: Record<string, number>) => structureFraction(v.h2_h6_count || 0, v.p_count || 0, targets);
 
   const calibrated = rows.map(({ bodyText, ...c }) => {
     if (!calibratedTerms.length) return c;
