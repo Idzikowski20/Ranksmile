@@ -6,6 +6,9 @@ export function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/drafts')
     || pathname.startsWith('/invite')
     || pathname.startsWith('/legal')
+    // MCP consent screen: it authenticates itself and offers its own sign-in link,
+    // so the shell must not intercept a signed-out visitor mid-OAuth-flow.
+    || pathname.startsWith('/oauth')
     || pathname.startsWith('/dev')
     || pathname === '/ai-visibility-tracking'
     || pathname === '/seo-content-editor'

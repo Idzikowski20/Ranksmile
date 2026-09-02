@@ -5,8 +5,12 @@ import { Icon } from '../koala/icons/Icon';
 import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
 
 const font = 'var(--font-family-primary)';
-const MCP_URL = 'https://mcp.ranksmile.pl/mcp';
 const DOCS_URL = 'https://ranksmile.pl';
+
+/** The MCP endpoint served by this deployment — never a hardcoded host, so dev shows dev. */
+const mcpUrl = (): string => (typeof window === 'undefined' ? '/mcp' : `${window.location.origin}/mcp`);
+
+type Connection = { client_id: string; client_name: string | null; created_at: string | null };
 
 type Tab = 'mcp' | 'api';
 
@@ -111,10 +115,65 @@ const cardStyle: React.CSSProperties = {
   background: 'var(--koala-bg-primary)',
 };
 
+/** Agents that completed the consent flow, with a way to cut them off again. */
+const ConnectedAgents = () => {
+  const [items, setItems] = useState<Connection[] | null>(null);
+
+  const load = async () => {
+    try {
+      const res = await fetch('/api/mcp/connections', { credentials: 'same-origin' });
+      const body = (await res.json()) as { connections?: Connection[] };
+      setItems(res.ok ? body.connections ?? [] : []);
+    } catch {
+      setItems([]);
+    }
+  };
+
+  React.useEffect(() => { void load(); }, []);
+
+  const revoke = async (clientId: string) => {
+    try {
+      const res = await fetch(`/api/mcp/connections?client_id=${encodeURIComponent(clientId)}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+      if (!res.ok) throw new Error('failed');
+      toast.success('Dostęp cofnięty');
+      await load();
+    } catch {
+      toast.error('Nie udało się cofnąć dostępu');
+    }
+  };
+
+  if (items === null || items.length === 0) return null;
+
+  return (
+    <div style={cardStyle}>
+      <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--koala-text-primary)' }}>Połączone agenty</div>
+      {items.map((c) => (
+        <div key={c.client_id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <div style={{ fontSize: 14, color: 'var(--koala-text-primary)' }}>{c.client_name || c.client_id}</div>
+            {c.created_at ? (
+              <div style={{ fontSize: 13, color: 'var(--koala-text-tertiary)' }}>
+                Połączono {new Date(c.created_at).toLocaleDateString('pl-PL')}
+              </div>
+            ) : null}
+          </div>
+          <Button type="button" variant="secondary" size="sm" onClick={() => revoke(c.client_id)}>
+            Cofnij dostęp
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const McpTab = () => {
+  const url = mcpUrl();
   const copyUrl = async () => {
     try {
-      await navigator.clipboard.writeText(MCP_URL);
+      await navigator.clipboard.writeText(url);
       toast.success('Skopiowano adres do schowka');
     } catch {
       toast.error('Nie udało się skopiować');
@@ -153,7 +212,7 @@ const McpTab = () => {
               color: 'var(--koala-text-primary)',
             }}
           >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{MCP_URL}</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{url}</span>
           </div>
           <Button
             type="button"
@@ -165,9 +224,12 @@ const McpTab = () => {
           />
         </div>
         <div style={{ fontSize: 14, color: 'var(--koala-text-tertiary)' }}>
-          Skopiuj ten adres i wklej go w konfiguracji MCP swojego agenta.
+          Skopiuj ten adres i wklej go w konfiguracji MCP swojego agenta. Przy pierwszym połączeniu
+          zobaczysz ekran zgody — dostęp jest tylko do odczytu.
         </div>
       </div>
+
+      <ConnectedAgents />
     </div>
   );
 };

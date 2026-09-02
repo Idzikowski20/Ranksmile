@@ -66,6 +66,16 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // The consent screen mints credentials on click, so it must never be framed.
+        // frame-ancestors is enforcing (the global CSP below is report-only) and wins
+        // over X-Frame-Options where both are present.
+        source: '/oauth/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
+      {
         source: '/:path*',
         headers: [
           // Clickjacking: nothing embeds this app in an iframe today.
@@ -104,6 +114,23 @@ const nextConfig = {
   },
   async rewrites() {
     return [
+      // ── MCP (Model Context Protocol) ──────────────────────────────────────
+      // The advertised endpoint is /mcp, which is what hosts expect and what the
+      // protected-resource metadata names; the implementation lives under /api.
+      { source: '/mcp', destination: '/api/mcp' },
+      // OAuth endpoints at the paths the authorization-server metadata publishes.
+      { source: '/auth', destination: '/oauth/authorize' },
+      { source: '/token', destination: '/api/mcp/oauth/token' },
+      { source: '/token/revocation', destination: '/api/mcp/oauth/revoke' },
+      { source: '/reg', destination: '/api/mcp/oauth/register' },
+      // Next cannot host a `.well-known` directory under pages/, so the two RFC
+      // documents live as API routes and are surfaced at their spec paths. RFC 9728
+      // inserts the resource path into the URL (/…-protected-resource/mcp), and some
+      // clients still probe the bare form, so both resolve.
+      { source: '/.well-known/oauth-authorization-server', destination: '/api/mcp/oauth/authorization-server' },
+      { source: '/.well-known/oauth-authorization-server/:path*', destination: '/api/mcp/oauth/authorization-server' },
+      { source: '/.well-known/oauth-protected-resource', destination: '/api/mcp/oauth/protected-resource' },
+      { source: '/.well-known/oauth-protected-resource/:path*', destination: '/api/mcp/oauth/protected-resource' },
       { source: '/content-editor', destination: '/articles' },
       { source: '/content-editor/:path*', destination: '/articles/:path*' },
       { source: '/workspace/:wsId/sites/articles/new', destination: '/articles/new' },

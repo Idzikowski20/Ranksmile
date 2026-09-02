@@ -6,7 +6,8 @@ describe('McpApiSettings', () => {
   it('shows the MCP tab by default with the connect URL', () => {
     render(<McpApiSettings />);
     expect(screen.getByText('Połącz z MCP Ranksmile')).toBeInTheDocument();
-    expect(screen.getByText(/mcp\.ranksmile\.pl\/mcp/)).toBeInTheDocument();
+    // The endpoint is this deployment's own origin, so the test asserts the path.
+    expect(screen.getByText(/\/mcp$/)).toBeInTheDocument();
   });
 
   it('switches to the API tab', () => {
