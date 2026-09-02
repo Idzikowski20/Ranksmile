@@ -320,13 +320,19 @@ export function collectScoreSlots(
       const earned = Math.round((covered / entityItems.length) * 25);
       push('terms', 'NLP terms', earned, 25, `${covered}/${entityItems.length} terms covered`);
    } else if (scoreData.terms?.length) {
+      // Surfer grades its curated working set (~80 `included`), not the whole ~350 pool.
+      // Score against included when the analysis carries the flag; older analyses without
+      // it score every term, exactly as before.
+      const scored = scoreData.terms.some((t) => t.included)
+         ? scoreData.terms.filter((t) => t.included)
+         : scoreData.terms;
       // SERP-first termWeight (doc_freq) with salience fallback — Etap 1
       const corpusSize = Math.max(1, scoreData.competitor_count || 10);
-      const totalWeight = scoreData.terms.reduce(
+      const totalWeight = scored.reduce(
         (s, t) => s + Math.max(t.target_count, 1) * termWeight({ ...t, corpusSize }),
         0,
       );
-      const termsRatio = scoreData.terms.reduce((s, t) => {
+      const termsRatio = scored.reduce((s, t) => {
          const actual = countOccurrences(plainText, t.term, t.term_words_regexps);
          const w = Math.max(t.target_count, 1) * termWeight({ ...t, corpusSize });
          return s + Math.min(actual / Math.max(t.target_count, 1), 1) * w;

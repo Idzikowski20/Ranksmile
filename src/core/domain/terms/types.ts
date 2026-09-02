@@ -17,4 +17,8 @@ export interface NlpTerm {
   lemma_key?: string;
   /** The competitor cohort itself uses this term in H2/H3 — it belongs in headings. */
   in_headings?: boolean;
+  /** Surfer ships a large extracted pool (~300) and a curated working set (~80) it asks
+   *  you to include; the SEO score grades the included set. `true` = in the working set.
+   *  Absent on pre-existing analyses → every term counts, as before. */
+  included?: boolean;
 }

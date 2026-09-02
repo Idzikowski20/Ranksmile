@@ -382,7 +382,12 @@ const ContentScorePanel = ({
 
   useEffect(() => {
     if (!scoreData?.terms) return;
-    const updated = scoreData.terms.map((t) => ({
+    // Show the curated working set (Surfer's ~80 `included`) rather than the full ~350
+    // pool; older analyses without the flag show every term, as before.
+    const working = scoreData.terms.some((t) => t.included)
+      ? scoreData.terms.filter((t) => t.included)
+      : scoreData.terms;
+    const updated = working.map((t) => ({
       ...t,
       current_count: countOccurrences(plainText, t.term, t.term_words_regexps),
     }));
