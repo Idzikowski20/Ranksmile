@@ -1,0 +1,25 @@
+components/articles/ResearchOutlinePanel.tsx
+  s_8a599cee1c9d24::t_14bcd65dc57a21 5-10
+  s_8a599cee1c9d24::t_b10f340b0c88ac 494-497
+components/articles/EngineIcons.tsx
+  s_8a599cee1c9d24::t_972ca1115f52d8 26-28
+  s_8a599cee1c9d24::t_62ec53cebd4faf 48,50-51
+public/engine-icons/perplexity.svg
+  s_8a599cee1c9d24::t_83dc1ed414ed44 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7e2e09304cc8ee63075c755c13c830f0073d1630",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
