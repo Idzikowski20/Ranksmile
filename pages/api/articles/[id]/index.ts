@@ -173,8 +173,9 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
       // refresh sends just this (no content/meta/image), so it never rewrites the article.
       if (score_override && typeof score_override === 'object') {
          const so = score_override as { seo?: unknown; ai?: unknown; overall?: unknown };
+         // Accept only real numbers — never coerce null/booleans/strings into a score.
          const clamp01 = (v: unknown): number | null =>
-            (Number.isFinite(Number(v)) ? Math.max(0, Math.min(100, Math.round(Number(v)))) : null);
+            (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : null);
          scoreDataObj = { ...(scoreDataObj ?? storedScoreData ?? {}) };
          const seoOv = clamp01(so.seo);
          const aiOv = clamp01(so.ai);
@@ -191,8 +192,10 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
             scoreDataObj._computed_score = overallOv;
          }
          // Never zero content_score on a partial override (only seo/ai sent): recompute it
-         // from the merged blob / prior value instead of leaving contentScore at 0.
-         contentScore = Number(scoreDataObj._content_score ?? scoreDataObj._computed_score ?? beforeScore ?? contentScore) || contentScore;
+         // from the merged blob / prior value. A finite 0 is a real score — keep it (|| would
+         // discard it and desync content_score from score_data).
+         const merged = Number(scoreDataObj._content_score ?? scoreDataObj._computed_score ?? beforeScore);
+         if (Number.isFinite(merged)) contentScore = merged;
       }
 
       const scoreDataJson = scoreDataObj ? JSON.stringify(scoreDataObj) : (score_data ? JSON.stringify(score_data) : null);

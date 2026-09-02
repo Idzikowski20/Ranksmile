@@ -45,7 +45,7 @@ import { useContentSettings } from '../../../services/contentSettings';
 import { useArticleKeywords } from '../../../services/articleKeywords';
 import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '@/src/infrastructure/articles/contentScore';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
-import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import { computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
 import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '@/src/core/domain/articles/deepAnalysisProgress';
@@ -1029,14 +1029,24 @@ const ArticleEditorPage: NextPage = () => {
     // the resolved article, so its ref is stale — ignore the panel there and score the
     // final override html directly.
     const panel = contentOverride ? null : panelScoresRef.current;
-    const hasAiData = panel ? panel.ai != null : (scored.liveItems.length > 0 || scoreData.ai_score != null);
+    // Without the panel (AO save on the resolved HTML), resolve AI the way the panel does —
+    // scored.ai is coverage-only and would drop a summary-based AI from the saved overall.
+    const resolvedAi = resolveAiScore({
+      summary: aiVisibilitySummary,
+      articleText: text,
+      answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
+      coverageOverall: scored.liveItems.length > 0 ? scored.ai : null,
+    });
+    const hasAiData = panel ? panel.ai != null
+      : (scored.liveItems.length > 0 || scoreData.ai_score != null || resolvedAi > 0);
     const seoOut = panel ? panel.seo : scored.seo;
-    const aiOut = panel ? (panel.ai ?? scored.ai) : scored.ai;
+    const aiResolved = Math.max(scoreData.ai_score ?? 0, resolvedAi, scored.ai);
+    const aiOut = panel ? (panel.ai ?? scored.ai) : aiResolved;
     updatedScoreData.seo_score = seoOut;
     if (hasAiData) updatedScoreData.ai_score = aiOut;
     const contentScore = panel
       ? panel.overall
-      : (hasAiData ? computeOverallContentScore(scored.seo, scored.ai) : scored.seo);
+      : (hasAiData ? computeOverallContentScore(scored.seo, aiOut) : scored.seo);
     updatedScoreData._computed_score = contentScore;
     updatedScoreData._content_score = contentScore;
     if (versionMeta) updatedScoreData._ao_meta = versionMeta;
@@ -1163,6 +1173,7 @@ const ArticleEditorPage: NextPage = () => {
   // fields refresh. Skipped while a review/optimize save-suspend is active or the doc is
   // not a usable article.
   const scoreSyncedRef = useRef<string | null>(null);
+  const scoreSyncAbortRef = useRef<AbortController | null>(null);
   useEffect(() => {
     const key = String(id ?? '');
     if (isLoading || !article || saveSuspended || !key) return;
@@ -1174,6 +1185,11 @@ const ArticleEditorPage: NextPage = () => {
     const syncKey = `${key}:${panelScoresSig}`;
     if (scoreSyncedRef.current === syncKey) return;
     scoreSyncedRef.current = syncKey;
+    // Serialize: abort any in-flight refresh so an older request can't land after a newer
+    // one and overwrite the newest score.
+    scoreSyncAbortRef.current?.abort();
+    const ac = new AbortController();
+    scoreSyncAbortRef.current = ac;
     // Score-ONLY refresh: send just score_override, never content/meta/image/terms, so an
     // article scored before the current model catches up without rewriting the document.
     // Omit ai when the gauge is SEO-only so the list keeps its content_score fallback.
@@ -1183,9 +1199,14 @@ const ArticleEditorPage: NextPage = () => {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ score_override: override }),
+      signal: ac.signal,
     })
       .then((r) => { if (!r.ok) throw new Error(`score refresh HTTP ${r.status}`); })
-      .catch((err) => { scoreSyncedRef.current = null; console.warn('[score-refresh]', getErrorMessage(err)); });
+      .catch((err) => {
+        if ((err as Error)?.name === 'AbortError') return; // superseded by a newer refresh
+        scoreSyncedRef.current = null;
+        console.warn('[score-refresh]', getErrorMessage(err));
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, article, editorHtml, isLoading, saveSuspended, panelScoresSig]);
 
