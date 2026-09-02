@@ -1,0 +1,28 @@
+pages/articles/[id]/index.tsx
+  s_8a599cee1c9d24::t_6e8721098fe86c 406-409,411-412,414
+  s_8a599cee1c9d24::t_0fcbf5800c308e 410,413
+  s_8a599cee1c9d24::t_3340d232fada50 415-420
+  s_8a599cee1c9d24::t_b3b67358e8e60d 1020-1033
+  s_8a599cee1c9d24::t_58d25ba59748da 1161-1163,1168
+  s_8a599cee1c9d24::t_84068c78eb3245 2364
+components/articles/ContentScorePanel.tsx
+  s_8a599cee1c9d24::t_51f8db62e06c35 607-612
+  s_8a599cee1c9d24::t_fabc5bba3b2d16 117-119
+  s_8a599cee1c9d24::t_327534c61a7a72 338
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ebc794829877641242c7056dfd82ea1438ea4abb",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
