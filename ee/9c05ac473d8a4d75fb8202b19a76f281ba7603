@@ -1,0 +1,33 @@
+src/infrastructure/wie/dataDir.ts
+  s_8a599cee1c9d24::t_4f246820ab34da 1-14
+src/infrastructure/wie/patternStore.ts
+  s_8a599cee1c9d24::t_eec25dd9f48adf 64,187,203,205
+  s_8a599cee1c9d24::t_19bee673c309d1 9,62-63,65,168,178-179
+__tests__/lib/wie/dataDir.test.ts
+  s_8a599cee1c9d24::t_3dbeddfda4e66a 1-38
+src/infrastructure/wie/eval/history.ts
+  s_8a599cee1c9d24::t_19bee673c309d1 6,20-22,25-26,31,120-121,126
+src/infrastructure/wie/goldBadCorpus.ts
+  s_8a599cee1c9d24::t_19bee673c309d1 6
+  s_8a599cee1c9d24::t_eec25dd9f48adf 22,26,36-37
+jest.setup.js
+  s_8a599cee1c9d24::t_fb034afa2109da 46-59
+src/infrastructure/wie/outcomeLearning.ts
+  s_8a599cee1c9d24::t_19bee673c309d1 8,39-40,106,112-113,121,131,139-140,241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ee9c05ac473d8a4d75fb8202b19a76f281ba7603",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
