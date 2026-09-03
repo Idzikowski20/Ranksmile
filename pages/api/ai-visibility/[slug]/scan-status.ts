@@ -18,18 +18,22 @@ type PhaseRow = { sources_total: number, sources_read: number, brands_pending: n
  *  take minutes; past this a missing marker means nobody is going to write one. */
 const PHASE_GRACE_MS = 30 * 60 * 1000;
 
-/** SQLite hands back CURRENT_TIMESTAMP as "YYYY-MM-DD HH:MM:SS" with no zone, which Date
- *  reads in the process timezone — an hour or more of drift against a UTC clock, enough to
- *  move the cutoff either way. Postgres returns an ISO string with an offset; leave it. */
-function parseDbTimestamp(v: string | null): number {
+/** Timestamp columns reach us in two shapes: node-pg hands back a Date, while SQLite hands
+ *  back "YYYY-MM-DD HH:MM:SS" text with no zone, which Date reads in the process timezone —
+ *  an hour or more of drift against a UTC clock, enough to move the cutoff either way. The
+ *  declared type says string, so the Date branch is what keeps this from throwing on
+ *  Postgres and turning every completed scan-status request into a 500. */
+function parseDbTimestamp(v: unknown): number {
    if (!v) return NaN;
+   if (v instanceof Date) return v.getTime();
+   if (typeof v !== 'string') return NaN;
    const iso = /(Z|[+-]\d{2}:?\d{2})$/.test(v) ? v : `${v.replace(' ', 'T')}Z`;
    return new Date(iso).getTime();
 }
 
 /** Pending unless the phase marked itself done, the counts already prove it, or the scan
  *  finished long enough ago that no worker is coming. */
-export function phasePending(doneAt: string | null, countsComplete: boolean, finishedAt: string | null): boolean {
+export function phasePending(doneAt: unknown, countsComplete: boolean, finishedAt: unknown): boolean {
    if (doneAt || countsComplete) return false;
    const finished = parseDbTimestamp(finishedAt);
    if (Number.isFinite(finished) && Date.now() - finished > PHASE_GRACE_MS) return false;

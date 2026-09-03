@@ -41,4 +41,12 @@ describe('phasePending', () => {
       const recentNoZone = new Date(Date.now() - 60_000).toISOString().slice(0, 19).replace('T', ' ');
       expect(phasePending(null, false, recentNoZone)).toBe(true); // a minute old → still live
    });
+
+   it('accepts a Date, which is what node-pg returns for a timestamp column', () => {
+      // The column is typed as string, but Postgres hands back a Date — calling string
+      // methods on it threw and turned every completed scan-status request into a 500.
+      expect(phasePending(null, false, new Date(Date.now() - 3 * 3600_000))).toBe(false);
+      expect(phasePending(null, false, new Date())).toBe(true);
+      expect(phasePending(new Date(), false, new Date())).toBe(false);
+   });
 });

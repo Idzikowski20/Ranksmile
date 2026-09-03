@@ -1890,6 +1890,10 @@ const ArticleEditorPage: NextPage = () => {
       // would overwrite the optimization scores with the pre-optimization ones. Bumping the
       // generation drops anything still queued; the chain guarantees this save goes last.
       scoreSyncGenRef.current += 1;
+      // Re-arm the score effect as well: the refresh we just superseded never sent its PUT,
+      // so if this save fails or is cancelled its scores would otherwise stay unsynced,
+      // with the dedupe key still claiming they were written.
+      scoreSyncedRef.current = null;
       scoreSyncChainRef.current = scoreSyncChainRef.current
         .catch(() => { /* a failed refresh must not block the save */ })
         .then(() => doSave(
