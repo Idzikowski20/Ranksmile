@@ -73,6 +73,30 @@ const YES_NO_OPENER = new RegExp(
    'i',
 );
 
+/**
+ * Definitional and explanatory openers. "What is X?" and "How does X work?" are answered
+ * with an explanation and name no company, so five of them would be a pool that measures
+ * nothing — the same failure as the yes/no questions, one step less obvious.
+ *
+ * ponytail: still a blacklist of openers, not a reading of intent. It catches the shapes a
+ * model actually drifts into; a prompt that seeks no provider while opening like one would
+ * slip through. Upgrade path is asking a model to score provider-intent, which costs a call
+ * per topic — worth it only if these keep getting past.
+ */
+const EXPLAINER_OPENER = new RegExp(
+   `^(${[
+      'what is', 'what are', 'what does', 'how does', 'how do', 'how to', 'why', 'when',
+      'co to', 'czym jest', 'czym są', 'jak działa', 'jak działają', 'jak wygląda', 'dlaczego', 'kiedy',
+      'was ist', 'was sind', 'wie funktioniert', 'warum', 'wann',
+      "qu'est-ce", 'comment fonctionne', 'pourquoi', 'quand',
+      'qué es', 'qué son', 'cómo funciona', 'por qué', 'cuándo',
+      "cos'è", 'che cosa', 'come funziona', 'perché', 'quando',
+      'wat is', 'wat zijn', 'hoe werkt', 'waarom', 'wanneer',
+      'o que é', 'o que são', 'como funciona', 'por que', 'quando',
+   ].join('|')})\\b`,
+   'i',
+);
+
 /** Price questions return a range, not a shortlist. */
 const PRICE_OPENER = /^(ile\s+kosztuje|how\s+much|wie\s+viel|combien|cu[aá]nto|quanto|hoeveel)\b/i;
 
@@ -83,6 +107,7 @@ export function isBrandElicitingPrompt(text: string): boolean {
    if (!/[?]$/.test(t)) return false;
    if (YES_NO_OPENER.test(t)) return false;
    if (PRICE_OPENER.test(t)) return false;
+   if (EXPLAINER_OPENER.test(t)) return false;
    return true;
 }
 
@@ -135,16 +160,19 @@ function siblingRule(seed: TrackerPromptSeed): string {
       // different intents, and asserting otherwise would have the model hand away use
       // cases that belong to this topic.
       'Where one of them covers the same ground as this topic, leave that ground to it and',
-      `take what fits "${seed.topic}" most specifically. Ignore the ones that do not overlap.`,
+      `take what fits "${sanitizeForPrompt(seed.topic)}" most specifically. Ignore the ones that do not overlap.`,
    ].join('\n');
 }
 
 export function buildTrackerPromptRequest(seed: TrackerPromptSeed): { system: string; user: string } {
    const observed = seed.observedQuestions.filter(isBrandElicitingPrompt).slice(0, 8);
+   // The topic and the brand are client input as much as the questions are; a newline in
+   // either would otherwise read as the start of a new instruction line.
+   const topic = sanitizeForPrompt(seed.topic);
    const user = [
-      `Topic: ${seed.topic}`,
-      `Market context (the tracked brand — do NOT mention it): ${seed.brand}`,
-      `Language: write every prompt in ${seed.language}.`,
+      `Topic: ${topic}`,
+      `Market context (the tracked brand — do NOT mention it): ${sanitizeForPrompt(seed.brand)}`,
+      `Language: write every prompt in ${sanitizeForPrompt(seed.language)}.`,
       `Count: exactly ${AI_VIS_PROMPTS_PER_TOPIC} prompts.`,
       siblingRule(seed),
       observed.length

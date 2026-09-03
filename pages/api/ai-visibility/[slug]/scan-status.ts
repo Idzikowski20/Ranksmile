@@ -5,6 +5,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
+import { parseDbTimestamp } from '@/src/infrastructure/db/timestamps';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type ScanRow = {
@@ -17,19 +18,6 @@ type PhaseRow = { sources_total: number, sources_read: number, brands_pending: n
 /** How long after a scan finishes its follow-on phases are still considered live. They
  *  take minutes; past this a missing marker means nobody is going to write one. */
 const PHASE_GRACE_MS = 30 * 60 * 1000;
-
-/** Timestamp columns reach us in two shapes: node-pg hands back a Date, while SQLite hands
- *  back "YYYY-MM-DD HH:MM:SS" text with no zone, which Date reads in the process timezone —
- *  an hour or more of drift against a UTC clock, enough to move the cutoff either way. The
- *  declared type says string, so the Date branch is what keeps this from throwing on
- *  Postgres and turning every completed scan-status request into a 500. */
-function parseDbTimestamp(v: unknown): number {
-   if (!v) return NaN;
-   if (v instanceof Date) return v.getTime();
-   if (typeof v !== 'string') return NaN;
-   const iso = /(Z|[+-]\d{2}:?\d{2})$/.test(v) ? v : `${v.replace(' ', 'T')}Z`;
-   return new Date(iso).getTime();
-}
 
 /** Pending unless the phase marked itself done, the counts already prove it, or the scan
  *  finished long enough ago that no worker is coming. */

@@ -16,6 +16,7 @@ import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schem
 import { generateTrackerPrompts } from '@/src/infrastructure/aiVisibility/aiVisibilityPromptGen';
 import { AI_VIS_PROMPTS_PER_TOPIC, isBrandElicitingPrompt } from '@/src/core/domain/aiVisibility/trackerPrompts';
 import { queryOne } from '@/src/infrastructure/db/query';
+import { parseDbTimestamp } from '@/src/infrastructure/db/timestamps';
 import { parseJsonish } from '@/src/core/shared/types/json';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
@@ -135,7 +136,10 @@ type TopicRow = {
    claimAgeMs: number | null;
    /** A pool that exists but is superseded — the template-era shape, an older version, or
     *  one generated against a different sibling set. Replaced rather than waited for. */
-   stale: boolean;
+    stale: boolean;
+   /** The row's stored text, exactly as read. Claiming a stale row is a compare-and-swap
+    *  against this, so only one concurrent request gets to regenerate it. */
+   raw?: string;
 };
 
 /** What a stored pool looks like from POOL_VERSION 2 on. Version 1 was a bare array. */
@@ -163,7 +167,8 @@ async function readTopic(domainId: number, topic: string, fingerprint: string): 
       // A bare array is a version-1 pool: the eight substituted template frames the
       // generator replaces. Serving it would mean an already-generated topic never sees a
       // use-case prompt.
-      if (Array.isArray(parsed)) return { pool: null, claimAgeMs: null, stale: parsed.length > 0 };
+      const raw = typeof row.prompts === 'string' ? row.prompts : JSON.stringify(row.prompts);
+      if (Array.isArray(parsed)) return { pool: null, claimAgeMs: null, stale: parsed.length > 0, raw };
 
       const stored = parsed as Partial<StoredPool> & { claim?: unknown };
       if (Array.isArray(stored.prompts) && stored.prompts.length > 0) {
@@ -172,10 +177,13 @@ async function readTopic(domainId: number, topic: string, fingerprint: string): 
          // against a different sibling set no longer partitions anything.
          return usable
             ? { pool: stored.prompts as GeneratedPrompt[], claimAgeMs: null, stale: false }
-            : { pool: null, claimAgeMs: null, stale: true };
+            : { pool: null, claimAgeMs: null, stale: true, raw };
       }
 
-      const claimedAt = row.created_at ? new Date(row.created_at).getTime() : NaN;
+      // Via parseDbTimestamp: SQLite's bare "YYYY-MM-DD HH:MM:SS" read as local time made a
+      // fresh claim look hours old, so a second request treated it as abandoned and bought
+      // its own PAA + LLM.
+      const claimedAt = parseDbTimestamp(row.created_at);
       return {
          pool: null,
          claimAgeMs: Number.isNaN(claimedAt) ? CLAIM_STALE_MS : Date.now() - claimedAt,
@@ -212,6 +220,33 @@ async function claimTopic(domainId: number, topic: string): Promise<string | nul
       return token;
    } catch {
       // The unique index rejected it: someone else is already fetching this topic.
+      return null;
+   }
+}
+
+/**
+ * Claim a row that holds a superseded pool.
+ *
+ * The INSERT-based claim cannot work here: the row already exists, so the unique index
+ * rejects it and every concurrent request fell through to buying its own PAA and LLM, then
+ * raced through writeCached. This swaps the stale content for a claim token conditionally
+ * on that content still being there, so exactly one request wins and the losers wait.
+ */
+async function claimStaleTopic(domainId: number, topic: string, raw: string): Promise<string | null> {
+   const token = JSON.stringify({ claim: randomUUID() });
+   try {
+      const [, meta] = await db.query(
+         'UPDATE ai_vis_generated_prompts SET prompts = ? WHERE domain_id = ? AND topic = ? AND prompts = ?',
+         { replacements: [token, domainId, topic, raw] },
+      ) as [unknown, unknown];
+      // Dialects report affected rows differently; treat an explicit 0 as "someone else
+      // swapped it first" and anything else as a win, which is the safe side — a false win
+      // costs one duplicate generation, a false loss would stall the topic behind a wait.
+      const affected = typeof meta === 'number'
+         ? meta
+         : (meta as { rowCount?: number } | undefined)?.rowCount;
+      return affected === 0 ? null : token;
+   } catch {
       return null;
    }
 }
@@ -291,8 +326,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    const fingerprint = poolFingerprint(siblings);
    const cached = refresh ? null : await readTopic(domainId, topicTrimmed, fingerprint);
    if (cached?.pool) return res.status(200).json({ prompts: cached.pool, degraded: false, cached: true });
-   // A superseded pool is overwritten, exactly like an explicit refresh: there is nobody to
-   // wait for, and the row it occupies is replaced by the write below.
+
+   // A superseded pool is regenerated, but the row still has to be claimed first — leaving
+   // it unclaimed had every concurrent request buy its own PAA and LLM for the same topic.
+   let staleClaim: string | null = null;
+   if (cached?.stale && cached.raw) {
+      staleClaim = await claimStaleTopic(domainId, topicTrimmed, cached.raw);
+      if (!staleClaim) {
+         // Someone else took it: wait for their pool exactly as for any live claim.
+         const waited = await waitForCached(domainId, topicTrimmed, fingerprint);
+         if (waited) return res.status(200).json({ prompts: waited, degraded: false, cached: true });
+      }
+   }
+   // Our claim on the stale row stands in for the INSERT-based one below.
    const existing = cached?.stale ? null : cached;
 
    if (!isDataForSeoConfigured()) {
@@ -325,11 +371,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    // its pool and only buy if it never lands. A claim older than that: its holder is
    // gone, so ignore it and buy — a successful write replaces it, and nothing has to
    // delete a row this request does not own.
-   let claimToken: string | null = null;
+   let claimToken: string | null = staleClaim;
    let waitForHolder = false;
    if (existing) {
       if (existing.claimAgeMs === null) {
-         claimToken = await claimTopic(domainId, topicTrimmed);
+         claimToken = claimToken ?? await claimTopic(domainId, topicTrimmed);
          // Lost the INSERT: someone claimed it between our read and our write.
          waitForHolder = claimToken === null;
       } else {
