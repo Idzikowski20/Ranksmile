@@ -22,6 +22,21 @@ describe('phaseState', () => {
       expect(phaseState(null, true, hoursAgo(50))).toEqual({ done: true, pending: false });
    });
 
+   it('keeps polling while the phase is still writing, however old the scan is', () => {
+      // Reading 176 pages runs far longer than any scan-relative window. Keyed off the
+      // scan's finish time this went to pending:false mid-phase, the interval returned
+      // false, and the UI only updated on a manual reload.
+      expect(phaseState(null, false, hoursAgo(2), justNow()))
+         .toEqual({ done: false, pending: true });
+      // Minutes of silence is still alive; the grace window is five.
+      expect(phaseState(null, false, hoursAgo(2), new Date(Date.now() - 60_000)).pending).toBe(true);
+   });
+
+   it('gives up on a phase that has written nothing for the grace period', () => {
+      expect(phaseState(null, false, hoursAgo(2), hoursAgo(1)))
+         .toEqual({ done: false, pending: false });
+   });
+
    it('stops calling a long-finished scan busy, even with nothing to go on', () => {
       // Nobody is coming to write the marker: the phases take minutes, not hours. It stops
       // being polled, but it must NOT claim to be done — a green tick on a phase that never

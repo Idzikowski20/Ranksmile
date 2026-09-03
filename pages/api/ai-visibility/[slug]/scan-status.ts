@@ -15,9 +15,15 @@ type ScanRow = {
 /** Counts for the follow-on phases the progress bar reports (sources → brands → profiles). */
 type PhaseRow = { sources_total: number, sources_read: number, brands_pending: number, profiles_built: number };
 
-/** How long after a scan finishes its follow-on phases are still considered live. They
- *  take minutes; past this a missing marker means nobody is going to write one. */
-const PHASE_GRACE_MS = 30 * 60 * 1000;
+/**
+ * How long a phase may show no activity before we stop treating it as live work.
+ *
+ * Measured from the phase's OWN last write, not from when the scan finished. Keyed off the
+ * scan, this killed the polling mid-phase: reading 176 pages legitimately runs for far
+ * longer than any scan-relative window, so the UI stopped refreshing while the worker was
+ * still fetching, and only a manual reload showed the new count.
+ */
+const PHASE_GRACE_MS = 5 * 60 * 1000;
 
 /**
  * A phase reports two independent things, and conflating them made the bar lie.
@@ -27,11 +33,20 @@ const PHASE_GRACE_MS = 30 * 60 * 1000;
  * enough that no worker is coming. A scan whose phases never ran then stops being polled
  * while still, correctly, not showing a tick.
  */
-export function phaseState(doneAt: unknown, countsComplete: boolean, finishedAt: unknown): { done: boolean; pending: boolean } {
+export function phaseState(
+   doneAt: unknown,
+   countsComplete: boolean,
+   finishedAt: unknown,
+   /** The phase's own most recent write, when it has made any. */
+   lastActivityAt?: unknown,
+): { done: boolean; pending: boolean } {
    const done = Boolean(doneAt) || countsComplete;
    if (done) return { done: true, pending: false };
-   const finished = parseDbTimestamp(finishedAt);
-   const abandoned = Number.isFinite(finished) && Date.now() - finished > PHASE_GRACE_MS;
+   // A phase that wrote something recently has a worker on it, however old the scan is.
+   // Only with nothing recent to go on does the scan's own age decide.
+   const since = parseDbTimestamp(lastActivityAt);
+   const reference = Number.isFinite(since) ? since : parseDbTimestamp(finishedAt);
+   const abandoned = Number.isFinite(reference) && Date.now() - reference > PHASE_GRACE_MS;
    return { done: false, pending: !abandoned };
 }
 
@@ -93,12 +108,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    ).catch(() => []);
    const recentSourceDomains = Array.from(new Set(domainRows.map((r) => r.domain))).slice(0, 6);
 
+   // Each phase's own last write: proof a worker is on it while the counters climb.
+   const activity = await queryOne<{ sources_last: string | null; profiles_last: string | null }>(
+      `SELECT
+         (SELECT MAX(fetched_at) FROM ai_vis_sources WHERE scan_id = ?) AS sources_last,
+         (SELECT MAX(updated_at) FROM ai_vis_brand_profiles WHERE scan_id = ?) AS profiles_last`,
+      [scan.id, scan.id],
+   ).catch(() => null);
+
    const sources = phaseState(
       scan.sources_done_at,
       sourcesTotal > 0 && sourcesRead >= sourcesTotal,
       scan.finished_at,
+      activity?.sources_last,
    );
-   const profiles = phaseState(scan.profiles_done_at, false, scan.finished_at);
+   const profiles = phaseState(scan.profiles_done_at, false, scan.finished_at, activity?.profiles_last);
 
    return res.status(200).json({
       status: scan.status,
