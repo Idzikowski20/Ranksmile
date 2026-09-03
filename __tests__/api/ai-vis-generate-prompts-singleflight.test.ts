@@ -41,13 +41,11 @@ jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withO
 import db from '../../database/database';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { getPeopleAlsoAsk } from '@/src/infrastructure/dataforseo/dataforseo';
-import { generateTrackerPrompts } from '@/src/infrastructure/aiVisibility/aiVisibilityPromptGen';
 import handler from '../../pages/api/ai-visibility/[slug]/generate-prompts';
 
 const dbQuery = db.query as jest.Mock;
 const cacheRead = queryOne as jest.Mock;
 const paa = getPeopleAlsoAsk as jest.Mock;
-const generate = generateTrackerPrompts as jest.Mock;
 
 function mockReq(): NextApiRequest {
   return { method: 'POST', query: { slug: 'example-com' }, body: { topic: 'fizjoterapia' } } as unknown as NextApiRequest;
@@ -62,11 +60,30 @@ function mockRes() {
 }
 
 const POOL = [{ text: 'najlepszy fizjoterapeuta', provenance: ['google'] }];
+// Pools are stored versioned, with the sibling set they were generated against; the
+// request under test sends no siblings, so the fingerprint is empty.
+const STORED_POOL = { v: 2, s: '', prompts: POOL };
 /** What a claim row looks like: somebody's token, plus when they took it. */
 const claimRow = (ageMs: number) => ({
   prompts: JSON.stringify({ claim: 'a2ba0d1e-0000-4000-8000-000000000000' }),
   created_at: new Date(Date.now() - ageMs),
 });
+
+/**
+ * queryOne serves two different reads here: the cached pool and the config's brand name.
+ * Ordering mocks by call index silently mis-assigns them — the live-claim case then got a
+ * pool on its first read and never exercised the polling it exists to test. Dispatch on the
+ * SQL instead, so adding another lookup to the handler cannot rewire these tests.
+ */
+function mockPoolReads(...values: unknown[]) {
+  let i = 0;
+  cacheRead.mockImplementation((sql: string) => {
+    if (/ai_vis_configs/.test(String(sql))) return Promise.resolve({ brand_name: 'Brand' });
+    const v = values[Math.min(i, values.length - 1)];
+    i += 1;
+    return Promise.resolve(v);
+  });
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -76,9 +93,8 @@ beforeEach(() => {
 describe('generate-prompts single-flight', () => {
   it('waits out a live claim and replays the winner’s pool instead of buying its own', async () => {
     // A claim taken a second ago; the holder's pool lands while we are polling.
-    cacheRead
-      .mockResolvedValueOnce(claimRow(1000))
-      .mockResolvedValue({ prompts: JSON.stringify(POOL), created_at: new Date() });
+    // First pool read: somebody's fresh claim. Then the holder's pool lands while polling.
+    mockPoolReads(claimRow(1000), { prompts: JSON.stringify(STORED_POOL), created_at: new Date() });
 
     const res = mockRes();
     await handler(mockReq(), res);
@@ -90,7 +106,7 @@ describe('generate-prompts single-flight', () => {
   // Nothing may wait on a claim whose holder is gone: it would never be filled, and the
   // wait would be paid again on every visit for as long as the row sits there.
   it('ignores a stale claim outright — no wait, and the write replaces the row', async () => {
-    cacheRead.mockResolvedValue(claimRow(10 * 60_000));
+    mockPoolReads(claimRow(10 * 60_000));
     paa.mockResolvedValue({ questions: [{ question: POOL[0].text, domain: 'google.com' }], related: [] });
 
     const started = Date.now();
@@ -108,11 +124,12 @@ describe('generate-prompts single-flight', () => {
   });
 
   it('the claim holder releases its own row when the result is only templates', async () => {
-    cacheRead.mockResolvedValue(null);
+    mockPoolReads(null);
     // Claim INSERT succeeds; PAA then fails, so nothing will ever fill the claim.
+    // PAA throws before buildPromptList is reached, so the templates come from the catch
+    // path — generation is never called here. (A mockResolvedValueOnce would also outlive
+    // clearAllMocks and be consumed by a later test.)
     paa.mockRejectedValue(new Error('locale mismatch'));
-    // Generation unavailable too, so the result really is the template fallback.
-    generate.mockResolvedValueOnce(null);
 
     const res = mockRes();
     await handler(mockReq(), res);
@@ -131,10 +148,9 @@ describe('generate-prompts single-flight', () => {
   // Losing the INSERT after a clean read means someone claimed the topic in between —
   // that is a live holder, so it is waited for like any other.
   it('waits when it loses the claim race after reading no row at all', async () => {
-    cacheRead.mockResolvedValue(null);
+    mockPoolReads(null);
     dbQuery.mockRejectedValueOnce(new Error('duplicate key value violates unique constraint'));
     paa.mockRejectedValue(new Error('locale mismatch'));
-    generate.mockResolvedValueOnce(null);
 
     const res = mockRes();
     await handler(mockReq(), res);

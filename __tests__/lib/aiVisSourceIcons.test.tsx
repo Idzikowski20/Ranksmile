@@ -17,3 +17,13 @@ describe('llm provenance icon', () => {
       expect(container.querySelector('svg')).toBeNull();
    });
 });
+
+describe('topicSources', () => {
+   it('includes llm, so a fully generated topic is not sourceless in the header', () => {
+      const { topicSources } = jest.requireActual('@/components/aiVisibility/sourceIcons');
+      expect(topicSources([{ provenance: ['llm'] }])).toEqual(['llm']);
+      // Third-party marks first, ours last, and unknown sources still ignored.
+      expect(topicSources([{ provenance: ['llm'] }, { provenance: ['google', 'nope'] }]))
+         .toEqual(['google', 'llm']);
+   });
+});

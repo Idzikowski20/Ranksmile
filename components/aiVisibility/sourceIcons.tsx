@@ -76,9 +76,14 @@ export const SourceBadge = ({ source }: { source: string }) => {
    );
 };
 
+/** Stable header order — third-party sources first, then what we wrote ourselves. */
+const ORDER = ['google', 'reddit', 'quora', 'llm'];
+
 /** Unique provenance sources across a topic's prompts, in a stable order. */
 export const topicSources = (prompts: Array<{ provenance: string[] }>): string[] => {
    const seen = new Set<string>();
    for (const p of prompts) for (const s of p.provenance) if (ICONS[s]) seen.add(s);
-   return ['google', 'reddit', 'quora'].filter((s) => seen.has(s));
+   // Generated prompts belong in the header too; without 'llm' here the new icon rendered
+   // inline only and a fully-generated topic showed no source at all.
+   return ORDER.filter((s) => seen.has(s));
 };

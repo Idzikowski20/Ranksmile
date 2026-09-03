@@ -132,12 +132,26 @@ describe('sibling topics', () => {
       });
       expect(user).toContain('"Biuro detektywistyczne"');
       expect(user).toContain('"Prywatny detektyw Warszawa"');
-      expect(user).toContain('Claim the slice');
+      expect(user).toContain('leave that ground to it');
+      // Not asserted as synonyms: tracked topics are sometimes distinct intents, and
+      // saying otherwise makes the model hand away use cases that belong here.
+      expect(user).toContain('Ignore the ones that do not overlap');
    });
 
    it('says nothing when the topic has no siblings', () => {
-      expect(buildTrackerPromptRequest(base).user).not.toContain('Claim the slice');
-      expect(buildTrackerPromptRequest({ ...base, siblingTopics: [] }).user).not.toContain('Claim the slice');
+      expect(buildTrackerPromptRequest(base).user).not.toContain('Other topics tracked');
+      expect(buildTrackerPromptRequest({ ...base, siblingTopics: [] }).user).not.toContain('Other topics tracked');
+   });
+
+   it('never lists the topic as its own sibling, whatever the casing or length', () => {
+      const long = 'x'.repeat(300);
+      const listed = (siblingTopics: string[], topic = base.topic): string => buildTrackerPromptRequest({ ...base, topic, siblingTopics })
+         .user.split('\n').find((l) => l.startsWith('Other topics tracked')) ?? '';
+      // Case-only difference: comparing raw strings kept it, telling the topic to avoid
+      // its own subject.
+      expect(listed(['agencja DETEKTYWISTYCZNA'])).toBe('');
+      // Longer than the truncation cap: comparing after slicing also kept it.
+      expect(listed([long], long)).toBe('');
    });
 
    it('drops the topic itself, blanks, and anything past the cap', () => {

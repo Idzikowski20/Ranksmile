@@ -96,6 +96,27 @@ type GeneratedPrompt = { text: string, provenance: string[] };
  * unique index. `claimTopic` below closes that: the buyer is whoever wins the INSERT.
  */
 
+const MAX_TOPIC_CHARS = 200;
+const MAX_SIBLINGS_IN = 24;
+
+/**
+ * Cache identity for a stored pool, beyond the (domain, topic) key.
+ *
+ * `v` retires the pools written by the fixed-template implementation: they contain the
+ * eight substituted frames, which the generator exists to replace, and without a version
+ * every already-generated topic would keep serving them forever.
+ *
+ * `s` is the sibling set the pool was generated against. The prompts partition the service
+ * between the tracked topics, so a pool generated when the brand tracked two topics is
+ * stale once it tracks four.
+ */
+const POOL_VERSION = 2;
+const poolFingerprint = (siblings: string[]): string => siblings
+   .map((t) => t.trim().toLowerCase().replace(/\s+/g, ' '))
+   .filter(Boolean)
+   .sort()
+   .join('|');
+
 /** How long a loser waits for the claim holder's pool before buying its own. */
 const CLAIM_WAIT_MS = 3000;
 const CLAIM_POLL_MS = 400;
@@ -107,9 +128,18 @@ const CLAIM_POLL_MS = 400;
 const CLAIM_STALE_MS = 60_000;
 
 /** What the (domain, topic) row currently is: a finished pool, or somebody's claim. */
-type TopicRow =
-   | { pool: GeneratedPrompt[]; claimAgeMs: null }
-   | { pool: null; claimAgeMs: number | null };
+type TopicRow = {
+   /** A pool that is still valid for this request's version and sibling set. */
+   pool: GeneratedPrompt[] | null;
+   /** Age of somebody's claim, when the row is a claim rather than a pool. */
+   claimAgeMs: number | null;
+   /** A pool that exists but is superseded — the template-era shape, an older version, or
+    *  one generated against a different sibling set. Replaced rather than waited for. */
+   stale: boolean;
+};
+
+/** What a stored pool looks like from POOL_VERSION 2 on. Version 1 was a bare array. */
+type StoredPool = { v: number; s: string; prompts: GeneratedPrompt[] };
 
 /**
  * The row as it stands. `claimAgeMs` is null when there is no row at all, and a number
@@ -121,22 +151,41 @@ type TopicRow =
  * the claim is then treated as abandoned, which costs a duplicate call in dev and never
  * blocks. Production is Postgres, where the driver returns a real Date.
  */
-async function readTopic(domainId: number, topic: string): Promise<TopicRow> {
+async function readTopic(domainId: number, topic: string, fingerprint: string): Promise<TopicRow> {
    try {
       const row = await queryOne<{ prompts: unknown; created_at: string | Date | null }>(
          'SELECT prompts, created_at FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ? LIMIT 1',
          [domainId, topic],
       );
-      if (!row) return { pool: null, claimAgeMs: null };
-      const prompts = parseJsonish<GeneratedPrompt[]>(row.prompts);
-      if (Array.isArray(prompts) && prompts.length > 0) return { pool: prompts, claimAgeMs: null };
+      if (!row) return { pool: null, claimAgeMs: null, stale: false };
+      const parsed = parseJsonish<unknown>(row.prompts);
+
+      // A bare array is a version-1 pool: the eight substituted template frames the
+      // generator replaces. Serving it would mean an already-generated topic never sees a
+      // use-case prompt.
+      if (Array.isArray(parsed)) return { pool: null, claimAgeMs: null, stale: parsed.length > 0 };
+
+      const stored = parsed as Partial<StoredPool> & { claim?: unknown };
+      if (Array.isArray(stored.prompts) && stored.prompts.length > 0) {
+         const usable = stored.v === POOL_VERSION && stored.s === fingerprint;
+         // Prompts partition the service between the tracked topics, so a pool generated
+         // against a different sibling set no longer partitions anything.
+         return usable
+            ? { pool: stored.prompts as GeneratedPrompt[], claimAgeMs: null, stale: false }
+            : { pool: null, claimAgeMs: null, stale: true };
+      }
+
       const claimedAt = row.created_at ? new Date(row.created_at).getTime() : NaN;
-      return { pool: null, claimAgeMs: Number.isNaN(claimedAt) ? CLAIM_STALE_MS : Date.now() - claimedAt };
+      return {
+         pool: null,
+         claimAgeMs: Number.isNaN(claimedAt) ? CLAIM_STALE_MS : Date.now() - claimedAt,
+         stale: false,
+      };
    } catch (e) {
       // Best-effort, exactly like the write: a cache lookup that fails must degrade to
       // generating, not 500 past the paid-call and template fallbacks below.
       console.warn('[generate-prompts] cache read failed:', getErrorMessage(e));
-      return { pool: null, claimAgeMs: null };
+      return { pool: null, claimAgeMs: null, stale: false };
    }
 }
 
@@ -177,25 +226,26 @@ async function releaseTopic(domainId: number, topic: string, token: string): Pro
 }
 
 /** Poll for the claim holder's pool. Null means it did not arrive in time — buy our own. */
-async function waitForCached(domainId: number, topic: string): Promise<GeneratedPrompt[] | null> {
+async function waitForCached(domainId: number, topic: string, fingerprint: string): Promise<GeneratedPrompt[] | null> {
    const deadline = Date.now() + CLAIM_WAIT_MS;
    while (Date.now() < deadline) {
       // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => { setTimeout(r, CLAIM_POLL_MS); });
       // eslint-disable-next-line no-await-in-loop
-      const current = await readTopic(domainId, topic);
+      const current = await readTopic(domainId, topic, fingerprint);
       if (current.pool) return current.pool;
    }
    return null;
 }
 
-async function writeCached(domainId: number, topic: string, prompts: GeneratedPrompt[]): Promise<void> {
+async function writeCached(domainId: number, topic: string, prompts: GeneratedPrompt[], fingerprint: string): Promise<void> {
    // Delete-then-insert rather than ON CONFLICT: the codebase targets both
    // Postgres and SQLite, and the unique index makes this idempotent enough.
+   const envelope: StoredPool = { v: POOL_VERSION, s: fingerprint, prompts };
    await db.query('DELETE FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ?', { replacements: [domainId, topic] });
    await db.query(
       'INSERT INTO ai_vis_generated_prompts (domain_id, topic, prompts) VALUES (?, ?, ?)',
-      { replacements: [domainId, topic, JSON.stringify(prompts)] },
+      { replacements: [domainId, topic, JSON.stringify(envelope)] },
    );
 }
 
@@ -210,18 +260,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
 
    const domainId = (ownership as { ID: number }).ID;
-   const { topic, refresh, siblingTopics } = req.body as {
-      topic?: string, refresh?: boolean, siblingTopics?: unknown,
-   };
-   if (!topic?.trim()) return res.status(400).json({ error: 'topic is required' });
-   // The wizard's other topics. Client-supplied and fed to a model, so only strings, and
-   // the domain module caps how many reach the prompt.
-   const siblings = Array.isArray(siblingTopics)
-      ? siblingTopics.filter((t): t is string => typeof t === 'string')
-      : [];
+   // Validated, not cast: the body is client input, and a non-string `topic` used to throw
+   // inside .trim() before anything checked it. Bounded too — the topic reaches an LLM
+   // prompt and a database key.
+   const body: Record<string, unknown> = (req.body && typeof req.body === 'object' && !Array.isArray(req.body))
+      ? req.body as Record<string, unknown>
+      : {};
+   const topic = typeof body.topic === 'string' ? body.topic.trim() : '';
+   if (!topic) return res.status(400).json({ error: 'topic is required' });
+   if (topic.length > MAX_TOPIC_CHARS) return res.status(400).json({ error: 'topic is too long' });
+   const refresh = body.refresh === true;
+   // The wizard's other topics: strings only, each bounded, and capped in number. The
+   // domain module caps again for what actually reaches the prompt.
+   const siblings = (Array.isArray(body.siblingTopics) ? body.siblingTopics : [])
+      .filter((t): t is string => typeof t === 'string')
+      .map((t) => t.trim())
+      .filter((t) => t && t.length <= MAX_TOPIC_CHARS)
+      .slice(0, MAX_SIBLINGS_IN);
 
    const locale = await getDomainLocale(domainId);
-   const topicTrimmed = topic.trim();
+   const topicTrimmed = topic;
    // Market context for the generator. The wizard runs before any config exists, so the
    // domain is the fallback — the brand is never named in a prompt either way.
    const cfg = await queryOne<{ brand_name: string }>(
@@ -230,8 +288,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    ).catch(() => null);
    const brandName = cfg?.brand_name || (ownership as { domain?: string }).domain || topicTrimmed;
 
-   const existing = refresh ? null : await readTopic(domainId, topicTrimmed);
-   if (existing?.pool) return res.status(200).json({ prompts: existing.pool, degraded: false, cached: true });
+   const fingerprint = poolFingerprint(siblings);
+   const cached = refresh ? null : await readTopic(domainId, topicTrimmed, fingerprint);
+   if (cached?.pool) return res.status(200).json({ prompts: cached.pool, degraded: false, cached: true });
+   // A superseded pool is overwritten, exactly like an explicit refresh: there is nobody to
+   // wait for, and the row it occupies is replaced by the write below.
+   const existing = cached?.stale ? null : cached;
 
    if (!isDataForSeoConfigured()) {
       // PAA is down, but generation only needs the topic — try it before the templates.
@@ -243,10 +305,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         siblingTopics: siblings,
       });
       if (generated) {
-        return res.status(200).json({
-          prompts: generated.map((text) => ({ text, provenance: ['llm'] })),
-          degraded: false,
-        });
+        const prompts = generated.map((text) => ({ text, provenance: ['llm'] }));
+        // Cache it: generation costs a model call, and the wizard re-requests every topic
+        // on mount. Non-fatal, like the other write.
+        await writeCached(domainId, topicTrimmed, prompts, fingerprint)
+          .catch((e) => console.warn('[generate-prompts] cache write failed:', getErrorMessage(e)));
+        return res.status(200).json({ prompts, degraded: false });
       }
       const templates = promptTemplatesForLocale(locale.languageCode, topicTrimmed);
       return res.status(200).json({ prompts: templates.slice(0, AI_VIS_PROMPTS_PER_TOPIC), degraded: true });
@@ -273,7 +337,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
    }
    if (waitForHolder) {
-      const waited = await waitForCached(domainId, topicTrimmed);
+      const waited = await waitForCached(domainId, topicTrimmed, fingerprint);
       if (waited) return res.status(200).json({ prompts: waited, degraded: false, cached: true });
    }
 
@@ -286,7 +350,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const result = await buildPromptList(locale, topicTrimmed, brandName, siblings, questions, related);
       if (!result.degraded) {
          // Non-fatal: a failed write only means the next visit pays again.
-         await writeCached(domainId, topicTrimmed, result.prompts)
+         await writeCached(domainId, topicTrimmed, result.prompts, fingerprint)
             .catch((e) => console.warn('[generate-prompts] cache write failed:', getErrorMessage(e)));
       } else if (claimToken) {
          // Nothing will fill this claim: templates are never cached.

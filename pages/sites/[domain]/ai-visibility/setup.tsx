@@ -16,6 +16,9 @@ const FONT = 'var(--font-family-primary)';
 
 const DEFAULT_SELECTED = 5;
 
+/** Titles the wizard creates itself; they name no service. */
+const PLACEHOLDER_TITLES = new Set(['New topic', 'Bulk prompts']);
+
 const AiVisibilitySetup: NextPage = () => {
    const router = useRouter();
    const { domain: slug } = router.query as { domain: string };
@@ -101,7 +104,11 @@ const AiVisibilitySetup: NextPage = () => {
          const { prompts } = await generate.mutateAsync({
             topic: title,
             refresh: true,
-            siblingTopics: topics.filter((t) => t.key !== topicKey).map((t) => t.title),
+            // Real topics only: an untouched "New topic" card or the bulk bucket would have
+            // the model reserve use cases for a subject nobody is tracking.
+            siblingTopics: topics
+               .filter((t) => t.key !== topicKey && !PLACEHOLDER_TITLES.has(t.title.trim()))
+               .map((t) => t.title),
          });
          const wp: WizardPrompt[] = prompts.map((p, pi) => ({ key: `${topicKey}-p${pi}`, text: p.text, provenance: p.provenance, selected: pi < DEFAULT_SELECTED }));
          setTopics((prev) => prev.map((t) => (t.key === topicKey ? { ...t, prompts: wp, generating: false } : t)));
