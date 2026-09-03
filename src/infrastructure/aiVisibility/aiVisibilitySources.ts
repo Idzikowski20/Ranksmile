@@ -170,6 +170,13 @@ export async function runSourceChunk(
          }
       } catch {
          status = null; // unreachable / blocked / timed out — still recorded as read
+         // Unless we simply ran out of budget mid-fetch: that page was never opened, and
+         // stamping fetched_at would publish "does not mention your brand" about a page
+         // nobody looked at, with no retry. Leave it queued for the next tick.
+         if (Number.isFinite(deadlineAt) && Date.now() >= deadlineAt) {
+            reached -= 1;
+            break;
+         }
       }
       // eslint-disable-next-line no-await-in-loop
       await db.query(

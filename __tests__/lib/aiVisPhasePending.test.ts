@@ -31,4 +31,14 @@ describe('phasePending', () => {
       expect(phasePending(null, false, null)).toBe(true);
       expect(phasePending(null, false, 'not-a-date')).toBe(true);
    });
+
+   it('reads a timezone-less database timestamp as UTC', () => {
+      // SQLite's CURRENT_TIMESTAMP has no zone; parsed as local time it can land hours off,
+      // flipping the cutoff either way depending on where the process runs.
+      const utcNoZone = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 19).replace('T', ' ');
+      expect(phasePending(null, false, utcNoZone)).toBe(false); // 3h old → past the window
+
+      const recentNoZone = new Date(Date.now() - 60_000).toISOString().slice(0, 19).replace('T', ' ');
+      expect(phasePending(null, false, recentNoZone)).toBe(true); // a minute old → still live
+   });
 });

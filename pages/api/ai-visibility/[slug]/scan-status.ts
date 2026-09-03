@@ -18,11 +18,20 @@ type PhaseRow = { sources_total: number, sources_read: number, brands_pending: n
  *  take minutes; past this a missing marker means nobody is going to write one. */
 const PHASE_GRACE_MS = 30 * 60 * 1000;
 
+/** SQLite hands back CURRENT_TIMESTAMP as "YYYY-MM-DD HH:MM:SS" with no zone, which Date
+ *  reads in the process timezone — an hour or more of drift against a UTC clock, enough to
+ *  move the cutoff either way. Postgres returns an ISO string with an offset; leave it. */
+function parseDbTimestamp(v: string | null): number {
+   if (!v) return NaN;
+   const iso = /(Z|[+-]\d{2}:?\d{2})$/.test(v) ? v : `${v.replace(' ', 'T')}Z`;
+   return new Date(iso).getTime();
+}
+
 /** Pending unless the phase marked itself done, the counts already prove it, or the scan
  *  finished long enough ago that no worker is coming. */
 export function phasePending(doneAt: string | null, countsComplete: boolean, finishedAt: string | null): boolean {
    if (doneAt || countsComplete) return false;
-   const finished = finishedAt ? new Date(finishedAt).getTime() : NaN;
+   const finished = parseDbTimestamp(finishedAt);
    if (Number.isFinite(finished) && Date.now() - finished > PHASE_GRACE_MS) return false;
    return true;
 }
@@ -92,11 +101,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          sourcesTotal > 0 && sourcesRead >= sourcesTotal,
          scan.finished_at,
       ),
-      profilesPending: phasePending(
-         scan.profiles_done_at,
-         Number(phases?.profiles_built ?? 0) > 0,
-         scan.finished_at,
-      ),
+      // No count fallback here, unlike sources: rows written proves the phase STARTED, not
+      // that every brand was written, and calling it done mid-chunk would show a truncated
+      // competitor list as final. Legacy rows fall through to the grace window instead.
+      profilesPending: phasePending(scan.profiles_done_at, false, scan.finished_at),
    });
 }
 

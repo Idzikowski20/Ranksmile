@@ -160,12 +160,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const engines = Array.from(new Set(entityRows.map((r) => r.model)));
 
          // Time series over recent completed scans (bounded like /history).
-         const scans = await queryRows<{ id: number, finished_at: string | null }>(
-            `SELECT s.id, s.finished_at FROM ai_vis_scans s JOIN ai_vis_configs c ON c.id = s.config_id
+         const scans = await queryRows<{ id: number, finished_at: string | null, brand_name: string | null }>(
+            `SELECT s.id, s.finished_at, s.brand_name FROM ai_vis_scans s JOIN ai_vis_configs c ON c.id = s.config_id
              WHERE c.domain_id = ? AND s.status = 'completed' ORDER BY s.id DESC LIMIT 24`, [domain.ID]);
          const series: Array<{ finishedAt: string | null, visibilityScore: number, mentionRate: number, avgPosition: number | null }> = [];
          for (const s of scans.slice().reverse()) {
-            const ov = computeBrandOverview(s.id === scan.id ? scoped : scope(await loadScanResultRows(s.id)), scanBrand);
+            // Each historical point uses the brand ITS scan ran under; scoring them all
+            // with the current name makes every scan before a rename look unmentioned.
+            const ov = computeBrandOverview(
+               s.id === scan.id ? scoped : scope(await loadScanResultRows(s.id)),
+               s.brand_name || ownBrand,
+            );
             series.push({ finishedAt: s.finished_at, visibilityScore: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition });
          }
 

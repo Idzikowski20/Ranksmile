@@ -1885,12 +1885,24 @@ const ArticleEditorPage: NextPage = () => {
         if (n.type.name === 'heading') headings += 1;
         if (n.type.name === 'paragraph' && n.textContent.trim()) paragraphs += 1;
       });
-      await doSave(
-        'auto_optimize',
-        undefined,
-        { changes: optimizeMetaRef.current.changedCount, promptVersion: optimizeMetaRef.current.promptVersion, creditDeducted: optimizeMetaRef.current.creditDeducted },
-        { html, text, words, headings, paragraphs },
-      );
+      // Onto the score-refresh chain, not alongside it. Suspending new refreshes cannot
+      // recall a PUT already in flight, and if that older trio landed after this save it
+      // would overwrite the optimization scores with the pre-optimization ones. Bumping the
+      // generation drops anything still queued; the chain guarantees this save goes last.
+      scoreSyncGenRef.current += 1;
+      scoreSyncChainRef.current = scoreSyncChainRef.current
+        .catch(() => { /* a failed refresh must not block the save */ })
+        .then(() => doSave(
+          'auto_optimize',
+          undefined,
+          {
+            changes: optimizeMetaRef.current.changedCount,
+            promptVersion: optimizeMetaRef.current.promptVersion,
+            creditDeducted: optimizeMetaRef.current.creditDeducted,
+          },
+          { html, text, words, headings, paragraphs },
+        ).then(() => undefined));
+      await scoreSyncChainRef.current;
       // We just persisted the resolved doc AND created a version. Mark this exact state as
       // saved so the debounced autosave (which re-arms once isAutoOptimizing flips false and
       // editorHtml has changed) sees no diff — preventing a redundant PUT and a spurious
