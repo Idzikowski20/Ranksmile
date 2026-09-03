@@ -66,6 +66,7 @@ export const mapDbRowsToResultRows = (dbRows: DbResultRow[]): ResultRow[] => dbR
    topic: r.topic ?? '',
    text: r.text ?? '',
    brands: parseBrands(r.brands),
+   brandsAnalyzed: r.brands != null,
    fanOutQueries: parseFanOut(r.fan_out_queries),
 }));
 
@@ -83,40 +84,43 @@ export async function loadScanResultRows(scanId: number): Promise<ResultRow[]> {
    return mapDbRowsToResultRows(dbRows);
 }
 
-/** Citations-only rows for overview / competitor ranking / delta — skips brands + fan-out JSON. */
-export async function loadScanCitationRows(scanId: number): Promise<ResultRow[]> {
-   const map = await loadScanCitationRowsForScans([scanId]);
+/** One scan's rows for overview / competitor ranking / delta — skips the fan-out JSON only. */
+export async function loadScanRows(scanId: number): Promise<ResultRow[]> {
+   const map = await loadScanRowsForScans([scanId]);
    return map.get(scanId) ?? [];
 }
 
-/** Batch citations-only load for many scans (history charts) — one SQL round-trip. */
-export async function loadScanCitationRowsForScans(scanIds: number[]): Promise<Map<number, ResultRow[]>> {
+/** Batch load for many scans (history charts) — one SQL round-trip. Carries brands, which
+ *  the brand metric needs; only the fan-out column is skipped. */
+export async function loadScanRowsForScans(scanIds: number[]): Promise<Map<number, ResultRow[]>> {
    const out = new Map<number, ResultRow[]>();
    if (!scanIds.length) return out;
    for (const id of scanIds) out.set(id, []);
    const placeholders = scanIds.map(() => '?').join(',');
    const dbRows = await queryRows<{
       scan_id: number; prompt_id: number; model: string; own_cited: number; own_position: number | null;
-      citations: unknown; topic: string | null; text: string | null;
+      citations: unknown; brands: unknown; topic: string | null; text: string | null;
    }>(
-      `SELECT r.scan_id, r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, p.topic, p.text
+      `SELECT r.scan_id, r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, r.brands, p.topic, p.text
        FROM ai_vis_results r LEFT JOIN ai_vis_prompts p ON p.id = r.prompt_id
        WHERE r.scan_id IN (${placeholders}) AND r.error IS NULL`,
       scanIds,
    );
    for (const r of dbRows) {
       const list = out.get(r.scan_id) ?? [];
-      const [mapped] = mapDbRowsToResultRows([{ ...r, brands: [], fan_out_queries: [] }]);
+      const [mapped] = mapDbRowsToResultRows([{ ...r, fan_out_queries: [] }]);
       if (mapped) list.push(mapped);
       out.set(r.scan_id, list);
    }
    return out;
 }
 
+export type ScanRef = { id: number; finished_at: string | null; brand_name: string | null };
+
 async function queryCompletedScan(
    domainId: number,
    opts: { requireUsableRows?: boolean; beforeFinishedAt?: string } = {},
-): Promise<{ id: number; finished_at: string | null } | null> {
+): Promise<ScanRef | null> {
    const filters = ['c.domain_id = ?', "s.status = 'completed'"];
    const params: unknown[] = [domainId];
    if (opts.beforeFinishedAt) {
@@ -126,8 +130,8 @@ async function queryCompletedScan(
    if (opts.requireUsableRows) {
       filters.push('EXISTS (SELECT 1 FROM ai_vis_results r WHERE r.scan_id = s.id AND r.error IS NULL)');
    }
-   return queryOne<{ id: number; finished_at: string | null }>(
-      `SELECT s.id, s.finished_at FROM ai_vis_scans s
+   return queryOne<ScanRef>(
+      `SELECT s.id, s.finished_at, s.brand_name FROM ai_vis_scans s
        JOIN ai_vis_configs c ON c.id = s.config_id
        WHERE ${filters.join(' AND ')}
        ORDER BY s.finished_at DESC LIMIT 1`,
@@ -136,15 +140,13 @@ async function queryCompletedScan(
 }
 
 /** Latest completed scan for a domain, even when every row failed (e.g. DFS 402). */
-export async function getLatestCompletedScan(
-   domainId: number,
-): Promise<{ id: number; finished_at: string | null } | null> {
+export async function getLatestCompletedScan(domainId: number): Promise<ScanRef | null> {
    return queryCompletedScan(domainId);
 }
 
 /** Scan to show in the UI: newest completed scan with at least one successful result row. */
 export async function getDisplayScan(domainId: number): Promise<{
-   scan: { id: number; finished_at: string | null };
+   scan: ScanRef;
    usingFallbackScan: boolean;
    latestAttemptFinishedAt: string | null;
 } | null> {
@@ -165,6 +167,6 @@ export async function getDisplayScan(domainId: number): Promise<{
 export async function getPreviousDisplayScan(
    domainId: number,
    beforeFinishedAt: string,
-): Promise<{ id: number; finished_at: string | null } | null> {
+): Promise<ScanRef | null> {
    return queryCompletedScan(domainId, { requireUsableRows: true, beforeFinishedAt });
 }

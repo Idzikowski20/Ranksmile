@@ -54,7 +54,9 @@ describe('mapDbRowsToResultRows', () => {
          { prompt_id: 5, model: 'gemini', own_cited: 1, own_position: 2, citations: JSON.stringify([{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }]), topic: 'T', text: 'Q', brands: JSON.stringify([{ brand: 'Wix' }]) },
          { prompt_id: 6, model: 'chat_gpt', own_cited: 0, own_position: null, citations: null, topic: 'T2', text: 'Q2', brands: null },
       ]);
-      expect(rows[0]).toEqual({ promptId: 5, model: 'gemini', ownCited: true, ownPosition: 2, citations: [{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }], topic: 'T', text: 'Q', brands: [{ brand: 'Wix', domain: '', sentiment: 'neutral', pos: 1, quotes: [] }], fanOutQueries: [] });
-      expect(rows[1]).toEqual({ promptId: 6, model: 'chat_gpt', ownCited: false, ownPosition: null, citations: [], topic: 'T2', text: 'Q2', brands: [], fanOutQueries: [] });
+      // brandsAnalyzed distinguishes "no brands named" from "extraction has not run yet":
+      // row 5 has an extracted list, row 6's column is still NULL.
+      expect(rows[0]).toEqual({ promptId: 5, model: 'gemini', ownCited: true, ownPosition: 2, citations: [{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }], topic: 'T', text: 'Q', brands: [{ brand: 'Wix', domain: '', sentiment: 'neutral', pos: 1, quotes: [] }], brandsAnalyzed: true, fanOutQueries: [] });
+      expect(rows[1]).toEqual({ promptId: 6, model: 'chat_gpt', ownCited: false, ownPosition: null, citations: [], topic: 'T2', text: 'Q2', brands: [], brandsAnalyzed: false, fanOutQueries: [] });
    });
 });

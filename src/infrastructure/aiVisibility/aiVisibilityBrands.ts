@@ -52,7 +52,9 @@ export async function runBrandChunk(scanId: number, ownBrand: string, limit = AI
 /** Latest completed scan per config that still has un-analysed answers (for backfill). */
 export async function findConfigsNeedingBrands(limit = 5): Promise<Array<{ scanId: number; brandName: string }>> {
    return queryRows<{ scanId: number; brandName: string }>(
-      `SELECT s.id AS "scanId", c.brand_name AS "brandName"
+      // The scan's own brand, not the config's: extraction is asynchronous, and a rename
+      // while it runs would otherwise tag answers with a name the read path never matches.
+      `SELECT s.id AS "scanId", COALESCE(s.brand_name, c.brand_name) AS "brandName"
        FROM ai_vis_scans s
        JOIN ai_vis_configs c ON c.id = s.config_id
        JOIN (SELECT config_id, MAX(finished_at) AS mx FROM ai_vis_scans WHERE status = 'completed' GROUP BY config_id) latest

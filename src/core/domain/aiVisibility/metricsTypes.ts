@@ -11,6 +11,9 @@ export type ResultRow = {
    topic: string,
    text: string,
    brands: BrandMention[],
+   /** false = the brands column is still NULL (extraction has not reached this answer),
+    *  so an empty `brands` here means "unknown", not "no brands named". */
+   brandsAnalyzed?: boolean,
    fanOutQueries?: string[],
 };
 

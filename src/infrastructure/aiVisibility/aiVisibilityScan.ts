@@ -71,9 +71,19 @@ export async function enqueueAiVisScan(configId: number): Promise<number> {
       [configId],
    );
    if (active) return active.id;
-   await db.query('INSERT INTO ai_vis_scans (config_id, status) VALUES (?, ?)', { replacements: [configId, 'queued'] });
+   // Copy the brand from the config in the same statement: the scan is scored against the
+   // name it was run under, so a later rename cannot retro-score these answers.
+   await db.query(
+      `INSERT INTO ai_vis_scans (config_id, status, brand_name)
+       SELECT ?, ?, c.brand_name FROM ai_vis_configs c WHERE c.id = ?`,
+      { replacements: [configId, 'queued', configId] },
+   );
+   // The SELECT source means a missing config inserts nothing. Look for the QUEUED row,
+   // not merely the newest one: a bare "latest scan" read would return a finished older
+   // scan and report it as freshly enqueued.
    const created = await queryOne<{ id: number }>(
-      'SELECT id FROM ai_vis_scans WHERE config_id = ? ORDER BY id DESC LIMIT 1', [configId],
+      "SELECT id FROM ai_vis_scans WHERE config_id = ? AND status = 'queued' ORDER BY id DESC LIMIT 1",
+      [configId],
    );
    if (!created) throw new Error('Failed to enqueue scan');
    return created.id;

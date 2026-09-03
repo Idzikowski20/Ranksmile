@@ -1,10 +1,11 @@
-// POST /api/ai-visibility/internal/analyze-brands — machine-to-machine, called by the
-// sidecar tick. Backfills brand extraction for the latest completed scan of each config
-// that still has un-analysed answers. One chunk per config per call → drained over ticks.
+// POST /api/ai-visibility/internal/build-profiles — machine-to-machine, called by the
+// sidecar tick. Aggregates the extracted brand mentions of the latest completed scan of
+// each config into one profile row per brand (what Competitors reads). One chunk per scan
+// per call → drained over ticks.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
-import { findConfigsNeedingBrands, runBrandChunk } from '@/src/infrastructure/aiVisibility/aiVisibilityBrands';
+import { findScansNeedingProfiles, runProfileChunk } from '@/src/infrastructure/aiVisibility/aiVisibilityProfiles';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isInternalPipelineRequest } from '@/src/infrastructure/aiVisibility/internalPipelineAuth';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
@@ -15,13 +16,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    try {
       await db.sync();
       await ensureAiVisibilityTables();
-      const configs = await findConfigsNeedingBrands();
+      const scans = await findScansNeedingProfiles();
       const out: Array<{ scanId: number; done: number; remaining: number }> = [];
-      for (const c of configs) {
-         // Per-item guard: one failing config's extraction must not abort the batch.
-         try { const r = await runBrandChunk(c.scanId, c.brandName); out.push({ scanId: c.scanId, ...r }); } catch { /* per-item */ }
+      for (const s of scans) {
+         // Per-item guard: one bad aggregate must not abort the batch.
+         try {
+            const r = await runProfileChunk(s.scanId);
+            out.push({ scanId: s.scanId, ...r });
+         } catch { /* per-item */ }
       }
-      return res.status(200).json({ analyzed: out });
+      return res.status(200).json({ built: out });
    } catch (error) {
       // Logged, not returned: the message can carry database or config detail.
       console.error(`[ai-vis] ${req.url} failed:`, getErrorMessage(error));

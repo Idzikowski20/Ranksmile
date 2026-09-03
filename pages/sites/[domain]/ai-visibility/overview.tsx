@@ -10,6 +10,8 @@ import { HoverTooltip, Button, Modal, SegmentedControl } from '../../../../compo
 import { MetricWidget } from '../../../../components/koala/product';
 import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
+import ScanStagePill from '../../../../components/aiVisibility/ScanStagePill';
+import { currentScanStage, isScanBusy } from '../../../../components/aiVisibility/ScanProgressBar';
 
 const CompetitorBarChart = dynamic(() => import('../../../../components/aiVisibility/CompetitorBarChart'), { ssr: false });
 const TrendLineChart = dynamic(() => import('../../../../components/aiVisibility/TrendLineChart'), { ssr: false });
@@ -107,7 +109,9 @@ const AiVisibilityOverview: NextPage = () => {
    // Refresh button — which lives in the toolbar, above the children render — can
    // reflect the crunching state without threading it back up from the shell.
    const scanStatusQ = useAiVisScanStatus(slug);
-   const crunchingTop = scanStatusQ.data?.status === 'running' || scanStatusQ.data?.status === 'queued';
+   const crunchingTop = isScanBusy(scanStatusQ.data);
+   // Which phase is still filling these panels — shown as a quiet pill on each metric.
+   const scanStage = currentScanStage(scanStatusQ.data);
 
    const runScan = async (force: boolean) => {
       const res = await startScan.mutateAsync(force ? { force: true } : undefined);
@@ -259,6 +263,7 @@ const AiVisibilityOverview: NextPage = () => {
                         title={(
                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               AI Visibility Score
+                              {scanStage ? <ScanStagePill label={scanStage} /> : null}
                               {scoreHint ? <InfoHint text={scoreHint} /> : null}
                            </span>
                         )}
@@ -277,7 +282,8 @@ const AiVisibilityOverview: NextPage = () => {
                         title={(
                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               Mention Rate
-                              <InfoHint text="Share of prompt/model answers that cite your domain" />
+                              {scanStage ? <ScanStagePill label={scanStage} /> : null}
+                              <InfoHint text="Share of prompt/model answers that name your brand" />
                            </span>
                         )}
                         value={pending || !own ? '—' : `${own.mentionRate}%`}
@@ -290,7 +296,8 @@ const AiVisibilityOverview: NextPage = () => {
                         title={(
                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               Avg Position
-                              <InfoHint text="Your average citation rank when cited (lower is better)" />
+                              {scanStage ? <ScanStagePill label={scanStage} /> : null}
+                              <InfoHint text="How early your brand appears in the answers that name it (lower is better)" />
                            </span>
                         )}
                         value={pending || !own || own.avgPosition == null ? '—' : own.avgPosition.toFixed(1)}

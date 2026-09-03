@@ -101,6 +101,17 @@ async function createAll(): Promise<boolean> {
       finished_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('ai_vis_scans', e));
 
+   // Terminal markers for the phases that run after the scan row flips to `completed`.
+   // Their tables cannot express "finished": a scan whose answers cited nothing, or named
+   // no brands, legitimately has zero rows, which is indistinguishable from "not started"
+   // — so the finders re-picked it forever and the progress bar never left the phase.
+   // The brand in force when the scan ran. Answers are scored by matching this name in
+   // the extracted mentions, so scoring old rows with a renamed brand would read as the
+   // brand vanishing from every answer.
+   try { await db.query('ALTER TABLE ai_vis_scans ADD COLUMN brand_name TEXT'); } catch (e) { ignoreExisting('ai_vis_scans.brand_name', e); }
+   try { await db.query('ALTER TABLE ai_vis_scans ADD COLUMN sources_done_at TIMESTAMP'); } catch (e) { ignoreExisting('ai_vis_scans.sources_done_at', e); }
+   try { await db.query('ALTER TABLE ai_vis_scans ADD COLUMN profiles_done_at TIMESTAMP'); } catch (e) { ignoreExisting('ai_vis_scans.profiles_done_at', e); }
+
    // One row per (scan, prompt, model). citations = [{url, domain, title}].
    await db.query(`CREATE TABLE IF NOT EXISTS ai_vis_results (
       id ${PK},
@@ -119,6 +130,36 @@ async function createAll(): Promise<boolean> {
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_vis_results_scan ON ai_vis_results (scan_id)'); } catch (e) { ignoreExisting('idx results', e); }
    try { await db.query(`ALTER TABLE ai_vis_results ADD COLUMN brands ${JSON_T}`); } catch (e) { ignoreExisting('ai_vis_results.brands', e); }
    try { await db.query(`ALTER TABLE ai_vis_results ADD COLUMN fan_out_queries ${JSON_T}`); } catch (e) { ignoreExisting('ai_vis_results.fan_out_queries', e); }
+   // One row per cited URL of a scan — the "reading sources" phase fetches each page once
+   // and records what it found, so Sources shows a verified title instead of whatever the
+   // model claimed, and we know which pages actually mention the brand.
+   await db.query(`CREATE TABLE IF NOT EXISTS ai_vis_sources (
+      id ${PK},
+      scan_id INTEGER NOT NULL,
+      url TEXT NOT NULL,
+      domain TEXT NOT NULL,
+      title TEXT,
+      http_status INTEGER,
+      own_mentioned INTEGER DEFAULT 0,
+      fetched_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('ai_vis_sources', e));
+   try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_vis_sources_scan_url ON ai_vis_sources (scan_id, url)'); } catch (e) { ignoreExisting('idx sources url', e); }
+
+   // Aggregated profile per brand mentioned in a scan's answers — what the Competitors
+   // view reads. Built by the "building brand profiles" phase from ai_vis_results.brands.
+   await db.query(`CREATE TABLE IF NOT EXISTS ai_vis_brand_profiles (
+      id ${PK},
+      scan_id INTEGER NOT NULL,
+      brand TEXT NOT NULL,
+      domain TEXT,
+      mentions INTEGER DEFAULT 0,
+      avg_position REAL,
+      presence_score INTEGER,
+      sentiment TEXT,
+      updated_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('ai_vis_brand_profiles', e));
+   try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_vis_profiles_scan_brand ON ai_vis_brand_profiles (scan_id, brand)'); } catch (e) { ignoreExisting('idx profiles brand', e); }
+
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_vis_prompts_config ON ai_vis_prompts (config_id)'); } catch (e) { ignoreExisting('idx prompts', e); }
    try { await db.query("ALTER TABLE ai_vis_configs ADD COLUMN priority TEXT DEFAULT 'long_tail'"); } catch (e) { ignoreExisting('ai_vis_configs.priority', e); }
 

@@ -4,7 +4,9 @@ import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
 
-export type CompetitorRow = { domain: string; visibilityScore: number; mentionRate: number; avgPosition: number | null };
+/** Brand-keyed, like the reference tool: the row IS a brand. `domain` is optional context
+ *  (favicon + the domain-keyed detail modal) and is empty for brands we never saw cited. */
+export type CompetitorRow = { brand: string; domain: string; mentions?: number; visibilityScore: number; mentionRate: number; avgPosition: number | null };
 type SortKey = 'avgPosition' | 'mentionRate' | 'visibilityScore';
 
 const SortArrow = ({ dir }: { dir: 'asc' | 'desc' | null }) => (
@@ -51,25 +53,38 @@ const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRo
    const toggle = (k: SortKey, def: 'asc' | 'desc') => { if (sort === k) setDir((d) => (d === 'asc' ? 'desc' : 'asc')); else { setSort(k); setDir(def); } };
 
    if (!competitors.length) {
-      return <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No competitors found in this scan.</div>;
+      return <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No brands were mentioned in this scan.</div>;
    }
 
    return (
       <div style={{ background: 'var(--koala-bg-primary, #fff)' }}>
          <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)' }}>
-            <div style={{ ...headCell, flex: 1, minWidth: 0 }}>Competitor</div>
+            <div style={{ ...headCell, flex: 1, minWidth: 0 }}>Brand</div>
             <div style={{ ...headCell, width: 120, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Avg. pos." active={sort === 'avgPosition'} dir={dir} onClick={() => toggle('avgPosition', 'asc')} /></div>
             <div style={{ ...headCell, width: 140, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Mention rate" active={sort === 'mentionRate'} dir={dir} onClick={() => toggle('mentionRate', 'desc')} /></div>
             <div style={{ ...headCell, width: 160, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Visibility score" active={sort === 'visibilityScore'} dir={dir} onClick={() => toggle('visibilityScore', 'desc')} bold /></div>
          </div>
 
-         {sorted.slice(0, visible).map((c) => (
-            <div key={c.domain} style={rowStyle} onClick={() => onSelect(c.domain)} onMouseEnter={hoverOn} onMouseLeave={hoverOff} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(c.domain); }}>
+         {sorted.slice(0, visible).map((c) => {
+            // The detail modal is domain-keyed; a brand we never saw cited has no domain to
+            // open, so that row stays a plain row rather than a dead button.
+            const openable = !!c.domain;
+            return (
+            <div
+               key={c.brand}
+               style={{ ...rowStyle, cursor: openable ? 'pointer' : 'default' }}
+               onClick={openable ? () => onSelect(c.domain) : undefined}
+               onMouseEnter={openable ? hoverOn : undefined}
+               onMouseLeave={openable ? hoverOff : undefined}
+               role={openable ? 'button' : undefined}
+               tabIndex={openable ? 0 : undefined}
+               onKeyDown={openable ? (e) => { if (e.key === 'Enter') onSelect(c.domain); } : undefined}
+            >
                <div style={{ ...bodyCell, flex: 1, minWidth: 0, position: 'relative', gap: 8, justifyContent: 'space-between' }}>
                   <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${(c.visibilityScore / maxVis) * 100}%`, background: 'linear-gradient(to right, rgba(244,244,245,0), #F0F0F2)', pointerEvents: 'none' }} />
                   <span style={{ zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                      <DomainFavicon domain={c.domain} size={20} />
-                     <span style={{ fontWeight: 500, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.domain}</span>
+                     <span style={{ fontWeight: 500, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.brand}>{c.brand}</span>
                   </span>
                   <span data-open style={{ zIndex: 1, opacity: 0, transition: 'opacity 120ms ease', color: '#71717B', display: 'inline-flex', flexShrink: 0 }}><OpenDetailsIcon /></span>
                </div>
@@ -77,7 +92,8 @@ const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRo
                <div style={{ ...bodyCell, width: 140, flexShrink: 0, justifyContent: 'flex-end' }}>{c.mentionRate}%</div>
                <div style={{ ...bodyCell, width: 160, flexShrink: 0, justifyContent: 'flex-end', fontWeight: 600 }}>{c.visibilityScore}</div>
             </div>
-         ))}
+            );
+         })}
 
          {sorted.length > visible && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 12 }}>

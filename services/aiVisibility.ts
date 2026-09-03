@@ -5,6 +5,11 @@ import { fetchJson, toastError, jsonPost } from './http';
 export type AiVisScanStatus = {
    status: 'idle' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled',
    progressDone: number, progressTotal: number, costUsd: number, finishedAt: string | null,
+   /** Follow-on phases, drained by the sidecar after the answers land: cited pages read,
+    *  brand mentions still to extract, brand profiles written. Counts are for display —
+    *  `*Pending` is the completion signal, because zero rows is a legitimate result. */
+   sourcesTotal: number, sourcesRead: number, brandsPending: number, profilesBuilt: number,
+   sourcesPending: boolean, profilesPending: boolean,
 };
 
 export function useAiVisData<T>(slug: string | undefined, view: string) {
@@ -31,9 +36,14 @@ export function useAiVisScanStatus(slug: string | undefined) {
       () => fetchJson<AiVisScanStatus>(`/api/ai-visibility/${slug}/scan-status`),
       {
          enabled: !!slug,
+         // Keep polling through the follow-on phases too: they run after the scan row flips
+         // to `completed`, so stopping at that point froze the progress bar mid-pipeline.
          refetchInterval: (data) => (
             data?.status === 'running' ? 3000
             : data?.status === 'queued' ? 5000
+            : data?.status === 'completed' && (
+               data.sourcesPending || data.brandsPending > 0 || data.profilesPending
+            ) ? 5000
             : false
          ),
       },
@@ -165,7 +175,9 @@ export function useAiVisPromptTopics(slug: string | undefined, params: { prompts
       { enabled: !!slug, staleTime: 30_000, keepPreviousData: true });
 }
 
-export type CompetitorRow = { domain: string; visibilityScore: number; mentionRate: number; avgPosition: number | null };
+/** Brand-keyed competitor row (reference-tool parity): the brand is the identity, the
+ *  domain is optional context for the favicon and the domain-keyed detail modal. */
+export type CompetitorRow = { brand: string; domain: string; mentions?: number; visibilityScore: number; mentionRate: number; avgPosition: number | null };
 export function useAiVisCompetitors(slug: string | undefined, params: { prompts?: number[]; models?: string[] }) {
    const q = new URLSearchParams({ view: 'competitors' });
    if (params.prompts?.length) q.set('prompts', params.prompts.join(','));

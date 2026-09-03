@@ -45,7 +45,7 @@ import { useContentSettings } from '../../../services/contentSettings';
 import { useArticleKeywords } from '../../../services/articleKeywords';
 import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '@/src/infrastructure/articles/contentScore';
 import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
-import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import { computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
 import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '@/src/core/domain/articles/deepAnalysisProgress';
@@ -1029,14 +1029,30 @@ const ArticleEditorPage: NextPage = () => {
     // the resolved article, so its ref is stale — ignore the panel there and score the
     // final override html directly.
     const panel = contentOverride ? null : panelScoresRef.current;
-    const hasAiData = panel ? panel.ai != null : (scored.liveItems.length > 0 || scoreData.ai_score != null);
+    // Without the panel (AO save on the resolved HTML), resolve AI the way the panel does —
+    // scored.ai is coverage-only and would drop a summary-based AI from the saved overall.
+    const resolvedAi = resolveAiScore({
+      summary: aiVisibilitySummary,
+      articleText: text,
+      answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
+      coverageOverall: scored.liveItems.length > 0 ? scored.ai : null,
+    });
+    // A summary with prompts is AI data even when it scores 0 — testing `resolvedAi > 0`
+    // dropped the AI half of a legitimately-zero article and saved an SEO-only score that
+    // no longer matched the panel.
+    const hasAiData = panel ? panel.ai != null
+      : (scored.liveItems.length > 0
+         || scoreData.ai_score != null
+         || (aiVisibilitySummary?.prompts_total ?? 0) > 0
+         || resolvedAi > 0);
     const seoOut = panel ? panel.seo : scored.seo;
-    const aiOut = panel ? (panel.ai ?? scored.ai) : scored.ai;
+    const aiResolved = Math.max(scoreData.ai_score ?? 0, resolvedAi, scored.ai);
+    const aiOut = panel ? (panel.ai ?? scored.ai) : aiResolved;
     updatedScoreData.seo_score = seoOut;
     if (hasAiData) updatedScoreData.ai_score = aiOut;
     const contentScore = panel
       ? panel.overall
-      : (hasAiData ? computeOverallContentScore(scored.seo, scored.ai) : scored.seo);
+      : (hasAiData ? computeOverallContentScore(scored.seo, aiOut) : scored.seo);
     updatedScoreData._computed_score = contentScore;
     updatedScoreData._content_score = contentScore;
     if (versionMeta) updatedScoreData._ao_meta = versionMeta;
@@ -1163,6 +1179,11 @@ const ArticleEditorPage: NextPage = () => {
   // fields refresh. Skipped while a review/optimize save-suspend is active or the doc is
   // not a usable article.
   const scoreSyncedRef = useRef<string | null>(null);
+  // Score refreshes run one at a time, newest wins. AbortController was the wrong tool: it
+  // drops OUR handling of a response, but the PUT it aborted may already have reached the
+  // server, so an older trio could still be written after a newer one.
+  const scoreSyncChainRef = useRef<Promise<void>>(Promise.resolve());
+  const scoreSyncGenRef = useRef(0);
   useEffect(() => {
     const key = String(id ?? '');
     if (isLoading || !article || saveSuspended || !key) return;
@@ -1174,18 +1195,38 @@ const ArticleEditorPage: NextPage = () => {
     const syncKey = `${key}:${panelScoresSig}`;
     if (scoreSyncedRef.current === syncKey) return;
     scoreSyncedRef.current = syncKey;
-    // Score-ONLY refresh: send just score_override, never content/meta/image/terms, so an
-    // article scored before the current model catches up without rewriting the document.
-    // Omit ai when the gauge is SEO-only so the list keeps its content_score fallback.
-    const override: { seo: number; overall: number; ai?: number } = { seo: ps.seo, overall: ps.overall };
-    if (ps.ai != null) override.ai = ps.ai;
-    fetch(`/api/articles/${key}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ score_override: override }),
-    })
-      .then((r) => { if (!r.ok) throw new Error(`score refresh HTTP ${r.status}`); })
-      .catch((err) => { scoreSyncedRef.current = null; console.warn('[score-refresh]', getErrorMessage(err)); });
+    const gen = scoreSyncGenRef.current + 1;
+    scoreSyncGenRef.current = gen;
+    scoreSyncChainRef.current = scoreSyncChainRef.current
+      .catch(() => { /* a failed refresh must not stall the ones after it */ })
+      .then(async () => {
+        // Superseded while queued: skip the write entirely rather than send a stale trio.
+        if (gen !== scoreSyncGenRef.current) return;
+        // Auto-Optimize may have started while this sat in the queue; the panel then holds
+        // a transient mid-optimization score. Drop the write and re-arm, so the real score
+        // syncs once the suspension lifts.
+        if (saveSuspendedRef.current) { scoreSyncedRef.current = null; return; }
+        // Read the scores at SEND time, so what goes out is the newest the panel emitted.
+        const cur = panelScoresRef.current;
+        if (!cur) return;
+        // Score-ONLY refresh: send just score_override, never content/meta/image/terms, so
+        // an article scored before the current model catches up without rewriting the
+        // document. Omit ai when the gauge is SEO-only so the list keeps its fallback.
+        const override: { seo: number; overall: number; ai?: number } = { seo: cur.seo, overall: cur.overall };
+        if (cur.ai != null) override.ai = cur.ai;
+        const r = await fetch(`/api/articles/${key}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ score_override: override }),
+        });
+        if (!r.ok) throw new Error(`score refresh HTTP ${r.status}`);
+      })
+      .catch((err) => {
+        // Only re-arm if nothing newer has registered: clearing the key after a newer
+        // refresh already succeeded would make the next render send it a second time.
+        if (gen === scoreSyncGenRef.current) scoreSyncedRef.current = null;
+        console.warn('[score-refresh]', getErrorMessage(err));
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, article, editorHtml, isLoading, saveSuspended, panelScoresSig]);
 
@@ -1844,12 +1885,28 @@ const ArticleEditorPage: NextPage = () => {
         if (n.type.name === 'heading') headings += 1;
         if (n.type.name === 'paragraph' && n.textContent.trim()) paragraphs += 1;
       });
-      await doSave(
-        'auto_optimize',
-        undefined,
-        { changes: optimizeMetaRef.current.changedCount, promptVersion: optimizeMetaRef.current.promptVersion, creditDeducted: optimizeMetaRef.current.creditDeducted },
-        { html, text, words, headings, paragraphs },
-      );
+      // Onto the score-refresh chain, not alongside it. Suspending new refreshes cannot
+      // recall a PUT already in flight, and if that older trio landed after this save it
+      // would overwrite the optimization scores with the pre-optimization ones. Bumping the
+      // generation drops anything still queued; the chain guarantees this save goes last.
+      scoreSyncGenRef.current += 1;
+      // Re-arm the score effect as well: the refresh we just superseded never sent its PUT,
+      // so if this save fails or is cancelled its scores would otherwise stay unsynced,
+      // with the dedupe key still claiming they were written.
+      scoreSyncedRef.current = null;
+      scoreSyncChainRef.current = scoreSyncChainRef.current
+        .catch(() => { /* a failed refresh must not block the save */ })
+        .then(() => doSave(
+          'auto_optimize',
+          undefined,
+          {
+            changes: optimizeMetaRef.current.changedCount,
+            promptVersion: optimizeMetaRef.current.promptVersion,
+            creditDeducted: optimizeMetaRef.current.creditDeducted,
+          },
+          { html, text, words, headings, paragraphs },
+        ).then(() => undefined));
+      await scoreSyncChainRef.current;
       // We just persisted the resolved doc AND created a version. Mark this exact state as
       // saved so the debounced autosave (which re-arms once isAutoOptimizing flips false and
       // editorHtml has changed) sees no diff — preventing a redundant PUT and a spurious
