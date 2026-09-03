@@ -54,7 +54,11 @@ export async function runBrandChunk(scanId: number, ownBrand: string, limit = AI
       [scanId, limit],
    );
    for (const row of pending) {
-      const brands = await extractBrandsForRow(row.answer || '', ownBrand);
+      // An empty answer names nobody, and there is nothing for a model to read. Recording
+      // that directly keeps ten empty ai_overview rows from spending ten calls a pass —
+      // and from stalling the phase if the model rejects an empty prompt.
+      // eslint-disable-next-line no-await-in-loop
+      const brands = row.answer?.trim() ? await extractBrandsForRow(row.answer, ownBrand) : [];
       if (brands === null) continue; // keep NULL, retry next time
       await db.query('UPDATE ai_vis_results SET brands = ? WHERE id = ? AND brands IS NULL', { replacements: [JSON.stringify(brands), row.id] }).catch(() => {});
    }

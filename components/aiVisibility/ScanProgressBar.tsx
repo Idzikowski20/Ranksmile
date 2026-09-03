@@ -99,12 +99,12 @@ function buildSteps(scan?: AiVisScanStatus): Step[] {
    const profiles = scan?.profilesBuilt ?? 0;
 
    const answersIn = total > 0 && done >= total;
-   // Completion comes from the phase's own marker, not from its row count: a scan whose
-   // answers cited nothing has zero sources, and one that named no brands has zero
-   // profiles, and neither means the phase is still running.
-   const sourcesIn = answersIn && !(scan?.sourcesPending ?? true);
+   // Evidence, not absence of waiting: `sourcesDone` is the phase's marker (or counts that
+   // prove it). Reading the pending flag here put a green tick on a phase that never ran,
+   // because pending also goes false once the scan is too old to be worth polling.
+   const sourcesIn = answersIn && (scan?.sourcesDone ?? false);
    const brandsIn = sourcesIn && brandsPending === 0;
-   const profilesIn = brandsIn && !(scan?.profilesPending ?? true);
+   const profilesIn = brandsIn && (scan?.profilesDone ?? false);
 
    const phase = (reached: boolean, complete: boolean): StepState => (!reached ? 'idle' : complete ? 'done' : 'active');
 

@@ -70,8 +70,12 @@ async def _start_ai_vis_scheduler() -> None:
     restart so due scans aren't stranded for hours. Skipped implicitly in one-off
     script contexts that don't start the app."""
     import asyncio
-    from pipeline.ai_vis_scheduler import scheduler_loop
+    from pipeline.ai_vis_scheduler import follow_on_loop, scheduler_loop
     asyncio.create_task(scheduler_loop(resolved_nextjs_url()))
+    # Separate loop: the post-scan phases run on a 60s cadence, not the 6-hourly scan tick.
+    # Tied to the tick, a scan whose phases had not drained sat untouched for hours with the
+    # progress bar spinning, and an inline pass that gave up was never retried.
+    asyncio.create_task(follow_on_loop(resolved_nextjs_url()))
     print("[ai_vis_scheduler] started")
 
 

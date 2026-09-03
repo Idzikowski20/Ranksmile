@@ -19,6 +19,52 @@ CONNECT_RETRY_SEC = 30
 CONNECT_RETRY_MAX_WAIT_SEC = 180
 _tick_lock = asyncio.Lock()
 
+# The follow-on phases used to be drained inside the 6-hourly scan tick, so a scan whose
+# phases had not finished sat untouched for hours while the progress bar spun — and a scan
+# whose inline pass gave up was never retried at all. They are cheap, chunked and
+# idempotent, so they get their own loop at a cadence a person would wait through.
+FOLLOW_ON_TICK_SEC = 60
+_follow_on_lock = asyncio.Lock()
+
+FOLLOW_ON_PHASES = (
+    ("read-sources", "/api/ai-visibility/internal/read-sources"),
+    ("analyze-brands", "/api/ai-visibility/internal/analyze-brands"),
+    ("build-profiles", "/api/ai-visibility/internal/build-profiles"),
+)
+
+
+def _internal_headers() -> dict:
+    return {
+        "Content-Type": "application/json",
+        "x-internal-token": os.environ.get("INTERNAL_PIPELINE_TOKEN", ""),
+    }
+
+
+async def _drain_follow_on_phases(nextjs_url: str) -> None:
+    """One chunk per scan per phase, in the order the progress bar reports them."""
+    async with _follow_on_lock:
+        headers = _internal_headers()
+        for label, path in FOLLOW_ON_PHASES:
+            try:
+                async with httpx.AsyncClient(timeout=120) as client:
+                    resp = await client.post(f"{nextjs_url.rstrip('/')}{path}", headers=headers, json={})
+                    # A 401/402/500 counted as a successful tick before this, so a phase
+                    # could silently never run.
+                    resp.raise_for_status()
+            except Exception as exc:  # noqa: BLE001 - one phase must not stop the others
+                print(f"[ai_vis_scheduler] {label} failed: {exc}")
+
+
+async def follow_on_loop(nextjs_url: str) -> None:
+    """Drain the post-scan phases on their own short cadence."""
+    await _wait_for_nextjs(nextjs_url)
+    while True:
+        try:
+            await _drain_follow_on_phases(nextjs_url)
+        except Exception as exc:  # noqa: BLE001 — keep the loop alive
+            print(f"[ai_vis_scheduler] follow-on tick failed: {type(exc).__name__}: {exc}")
+        await asyncio.sleep(FOLLOW_ON_TICK_SEC)
+
 
 async def _wait_for_nextjs(nextjs_url: str) -> None:
     """Block until Next.js accepts HTTP (mprocs starts sidecar before Next compiles)."""
@@ -72,25 +118,8 @@ async def _tick(nextjs_url: str) -> None:
             await run_scan_loop(item["scanId"], nextjs_url)
         print(f"[ai_vis_scheduler] tick processed {len(due)} scan(s)")
 
-        # Backfill brand extraction for scans that still have un-analysed answers
-        # (best-effort; Sources just shows "no brands yet" until this drains).
-        # Follow-on phases, in the order the UI reports them: read the cited pages, extract
-        # the brands each answer names, then aggregate those into per-brand profiles. Each
-        # call drains one chunk per scan, so a big scan needs several ticks — fine, the UI
-        # shows what is left. Best-effort: a failure here never breaks the tick.
-        for label, path in (
-            ("read-sources", "/api/ai-visibility/internal/read-sources"),
-            ("analyze-brands", "/api/ai-visibility/internal/analyze-brands"),
-            ("build-profiles", "/api/ai-visibility/internal/build-profiles"),
-        ):
-            try:
-                async with httpx.AsyncClient(timeout=120) as client:
-                    resp = await client.post(f"{nextjs_url.rstrip('/')}{path}", headers=headers, json={})
-                    # Without this a 401/402/500 counted as a successful tick and the phase
-                    # silently never ran; raise so the handler below logs which one failed.
-                    resp.raise_for_status()
-            except Exception as exc:  # noqa: BLE001 - never let a follow-on break the tick
-                print(f"[ai_vis_scheduler] {label} failed: {exc}")
+        # A freshly finished scan should not wait a whole follow-on tick for its phases.
+        await _drain_follow_on_phases(nextjs_url)
 
 
 async def scheduler_loop(nextjs_url: str) -> None:

@@ -19,13 +19,20 @@ type PhaseRow = { sources_total: number, sources_read: number, brands_pending: n
  *  take minutes; past this a missing marker means nobody is going to write one. */
 const PHASE_GRACE_MS = 30 * 60 * 1000;
 
-/** Pending unless the phase marked itself done, the counts already prove it, or the scan
- *  finished long enough ago that no worker is coming. */
-export function phasePending(doneAt: unknown, countsComplete: boolean, finishedAt: unknown): boolean {
-   if (doneAt || countsComplete) return false;
+/**
+ * A phase reports two independent things, and conflating them made the bar lie.
+ *
+ * `done` is evidence the work happened: the phase's own marker, or counts that prove it.
+ * `pending` is only whether to keep polling — it also goes false once the scan is old
+ * enough that no worker is coming. A scan whose phases never ran then stops being polled
+ * while still, correctly, not showing a tick.
+ */
+export function phaseState(doneAt: unknown, countsComplete: boolean, finishedAt: unknown): { done: boolean; pending: boolean } {
+   const done = Boolean(doneAt) || countsComplete;
+   if (done) return { done: true, pending: false };
    const finished = parseDbTimestamp(finishedAt);
-   if (Number.isFinite(finished) && Date.now() - finished > PHASE_GRACE_MS) return false;
-   return true;
+   const abandoned = Number.isFinite(finished) && Date.now() - finished > PHASE_GRACE_MS;
+   return { done: false, pending: !abandoned };
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -51,7 +58,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(200).json({
          status: 'idle', progressDone: 0, progressTotal: 0, costUsd: 0, finishedAt: null,
          sourcesTotal: 0, sourcesRead: 0, brandsPending: 0, profilesBuilt: 0,
-         sourcesPending: false, profilesPending: false, models: [], recentSourceDomains: [],
+         sourcesPending: false, profilesPending: false, sourcesDone: false, profilesDone: false,
+         models: [], recentSourceDomains: [],
       });
    }
 
@@ -85,6 +93,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    ).catch(() => []);
    const recentSourceDomains = Array.from(new Set(domainRows.map((r) => r.domain))).slice(0, 6);
 
+   const sources = phaseState(
+      scan.sources_done_at,
+      sourcesTotal > 0 && sourcesRead >= sourcesTotal,
+      scan.finished_at,
+   );
+   const profiles = phaseState(scan.profiles_done_at, false, scan.finished_at);
+
    return res.status(200).json({
       status: scan.status,
       progressDone: scan.progress_done || 0,
@@ -99,22 +114,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       profilesBuilt: Number(phases?.profiles_built ?? 0),
       // Row counts cannot say "finished": a scan that cited nothing, or named no brands,
       // has zero rows for the same reason a scan that has not started does. The phase
-      // writes a marker when it drains, and that is the primary completion signal.
-      //
-      // Two fallbacks keep old rows out of an endless poll. Scans finished before the
-      // markers existed have none and would never get one until a sidecar tick (hours
-      // away), and a scan run through the inline fallback never runs these phases at all:
-      //   - counts that already prove completion settle it,
-      //   - and past PHASE_GRACE_MS the follow-on phases are no longer treated as live.
-      sourcesPending: phasePending(
-         scan.sources_done_at,
-         sourcesTotal > 0 && sourcesRead >= sourcesTotal,
-         scan.finished_at,
-      ),
-      // No count fallback here, unlike sources: rows written proves the phase STARTED, not
-      // that every brand was written, and calling it done mid-chunk would show a truncated
-      // competitor list as final. Legacy rows fall through to the grace window instead.
-      profilesPending: phasePending(scan.profiles_done_at, false, scan.finished_at),
+      // writes a marker when it drains, and that is the primary completion signal; counts
+      // that already prove completion cover rows written before the markers existed.
+      sourcesPending: sources.pending,
+      sourcesDone: sources.done,
+      // No count fallback for profiles: rows written prove the phase STARTED, not that
+      // every brand was stored, and calling it done mid-chunk would present a truncated
+      // competitor list as final.
+      profilesPending: profiles.pending,
+      profilesDone: profiles.done,
    });
 }
 

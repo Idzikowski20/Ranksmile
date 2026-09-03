@@ -9,7 +9,10 @@ export type AiVisScanStatus = {
     *  brand mentions still to extract, brand profiles written. Counts are for display —
     *  `*Pending` is the completion signal, because zero rows is a legitimate result. */
    sourcesTotal: number, sourcesRead: number, brandsPending: number, profilesBuilt: number,
+   /** `*Pending` says whether to keep polling; `*Done` is evidence the phase ran. A scan
+    *  whose phases never ran stops being polled without ever claiming to be finished. */
    sourcesPending: boolean, profilesPending: boolean,
+   sourcesDone: boolean, profilesDone: boolean,
    /** Engines this scan queries, and the pages it read most recently — for the icons and
     *  the favicon trail in the progress bar. */
    models: string[], recentSourceDomains: string[],
