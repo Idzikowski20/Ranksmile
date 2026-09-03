@@ -3,6 +3,7 @@
  */
 import { mkdir, readFile, writeFile, appendFile } from 'fs/promises';
 import path from 'path';
+import { wieDataPath } from '@/src/infrastructure/wie/dataDir';
 
 export type HistoryEntry = {
   runId: string;
@@ -16,18 +17,18 @@ export type HistoryEntry = {
   dna_version?: number;
 };
 
-const ROOT = path.join(process.cwd(), 'data', 'wie-eval');
-const HISTORY_FILE = path.join(ROOT, 'history.jsonl');
-const TRENDS_FILE = path.join(ROOT, 'trends.md');
+const root = (): string => wieDataPath('wie-eval');
+const historyFile = (): string => path.join(root(), 'history.jsonl');
+const trendsFile = (): string => path.join(root(), 'trends.md');
 
 export async function appendHistory(entry: HistoryEntry): Promise<void> {
-  await mkdir(ROOT, { recursive: true });
-  await appendFile(HISTORY_FILE, `${JSON.stringify(entry)}\n`, 'utf-8');
+  await mkdir(root(), { recursive: true });
+  await appendFile(historyFile(), `${JSON.stringify(entry)}\n`, 'utf-8');
 }
 
 export async function readHistory(limit = 100): Promise<HistoryEntry[]> {
   try {
-    const raw = await readFile(HISTORY_FILE, 'utf-8');
+    const raw = await readFile(historyFile(), 'utf-8');
     const lines = raw.split(/\n/).map((l) => l.trim()).filter(Boolean);
     const out: HistoryEntry[] = [];
     for (const line of lines.slice(-limit)) {
@@ -116,11 +117,11 @@ export async function writeTrendsFile(
 ): Promise<TrendsResult> {
   const h = history ?? await readHistory(50);
   const t = buildTrendsMarkdown(h, opts);
-  await mkdir(ROOT, { recursive: true });
-  await writeFile(TRENDS_FILE, t.markdown, 'utf-8');
+  await mkdir(root(), { recursive: true });
+  await writeFile(trendsFile(), t.markdown, 'utf-8');
   return t;
 }
 
 export function evalRootDir(): string {
-  return ROOT;
+  return root();
 }

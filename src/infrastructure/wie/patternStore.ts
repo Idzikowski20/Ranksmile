@@ -6,6 +6,7 @@
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import { WRITING_PRINCIPLES } from '@/src/core/domain/wie/principles';
+import { wieDataPath } from '@/src/infrastructure/wie/dataDir';
 
 export type PatternLayer = 'global' | 'industry' | 'brand';
 
@@ -58,8 +59,10 @@ type DnaSnapshotsFile = {
   }>;
 };
 
-const FILE = path.join(process.cwd(), 'data', 'wie-pattern-store.json');
-const SNAPSHOTS_FILE = path.join(process.cwd(), 'data', 'wie-dna-snapshots.json');
+// Resolved per call — see wie/dataDir. Module-level constants made every Jest worker
+// share one file, which is what made the DNA rollback suite flaky.
+const storeFile = (): string => wieDataPath('wie-pattern-store.json');
+const snapshotsFile = (): string => wieDataPath('wie-dna-snapshots.json');
 const MAX_SNAPSHOTS = 12;
 
 const SEED: WritingPattern[] = [
@@ -162,7 +165,7 @@ function cloneStore(store: PatternStoreSnapshot): PatternStoreSnapshot {
 
 async function readSnapshotsFile(): Promise<DnaSnapshotsFile> {
   try {
-    const raw = await readFile(SNAPSHOTS_FILE, 'utf-8');
+    const raw = await readFile(snapshotsFile(), 'utf-8');
     const parsed = JSON.parse(raw) as Partial<DnaSnapshotsFile>;
     return { snapshots: Array.isArray(parsed.snapshots) ? parsed.snapshots : [] };
   } catch {
@@ -172,8 +175,8 @@ async function readSnapshotsFile(): Promise<DnaSnapshotsFile> {
 
 async function writeSnapshotsFile(data: DnaSnapshotsFile): Promise<void> {
   try {
-    await mkdir(path.dirname(SNAPSHOTS_FILE), { recursive: true });
-    await writeFile(SNAPSHOTS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    await mkdir(path.dirname(snapshotsFile()), { recursive: true });
+    await writeFile(snapshotsFile(), JSON.stringify(data, null, 2), 'utf-8');
   } catch {
     /* best-effort */
   }
@@ -181,7 +184,7 @@ async function writeSnapshotsFile(data: DnaSnapshotsFile): Promise<void> {
 
 export async function readPatternStore(): Promise<PatternStoreSnapshot> {
   try {
-    const raw = await readFile(FILE, 'utf-8');
+    const raw = await readFile(storeFile(), 'utf-8');
     const parsed = JSON.parse(raw) as Partial<PatternStoreSnapshot>;
     if (!Array.isArray(parsed.patterns) || !parsed.patterns.length) return emptyStore();
     return {
@@ -197,9 +200,9 @@ export async function readPatternStore(): Promise<PatternStoreSnapshot> {
 
 export async function writePatternStore(store: PatternStoreSnapshot): Promise<void> {
   try {
-    await mkdir(path.dirname(FILE), { recursive: true });
+    await mkdir(path.dirname(storeFile()), { recursive: true });
     await writeFile(
-      FILE,
+      storeFile(),
       JSON.stringify({ ...store, updated_at: new Date().toISOString() }, null, 2),
       'utf-8',
     );

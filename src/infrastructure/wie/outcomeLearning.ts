@@ -5,6 +5,7 @@
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import { recordPatternOutcome, readPatternStore } from '@/src/infrastructure/wie/patternStore';
+import { wieDataPath } from '@/src/infrastructure/wie/dataDir';
 
 export type OutcomeMetrics = {
   clicks?: number;
@@ -35,8 +36,8 @@ export type OutcomeRecord = {
   success: boolean;
 };
 
-const RUNS_FILE = path.join(process.cwd(), 'data', 'wie-article-runs.json');
-const OUTCOMES_FILE = path.join(process.cwd(), 'data', 'wie-outcomes.json');
+const runsFile = (): string => wieDataPath('wie-article-runs.json');
+const outcomesFile = (): string => wieDataPath('wie-outcomes.json');
 
 type RunsFile = Record<string, WieLastRun>;
 type OutcomesFile = { records: OutcomeRecord[] };
@@ -102,14 +103,14 @@ export async function saveWieLastRun(articleId: number, run: WieLastRun): Promis
   const key = String(articleId);
   let data: RunsFile = {};
   try {
-    data = JSON.parse(await readFile(RUNS_FILE, 'utf-8')) as RunsFile;
+    data = JSON.parse(await readFile(runsFile(), 'utf-8')) as RunsFile;
   } catch {
     data = {};
   }
   data[key] = run;
   try {
-    await mkdir(path.dirname(RUNS_FILE), { recursive: true });
-    await writeFile(RUNS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    await mkdir(path.dirname(runsFile()), { recursive: true });
+    await writeFile(runsFile(), JSON.stringify(data, null, 2), 'utf-8');
   } catch {
     /* best-effort */
   }
@@ -117,7 +118,7 @@ export async function saveWieLastRun(articleId: number, run: WieLastRun): Promis
 
 export async function readWieLastRun(articleId: number): Promise<WieLastRun | null> {
   try {
-    const data = JSON.parse(await readFile(RUNS_FILE, 'utf-8')) as RunsFile;
+    const data = JSON.parse(await readFile(runsFile(), 'utf-8')) as RunsFile;
     return data[String(articleId)] || null;
   } catch {
     return null;
@@ -127,7 +128,7 @@ export async function readWieLastRun(articleId: number): Promise<WieLastRun | nu
 async function appendOutcome(rec: OutcomeRecord): Promise<void> {
   let file: OutcomesFile = { records: [] };
   try {
-    file = JSON.parse(await readFile(OUTCOMES_FILE, 'utf-8')) as OutcomesFile;
+    file = JSON.parse(await readFile(outcomesFile(), 'utf-8')) as OutcomesFile;
     if (!Array.isArray(file.records)) file.records = [];
   } catch {
     file = { records: [] };
@@ -135,8 +136,8 @@ async function appendOutcome(rec: OutcomeRecord): Promise<void> {
   file.records.push(rec);
   file.records = file.records.slice(-500);
   try {
-    await mkdir(path.dirname(OUTCOMES_FILE), { recursive: true });
-    await writeFile(OUTCOMES_FILE, JSON.stringify(file, null, 2), 'utf-8');
+    await mkdir(path.dirname(outcomesFile()), { recursive: true });
+    await writeFile(outcomesFile(), JSON.stringify(file, null, 2), 'utf-8');
   } catch {
     /* best-effort */
   }
@@ -237,7 +238,7 @@ export async function applyOutcomeLearning(opts: {
 
 export async function listOutcomesForArticle(articleId: number, limit = 20): Promise<OutcomeRecord[]> {
   try {
-    const file = JSON.parse(await readFile(OUTCOMES_FILE, 'utf-8')) as OutcomesFile;
+    const file = JSON.parse(await readFile(outcomesFile(), 'utf-8')) as OutcomesFile;
     return (file.records || [])
       .filter((r) => r.articleId === articleId)
       .slice(-limit)
