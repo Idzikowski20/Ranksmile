@@ -1,0 +1,23 @@
+pages/articles/[id]/index.tsx
+  s_8a599cee1c9d24::t_0afeee47961a63 1893-1896
+pages/api/ai-visibility/[slug]/scan-status.ts
+  s_8a599cee1c9d24::t_0afeee47961a63 21-26,28-29,36
+__tests__/lib/aiVisPhasePending.test.ts
+  s_8a599cee1c9d24::t_950de5eed3717b 44-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f59a556e8c01150024dd20ee3c4f2a3709838efe",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
