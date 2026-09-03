@@ -63,7 +63,7 @@ export function computeOverview(rows: ResultRow[]) {
 /** Brand names compare on letters and digits only: "Pro Detektyw" === "ProDetektyw".
  *  Unicode-aware on purpose — an ASCII class erases a brand like "Żółw" to nothing, and
  *  an empty key silently scores every answer as "brand not named". */
-const brandKey = (s: string): string => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+export const brandKey = (s: string): string => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 
 /** 1-based appearance position of the tracked brand in an answer, or null if unnamed. */
 export function ownBrandPosition(row: ResultRow, ownBrand: string): number | null {

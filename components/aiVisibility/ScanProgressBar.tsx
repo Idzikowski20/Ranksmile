@@ -9,10 +9,14 @@ const LIFT = '0 16px 48px rgba(0,0,0,0.28)';
 type StepState = 'done' | 'active' | 'idle';
 type Step = { label: string; state: StepState; detail?: string };
 
+/** Decorative: the pill's single status region announces the phase, so a spinner per step
+ *  would have screen readers reading "Loading" several times at once.
+ *  data-aiv-spin sits on this span because it is the element carrying the animation —
+ *  `animation` does not inherit, so the reduced-motion rule must target it directly. */
 const Spinner = ({ size = 20 }: { size?: number }) => (
    <span
-      aria-label="Loading"
-      role="status"
+      aria-hidden="true"
+      data-aiv-spin
       style={{
          width: size,
          height: size,
@@ -171,16 +175,30 @@ const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScan
       <div style={{ position: 'fixed', left: 0, right: 0, bottom: 24, zIndex: 200, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
          <style>{'@keyframes aiv-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { [data-aiv-spin] { animation: none !important; } }'}</style>
 
-         <div style={{ position: 'relative', pointerEvents: 'auto', width: 'min(680px, calc(100vw - 48px))' }}>
+         {/* Hover lives on the wrapper, not the pill: closing on the pill's mouseleave shut
+             the timeline before the pointer could arrive. The 8px gap is padding inside the
+             timeline's positioner rather than an offset, so the pointer never leaves the
+             subtree on the way up. */}
+         <div
+            style={{ position: 'relative', pointerEvents: 'auto', width: 'min(680px, calc(100vw - 48px))' }}
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+         >
             {/* Timeline, above the pill */}
+            <div
+               style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: 0,
+                  right: 0,
+                  paddingBottom: 8,
+                  pointerEvents: open ? 'auto' : 'none',
+               }}
+            >
             <div
                role="region"
                aria-label="Scan progress details"
                style={{
-                  position: 'absolute',
-                  bottom: 'calc(100% + 8px)',
-                  left: 0,
-                  right: 0,
                   borderRadius: 16,
                   background: SURFACE,
                   color: ON_SURFACE,
@@ -190,7 +208,6 @@ const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScan
                   opacity: open ? 1 : 0,
                   transform: open ? 'translateY(0)' : 'translateY(4px)',
                   transition: 'opacity 150ms ease, transform 150ms ease',
-                  pointerEvents: open ? 'auto' : 'none',
                }}
             >
                <div style={{ padding: 20 }}>
@@ -200,12 +217,11 @@ const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScan
                   You can leave this page — the scan keeps running in the background.
                </div>
             </div>
+            </div>
 
             {/* Collapsed pill */}
             <button
                type="button"
-               onMouseEnter={() => setOpen(true)}
-               onMouseLeave={() => setOpen(false)}
                onFocus={() => setOpen(true)}
                onBlur={() => setOpen(false)}
                aria-expanded={open}
@@ -225,17 +241,22 @@ const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScan
                   boxShadow: LIFT,
                }}
             >
-               <span data-aiv-spin style={{ display: 'inline-flex', flexShrink: 0 }}><Spinner size={24} /></span>
+               <span style={{ display: 'inline-flex', flexShrink: 0 }}><Spinner size={24} /></span>
                <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
                   <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                     <span role="status" aria-live="polite" style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                     <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>
                         Building your report
                      </span>
                      <span style={{ fontSize: 12, opacity: 0.7, flexShrink: 0 }}>
                         {doneCount} of {steps.length} steps done
                      </span>
                   </span>
-                  <span style={{ fontSize: 12, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {/* The one live region: it names the phase, which is what actually changes. */}
+                  <span
+                     role="status"
+                     aria-live="polite"
+                     style={{ fontSize: 12, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
                      {current.label}{current.detail ? ` · ${current.detail}` : ''}
                   </span>
                   <span aria-hidden="true" style={{ display: 'block', height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>

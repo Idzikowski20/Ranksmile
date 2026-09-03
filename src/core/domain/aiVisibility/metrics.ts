@@ -16,7 +16,7 @@
  *     directCitations = count of own-domain citation entries; pages = distinct own URLs
  *     pairScore(prompt,model) = cited@pos1 → 100; pos p → max(0, 100-(p-1)*15); else 0
  */
-import { computeOverview, computeBrandOverview, ownDomainPosition, mean, pairScore } from '@/src/core/domain/aiVisibility/metricsOverview';
+import { computeOverview, computeBrandOverview, ownDomainPosition, brandKey, mean, pairScore } from '@/src/core/domain/aiVisibility/metricsOverview';
 import type { BrandTriad } from '@/src/core/domain/aiVisibility/metricsOverview';
 import { BLOCKED_CITATION_DOMAINS, isBlockedCitationDomain } from '@/src/core/domain/aiVisibility/blockedDomains';
 import { presenceScore } from '@/src/core/domain/aiVisibility/presence';
@@ -28,7 +28,7 @@ import type {
 } from '@/src/core/domain/aiVisibility/metricsTypes';
 
 export type { BrandMention, GapCard, ResultRow, SourceBrand, SourceDetailBrand } from '@/src/core/domain/aiVisibility/metricsTypes';
-export { ownDomainPosition, computeOverview, computeBrandOverview, ownBrandPosition } from '@/src/core/domain/aiVisibility/metricsOverview';
+export { ownDomainPosition, computeOverview, computeBrandOverview, ownBrandPosition, brandKey } from '@/src/core/domain/aiVisibility/metricsOverview';
 export type { BrandOverview, BrandTriad } from '@/src/core/domain/aiVisibility/metricsOverview';
 
 // AI grounding / redirect proxies, not real competitors — excluded from the ranking.
@@ -481,9 +481,16 @@ export function rankBrandProfiles(rows: ResultRow[]): BrandProfile[] {
    if (!pairs) return [];
    const agg = new Map<string, { brand: string, domain: string, mentions: number, posSum: number }>();
    for (const r of scored) {
+      // Same key as computeBrandOverview (brandKey), or "Pro Detektyw" and "ProDetektyw"
+      // become two competitor rows here while the tracked brand's own headline counts them
+      // as one — and the two views stop agreeing on the same brand.
+      const seen = new Set<string>();
       for (const b of r.brands) {
-         const key = b.brand.trim().toLowerCase();
-         if (!key) continue;
+         const key = brandKey(b.brand);
+         // One answer naming a brand twice is one mention, at its first position: the rate
+         // is a share of ANSWERS, exactly as the tracked brand's own metric counts it.
+         if (!key || seen.has(key)) continue;
+         seen.add(key);
          const e = agg.get(key) ?? { brand: b.brand.trim(), domain: b.domain, mentions: 0, posSum: 0 };
          e.mentions += 1;
          e.posSum += b.pos;

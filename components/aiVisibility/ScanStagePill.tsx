@@ -28,6 +28,8 @@ const ScanStagePill = ({ label }: { label: string }) => (
          {'@keyframes aiv-spin { to { transform: rotate(360deg); } }'
           + '@media (prefers-reduced-motion: reduce) { [data-aiv-spin] { animation: none } }'}
       </style>
+      {/* data-aiv-spin sits on this span because it carries the animation; `animation` does
+          not inherit, so the rule above must target the animated element itself. */}
       <span
          aria-hidden="true"
          data-aiv-spin

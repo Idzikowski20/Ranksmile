@@ -16,6 +16,7 @@ import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { parseBrands } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import type { BrandMention } from '@/src/core/domain/aiVisibility/metricsTypes';
 import { presenceScore } from '@/src/core/domain/aiVisibility/presence';
+import { brandKey } from '@/src/core/domain/aiVisibility/metricsOverview';
 
 export type ProfileChunkResult = { done: number; remaining: number };
 export const AI_VIS_PROFILE_CHUNK = 25;
@@ -66,9 +67,13 @@ export async function runProfileChunk(scanId: number, limit = AI_VIS_PROFILE_CHU
 
    const agg = new Map<string, Agg>();
    for (const r of rows) {
+      // Key and per-answer dedupe must match rankBrandProfiles — this table is a cache of
+      // exactly that computation.
+      const seen = new Set<string>();
       for (const b of parseBrands(r.brands)) {
-         const key = b.brand.trim().toLowerCase();
-         if (!key) continue;
+         const key = brandKey(b.brand);
+         if (!key || seen.has(key)) continue;
+         seen.add(key);
          const e = agg.get(key) ?? { brand: b.brand.trim(), domain: b.domain, mentions: 0, posSum: 0, sentiments: [] };
          e.mentions += 1;
          e.posSum += b.pos;
@@ -79,7 +84,7 @@ export async function runProfileChunk(scanId: number, limit = AI_VIS_PROFILE_CHU
    }
 
    const built = await queryRows<{ brand: string }>('SELECT brand FROM ai_vis_brand_profiles WHERE scan_id = ?', [scanId]);
-   const have = new Set(built.map((b) => String(b.brand).trim().toLowerCase()));
+   const have = new Set(built.map((b) => brandKey(String(b.brand))));
    const pending = [...agg.entries()].filter(([key]) => !have.has(key));
    const batch = pending.slice(0, limit);
 

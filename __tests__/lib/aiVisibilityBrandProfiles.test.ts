@@ -54,3 +54,25 @@ describe('rankBrandProfiles', () => {
       expect(rankBrandProfiles([])).toEqual([]);
    });
 });
+
+describe('rankBrandProfiles agrees with the own-brand metric', () => {
+   const two = (brands: Array<[string, string]>): ResultRow => row(1, 'chat_gpt', brands);
+
+   it('counts one mention per answer, at its first position', () => {
+      // The extractor can list the same brand twice in one answer; the rate is a share of
+      // ANSWERS, so that must not count twice — computeBrandOverview counts it once.
+      const [b] = rankBrandProfiles([two([['Alpha', 'a.pl'], ['Alpha', 'a.pl']])]);
+      expect(b.mentions).toBe(1);
+      expect(b.mentionRate).toBe(100);
+      expect(b.avgPosition).toBe(1);
+   });
+
+   it('groups spacing and punctuation variants as one brand, like brandKey', () => {
+      const out = rankBrandProfiles([
+         row(1, 'chat_gpt', [['Pro Detektyw', 'pd.pl']]),
+         row(2, 'chat_gpt', [['ProDetektyw', '']]),
+      ]);
+      expect(out).toHaveLength(1);
+      expect(out[0].mentions).toBe(2);
+   });
+});

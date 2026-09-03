@@ -1037,8 +1037,14 @@ const ArticleEditorPage: NextPage = () => {
       answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
       coverageOverall: scored.liveItems.length > 0 ? scored.ai : null,
     });
+    // A summary with prompts is AI data even when it scores 0 — testing `resolvedAi > 0`
+    // dropped the AI half of a legitimately-zero article and saved an SEO-only score that
+    // no longer matched the panel.
     const hasAiData = panel ? panel.ai != null
-      : (scored.liveItems.length > 0 || scoreData.ai_score != null || resolvedAi > 0);
+      : (scored.liveItems.length > 0
+         || scoreData.ai_score != null
+         || (aiVisibilitySummary?.prompts_total ?? 0) > 0
+         || resolvedAi > 0);
     const seoOut = panel ? panel.seo : scored.seo;
     const aiResolved = Math.max(scoreData.ai_score ?? 0, resolvedAi, scored.ai);
     const aiOut = panel ? (panel.ai ?? scored.ai) : aiResolved;
@@ -1173,7 +1179,11 @@ const ArticleEditorPage: NextPage = () => {
   // fields refresh. Skipped while a review/optimize save-suspend is active or the doc is
   // not a usable article.
   const scoreSyncedRef = useRef<string | null>(null);
-  const scoreSyncAbortRef = useRef<AbortController | null>(null);
+  // Score refreshes run one at a time, newest wins. AbortController was the wrong tool: it
+  // drops OUR handling of a response, but the PUT it aborted may already have reached the
+  // server, so an older trio could still be written after a newer one.
+  const scoreSyncChainRef = useRef<Promise<void>>(Promise.resolve());
+  const scoreSyncGenRef = useRef(0);
   useEffect(() => {
     const key = String(id ?? '');
     if (isLoading || !article || saveSuspended || !key) return;
@@ -1185,26 +1195,30 @@ const ArticleEditorPage: NextPage = () => {
     const syncKey = `${key}:${panelScoresSig}`;
     if (scoreSyncedRef.current === syncKey) return;
     scoreSyncedRef.current = syncKey;
-    // Serialize: abort any in-flight refresh so an older request can't land after a newer
-    // one and overwrite the newest score.
-    scoreSyncAbortRef.current?.abort();
-    const ac = new AbortController();
-    scoreSyncAbortRef.current = ac;
-    // Score-ONLY refresh: send just score_override, never content/meta/image/terms, so an
-    // article scored before the current model catches up without rewriting the document.
-    // Omit ai when the gauge is SEO-only so the list keeps its content_score fallback.
-    const override: { seo: number; overall: number; ai?: number } = { seo: ps.seo, overall: ps.overall };
-    if (ps.ai != null) override.ai = ps.ai;
-    fetch(`/api/articles/${key}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ score_override: override }),
-      signal: ac.signal,
-    })
-      .then((r) => { if (!r.ok) throw new Error(`score refresh HTTP ${r.status}`); })
+    const gen = scoreSyncGenRef.current + 1;
+    scoreSyncGenRef.current = gen;
+    scoreSyncChainRef.current = scoreSyncChainRef.current
+      .catch(() => { /* a failed refresh must not stall the ones after it */ })
+      .then(async () => {
+        // Superseded while queued: skip the write entirely rather than send a stale trio.
+        if (gen !== scoreSyncGenRef.current) return;
+        // Read the scores at SEND time, so what goes out is the newest the panel emitted.
+        const cur = panelScoresRef.current;
+        if (!cur) return;
+        // Score-ONLY refresh: send just score_override, never content/meta/image/terms, so
+        // an article scored before the current model catches up without rewriting the
+        // document. Omit ai when the gauge is SEO-only so the list keeps its fallback.
+        const override: { seo: number; overall: number; ai?: number } = { seo: cur.seo, overall: cur.overall };
+        if (cur.ai != null) override.ai = cur.ai;
+        const r = await fetch(`/api/articles/${key}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ score_override: override }),
+        });
+        if (!r.ok) throw new Error(`score refresh HTTP ${r.status}`);
+      })
       .catch((err) => {
-        if ((err as Error)?.name === 'AbortError') return; // superseded by a newer refresh
-        scoreSyncedRef.current = null;
+        scoreSyncedRef.current = null; // let the next change retry
         console.warn('[score-refresh]', getErrorMessage(err));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps

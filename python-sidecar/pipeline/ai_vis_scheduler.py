@@ -85,7 +85,10 @@ async def _tick(nextjs_url: str) -> None:
         ):
             try:
                 async with httpx.AsyncClient(timeout=120) as client:
-                    await client.post(f"{nextjs_url.rstrip('/')}{path}", headers=headers, json={})
+                    resp = await client.post(f"{nextjs_url.rstrip('/')}{path}", headers=headers, json={})
+                    # Without this a 401/402/500 counted as a successful tick and the phase
+                    # silently never ran; raise so the handler below logs which one failed.
+                    resp.raise_for_status()
             except Exception as exc:  # noqa: BLE001 - never let a follow-on break the tick
                 print(f"[ai_vis_scheduler] {label} failed: {exc}")
 
