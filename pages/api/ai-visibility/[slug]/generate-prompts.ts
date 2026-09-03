@@ -8,10 +8,13 @@ import { getPeopleAlsoAsk, isDataForSeoConfigured } from '@/src/infrastructure/d
 import { getErrorMessage } from '@/src/core/shared/errors';
 import {
   getDomainLocale,
+  languageNameForLlm,
   looksLikeLanguage,
   promptTemplatesForLocale,
 } from '@/src/infrastructure/config/domainLanguage';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
+import { generateTrackerPrompts } from '@/src/infrastructure/aiVisibility/aiVisibilityPromptGen';
+import { AI_VIS_PROMPTS_PER_TOPIC, isBrandElicitingPrompt } from '@/src/core/domain/aiVisibility/trackerPrompts';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { parseJsonish } from '@/src/core/shared/types/json';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
@@ -23,31 +26,56 @@ const provenanceFor = (domain: string): string[] => {
    return ['google'];
 };
 
-function buildPromptList(
+/**
+ * The topic's prompt pool.
+ *
+ * Google's questions are evidence of what people ask, not prompts in themselves: a yes/no
+ * legal question is answered with the law and a "related search" is a keyword string, and
+ * neither can name a company — yet both used to sit in the mention-rate denominator. So
+ * the observed questions are filtered to the ones that could elicit a shortlist and handed
+ * to the model as material; the model writes one prompt per distinct use case.
+ *
+ * Falling back to the fixed templates is the degraded path, and degraded pools are never
+ * cached — the same rule the paid PAA call already followed.
+ */
+async function buildPromptList(
   locale: { languageCode: string },
   topicTrimmed: string,
+  brand: string,
   questions: Array<{ question: string; domain: string }>,
   related: string[],
 ) {
-  const templates = promptTemplatesForLocale(locale.languageCode, topicTrimmed);
-  const fromPaa = questions
-    .filter((q) => looksLikeLanguage(q.question, locale.languageCode))
-    .slice(0, 8)
-    .map((q) => ({ text: q.question, provenance: provenanceFor(q.domain) }));
+  const inLocale = (t: string): boolean => looksLikeLanguage(t, locale.languageCode);
+  const observed = [
+    ...questions.filter((q) => inLocale(q.question)).map((q) => q.question),
+    ...related.filter(inLocale),
+  ].filter(isBrandElicitingPrompt);
 
-  const fromRelated = related
-    .filter((r) => looksLikeLanguage(r, locale.languageCode))
-    .slice(0, Math.max(0, 10 - fromPaa.length))
-    .map((r) => ({ text: r, provenance: ['google'] as string[] }));
+  const generated = await generateTrackerPrompts({
+    topic: topicTrimmed,
+    brand,
+    language: languageNameForLlm(locale.languageCode),
+    observedQuestions: observed,
+  });
 
-  const prompts = [...fromPaa, ...fromRelated];
-  for (const t of templates) {
-    if (prompts.length >= 10) break;
-    if (!prompts.some((p) => p.text === t.text)) prompts.push(t);
+  if (generated) {
+    // provenance 'llm' distinguishes these from the Google-sourced rows the wizard badges.
+    return { prompts: generated.map((text) => ({ text, provenance: ['llm'] })), degraded: false as const };
   }
 
-  if (prompts.length === 0) return { prompts: templates.slice(0, 8), degraded: true as const };
-  return { prompts: prompts.slice(0, 10), degraded: false as const };
+  // Generation unavailable: keep whatever Google gave us that can name a brand, then top
+  // up from the templates so the topic is never left empty.
+  const fromGoogle = questions
+    .filter((q) => inLocale(q.question) && isBrandElicitingPrompt(q.question))
+    .slice(0, AI_VIS_PROMPTS_PER_TOPIC)
+    .map((q) => ({ text: q.question, provenance: provenanceFor(q.domain) }));
+  const templates = promptTemplatesForLocale(locale.languageCode, topicTrimmed);
+  const prompts = [...fromGoogle];
+  for (const t of templates) {
+    if (prompts.length >= AI_VIS_PROMPTS_PER_TOPIC) break;
+    if (!prompts.some((x) => x.text === t.text)) prompts.push(t);
+  }
+  return { prompts: prompts.slice(0, AI_VIS_PROMPTS_PER_TOPIC), degraded: true as const };
 }
 
 type GeneratedPrompt = { text: string, provenance: string[] };
@@ -185,13 +213,33 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
    const locale = await getDomainLocale(domainId);
    const topicTrimmed = topic.trim();
+   // Market context for the generator. The wizard runs before any config exists, so the
+   // domain is the fallback — the brand is never named in a prompt either way.
+   const cfg = await queryOne<{ brand_name: string }>(
+      'SELECT brand_name FROM ai_vis_configs WHERE domain_id = ? ORDER BY id DESC LIMIT 1',
+      [domainId],
+   ).catch(() => null);
+   const brandName = cfg?.brand_name || (ownership as { domain?: string }).domain || topicTrimmed;
 
    const existing = refresh ? null : await readTopic(domainId, topicTrimmed);
    if (existing?.pool) return res.status(200).json({ prompts: existing.pool, degraded: false, cached: true });
 
    if (!isDataForSeoConfigured()) {
+      // PAA is down, but generation only needs the topic — try it before the templates.
+      const generated = await generateTrackerPrompts({
+        topic: topicTrimmed,
+        brand: brandName,
+        language: languageNameForLlm(locale.languageCode),
+        observedQuestions: [],
+      });
+      if (generated) {
+        return res.status(200).json({
+          prompts: generated.map((text) => ({ text, provenance: ['llm'] })),
+          degraded: false,
+        });
+      }
       const templates = promptTemplatesForLocale(locale.languageCode, topicTrimmed);
-      return res.status(200).json({ prompts: templates.slice(0, 8), degraded: true });
+      return res.status(200).json({ prompts: templates.slice(0, AI_VIS_PROMPTS_PER_TOPIC), degraded: true });
    }
 
    // Only the claim holder pays. `refresh` is an explicit re-buy, so it skips the claim
@@ -225,7 +273,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          country: locale.countryCode,
          languageCode: locale.languageCode,
       });
-      const result = buildPromptList(locale, topicTrimmed, questions, related);
+      const result = await buildPromptList(locale, topicTrimmed, brandName, questions, related);
       if (!result.degraded) {
          // Non-fatal: a failed write only means the next visit pays again.
          await writeCached(domainId, topicTrimmed, result.prompts)

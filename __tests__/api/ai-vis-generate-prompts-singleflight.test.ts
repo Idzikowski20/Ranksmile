@@ -18,7 +18,19 @@ jest.mock('@/src/infrastructure/persistence/schema/ensureAiVisibilityTables', ()
 jest.mock('@/src/infrastructure/config/domainLanguage', () => ({
   getDomainLocale: jest.fn().mockResolvedValue({ languageCode: 'pl', countryCode: 'PL' }),
   looksLikeLanguage: () => true,
+  languageNameForLlm: () => 'Polish (polski)',
   promptTemplatesForLocale: () => [{ text: 'szablon', provenance: ['template'] }],
+}));
+// These tests are about the claim, not about prompt quality. Stubbed so the handler never
+// reaches the network — an unmocked generator would make every case here a live LLM call.
+jest.mock('@/src/infrastructure/aiVisibility/aiVisibilityPromptGen', () => ({
+  generateTrackerPrompts: jest.fn(async () => [
+    'Jakie gabinety fizjoterapii polecacie po operacji kolana?',
+    'Jakie gabinety fizjoterapii pomagają przy bólu kręgosłupa?',
+    'Jakie gabinety fizjoterapii prowadzą rehabilitację sportowców?',
+    'Jakie gabinety fizjoterapii przyjmują dzieci?',
+    'Jakie gabinety fizjoterapii oferują terapię manualną?',
+  ]),
 }));
 jest.mock('@/src/infrastructure/dataforseo/dataforseo', () => ({
   isDataForSeoConfigured: () => true,
@@ -29,11 +41,13 @@ jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withO
 import db from '../../database/database';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { getPeopleAlsoAsk } from '@/src/infrastructure/dataforseo/dataforseo';
+import { generateTrackerPrompts } from '@/src/infrastructure/aiVisibility/aiVisibilityPromptGen';
 import handler from '../../pages/api/ai-visibility/[slug]/generate-prompts';
 
 const dbQuery = db.query as jest.Mock;
 const cacheRead = queryOne as jest.Mock;
 const paa = getPeopleAlsoAsk as jest.Mock;
+const generate = generateTrackerPrompts as jest.Mock;
 
 function mockReq(): NextApiRequest {
   return { method: 'POST', query: { slug: 'example-com' }, body: { topic: 'fizjoterapia' } } as unknown as NextApiRequest;
@@ -97,6 +111,8 @@ describe('generate-prompts single-flight', () => {
     cacheRead.mockResolvedValue(null);
     // Claim INSERT succeeds; PAA then fails, so nothing will ever fill the claim.
     paa.mockRejectedValue(new Error('locale mismatch'));
+    // Generation unavailable too, so the result really is the template fallback.
+    generate.mockResolvedValueOnce(null);
 
     const res = mockRes();
     await handler(mockReq(), res);
@@ -118,6 +134,7 @@ describe('generate-prompts single-flight', () => {
     cacheRead.mockResolvedValue(null);
     dbQuery.mockRejectedValueOnce(new Error('duplicate key value violates unique constraint'));
     paa.mockRejectedValue(new Error('locale mismatch'));
+    generate.mockResolvedValueOnce(null);
 
     const res = mockRes();
     await handler(mockReq(), res);
