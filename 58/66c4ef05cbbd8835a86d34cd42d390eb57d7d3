@@ -1,0 +1,65 @@
+pages/api/ai-visibility/internal/read-sources.ts
+  s_8a599cee1c9d24::t_67587f815fbaf6 10,13-15,17,22-25,29,32,38-40
+src/infrastructure/aiVisibility/internalPipelineAuth.ts
+  s_8a599cee1c9d24::t_2a8499119b151a 24-25
+  s_8a599cee1c9d24::t_b54c77c19e0962 1-23
+src/infrastructure/aiVisibility/aiVisibilitySources.ts
+  s_8a599cee1c9d24::t_2a8499119b151a 80
+  s_8a599cee1c9d24::t_645a2bcee04c8d 15,20-22,34-37,40-42,48-52,54-58,60,67-79,81-94,96,116-118,130,132-133,144,146-149,159,166-176,189
+pages/api/ai-visibility/internal/analyze-brands.ts
+  s_8a599cee1c9d24::t_67587f815fbaf6 9,13,26-28
+src/infrastructure/persistence/schema/ensureAiVisibilityTables.ts
+  s_8a599cee1c9d24::t_bdc6ee30d8f3cc 104-107,112-114
+  s_8a599cee1c9d24::t_83fe7c0f8fa0e0 108-111
+src/infrastructure/aiVisibility/aiVisibilityProfiles.ts
+  s_8a599cee1c9d24::t_bdc6ee30d8f3cc 31-33,52-59,63,86-95,98-100,103-112,123
+services/aiVisibility.ts
+  s_8a599cee1c9d24::t_83fe7c0f8fa0e0 45
+  s_8a599cee1c9d24::t_96e2d520489f85 9-10,12
+pages/api/ai-visibility/[slug]/data.ts
+  s_8a599cee1c9d24::t_83fe7c0f8fa0e0 42-44,218,241-242
+  s_8a599cee1c9d24::t_222246a93b84c9 80-83,89-92
+__tests__/lib/aiVisibilityBrandOverview.test.ts
+  s_8a599cee1c9d24::t_8cc7bf44394861 109-122
+components/aiVisibility/ScanStagePill.tsx
+  s_8a599cee1c9d24::t_222246a93b84c9 25-30,33
+__tests__/lib/internalPipelineAuth.test.ts
+  s_8a599cee1c9d24::t_8cc7bf44394861 1-40
+src/core/domain/aiVisibility/metricsOverview.ts
+  s_8a599cee1c9d24::t_222246a93b84c9 63-66
+pages/api/ai-visibility/[slug]/scan-status.ts
+  s_8a599cee1c9d24::t_83fe7c0f8fa0e0 10-13,30-31,40,65-69
+pages/api/ai-visibility/[slug]/history.ts
+  s_8a599cee1c9d24::t_83fe7c0f8fa0e0 36-37,59-64,68
+pages/api/ai-visibility/internal/run-chunk.ts
+  s_8a599cee1c9d24::t_67587f815fbaf6 12,19,45-47
+src/infrastructure/aiVisibility/aiVisibilityRead.ts
+  s_8a599cee1c9d24::t_83fe7c0f8fa0e0 118-119,123,133-134,143,149
+  s_8a599cee1c9d24::t_96e2d520489f85 170
+components/aiVisibility/ScanProgressBar.tsx
+  s_8a599cee1c9d24::t_83fe7c0f8fa0e0 84-87,89
+components/aiVisibility/CompetitorsTable.tsx
+  s_8a599cee1c9d24::t_222246a93b84c9 77-78
+pages/api/ai-visibility/internal/build-profiles.ts
+  s_8a599cee1c9d24::t_67587f815fbaf6 10,14,30-32
+pages/api/ai-visibility/internal/due-scans.ts
+  s_8a599cee1c9d24::t_67587f815fbaf6 10,14,60-62
+src/infrastructure/aiVisibility/aiVisibilityScan.ts
+  s_8a599cee1c9d24::t_83fe7c0f8fa0e0 74-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "5866c4ef05cbbd8835a86d34cd42d390eb57d7d3",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
