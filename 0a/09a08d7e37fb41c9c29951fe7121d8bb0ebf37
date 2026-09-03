@@ -1,0 +1,34 @@
+pages/articles/[id]/index.tsx
+  s_8a599cee1c9d24::t_34a375b29ebe94 1040-1042,1044-1047,1182-1186,1198-1219,1221
+python-sidecar/pipeline/ai_vis_scheduler.py
+  s_8a599cee1c9d24::t_cec83504651eae 88-91
+src/core/domain/aiVisibility/metricsOverview.ts
+  s_8a599cee1c9d24::t_cec83504651eae 66
+components/aiVisibility/ScanStagePill.tsx
+  s_8a599cee1c9d24::t_eed7bf304e0592 31-32
+src/infrastructure/aiVisibility/aiVisibilityProfiles.ts
+  s_8a599cee1c9d24::t_cec83504651eae 19,70-72,74-76,87
+__tests__/lib/aiVisibilityBrandProfiles.test.ts
+  s_8a599cee1c9d24::t_7595a2ff54fa0e 57-78
+src/core/domain/aiVisibility/metrics.ts
+  s_8a599cee1c9d24::t_cec83504651eae 19,31,484-487,489-493
+components/aiVisibility/ScanProgressBar.tsx
+  s_8a599cee1c9d24::t_eed7bf304e0592 178-186,191,194-201
+  s_8a599cee1c9d24::t_cec83504651eae 12-15,18-19,244,247,254-259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0a09a08d7e37fb41c9c29951fe7121d8bb0ebf37",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
