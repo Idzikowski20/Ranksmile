@@ -1,0 +1,40 @@
+pages/articles/[id]/index.tsx
+  s_8a599cee1c9d24::t_0979d68f552b1f 1205-1208,1225-1227
+src/infrastructure/aiVisibility/aiVisibilityProfiles.ts
+  s_8a599cee1c9d24::t_1734de40911c35 96-99,102-103,105,108-114,135-137
+components/aiVisibility/TrendLineChart.tsx
+  s_8a599cee1c9d24::t_639142557111e9 30-32,38
+pages/api/ai-visibility/[slug]/scan-status.ts
+  s_8a599cee1c9d24::t_77e30133e349ed 23
+  s_8a599cee1c9d24::t_639142557111e9 17-22,24-29,68-70,77-78,83-99
+pages/api/ai-visibility/[slug]/history.ts
+  s_8a599cee1c9d24::t_639142557111e9 62-64
+__tests__/lib/aiVisPhasePending.test.ts
+  s_8a599cee1c9d24::t_77e30133e349ed 1-34
+src/infrastructure/aiVisibility/aiVisibilityBrands.ts
+  s_8a599cee1c9d24::t_d66826692779e6 55-56
+  s_8a599cee1c9d24::t_639142557111e9 57
+src/infrastructure/aiVisibility/aiVisibilitySources.ts
+  s_8a599cee1c9d24::t_639142557111e9 205
+  s_8a599cee1c9d24::t_9dfb0a4d991c3b 48-55,62,64-69,74-75,77-78,124-131,151-159,185-189
+src/infrastructure/aiVisibility/aiVisibilityScan.ts
+  s_8a599cee1c9d24::t_1734de40911c35 81-83,85-86
+pages/api/ai-visibility/[slug]/data.ts
+  s_8a599cee1c9d24::t_639142557111e9 158,168,367,371,377
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f4d44851a17f7e574b7bdc4b0a1917c7cc6d8434",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
