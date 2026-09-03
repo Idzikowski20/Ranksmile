@@ -1,7 +1,8 @@
 import React from 'react';
 import { Badge } from '../koala/core/badge/badge';
+import { Icon } from '../koala/icons';
 
-/** Provenance icons for wizard prompts — where Google surfaced each question. */
+/** Provenance icons for wizard prompts — where each question came from. */
 
 export const GoogleIcon = ({ size = 16 }: { size?: number }) => (
    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-label="Google" style={{ flexShrink: 0 }}>
@@ -29,8 +30,19 @@ export const QuoraIcon = ({ size = 16 }: { size?: number }) => (
    </svg>
 );
 
+/**
+ * Written for the tracker rather than observed on a platform, so there is no logo to show.
+ * A Koala glyph in the brand colour instead — the three above are third-party marks and
+ * keep their own colours, this one is ours (DESIGN.md §4: Icon_Bold = Phosphor Bold).
+ */
+export const LlmIcon = ({ size = 16 }: { size?: number }) => (
+   <span role="img" aria-label="Generated for this topic" style={{ display: 'inline-flex', flexShrink: 0 }}>
+      <Icon name="Sparkle" size={size} color="var(--koala-text-brand)" />
+   </span>
+);
+
 const ICONS: Record<string, React.FC<{ size?: number }>> = {
-   google: GoogleIcon, reddit: RedditIcon, quora: QuoraIcon,
+   google: GoogleIcon, reddit: RedditIcon, quora: QuoraIcon, llm: LlmIcon,
 };
 
 /** Inline icon shown next to a prompt row (bare, 16px). */
