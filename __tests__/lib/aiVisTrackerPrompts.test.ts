@@ -72,6 +72,14 @@ describe('buildTrackerPromptRequest', () => {
       expect(system).toContain('Never name the tracked brand');
    });
 
+   it('tells the model the sample does not define its coverage', () => {
+      // With infidelity-only seeds, every prompt collapsed onto infidelity — the model read
+      // the sample as the spec. Reproduced 2/2 with such seeds, 0/2 without them.
+      const { system } = buildTrackerPromptRequest(seed);
+      expect(system).toContain('ONE SAMPLE of demand');
+      expect(system).toContain('never define your coverage');
+   });
+
    it('says so when Google gave nothing usable', () => {
       const { user } = buildTrackerPromptRequest({ ...seed, observedQuestions: ['Czy to legalne?'] });
       expect(user).toContain('No observed questions available');
