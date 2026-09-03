@@ -235,8 +235,12 @@ async function claimTopic(domainId: number, topic: string): Promise<string | nul
 async function claimStaleTopic(domainId: number, topic: string, raw: string): Promise<string | null> {
    const token = JSON.stringify({ claim: randomUUID() });
    try {
+      // created_at moves with the token. Left at the superseded pool's timestamp, the
+      // claim we just took reads as hours old to the next request, which treats it as
+      // abandoned and buys its own generation — the very duplicate this claim prevents.
       const [, meta] = await db.query(
-         'UPDATE ai_vis_generated_prompts SET prompts = ? WHERE domain_id = ? AND topic = ? AND prompts = ?',
+         `UPDATE ai_vis_generated_prompts SET prompts = ?, created_at = CURRENT_TIMESTAMP
+          WHERE domain_id = ? AND topic = ? AND prompts = ?`,
          { replacements: [token, domainId, topic, raw] },
       ) as [unknown, unknown];
       // Dialects report affected rows differently; treat an explicit 0 as "someone else

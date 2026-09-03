@@ -69,8 +69,11 @@ const YES_NO_OPENER = new RegExp(
       'czy', 'is', 'are', 'was', 'were', 'does', 'do', 'did', 'can', 'could', 'should', 'may',
       'ist', 'sind', 'kann', 'darf', 'est-ce', 'es', 'son', 'puede', 'debo',
       'è', 'sono', 'posso', 'is het', 'zijn', 'kan', 'é', 'são', 'pode',
-   ].join('|')})\\b`,
-   'i',
+   ].join('|')})(?![\\p{L}\\p{N}])`,
+   // 'iu' rather than 'i':  after a non-ASCII letter is not a word boundary, so every
+   // alternative ending in ą, é, è or ó silently never matched. A Unicode-aware negative
+   // lookahead is the boundary that actually holds for 'czym są' and 'perché'.
+   'iu',
 );
 
 /**
@@ -85,7 +88,10 @@ const YES_NO_OPENER = new RegExp(
  */
 const EXPLAINER_OPENER = new RegExp(
    `^(${[
-      'what is', 'what are', 'what does', 'how does', 'how do', 'how to', 'why', 'when',
+      // No bare 'what are': English says "What are the best agencies for X?", which is a
+      // shortlist request. The other languages phrase that with their own interrogative
+      // (welche, quali, welke, quais), so their "what are" forms stay definitional.
+      'what is', 'what does', 'how does', 'how do', 'how to', 'why', 'when',
       'co to', 'czym jest', 'czym są', 'jak działa', 'jak działają', 'jak wygląda', 'dlaczego', 'kiedy',
       'was ist', 'was sind', 'wie funktioniert', 'warum', 'wann',
       "qu'est-ce", 'comment fonctionne', 'pourquoi', 'quand',
@@ -93,8 +99,11 @@ const EXPLAINER_OPENER = new RegExp(
       "cos'è", 'che cosa', 'come funziona', 'perché', 'quando',
       'wat is', 'wat zijn', 'hoe werkt', 'waarom', 'wanneer',
       'o que é', 'o que são', 'como funciona', 'por que', 'quando',
-   ].join('|')})\\b`,
-   'i',
+   ].join('|')})(?![\\p{L}\\p{N}])`,
+   // 'iu' rather than 'i':  after a non-ASCII letter is not a word boundary, so every
+   // alternative ending in ą, é, è or ó silently never matched. A Unicode-aware negative
+   // lookahead is the boundary that actually holds for 'czym są' and 'perché'.
+   'iu',
 );
 
 /** Price questions return a range, not a shortlist. */

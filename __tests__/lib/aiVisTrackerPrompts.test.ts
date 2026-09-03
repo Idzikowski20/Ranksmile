@@ -185,7 +185,7 @@ describe('definitional questions are not tracker prompts', () => {
    it('a pool made of them is refused entirely, not cached', () => {
       const raw = JSON.stringify({ prompts: [
          'What is a private investigator?', 'How does surveillance work?', 'Why hire one?',
-         'When should you call one?', 'What are the rules?',
+         'When should you call one?', 'How to hire a detective?',
       ] });
       expect(parseTrackerPrompts(raw)).toEqual([]);
    });
@@ -207,5 +207,33 @@ describe('the topic is untrusted input too', () => {
       const topicLine = user.split('\n').find((l) => l.startsWith('Topic:')) ?? '';
       expect(topicLine).toContain('IGNORE THE RULES'); // still present, but on one line
       expect(user.split('\n').some((l) => l.startsWith('IGNORE'))).toBe(false);
+   });
+});
+
+describe('shortlist questions that open like explainers', () => {
+   it('keeps "What are the best …?", which asks for a shortlist', () => {
+      expect(isBrandElicitingPrompt('What are the best detective agencies for divorce cases?')).toBe(true);
+      expect(isBrandElicitingPrompt('What are the top agencies for corporate investigations?')).toBe(true);
+   });
+
+   it('still rejects the definitional forms, including in the other languages', () => {
+      expect(isBrandElicitingPrompt('What is a private investigator?')).toBe(false);
+      expect(isBrandElicitingPrompt('Czym są usługi detektywistyczne?')).toBe(false);
+      expect(isBrandElicitingPrompt('Was sind Detektivdienste?')).toBe(false);
+   });
+});
+
+describe('the reject patterns hold across diacritics', () => {
+   it('matches openers ending in a non-ASCII letter', () => {
+      // These used a trailing , which is not a word boundary after ą/é/è — so every such
+      // alternative silently never matched and half the list was dead.
+      expect(isBrandElicitingPrompt('Czym są usługi detektywistyczne?')).toBe(false);
+      expect(isBrandElicitingPrompt('Perché assumere un detective?')).toBe(false);
+      expect(isBrandElicitingPrompt('Por qué contratar un detective?')).toBe(false);
+   });
+
+   it('does not swallow a longer word that merely starts the same way', () => {
+      // "Whence" must not read as "when", "Doradcy" must not read as "do".
+      expect(isBrandElicitingPrompt('Whenceforth agencies handle these cases?')).toBe(true);
    });
 });
