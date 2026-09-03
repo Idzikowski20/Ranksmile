@@ -30,9 +30,11 @@ describe('wieDataDir', () => {
       expect(wieDataDir()).not.toBe(first);
    });
 
-   it('is pointed at a per-test-file directory by jest.setup', () => {
-      // Proves the isolation is actually in force for this run, not just available.
+   it('is pointed away from the repo data directory by jest.setup', () => {
+      // Proves the isolation is actually in force for this run, not merely available —
+      // without pinning the temp-directory name jest.setup happens to pick.
       expect(saved).toBeTruthy();
-      expect(saved).toContain('ranksmile-wie-');
+      expect(path.isAbsolute(saved as string)).toBe(true);
+      expect(saved).not.toBe(path.join(process.cwd(), 'data'));
    });
 });

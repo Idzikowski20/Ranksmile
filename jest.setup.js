@@ -52,8 +52,12 @@ const os = require('os');
 const nodePath = require('path');
 const { mkdtempSync, rmSync } = require('fs');
 
-process.env.WIE_DATA_DIR = mkdtempSync(nodePath.join(os.tmpdir(), 'ranksmile-wie-'));
+const wieDataDir = mkdtempSync(nodePath.join(os.tmpdir(), 'ranksmile-wie-'));
+process.env.WIE_DATA_DIR = wieDataDir;
 
+// Delete the directory we created, not whatever the variable happens to hold at teardown.
+// A test that points WIE_DATA_DIR elsewhere and does not restore it (a crash mid-test is
+// enough) would otherwise have this recursively remove that path instead.
 afterAll(() => {
-   try { rmSync(process.env.WIE_DATA_DIR, { recursive: true, force: true }); } catch { /* tmp dir, best effort */ }
+   try { rmSync(wieDataDir, { recursive: true, force: true }); } catch { /* tmp dir, best effort */ }
 });
