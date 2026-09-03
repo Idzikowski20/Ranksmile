@@ -120,3 +120,45 @@ describe('brand matching is Unicode-aware', () => {
       expect(ownBrandPosition(row('chat_gpt', ['Pro-Detektyw']), 'Pro Detektyw')).toBe(1);
    });
 });
+
+describe('recognising the tracked brand as the answers actually write it', () => {
+   const mention = (brand: string, domain = '', pos = 1) => ({
+      brand, domain, sentiment: 'neutral' as const, pos, quotes: [],
+   });
+   const answer = (brands: Array<ReturnType<typeof mention>>): ResultRow => ({
+      promptId: 1, model: 'chat_gpt', ownCited: false, ownPosition: null,
+      citations: [], topic: 'T', text: 'Q', brands,
+   });
+
+   // The setup wizard stores the domain as the brand name, and one scan writes the same
+   // company several ways. Exact-key matching found none of these and reported 0%
+   // visibility for a brand the answers named repeatedly.
+   it('matches a domain-shaped configured brand against the written name', () => {
+      expect(ownBrandPosition(answer([mention('ProDetektyw')]), 'prodetektyw.pl')).toBe(1);
+   });
+
+   it('matches a suffixed variant', () => {
+      expect(ownBrandPosition(answer([mention('ProDetektyw Warszawa')]), 'prodetektyw.pl')).toBe(1);
+   });
+
+   it('matches on the attributed domain when the name is unrecognisable', () => {
+      const r = answer([mention('Agencja Detektywistyczna ProDetektyw', 'prodetektyw.pl', 2)]);
+      // Nothing about "Agencja…" starts with our key; the domain is what identifies it.
+      expect(ownBrandPosition(r, 'prodetektyw.pl', 'prodetektyw.pl')).toBe(2);
+      expect(ownBrandPosition(r, 'Zupelnie Inna Marka', 'prodetektyw.pl')).toBe(2);
+   });
+
+   it('takes the earliest position when several variants appear in one answer', () => {
+      const r = answer([
+         mention('Konkurent', 'konkurent.pl', 1),
+         mention('ProDetektyw', 'prodetektyw.pl', 2),
+         mention('ProDetektyw Warszawa', 'prodetektyw.pl', 3),
+      ]);
+      expect(ownBrandPosition(r, 'prodetektyw.pl', 'prodetektyw.pl')).toBe(2);
+   });
+
+   it('does not claim a competitor', () => {
+      const r = answer([mention('Detektyw TD24', 'td24.pl', 1)]);
+      expect(ownBrandPosition(r, 'prodetektyw.pl', 'prodetektyw.pl')).toBeNull();
+   });
+});

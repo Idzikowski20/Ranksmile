@@ -155,7 +155,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          if (!entityRows.length) return res.status(200).json({ pending: false, title: query, overview: null, engines: [], series: [], brands: [], fanout: [] });
          const scoped = engine ? entityRows.filter((r) => r.model === engine) : entityRows;
          // Same brand metric as the prompt row this modal was opened from, so the two agree.
-         const overview = computeBrandOverview(scoped, scanBrand);
+         const overview = computeBrandOverview(scoped, scanBrand, domain.domain);
 
          const engines = Array.from(new Set(entityRows.map((r) => r.model)));
 
@@ -170,6 +170,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             const ov = computeBrandOverview(
                s.id === scan.id ? scoped : scope(await loadScanResultRows(s.id)),
                s.brand_name || ownBrand,
+               domain.domain,
             );
             series.push({ finishedAt: s.finished_at, visibilityScore: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition });
          }
@@ -220,9 +221,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // competitor cards and the trend all read on one scale — and agree with the
          // Competitors tab. The snapshots underneath stay citation-based: that is what
          // Sources, the prompt overlap and the gap are made of.
-         const ownSnap = withBrandHeadline(byDomain.get(ownKey) ?? snapshotForDomain(all, own), all, scanBrand);
+         const ownSnap = withBrandHeadline(byDomain.get(ownKey) ?? snapshotForDomain(all, own), all, scanBrand, own);
          const ranked = rankCompetitors(byDomain, own)
-            .map((c) => ({ ...c, snapshot: withBrandHeadline(c.snapshot, all, brandOf(c.domain)) }))
+            .map((c) => ({ ...c, snapshot: withBrandHeadline(c.snapshot, all, brandOf(c.domain), c.domain) }))
             .sort((a, b) => b.snapshot.overview.visibilityScore - a.snapshot.overview.visibilityScore);
 
          const competitors = ranked.slice(0, 5).map((c) => ({ domain: c.domain, snapshot: withoutSources(c.snapshot) }));
@@ -232,7 +233,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const compare = wanted && byDomain.has(wanted) && !competitors.some((c) => c.domain === wanted)
             ? {
                competitorDomain: wanted,
-               snapshot: withoutSources(withBrandHeadline(byDomain.get(wanted) as DomainSnapshot, all, brandOf(wanted))),
+               snapshot: withoutSources(withBrandHeadline(byDomain.get(wanted) as DomainSnapshot, all, brandOf(wanted), wanted)),
             } : null;
 
          // "Previous" = the completed scan that finished before this one (chronology
@@ -244,7 +245,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // a brand score against a citation score and invent a jump that never happened.
          const prevRows = prev ? filterRows(await loadScanRows(prev.id)) : null;
          const delta = prevRows && prev
-            ? computeDelta(ownSnap, withBrandHeadline(snapshotForDomain(prevRows, own), prevRows, prev.brand_name || ownBrand))
+            ? computeDelta(ownSnap, withBrandHeadline(snapshotForDomain(prevRows, own), prevRows, prev.brand_name || ownBrand, own))
             : null;
 
          // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).
@@ -369,17 +370,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // matching the reference tool, whose per-prompt average position is the brand's own
          // entry in that prompt's brand list. Domain citations drive the Sources views.
          const topics = Array.from(byTopic.entries()).map(([topic, topicRows]) => {
-            const ov = computeBrandOverview(topicRows, scanBrand);
+            const ov = computeBrandOverview(topicRows, scanBrand, domain.domain);
             const promptIds = Array.from(new Set(topicRows.map((r) => r.promptId)));
             const prompts = promptIds.map((id) => {
                const pr = byPrompt.get(id) || [];
-               const pov = computeBrandOverview(pr, scanBrand);
+               const pov = computeBrandOverview(pr, scanBrand, domain.domain);
                return { id, text: promptMeta.get(id)?.text || '', visibility: pov.visibilityScore, mentionRate: pov.mentionRate, avgPosition: pov.avgPosition, brands: brandDomains(pr) };
             });
             return { topic, promptCount: prompts.length, visibility: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition, brands: brandDomains(topicRows), prompts };
          }).sort((a, b) => b.visibility - a.visibility);
 
-         const overall = computeBrandOverview(all, scanBrand);
+         const overall = computeBrandOverview(all, scanBrand, domain.domain);
          return res.status(200).json({
             overview: { visibilityScore: overall.visibilityScore, mentionRate: overall.mentionRate, avgPosition: overall.avgPosition },
             topics,

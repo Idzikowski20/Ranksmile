@@ -520,8 +520,8 @@ export function rankBrandProfiles(rows: ResultRow[]): BrandProfile[] {
  * position describe the brand in the answers, while direct citations and pages count our
  * own cited URLs. Sources, prompts and the gap below stay citation-based.
  */
-export function withBrandHeadline(snap: DomainSnapshot, rows: ResultRow[], brand: string): DomainSnapshot {
-   const b = computeBrandOverview(rows, brand);
+export function withBrandHeadline(snap: DomainSnapshot, rows: ResultRow[], brand: string, domain?: string): DomainSnapshot {
+   const b = computeBrandOverview(rows, brand, domain);
    return {
       ...snap,
       overview: {
