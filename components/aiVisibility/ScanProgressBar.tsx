@@ -7,8 +7,13 @@ const FONT = 'var(--font-family-primary)';
 const SURFACE = 'var(--koala-bg-inverse)';
 const ON_SURFACE = 'var(--koala-text-on-inverse)';
 const LIFT = '0 16px 48px rgba(0,0,0,0.28)';
-/** Marks sit on the dark surface, so they get their own slightly lighter disc. */
-const SURFACE_MARK = 'rgba(255,255,255,0.10)';
+/**
+ * Marks sit on the dark pill, so each gets its own opaque disc — the same treatment as the
+ * engine badges elsewhere (bg-primary on border-primary). A translucent wash let the dark
+ * surface through and every favicon read as half-faded.
+ */
+const MARK_BG = 'var(--koala-bg-primary)';
+const MARK_BORDER = 'var(--koala-border-primary)';
 /** Card radius from DESIGN.md — the pill matches the timeline above it. */
 const RADIUS = 16;
 
@@ -19,8 +24,8 @@ type Step = {
    detail?: string;
    /** Engines this step queries — an icon each, so the row names what it is working on. */
    models?: string[];
-   /** Pages just read — a favicon trail, newest first. */
-   domains?: string[];
+   /** The page the phase is on right now — one mark, not a trail. */
+   domain?: string;
 };
 
 /** Decorative: the pill's single status region announces the phase, so a spinner per step
@@ -99,13 +104,19 @@ function buildSteps(scan?: AiVisScanStatus): Step[] {
    const profiles = scan?.profilesBuilt ?? 0;
 
    const answersIn = total > 0 && done >= total;
-   // Evidence, not absence of waiting: `sourcesDone` is the phase's marker (or counts that
-   // prove it). Reading the pending flag here put a green tick on a phase that never ran,
-   // because pending also goes false once the scan is too old to be worth polling.
+   // Each phase reports itself. They are listed in the order they matter to the reader, but
+   // the sidecar drains all three on every tick, so they finish in whatever order their
+   // work allows — chaining each on the previous one showed brand extraction and profiles
+   // as untouched while they were provably complete and only the page fetching was left.
+   //
+   // Evidence, not absence of waiting: `*Done` is the phase's marker (or counts that prove
+   // it). Reading the pending flag put a green tick on a phase that never ran, because
+   // pending also goes false once the scan is too old to be worth polling.
    const sourcesIn = answersIn && (scan?.sourcesDone ?? false);
-   const brandsIn = sourcesIn && brandsPending === 0;
-   const profilesIn = brandsIn && (scan?.profilesDone ?? false);
+   const brandsIn = answersIn && brandsPending === 0;
+   const profilesIn = answersIn && (scan?.profilesDone ?? false);
 
+   // Reached once the answers are in: every follow-on phase starts then, together.
    const phase = (reached: boolean, complete: boolean): StepState => (!reached ? 'idle' : complete ? 'done' : 'active');
 
    return [
@@ -123,16 +134,16 @@ function buildSteps(scan?: AiVisScanStatus): Step[] {
          detail: sTotal > 0
             ? [scan?.recentSourceDomains?.[0], `${sRead} / ${sTotal} sources`].filter(Boolean).join(' · ')
             : undefined,
-         domains: scan?.recentSourceDomains ?? [],
+         domain: scan?.recentSourceDomains?.[0],
       },
       {
          label: 'Extracting brand mentions',
-         state: phase(sourcesIn, brandsIn),
+         state: phase(answersIn, brandsIn),
          detail: brandsPending > 0 ? `${brandsPending} answers left` : undefined,
       },
       {
          label: 'Building brand profiles',
-         state: phase(brandsIn, profilesIn),
+         state: phase(answersIn, profilesIn),
          detail: profiles > 0 ? `${profiles} brands` : undefined,
       },
    ];
@@ -165,8 +176,9 @@ const MARK: React.CSSProperties = {
    height: 20,
    marginRight: -5,
    borderRadius: 9999,
-   background: SURFACE_MARK,
-   border: '1px solid rgba(255,255,255,0.18)',
+   background: MARK_BG,
+   border: `1px solid ${MARK_BORDER}`,
+   overflow: 'hidden',
    display: 'inline-flex',
    alignItems: 'center',
    justifyContent: 'center',
@@ -184,12 +196,12 @@ const StepMarks = ({ step }: { step: Step }) => {
          </MarkRow>
       );
    }
-   if (step.domains?.length) {
+   if (step.domain) {
       return (
          <MarkRow>
-            {step.domains.map((d) => (
-               <span key={d} style={MARK} title={d}><DomainFavicon domain={d} size={12} alt={d} /></span>
-            ))}
+            <span style={MARK} title={step.domain}>
+               <DomainFavicon domain={step.domain} size={12} alt={step.domain} />
+            </span>
          </MarkRow>
       );
    }

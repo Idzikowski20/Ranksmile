@@ -16,7 +16,14 @@ import { isBlockedCitationDomain } from '@/src/core/domain/aiVisibility/blockedD
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 
 export type SourceChunkResult = { done: number; remaining: number };
-export const AI_VIS_SOURCE_CHUNK = 8;
+/**
+ * Pages per chunk. Eight at a 60s cadence meant a 176-source scan crawled for 22 minutes
+ * while the bar looked frozen between ticks. The request deadline is what actually bounds
+ * a chunk — it stops starting fetches when the budget runs out and leaves the rest queued —
+ * so a larger chunk simply lets a batch of fast hosts get further, and a batch of slow ones
+ * behaves exactly as before.
+ */
+export const AI_VIS_SOURCE_CHUNK = 25;
 /** Read at most this much of a page: enough for <title> and a brand mention, bounded so a
  *  hostile or broken host cannot stream us out of memory. */
 const MAX_PAGE_BYTES = 200_000;

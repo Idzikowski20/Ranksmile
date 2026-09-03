@@ -45,6 +45,33 @@ describe('ScanProgressBar', () => {
       expect(container.querySelectorAll('svg').length).toBeGreaterThan(1);
    });
 
+
+   it('shows one favicon — the page it is on, not a trail of everything read', () => {
+      const { container } = render(<ScanProgressBar visible scan={status({
+         progressDone: 50,
+         sourcesTotal: 176,
+         sourcesRead: 48,
+         recentSourceDomains: ['a.pl', 'b.pl', 'c.pl'],
+      })} />);
+      // span[title], not [title]: the pill itself is a <button title="Pin the phase timeline open">.
+      const marks = container.querySelectorAll('span[title]');
+      expect(Array.from(marks).map((m) => m.getAttribute('title'))).toEqual(['a.pl']);
+   });
+
+   it('does not gate a finished phase behind an unfinished earlier one', () => {
+      // The sidecar drains all three phases every tick, so brands and profiles can finish
+      // while page fetching is still going. Chaining them showed both as untouched.
+      const { getByText } = render(<ScanProgressBar visible scan={status({
+         progressDone: 50,
+         sourcesDone: false,
+         sourcesPending: true,
+         brandsPending: 0,
+         profilesDone: true,
+         profilesBuilt: 120,
+      })} />);
+      expect(getByText('120 brands')).toBeTruthy();
+   });
+
    it('survives the transition to finished without throwing on audio', () => {
       const done = status({
          status: 'completed', progressDone: 50, sourcesPending: false, profilesPending: false, profilesBuilt: 3,
