@@ -1,0 +1,22 @@
+components/aiVisibility/SourcesTable.tsx
+  s_8a599cee1c9d24::t_bded3541c8d3ed 9,11-13,15-18,91-106,108,143,218,233,242,253
+  s_8a599cee1c9d24::t_bc2c929baddef3 10,14,19-29,151
+__tests__/lib/aiVisibilitySourceMentions.test.ts
+  s_8a599cee1c9d24::t_bc2c929baddef3 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4b30863a087d1826a9008f4b9d96b654fda84735",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
