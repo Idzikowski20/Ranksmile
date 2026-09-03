@@ -86,3 +86,15 @@ export function sanitizeModels(models: unknown): string[] {
 export function countSelected(topics: AiVisTopic[]): number {
    return topics.reduce((n, t) => n + t.prompts.filter((p) => p.selected).length, 0);
 }
+
+/**
+ * A first guess at a brand name from its domain: "prodetektyw.pl" -> "Prodetektyw".
+ *
+ * Only a starting point for a field the user can correct. Saving the domain itself, which
+ * the setup wizard used to do, meant the tracked brand never matched the name the AI
+ * answers write, and the scan reported 0% visibility for a brand it named repeatedly.
+ */
+export function brandFromDomain(domain: string): string {
+   const label = domain.split('.')[0]?.replace(/[-_]+/g, ' ').trim() ?? '';
+   return label ? label.charAt(0).toUpperCase() + label.slice(1) : '';
+}
