@@ -304,13 +304,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const all = filterRows(await loadScanResultRows(scan.id));
          const snap = snapshotForDomain(all, comp);
          const sources = snap.sources.filter((s) => s.domain === NORM(comp));
-         // Brand name derived from the competitor domain (matches extracted brand names
-         // for most cases, e.g. www.squarespace.com → "Squarespace").
+         // Prefer the brand name the answers actually use; fall back to the domain's first
+         // label (www.squarespace.com → "Squarespace") when this site is never named.
+         const named = rankBrandProfiles(all).find((b) => b.domain && NORM(b.domain) === NORM(comp));
          const base = NORM(comp).split('.')[0];
-         const brand = base ? base.charAt(0).toUpperCase() + base.slice(1) : comp;
+         const brand = named?.brand || (base ? base.charAt(0).toUpperCase() + base.slice(1) : comp);
          const ms = sourceMentions(all, ownBrand, brand);
          return res.status(200).json({
-            overview: { visibilityScore: snap.overview.visibilityScore, mentionRate: snap.overview.mentionRate, avgPosition: snap.overview.avgPosition },
+            // Brand metric, so this modal shows the same score as the row that opened it.
+            overview: brandOverviewForDomain(all, comp),
             prompts: competitorPrompts(all, comp),
             sources,
             brand,
