@@ -217,7 +217,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
          // Long-tail: a picker choice outside the top-5. Reuse the already-computed map.
          const compare = wanted && byDomain.has(wanted) && !competitors.some((c) => c.domain === wanted)
-            ? { competitorDomain: wanted, snapshot: withoutSources(withBrandHeadline(byDomain.get(wanted) as DomainSnapshot, all, brandOf(wanted))) } : null;
+            ? {
+               competitorDomain: wanted,
+               snapshot: withoutSources(withBrandHeadline(byDomain.get(wanted) as DomainSnapshot, all, brandOf(wanted))),
+            } : null;
 
          // "Previous" = the completed scan that finished before this one (chronology
          // by finished_at, NOT id — a retry may have a higher id but earlier finish).

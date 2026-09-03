@@ -10,9 +10,15 @@ import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { loadScanRowsForScans } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import { computeBrandOverview, brandOverviewForDomain } from '@/src/core/domain/aiVisibility/metrics';
+import type { BrandTriad } from '@/src/core/domain/aiVisibility/metrics';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const HISTORY_LIMIT = 24;
+
+// The chart never reads the per-model breakdown, and 24 scans of it is payload for nothing.
+const triad = (o: BrandTriad): BrandTriad => ({
+   visibilityScore: o.visibilityScore, mentionRate: o.mentionRate, avgPosition: o.avgPosition,
+});
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -50,10 +56,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // Both lines plot the BRAND metric — how often the answers name the brand and how
          // early — so the comparison is like-for-like. The picker is domain-keyed, so the
          // competitor's domain is resolved to its brand (brandOverviewForDomain).
-         const series: { you: ReturnType<typeof brandOverviewForDomain>; competitor?: ReturnType<typeof brandOverviewForDomain> } = {
-            // Triad only — the chart never reads the per-model breakdown, and 24 scans of it
-            // is payload for nothing.
-            you: (({ visibilityScore, mentionRate, avgPosition }) => ({ visibilityScore, mentionRate, avgPosition }))(computeBrandOverview(rows, ownBrand)),
+         const series: { you: BrandTriad; competitor?: BrandTriad } = {
+            you: triad(computeBrandOverview(rows, ownBrand)),
          };
          // Always emit a competitor point per scan (0-visibility when unnamed that scan)
          // so the trend line is continuous instead of collapsing to a single point.

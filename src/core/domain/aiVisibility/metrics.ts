@@ -17,6 +17,7 @@
  *     pairScore(prompt,model) = cited@pos1 → 100; pos p → max(0, 100-(p-1)*15); else 0
  */
 import { computeOverview, computeBrandOverview, ownDomainPosition, mean, pairScore } from '@/src/core/domain/aiVisibility/metricsOverview';
+import type { BrandTriad } from '@/src/core/domain/aiVisibility/metricsOverview';
 import { BLOCKED_CITATION_DOMAINS, isBlockedCitationDomain } from '@/src/core/domain/aiVisibility/blockedDomains';
 import { presenceScore } from '@/src/core/domain/aiVisibility/presence';
 import type {
@@ -28,7 +29,7 @@ import type {
 
 export type { BrandMention, GapCard, ResultRow, SourceBrand, SourceDetailBrand } from '@/src/core/domain/aiVisibility/metricsTypes';
 export { ownDomainPosition, computeOverview, computeBrandOverview, ownBrandPosition } from '@/src/core/domain/aiVisibility/metricsOverview';
-export type { BrandOverview } from '@/src/core/domain/aiVisibility/metricsOverview';
+export type { BrandOverview, BrandTriad } from '@/src/core/domain/aiVisibility/metricsOverview';
 
 // AI grounding / redirect proxies, not real competitors — excluded from the ranking.
 export const COMPETITOR_NOISE: string[] = [...BLOCKED_CITATION_DOMAINS];
@@ -532,7 +533,7 @@ export function withBrandHeadline(snap: DomainSnapshot, rows: ResultRow[], brand
  * presence as our own line, instead of mixing a brand scale with a citation scale.
  * A site the answers never name as a brand has no presence, exactly as on Competitors.
  */
-export function brandOverviewForDomain(rows: ResultRow[], domain: string): { visibilityScore: number, mentionRate: number, avgPosition: number | null } {
+export function brandOverviewForDomain(rows: ResultRow[], domain: string): BrandTriad {
    const d = norm(domain);
    const hit = d ? rankBrandProfiles(rows).find((b) => {
       const bd = norm(b.domain);

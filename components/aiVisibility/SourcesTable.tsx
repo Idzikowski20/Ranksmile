@@ -6,7 +6,10 @@ import DomainFavicon from '../common/DomainFavicon';
 const FONT = 'var(--font-family-primary)';
 
 export type SourceBrand = { domain: string; brand: string };
-export type SourceRow = { url: string; domain: string; timesShown: number; models: string[]; mentioned?: boolean; brands?: SourceBrand[]; compMentioned?: boolean; pageMentionsBrand?: boolean };
+export type SourceRow = {
+   url: string; domain: string; timesShown: number; models: string[];
+   mentioned?: boolean; brands?: SourceBrand[]; compMentioned?: boolean; pageMentionsBrand?: boolean;
+};
 export type MentionCounts = { mentioned: number; notMentioned: number; missing: number };
 type Group = { domain: string; urls: SourceRow[]; timesShown: number; models: string[]; counts: MentionCounts; brands: SourceBrand[] };
 
@@ -15,6 +18,8 @@ export const pageKind = (s: SourceRow): 'yes' | 'no' | 'unknown' => {
    if (s.pageMentionsBrand === undefined) return 'unknown';
    return s.pageMentionsBrand ? 'yes' : 'no';
 };
+
+const EMPTY_COUNTS: MentionCounts = { mentioned: 0, notMentioned: 0, missing: 0 };
 
 /** A domain's pages by whether they name our brand; unread pages are missing, never a "no". */
 export const mentionCounts = (urls: SourceRow[]): MentionCounts => {
@@ -33,6 +38,7 @@ export const splitSourceUrl = (url: string, fallback: string): { host: string; p
 };
 
 const PAGE_SIZE = 50;
+const MENTION_TIP = 'Whether the cited page itself names your brand. Pages we have not read yet show a dash.';
 
 const ChevronRight = ({ open }: { open: boolean }) => (
    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -140,7 +146,8 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
       if (!grouped) return [];
       const map = new Map<string, Group>();
       for (const s of sorted) {
-         const g = map.get(s.domain) ?? { domain: s.domain, urls: [], timesShown: 0, models: [], counts: { mentioned: 0, notMentioned: 0, missing: 0 }, brands: [] };
+         const g = map.get(s.domain)
+            ?? { domain: s.domain, urls: [], timesShown: 0, models: [], counts: EMPTY_COUNTS, brands: [] };
          g.urls.push(s);
          g.timesShown += s.timesShown;
          map.set(s.domain, g);
@@ -215,7 +222,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
          <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)' }}>
             <div style={{ ...headCell, flex: 1, minWidth: 0 }}>Source</div>
             {grouped ? <div style={{ ...headCell, width: 80, flexShrink: 0, justifyContent: 'flex-end' }}>URLs</div> : null}
-            <div style={{ ...headCell, width: 100, flexShrink: 0, justifyContent: 'center' }}><HeadTip label="Mentioned" tip="Whether the cited page itself names your brand. Pages we have not read yet show a dash." align="center" /></div>
+            <div style={{ ...headCell, width: 100, flexShrink: 0, justifyContent: 'center' }}><HeadTip label="Mentioned" tip={MENTION_TIP} align="center" /></div>
             <div style={{ ...headCell, width: 120, flexShrink: 0 }}><HeadTip label="Brands" tip="Brands mentioned in AI answers citing this source" /></div>
             <div style={{ ...headCell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}><HeadTip label="Price" tip="Price of offers from link and sponsored article providers" align="right" /></div>
             <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'flex-end' }}>

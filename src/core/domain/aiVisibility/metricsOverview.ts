@@ -71,6 +71,9 @@ export function ownBrandPosition(row: ResultRow, ownBrand: string): number | nul
   return hit ? hit.pos : null;
 }
 
+/** The three numbers the brand metric reports, before the per-model split. */
+export type BrandTriad = { visibilityScore: number; mentionRate: number; avgPosition: number | null };
+
 export type BrandOverview = {
   visibilityScore: number;
   mentionRate: number;
@@ -81,7 +84,10 @@ export type BrandOverview = {
 };
 
 /** Rate + position of the tracked BRAND over the answers whose brands are extracted. */
-function brandRateAndPosition(rows: ResultRow[], ownBrand: string): { mentionRate: number; avgPosition: number | null; mentions: number; pairs: number } {
+function brandRateAndPosition(
+  rows: ResultRow[],
+  ownBrand: string,
+): { mentionRate: number; avgPosition: number | null; mentions: number; pairs: number } {
   // A row whose brands column is still NULL has not been through the extraction phase —
   // counting it as "not mentioned" would understate the rate while that phase runs, so it
   // is left out of the denominator and the rate converges as extraction progresses.
