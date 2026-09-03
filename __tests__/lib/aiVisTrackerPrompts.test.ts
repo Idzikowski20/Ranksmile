@@ -114,3 +114,47 @@ describe('parseTrackerPrompts', () => {
       expect(parseTrackerPrompts('{"prompts":"nope"}')).toEqual([]);
    });
 });
+
+describe('sibling topics', () => {
+   const base = {
+      topic: 'Agencja detektywistyczna',
+      brand: 'ProDetektyw',
+      language: 'Polish (polski)',
+      observedQuestions: [] as string[],
+   };
+
+   it('names the siblings and tells the topic to claim its own slice', () => {
+      // Measured: three synonymous topics produced 5 distinct jobs between them without
+      // this, about 12 with it. The requests stay parallel; naming the siblings is enough.
+      const { user } = buildTrackerPromptRequest({
+         ...base,
+         siblingTopics: ['Biuro detektywistyczne', 'Prywatny detektyw Warszawa'],
+      });
+      expect(user).toContain('"Biuro detektywistyczne"');
+      expect(user).toContain('"Prywatny detektyw Warszawa"');
+      expect(user).toContain('Claim the slice');
+   });
+
+   it('says nothing when the topic has no siblings', () => {
+      expect(buildTrackerPromptRequest(base).user).not.toContain('Claim the slice');
+      expect(buildTrackerPromptRequest({ ...base, siblingTopics: [] }).user).not.toContain('Claim the slice');
+   });
+
+   it('drops the topic itself, blanks, and anything past the cap', () => {
+      const { user } = buildTrackerPromptRequest({
+         ...base,
+         siblingTopics: ['Agencja detektywistyczna', '  ', ...Array.from({ length: 12 }, (_, i) => `Temat ${i}`)],
+      });
+      // Check the list line itself: the topic is quoted again further down, in the
+      // "claim your slice" sentence, where it belongs.
+      const listed = user.split('\n').find((l) => l.startsWith('Other topics tracked')) ?? '';
+      expect(listed).not.toContain('"Agencja detektywistyczna"'); // never avoid itself
+      expect(listed).toContain('"Temat 0"');
+      expect(listed).not.toContain('"Temat 8"'); // capped
+   });
+
+   it('truncates an overlong title rather than letting it run into the prompt', () => {
+      const { user } = buildTrackerPromptRequest({ ...base, siblingTopics: ['x'.repeat(300)] });
+      expect(user).not.toContain('x'.repeat(100));
+   });
+});

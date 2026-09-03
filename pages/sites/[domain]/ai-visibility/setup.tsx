@@ -61,9 +61,15 @@ const AiVisibilitySetup: NextPage = () => {
             return;
          }
          setTopics(titles.map((title, i) => ({ key: `topic-${i}`, title, prompts: [], generating: true })));
+         // Sibling titles go with every request. The topics are usually near-synonyms and
+         // these calls run in parallel, so without them each one reaches for the same few
+         // obvious use cases and the wizard fills up with near-duplicates.
          await Promise.all(titles.map(async (title, i) => {
             try {
-               const { prompts } = await generate.mutateAsync({ topic: title });
+               const { prompts } = await generate.mutateAsync({
+                  topic: title,
+                  siblingTopics: titles.filter((t) => t !== title),
+               });
                const wp: WizardPrompt[] = prompts.map((p, pi) => ({
                   key: `topic-${i}-p${pi}`, text: p.text, provenance: p.provenance, selected: pi < DEFAULT_SELECTED,
                }));
@@ -92,7 +98,11 @@ const AiVisibilitySetup: NextPage = () => {
    const onGenerate = async (topicKey: string, title: string) => {
       setTopics((prev) => prev.map((t) => (t.key === topicKey ? { ...t, generating: true } : t)));
       try {
-         const { prompts } = await generate.mutateAsync({ topic: title, refresh: true });
+         const { prompts } = await generate.mutateAsync({
+            topic: title,
+            refresh: true,
+            siblingTopics: topics.filter((t) => t.key !== topicKey).map((t) => t.title),
+         });
          const wp: WizardPrompt[] = prompts.map((p, pi) => ({ key: `${topicKey}-p${pi}`, text: p.text, provenance: p.provenance, selected: pi < DEFAULT_SELECTED }));
          setTopics((prev) => prev.map((t) => (t.key === topicKey ? { ...t, prompts: wp, generating: false } : t)));
       } catch {

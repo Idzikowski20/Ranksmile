@@ -115,7 +115,7 @@ export function useGeneratePrompts(slug: string | undefined) {
    return useMutation(
       // `refresh` bypasses the stored pool and re-buys from DataForSEO — only for
       // the explicit per-topic Generate button, never for the wizard's initial seed.
-      ({ topic, refresh }: { topic: string, refresh?: boolean }) => fetchJson<{ prompts: Array<{ text: string, provenance: string[] }>, degraded?: boolean, cached?: boolean }>(`/api/ai-visibility/${slug}/generate-prompts`, jsonPost({ topic, refresh })),
+      ({ topic, refresh, siblingTopics }: { topic: string, refresh?: boolean, siblingTopics?: string[] }) => fetchJson<{ prompts: Array<{ text: string, provenance: string[] }>, degraded?: boolean, cached?: boolean }>(`/api/ai-visibility/${slug}/generate-prompts`, jsonPost({ topic, refresh, siblingTopics })),
       { onError: toastError },
    );
 }

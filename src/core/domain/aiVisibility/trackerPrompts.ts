@@ -28,7 +28,15 @@ export type TrackerPromptSeed = {
    language: string;
    /** Real questions Google surfaced for the topic — evidence of what people ask about. */
    observedQuestions: string[];
+   /** The brand's other tracked topics. They are usually near-synonyms of this one, and
+    *  each is generated in its own parallel request, so without knowing they exist every
+    *  topic reaches for the same handful of obvious jobs. */
+   siblingTopics?: string[];
 };
+
+/** Bounds what a client-supplied sibling list can add to the prompt. */
+const MAX_SIBLINGS = 8;
+const MAX_SIBLING_CHARS = 80;
 
 /**
  * A question that could plausibly make an assistant list providers.
@@ -69,6 +77,28 @@ const SYSTEM = [
    'Return ONLY a JSON object: {"prompts": ["…", "…"]}. No prose, no markdown.',
 ].join('\n');
 
+/**
+ * Tell the topic about its siblings.
+ *
+ * Measured on three synonymous topics for one brand: without this the fifteen prompts
+ * covered five distinct jobs, each asked three times over; with it, about twelve. The
+ * requests stay parallel and uncoordinated — naming the siblings is enough for each topic
+ * to claim the slice its own wording fits, and leave the rest.
+ */
+function siblingRule(seed: TrackerPromptSeed): string {
+   const siblings = (seed.siblingTopics ?? [])
+      .map((t) => t.trim().slice(0, MAX_SIBLING_CHARS))
+      .filter((t) => t && t !== seed.topic.trim())
+      .slice(0, MAX_SIBLINGS);
+   if (!siblings.length) return '';
+   return [
+      '',
+      `Other topics tracked for the same brand, generated separately: ${siblings.map((t) => `"${t}"`).join(', ')}.`,
+      'They name the same service in different words, so their prompts will otherwise repeat yours.',
+      `Claim the slice of the service that fits "${seed.topic}" most specifically, and leave the rest to them.`,
+   ].join('\n');
+}
+
 export function buildTrackerPromptRequest(seed: TrackerPromptSeed): { system: string; user: string } {
    const observed = seed.observedQuestions.filter(isBrandElicitingPrompt).slice(0, 8);
    const user = [
@@ -76,6 +106,7 @@ export function buildTrackerPromptRequest(seed: TrackerPromptSeed): { system: st
       `Market context (the tracked brand — do NOT mention it): ${seed.brand}`,
       `Language: write every prompt in ${seed.language}.`,
       `Count: exactly ${AI_VIS_PROMPTS_PER_TOPIC} prompts.`,
+      siblingRule(seed),
       observed.length
          ? [
             '',

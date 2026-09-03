@@ -42,6 +42,7 @@ async function buildPromptList(
   locale: { languageCode: string },
   topicTrimmed: string,
   brand: string,
+  siblings: string[],
   questions: Array<{ question: string; domain: string }>,
   related: string[],
 ) {
@@ -56,6 +57,7 @@ async function buildPromptList(
     brand,
     language: languageNameForLlm(locale.languageCode),
     observedQuestions: observed,
+    siblingTopics: siblings,
   });
 
   if (generated) {
@@ -208,8 +210,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
 
    const domainId = (ownership as { ID: number }).ID;
-   const { topic, refresh } = req.body as { topic?: string, refresh?: boolean };
+   const { topic, refresh, siblingTopics } = req.body as {
+      topic?: string, refresh?: boolean, siblingTopics?: unknown,
+   };
    if (!topic?.trim()) return res.status(400).json({ error: 'topic is required' });
+   // The wizard's other topics. Client-supplied and fed to a model, so only strings, and
+   // the domain module caps how many reach the prompt.
+   const siblings = Array.isArray(siblingTopics)
+      ? siblingTopics.filter((t): t is string => typeof t === 'string')
+      : [];
 
    const locale = await getDomainLocale(domainId);
    const topicTrimmed = topic.trim();
@@ -231,6 +240,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         brand: brandName,
         language: languageNameForLlm(locale.languageCode),
         observedQuestions: [],
+        siblingTopics: siblings,
       });
       if (generated) {
         return res.status(200).json({
@@ -273,7 +283,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          country: locale.countryCode,
          languageCode: locale.languageCode,
       });
-      const result = await buildPromptList(locale, topicTrimmed, brandName, questions, related);
+      const result = await buildPromptList(locale, topicTrimmed, brandName, siblings, questions, related);
       if (!result.degraded) {
          // Non-fatal: a failed write only means the next visit pays again.
          await writeCached(domainId, topicTrimmed, result.prompts)
