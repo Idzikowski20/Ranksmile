@@ -1,0 +1,21 @@
+__tests__/lib/wie/dataDir.test.ts
+  s_8a599cee1c9d24::t_557c9d1a8fed3c 33-35,37-38
+jest.setup.js
+  s_8a599cee1c9d24::t_557c9d1a8fed3c 55-56,58-60,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "975f29fb7551df7b65b52b214d1a2f80cd8037fa",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
