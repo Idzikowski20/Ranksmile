@@ -155,7 +155,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          if (!entityRows.length) return res.status(200).json({ pending: false, title: query, overview: null, engines: [], series: [], brands: [], fanout: [] });
          const scoped = engine ? entityRows.filter((r) => r.model === engine) : entityRows;
          // Same brand metric as the prompt row this modal was opened from, so the two agree.
-         const overview = computeBrandOverview(scoped, ownBrand);
+         const overview = computeBrandOverview(scoped, scanBrand);
 
          const engines = Array.from(new Set(entityRows.map((r) => r.model)));
 
@@ -165,7 +165,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
              WHERE c.domain_id = ? AND s.status = 'completed' ORDER BY s.id DESC LIMIT 24`, [domain.ID]);
          const series: Array<{ finishedAt: string | null, visibilityScore: number, mentionRate: number, avgPosition: number | null }> = [];
          for (const s of scans.slice().reverse()) {
-            const ov = computeBrandOverview(s.id === scan.id ? scoped : scope(await loadScanResultRows(s.id)), ownBrand);
+            const ov = computeBrandOverview(s.id === scan.id ? scoped : scope(await loadScanResultRows(s.id)), scanBrand);
             series.push({ finishedAt: s.finished_at, visibilityScore: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition });
          }
 
@@ -364,17 +364,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // matching the reference tool, whose per-prompt average position is the brand's own
          // entry in that prompt's brand list. Domain citations drive the Sources views.
          const topics = Array.from(byTopic.entries()).map(([topic, topicRows]) => {
-            const ov = computeBrandOverview(topicRows, ownBrand);
+            const ov = computeBrandOverview(topicRows, scanBrand);
             const promptIds = Array.from(new Set(topicRows.map((r) => r.promptId)));
             const prompts = promptIds.map((id) => {
                const pr = byPrompt.get(id) || [];
-               const pov = computeBrandOverview(pr, ownBrand);
+               const pov = computeBrandOverview(pr, scanBrand);
                return { id, text: promptMeta.get(id)?.text || '', visibility: pov.visibilityScore, mentionRate: pov.mentionRate, avgPosition: pov.avgPosition, brands: brandDomains(pr) };
             });
             return { topic, promptCount: prompts.length, visibility: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition, brands: brandDomains(topicRows), prompts };
          }).sort((a, b) => b.visibility - a.visibility);
 
-         const overall = computeBrandOverview(all, ownBrand);
+         const overall = computeBrandOverview(all, scanBrand);
          return res.status(200).json({
             overview: { visibilityScore: overall.visibilityScore, mentionRate: overall.mentionRate, avgPosition: overall.avgPosition },
             topics,

@@ -45,33 +45,37 @@ function parseCitationUrls(raw: unknown): Array<{ url: string; domain: string }>
    return out;
 }
 
-/** A duplicate-key race between two ticks is expected and harmless; any other persistence
- *  error must reach the caller, or we report progress over data that was never stored. */
-const isDuplicateKey = (e: unknown): boolean => /duplicate|unique/i.test(e instanceof Error ? e.message : String(e));
-
-/** Queue the scan's distinct cited URLs, once. The unique index is the real guard. */
-async function seedSources(scanId: number): Promise<void> {
-   // Seeding is a whole-scan read; running it per chunk repeated it for every eight rows
-   // drained. One existing row is proof this scan was already seeded.
-   const seeded = await queryOne<{ n: number }>('SELECT COUNT(*) AS n FROM ai_vis_sources WHERE scan_id = ?', [scanId]);
-   if (Number(seeded?.n ?? 0) > 0) return;
-
+/**
+ * Queue every cited URL of the scan that is not queued yet. Returns how many it added.
+ *
+ * Reconciles rather than seeding blind: a scan half-seeded by an earlier build would
+ * otherwise keep its missing citations forever, and the phase would mark an incomplete
+ * source set as finished.
+ */
+async function seedSources(scanId: number): Promise<number> {
    const rows = await queryRows<{ citations: unknown }>(
       'SELECT citations FROM ai_vis_results WHERE scan_id = ? AND error IS NULL',
       [scanId],
    );
    const byUrl = new Map<string, string>();
    for (const r of rows) for (const c of parseCitationUrls(r.citations)) if (!byUrl.has(c.url)) byUrl.set(c.url, c.domain);
-   if (!byUrl.size) return;
+   if (!byUrl.size) return 0;
 
-   // One multi-row INSERT: a 250-source scan used to be 250 round trips.
+   const existing = await queryRows<{ url: string }>('SELECT url FROM ai_vis_sources WHERE scan_id = ?', [scanId]);
+   for (const r of existing) byUrl.delete(r.url);
+   if (!byUrl.size) return 0;
+
+   // One multi-row INSERT: a 250-source scan used to be 250 round trips. ON CONFLICT so a
+   // concurrent tick claiming one URL cannot fail the whole statement.
    const entries = [...byUrl.entries()];
    const values = entries.map(() => '(?, ?, ?)').join(', ');
    const params = entries.flatMap(([url, domain]) => [scanId, url, domain]);
    await db.query(
-      `INSERT INTO ai_vis_sources (scan_id, url, domain) VALUES ${values}`,
+      `INSERT INTO ai_vis_sources (scan_id, url, domain) VALUES ${values}
+       ON CONFLICT (scan_id, url) DO NOTHING`,
       { replacements: params },
-   ).catch((e: unknown) => { if (!isDuplicateKey(e)) throw e; });
+   );
+   return entries.length;
 }
 
 /** Read a response body up to `max` characters, stopping the download at the cap instead
@@ -117,7 +121,14 @@ export async function runSourceChunk(
     *  the sidecar's timeout. Rows not reached stay pending for the next tick. */
    deadlineAt = Number.POSITIVE_INFINITY,
 ): Promise<SourceChunkResult> {
-   await seedSources(scanId);
+   // Cheap short-circuit: skip the whole-scan citation read while there is still queued
+   // work, and reconcile only when the queue looks drained (below), which is the only
+   // moment a missed citation could be mistaken for "phase finished".
+   const queued = await queryOne<{ n: number }>(
+      'SELECT COUNT(*) AS n FROM ai_vis_sources WHERE scan_id = ? AND fetched_at IS NULL',
+      [scanId],
+   );
+   if (!Number(queued?.n ?? 0)) await seedSources(scanId);
 
    const pending = await queryRows<{ id: number; url: string; domain: string }>(
       'SELECT id, url, domain FROM ai_vis_sources WHERE scan_id = ? AND fetched_at IS NULL ORDER BY id LIMIT ?',
@@ -137,7 +148,15 @@ export async function runSourceChunk(
       try {
          // eslint-disable-next-line no-await-in-loop -- sequential on purpose: one chunk is a
          // handful of third-party fetches; parallelising them would hammer small hosts.
-         const res = await ssrfSafeFetch(row.url, { headers: { Accept: 'text/html,*/*;q=0.8' } });
+         // Bound the whole fetch, redirect hops included, by what is left of the budget:
+         // ssrfSafeFetch's own 15s applies per hop, so four hops could run an hour past
+         // the deadline the caller set.
+         const res = await ssrfSafeFetch(row.url, {
+            headers: { Accept: 'text/html,*/*;q=0.8' },
+            signal: Number.isFinite(deadlineAt)
+               ? AbortSignal.timeout(Math.max(1, deadlineAt - Date.now()))
+               : undefined,
+         });
          status = res.status;
          if (res.ok) {
             // eslint-disable-next-line no-await-in-loop
@@ -163,7 +182,11 @@ export async function runSourceChunk(
       'SELECT COUNT(*) AS n FROM ai_vis_sources WHERE scan_id = ? AND fetched_at IS NULL',
       [scanId],
    );
-   const remaining = Number(left?.n ?? 0);
+   let remaining = Number(left?.n ?? 0);
+   // Last check before calling the phase done: make sure every citation is queued. A scan
+   // seeded by an earlier build can be missing URLs, and marking it finished would lose
+   // them permanently.
+   if (!remaining) remaining = await seedSources(scanId);
    // Terminal marker. Without it a scan whose answers cited nothing is handed back by the
    // finder forever and the UI never leaves this phase, because "no rows queued" reads
    // exactly like "not started yet".
@@ -179,7 +202,7 @@ export async function runSourceChunk(
 /** Latest completed scan per config whose cited pages are not all read yet. */
 export async function findScansNeedingSources(limit = 5): Promise<Array<{ scanId: number; brandName: string; domain: string }>> {
    return queryRows<{ scanId: number; brandName: string; domain: string }>(
-      `SELECT s.id AS "scanId", c.brand_name AS "brandName", d.domain AS domain
+      `SELECT s.id AS "scanId", COALESCE(s.brand_name, c.brand_name) AS "brandName", d.domain AS domain
        FROM ai_vis_scans s
        JOIN ai_vis_configs c ON c.id = s.config_id
        JOIN domain d ON d."ID" = c.domain_id

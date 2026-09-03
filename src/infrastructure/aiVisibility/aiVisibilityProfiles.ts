@@ -29,9 +29,6 @@ type Agg = {
    sentiments: BrandMention['sentiment'][];
 };
 
-/** A duplicate-key race between two ticks is expected; other persistence errors are not. */
-const isDuplicateKey = (e: unknown): boolean => /duplicate|unique/i.test(e instanceof Error ? e.message : String(e));
-
 /** The sentiment the answers most often carried for this brand. */
 function dominantSentiment(list: BrandMention['sentiment'][]): string {
    const counts = new Map<string, number>();
@@ -96,16 +93,25 @@ export async function runProfileChunk(scanId: number, limit = AI_VIS_PROFILE_CHU
          return [scanId, e.brand, e.domain || null, e.mentions, avgPosition,
             presenceScore({ mentionRate, avgPosition }), dominantSentiment(e.sentiments)];
       });
-      // One statement instead of 25 sequential round trips. A duplicate is a concurrent
-      // tick winning the race on the unique (scan_id, brand) index — not a failure.
+      // One statement instead of 25 sequential round trips. ON CONFLICT rather than a
+      // catch: swallowing the error would let one brand a concurrent tick already wrote
+      // fail the whole batch, and the marker below would then record work never persisted.
+      // Any other database error still throws, so the phase retries.
       await db.query(
          `INSERT INTO ai_vis_brand_profiles (scan_id, brand, domain, mentions, avg_position, presence_score, sentiment, updated_at)
-          VALUES ${values}`,
+          VALUES ${values}
+          ON CONFLICT (scan_id, brand) DO NOTHING`,
          { replacements: params },
-      ).catch((e: unknown) => { if (!isDuplicateKey(e)) throw e; });
+      );
    }
 
-   const remaining = pending.length - batch.length;
+   // Count what is actually stored, not what we tried to store: ON CONFLICT rows and a
+   // concurrent tick both mean the attempted count is not evidence.
+   const storedRow = await queryOne<{ n: number }>(
+      'SELECT COUNT(*) AS n FROM ai_vis_brand_profiles WHERE scan_id = ?',
+      [scanId],
+   );
+   const remaining = Math.max(0, agg.size - Number(storedRow?.n ?? 0));
    // Terminal marker — see ai_vis_scans.profiles_done_at. A scan whose answers named no
    // brands has nothing to write, and "zero profiles" must not read as "still working".
    if (!remaining) {
@@ -126,7 +132,9 @@ export async function findScansNeedingProfiles(limit = 5): Promise<Array<{ scanI
          ON latest.config_id = s.config_id AND latest.mx = s.finished_at
        WHERE s.status = 'completed'
          AND s.profiles_done_at IS NULL
-         AND EXISTS (SELECT 1 FROM ai_vis_results r WHERE r.scan_id = s.id AND r.brands IS NOT NULL)
+         -- No "has brands" requirement: a scan whose model calls all failed has nothing to
+         -- profile and must still reach runProfileChunk once, to be marked done. Without
+         -- that it was never selected, the marker never landed, and the UI polled forever.
          AND NOT EXISTS (SELECT 1 FROM ai_vis_results r2 WHERE r2.scan_id = s.id AND r2.brands IS NULL AND r2.error IS NULL AND r2.answer IS NOT NULL)
        ORDER BY s.finished_at DESC LIMIT ?`,
       [limit],

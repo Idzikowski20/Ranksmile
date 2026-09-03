@@ -59,7 +59,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // A scan still in brand extraction has only part of its mentions; plotting that
          // partial number draws a dip that never happened, so the point is a gap until the
          // phase finishes. Each scan is scored with the brand it ran under.
-         const extracting = rows.some((r) => r.brandsAnalyzed === false);
+         // allRows, not the filtered subset: a prompt filter can select only the rows that
+         // happen to be extracted already and hide that the scan is still mid-phase.
+         const extracting = allRows.some((r) => r.brandsAnalyzed === false);
          const series: { you: BrandTriad | null; competitor?: BrandTriad | null } = {
             you: extracting ? null : triad(computeBrandOverview(rows, s.brand_name || ownBrand)),
          };

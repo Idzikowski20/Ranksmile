@@ -1202,6 +1202,10 @@ const ArticleEditorPage: NextPage = () => {
       .then(async () => {
         // Superseded while queued: skip the write entirely rather than send a stale trio.
         if (gen !== scoreSyncGenRef.current) return;
+        // Auto-Optimize may have started while this sat in the queue; the panel then holds
+        // a transient mid-optimization score. Drop the write and re-arm, so the real score
+        // syncs once the suspension lifts.
+        if (saveSuspendedRef.current) { scoreSyncedRef.current = null; return; }
         // Read the scores at SEND time, so what goes out is the newest the panel emitted.
         const cur = panelScoresRef.current;
         if (!cur) return;
@@ -1218,7 +1222,9 @@ const ArticleEditorPage: NextPage = () => {
         if (!r.ok) throw new Error(`score refresh HTTP ${r.status}`);
       })
       .catch((err) => {
-        scoreSyncedRef.current = null; // let the next change retry
+        // Only re-arm if nothing newer has registered: clearing the key after a newer
+        // refresh already succeeded would make the next render send it a second time.
+        if (gen === scoreSyncGenRef.current) scoreSyncedRef.current = null;
         console.warn('[score-refresh]', getErrorMessage(err));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps

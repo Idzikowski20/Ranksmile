@@ -14,6 +14,19 @@ type ScanRow = {
 /** Counts for the follow-on phases the progress bar reports (sources → brands → profiles). */
 type PhaseRow = { sources_total: number, sources_read: number, brands_pending: number, profiles_built: number };
 
+/** How long after a scan finishes its follow-on phases are still considered live. They
+ *  take minutes; past this a missing marker means nobody is going to write one. */
+const PHASE_GRACE_MS = 30 * 60 * 1000;
+
+/** Pending unless the phase marked itself done, the counts already prove it, or the scan
+ *  finished long enough ago that no worker is coming. */
+export function phasePending(doneAt: string | null, countsComplete: boolean, finishedAt: string | null): boolean {
+   if (doneAt || countsComplete) return false;
+   const finished = finishedAt ? new Date(finishedAt).getTime() : NaN;
+   if (Number.isFinite(finished) && Date.now() - finished > PHASE_GRACE_MS) return false;
+   return true;
+}
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAiVisibilityTables();
@@ -52,21 +65,38 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       [scan.id, scan.id, scan.id, scan.id],
    );
 
+   const sourcesTotal = Number(phases?.sources_total ?? 0);
+   const sourcesRead = Number(phases?.sources_read ?? 0);
+
    return res.status(200).json({
       status: scan.status,
       progressDone: scan.progress_done || 0,
       progressTotal: scan.progress_total || 0,
       costUsd: (scan.cost_micros || 0) / 1e6, // integer micros → USD at the boundary
       finishedAt: scan.finished_at,
-      sourcesTotal: Number(phases?.sources_total ?? 0),
-      sourcesRead: Number(phases?.sources_read ?? 0),
+      sourcesTotal,
+      sourcesRead,
       brandsPending: Number(phases?.brands_pending ?? 0),
       profilesBuilt: Number(phases?.profiles_built ?? 0),
       // Row counts cannot say "finished": a scan that cited nothing, or named no brands,
       // has zero rows for the same reason a scan that has not started does. The phase
-      // writes a marker when it drains, and that is the only completion signal.
-      sourcesPending: !scan.sources_done_at,
-      profilesPending: !scan.profiles_done_at,
+      // writes a marker when it drains, and that is the primary completion signal.
+      //
+      // Two fallbacks keep old rows out of an endless poll. Scans finished before the
+      // markers existed have none and would never get one until a sidecar tick (hours
+      // away), and a scan run through the inline fallback never runs these phases at all:
+      //   - counts that already prove completion settle it,
+      //   - and past PHASE_GRACE_MS the follow-on phases are no longer treated as live.
+      sourcesPending: phasePending(
+         scan.sources_done_at,
+         sourcesTotal > 0 && sourcesRead >= sourcesTotal,
+         scan.finished_at,
+      ),
+      profilesPending: phasePending(
+         scan.profiles_done_at,
+         Number(phases?.profiles_built ?? 0) > 0,
+         scan.finished_at,
+      ),
    });
 }
 

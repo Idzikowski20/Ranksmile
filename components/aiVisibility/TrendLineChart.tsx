@@ -27,13 +27,15 @@ const TrendLineChart = ({ scans, competitorDomain }: { scans: Point[]; competito
         {
           label: 'You',
           kind: 'traffic' as const,
-          values: ordered.map((s) => s.series.you?.visibilityScore ?? 0),
+          // null, not 0: a scan still in brand extraction has no score yet, and coalescing
+          // it draws a dip that never happened.
+          values: ordered.map((s) => s.series.you?.visibilityScore ?? null),
         },
         ...(competitorDomain
           ? [{
               label: competitorDomain,
               kind: 'comparison' as const,
-              values: ordered.map((s) => s.series.competitor?.visibilityScore ?? 0),
+              values: ordered.map((s) => s.series.competitor?.visibilityScore ?? null),
             }]
           : []),
       ],
