@@ -10,6 +10,9 @@ export type AiVisScanStatus = {
     *  `*Pending` is the completion signal, because zero rows is a legitimate result. */
    sourcesTotal: number, sourcesRead: number, brandsPending: number, profilesBuilt: number,
    sourcesPending: boolean, profilesPending: boolean,
+   /** Engines this scan queries, and the pages it read most recently — for the icons and
+    *  the favicon trail in the progress bar. */
+   models: string[], recentSourceDomains: string[],
 };
 
 export function useAiVisData<T>(slug: string | undefined, view: string) {

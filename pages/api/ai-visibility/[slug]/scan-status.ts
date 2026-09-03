@@ -4,7 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
-import { queryOne } from '@/src/infrastructure/db/query';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type ScanRow = {
@@ -63,7 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(200).json({
          status: 'idle', progressDone: 0, progressTotal: 0, costUsd: 0, finishedAt: null,
          sourcesTotal: 0, sourcesRead: 0, brandsPending: 0, profilesBuilt: 0,
-         sourcesPending: false, profilesPending: false,
+         sourcesPending: false, profilesPending: false, models: [], recentSourceDomains: [],
       });
    }
 
@@ -81,6 +81,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    const sourcesTotal = Number(phases?.sources_total ?? 0);
    const sourcesRead = Number(phases?.sources_read ?? 0);
 
+   // Which engines this scan is actually querying, and the pages it has just read — the
+   // progress bar shows an icon per engine and a favicon trail, so a phase in flight names
+   // what it is working on instead of only counting.
+   const modelRows = await queryRows<{ model: string }>(
+      'SELECT DISTINCT model FROM ai_vis_results WHERE scan_id = ? ORDER BY model',
+      [scan.id],
+   ).catch(() => []);
+   // Newest first: the trail should read as "just did these", and the bar shows a handful.
+   const domainRows = await queryRows<{ domain: string }>(
+      `SELECT domain FROM ai_vis_sources
+       WHERE scan_id = ? AND fetched_at IS NOT NULL AND domain <> ''
+       ORDER BY fetched_at DESC LIMIT 12`,
+      [scan.id],
+   ).catch(() => []);
+   const recentSourceDomains = Array.from(new Set(domainRows.map((r) => r.domain))).slice(0, 6);
+
    return res.status(200).json({
       status: scan.status,
       progressDone: scan.progress_done || 0,
@@ -89,6 +105,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       finishedAt: scan.finished_at,
       sourcesTotal,
       sourcesRead,
+      models: modelRows.map((r) => r.model),
+      recentSourceDomains,
       brandsPending: Number(phases?.brands_pending ?? 0),
       profilesBuilt: Number(phases?.profiles_built ?? 0),
       // Row counts cannot say "finished": a scan that cited nothing, or named no brands,
