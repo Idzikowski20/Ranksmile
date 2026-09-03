@@ -3,6 +3,7 @@
  */
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
+import { wieDataPath } from '@/src/infrastructure/wie/dataDir';
 
 export type CorpusKind = 'gold' | 'bad';
 
@@ -18,11 +19,11 @@ export type CorpusEntry = {
 
 type CorpusFile = { entries: CorpusEntry[] };
 
-const FILE = path.join(process.cwd(), 'data', 'wie-gold-bad-corpus.json');
+const corpusFile = (): string => wieDataPath('wie-gold-bad-corpus.json');
 
 async function readFileSafe(): Promise<CorpusFile> {
   try {
-    const raw = await readFile(FILE, 'utf-8');
+    const raw = await readFile(corpusFile(), 'utf-8');
     const parsed = JSON.parse(raw) as Partial<CorpusFile>;
     return { entries: Array.isArray(parsed.entries) ? parsed.entries as CorpusEntry[] : [] };
   } catch {
@@ -32,8 +33,8 @@ async function readFileSafe(): Promise<CorpusFile> {
 
 async function writeFileSafe(data: CorpusFile): Promise<void> {
   try {
-    await mkdir(path.dirname(FILE), { recursive: true });
-    await writeFile(FILE, JSON.stringify(data, null, 2), 'utf-8');
+    await mkdir(path.dirname(corpusFile()), { recursive: true });
+    await writeFile(corpusFile(), JSON.stringify(data, null, 2), 'utf-8');
   } catch {
     /* best-effort */
   }

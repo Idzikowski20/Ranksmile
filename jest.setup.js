@@ -43,3 +43,21 @@ if (typeof global.TextDecoder === 'undefined') global.TextDecoder = TextDecoder;
 
 // Enable Fetch Mocking
 enableFetchMocks();
+
+// Each test FILE gets its own directory for the file-backed WIE stores (pattern store, DNA
+// snapshots, outcomes, eval history). setupFilesAfterEnv runs once per file, so this both
+// isolates suites Jest runs in parallel workers — they shared data/*.json and one suite's
+// writes surfaced in another's assertions — and keeps a test run out of the real data dir.
+const os = require('os');
+const nodePath = require('path');
+const { mkdtempSync, rmSync } = require('fs');
+
+const wieDataDir = mkdtempSync(nodePath.join(os.tmpdir(), 'ranksmile-wie-'));
+process.env.WIE_DATA_DIR = wieDataDir;
+
+// Delete the directory we created, not whatever the variable happens to hold at teardown.
+// A test that points WIE_DATA_DIR elsewhere and does not restore it (a crash mid-test is
+// enough) would otherwise have this recursively remove that path instead.
+afterAll(() => {
+   try { rmSync(wieDataDir, { recursive: true, force: true }); } catch { /* tmp dir, best effort */ }
+});
