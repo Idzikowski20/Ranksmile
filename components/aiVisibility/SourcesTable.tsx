@@ -6,8 +6,27 @@ import DomainFavicon from '../common/DomainFavicon';
 const FONT = 'var(--font-family-primary)';
 
 export type SourceBrand = { domain: string; brand: string };
-export type SourceRow = { url: string; domain: string; timesShown: number; models: string[]; mentioned?: boolean; brands?: SourceBrand[]; compMentioned?: boolean };
-type Group = { domain: string; urls: SourceRow[]; timesShown: number; models: string[]; mentioned: boolean; brands: SourceBrand[] };
+export type SourceRow = { url: string; domain: string; timesShown: number; models: string[]; mentioned?: boolean; brands?: SourceBrand[]; compMentioned?: boolean; pageMentionsBrand?: boolean };
+export type MentionCounts = { mentioned: number; notMentioned: number; missing: number };
+type Group = { domain: string; urls: SourceRow[]; timesShown: number; models: string[]; counts: MentionCounts; brands: SourceBrand[] };
+
+/** Whether the cited PAGE names our brand — undefined until the page has been read. */
+export const pageKind = (s: SourceRow): 'yes' | 'no' | 'unknown' => {
+   if (s.pageMentionsBrand === undefined) return 'unknown';
+   return s.pageMentionsBrand ? 'yes' : 'no';
+};
+
+/** A domain's pages by whether they name our brand; unread pages are missing, never a "no". */
+export const mentionCounts = (urls: SourceRow[]): MentionCounts => {
+   const counts: MentionCounts = { mentioned: 0, notMentioned: 0, missing: 0 };
+   for (const u of urls) {
+      const k = pageKind(u);
+      if (k === 'yes') counts.mentioned += 1;
+      else if (k === 'no') counts.notMentioned += 1;
+      else counts.missing += 1;
+   }
+   return counts;
+};
 
 export const splitSourceUrl = (url: string, fallback: string): { host: string; path: string } => {
    try { const u = new URL(url); return { host: u.host, path: `${u.pathname}${u.search}` }; } catch { return { host: fallback, path: '' }; }
@@ -69,9 +88,24 @@ const SourceCell = ({ icon, host, path, fillPct, indent = false, chevronOpen }: 
    </div>
 );
 
-const MetaCells = ({ mentioned, brands }: { mentioned?: boolean; brands?: SourceBrand[] }) => (
+/** Domain row: how many of its pages name our brand, out of the pages we could read. */
+const GroupMentions = ({ counts }: { counts: MentionCounts }) => {
+   const read = counts.mentioned + counts.notMentioned;
+   const tip = counts.missing
+      ? `${counts.mentioned} of ${read} read pages name your brand — ${counts.missing} not read yet`
+      : `${counts.mentioned} of ${read} pages name your brand`;
+   return (
+      <HoverTooltip label={tip} align="center">
+         <span style={{ display: 'inline-flex' }}>
+            <SourceStatusBadge kind={counts.mentioned ? 'yes' : 'no'} label={read ? `${counts.mentioned} / ${read}` : '—'} />
+         </span>
+      </HoverTooltip>
+   );
+};
+
+const MetaCells = ({ mention, brands }: { mention: React.ReactNode; brands?: SourceBrand[] }) => (
    <>
-      <div style={{ ...bodyCell, width: 100, flexShrink: 0, justifyContent: 'center' }}><SourceStatusBadge kind={mentioned ? 'yes' : 'no'} /></div>
+      <div style={{ ...bodyCell, width: 100, flexShrink: 0, justifyContent: 'center' }}>{mention}</div>
       <div style={{ ...bodyCell, width: 120, flexShrink: 0 }}><BrandStack brands={brands || []} /></div>
       <div style={{ ...bodyCell, width: 90, flexShrink: 0, justifyContent: 'flex-end', color: '#9F9FA9' }}>N/A</div>
    </>
@@ -106,7 +140,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
       if (!grouped) return [];
       const map = new Map<string, Group>();
       for (const s of sorted) {
-         const g = map.get(s.domain) ?? { domain: s.domain, urls: [], timesShown: 0, models: [], mentioned: false, brands: [] };
+         const g = map.get(s.domain) ?? { domain: s.domain, urls: [], timesShown: 0, models: [], counts: { mentioned: 0, notMentioned: 0, missing: 0 }, brands: [] };
          g.urls.push(s);
          g.timesShown += s.timesShown;
          map.set(s.domain, g);
@@ -114,7 +148,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
       const out = Array.from(map.values());
       for (const g of out) {
          g.models = Array.from(new Set(g.urls.flatMap((u) => u.models)));
-         g.mentioned = g.urls.some((u) => u.mentioned);
+         g.counts = mentionCounts(g.urls);
          const seen = new Map<string, SourceBrand>();
          for (const u of g.urls) for (const b of (u.brands || [])) if (!seen.has(b.brand.toLowerCase())) seen.set(b.brand.toLowerCase(), b);
          g.brands = Array.from(seen.values());
@@ -181,7 +215,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
          <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)' }}>
             <div style={{ ...headCell, flex: 1, minWidth: 0 }}>Source</div>
             {grouped ? <div style={{ ...headCell, width: 80, flexShrink: 0, justifyContent: 'flex-end' }}>URLs</div> : null}
-            <div style={{ ...headCell, width: 100, flexShrink: 0, justifyContent: 'center' }}><HeadTip label="Mentioned" tip="Whether your brand is mentioned in AI answers citing this source" align="center" /></div>
+            <div style={{ ...headCell, width: 100, flexShrink: 0, justifyContent: 'center' }}><HeadTip label="Mentioned" tip="Whether the cited page itself names your brand. Pages we have not read yet show a dash." align="center" /></div>
             <div style={{ ...headCell, width: 120, flexShrink: 0 }}><HeadTip label="Brands" tip="Brands mentioned in AI answers citing this source" /></div>
             <div style={{ ...headCell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}><HeadTip label="Price" tip="Price of offers from link and sponsored article providers" align="right" /></div>
             <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'flex-end' }}>
@@ -196,7 +230,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
                <div style={rowStyle} onClick={() => toggleGroup(g.domain)} onMouseEnter={hoverOn} onMouseLeave={hoverOff} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') toggleGroup(g.domain); }}>
                   <SourceCell icon={g.domain} host={g.domain} path="" fillPct={(g.timesShown / maxGroup) * 100} chevronOpen={expanded.has(g.domain)} />
                   <div style={{ ...bodyCell, width: 80, flexShrink: 0, justifyContent: 'flex-end', color: '#52525C' }}>{g.urls.length}</div>
-                  <MetaCells mentioned={g.mentioned} brands={g.brands} />
+                  <MetaCells mention={<GroupMentions counts={g.counts} />} brands={g.brands} />
                   <TimesCell v={g.timesShown} />
                </div>
                {expanded.has(g.domain) && g.urls.map((u, i) => {
@@ -205,7 +239,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
                      <div key={u.url} style={{ ...rowStyle, background: 'var(--koala-bg-secondary, #f5f5f5)' }} onClick={() => onSelect(g.urls, i, true)} onMouseEnter={hoverOn} onMouseLeave={hoverOffChild} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(g.urls, i, true); }}>
                         <SourceCell icon={u.domain} host={host} path={path} fillPct={(u.timesShown / maxUrl) * 100} indent />
                         <div style={{ ...bodyCell, width: 80, flexShrink: 0 }} />
-                        <MetaCells mentioned={u.mentioned} brands={u.brands} />
+                        <MetaCells mention={<SourceStatusBadge kind={pageKind(u)} />} brands={u.brands} />
                         <TimesCell v={u.timesShown} />
                      </div>
                   );
@@ -216,7 +250,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
             return (
                <div key={s.url} style={rowStyle} onClick={() => onSelect(sorted, i, true)} onMouseEnter={hoverOn} onMouseLeave={hoverOff} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(sorted, i, true); }}>
                   <SourceCell icon={s.domain} host={host} path={path} fillPct={(s.timesShown / maxUrl) * 100} />
-                  <MetaCells mentioned={s.mentioned} brands={s.brands} />
+                  <MetaCells mention={<SourceStatusBadge kind={pageKind(s)} />} brands={s.brands} />
                   <TimesCell v={s.timesShown} />
                </div>
             );
