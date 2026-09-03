@@ -294,11 +294,19 @@ export async function runBrandsForScan(scanId: number): Promise<void> {
       const { runBrandChunk } = await import('@/src/infrastructure/aiVisibility/aiVisibilityBrands');
       let prevRemaining = Number.POSITIVE_INFINITY;
       for (let i = 0; i < 100; i += 1) {
+         // eslint-disable-next-line no-await-in-loop
          const { remaining } = await runBrandChunk(scanId, ownBrand);
-         if (remaining === 0 || remaining >= prevRemaining) break; // done, or no progress this pass
+         if (remaining === 0) break;
+         if (remaining >= prevRemaining) {
+            // Bailing out is right — retrying a pass that changed nothing would spin — but
+            // it has to be said out loud. Silently stopping here is what made the phase
+            // look frozen with an unexplained "N answers left" and an empty log.
+            console.warn(`[ai_vis_brands] scan ${scanId}: no progress, giving up with ${remaining} answers left`);
+            break;
+         }
          prevRemaining = remaining;
       }
-   } catch { /* brands are optional */ }
+   } catch (e) { console.warn('[ai_vis_brands] scan pass failed:', getErrorMessage(e)); }
 }
 
 /**
