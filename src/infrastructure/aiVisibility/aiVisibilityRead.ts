@@ -115,10 +115,12 @@ export async function loadScanRowsForScans(scanIds: number[]): Promise<Map<numbe
    return out;
 }
 
+export type ScanRef = { id: number; finished_at: string | null; brand_name: string | null };
+
 async function queryCompletedScan(
    domainId: number,
    opts: { requireUsableRows?: boolean; beforeFinishedAt?: string } = {},
-): Promise<{ id: number; finished_at: string | null } | null> {
+): Promise<ScanRef | null> {
    const filters = ['c.domain_id = ?', "s.status = 'completed'"];
    const params: unknown[] = [domainId];
    if (opts.beforeFinishedAt) {
@@ -128,8 +130,8 @@ async function queryCompletedScan(
    if (opts.requireUsableRows) {
       filters.push('EXISTS (SELECT 1 FROM ai_vis_results r WHERE r.scan_id = s.id AND r.error IS NULL)');
    }
-   return queryOne<{ id: number; finished_at: string | null }>(
-      `SELECT s.id, s.finished_at FROM ai_vis_scans s
+   return queryOne<ScanRef>(
+      `SELECT s.id, s.finished_at, s.brand_name FROM ai_vis_scans s
        JOIN ai_vis_configs c ON c.id = s.config_id
        WHERE ${filters.join(' AND ')}
        ORDER BY s.finished_at DESC LIMIT 1`,
@@ -138,15 +140,13 @@ async function queryCompletedScan(
 }
 
 /** Latest completed scan for a domain, even when every row failed (e.g. DFS 402). */
-export async function getLatestCompletedScan(
-   domainId: number,
-): Promise<{ id: number; finished_at: string | null } | null> {
+export async function getLatestCompletedScan(domainId: number): Promise<ScanRef | null> {
    return queryCompletedScan(domainId);
 }
 
 /** Scan to show in the UI: newest completed scan with at least one successful result row. */
 export async function getDisplayScan(domainId: number): Promise<{
-   scan: { id: number; finished_at: string | null };
+   scan: ScanRef;
    usingFallbackScan: boolean;
    latestAttemptFinishedAt: string | null;
 } | null> {
@@ -167,6 +167,6 @@ export async function getDisplayScan(domainId: number): Promise<{
 export async function getPreviousDisplayScan(
    domainId: number,
    beforeFinishedAt: string,
-): Promise<{ id: number; finished_at: string | null } | null> {
+): Promise<ScanRef | null> {
    return queryCompletedScan(domainId, { requireUsableRows: true, beforeFinishedAt });
 }

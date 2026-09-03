@@ -71,7 +71,13 @@ export async function enqueueAiVisScan(configId: number): Promise<number> {
       [configId],
    );
    if (active) return active.id;
-   await db.query('INSERT INTO ai_vis_scans (config_id, status) VALUES (?, ?)', { replacements: [configId, 'queued'] });
+   // Copy the brand from the config in the same statement: the scan is scored against the
+   // name it was run under, so a later rename cannot retro-score these answers.
+   await db.query(
+      `INSERT INTO ai_vis_scans (config_id, status, brand_name)
+       SELECT ?, ?, c.brand_name FROM ai_vis_configs c WHERE c.id = ?`,
+      { replacements: [configId, 'queued', configId] },
+   );
    const created = await queryOne<{ id: number }>(
       'SELECT id FROM ai_vis_scans WHERE config_id = ? ORDER BY id DESC LIMIT 1', [configId],
    );

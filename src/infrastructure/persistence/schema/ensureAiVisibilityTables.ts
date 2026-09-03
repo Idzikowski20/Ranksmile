@@ -101,6 +101,17 @@ async function createAll(): Promise<boolean> {
       finished_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('ai_vis_scans', e));
 
+   // Terminal markers for the phases that run after the scan row flips to `completed`.
+   // Their tables cannot express "finished": a scan whose answers cited nothing, or named
+   // no brands, legitimately has zero rows, which is indistinguishable from "not started"
+   // — so the finders re-picked it forever and the progress bar never left the phase.
+   // The brand in force when the scan ran. Answers are scored by matching this name in
+   // the extracted mentions, so scoring old rows with a renamed brand would read as the
+   // brand vanishing from every answer.
+   try { await db.query('ALTER TABLE ai_vis_scans ADD COLUMN brand_name TEXT'); } catch (e) { ignoreExisting('ai_vis_scans.brand_name', e); }
+   try { await db.query('ALTER TABLE ai_vis_scans ADD COLUMN sources_done_at TIMESTAMP'); } catch (e) { ignoreExisting('ai_vis_scans.sources_done_at', e); }
+   try { await db.query('ALTER TABLE ai_vis_scans ADD COLUMN profiles_done_at TIMESTAMP'); } catch (e) { ignoreExisting('ai_vis_scans.profiles_done_at', e); }
+
    // One row per (scan, prompt, model). citations = [{url, domain, title}].
    await db.query(`CREATE TABLE IF NOT EXISTS ai_vis_results (
       id ${PK},

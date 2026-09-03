@@ -39,6 +39,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          'SELECT c.brand_name, c.priority FROM ai_vis_configs c WHERE c.domain_id = ? ORDER BY c.id DESC LIMIT 1', [domain.ID],
       );
       const ownBrand = cfg?.brand_name || domain.domain;
+      // Rows are scored against the brand their scan ran under; the config's current name
+      // is only the fallback for scans recorded before the column existed.
+      const scanBrand = scan.brand_name || ownBrand;
       const parseIds = (v: unknown): number[] => (typeof v === 'string' && v ? v.split(',').map((x) => parseInt(x, 10)).filter((n) => !Number.isNaN(n)) : []);
       const parseList = (v: unknown): string[] => (typeof v === 'string' && v ? v.split(',').filter(Boolean) : []);
       const filterRows = (rs: ResultRow[]): ResultRow[] => {
@@ -74,14 +77,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // Enrich with what the "reading sources" phase actually found on each page: the
          // real <title>, the HTTP status, and whether the page itself names our brand.
          // Additive — rows the phase has not reached yet are returned unchanged.
-         const verified = await queryRows<{ url: string; title: string | null; http_status: number | null; own_mentioned: number }>(
-            'SELECT url, title, http_status, own_mentioned FROM ai_vis_sources WHERE scan_id = ?',
+         const verified = await queryRows<{
+            url: string; title: string | null; http_status: number | null; own_mentioned: number | null; fetched_at: string | null;
+         }>(
+            'SELECT url, title, http_status, own_mentioned, fetched_at FROM ai_vis_sources WHERE scan_id = ?',
             [scan.id],
          );
          const verifiedByUrl = new Map(verified.map((v) => [v.url, v]));
          const sources = aggregateSources(all, ownBrand).map((s) => {
             const v = verifiedByUrl.get(s.url);
-            if (!v) return s;
+            // A row exists as soon as the URL is queued; only fetched_at proves the page was
+            // read. Reporting `false` for a merely queued page would tell the user we
+            // checked and found nothing.
+            if (!v || !v.fetched_at) return s;
             return {
                ...s,
                title: v.title ?? undefined,
@@ -207,7 +215,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // competitor cards and the trend all read on one scale — and agree with the
          // Competitors tab. The snapshots underneath stay citation-based: that is what
          // Sources, the prompt overlap and the gap are made of.
-         const ownSnap = withBrandHeadline(byDomain.get(ownKey) ?? snapshotForDomain(all, own), all, ownBrand);
+         const ownSnap = withBrandHeadline(byDomain.get(ownKey) ?? snapshotForDomain(all, own), all, scanBrand);
          const ranked = rankCompetitors(byDomain, own)
             .map((c) => ({ ...c, snapshot: withBrandHeadline(c.snapshot, all, brandOf(c.domain)) }))
             .sort((a, b) => b.snapshot.overview.visibilityScore - a.snapshot.overview.visibilityScore);
@@ -230,8 +238,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // The previous snapshot gets the same brand headline, or the delta would compare
          // a brand score against a citation score and invent a jump that never happened.
          const prevRows = prev ? filterRows(await loadScanRows(prev.id)) : null;
-         const delta = prevRows
-            ? computeDelta(ownSnap, withBrandHeadline(snapshotForDomain(prevRows, own), prevRows, ownBrand))
+         const delta = prevRows && prev
+            ? computeDelta(ownSnap, withBrandHeadline(snapshotForDomain(prevRows, own), prevRows, prev.brand_name || ownBrand))
             : null;
 
          // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).

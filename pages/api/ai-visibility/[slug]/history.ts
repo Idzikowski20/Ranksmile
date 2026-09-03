@@ -33,8 +33,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    const domain = ownership as unknown as { ID: number, domain: string };
 
    try {
-      const scans = await queryRows<{ id: number, finished_at: string | null }>(
-         `SELECT s.id, s.finished_at FROM ai_vis_scans s
+      const scans = await queryRows<{ id: number, finished_at: string | null, brand_name: string | null }>(
+         `SELECT s.id, s.finished_at, s.brand_name FROM ai_vis_scans s
           JOIN ai_vis_configs c ON c.id = s.config_id
           WHERE c.domain_id = ? AND s.status = 'completed'
           ORDER BY s.id DESC LIMIT ${HISTORY_LIMIT}`,
@@ -56,12 +56,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // Both lines plot the BRAND metric — how often the answers name the brand and how
          // early — so the comparison is like-for-like. The picker is domain-keyed, so the
          // competitor's domain is resolved to its brand (brandOverviewForDomain).
-         const series: { you: BrandTriad; competitor?: BrandTriad } = {
-            you: triad(computeBrandOverview(rows, ownBrand)),
+         // A scan still in brand extraction has only part of its mentions; plotting that
+         // partial number draws a dip that never happened, so the point is a gap until the
+         // phase finishes. Each scan is scored with the brand it ran under.
+         const extracting = rows.some((r) => r.brandsAnalyzed === false);
+         const series: { you: BrandTriad | null; competitor?: BrandTriad | null } = {
+            you: extracting ? null : triad(computeBrandOverview(rows, s.brand_name || ownBrand)),
          };
          // Always emit a competitor point per scan (0-visibility when unnamed that scan)
          // so the trend line is continuous instead of collapsing to a single point.
-         if (wanted) series.competitor = brandOverviewForDomain(rows, wanted);
+         if (wanted) series.competitor = extracting ? null : brandOverviewForDomain(rows, wanted);
          return { scanId: s.id, finishedAt: s.finished_at, series };
       });
       return res.status(200).json({ scans: out });

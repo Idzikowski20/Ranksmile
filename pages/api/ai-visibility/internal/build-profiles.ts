@@ -7,13 +7,11 @@ import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { findScansNeedingProfiles, runProfileChunk } from '@/src/infrastructure/aiVisibility/aiVisibilityProfiles';
 import { getErrorMessage } from '@/src/core/shared/errors';
+import { isInternalPipelineRequest } from '@/src/infrastructure/aiVisibility/internalPipelineAuth';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-   const token = req.headers['x-internal-token'];
-   if (!process.env.INTERNAL_PIPELINE_TOKEN || token !== process.env.INTERNAL_PIPELINE_TOKEN) {
-      return res.status(401).json({ error: 'unauthorized' });
-   }
+   if (!isInternalPipelineRequest(req)) return res.status(401).json({ error: 'unauthorized' });
    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed' }); }
    try {
       await db.sync();
@@ -29,7 +27,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
       return res.status(200).json({ built: out });
    } catch (error) {
-      return res.status(500).json({ error: getErrorMessage(error) });
+      // Logged, not returned: the message can carry database or config detail.
+      console.error(`[ai-vis] ${req.url} failed:`, getErrorMessage(error));
+      return res.status(500).json({ error: 'Internal server error' });
    }
 }
 

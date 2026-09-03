@@ -22,10 +22,15 @@ const ScanStagePill = ({ label }: { label: string }) => (
          verticalAlign: 'middle',
       }}
    >
-      {/* Self-contained: the pill can render without the pinned progress bar mounted. */}
-      <style>{'@keyframes aiv-spin { to { transform: rotate(360deg); } }'}</style>
+      {/* Self-contained: the pill can render without the pinned progress bar mounted, so it
+          carries its own reduced-motion rule rather than relying on the bar's copy. */}
+      <style>
+         {'@keyframes aiv-spin { to { transform: rotate(360deg); } }'
+          + '@media (prefers-reduced-motion: reduce) { [data-aiv-spin] { animation: none } }'}
+      </style>
       <span
          aria-hidden="true"
+         data-aiv-spin
          style={{
             width: 12,
             height: 12,

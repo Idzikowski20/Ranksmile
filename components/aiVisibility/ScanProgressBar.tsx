@@ -81,11 +81,12 @@ function buildSteps(scan?: AiVisScanStatus): Step[] {
    const profiles = scan?.profilesBuilt ?? 0;
 
    const answersIn = total > 0 && done >= total;
-   // A scan whose answers cited nothing never gets source rows; profiles being written is
-   // then the only proof the pipeline moved past this phase.
-   const sourcesIn = answersIn && (sTotal > 0 ? sRead >= sTotal : profiles > 0);
+   // Completion comes from the phase's own marker, not from its row count: a scan whose
+   // answers cited nothing has zero sources, and one that named no brands has zero
+   // profiles, and neither means the phase is still running.
+   const sourcesIn = answersIn && !(scan?.sourcesPending ?? true);
    const brandsIn = sourcesIn && brandsPending === 0;
-   const profilesIn = brandsIn && profiles > 0;
+   const profilesIn = brandsIn && !(scan?.profilesPending ?? true);
 
    const phase = (reached: boolean, complete: boolean): StepState => (!reached ? 'idle' : complete ? 'done' : 'active');
 

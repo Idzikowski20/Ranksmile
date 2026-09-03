@@ -7,7 +7,10 @@ import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schem
 import { queryOne } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
-type ScanRow = { id: number, status: string, progress_done: number, progress_total: number, cost_micros: number, finished_at: string | null };
+type ScanRow = {
+   id: number, status: string, progress_done: number, progress_total: number, cost_micros: number,
+   finished_at: string | null, sources_done_at: string | null, profiles_done_at: string | null,
+};
 /** Counts for the follow-on phases the progress bar reports (sources → brands → profiles). */
 type PhaseRow = { sources_total: number, sources_read: number, brands_pending: number, profiles_built: number };
 
@@ -24,7 +27,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    const domainId = (ownership as unknown as { ID: number }).ID;
 
    const scan = await queryOne<ScanRow>(
-      `SELECT s.id, s.status, s.progress_done, s.progress_total, s.cost_micros, s.finished_at
+      `SELECT s.id, s.status, s.progress_done, s.progress_total, s.cost_micros, s.finished_at,
+              s.sources_done_at, s.profiles_done_at
        FROM ai_vis_scans s JOIN ai_vis_configs c ON c.id = s.config_id
        WHERE c.domain_id = ? ORDER BY s.id DESC LIMIT 1`,
       [domainId],
@@ -33,6 +37,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(200).json({
          status: 'idle', progressDone: 0, progressTotal: 0, costUsd: 0, finishedAt: null,
          sourcesTotal: 0, sourcesRead: 0, brandsPending: 0, profilesBuilt: 0,
+         sourcesPending: false, profilesPending: false,
       });
    }
 
@@ -57,6 +62,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       sourcesRead: Number(phases?.sources_read ?? 0),
       brandsPending: Number(phases?.brands_pending ?? 0),
       profilesBuilt: Number(phases?.profiles_built ?? 0),
+      // Row counts cannot say "finished": a scan that cited nothing, or named no brands,
+      // has zero rows for the same reason a scan that has not started does. The phase
+      // writes a marker when it drains, and that is the only completion signal.
+      sourcesPending: !scan.sources_done_at,
+      profilesPending: !scan.profiles_done_at,
    });
 }
 

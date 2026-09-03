@@ -6,8 +6,10 @@ export type AiVisScanStatus = {
    status: 'idle' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled',
    progressDone: number, progressTotal: number, costUsd: number, finishedAt: string | null,
    /** Follow-on phases, drained by the sidecar after the answers land: cited pages read,
-    *  brand mentions still to extract, brand profiles written. */
+    *  brand mentions still to extract, brand profiles written. Counts are for display —
+    *  `*Pending` is the completion signal, because zero rows is a legitimate result. */
    sourcesTotal: number, sourcesRead: number, brandsPending: number, profilesBuilt: number,
+   sourcesPending: boolean, profilesPending: boolean,
 };
 
 export function useAiVisData<T>(slug: string | undefined, view: string) {
@@ -40,9 +42,7 @@ export function useAiVisScanStatus(slug: string | undefined) {
             data?.status === 'running' ? 3000
             : data?.status === 'queued' ? 5000
             : data?.status === 'completed' && (
-               data.brandsPending > 0
-               || (data.sourcesTotal > 0 && data.sourcesRead < data.sourcesTotal)
-               || data.profilesBuilt === 0
+               data.sourcesPending || data.brandsPending > 0 || data.profilesPending
             ) ? 5000
             : false
          ),

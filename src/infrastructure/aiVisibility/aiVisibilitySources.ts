@@ -12,10 +12,14 @@
  */
 import db from '@/database/database';
 import { ssrfSafeFetch } from '@/src/infrastructure/http/ssrfGuard';
+import { isBlockedCitationDomain } from '@/src/core/domain/aiVisibility/blockedDomains';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 
 export type SourceChunkResult = { done: number; remaining: number };
 export const AI_VIS_SOURCE_CHUNK = 8;
+/** Read at most this much of a page: enough for <title> and a brand mention, bounded so a
+ *  hostile or broken host cannot stream us out of memory. */
+const MAX_PAGE_BYTES = 200_000;
 
 const norm = (d: string): string => d.toLowerCase().replace(/^www\./, '');
 
@@ -27,33 +31,69 @@ function parseCitationUrls(raw: unknown): Array<{ url: string; domain: string }>
    const out: Array<{ url: string; domain: string }> = [];
    for (const c of v) {
       const url = (c as { url?: unknown })?.url;
-      if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) continue;
+      // https only: an http page is fetched in the clear, and anything on the wire could
+      // flip own_mentioned. Such a citation stays unread (Sources shows a dash for it)
+      // rather than being recorded on evidence we cannot trust.
+      if (typeof url !== 'string' || !/^https:\/\//i.test(url)) continue;
       let domain = String((c as { domain?: unknown })?.domain ?? '');
       if (!domain) { try { domain = new URL(url).hostname; } catch { continue; } }
+      // Grounding and redirect proxies are not sources; Sources drops them on read, so
+      // queueing them would only spend the fetch budget and inflate this phase's progress.
+      if (isBlockedCitationDomain(domain)) continue;
       out.push({ url, domain: norm(domain) });
    }
    return out;
 }
 
-/** Queue the scan's distinct cited URLs. Idempotent — the unique index is the real guard. */
+/** A duplicate-key race between two ticks is expected and harmless; any other persistence
+ *  error must reach the caller, or we report progress over data that was never stored. */
+const isDuplicateKey = (e: unknown): boolean => /duplicate|unique/i.test(e instanceof Error ? e.message : String(e));
+
+/** Queue the scan's distinct cited URLs, once. The unique index is the real guard. */
 async function seedSources(scanId: number): Promise<void> {
+   // Seeding is a whole-scan read; running it per chunk repeated it for every eight rows
+   // drained. One existing row is proof this scan was already seeded.
+   const seeded = await queryOne<{ n: number }>('SELECT COUNT(*) AS n FROM ai_vis_sources WHERE scan_id = ?', [scanId]);
+   if (Number(seeded?.n ?? 0) > 0) return;
+
    const rows = await queryRows<{ citations: unknown }>(
-      'SELECT citations FROM ai_vis_results WHERE scan_id = ?',
+      'SELECT citations FROM ai_vis_results WHERE scan_id = ? AND error IS NULL',
       [scanId],
    );
    const byUrl = new Map<string, string>();
    for (const r of rows) for (const c of parseCitationUrls(r.citations)) if (!byUrl.has(c.url)) byUrl.set(c.url, c.domain);
    if (!byUrl.size) return;
 
-   const existing = await queryRows<{ url: string }>('SELECT url FROM ai_vis_sources WHERE scan_id = ?', [scanId]);
-   const have = new Set(existing.map((r) => r.url));
-   for (const [url, domain] of byUrl) {
-      if (have.has(url)) continue;
-      await db.query(
-         'INSERT INTO ai_vis_sources (scan_id, url, domain) VALUES (?, ?, ?)',
-         { replacements: [scanId, url, domain] },
-      ).catch(() => {});
+   // One multi-row INSERT: a 250-source scan used to be 250 round trips.
+   const entries = [...byUrl.entries()];
+   const values = entries.map(() => '(?, ?, ?)').join(', ');
+   const params = entries.flatMap(([url, domain]) => [scanId, url, domain]);
+   await db.query(
+      `INSERT INTO ai_vis_sources (scan_id, url, domain) VALUES ${values}`,
+      { replacements: params },
+   ).catch((e: unknown) => { if (!isDuplicateKey(e)) throw e; });
+}
+
+/** Read a response body up to `max` characters, stopping the download at the cap instead
+ *  of buffering whatever the host decides to send. */
+async function readCapped(res: Response, max: number): Promise<string> {
+   const { body } = res;
+   if (!body) return (await res.text()).slice(0, max);
+   const reader = body.getReader();
+   const decoder = new TextDecoder();
+   let out = '';
+   try {
+      for (;;) {
+         // eslint-disable-next-line no-await-in-loop -- reading one stream, chunk by chunk.
+         const { done, value } = await reader.read();
+         if (done) break;
+         out += decoder.decode(value, { stream: true });
+         if (out.length >= max) break;
+      }
+   } finally {
+      await reader.cancel().catch(() => {});
    }
+   return out.slice(0, max);
 }
 
 /** Real <title>, collapsed and trimmed. Empty when the page has none. */
@@ -73,6 +113,9 @@ export async function runSourceChunk(
    ownBrand: string,
    ownDomain: string,
    limit = AI_VIS_SOURCE_CHUNK,
+   /** Stop starting new fetches past this moment, so the caller's request cannot outlive
+    *  the sidecar's timeout. Rows not reached stay pending for the next tick. */
+   deadlineAt = Number.POSITIVE_INFINITY,
 ): Promise<SourceChunkResult> {
    await seedSources(scanId);
 
@@ -84,7 +127,10 @@ export async function runSourceChunk(
    const brand = ownBrand.trim().toLowerCase();
    const own = norm(ownDomain);
 
+   let reached = 0;
    for (const row of pending) {
+      if (Date.now() >= deadlineAt) break;
+      reached += 1;
       let title = '';
       let status: number | null = null;
       let mentioned = norm(row.domain) === own; // our own page always counts
@@ -95,8 +141,12 @@ export async function runSourceChunk(
          status = res.status;
          if (res.ok) {
             // eslint-disable-next-line no-await-in-loop
-            const html = (await res.text()).slice(0, 200_000);
+            const html = await readCapped(res, MAX_PAGE_BYTES);
             title = extractTitle(html);
+            // ponytail: substring match over raw HTML — counts a brand named only in markup
+            // or in a URL, misses one written as an entity, and matches inside longer words.
+            // Upgrade to text-extracted, entity-decoded, word-boundary matching if this flag
+            // ever drives more than the Sources column.
             if (!mentioned && brand) mentioned = html.toLowerCase().includes(brand);
          }
       } catch {
@@ -106,14 +156,24 @@ export async function runSourceChunk(
       await db.query(
          'UPDATE ai_vis_sources SET title = ?, http_status = ?, own_mentioned = ?, fetched_at = CURRENT_TIMESTAMP WHERE id = ?',
          { replacements: [title || null, status, mentioned ? 1 : 0, row.id] },
-      ).catch(() => {});
+      );
    }
 
    const left = await queryOne<{ n: number }>(
       'SELECT COUNT(*) AS n FROM ai_vis_sources WHERE scan_id = ? AND fetched_at IS NULL',
       [scanId],
    );
-   return { done: pending.length, remaining: Number(left?.n ?? 0) };
+   const remaining = Number(left?.n ?? 0);
+   // Terminal marker. Without it a scan whose answers cited nothing is handed back by the
+   // finder forever and the UI never leaves this phase, because "no rows queued" reads
+   // exactly like "not started yet".
+   if (!remaining) {
+      await db.query(
+         'UPDATE ai_vis_scans SET sources_done_at = CURRENT_TIMESTAMP WHERE id = ? AND sources_done_at IS NULL',
+         { replacements: [scanId] },
+      );
+   }
+   return { done: reached, remaining };
 }
 
 /** Latest completed scan per config whose cited pages are not all read yet. */
@@ -126,9 +186,8 @@ export async function findScansNeedingSources(limit = 5): Promise<Array<{ scanId
        JOIN (SELECT config_id, MAX(finished_at) AS mx FROM ai_vis_scans WHERE status = 'completed' GROUP BY config_id) latest
          ON latest.config_id = s.config_id AND latest.mx = s.finished_at
        WHERE s.status = 'completed'
+         AND s.sources_done_at IS NULL
          AND EXISTS (SELECT 1 FROM ai_vis_results r WHERE r.scan_id = s.id)
-         AND (NOT EXISTS (SELECT 1 FROM ai_vis_sources x WHERE x.scan_id = s.id)
-              OR EXISTS (SELECT 1 FROM ai_vis_sources x WHERE x.scan_id = s.id AND x.fetched_at IS NULL))
        ORDER BY s.finished_at DESC LIMIT ?`,
       [limit],
    );

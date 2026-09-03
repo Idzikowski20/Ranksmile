@@ -106,3 +106,17 @@ describe('withBrandHeadline', () => {
       expect(out.sources).toEqual(snap.sources);
    });
 });
+
+describe('brand matching is Unicode-aware', () => {
+   it('matches a brand whose name has no ASCII letters', () => {
+      // An ASCII-only key erased "Żółw" to '' and then scored every answer as unmentioned.
+      const r = row('chat_gpt', ['Żółw']);
+      expect(ownBrandPosition(r, 'Żółw')).toBe(1);
+      expect(ownBrandPosition(r, 'żółw')).toBe(1);
+      expect(computeBrandOverview([r], 'Żółw').mentionRate).toBe(100);
+   });
+
+   it('still ignores spacing and punctuation', () => {
+      expect(ownBrandPosition(row('chat_gpt', ['Pro-Detektyw']), 'Pro Detektyw')).toBe(1);
+   });
+});

@@ -74,8 +74,8 @@ const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRo
                key={c.brand}
                style={{ ...rowStyle, cursor: openable ? 'pointer' : 'default' }}
                onClick={openable ? () => onSelect(c.domain) : undefined}
-               onMouseEnter={hoverOn}
-               onMouseLeave={hoverOff}
+               onMouseEnter={openable ? hoverOn : undefined}
+               onMouseLeave={openable ? hoverOff : undefined}
                role={openable ? 'button' : undefined}
                tabIndex={openable ? 0 : undefined}
                onKeyDown={openable ? (e) => { if (e.key === 'Enter') onSelect(c.domain); } : undefined}
