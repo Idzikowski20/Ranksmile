@@ -84,32 +84,31 @@ export async function loadScanResultRows(scanId: number): Promise<ResultRow[]> {
    return mapDbRowsToResultRows(dbRows);
 }
 
-/** Citations-only rows for overview / competitor ranking / delta — skips brands + fan-out JSON. */
-export async function loadScanCitationRows(scanId: number): Promise<ResultRow[]> {
-   const map = await loadScanCitationRowsForScans([scanId]);
+/** One scan's rows for overview / competitor ranking / delta — skips the fan-out JSON only. */
+export async function loadScanRows(scanId: number): Promise<ResultRow[]> {
+   const map = await loadScanRowsForScans([scanId]);
    return map.get(scanId) ?? [];
 }
 
-/** Batch citations-only load for many scans (history charts) — one SQL round-trip. */
-export async function loadScanCitationRowsForScans(scanIds: number[]): Promise<Map<number, ResultRow[]>> {
+/** Batch load for many scans (history charts) — one SQL round-trip. Carries brands, which
+ *  the brand metric needs; only the fan-out column is skipped. */
+export async function loadScanRowsForScans(scanIds: number[]): Promise<Map<number, ResultRow[]>> {
    const out = new Map<number, ResultRow[]>();
    if (!scanIds.length) return out;
    for (const id of scanIds) out.set(id, []);
    const placeholders = scanIds.map(() => '?').join(',');
    const dbRows = await queryRows<{
       scan_id: number; prompt_id: number; model: string; own_cited: number; own_position: number | null;
-      citations: unknown; topic: string | null; text: string | null;
+      citations: unknown; brands: unknown; topic: string | null; text: string | null;
    }>(
-      `SELECT r.scan_id, r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, p.topic, p.text
+      `SELECT r.scan_id, r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, r.brands, p.topic, p.text
        FROM ai_vis_results r LEFT JOIN ai_vis_prompts p ON p.id = r.prompt_id
        WHERE r.scan_id IN (${placeholders}) AND r.error IS NULL`,
       scanIds,
    );
    for (const r of dbRows) {
       const list = out.get(r.scan_id) ?? [];
-      // brands stays NULL, not []: this loader does not read the column, so the rows must
-      // report "brands unknown" rather than "no brands named" (see ResultRow.brandsAnalyzed).
-      const [mapped] = mapDbRowsToResultRows([{ ...r, brands: null, fan_out_queries: [] }]);
+      const [mapped] = mapDbRowsToResultRows([{ ...r, fan_out_queries: [] }]);
       if (mapped) list.push(mapped);
       out.set(r.scan_id, list);
    }

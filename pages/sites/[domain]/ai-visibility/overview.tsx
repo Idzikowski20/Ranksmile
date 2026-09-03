@@ -283,7 +283,7 @@ const AiVisibilityOverview: NextPage = () => {
                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               Mention Rate
                               {scanStage ? <ScanStagePill label={scanStage} /> : null}
-                              <InfoHint text="Share of prompt/model answers that cite your domain" />
+                              <InfoHint text="Share of prompt/model answers that name your brand" />
                            </span>
                         )}
                         value={pending || !own ? '—' : `${own.mentionRate}%`}
@@ -297,7 +297,7 @@ const AiVisibilityOverview: NextPage = () => {
                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               Avg Position
                               {scanStage ? <ScanStagePill label={scanStage} /> : null}
-                              <InfoHint text="Your average citation rank when cited (lower is better)" />
+                              <InfoHint text="How early your brand appears in the answers that name it (lower is better)" />
                            </span>
                         )}
                         value={pending || !own || own.avgPosition == null ? '—' : own.avgPosition.toFixed(1)}

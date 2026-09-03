@@ -6,8 +6,8 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
-import { aggregateSources, buildSnapshotsForScan, rankCompetitors, rankBrandProfiles, snapshotForDomain, computeDelta, computeOverview, computeBrandOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '@/src/core/domain/aiVisibility/metrics';
-import { loadScanResultRows, loadScanCitationRows, getDisplayScan, getPreviousDisplayScan } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
+import { aggregateSources, buildSnapshotsForScan, rankCompetitors, rankBrandProfiles, snapshotForDomain, computeDelta, computeOverview, computeBrandOverview, withBrandHeadline, brandOverviewForDomain, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '@/src/core/domain/aiVisibility/metrics';
+import { loadScanResultRows, loadScanRows, getDisplayScan, getPreviousDisplayScan } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import { refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
@@ -188,33 +188,48 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
 
       if (view === 'overview') {
-         const rows = await loadScanCitationRows(scan.id);
+         const rows = await loadScanRows(scan.id);
          const own = domain.domain;
          const ownKey = NORM(own);
          const all = filterRows(rows); // scope own + competitor metrics to the picked prompts
+         // The cards are keyed by domain; their score is the brand the answers name for that
+         // site, so an entry reads the same here as it does on Competitors. A site never
+         // named as a brand resolves to no brand and scores 0, exactly as it does there.
+         const brandByDomain = new Map(rankBrandProfiles(all).filter((b) => b.domain).map((b) => [NORM(b.domain), b.brand]));
+         const brandOf = (d: string): string => brandByDomain.get(NORM(d)) || d;
          const wanted = typeof req.query.competitor === 'string' ? NORM(req.query.competitor) : '';
          // Full sources/prompts only for own + top-5 (+ optional compare); rest = overview scores.
          const byDomain = buildSnapshotsForScan(all, own, {
             fullDetailTopCompetitors: 5,
             extraFullDomains: wanted ? [wanted] : [],
          });
-         const ownSnap = byDomain.get(ownKey) ?? snapshotForDomain(all, own);
-         const ranked = rankCompetitors(byDomain, own);
+         // Every headline number on this page is the BRAND metric, so our gauge, the
+         // competitor cards and the trend all read on one scale — and agree with the
+         // Competitors tab. The snapshots underneath stay citation-based: that is what
+         // Sources, the prompt overlap and the gap are made of.
+         const ownSnap = withBrandHeadline(byDomain.get(ownKey) ?? snapshotForDomain(all, own), all, ownBrand);
+         const ranked = rankCompetitors(byDomain, own)
+            .map((c) => ({ ...c, snapshot: withBrandHeadline(c.snapshot, all, brandOf(c.domain)) }))
+            .sort((a, b) => b.snapshot.overview.visibilityScore - a.snapshot.overview.visibilityScore);
 
          const competitors = ranked.slice(0, 5).map((c) => ({ domain: c.domain, snapshot: withoutSources(c.snapshot) }));
          const competitorsAll = ranked.map((c) => ({ domain: c.domain, visibilityScore: c.snapshot.overview.visibilityScore }));
 
          // Long-tail: a picker choice outside the top-5. Reuse the already-computed map.
          const compare = wanted && byDomain.has(wanted) && !competitors.some((c) => c.domain === wanted)
-            ? { competitorDomain: wanted, snapshot: withoutSources(byDomain.get(wanted) as DomainSnapshot) } : null;
+            ? { competitorDomain: wanted, snapshot: withoutSources(withBrandHeadline(byDomain.get(wanted) as DomainSnapshot, all, brandOf(wanted))) } : null;
 
          // "Previous" = the completed scan that finished before this one (chronology
          // by finished_at, NOT id — a retry may have a higher id but earlier finish).
          const prev = scan.finished_at
             ? await getPreviousDisplayScan(domain.ID, scan.finished_at)
             : undefined;
-         // Citations-only load (no brands/fan-out) — delta only needs own overview/sources/prompts.
-         const delta = prev ? computeDelta(ownSnap, snapshotForDomain(filterRows(await loadScanCitationRows(prev.id)), own)) : null;
+         // The previous snapshot gets the same brand headline, or the delta would compare
+         // a brand score against a citation score and invent a jump that never happened.
+         const prevRows = prev ? filterRows(await loadScanRows(prev.id)) : null;
+         const delta = prevRows
+            ? computeDelta(ownSnap, withBrandHeadline(snapshotForDomain(prevRows, own), prevRows, ownBrand))
+            : null;
 
          // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).
          const refreshDays = refreshIntervalDays(cfg?.priority);
@@ -353,7 +368,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          });
       }
       if (view === 'prompts') {
-         const citationRows = await loadScanCitationRows(scan.id);
+         const citationRows = await loadScanRows(scan.id);
          const byPrompt = new Map<number, { id: number, topic: string, text: string, perModel: Array<{ model: string, cited: boolean, position: number | null }> }>();
          for (const r of citationRows) {
             const entry = byPrompt.get(r.promptId) ?? { id: r.promptId, topic: r.topic, text: r.text, perModel: [] };

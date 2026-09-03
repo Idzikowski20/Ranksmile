@@ -1,14 +1,22 @@
 /**
  * Pure aggregation for AI Visibility — shared by the scan runner and the read API.
  *
- * Scoring (locked so UI and API agree):
- *   pairScore(prompt,model) = cited@pos1 → 100; pos p → max(0, 100-(p-1)*15); not cited → 0
- *   visibilityScore = round(mean of pairScore over all (prompt,model) pairs)
- *   mentionRate     = % of pairs where the brand was cited
- *   avgPosition     = mean own_position over cited pairs (1 dp); null if never cited
- *   directCitations = count of own-domain citation entries; pages = distinct own URLs
+ * Two metrics live here, on purpose:
+ *
+ *   BRAND (computeBrandOverview, rankBrandProfiles) — what the tracked brand and its
+ *   competitors are scored on, and what the reference tool reports:
+ *     mentionRate     = % of extracted answers that NAME the brand (1 dp)
+ *     avgPosition     = mean appearance position in those answers (1 dp); null if never
+ *     visibilityScore = presenceScore(mentionRate, avgPosition) — see ./presence
+ *
+ *   DOMAIN (computeOverview + the snapshot/projection machinery) — citations of a SITE.
+ *   The only signal available when projecting onto a competitor domain, and the basis of
+ *   Sources, Mention Gap and the source/prompt deltas:
+ *     mentionRate     = % of pairs citing the domain; avgPosition = mean citation rank
+ *     directCitations = count of own-domain citation entries; pages = distinct own URLs
+ *     pairScore(prompt,model) = cited@pos1 → 100; pos p → max(0, 100-(p-1)*15); else 0
  */
-import { computeOverview, ownDomainPosition, mean, pairScore } from '@/src/core/domain/aiVisibility/metricsOverview';
+import { computeOverview, computeBrandOverview, ownDomainPosition, mean, pairScore } from '@/src/core/domain/aiVisibility/metricsOverview';
 import { BLOCKED_CITATION_DOMAINS, isBlockedCitationDomain } from '@/src/core/domain/aiVisibility/blockedDomains';
 import { presenceScore } from '@/src/core/domain/aiVisibility/presence';
 import type {
@@ -130,11 +138,6 @@ export function projectRows(rows: ResultRow[], domain: string): ResultRow[] {
       const pos = ownDomainPosition(r.citations, domain);
       return { ...r, ownCited: pos !== null, ownPosition: pos };
    });
-}
-
-/** Overview metrics for one domain — no sources/prompts/topics aggregation. */
-export function overviewForDomain(rows: ResultRow[], domain: string) {
-   return computeOverview(projectRows(rows, domain));
 }
 
 function promptsFor(projected: ResultRow[]): Array<{ promptId: number, topic: string, text: string, score: number }> {
@@ -469,10 +472,14 @@ export type BrandProfile = {
  * appearance position where mentioned, and the calibrated presence score.
  */
 export function rankBrandProfiles(rows: ResultRow[]): BrandProfile[] {
-   const pairs = rows.length;
+   // Same denominator rule as computeBrandOverview, so the tracked brand's own row here
+   // reads exactly like its headline on Summary: answers still awaiting brand extraction
+   // are not counted as misses.
+   const scored = rows.filter((r) => r.brandsAnalyzed !== false);
+   const pairs = scored.length;
    if (!pairs) return [];
    const agg = new Map<string, { brand: string, domain: string, mentions: number, posSum: number }>();
-   for (const r of rows) {
+   for (const r of scored) {
       for (const b of r.brands) {
          const key = b.brand.trim().toLowerCase();
          if (!key) continue;
@@ -485,7 +492,7 @@ export function rankBrandProfiles(rows: ResultRow[]): BrandProfile[] {
    }
    return Array.from(agg.values())
       .map((e) => {
-         const mentionRate = Math.round((e.mentions / pairs) * 100);
+         const mentionRate = Math.round((e.mentions / pairs) * 1000) / 10;
          const avgPosition = e.mentions ? Math.round((e.posSum / e.mentions) * 10) / 10 : null;
          return {
             brand: e.brand,
@@ -497,6 +504,45 @@ export function rankBrandProfiles(rows: ResultRow[]): BrandProfile[] {
          };
       })
       .sort((a, b) => b.visibilityScore - a.visibilityScore || b.mentions - a.mentions);
+}
+
+/**
+ * A snapshot whose headline triad is the BRAND metric, with the citation detail intact.
+ * Summary reports both, as the reference tool does: presence / mention rate / average
+ * position describe the brand in the answers, while direct citations and pages count our
+ * own cited URLs. Sources, prompts and the gap below stay citation-based.
+ */
+export function withBrandHeadline(snap: DomainSnapshot, rows: ResultRow[], brand: string): DomainSnapshot {
+   const b = computeBrandOverview(rows, brand);
+   return {
+      ...snap,
+      overview: {
+         ...snap.overview,
+         visibilityScore: b.visibilityScore,
+         mentionRate: b.mentionRate,
+         avgPosition: b.avgPosition,
+         perModel: b.perModel,
+      },
+   };
+}
+
+/**
+ * Brand metric for the brand whose site is `domain` — the bridge for surfaces whose picker
+ * is domain-keyed (the trend chart's competitor line) but which must plot the same brand
+ * presence as our own line, instead of mixing a brand scale with a citation scale.
+ * A site the answers never name as a brand has no presence, exactly as on Competitors.
+ */
+export function brandOverviewForDomain(rows: ResultRow[], domain: string): { visibilityScore: number, mentionRate: number, avgPosition: number | null } {
+   const d = norm(domain);
+   const hit = d ? rankBrandProfiles(rows).find((b) => {
+      const bd = norm(b.domain);
+      return !!bd && (bd === d || bd.endsWith(`.${d}`));
+   }) : undefined;
+   return {
+      visibilityScore: hit?.visibilityScore ?? 0,
+      mentionRate: hit?.mentionRate ?? 0,
+      avgPosition: hit?.avgPosition ?? null,
+   };
 }
 
 export type DomainGapCard = { domain: string, gap: number, shared: number, you: number };

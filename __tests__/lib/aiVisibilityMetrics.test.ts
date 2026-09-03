@@ -1,4 +1,4 @@
-import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, domainMentionGap, domainGapCandidates, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, overviewForDomain, ResultRow } from '@/src/core/domain/aiVisibility/metrics';
+import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, domainMentionGap, domainGapCandidates, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow } from '@/src/core/domain/aiVisibility/metrics';
 
 const cit = (domain: string, url?: string) => ({ domain, url: url || `https://${domain}/x`, title: '' });
 const brand = (b: string, domain = '', sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' = 'neutral', pos = 1) => ({ brand: b, domain, sentiment, pos, quotes: [] });
@@ -99,16 +99,6 @@ describe('snapshotForDomain', () => {
       const snap = snapshotForDomain(rows, 'nobody.example');
       expect(snap.overview.visibilityScore).toBe(0);
       expect(snap.citedPromptIds).toEqual([]);
-   });
-});
-
-describe('overviewForDomain', () => {
-   it('matches snapshot overview scores without building sources/prompts', () => {
-      const light = overviewForDomain(rows, 'idztech.pl');
-      const full = snapshotForDomain(rows, 'idztech.pl').overview;
-      expect(light.visibilityScore).toBe(full.visibilityScore);
-      expect(light.mentionRate).toBe(full.mentionRate);
-      expect(light.avgPosition).toBe(full.avgPosition);
    });
 });
 

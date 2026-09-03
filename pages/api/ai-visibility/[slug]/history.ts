@@ -7,9 +7,9 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { queryRows } from '@/src/infrastructure/db/query';
-import { loadScanCitationRowsForScans } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
-import { overviewForDomain } from '@/src/core/domain/aiVisibility/metrics';
+import { queryOne, queryRows } from '@/src/infrastructure/db/query';
+import { loadScanRowsForScans } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
+import { computeBrandOverview, brandOverviewForDomain } from '@/src/core/domain/aiVisibility/metrics';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 const HISTORY_LIMIT = 24;
@@ -34,21 +34,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           ORDER BY s.id DESC LIMIT ${HISTORY_LIMIT}`,
          [domain.ID],
       );
+      const cfg = await queryOne<{ brand_name: string }>(
+         'SELECT c.brand_name FROM ai_vis_configs c WHERE c.domain_id = ? ORDER BY c.id DESC LIMIT 1', [domain.ID],
+      );
+      const ownBrand = cfg?.brand_name || domain.domain;
       const wanted = typeof req.query.competitor === 'string' ? req.query.competitor.toLowerCase().replace(/^www\./, '') : '';
       // Prompt filter (CSV of prompt ids) so the trend matches the overview's picker.
       const pids = typeof req.query.prompts === 'string' && req.query.prompts
          ? req.query.prompts.split(',').map((x) => parseInt(x, 10)).filter((n) => !Number.isNaN(n)) : [];
 
-      const byScan = await loadScanCitationRowsForScans(scans.map((s) => s.id));
+      const byScan = await loadScanRowsForScans(scans.map((s) => s.id));
       const out = scans.map((s) => {
          const allRows = byScan.get(s.id) ?? [];
          const rows = pids.length ? allRows.filter((r) => pids.includes(r.promptId)) : allRows;
-         const series: { you: ReturnType<typeof overviewForDomain>; competitor?: ReturnType<typeof overviewForDomain> } = {
-            you: overviewForDomain(rows, domain.domain),
+         // Both lines plot the BRAND metric — how often the answers name the brand and how
+         // early — so the comparison is like-for-like. The picker is domain-keyed, so the
+         // competitor's domain is resolved to its brand (brandOverviewForDomain).
+         const series: { you: ReturnType<typeof brandOverviewForDomain>; competitor?: ReturnType<typeof brandOverviewForDomain> } = {
+            // Triad only — the chart never reads the per-model breakdown, and 24 scans of it
+            // is payload for nothing.
+            you: (({ visibilityScore, mentionRate, avgPosition }) => ({ visibilityScore, mentionRate, avgPosition }))(computeBrandOverview(rows, ownBrand)),
          };
-         // Always emit a competitor point per scan (0-visibility when uncited that scan)
+         // Always emit a competitor point per scan (0-visibility when unnamed that scan)
          // so the trend line is continuous instead of collapsing to a single point.
-         if (wanted) series.competitor = overviewForDomain(rows, wanted);
+         if (wanted) series.competitor = brandOverviewForDomain(rows, wanted);
          return { scanId: s.id, finishedAt: s.finished_at, series };
       });
       return res.status(200).json({ scans: out });

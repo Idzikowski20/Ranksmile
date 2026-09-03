@@ -3,7 +3,7 @@
  * The tracked brand's headline metric counts BRAND MENTIONS in the answers, which is what
  * the reference tool reports — not citations of our domain (that stays computeOverview).
  */
-import { computeBrandOverview, ownBrandPosition } from '@/src/core/domain/aiVisibility/metrics';
+import { computeBrandOverview, ownBrandPosition, brandOverviewForDomain, withBrandHeadline, snapshotForDomain } from '@/src/core/domain/aiVisibility/metrics';
 import { presenceScore } from '@/src/core/domain/aiVisibility/presence';
 import type { ResultRow } from '@/src/core/domain/aiVisibility/metricsTypes';
 
@@ -67,5 +67,42 @@ describe('computeBrandOverview', () => {
       expect(empty.visibilityScore).toBe(0);
       expect(empty.avgPosition).toBeNull();
       expect(empty.mentionRate).toBe(0);
+   });
+});
+
+describe('brandOverviewForDomain', () => {
+   const rows: ResultRow[] = [
+      { ...row('chat_gpt', ['Oracle', 'Us']), brands: [
+         { brand: 'Oracle', domain: 'oracle.com', sentiment: 'neutral', pos: 1, quotes: [] },
+         { brand: 'Us', domain: 'us.pl', sentiment: 'neutral', pos: 2, quotes: [] },
+      ] },
+      { ...row('gemini', ['Oracle']), brands: [
+         { brand: 'Oracle', domain: 'oracle.com', sentiment: 'neutral', pos: 1, quotes: [] },
+      ] },
+   ];
+
+   it('resolves a domain-keyed picker choice to the brand of that site', () => {
+      expect(brandOverviewForDomain(rows, 'oracle.com')).toEqual({ visibilityScore: presenceScore({ mentionRate: 100, avgPosition: 1 }), mentionRate: 100, avgPosition: 1 });
+      expect(brandOverviewForDomain(rows, 'www.oracle.com').mentionRate).toBe(100);
+   });
+
+   it('a site the answers never name as a brand has no presence', () => {
+      expect(brandOverviewForDomain(rows, 'nobody.example')).toEqual({ visibilityScore: 0, mentionRate: 0, avgPosition: null });
+      expect(brandOverviewForDomain(rows, '')).toEqual({ visibilityScore: 0, mentionRate: 0, avgPosition: null });
+   });
+});
+
+describe('withBrandHeadline', () => {
+   it('swaps the triad for the brand metric and keeps the citation detail', () => {
+      const rows = [row('chat_gpt', ['Us']), row('gemini', ['Oracle'])];
+      const snap = snapshotForDomain(rows, 'us.pl');
+      const out = withBrandHeadline(snap, rows, 'Us');
+      const brand = computeBrandOverview(rows, 'Us');
+      expect(out.overview.visibilityScore).toBe(brand.visibilityScore);
+      expect(out.overview.mentionRate).toBe(brand.mentionRate);
+      expect(out.overview.avgPosition).toBe(brand.avgPosition);
+      // Own-page citations are a separate number on Summary and must survive untouched.
+      expect(out.overview.directCitations).toBe(snap.overview.directCitations);
+      expect(out.sources).toEqual(snap.sources);
    });
 });
