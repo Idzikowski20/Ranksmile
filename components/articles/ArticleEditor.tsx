@@ -51,6 +51,7 @@ import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
 import { revealHtmlInEditor, editorCanCommand } from '@/components/editor/revealHtmlProgressive';
 import clearEditorHistory from '@/components/editor/clearEditorHistory';
 import { normalizeListHtml } from '@/src/core/domain/editor/normalizeListHtml';
+import { readJsonResponse } from '@/src/core/shared/readJsonResponse';
 import { clearWizardState } from '@/src/infrastructure/articles/wizardState';
 import {
   collectApprovedOutline,
@@ -1374,6 +1375,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         const ac = new AbortController();
         ranksmileAbortRef.current = ac;
 
+        // Role + message only. Each assistant turn also carries the article HTML it
+        // produced (`content`) and its thinking; the API reads neither, and sending them
+        // grew the request by a whole article per turn towards the 1 MB body limit.
+        const historyForApi = ranksmileHistory.map(({ role, message }) => ({ role, message }));
+
         const body = useAgent
           ? {
               prompt,
@@ -1383,7 +1389,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               internalArticles: internalArticles || [],
               articleTitle: metaTitle || '',
               articleMetaDescription: metaDescription || '',
-              history: ranksmileHistory,
+              history: historyForApi,
               articleId: commentArticleId ? Number(commentArticleId) : null,
               authorName: commentAuthor?.name || '',
             }
@@ -1396,7 +1402,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               scoreData: scoreData || null,
               internalArticles: internalArticles || [],
               keyword: articleKeyword || keyword || '',
-              history: ranksmileHistory,
+              history: historyForApi,
             };
         const res = await fetch(endpoint, {
           method: 'POST',
@@ -1419,7 +1425,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         let data: RanksmileAgentDonePayload & Record<string, unknown>;
         if (useAgent) {
           // SSE stream: errors before streaming come back as JSON; otherwise read the stream.
-          if (!res.ok) { const ej = await res.json().catch(() => ({})); throw new Error(ej.error || 'Request failed'); }
+          if (!res.ok) {
+            const ej = await readJsonResponse(res).catch((e: Error) => ({ error: e.message }));
+            throw new Error(String(ej.error || `Request failed (HTTP ${res.status})`));
+          }
           data = await readRanksmileAgentStream(res, {
             text: (delta) => setRanksmileStreamText((t) => {
               const next = t + delta;
@@ -1447,8 +1456,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setRanksmileUsageDetail({ input: data.usage?.inputTokens || 0, output: data.usage?.outputTokens || 0 });
           setRanksmileTotals((t) => ({ input: t.input + (data.usage?.inputTokens || 0), output: t.output + (data.usage?.outputTokens || 0) }));
         } else {
-          const json = await res.json() as Record<string, unknown>;
-          if (!res.ok) throw new Error(String(json.error || 'Request failed'));
+          // Never `res.json()` blind: an HTML error page here surfaced as
+          // "Unexpected token '<', "<!DOCTYPE"…" with no status to act on.
+          const json = await readJsonResponse(res);
+          if (!res.ok) throw new Error(String(json.error || `Request failed (HTTP ${res.status})`));
           data = json as RanksmileAgentDonePayload & Record<string, unknown>;
         }
 
