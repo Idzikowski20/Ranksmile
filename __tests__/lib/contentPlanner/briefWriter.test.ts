@@ -59,8 +59,8 @@ const call = (reply: string, extra: Partial<Parameters<typeof writeOutlineBrief>
 const GOOD = JSON.stringify({
   title: 'Prywatny detektyw Warszawa – ProDetektyw: agencja dla osób prywatnych i firm',
   sections: [
-    { heading: 'Kim jesteśmy', instructions: ['Krótki lead o ProDetektyw.', 'Wspomnij licencję RD-58/2020.'] },
-    { heading: 'Zakres usług', instructions: ['Wypunktuj usługi dla osób prywatnych i firm.'] },
+    { n: 1, heading: 'Kim jesteśmy', instructions: ['Krótki lead o ProDetektyw.', 'Wspomnij licencję RD-58/2020.'] },
+    { n: 2, heading: 'Zakres usług', instructions: ['Wypunktuj usługi dla osób prywatnych i firm.'] },
   ],
 });
 
@@ -104,8 +104,8 @@ describe('writeOutlineBrief', () => {
     const rewritten = JSON.stringify({
       title: 'T',
       sections: [
-        { heading: 'Jak działa prywatny detektyw w Warszawie', instructions: ['a'] },
-        { heading: 'Sprawy rodzinne – zdrada, rozwód, dzieci', instructions: ['b'] },
+        { n: 1, heading: 'Jak działa prywatny detektyw w Warszawie', instructions: ['a'] },
+        { n: 2, heading: 'Sprawy rodzinne – zdrada, rozwód, dzieci', instructions: ['b'] },
       ],
     });
 
@@ -121,7 +121,7 @@ describe('writeOutlineBrief', () => {
   it('keeps the planner label for a section the model did not rename', async () => {
     const partial = JSON.stringify({
       title: 'T',
-      sections: [{ heading: '', instructions: ['a'] }],
+      sections: [{ n: 1, heading: '', instructions: ['a'] }],
     });
 
     const headings = await call(partial).run();
@@ -140,7 +140,7 @@ describe('writeOutlineBrief', () => {
   it('falls back to the objective for a section the model skipped', async () => {
     const partial = JSON.stringify({
       title: 'T',
-      sections: [{ heading: 'Kim jesteśmy', instructions: ['a'] }],
+      sections: [{ n: 1, heading: 'Kim jesteśmy', instructions: ['a'] }],
     });
 
     const headings = await call(partial).run();
@@ -164,7 +164,8 @@ describe('writeOutlineBrief', () => {
       onTokens: async (tokens) => { seen.push(tokens); throw new Error('ledger down'); },
     });
 
-    expect(seen).toEqual([4321]);
+    // One call per section, each charged.
+    expect(seen).toEqual([4321, 4321]);
     expect(headings?.[1].instructions).toEqual([
       'Krótki lead o ProDetektyw.',
       'Wspomnij licencję RD-58/2020.',
@@ -200,7 +201,7 @@ describe('writeOutlineBrief', () => {
   it('strips markdown bullets the model leaves on instructions', async () => {
     const bulleted = JSON.stringify({
       title: 'T',
-      sections: [{ heading: 'Kim jesteśmy', instructions: ['- Krótki lead.', '* Druga rzecz.'] }],
+      sections: [{ n: 1, heading: 'Kim jesteśmy', instructions: ['- Krótki lead.', '* Druga rzecz.'] }],
     });
 
     const headings = await call(bulleted).run();
@@ -454,9 +455,10 @@ describe('writeOutlineBrief partial replies', () => {
       llmEdit: async () => ({ html: replies.shift() ?? PARTIAL, tokens: 1 }),
     });
 
-    // GOOD already covers both sections, so it must not spend a second call at all.
-    expect(replies).toEqual([PARTIAL]);
+    // Each section's first reply covered it, so neither call spends a retry.
+    expect(replies).toEqual([]);
     expect(headings?.[1].instructions).toHaveLength(2);
+    expect(headings?.[2].instructions).toEqual(['Wypunktuj usługi.']);
   });
 
   it('falls back to the planner objective only for sections still missing after retries', async () => {
@@ -474,12 +476,13 @@ describe('writeOutlineBrief partial replies', () => {
 
 /**
  * A 13-section outline used to be briefed in one call, so a single reply had to carry
- * ~80 instructions — and one truncated reply cost every section but one. Sections are
- * batched now: bounded replies, and a bad batch can only lose its own sections.
+ * ~80 instructions — and one truncated reply cost every section but one. One call per
+ * section now, all in parallel: bounded replies, the outline is ready when the slowest
+ * section is, and a bad reply can only lose its own section.
  */
 describe('writeOutlineBrief batching', () => {
   const SECTION_COUNT = 13;
-  const BATCH_SIZE = 5;
+  const BATCH_SIZE = 1;
 
   function wideBundle(): ContentPlannerBundle {
     const base = bundle();
@@ -540,9 +543,9 @@ describe('writeOutlineBrief batching', () => {
     await c.run();
 
     const asked = c.seen.map((user) => [...user.matchAll(/^(\d+)\. role: /gm)].map((m) => Number(m[1])));
-    expect(asked).toEqual([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13]]);
-    // Batch-local numbering would file section 6 as section 1.
-    expect(c.seen[1]).toContain('6. role: Sekcja 6');
+    expect(asked).toEqual(Array.from({ length: SECTION_COUNT }, (_, i) => [i + 1]));
+    // Batch-local numbering would file section 2 as section 1.
+    expect(c.seen[1]).toContain('2. role: Sekcja 2');
     expect(c.seen[1]).not.toContain('1. role: Sekcja 1');
   });
 
@@ -582,11 +585,12 @@ describe('writeOutlineBrief batching', () => {
     expect(headings?.[11].instructions).toEqual(['Instrukcja dla sekcji 11.']);
   });
 
-  it('keeps a single call, and no outline context, for a short outline', async () => {
+  it('shows even a two-section outline to both of its calls', async () => {
     const c = call(GOOD);
     await c.run();
 
-    expect(c.seen).toHaveLength(1);
-    expect(c.seen[0].user).not.toContain('FULL OUTLINE');
+    expect(c.seen).toHaveLength(2);
+    expect(c.seen[0].user).toContain('FULL OUTLINE');
+    expect(c.seen[1].user).toContain('2. role: Zakres usług');
   });
 });

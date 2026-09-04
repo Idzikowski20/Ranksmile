@@ -64,8 +64,6 @@ interface Props {
   faviconDomain: string;
   viewHref: string;
   loading: boolean;
-  /** When set (domain pipeline running), shown inside the card instead of the rows. */
-  pipeline?: React.ReactNode;
   /** Blog-audit coverage from the scan; drives the "Audited X of Y" footnote. */
   coverage?: { audited: number; skipped: number; total: number } | null;
   /** False ⇒ the domain has no blog_paths set; the empty state prompts to set one. */
@@ -155,12 +153,8 @@ const SectionShell = ({ children, listItems }: { children?: React.ReactNode; lis
 };
 
 const RecommendationsSection = ({
-  items, total, faviconDomain, viewHref, loading, pipeline, coverage, hasBlogPath, settingsHref,
+  items, total, faviconDomain, viewHref, loading, coverage, hasBlogPath, settingsHref,
 }: Props) => {
-  // While the domain pipeline runs, the section shows its progress in place of the rows.
-  if (pipeline) {
-    return <SectionShell><Container padding="2xl">{pipeline}</Container></SectionShell>;
-  }
   if (loading) {
     return (
       <SectionShell>

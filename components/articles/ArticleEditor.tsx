@@ -46,6 +46,7 @@ import IconSmily from './IconSmily';
 import ProgressiveBlur from '../common/ProgressiveBlur';
 import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 import OutlineGenerateBar from './OutlineGenerateBar';
+import GenerationProgressBar from './GenerationProgressBar';
 import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
 import { revealHtmlInEditor, editorCanCommand } from '@/components/editor/revealHtmlProgressive';
 import clearEditorHistory from '@/components/editor/clearEditorHistory';
@@ -2688,20 +2689,19 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         {generateBusy && !outlineReviewMode && !streaming && (
           <GenerateWritingOverlay message={generateMsg} pct={generatePct} />
         )}
-        {generateBusy && streaming && (
-          <div className="nc-gen-stream-pill" role="status" aria-live="polite">
-            <span className="nc-gen-stream-dot" aria-hidden="true" />
-            <span>{generateMsg || 'Writing your article…'}</span>
-          </div>
-        )}
-        {/* Not while the analysis is still running: there is no outline to review yet, and
-            the bar overlapped the progress panel claiming a generation was under way. */}
-        {outlineReviewMode && !readOnly && (
-          <OutlineGenerateBar
-            planning={outlineBusy}
+        {/* One bar for planning and writing, in the AI Visibility bar's shape. Not while the
+            analysis is still running: there is no outline to review yet, and the bar
+            overlapped the progress panel claiming a generation was under way. */}
+        {(outlineBusy || generateBusy) && !readOnly && (
+          <GenerationProgressBar
+            mode={generateBusy ? 'article' : 'outline'}
+            status={generateMsg}
             planningLabel={outlineRestoring ? 'Loading saved outline' : undefined}
-            busy={generateBusy}
-            progressPct={generatePct}
+            rightReserve={bottomBarRightReserve}
+          />
+        )}
+        {outlineReviewMode && !readOnly && !outlineBusy && !generateBusy && (
+          <OutlineGenerateBar
             headingCount={outlineHeadingCount}
             onGenerate={handleOutlineGenerate}
             rightReserve={bottomBarRightReserve}

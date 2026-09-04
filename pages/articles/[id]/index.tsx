@@ -28,6 +28,7 @@ import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanne
 import { resolveArticleEntry, articleEntryHref } from '@/src/core/domain/articles/articleFlow';
 import AnalysisProgressPanel from '../../../components/articles/AnalysisProgressPanel';
 import CompetitorOutlinesPanel from '../../../components/articles/CompetitorOutlinesPanel';
+import { Spinner } from '../../../components/common/ProgressPill';
 import { emptyPhases, type AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
 import { computeOptimizeLiveSnapshot } from '@/src/infrastructure/articles/computeLiveArticleScores';
 import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
@@ -2219,23 +2220,24 @@ const ArticleEditorPage: NextPage = () => {
         {/* ── Main content row ─────────────────────────────────────── */}
         <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex' }}>
 
-          {/* ── Auto-save status (floating, bottom-left) — only while saving/unsaved ── */}
+          {/* ── Auto-save status (floating, bottom-left) — only while saving/unsaved.
+              Same dark surface as the progress pill, one size down. ── */}
           {autoSaveState !== 'saved' && (
           <div
+            role="status"
             title={autoSaveState === 'saving' ? 'Saving…' : 'Unsaved changes'}
             style={{
               position: 'absolute', bottom: 12, left: 12, zIndex: 80,
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999,
-              background: 'rgba(255,255,255,0.92)', border: '1px solid var(--koala-border-primary)', boxShadow: '0 1px 3px rgba(24,26,34,0.08)',
-              backdropFilter: 'blur(6px)', fontSize: 12, fontWeight: 500, color: 'var(--koala-text-tertiary)',
-              fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap', pointerEvents: 'none',
+              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 12,
+              background: 'var(--koala-bg-inverse)', color: 'var(--koala-text-on-inverse)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
+              fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)',
+              whiteSpace: 'nowrap', pointerEvents: 'none',
             }}
           >
-            {autoSaveState === 'saving' ? (
-              <div style={{ width: 13, height: 13, border: '2px solid var(--koala-border-primary)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
-            ) : (
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--koala-status-warning)', flexShrink: 0 }} />
-            )}
+            {autoSaveState === 'saving'
+              ? <Spinner size={14} />
+              : <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--koala-status-warning)', flexShrink: 0 }} />}
             {autoSaveState === 'saving' ? 'Saving…' : 'Unsaved'}
           </div>
           )}
@@ -2439,6 +2441,7 @@ const ArticleEditorPage: NextPage = () => {
                     articleId={article.id}
                     keyword={article.target_keyword || ''}
                     cachedOutlines={article.competitor_outlines_cache}
+                    domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
                   />
                 </div>
               ) : ranksmileDockOpen ? (

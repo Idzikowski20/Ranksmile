@@ -1,0 +1,51 @@
+/** @jest-environment jsdom */
+import { render, screen } from '@testing-library/react';
+import DomainSetupProgressBar, { setupSteps } from '../../components/dashboard/DomainSetupProgressBar';
+import type { SetupStatus } from '../../services/domainPipeline';
+
+const status = (over: Partial<SetupStatus> = {}): SetupStatus => ({
+  status: 'running',
+  currentStage: 'topics',
+  stagePercent: 40,
+  stages: { gsc: 'done', keywords: 'done', topics: 'running', competitors: 'pending', recommendations: 'pending' },
+  error: null,
+  auditCounts: null,
+  ...over,
+});
+
+it('maps the job row onto the five stages, with the running stage\'s own percent', () => {
+  const steps = setupSteps(status());
+  expect(steps.map((s) => s.state)).toEqual(['done', 'done', 'active', 'idle', 'idle']);
+  expect(steps[2].detail).toBe('40%');
+  // 0 and 100 say nothing a spinner or a tick does not already say.
+  expect(setupSteps(status({ stagePercent: 0 }))[2].detail).toBeUndefined();
+});
+
+it('leaves once the job is done', () => {
+  const { rerender } = render(<DomainSetupProgressBar setup={status()} onRetry={() => undefined} />);
+  expect(screen.getByRole('status')).toHaveTextContent('Clustering and modeling topics · 40%');
+  expect(screen.getByText('2 of 5 steps done')).toBeInTheDocument();
+
+  rerender(<DomainSetupProgressBar setup={status({ status: 'done' })} onRetry={() => undefined} />);
+  expect(screen.queryByRole('status')).toBeNull();
+});
+
+it('names the first stage as waiting while the job is still queued', () => {
+  render(<DomainSetupProgressBar onRetry={() => undefined} setup={status({
+    status: 'queued',
+    stagePercent: 0,
+    stages: { gsc: 'pending', keywords: 'pending', topics: 'pending', competitors: 'pending', recommendations: 'pending' },
+  })} />);
+  expect(screen.getByRole('status')).toHaveTextContent('Getting Search Console and site data · queued');
+});
+
+/** Retry lives in the pill too — the failed run is the one state that needs a control. */
+it('keeps the pill on failure, marks the stage it died in, and offers Retry', () => {
+  const onRetry = jest.fn();
+  render(<DomainSetupProgressBar setup={status({ status: 'failed', error: 'GSC token expired' })} onRetry={onRetry} />);
+
+  expect(screen.getByRole('status')).toHaveTextContent('GSC token expired');
+  expect(screen.getByText("We couldn't finish analyzing your domain")).toBeInTheDocument();
+  screen.getByRole('button', { name: 'Retry' }).click();
+  expect(onRetry).toHaveBeenCalledTimes(1);
+});
