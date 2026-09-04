@@ -1,0 +1,86 @@
+__tests__/lib/contentPlanner/competitorPageTitles.test.ts
+  s_87fdc9d80693d3::t_48a1e1a8cbeb2d 1-25
+python-sidecar/pipeline/section_writer.py
+  s_87fdc9d80693d3::t_f2742dffa155d4 1-7,22,34-41,44-51,54-55,63,85-87,99,110,120-122,127,143,147-149,151,154-177,183-184,186-187,189,191-193,195,199,201-202,204-206,208-215,219-220,223-226,228,236-240,242-243,245-247,249,253-254,264-271,276,279,282,321-322,328,330-333,365-367,369-373,376-379,382-385
+  s_87fdc9d80693d3::t_d4b8c34c265b54 178-182
+pages/api/articles/[id]/generate-stream.ts
+  s_87fdc9d80693d3::t_fda37aca0100a0 114-117
+python-sidecar/pipeline/article_pipeline.py
+  s_87fdc9d80693d3::t_d152ad233314f3 232
+  s_87fdc9d80693d3::t_cf30d9c5f4e8f5 119-129
+  s_87fdc9d80693d3::t_3e181c5bdbe59d 289-290,294,300,305,308,311,314,320,323-324,327,331-332,338-340,346-350,360-368,371-373
+src/infrastructure/contentPlanner/fromArticleInputs.ts
+  s_87fdc9d80693d3::t_9f89dfc0d270a1 298-307
+  s_87fdc9d80693d3::t_a2a580a49b0dc6 296,308-309
+  s_87fdc9d80693d3::t_955928ea12d270 311
+  s_87fdc9d80693d3::t_f103e38a9596fc 285-286,289-295,297
+python-sidecar/pipeline/compiled_runtime.py
+  s_87fdc9d80693d3::t_be72b2fe41cb65 167
+  s_87fdc9d80693d3::t_4d9d711baebfc9 1-6,14,17,23-32,43,80-110,116-119,133,141,146-166,168-176,178-191,194-198,207,211,215
+__tests__/lib/intelligence/ccmToCoverageSnapshot.test.ts
+  s_87fdc9d80693d3::t_a69b318dc37b8d 3-4
+  s_87fdc9d80693d3::t_c2e87884d8da81 130-167
+pages/api/articles/[id]/generate.ts
+  s_87fdc9d80693d3::t_8b03f32201b023 33
+  s_87fdc9d80693d3::t_7a46ef8a2c142e 519
+python-sidecar/tests/test_compiled_runtime.py
+  s_87fdc9d80693d3::t_a2e5afbaf839fd 22,34-35,38,42,63,77,79-81,83-115,138,158-159,161,168-169,171-174,176-177,180-183,186,190,195,198,202-241,243-245
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_87fdc9d80693d3::t_aab5a6ed63c0db 263
+  s_87fdc9d80693d3::t_0193be9249ec0f 239-259,262
+src/core/intelligence/ccmToCoverageSnapshot.ts
+  s_87fdc9d80693d3::t_28c62d2430a779 20-25
+  s_87fdc9d80693d3::t_e2a1d290a216b3 190-196,198-199,203-217
+python-sidecar/tests/test_editorial_judge.py
+  s_87fdc9d80693d3::t_0271ab2f21e9c0 3-4,7,26,36-37,46,49-50,52,55,57,68
+components/articles/ArticleEditor.tsx
+  s_87fdc9d80693d3::t_95adf50f96e351 2083-2093,2096-2099
+  s_87fdc9d80693d3::t_eb96247c69f11d 1111
+  s_87fdc9d80693d3::t_285c1ba14aa4d6 2124-2132
+  s_87fdc9d80693d3::t_09c02468260bfa 2670-2672,2675-2679
+  s_87fdc9d80693d3::t_b22036284ce34e 2147-2151
+  s_87fdc9d80693d3::t_db682ec767e91b 113-115
+  s_87fdc9d80693d3::t_5e5899025c9a22 1170-1173
+  s_87fdc9d80693d3::t_6103e7387f5728 1974-1975
+  s_87fdc9d80693d3::t_709b1faa243b10 2094-2095
+  s_87fdc9d80693d3::t_427ea3a0e08d80 2158-2159
+styles/globals.css
+  s_87fdc9d80693d3::t_ca8da59c430662 4995-5031
+src/infrastructure/contentPlanner/briefWriter.ts
+  s_87fdc9d80693d3::t_0aef5276ef8e67 444-458
+  s_87fdc9d80693d3::t_0f80419e0acef2 106-107
+  s_87fdc9d80693d3::t_329cb56e07dde8 391-395
+python-sidecar/tests/test_section_writer.py
+  s_87fdc9d80693d3::t_37211cb33759c8 95-97
+  s_87fdc9d80693d3::t_1c9aa2254527e4 7,10,18-19,28,39-40,42,57,60-72,74-76,78,81-82,84,92,98-117,119-121,123-133,156-158,160-164,166,174,177,179-180,186-188,190-191,194-197,202,208-209,212,214,216-219,222-225,228-230,232-233,266-273
+pages/api/articles/[id]/content-plan.ts
+  s_87fdc9d80693d3::t_4a302a4b92b9ef 20
+  s_87fdc9d80693d3::t_a8679eb563698c 293
+python-sidecar/main.py
+  s_87fdc9d80693d3::t_7dee315013ea42 614
+  s_87fdc9d80693d3::t_860430e01f2810 181
+  s_87fdc9d80693d3::t_ee85cdc796f05d 628-635
+  s_87fdc9d80693d3::t_95c559ca77755a 211
+pages/articles/[id]/index.tsx
+  s_87fdc9d80693d3::t_9485668afe1641 498-503
+  s_87fdc9d80693d3::t_a51dd940cdbac6 545-548,551
+  s_87fdc9d80693d3::t_00f4eb44e54443 2140
+python-sidecar/pipeline/editorial_judge.py
+  s_87fdc9d80693d3::t_989b673c8c3a69 1,7,11-12,20-21,26,32,41-44,46,58,61,65,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "13e9c235155ffddbdfa7eb35c952638c8ecbdfa5",
+  "prompts": {},
+  "sessions": {
+    "s_87fdc9d80693d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0c3b0412-06ad-4c70-9b13-e97ea0a304ad",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
