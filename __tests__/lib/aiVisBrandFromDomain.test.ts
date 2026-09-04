@@ -22,3 +22,14 @@ describe('brandFromDomain', () => {
       expect(brandFromDomain('.pl')).toBe('');
    });
 });
+
+describe('brandFromDomain and the www prefix', () => {
+   it('does not offer "Www" as the brand', () => {
+      expect(brandFromDomain('www.example.com')).toBe('Example');
+      expect(brandFromDomain('WWW.Example.COM')).toBe('Example');
+   });
+
+   it('leaves a label that merely starts with w alone', () => {
+      expect(brandFromDomain('wwwild.pl')).toBe('Wwwild');
+   });
+});

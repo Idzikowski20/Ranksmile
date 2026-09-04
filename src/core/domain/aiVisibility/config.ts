@@ -95,6 +95,8 @@ export function countSelected(topics: AiVisTopic[]): number {
  * answers write, and the scan reported 0% visibility for a brand it named repeatedly.
  */
 export function brandFromDomain(domain: string): string {
-   const label = domain.split('.')[0]?.replace(/[-_]+/g, ' ').trim() ?? '';
+   // A leading www. is not the brand; taking the first label blindly offered "Www".
+   const host = domain.trim().toLowerCase().replace(/^www\./, '');
+   const label = host.split('.')[0]?.replace(/[-_]+/g, ' ').trim() ?? '';
    return label ? label.charAt(0).toUpperCase() + label.slice(1) : '';
 }

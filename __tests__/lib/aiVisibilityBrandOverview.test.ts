@@ -162,3 +162,28 @@ describe('recognising the tracked brand as the answers actually write it', () =>
       expect(ownBrandPosition(r, 'prodetektyw.pl', 'prodetektyw.pl')).toBeNull();
    });
 });
+
+describe('a suffixed match must land on a word boundary', () => {
+   const one = (brand: string): ResultRow => ({
+      promptId: 1, model: 'chat_gpt', ownCited: false, ownPosition: null, citations: [],
+      topic: 'T', text: 'Q', brands: [{ brand, domain: '', sentiment: 'neutral', pos: 1, quotes: [] }],
+   });
+
+   it('claims our own suffixed variants', () => {
+      expect(ownBrandPosition(one('ProDetektyw Warszawa'), 'prodetektyw.pl')).toBe(1);
+      expect(ownBrandPosition(one('Pro Detektyw Warszawa'), 'prodetektyw.pl')).toBe(1);
+      expect(ownBrandPosition(one('ProDetektyw – Agencja'), 'prodetektyw.pl')).toBe(1);
+   });
+
+   it('does not claim a different company that merely starts the same way', () => {
+      // brandKey collapses separators, so a raw startsWith made these "us" and inflated
+      // our own mention rate with a competitor's appearances.
+      expect(ownBrandPosition(one('ProDetektywistyka'), 'prodetektyw.pl')).toBeNull();
+      expect(ownBrandPosition(one('ProDetektywi Group'), 'prodetektyw.pl')).toBeNull();
+   });
+
+   it('still treats spacing as noise for the name itself', () => {
+      expect(ownBrandPosition(one('Pro Detektyw'), 'prodetektyw.pl')).toBe(1);
+      expect(ownBrandPosition(one('PRO-DETEKTYW'), 'prodetektyw.pl')).toBe(1);
+   });
+});

@@ -72,6 +72,33 @@ export const brandKey = (s: string): string => s.normalize('NFKC').toLowerCase()
  * "prodetektyw.pl" has to recognise "ProDetektyw". Anything before the first dot counts,
  * which is what turns a domain into a brand key.
  */
+/** The written name split into words, so a match can respect where words begin and end. */
+const brandTokens = (s: string): string[] => s
+   .normalize('NFKC')
+   .toLowerCase()
+   .split(/[^\p{L}\p{N}]+/u)
+   .filter(Boolean);
+
+/**
+ * Does this written brand name begin with the tracked brand, at a word boundary?
+ *
+ * Collapsed keys alone cannot answer that: brandKey drops the separators, so "prodetektyw"
+ * is a prefix of both "ProDetektyw Warszawa" (us, suffixed) and "ProDetektywistyka" (a
+ * different company). Comparing collapsed prefixes of the TOKEN list keeps the boundary
+ * while still equating "Pro Detektyw" with "ProDetektyw" — a raw startsWith would have
+ * claimed the competitor and inflated our own visibility.
+ */
+function startsWithAlias(brand: string, alias: string): boolean {
+   const tokens = brandTokens(brand);
+   let prefix = '';
+   for (const t of tokens) {
+      prefix += brandKey(t);
+      if (prefix === alias) return true;
+      if (prefix.length >= alias.length) return false; // past it without landing on it
+   }
+   return false;
+}
+
 function brandAliases(ownBrand: string, ownDomain?: string): string[] {
   const firstLabel = (v: string): string => v.split('.')[0] ?? '';
   return [ownBrand, firstLabel(ownBrand), firstLabel(ownDomain ?? '')]
@@ -98,7 +125,7 @@ export function ownBrandPosition(row: ResultRow, ownBrand: string, ownDomain?: s
   // brands are stored in appearance order, so the first match is the earliest position.
   const hit = row.brands.find((b) => {
     const key = brandKey(b.brand);
-    if (key && aliases.some((a) => key === a || key.startsWith(a))) return true;
+    if (key && aliases.some((a) => key === a || startsWithAlias(b.brand, a))) return true;
     const d = norm(b.domain ?? '');
     return !!own && !!d && (d === own || d.endsWith(`.${own}`));
   });

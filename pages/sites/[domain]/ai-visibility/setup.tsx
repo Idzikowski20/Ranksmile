@@ -30,6 +30,13 @@ const AiVisibilitySetup: NextPage = () => {
    const configQ = useAiVisConfig(slug);
    const [brandName, setBrandName] = useState('');
    const brandTouched = useRef(false);
+   // Client-side navigation keeps this component mounted, so an edited field would other-
+   // wise survive a domain switch and Finish would save the previous brand under the new
+   // slug. Clearing on slug change lets the prefill below run again for the new domain.
+   useEffect(() => {
+      brandTouched.current = false;
+      setBrandName('');
+   }, [slug]);
    useEffect(() => {
       if (brandTouched.current) return; // never overwrite what the user is typing
       const saved = configQ.data?.config?.brandName?.trim();
