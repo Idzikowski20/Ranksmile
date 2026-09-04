@@ -21,13 +21,14 @@ import EditorOnboarding from '../../../components/articles/EditorOnboarding';
 import { Thread, CommentAuthor } from '../../../components/articles/comments/CommentThreadBubble';
 import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
-import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
+import AutoOptimizeProgressBar from '../../../components/articles/AutoOptimizeProgressBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
 import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
 import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
 import { resolveArticleEntry, articleEntryHref } from '@/src/core/domain/articles/articleFlow';
 import AnalysisProgressPanel from '../../../components/articles/AnalysisProgressPanel';
 import CompetitorOutlinesPanel from '../../../components/articles/CompetitorOutlinesPanel';
+import { Spinner } from '../../../components/common/ProgressPill';
 import { emptyPhases, type AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
 import { computeOptimizeLiveSnapshot } from '@/src/infrastructure/articles/computeLiveArticleScores';
 import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
@@ -2219,23 +2220,24 @@ const ArticleEditorPage: NextPage = () => {
         {/* ── Main content row ─────────────────────────────────────── */}
         <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex' }}>
 
-          {/* ── Auto-save status (floating, bottom-left) — only while saving/unsaved ── */}
+          {/* ── Auto-save status (floating, bottom-left) — only while saving/unsaved.
+              Same dark surface as the progress pill, one size down. ── */}
           {autoSaveState !== 'saved' && (
           <div
+            role="status"
             title={autoSaveState === 'saving' ? 'Saving…' : 'Unsaved changes'}
             style={{
               position: 'absolute', bottom: 12, left: 12, zIndex: 80,
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999,
-              background: 'rgba(255,255,255,0.92)', border: '1px solid var(--koala-border-primary)', boxShadow: '0 1px 3px rgba(24,26,34,0.08)',
-              backdropFilter: 'blur(6px)', fontSize: 12, fontWeight: 500, color: 'var(--koala-text-tertiary)',
-              fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap', pointerEvents: 'none',
+              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 12,
+              background: 'var(--koala-bg-inverse)', color: 'var(--koala-text-on-inverse)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
+              fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)',
+              whiteSpace: 'nowrap', pointerEvents: 'none',
             }}
           >
-            {autoSaveState === 'saving' ? (
-              <div style={{ width: 13, height: 13, border: '2px solid var(--koala-border-primary)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
-            ) : (
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--koala-status-warning)', flexShrink: 0 }} />
-            )}
+            {autoSaveState === 'saving'
+              ? <Spinner size={14} />
+              : <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--koala-status-warning)', flexShrink: 0 }} />}
             {autoSaveState === 'saving' ? 'Saving…' : 'Unsaved'}
           </div>
           )}
@@ -2439,6 +2441,7 @@ const ArticleEditorPage: NextPage = () => {
                     articleId={article.id}
                     keyword={article.target_keyword || ''}
                     cachedOutlines={article.competitor_outlines_cache}
+                    domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
                   />
                 </div>
               ) : ranksmileDockOpen ? (
@@ -2527,50 +2530,20 @@ const ArticleEditorPage: NextPage = () => {
           )}
         </div>
 
-        {/* ── Auto-optimize loading indicator (legacy flow only; AO-8a uses OptimizeReviewBar) ── */}
-        {isAutoOptimizing && optimizeState === 'idle' && (
-          <div style={{
-            position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 10000, width: 520, maxWidth: 'calc(100vw - 40px)',
-            background: 'var(--koala-text-primary)', borderRadius: 10,
-            boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
-            display: 'flex', alignItems: 'center', padding: '0 16px', height: 52, gap: 12,
-          }}>
-            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
-            <span
-              key={autoOptimizeStatus}
-              style={{
-                fontSize: 13, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)',
-                flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                animation: 'fadeSlideIn 0.25s ease',
-              }}
-            >
-              {autoOptimizeStatus}
-            </span>
-            <div style={{ display: 'flex', gap: 3, alignItems: 'center', flexShrink: 0 }}>
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} style={{ width: 3, borderRadius: 2, background: 'var(--koala-text-brand)', animation: `barPulse 1s ease-in-out ${i * 0.15}s infinite`, height: 14 }} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── AO-8a: section-by-section Auto-Optimize review toolbar ── */}
-        {optimizeState !== 'idle' && (
-          <OptimizeReviewBar
-            state={optimizeState}
+        {/* ── Auto-Optimize: the same pill as generation and the domain analysis. The legacy
+            flow (isAutoOptimizing with no review state) rides the optimizing branch. ── */}
+        {(optimizeState !== 'idle' || isAutoOptimizing) && (
+          <AutoOptimizeProgressBar
+            state={optimizeState === 'reviewing' ? 'reviewing' : 'optimizing'}
             processed={optimizeProgress.processed}
             total={optimizeProgress.total}
+            status={autoOptimizeStatus}
             remaining={optimizeRemaining}
             changedCount={optimizeMetaRef.current.changedCount}
+            saving={optimizeSaving}
             onCancel={() => setCancelModalOpen(true)}
             onSave={() => setSaveModalOpen(true)}
-            saving={optimizeSaving}
             rightReserve={panelCollapsed ? 0 : PANEL_W + PANEL_GAP}
-            currentSection={optimizeState === 'optimizing' && optimizeProgress.total > 0
-              ? Math.min(optimizeProgress.processed + 1, optimizeProgress.total)
-              : undefined}
-            activeStatusLabel={optimizeState === 'optimizing' ? autoOptimizeStatus : undefined}
           />
         )}
 

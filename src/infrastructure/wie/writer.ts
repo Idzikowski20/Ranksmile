@@ -137,6 +137,14 @@ export async function wieLlmComplete(opts: {
   // came back closing a section object without closing its instructions array, and one
   // malformed character costs the whole call. The provider's own JSON mode enforces it.
   if (opts.json) body.response_format = { type: 'json_object' };
+  // The chat model is a reasoning model, and its default effort spends the completion
+  // budget on thinking before a token of the answer is emitted — the sidecar hit exactly
+  // this and shipped empty paragraphs. None of these calls is a reasoning task: they
+  // rewrite or structure text that is already in the prompt. Provider-specific, the same
+  // branching llmGateway uses: `reasoning` is OpenRouter's shape, Gemini's OpenAI-compat
+  // endpoint takes `reasoning_effort`, and DeepSeek takes neither.
+  if (llm.provider === 'openrouter') body.reasoning = { effort: 'minimal', exclude: true };
+  if (llm.provider === 'gemini') body.reasoning_effort = 'low';
 
   const aiRes = await fetch(llm.url, {
     method: 'POST',

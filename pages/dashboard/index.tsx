@@ -24,7 +24,7 @@ import AiVisibilityPerformance from '../../components/dashboard/AiVisibilityPerf
 import RecommendationsSection, { RecommendationItem } from '../../components/dashboard/RecommendationsSection';
 import RecentlyEdited, { RecentlyEditedItem } from '../../components/dashboard/RecentlyEdited';
 import LearnSection from '../../components/dashboard/LearnSection';
-import SetupPipeline from '../../components/dashboard/SetupPipeline';
+import DomainSetupProgressBar, { isSetupShown } from '../../components/dashboard/DomainSetupProgressBar';
 import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
 import { useAiVisHistory } from '../../services/aiVisibility';
 import fetchJson from '@/src/infrastructure/http/fetchJson';
@@ -166,6 +166,11 @@ const DashboardPage: NextPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup?.status, activeDomainSlug]);
 
+  // An empty recommendation list means something different while the scan is unfinished.
+  const setupAnalysisState = setup && isSetupShown(setup)
+    ? (setup.status === 'failed' ? 'failed' as const : 'running' as const)
+    : undefined;
+
   // On transition to done, refresh the dashboard data queries
   useEffect(() => {
     if (setup?.status === 'done') {
@@ -176,7 +181,6 @@ const DashboardPage: NextPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup?.status]);
 
-  const pipelineActive = setup && (setup.status === 'queued' || setup.status === 'running' || setup.status === 'failed');
 
   // Until the pipeline's state is KNOWN, don't flash the empty "set blog path" prompt.
   // Pending = the status query is still loading, or a job is about to be kicked ('none').
@@ -358,14 +362,7 @@ const DashboardPage: NextPage = () => {
                       coverage={setup?.auditCounts}
                       hasBlogPath={hasBlogPath}
                       settingsHref={settingsHref}
-                      pipeline={pipelineActive && setup ? (
-                        <SetupPipeline
-                          stages={setup.stages}
-                          status={setup.status}
-                          error={setup.error}
-                          onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }}
-                        />
-                      ) : undefined}
+                      analysis={setupAnalysisState}
                     />
                   ),
                 },
@@ -388,6 +385,9 @@ const DashboardPage: NextPage = () => {
             />
           </div>
         </KoalaPage>
+
+        {/* The analysis runs in the sidecar; the pill only polls it (useSetupStatus above). */}
+        <DomainSetupProgressBar setup={setup} onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }} />
 
         {showAddDomain && (
           <AddDomain domains={domains} closeModal={() => setShowAddDomain(false)} />

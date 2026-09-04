@@ -59,14 +59,17 @@ const SiteAuditPage: NextPage = () => {
   const setupQ = useSetupStatus(slug);
   const runSetup = useRunSetup();
   const setupStatus = setupQ.data?.status;
-  const auditing = setupStatus === 'queued' || setupStatus === 'running';
+  // 'finalizing' is the job saving its result — still the crawl from the page's side, and
+  // treating it as idle skipped the refresh that fires when the run completes.
+  const auditing = setupStatus === 'queued' || setupStatus === 'running' || setupStatus === 'finalizing';
   const prevSetupRef = React.useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     const prev = prevSetupRef.current;
     prevSetupRef.current = setupStatus;
     if (!slug) return;
-    if ((prev === 'queued' || prev === 'running') && (setupStatus === 'done' || setupStatus === 'failed')) {
+    const wasActive = prev === 'queued' || prev === 'running' || prev === 'finalizing';
+    if (wasActive && (setupStatus === 'done' || setupStatus === 'failed')) {
       void queryClient.invalidateQueries(['site-audit', slug]);
       void queryClient.invalidateQueries(['site-audit-pages', slug]);
       void queryClient.invalidateQueries(['site-audit-compare', slug]);

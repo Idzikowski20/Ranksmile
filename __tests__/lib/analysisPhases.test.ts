@@ -1,5 +1,5 @@
 import {
-  emptyPhases, mergePhases, phasesFromStage,
+  completePhases, emptyPhases, failPhases, mergePhases, phasesFromStage,
 } from '@/src/core/domain/articles/analysisPhases';
 
 describe('mergePhases', () => {
@@ -58,5 +58,23 @@ describe('phasesFromStage', () => {
 
   it('ignores stages that have no phase of their own', () => {
     expect(phasesFromStage('score_ranking', 0)).toEqual({});
+  });
+});
+
+describe('failPhases / completePhases', () => {
+  it('puts the error on the phase in flight', () => {
+    const running = mergePhases(emptyPhases(), phasesFromStage('scrape_serp', 0));
+    const failed = failPhases(running, 'SERP down');
+    expect(failed.fetchingSerp).toMatchObject({ status: 'ERROR', error: 'SERP down' });
+    expect(failed.importingContent.status).toBe('NEW');
+  });
+
+  it('puts the error on the first phase when nothing had started', () => {
+    expect(failPhases(null, 'no job').importingContent).toMatchObject({ status: 'ERROR', error: 'no job' });
+  });
+
+  it('marks every phase done and clears stale errors', () => {
+    const done = completePhases(failPhases(emptyPhases(), 'x'));
+    expect(Object.values(done).every((p) => p.status === 'DONE' && p.error === null)).toBe(true);
   });
 });

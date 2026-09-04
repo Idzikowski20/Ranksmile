@@ -19,6 +19,8 @@ import {
   parseRankingSources,
 } from '@/src/infrastructure/articles/rankingSources';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { isReviewOutlineHtml } from '@/src/infrastructure/contentPlanner/reviewOutline';
+import { isWrittenArticleHtml } from '@/src/infrastructure/articles/outlineReviewState';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -99,7 +101,14 @@ async function getArticle(id: string, res: NextApiResponse) {
 }
 
 async function updateArticle(id: string, req: NextApiRequest, res: NextApiResponse) {
-   const { title, content, status, target_keyword, meta_title, meta_description, meta_url, word_count, score_data, featured_image, internal_links_cache, version_type, score_override } = req.body;
+   const {
+      title, content: requestedContent, status, target_keyword, meta_title, meta_description, meta_url,
+      word_count, score_data, featured_image, internal_links_cache, version_type, score_override,
+   } = req.body;
+   // Reassigned below when the body is refused; every later use reads this one. Typed
+   // here because a `let` loses its narrowing inside the fire-and-forget closures below.
+   let content: string | undefined = typeof requestedContent === 'string' ? requestedContent : undefined;
+   let contentKept = false;
 
    // Extract content score from score_data
    let contentScore = 0;
@@ -136,15 +145,27 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
       const articleIdSql = await getArticleIdSql();
       let beforeScore: number | undefined;
       let storedScoreData: Record<string, unknown> | null = null;
+      let storedContent: string | null = null;
       try {
-         const prev = await queryOne<{ content_score: number | null; score_data: string | null }>(
-            `SELECT content_score, score_data FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+         const prev = await queryOne<{ content_score: number | null; score_data: string | null; content: string | null }>(
+            `SELECT content_score, score_data, content FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
             [id],
          );
          if (prev?.content_score != null) beforeScore = Number(prev.content_score);
          storedScoreData = prev?.score_data ? JSON.parse(prev.score_data) as Record<string, unknown> : null;
+         storedContent = prev?.content ?? null;
       } catch {
          beforeScore = undefined;
+      }
+
+      // A written article never regresses to its plan. The outline is a document the
+      // editor renders while reviewing; whichever client path lets it reach autosave —
+      // article 166 arrived here through a stale ?reviewOutline=1 — the stored body wins.
+      // Everything else in the save (meta, scores, image) still lands.
+      if (typeof content === 'string' && isReviewOutlineHtml(content) && isWrittenArticleHtml(storedContent)) {
+         console.warn(`[articles/[id]] refused to overwrite article ${id} with its outline — body kept`);
+         content = undefined;
+         contentKept = true;
       }
 
       // Merge ONTO the stored blob, never replace it. The editor loads its score_data
@@ -303,7 +324,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
             });
       }
 
-      return res.status(200).json({ updated: true });
+      return res.status(200).json({ updated: true, ...(contentKept ? { contentKept: true } : {}) });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }

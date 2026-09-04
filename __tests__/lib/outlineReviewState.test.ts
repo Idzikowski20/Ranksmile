@@ -1,4 +1,6 @@
-import { isOutlineAwaitingReview } from '@/src/infrastructure/articles/outlineReviewState';
+import {
+  isOutlineAwaitingReview, isWrittenArticleHtml, shouldEnterOutlineReview,
+} from '@/src/infrastructure/articles/outlineReviewState';
 import { reviewOutlineToHtml } from '@/src/infrastructure/contentPlanner/reviewOutline';
 import { resolveArticleEntry } from '@/src/core/domain/articles/articleFlow';
 
@@ -137,5 +139,38 @@ describe('the recorded status', () => {
     // The status-less empty+bundle legacy case is already covered above ("recognises an
     // empty draft that already has a planner bundle"); this only adds the new 'draft' guard.
     expect(isOutlineAwaitingReview({ content: '', scoreData: WITH_PLAN, status: 'draft' })).toBe(false);
+  });
+});
+
+/**
+ * Article 166: generated at 14:40, reopened through a link that still carried
+ * ?reviewOutline=1, and the review replaced the article with its outline in the editor —
+ * which autosave then persisted. The param cannot open a review over a written body.
+ */
+describe('shouldEnterOutlineReview', () => {
+  const article = '<h1>Tytuł</h1><h2>Sekcja</h2><p>Były pracownik może konkurować o klientów.</p>';
+  const outline = reviewOutlineToHtml([
+    { level: 1, text: 'Tytuł' },
+    { level: 2, text: 'Sekcja', instructions: ['Wyjaśnij zakres.', 'Podaj przykład.'] },
+  ]);
+
+  it('ignores the URL param over a written article', () => {
+    expect(shouldEnterOutlineReview({ content: article, fromQuery: true })).toBe(false);
+  });
+
+  it('honours the URL param over an empty draft or a persisted outline', () => {
+    expect(shouldEnterOutlineReview({ content: '', fromQuery: true })).toBe(true);
+    expect(shouldEnterOutlineReview({ content: outline, fromQuery: true })).toBe(true);
+  });
+
+  it('always resumes a review the row itself is in', () => {
+    expect(shouldEnterOutlineReview({ content: article, fromQuery: false, resume: true })).toBe(true);
+  });
+
+  it('tells a written body from an outline and from nothing', () => {
+    expect(isWrittenArticleHtml(article)).toBe(true);
+    expect(isWrittenArticleHtml(outline)).toBe(false);
+    expect(isWrittenArticleHtml('<p></p>')).toBe(false);
+    expect(isWrittenArticleHtml(null)).toBe(false);
   });
 });

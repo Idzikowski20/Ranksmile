@@ -17,6 +17,8 @@ import Placeholder from '@tiptap/extension-placeholder';
 import type { ScoreData, NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
+import { shouldEnterOutlineReview } from '@/src/infrastructure/articles/outlineReviewState';
+import readSse from '@/src/core/shared/readSse';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '@/src/infrastructure/highlightColors';
 import { EC } from './editorChrome';
 import RanksmileImageNode from './RanksmileImageNode';
@@ -46,10 +48,12 @@ import IconSmily from './IconSmily';
 import ProgressiveBlur from '../common/ProgressiveBlur';
 import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 import OutlineGenerateBar from './OutlineGenerateBar';
+import GenerationProgressBar from './GenerationProgressBar';
 import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
 import { revealHtmlInEditor, editorCanCommand } from '@/components/editor/revealHtmlProgressive';
 import clearEditorHistory from '@/components/editor/clearEditorHistory';
 import { normalizeListHtml } from '@/src/core/domain/editor/normalizeListHtml';
+import { readJsonResponse } from '@/src/core/shared/readJsonResponse';
 import { clearWizardState } from '@/src/infrastructure/articles/wizardState';
 import {
   collectApprovedOutline,
@@ -964,29 +968,14 @@ async function readRanksmileAgentStream(
   res: Response,
   on: { text: (delta: string) => void; step: (d: { phase: string; tool: string }) => void; usage: (n: number) => void },
 ): Promise<RanksmileAgentDonePayload> {
-  const reader = res.body!.getReader();
-  const dec = new TextDecoder();
-  let buf = '';
   let done: RanksmileAgentDonePayload | null = null;
-  for (;;) {
-    const { value, done: streamDone } = await reader.read();
-    if (streamDone) break;
-    buf += dec.decode(value, { stream: true });
-    const frames = buf.split('\n\n');
-    buf = frames.pop() || '';
-    for (const f of frames) {
-      const ev = /event: (.*)/.exec(f)?.[1];
-      const dataLine = /data: (.*)/.exec(f)?.[1];
-      if (!ev || !dataLine) continue;
-      let parsed: Record<string, unknown>;
-      try { parsed = JSON.parse(dataLine) as Record<string, unknown>; } catch { continue; }
-      if (ev === 'text') on.text(String(parsed.delta || ''));
-      else if (ev === 'step') on.step(parsed as { phase: string; tool: string });
-      else if (ev === 'usage') on.usage(Number(parsed.totalTokens) || 0);
-      else if (ev === 'done') done = parsed as RanksmileAgentDonePayload;
-      else if (ev === 'error') throw new Error(String(parsed.error || 'stream error'));
-    }
-  }
+  await readSse(res, (ev, parsed) => {
+    if (ev === 'text') on.text(String(parsed.delta || ''));
+    else if (ev === 'step') on.step(parsed as { phase: string; tool: string });
+    else if (ev === 'usage') on.usage(Number(parsed.totalTokens) || 0);
+    else if (ev === 'done') done = parsed as RanksmileAgentDonePayload;
+    else if (ev === 'error') throw new Error(String(parsed.error || 'stream error'));
+  });
   if (!done) throw new Error('stream ended without result');
   return done;
 }
@@ -1158,6 +1147,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
      * told the planner was running again — and had no way to tell that it wasn't.
      */
     const [outlineRestoring, setOutlineRestoring] = useState(false);
+    // Section briefs written so far, off the content-plan stream; the pill counts them.
+    const [outlineProgress, setOutlineProgress] = useState<{ done: number; total: number } | undefined>();
     const [generateBusy, setGenerateBusy] = useState(false);
     // Empty while idle. This doubles as the outline bar's status line, and seeding it
     // with "Generating article…" meant a bar that was waiting for the reviewer claimed a
@@ -1373,6 +1364,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         const ac = new AbortController();
         ranksmileAbortRef.current = ac;
 
+        // Role + message only. Each assistant turn also carries the article HTML it
+        // produced (`content`) and its thinking; the API reads neither, and sending them
+        // grew the request by a whole article per turn towards the 1 MB body limit.
+        const historyForApi = ranksmileHistory.map(({ role, message }) => ({ role, message }));
+
         const body = useAgent
           ? {
               prompt,
@@ -1382,7 +1378,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               internalArticles: internalArticles || [],
               articleTitle: metaTitle || '',
               articleMetaDescription: metaDescription || '',
-              history: ranksmileHistory,
+              history: historyForApi,
               articleId: commentArticleId ? Number(commentArticleId) : null,
               authorName: commentAuthor?.name || '',
             }
@@ -1395,7 +1391,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               scoreData: scoreData || null,
               internalArticles: internalArticles || [],
               keyword: articleKeyword || keyword || '',
-              history: ranksmileHistory,
+              history: historyForApi,
             };
         const res = await fetch(endpoint, {
           method: 'POST',
@@ -1418,7 +1414,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         let data: RanksmileAgentDonePayload & Record<string, unknown>;
         if (useAgent) {
           // SSE stream: errors before streaming come back as JSON; otherwise read the stream.
-          if (!res.ok) { const ej = await res.json().catch(() => ({})); throw new Error(ej.error || 'Request failed'); }
+          if (!res.ok) {
+            const ej = await readJsonResponse(res).catch((e: Error) => ({ error: e.message }));
+            throw new Error(String(ej.error || `Request failed (HTTP ${res.status})`));
+          }
           data = await readRanksmileAgentStream(res, {
             text: (delta) => setRanksmileStreamText((t) => {
               const next = t + delta;
@@ -1446,8 +1445,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setRanksmileUsageDetail({ input: data.usage?.inputTokens || 0, output: data.usage?.outputTokens || 0 });
           setRanksmileTotals((t) => ({ input: t.input + (data.usage?.inputTokens || 0), output: t.output + (data.usage?.outputTokens || 0) }));
         } else {
-          const json = await res.json() as Record<string, unknown>;
-          if (!res.ok) throw new Error(String(json.error || 'Request failed'));
+          // Never `res.json()` blind: an HTML error page here surfaced as
+          // "Unexpected token '<', "<!DOCTYPE"…" with no status to act on.
+          const json = await readJsonResponse(res);
+          if (!res.ok) throw new Error(String(json.error || `Request failed (HTTP ${res.status})`));
           data = json as RanksmileAgentDonePayload & Record<string, unknown>;
         }
 
@@ -1931,16 +1932,36 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       outlineRequestRef.current = request;
       outlineOriginalHtmlRef.current ??= editor.getHTML();
       setOutlineBusy(true);
+      setOutlineProgress(undefined);
       try {
-        const res = await fetch(articleId ? `/api/articles/${articleId}/content-plan` : '/api/articles/generate-outline', {
+        // The article route streams the per-section count; the keyword-only route is one
+        // plain reply. A non-stream reply (an early 4xx, or a proxy that dropped the
+        // header) is read as JSON either way.
+        const res = await fetch(articleId ? `/api/articles/${articleId}/content-plan?stream=1` : '/api/articles/generate-outline', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(articleId ? { persist: true } : { keyword: kw }),
           signal: request.signal,
         });
-        const data = await res.json() as { headings?: ApprovedOutlineHeading[]; error?: string };
+        type OutlineReply = { headings?: ApprovedOutlineHeading[]; error?: string; status?: number };
+        let data: OutlineReply = {};
+        let replyOk = res.ok;
+        if (res.headers.get('content-type')?.includes('text/event-stream')) {
+          await readSse(res, (event, payload) => {
+            if (outlineRequestRef.current !== request) return;
+            if (event === 'status') {
+              const { done, total } = payload as { done?: number; total?: number };
+              if (typeof done === 'number' && typeof total === 'number') setOutlineProgress({ done, total });
+            } else if (event === 'done' || event === 'error') {
+              data = payload as OutlineReply;
+              replyOk = event === 'done';
+            }
+          });
+        } else {
+          data = await res.json() as OutlineReply;
+        }
         if (outlineRequestRef.current !== request || request.signal.aborted) return;
         const headings = Array.isArray(data.headings) ? data.headings : [];
-        if (!res.ok || headings.length === 0) throw new Error(data.error || 'Could not generate an outline.');
+        if (!replyOk || headings.length === 0) throw new Error(data.error || 'Could not generate an outline.');
         const html = reviewOutlineToHtml(headings);
         await playReveal(html, true, 'preserve');
         if (outlineRequestRef.current !== request || request.signal.aborted) return;
@@ -1951,6 +1972,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         if (outlineRequestRef.current === request) {
           outlineRequestRef.current = null;
           setOutlineBusy(false);
+          setOutlineProgress(undefined);
         }
       }
     };
@@ -2207,11 +2229,32 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // outline read as the finished article.
     useEffect(() => {
       if (!router.isReady) return;
-      setOutlineReviewMode(router.query.reviewOutline === '1' || Boolean(resumeOutlineReview));
+      const fromQuery = router.query.reviewOutline === '1';
+      const enter = shouldEnterOutlineReview({ content, fromQuery, resume: resumeOutlineReview });
+      setOutlineReviewMode(enter);
+      // A stale param over a written article is dropped from the URL too, so history and
+      // the wizard's link stop asking on every open.
+      if (fromQuery && !enter) {
+        const q = { ...router.query };
+        delete q.reviewOutline;
+        void router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [router.isReady, router.query.reviewOutline, resumeOutlineReview]);
 
     useEffect(() => {
-      if (!outlineReviewMode) outlineAutoStarted.current = false;
+      if (outlineReviewMode) return;
+      outlineAutoStarted.current = false;
+      // Review ended without a generation (the param went away): the plan is still in
+      // the document, and with autosave no longer suspended it would be saved as the
+      // article. Put the article back. Generation clears the ref before flipping the
+      // mode, so a written article is never overwritten here.
+      const original = outlineOriginalHtmlRef.current;
+      outlineOriginalHtmlRef.current = null;
+      if (original && editorCanCommand(editor) && editor.getHTML() !== original) {
+        editor.commands.setContent(original, { emitUpdate: true });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [outlineReviewMode]);
 
     /**
@@ -2688,20 +2731,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         {generateBusy && !outlineReviewMode && !streaming && (
           <GenerateWritingOverlay message={generateMsg} pct={generatePct} />
         )}
-        {generateBusy && streaming && (
-          <div className="nc-gen-stream-pill" role="status" aria-live="polite">
-            <span className="nc-gen-stream-dot" aria-hidden="true" />
-            <span>{generateMsg || 'Writing your article…'}</span>
-          </div>
-        )}
-        {/* Not while the analysis is still running: there is no outline to review yet, and
-            the bar overlapped the progress panel claiming a generation was under way. */}
-        {outlineReviewMode && !readOnly && (
-          <OutlineGenerateBar
-            planning={outlineBusy}
+        {/* One bar for planning and writing, in the AI Visibility bar's shape. Not while the
+            analysis is still running: there is no outline to review yet, and the bar
+            overlapped the progress panel claiming a generation was under way. */}
+        {(outlineBusy || generateBusy) && !readOnly && (
+          <GenerationProgressBar
+            mode={generateBusy ? 'article' : 'outline'}
+            status={generateMsg}
             planningLabel={outlineRestoring ? 'Loading saved outline' : undefined}
-            busy={generateBusy}
-            progressPct={generatePct}
+            outlineProgress={outlineProgress}
+            rightReserve={bottomBarRightReserve}
+          />
+        )}
+        {outlineReviewMode && !readOnly && !outlineBusy && !generateBusy && (
+          <OutlineGenerateBar
             headingCount={outlineHeadingCount}
             onGenerate={handleOutlineGenerate}
             rightReserve={bottomBarRightReserve}

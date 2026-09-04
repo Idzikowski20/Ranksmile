@@ -5,6 +5,11 @@ jest.mock('../../components/common/DomainFavicon', () => ({
   __esModule: true,
   default: () => null,
 }));
+// The scanned-score lookup is react-query; the panel must render (with the peer estimate)
+// without a QueryClient, exactly as it does before the store has scanned anything.
+jest.mock('../../services/competitors', () => ({
+  useCompetitors: () => ({ data: undefined }),
+}));
 
 const CACHED = JSON.stringify({
   competitors: [
@@ -68,4 +73,36 @@ it.each([
 
   await screen.findByText('Detektyw Warszawa');
   expect(screen.queryByRole('button', { name: /Generate brief/ })).toBeNull();
+});
+
+/** Outline review used to show the competitors without the score every other view has. */
+it('grades every competitor with a gauge, peer-relative when nothing was scanned', async () => {
+  const { container } = render(<CompetitorOutlinesPanel {...props} />);
+
+  await screen.findByText('Detektyw Warszawa');
+  // One gauge per competitor — the card chevrons are svgs too, so count the score text
+  // the gauge itself renders. The longer, more-structured page is the peer median or
+  // above: 100. The other: 1800/2100 words and 11/14 headings, weighted 70/30 → 84.
+  const scores = container.querySelectorAll('[data-testid="gauge-score"]');
+  expect(Array.from(scores).map((n) => n.textContent)).toEqual(['100', '84']);
+});
+
+/** The list is the panel's only scroll container; without minHeight 0 it grew past the
+ *  card and `overflow: hidden` cut the last competitors off. */
+it('lets the list scroll instead of growing past the card', async () => {
+  render(<CompetitorOutlinesPanel {...props} />);
+  await screen.findByText('Detektyw Warszawa');
+
+  const scroller = document.querySelector('.styled-scrollbar') as HTMLElement;
+  expect(scroller.style.overflowY).toBe('auto');
+  expect(scroller.style.minHeight).toBe('0');
+});
+
+/** The counts feed the gauge; on the card they pushed the domain onto a second line. */
+it('shows the domain without the word and heading counts', async () => {
+  render(<CompetitorOutlinesPanel {...props} />);
+
+  expect(await screen.findByText('a.pl')).toBeInTheDocument();
+  expect(screen.queryByText(/2,100/)).toBeNull();
+  expect(screen.queryByText(/14h/)).toBeNull();
 });

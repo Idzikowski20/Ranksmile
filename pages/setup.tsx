@@ -6,6 +6,7 @@ import { parseWorkspaceId } from '@/src/core/domain/navigation/activeWorkspace';
 import { SETUP_LOCATIONS, type SetupLocation } from '@/src/core/domain/setup/locations';
 import BlogPathsField from '../components/domains/BlogPathsField';
 import DomainFavicon from '../components/common/DomainFavicon';
+import Skeleton from '../components/dashboard/Skeleton';
 import {
   Badge, Button, DropdownButton, Input, MenuListItem, Textarea,
 } from '../components/koala/core';
@@ -146,6 +147,9 @@ const SetupPage: NextPage = () => {
    const [brandName, setBrandName] = useState('');
    const [brandKnowledge, setBrandKnowledge] = useState('');
    const [loadingBrand, setLoadingBrand] = useState(false);
+   // The site scan failed or came back empty. Left silent, the empty textarea read as a
+   // form the user had to fill in by hand.
+   const [brandGenError, setBrandGenError] = useState('');
    const [submitting, setSubmitting] = useState(false);
    const [step2Error, setStep2Error] = useState('');
 
@@ -289,19 +293,7 @@ const SetupPage: NextPage = () => {
                }).catch(() => { /* non-fatal — paths can be edited later in domain settings */ });
             }
             setStep(2);
-            setLoadingBrand(true);
-            fetch('/api/brand-knowledge', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ url: domain }),
-            })
-               .then((r) => r.json())
-               .then((data) => {
-                  if (data?.brandName) setBrandName(data.brandName);
-                  if (data?.brandKnowledge) setBrandKnowledge(data.brandKnowledge);
-               })
-               .catch(() => { /* leave fields empty */ })
-               .finally(() => setLoadingBrand(false));
+            void generateBrand(domain);
          } else {
             const err = await res.json().catch(() => ({}));
             setStep1Error(err?.error || 'Failed to configure domain. Please try again.');
@@ -310,6 +302,30 @@ const SetupPage: NextPage = () => {
          setStep1Error('Network error. Please try again.');
       } finally {
          setConfiguring(false);
+      }
+   };
+
+   // ── Brand knowledge, drafted from the site by the sidecar ───────────────
+   // A failed or empty scan is reported, not swallowed: the textarea stays editable
+   // either way, but the user has to know the draft did not arrive.
+   const generateBrand = async (siteUrl: string) => {
+      setLoadingBrand(true);
+      setBrandGenError('');
+      try {
+         const r = await fetch('/api/brand-knowledge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: siteUrl }),
+         });
+         const data = await r.json().catch(() => ({})) as { brandName?: string; brandKnowledge?: string; error?: string };
+         if (!r.ok) throw new Error(data.error || `Scan failed (HTTP ${r.status})`);
+         if (data.brandName) setBrandName(data.brandName);
+         if (data.brandKnowledge) setBrandKnowledge(data.brandKnowledge);
+         else setBrandGenError('We could not read enough of your website to draft this.');
+      } catch (err) {
+         setBrandGenError(err instanceof Error ? err.message : 'The website scan failed.');
+      } finally {
+         setLoadingBrand(false);
       }
    };
 
@@ -579,7 +595,7 @@ const SetupPage: NextPage = () => {
             <SetupStepProgress step={2} />
             <SetupHeader
                title="Set up Brand Knowledge"
-               description="Add your brand details, audience, voice, competitors, internal docs and more, so we can provide better recommendations and create content relevant to your business."
+               description="We draft this from your website — your brand, audience, services and voice. Review it, edit anything that is off, and continue; it drives recommendations and every article we write for you."
             />
 
             <form
@@ -593,7 +609,10 @@ const SetupPage: NextPage = () => {
                      <p className="koala-setup-brand-block-desc">What is your brand called?</p>
                   </div>
                   {loadingBrand ? (
-                     <SetupLoadingLine>Fetching your brand name…</SetupLoadingLine>
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <Skeleton width="40%" height={38} radius={8} />
+                        <SetupLoadingLine>Reading {domain} for your brand name…</SetupLoadingLine>
+                     </div>
                   ) : (
                      <Input
                         ref={brandNameRef}
@@ -611,11 +630,25 @@ const SetupPage: NextPage = () => {
                   <div>
                      <p className="koala-setup-brand-block-title">Brand details</p>
                      <p className="koala-setup-brand-block-desc">
-                        Tell us more about your business, so we have enough context to prepare personalized recommendations and generate relevant content.
+                        Drafted from your website. Correct anything we got wrong and add what the site does not say — audience, tone, what sets you apart.
                      </p>
                   </div>
+                  {brandGenError && !loadingBrand && (
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <SetupError message={`${brandGenError} You can write it yourself below, or try the scan again.`} />
+                        <Button type="button" variant="secondary" size="sm" onClick={() => { if (domain) void generateBrand(domain); }}>
+                           Try again
+                        </Button>
+                     </div>
+                  )}
                   {loadingBrand ? (
-                     <SetupLoadingLine>Digging into your business model…</SetupLoadingLine>
+                     // The draft's shape while it is being written — the textarea it will fill.
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {['100%', '92%', '97%', '64%', '88%', '45%'].map((w, i) => (
+                           <Skeleton key={i} width={w} height={13} radius={4} />
+                        ))}
+                        <SetupLoadingLine>Reading {domain} and drafting your brand knowledge…</SetupLoadingLine>
+                     </div>
                   ) : (
                      <Textarea
                         ref={brandKnowledgeRef}

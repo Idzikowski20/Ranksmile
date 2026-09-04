@@ -194,3 +194,48 @@ it('leaves a written article on its own status when it is re-planned', async () 
 
   expect(mockDbQuery.mock.calls.filter(([sql]) => String(sql).includes("status = 'review'"))).toHaveLength(0);
 });
+
+/**
+ * `?stream=1`: the editor's pill wants the per-section count, so the reply is SSE —
+ * one `status` per landed brief, then the JSON payload under `done`.
+ */
+it('streams the section count and the final payload when asked', async () => {
+  const { writeOutlineBrief } = jest.requireMock('@/src/infrastructure/contentPlanner/briefWriter');
+  (writeOutlineBrief as jest.Mock).mockImplementationOnce(async (input: { onProgress?: (d: number, t: number) => void }) => {
+    input.onProgress?.(1, 2);
+    input.onProgress?.(2, 2);
+    return [
+      { level: 1, text: 'Prywatny detektyw Warszawa' },
+      { level: 2, text: 'Ile kosztuje detektyw', instructions: ['Podaj widełki cenowe.'] },
+    ];
+  });
+  mockDbQuery.mockImplementation((sql: string) => {
+    if (String(sql).startsWith('SELECT id, target_keyword')) {
+      return Promise.resolve(dbResult([articleRow()]));
+    }
+    return Promise.resolve(dbResult([]));
+  });
+
+  const res = makeRes();
+  res.write = jest.fn();
+  res.end = jest.fn();
+  await handler(
+    { method: 'POST', query: { id: '28', stream: '1' }, body: { persist: true }, headers: {}, cookies: {}, on: jest.fn() } as any,
+    res,
+  );
+
+  expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/event-stream');
+  const frames = (res.write as jest.Mock).mock.calls.map(([f]) => String(f));
+  expect(frames.filter((f) => f.startsWith('event: status'))).toEqual([
+    'event: status\ndata: {"done":0,"total":2}\n\n',
+    'event: status\ndata: {"done":1,"total":2}\n\n',
+    'event: status\ndata: {"done":2,"total":2}\n\n',
+  ]);
+  const done = frames.find((f) => f.startsWith('event: done'));
+  expect(done).toBeDefined();
+  const payload = JSON.parse(String(done).replace(/^event: done\ndata: /, ''));
+  expect(payload.status).toBe(200);
+  expect(payload.headings).toHaveLength(2);
+  expect(res.json).not.toHaveBeenCalled();
+  expect(res.end).toHaveBeenCalled();
+});

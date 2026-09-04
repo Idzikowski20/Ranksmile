@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 export type StageState = 'pending' | 'running' | 'done';
 export type SetupStatus = {
-   status: 'none' | 'queued' | 'running' | 'done' | 'failed';
+   // 'finalizing' is what job-progress sets while it materializes the result — the row
+   // is not done yet, and typing it away made the client treat it as an unknown state.
+   status: 'none' | 'queued' | 'running' | 'finalizing' | 'done' | 'failed';
    currentStage: string | null;
    stagePercent: number;
    stages: Record<'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations', StageState>;
@@ -21,11 +23,10 @@ export function useSetupStatus(slug: string | null | undefined) {
       },
       {
          enabled: !!slug,
-         refetchInterval: (data) => (
-            data?.status === 'running' ? 2000
-            : data?.status === 'queued' ? 5000
-            : false
-         ),
+         refetchInterval: (data) => {
+            if (data?.status === 'running' || data?.status === 'finalizing') return 2000;
+            return data?.status === 'queued' ? 5000 : false;
+         },
       },
    );
 }

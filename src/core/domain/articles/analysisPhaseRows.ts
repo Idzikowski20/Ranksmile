@@ -69,6 +69,14 @@ export function analysisPhaseGroups(phases: AnalysisPhases): PhaseGroup[] {
       title: 'Google Search results',
       rows: [
         {
+          // The page fetch has its own phase, so a run that dies fetching the page has a
+          // row to turn red — without it the failure had nowhere to show.
+          id: 'importing',
+          label: phases.importingContent.status === 'DONE' ? 'Imported page content' : 'Importing page content',
+          state: stateOf(phases.importingContent),
+          ...(phases.importingContent.error ? { detail: phases.importingContent.error } : {}),
+        },
+        {
           id: 'serp',
           label: serpCount ? `Got ${serpCount} search results` : 'Getting search results',
           state: stateOf(phases.fetchingSerp),
