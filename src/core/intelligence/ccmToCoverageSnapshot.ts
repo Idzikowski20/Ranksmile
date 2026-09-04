@@ -16,6 +16,7 @@ import { graphQuery } from '@/src/core/ccm/graphQuery';
 import type { CoverageStatus } from '@/src/core/ccm/types/status';
 import { normalizeFactKey } from '@/src/core/ccm/builders/factEngine';
 import { compactCoverageSnapshotItems, AI_COVERAGE_MAX } from '@/src/infrastructure/coverage/curateCoverageItems';
+import { isCorpusNoiseSentence } from '@/src/core/domain/corpus/corpusNoiseFilter';
 
 /**
  * Sourced facts kept on top of the rubric. Surfer's Info-to-cover lists ~20-30 such
@@ -195,26 +196,34 @@ export function projectCcmToCoverageSnapshot(
   // 30-row rubric left 5 slots, the article's own sentences won them on keyword
   // overlap, and article 164 shipped 40 sourced facts in its graph and 0 in the panel.
   //
-  // ponytail: ceiling = the rubric is never trimmed, so the snapshot can exceed the
-  // max. Upgrade = dedupe/compact the rubric against the query once it exceeds it.
+  // ponytail: ceiling = the rubric is never trimmed and the sourced budget sits on top
+  // of it, so the snapshot reaches AI_COVERAGE_MAX + CITED_FACTS_MAX (55) when both are
+  // full. Upgrade = one shared cap with the rubric deduped/compacted against the query
+  // first, then sourced facts, then the article's own sentences.
   const query = model.metadata.primaryQuery ?? model.metadata.title;
   const rubric = items.filter((i) => rubricKeys.has(normalizeFactKey(i.label)));
   const ccmOnly = items.filter((i) => !rubricKeys.has(normalizeFactKey(i.label)));
+  const isSourced = (i: CoverageItem) => (i.webSources?.length ?? 0) > 0 || (i.llmSources?.length ?? 0) > 0;
   const cited = ccmOnly
-    .filter((i) => (i.webSources?.length ?? 0) > 0 || (i.llmSources?.length ?? 0) > 0)
+    // Boilerplate a ranking page happens to state (cookie notices, bylines) is not a
+    // fact to cover, sourced or not — the same guard every other knowledge row passes.
+    .filter((i) => isSourced(i) && !isCorpusNoiseSentence(i.label))
     // Most-cited first — a fact five ranking pages state matters more than one page's.
     .sort((a, b) => (b.webSources?.length ?? 0) - (a.webSources?.length ?? 0)
       || (b.llmSources?.length ?? 0) - (a.llmSources?.length ?? 0)
       || (b.confidence ?? 0) - (a.confidence ?? 0)
       || a.id.localeCompare(b.id))
     .slice(0, CITED_FACTS_MAX);
-  const citedIds = new Set(cited.map((i) => i.id));
+  // CCM's own intents (one per heading) are the topic groups the panel is organised by,
+  // so they are kept outside the knowledge budget rather than competing with facts for it.
+  const ccmIntents = ccmOnly.filter((i) => i.category === 'intent');
   // The article's own uncited sentences fill only what is left — they grade the article
-  // against itself, which is worth something only when nothing external exists.
-  const own = ccmOnly.filter((i) => !citedIds.has(i.id));
-  const ownBudget = Math.max(0, AI_COVERAGE_MAX - rubric.length - cited.length);
+  // against itself, which is worth something only when nothing external exists. Sourced
+  // rows past CITED_FACTS_MAX stay out: letting them back in here made the cap a floor.
+  const own = ccmOnly.filter((i) => !isSourced(i) && i.category !== 'intent');
+  const ownBudget = Math.max(0, AI_COVERAGE_MAX - rubric.length - ccmIntents.length - cited.length);
   const compactedOwn = query ? compactCoverageSnapshotItems(own, query) : own;
-  const capped = [...rubric, ...cited, ...compactedOwn.slice(0, ownBudget)];
+  const capped = [...rubric, ...ccmIntents, ...cited, ...compactedOwn.slice(0, ownBudget)];
 
   const { overall, buckets } = computeCoverageScores(capped, answersMainQuestionEarly);
 

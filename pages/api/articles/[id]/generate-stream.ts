@@ -113,8 +113,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (delta.chunk) {
       // `offset` is where this chunk starts in the stored stream. EventSource reconnects
       // on a transport drop and this handler starts over at 0, so without it the
-      // client would append the whole article a second time.
-      send(res, 'content', { chunk: delta.chunk, offset: sentLength });
+      // client would append the whole article a second time. Derived from the delta,
+      // not from `sentLength`: a restarted job shrinks the stream and streamDelta then
+      // replays it from the top, which is offset 0 whatever this connection had sent.
+      send(res, 'content', { chunk: delta.chunk, offset: delta.nextLength - delta.chunk.length });
       sentLength = delta.nextLength;
     }
     if (job.status === 'done') {

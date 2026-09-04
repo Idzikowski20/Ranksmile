@@ -297,7 +297,10 @@ async def run_pipeline(
                 # "przemoc psychiczna" -> /przemoc-psychiczna/ — not an exact match.
                 # enforce_internal_links still unwraps anything off-list, so being liberal
                 # here is safe.
-                quota="1-2 na sekcję, gdy fragment dotyka tematu powiązanego z pozycją z listy — linkuj chętnie na luźno powiązane pojęcia, nie tylko przy dokładnym dopasowaniu (jeśli nic nie pasuje, 0)",
+                # 0-1 per section, not 1-2: with one call per section the quota compounds
+                # across ~12 sections, and 1-2 each is 12-24 links against the reference's
+                # ~12-15 per article.
+                quota="0-1 na tę sekcję (2 tylko w długiej sekcji, która dotyka dwóch różnych pozycji z listy) — linkuj na luźno powiązane pojęcia, nie tylko przy dokładnym dopasowaniu; jeśli nic nie pasuje, 0",
             )
             if internal_links else ""
         )

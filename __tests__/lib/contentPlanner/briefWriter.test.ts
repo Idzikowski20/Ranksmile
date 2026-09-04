@@ -260,7 +260,10 @@ describe('writeOutlineBrief', () => {
     await c.run();
 
     expect(c.seen[0].user).not.toContain('brand suffix');
-    expect(c.seen[0].user).not.toContain('RANKING TITLES —');
+    expect(c.seen[0].user).not.toContain('RANKING TITLES');
+    // No titles to average, so the prompt describes the shape instead of pointing at
+    // evidence it never received.
+    expect(c.seen[0].user).toContain('Shape it like a guide title');
   });
   /**
    * Measured off Surfer's own `outlineMd` for a comparable keyword: 28 bullets across 5
@@ -541,6 +544,22 @@ describe('writeOutlineBrief batching', () => {
     // Batch-local numbering would file section 6 as section 1.
     expect(c.seen[1]).toContain('6. role: Sekcja 6');
     expect(c.seen[1]).not.toContain('1. role: Sekcja 1');
+  });
+
+  it('asks only the first batch for the title', async () => {
+    const seen: string[] = [];
+    await writeOutlineBrief({
+      keyword: 'prywatny detektyw warszawa',
+      bundle: wideBundle(),
+      brandKnowledge: BRAND,
+      competitorTitles: ['Prywatny detektyw Warszawa – ile kosztuje i kiedy warto?'],
+      llmEdit: async (user: string) => { seen.push(user); return { html: replyFor(user), tokens: 1 }; },
+    });
+
+    const withTitle = seen.filter((u) => u.includes('RANKING TITLES —'));
+    expect(withTitle).toHaveLength(1);
+    expect(withTitle[0]).toContain('1. role: Sekcja 1');
+    expect(seen.filter((u) => u.includes('Write the H1'))).toHaveLength(1);
   });
 
   it('shows every call the full outline so batches do not cover the same ground', async () => {

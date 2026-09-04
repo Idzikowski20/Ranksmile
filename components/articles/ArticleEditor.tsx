@@ -2011,6 +2011,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               await playReveal(html, true, 'complete', true);
               if (!isCurrentRun()) return;
               toast.success('Article loaded');
+              // Same reconciled scores as a run this editor watched to the end.
+              void onGenerated?.();
               return;
             }
           }
@@ -2094,6 +2096,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             if (!generationRevealHtmlRef.current) {
               generationRevealHtmlRef.current = { runId, html: editor.getHTML() };
               setStreaming(true);
+              // A silent setContent emits no update, so the empty-document flag that
+              // keeps the generation skeleton over a blank article would never clear.
+              setDocEmpty(false);
             }
             editor.commands.setContent(normalizeListHtml(streamRef.current), { emitUpdate: false });
           });
@@ -2116,7 +2121,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
         const artRes = await fetch(`/api/articles/${articleId}`);
         const artData = await artRes.json() as { article?: { content?: string | null } };
-        if (!isCurrentRun()) return;
+        if (!isCurrentRun() || !editorCanCommand(editor)) return;
         const html = artData.article?.content || '';
         if (!html.replace(/<[^>]+>/g, ' ').trim()) {
           throw new Error('Generation finished but no content was returned.');
@@ -2147,8 +2152,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         // The terminal callback already reconciled score_data and the coverage snapshot
         // before the job went 'done', but only `content` was fetched above — the page kept
         // its pre-generation snapshot and graded the new article against it (AI 38 in
-        // the editor, 76 after a reload).
-        await onGenerated?.();
+        // the editor, 76 after a reload). Not awaited: the re-pull can retry for up to
+        // 20s, and the editor must unlock the moment the article is in.
+        void onGenerated?.();
       } catch (e) {
         if (isCurrentRun()) toast.error(getErrorMessage(e) || 'Could not generate the article.');
       } finally {

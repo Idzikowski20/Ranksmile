@@ -147,8 +147,18 @@ describe('projection preserves the grading rubric', () => {
       ],
     }, 'tekst artykułu bez tych faktów');
     const rubric = { ...previous(), items: Array.from({ length: 30 }, (_, i) => rubricItem(i)) };
+    // No digits: a sentence with a number is typed 'statistic', which compaction never
+    // keeps — the article's own sentences have to be plain facts to compete at all.
+    const ownLines = Array.from({ length: 12 }, (_, i) => (
+      `Najemca ${['pierwszy', 'drugi', 'trzeci', 'czwarty'][i % 4]} raz zalega z czynszem i właściciel wysyła wezwanie ${['pisemne', 'polecone', 'kurierem'][i % 3]}.`
+    )).join('\n\n');
+    const model = compile({
+      articleId: 'proj-cited',
+      compiledAt: FIXED_AT,
+      source: { kind: 'plain', text: `# Najemca nie płaci czynszu\n\n## Sekcja\n\n${ownLines}\n` },
+    }).model;
 
-    const snap = projectCcmToCoverageSnapshot(enrichCcmWithDaFacts(bigModel(), seeds), {
+    const snap = projectCcmToCoverageSnapshot(enrichCcmWithDaFacts(model, seeds), {
       createdAt: FIXED_AT,
       previous: rubric,
     });
@@ -161,8 +171,57 @@ describe('projection preserves the grading rubric', () => {
     ]);
     // The rubric is untouched and the sourced facts did not cost it a row.
     expect(snap.items.filter((i) => i.id.startsWith('paa-'))).toHaveLength(30);
-    // The article's own sentences only fill what is left after both.
-    expect(snap.items.filter((i) => i.reason === 'ccm' && !i.webSources?.length)).toHaveLength(2);
+    // The article's own sentences only fill what is left after the rubric, the two
+    // heading intents and the sourced facts: 35 - 30 - 2 - 3 = 0 — the heading intents
+    // are groups, not knowledge, and never displace a sourced fact.
+    const ownKept = snap.items.filter((i) => i.type !== 'intent' && i.reason === 'ccm' && !i.webSources?.length);
+    expect(ownKept).toHaveLength(0);
+    expect(snap.items.filter((i) => i.type === 'intent' && i.reason === 'ccm')).toHaveLength(2);
+  });
+
+  it('lets the article\'s own sentences fill only the budget left after sourced facts', () => {
+    const seeds = researchedFactsToDaSeeds({
+      claims: ['Eksmisję wykonuje wyłącznie komornik na podstawie tytułu wykonawczego.'],
+      sources: [{ url: 'https://kancelaria.pl/najemca' }],
+    }, 'tekst artykułu');
+    const ownLines = Array.from({ length: 12 }, (_, i) => (
+      `Najemca ${['pierwszy', 'drugi', 'trzeci', 'czwarty'][i % 4]} raz zalega z czynszem i właściciel wysyła wezwanie ${['pisemne', 'polecone', 'kurierem'][i % 3]}.`
+    )).join('\n\n');
+    const model = compile({
+      articleId: 'proj-own',
+      compiledAt: FIXED_AT,
+      source: { kind: 'plain', text: `# Najemca nie płaci czynszu\n\n## Sekcja\n\n${ownLines}\n` },
+    }).model;
+    const rubric = { ...previous(), items: Array.from({ length: 28 }, (_, i) => rubricItem(i)) };
+
+    const snap = projectCcmToCoverageSnapshot(enrichCcmWithDaFacts(model, seeds), {
+      createdAt: FIXED_AT,
+      previous: rubric,
+    });
+
+    // 35 - 28 rubric - 2 heading intents - 1 sourced = 4 of the article's own sentences.
+    const ownKept = snap.items.filter((i) => i.type !== 'intent' && i.reason === 'ccm' && !i.webSources?.length);
+    expect(ownKept).toHaveLength(4);
+    expect(ownKept.every((i) => i.label.startsWith('Najemca'))).toBe(true);
+    expect(snap.items.filter((i) => i.webSources?.length)).toHaveLength(1);
+  });
+
+  it('caps sourced facts at CITED_FACTS_MAX instead of letting the overflow back in as own sentences', () => {
+    const claims = Array.from({ length: 30 }, (_, i) => (
+      `Fakt ze strony rankingowej numer ${i} o zaległym czynszu i wezwaniu do zapłaty.`
+    ));
+    const seeds = researchedFactsToDaSeeds({
+      claims,
+      sources: claims.map((_, i) => ({ url: `https://strona${i}.pl/czynsz` })),
+    }, 'tekst artykułu');
+    const rubric = { ...previous(), items: Array.from({ length: 5 }, (_, i) => rubricItem(i)) };
+
+    const snap = projectCcmToCoverageSnapshot(enrichCcmWithDaFacts(bigModel(), seeds), {
+      createdAt: FIXED_AT,
+      previous: rubric,
+    });
+
+    expect(snap.items.filter((i) => i.webSources?.length)).toHaveLength(20);
   });
 
   it('keeps a true early-answer grade sticky across projections', () => {

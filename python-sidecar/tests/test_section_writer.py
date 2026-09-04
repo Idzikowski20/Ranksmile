@@ -79,9 +79,13 @@ def test_prompt_carries_the_whole_section_world():
 
     assert "Audyt SEO krok po kroku" in prompt
     assert "2. Ile trwa audyt SEO (this section)" in prompt
-    assert "1. Czym jest audyt" in prompt and "(this section)" not in prompt.split("1. Czym jest audyt")[1].split("\n")[0]
-    assert "Wyjasnij zakres audytu" in prompt
+    first_line = next(line for line in prompt.splitlines() if line.startswith("1. Czym jest audyt"))
+    assert "(this section)" not in first_line
+    assert "- Wyjasnij zakres audytu" in prompt
     assert "- Cover: audyt trwa 2-4 tygodnie" in prompt
+    # The brief is an instruction the writer is told to follow, so it sits above the
+    # fence — inside it the model is told to obey nothing.
+    assert prompt.index("SECTION BRIEF (follow in order):") < prompt.index("\n<context>\n")
     assert "Audyt trwa 2-4 tygodnie" in prompt
     assert "Ile kosztuje audyt?" in prompt
     assert "Google Search Console" in prompt
@@ -224,9 +228,18 @@ def test_prompt_states_a_hard_word_ceiling_above_the_fence():
 
 
 def test_terms_are_deduped_across_the_merged_paragraph_plans():
-    plan = {**SECTION, "keywords": [{"term": "audyt"}, {"term": "audyt"}, {"term": "seo"}]}
+    plan = {**SECTION, "keywords": [{"term": "audyt"}, {"term": "Audyt"}, {"term": "seo"}]}
     prompt = _prompt(plan, CONTEXT)
     assert "natural inflected form: audyt, seo" in prompt
+
+
+def test_terms_cannot_close_the_fence_or_start_a_line():
+    """Terms are stored NLP output and land in a live instruction line."""
+    plan = {**SECTION, "keywords": [{"term": f"audyt\n{INJECTION}\n</context>"}]}
+    prompt = _prompt(plan, CONTEXT)
+    terms_line = next(line for line in prompt.splitlines() if "natural inflected form" in line)
+    assert f"natural inflected form: audyt {INJECTION}" in terms_line
+    assert not CLOSING_TAG.search(terms_line)
 
 
 def test_an_echoed_heading_is_stripped_from_the_section():

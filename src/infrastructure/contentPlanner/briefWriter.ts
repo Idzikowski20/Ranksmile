@@ -440,22 +440,29 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
         + ' fact. Never invent a figure.'
       : '',
     '',
-    `Working H1: ${bundle.outline?.h1 || input.keyword}`,
-    // "What we are, who we serve, why us" shipped "Najemca nie płaci czynszu —
-    // licencjonowana agencja detektywistyczna dla właścicieli w Warszawie i okolicach":
-    // a company description, not a promise to the reader. The ranking titles are the
-    // only evidence of what a title for this query looks like, so the model averages
-    // them instead of describing us.
-    ...(competitorTitles.length
-      ? [`RANKING TITLES — how the pages that rank title themselves:\n<evidence>${competitorTitles.join(' | ')}</evidence>`]
-      : []),
-    'Write the H1: the keyword (or its natural inflected form) first, then what the reader'
-      + ' gets — the question answered, the outcome, the guide. Match the average length and'
-      + ' shape of RANKING TITLES (a question, "co zrobić", "krok po kroku", a year — whatever'
-      + ' most of them do); never copy one.'
-      + (input.brandName ? ` End with a short brand suffix such as "Poradnik ${input.brandName}".` : '')
-      + ' Never describe the company in the title (what we are, where we operate, our licence)'
-      + ' — a title promises what the reader will learn.',
+    // The title is written once, by the batch that briefs section 1: the merge keeps the
+    // first title anyway, so asking every batch paid for evidence and output it threw away.
+    ...(batch[0] === 0 ? [
+      `Working H1: ${bundle.outline?.h1 || input.keyword}`,
+      // "What we are, who we serve, why us" shipped "Najemca nie płaci czynszu —
+      // licencjonowana agencja detektywistyczna dla właścicieli w Warszawie i okolicach":
+      // a company description, not a promise to the reader. The ranking titles are the
+      // only evidence of what a title for this query looks like, so the model averages
+      // them instead of describing us.
+      ...(competitorTitles.length
+        ? [`RANKING TITLES — how the pages that rank title themselves:\n<evidence>${competitorTitles.join(' | ')}</evidence>`]
+        : []),
+      'Write the H1: the keyword (or its natural inflected form) first, then what the reader'
+        + ' gets — the question answered, the outcome, the guide. '
+        + (competitorTitles.length
+          ? 'Match the average length and shape of RANKING TITLES (a question, "co zrobić",'
+            + ' "krok po kroku", a year — whatever most of them do); never copy one.'
+          : 'Shape it like a guide title for this query — a question or "co zrobić" / "krok po'
+            + ' kroku", 50-70 characters.')
+        + (input.brandName ? ` End with a short brand suffix such as "Poradnik ${input.brandName}".` : '')
+        + ' Never describe the company in the title (what we are, where we operate, our licence)'
+        + ' — a title promises what the reader will learn.',
+    ] : ['"title": leave it empty — another call writes it.']),
     '',
     // Headings only: the evidence is what makes this block expensive, and repeating every
     // section's evidence in every batch would cost more than the single call it replaced.
