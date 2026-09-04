@@ -1,0 +1,27 @@
+src/core/domain/aiVisibility/config.ts
+  s_8a599cee1c9d24::t_d800862e3a6a1d 98-100
+__tests__/lib/aiVisBrandFromDomain.test.ts
+  s_8a599cee1c9d24::t_d800862e3a6a1d 25-35
+__tests__/lib/aiVisibilityBrandOverview.test.ts
+  s_8a599cee1c9d24::t_e8677ae5488d3d 165-189
+src/core/domain/aiVisibility/metricsOverview.ts
+  s_8a599cee1c9d24::t_e8677ae5488d3d 75-101,128
+pages/sites/[domain]/ai-visibility/setup.tsx
+  s_8a599cee1c9d24::t_d800862e3a6a1d 33-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "30916b145299969acdd3f8730f3f2cd29965f76a",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
