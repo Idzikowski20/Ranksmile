@@ -1,0 +1,21 @@
+components/articles/CompetitorOutlinesPanel.tsx
+  s_87fdc9d80693d3::t_e5ba1c0f365576 99-112
+__tests__/components/CompetitorOutlinesPanel.test.tsx
+  s_87fdc9d80693d3::t_cde83f509b3be0 99-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "01086db4ea2a250299b86f5803426dfb71ae4a60",
+  "prompts": {},
+  "sessions": {
+    "s_87fdc9d80693d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0c3b0412-06ad-4c70-9b13-e97ea0a304ad",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
