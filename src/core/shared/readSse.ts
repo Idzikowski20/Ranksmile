@@ -1,7 +1,8 @@
 /**
  * Read a `fetch` response that carries server-sent events. EventSource only speaks GET;
- * the outline planner answers a POST. Frames are `event: x\ndata: {json}` separated by
- * a blank line; a frame that fails to parse is skipped.
+ * the outline planner and Ask Smily answer a POST. Frames are `event: x\ndata: {json}`
+ * separated by a blank line and may arrive split across chunks; a frame whose JSON does
+ * not parse is skipped. Whatever the handler throws propagates to the caller.
  */
 export default async function readSse(
   res: Response,
@@ -19,15 +20,19 @@ export default async function readSse(
     const frames = buffer.split('\n\n');
     buffer = frames.pop() || '';
     for (const frame of frames) {
-      const event = /^event: (.*)$/m.exec(frame)?.[1];
-      const data = /^data: (.*)$/m.exec(frame)?.[1];
-      if (event && data) {
-        try {
-          onEvent(event, JSON.parse(data) as Record<string, unknown>);
-        } catch {
-          /* a torn frame — the next one carries the state */
-        }
-      }
+      const parsed = parseFrame(frame);
+      if (parsed) onEvent(parsed.event, parsed.data);
     }
+  }
+}
+
+function parseFrame(frame: string): { event: string; data: Record<string, unknown> } | null {
+  const event = /^event: (.*)$/m.exec(frame)?.[1];
+  const raw = /^data: (.*)$/m.exec(frame)?.[1];
+  if (!event || !raw) return null;
+  try {
+    return { event, data: JSON.parse(raw) as Record<string, unknown> };
+  } catch {
+    return null;
   }
 }

@@ -968,29 +968,14 @@ async function readRanksmileAgentStream(
   res: Response,
   on: { text: (delta: string) => void; step: (d: { phase: string; tool: string }) => void; usage: (n: number) => void },
 ): Promise<RanksmileAgentDonePayload> {
-  const reader = res.body!.getReader();
-  const dec = new TextDecoder();
-  let buf = '';
   let done: RanksmileAgentDonePayload | null = null;
-  for (;;) {
-    const { value, done: streamDone } = await reader.read();
-    if (streamDone) break;
-    buf += dec.decode(value, { stream: true });
-    const frames = buf.split('\n\n');
-    buf = frames.pop() || '';
-    for (const f of frames) {
-      const ev = /event: (.*)/.exec(f)?.[1];
-      const dataLine = /data: (.*)/.exec(f)?.[1];
-      if (!ev || !dataLine) continue;
-      let parsed: Record<string, unknown>;
-      try { parsed = JSON.parse(dataLine) as Record<string, unknown>; } catch { continue; }
-      if (ev === 'text') on.text(String(parsed.delta || ''));
-      else if (ev === 'step') on.step(parsed as { phase: string; tool: string });
-      else if (ev === 'usage') on.usage(Number(parsed.totalTokens) || 0);
-      else if (ev === 'done') done = parsed as RanksmileAgentDonePayload;
-      else if (ev === 'error') throw new Error(String(parsed.error || 'stream error'));
-    }
-  }
+  await readSse(res, (ev, parsed) => {
+    if (ev === 'text') on.text(String(parsed.delta || ''));
+    else if (ev === 'step') on.step(parsed as { phase: string; tool: string });
+    else if (ev === 'usage') on.usage(Number(parsed.totalTokens) || 0);
+    else if (ev === 'done') done = parsed as RanksmileAgentDonePayload;
+    else if (ev === 'error') throw new Error(String(parsed.error || 'stream error'));
+  });
   if (!done) throw new Error('stream ended without result');
   return done;
 }

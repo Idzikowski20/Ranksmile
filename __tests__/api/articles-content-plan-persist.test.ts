@@ -220,7 +220,7 @@ it('streams the section count and the final payload when asked', async () => {
   res.write = jest.fn();
   res.end = jest.fn();
   await handler(
-    { method: 'POST', query: { id: '28', stream: '1' }, body: { persist: true }, headers: {}, cookies: {} } as any,
+    { method: 'POST', query: { id: '28', stream: '1' }, body: { persist: true }, headers: {}, cookies: {}, on: jest.fn() } as any,
     res,
   );
 

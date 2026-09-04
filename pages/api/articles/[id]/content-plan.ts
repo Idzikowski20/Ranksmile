@@ -279,13 +279,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // `?stream=1`: the brief is one call per section and the editor's pill wants the
     // count, so the reply becomes SSE — `status {done,total}` per section, then the same
     // payload as the JSON reply under `done` (or `error`). Plain JSON otherwise.
-    const streaming = req.query.stream === '1';
+    //
+    // Only once there is something to count: with no sections to brief the run ends in
+    // the 422 data-gap reply, and that should reach the client as a real HTTP status
+    // rather than as an event on a 200 stream.
+    const streaming = req.query.stream === '1' && result.bundle.briefs.length > 0;
     const send = (event: string, data: Record<string, unknown>) => {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
       flushSse(res);
     };
+    // A section brief can outlast a proxy's idle timeout; a comment frame keeps the
+    // connection open between counts.
+    let heartbeat: ReturnType<typeof setInterval> | null = null;
+    const stopHeartbeat = () => { if (heartbeat) { clearInterval(heartbeat); heartbeat = null; } };
     const reply = (status: number, body: Record<string, unknown>) => {
       if (!streaming) return res.status(status).json(body);
+      stopHeartbeat();
       send(status >= 400 ? 'error' : 'done', { status, ...body });
       return res.end();
     };
@@ -296,6 +305,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       res.setHeader('X-Accel-Buffering', 'no');
       res.status(200);
       flushHeaders(res);
+      heartbeat = setInterval(() => {
+        try { res.write(':hb\n\n'); flushSse(res); } catch { stopHeartbeat(); }
+      }, 20_000);
+      req.on('close', stopHeartbeat);
       send('status', { done: 0, total: result.bundle.briefs.length });
     }
 
@@ -454,8 +467,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   } catch (error) {
     // Once the stream is open the status line is gone; the failure travels as an event.
+    // Generic on the wire — the message may carry provider or database detail — and
+    // logged here in full.
     if (res.headersSent) {
-      res.write(`event: error\ndata: ${JSON.stringify({ status: 500, error: getErrorMessage(error) || 'content-plan failed' })}\n\n`);
+      console.error('[content-plan] failed mid-stream:', error);
+      res.write(`event: error\ndata: ${JSON.stringify({ status: 500, error: 'Could not plan the outline. Try again.' })}\n\n`);
       return res.end();
     }
     return res.status(500).json({ error: getErrorMessage(error) || 'content-plan failed' });
