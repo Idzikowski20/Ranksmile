@@ -527,11 +527,19 @@ const ArticleEditorPage: NextPage = () => {
             const data = await r.json();
             const art = data.article;
             if (art) {
-              // Scores only — never the body. The editor syncs its document from the
-              // `content` prop, and this loop can retry for 20s after the generation
-              // lock lifted; a server copy landing mid-edit would replace what the
-              // user has typed since.
-              setArticle((prev) => (prev ? { ...prev, ...art, content: prev.content } : art));
+              // Scores only — never the body or the meta fields. The editor syncs its
+              // document from the `content` prop and autosave persists `meta_*` from
+              // this state; this loop can retry for 20s after the generation lock
+              // lifted, so a server copy landing mid-edit would replace what the user
+              // has typed since.
+              setArticle((prev) => (prev ? {
+                ...prev,
+                status: art.status,
+                score_data: art.score_data,
+                content_score: art.content_score,
+                ai_info_to_cover: art.ai_info_to_cover,
+                ai_visibility_summary: art.ai_visibility_summary,
+              } : art));
               if (art.score_data) {
                 try { setScoreData(JSON.parse(art.score_data)); } catch { /* ignore */ }
               }
