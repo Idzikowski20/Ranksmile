@@ -1,0 +1,34 @@
+src/infrastructure/contentPlanner/briefWriter.ts
+  s_87fdc9d80693d3::t_677144ec232b47 112-113,642-648
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_87fdc9d80693d3::t_677144ec232b47 640-652
+components/articles/GenerationProgressBar.tsx
+  s_87fdc9d80693d3::t_677144ec232b47 33-50,53,57-58,63,68
+src/core/shared/readSse.ts
+  s_87fdc9d80693d3::t_677144ec232b47 1-5,7-23,30-33
+  s_87fdc9d80693d3::t_7ba77910a82a1d 6,24-29
+__tests__/components/GenerationProgressBar.test.tsx
+  s_87fdc9d80693d3::t_677144ec232b47 3,27-38
+components/articles/ArticleEditor.tsx
+  s_87fdc9d80693d3::t_7ba77910a82a1d 21,1165-1166,1950,1952-1955,1960-1976,1979,1990,2757
+pages/api/articles/[id]/content-plan.ts
+  s_87fdc9d80693d3::t_677144ec232b47 15,279-301,319,341,388,421,437,456-460
+__tests__/api/articles-content-plan-persist.test.ts
+  s_87fdc9d80693d3::t_677144ec232b47 197-241
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "51d730d3d9df51795108419dcded6fde67774b38",
+  "prompts": {},
+  "sessions": {
+    "s_87fdc9d80693d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0c3b0412-06ad-4c70-9b13-e97ea0a304ad",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
