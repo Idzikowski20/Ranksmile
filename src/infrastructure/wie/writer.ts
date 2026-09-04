@@ -140,8 +140,11 @@ export async function wieLlmComplete(opts: {
   // The chat model is a reasoning model, and its default effort spends the completion
   // budget on thinking before a token of the answer is emitted — the sidecar hit exactly
   // this and shipped empty paragraphs. None of these calls is a reasoning task: they
-  // rewrite or structure text that is already in the prompt.
-  body.reasoning = { effort: 'minimal', exclude: true };
+  // rewrite or structure text that is already in the prompt. Provider-specific, the same
+  // branching llmGateway uses: `reasoning` is OpenRouter's shape, Gemini's OpenAI-compat
+  // endpoint takes `reasoning_effort`, and DeepSeek takes neither.
+  if (llm.provider === 'openrouter') body.reasoning = { effort: 'minimal', exclude: true };
+  if (llm.provider === 'gemini') body.reasoning_effort = 'low';
 
   const aiRes = await fetch(llm.url, {
     method: 'POST',
