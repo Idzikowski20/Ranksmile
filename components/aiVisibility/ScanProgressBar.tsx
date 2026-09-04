@@ -1,13 +1,32 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { AiVisScanStatus } from '../../services/aiVisibility';
+import { ModelIcon } from './modelIcons';
+import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
 const SURFACE = 'var(--koala-bg-inverse)';
 const ON_SURFACE = 'var(--koala-text-on-inverse)';
 const LIFT = '0 16px 48px rgba(0,0,0,0.28)';
+/**
+ * Marks sit on the dark pill, so each gets its own opaque disc — the same treatment as the
+ * engine badges elsewhere (bg-primary on border-primary). A translucent wash let the dark
+ * surface through and every favicon read as half-faded.
+ */
+const MARK_BG = 'var(--koala-bg-primary)';
+const MARK_BORDER = 'var(--koala-border-primary)';
+/** Card radius from DESIGN.md — the pill matches the timeline above it. */
+const RADIUS = 16;
 
 type StepState = 'done' | 'active' | 'idle';
-type Step = { label: string; state: StepState; detail?: string };
+type Step = {
+   label: string;
+   state: StepState;
+   detail?: string;
+   /** Engines this step queries — an icon each, so the row names what it is working on. */
+   models?: string[];
+   /** The page the phase is on right now — one mark, not a trail. */
+   domain?: string;
+};
 
 /** Decorative: the pill's single status region announces the phase, so a spinner per step
  *  would have screen readers reading "Loading" several times at once.
@@ -85,13 +104,19 @@ function buildSteps(scan?: AiVisScanStatus): Step[] {
    const profiles = scan?.profilesBuilt ?? 0;
 
    const answersIn = total > 0 && done >= total;
-   // Completion comes from the phase's own marker, not from its row count: a scan whose
-   // answers cited nothing has zero sources, and one that named no brands has zero
-   // profiles, and neither means the phase is still running.
-   const sourcesIn = answersIn && !(scan?.sourcesPending ?? true);
-   const brandsIn = sourcesIn && brandsPending === 0;
-   const profilesIn = brandsIn && !(scan?.profilesPending ?? true);
+   // Each phase reports itself. They are listed in the order they matter to the reader, but
+   // the sidecar drains all three on every tick, so they finish in whatever order their
+   // work allows — chaining each on the previous one showed brand extraction and profiles
+   // as untouched while they were provably complete and only the page fetching was left.
+   //
+   // Evidence, not absence of waiting: `*Done` is the phase's marker (or counts that prove
+   // it). Reading the pending flag put a green tick on a phase that never ran, because
+   // pending also goes false once the scan is too old to be worth polling.
+   const sourcesIn = answersIn && (scan?.sourcesDone ?? false);
+   const brandsIn = answersIn && brandsPending === 0;
+   const profilesIn = answersIn && (scan?.profilesDone ?? false);
 
+   // Reached once the answers are in: every follow-on phase starts then, together.
    const phase = (reached: boolean, complete: boolean): StepState => (!reached ? 'idle' : complete ? 'done' : 'active');
 
    return [
@@ -99,20 +124,26 @@ function buildSteps(scan?: AiVisScanStatus): Step[] {
          label: 'Querying AI models',
          state: answersIn ? 'done' : 'active',
          detail: total > 0 ? `${done} / ${total} answers` : undefined,
+         models: scan?.models ?? [],
       },
       {
          label: 'Reading sources',
          state: phase(answersIn, sourcesIn),
-         detail: sTotal > 0 ? `${sRead} / ${sTotal} sources` : undefined,
+         // Name the page it just finished, not only the tally — a stalled phase is then
+         // obvious from the host that stopped changing.
+         detail: sTotal > 0
+            ? [scan?.recentSourceDomains?.[0], `${sRead} / ${sTotal} sources`].filter(Boolean).join(' · ')
+            : undefined,
+         domain: scan?.recentSourceDomains?.[0],
       },
       {
          label: 'Extracting brand mentions',
-         state: phase(sourcesIn, brandsIn),
+         state: phase(answersIn, brandsIn),
          detail: brandsPending > 0 ? `${brandsPending} answers left` : undefined,
       },
       {
          label: 'Building brand profiles',
-         state: phase(brandsIn, profilesIn),
+         state: phase(answersIn, profilesIn),
          detail: profiles > 0 ? `${profiles} brands` : undefined,
       },
    ];
@@ -132,6 +163,51 @@ export function currentScanStage(scan?: AiVisScanStatus): string | null {
    return buildSteps(scan).find((s) => s.state === 'active')?.label ?? null;
 }
 
+/** Overlapping marks, so a working step shows what it is working on rather than only a
+ *  count. Decorative: the label and the count already say it in words. */
+const MarkRow = ({ children }: { children: React.ReactNode }) => (
+   <span aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+      {children}
+   </span>
+);
+
+const MARK: React.CSSProperties = {
+   width: 20,
+   height: 20,
+   marginRight: -5,
+   borderRadius: 9999,
+   background: MARK_BG,
+   border: `1px solid ${MARK_BORDER}`,
+   overflow: 'hidden',
+   display: 'inline-flex',
+   alignItems: 'center',
+   justifyContent: 'center',
+   flexShrink: 0,
+};
+
+const StepMarks = ({ step }: { step: Step }) => {
+   // Only while the step is live: a finished step's tick is the information, and an idle
+   // one has nothing to show yet.
+   if (step.state !== 'active') return null;
+   if (step.models?.length) {
+      return (
+         <MarkRow>
+            {step.models.map((m) => <span key={m} style={MARK}><ModelIcon model={m} size={12} /></span>)}
+         </MarkRow>
+      );
+   }
+   if (step.domain) {
+      return (
+         <MarkRow>
+            <span style={MARK} title={step.domain}>
+               <DomainFavicon domain={step.domain} size={12} alt={step.domain} />
+            </span>
+         </MarkRow>
+      );
+   }
+   return null;
+};
+
 const StepRow = ({ step, last }: { step: Step; last: boolean }) => (
    <div style={{ display: 'flex', gap: 12 }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 20 }}>
@@ -140,9 +216,10 @@ const StepRow = ({ step, last }: { step: Step; last: boolean }) => (
       </div>
       <div style={{ minWidth: 0, flex: 1, paddingBottom: last ? 0 : 10 }}>
          <div style={{ display: 'flex', gap: 12, alignItems: 'center', minHeight: 20 }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, opacity: step.state === 'idle' ? 0.6 : 1 }}>
+            <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 500, opacity: step.state === 'idle' ? 0.6 : 1 }}>
                {step.label}
             </span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', paddingLeft: 4 }}><StepMarks step={step} /></span>
             {step.detail && (
                <span style={{ flexShrink: 0, fontSize: 12, opacity: 0.75, fontVariantNumeric: 'tabular-nums' }}>{step.detail}</span>
             )}
@@ -160,16 +237,38 @@ const StepRow = ({ step, last }: { step: Step; last: boolean }) => (
  * polls the scan record; that is what the footer line promises.
  */
 const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScanStatus }) => {
-   const [open, setOpen] = useState(false);
+   const [hovered, setHovered] = useState(false);
+   // Pinned wins over hover: reading the timeline while the pointer is elsewhere (or on a
+   // touch screen, where there is no hover at all) needs the panel to stay put.
+   const [pinned, setPinned] = useState(false);
+   const open = pinned || hovered;
+
+   // One chime when the last phase drains. `wasBusy` starts false, so a page opened after
+   // a scan already finished stays silent — the sound marks a transition, not a state.
+   const wasBusy = useRef(false);
+   const busy = isScanBusy(scan);
+   useEffect(() => {
+      if (busy) { wasBusy.current = true; return; }
+      if (!wasBusy.current) return;
+      wasBusy.current = false;
+      // Browsers block audio without a prior gesture; the user started this scan, so there
+      // usually is one. Nothing here may throw: the bar already says the scan is done.
+      try {
+         const audio = new Audio('/sounds/scan-complete.mp3');
+         audio.volume = 0.5;
+         // play() returns a promise in current browsers but undefined under jsdom and in
+         // older ones — calling .catch() on that is a TypeError, in a component effect.
+         const played: unknown = audio.play();
+         if (played instanceof Promise) played.catch(() => {});
+      } catch { /* no audio available */ }
+   }, [busy]);
+
    if (!visible) return null;
 
    const steps = buildSteps(scan);
    const activeIndex = steps.findIndex((s) => s.state === 'active');
    const current = activeIndex >= 0 ? steps[activeIndex] : steps[steps.length - 1];
    const doneCount = steps.filter((s) => s.state === 'done').length;
-   const total = scan?.progressTotal ?? 0;
-   const done = scan?.progressDone ?? 0;
-   const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
 
    return (
       <div style={{ position: 'fixed', left: 0, right: 0, bottom: 24, zIndex: 200, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
@@ -181,8 +280,8 @@ const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScan
              subtree on the way up. */}
          <div
             style={{ position: 'relative', pointerEvents: 'auto', width: 'min(680px, calc(100vw - 48px))' }}
-            onMouseEnter={() => setOpen(true)}
-            onMouseLeave={() => setOpen(false)}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
          >
             {/* Timeline, above the pill */}
             <div
@@ -222,22 +321,25 @@ const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScan
             {/* Collapsed pill */}
             <button
                type="button"
-               onFocus={() => setOpen(true)}
-               onBlur={() => setOpen(false)}
+               onClick={() => setPinned((v) => !v)}
+               onFocus={() => setHovered(true)}
+               onBlur={() => setHovered(false)}
                aria-expanded={open}
+               aria-pressed={pinned}
+               title={pinned ? 'Unpin the phase timeline' : 'Pin the phase timeline open'}
                style={{
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 12,
                   padding: '10px 20px',
-                  borderRadius: 999,
+                  borderRadius: RADIUS,
                   border: 'none',
                   background: SURFACE,
                   color: ON_SURFACE,
                   fontFamily: FONT,
                   textAlign: 'left',
-                  cursor: 'default',
+                  cursor: 'pointer',
                   boxShadow: LIFT,
                }}
             >
@@ -250,6 +352,10 @@ const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScan
                      <span style={{ fontSize: 12, opacity: 0.7, flexShrink: 0 }}>
                         {doneCount} of {steps.length} steps done
                      </span>
+                     <span style={{ flex: 1 }} />
+                     <span style={{ fontSize: 12, opacity: 0.6, flexShrink: 0 }}>
+                        {pinned ? 'Click to unpin' : 'Click to keep open'}
+                     </span>
                   </span>
                   {/* The one live region: it names the phase, which is what actually changes. */}
                   <span
@@ -258,9 +364,6 @@ const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScan
                      style={{ fontSize: 12, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                   >
                      {current.label}{current.detail ? ` · ${current.detail}` : ''}
-                  </span>
-                  <span aria-hidden="true" style={{ display: 'block', height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
-                     <span style={{ display: 'block', height: '100%', width: `${pct}%`, borderRadius: 999, background: 'var(--koala-status-success)', transition: 'width 300ms ease-out' }} />
                   </span>
                </span>
             </button>

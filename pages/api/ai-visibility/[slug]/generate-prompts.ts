@@ -8,11 +8,15 @@ import { getPeopleAlsoAsk, isDataForSeoConfigured } from '@/src/infrastructure/d
 import { getErrorMessage } from '@/src/core/shared/errors';
 import {
   getDomainLocale,
+  languageNameForLlm,
   looksLikeLanguage,
   promptTemplatesForLocale,
 } from '@/src/infrastructure/config/domainLanguage';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
+import { generateTrackerPrompts } from '@/src/infrastructure/aiVisibility/aiVisibilityPromptGen';
+import { AI_VIS_PROMPTS_PER_TOPIC, isBrandElicitingPrompt } from '@/src/core/domain/aiVisibility/trackerPrompts';
 import { queryOne } from '@/src/infrastructure/db/query';
+import { parseDbTimestamp } from '@/src/infrastructure/db/timestamps';
 import { parseJsonish } from '@/src/core/shared/types/json';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
@@ -23,31 +27,58 @@ const provenanceFor = (domain: string): string[] => {
    return ['google'];
 };
 
-function buildPromptList(
+/**
+ * The topic's prompt pool.
+ *
+ * Google's questions are evidence of what people ask, not prompts in themselves: a yes/no
+ * legal question is answered with the law and a "related search" is a keyword string, and
+ * neither can name a company — yet both used to sit in the mention-rate denominator. So
+ * the observed questions are filtered to the ones that could elicit a shortlist and handed
+ * to the model as material; the model writes one prompt per distinct use case.
+ *
+ * Falling back to the fixed templates is the degraded path, and degraded pools are never
+ * cached — the same rule the paid PAA call already followed.
+ */
+async function buildPromptList(
   locale: { languageCode: string },
   topicTrimmed: string,
+  brand: string,
+  siblings: string[],
   questions: Array<{ question: string; domain: string }>,
   related: string[],
 ) {
-  const templates = promptTemplatesForLocale(locale.languageCode, topicTrimmed);
-  const fromPaa = questions
-    .filter((q) => looksLikeLanguage(q.question, locale.languageCode))
-    .slice(0, 8)
-    .map((q) => ({ text: q.question, provenance: provenanceFor(q.domain) }));
+  const inLocale = (t: string): boolean => looksLikeLanguage(t, locale.languageCode);
+  const observed = [
+    ...questions.filter((q) => inLocale(q.question)).map((q) => q.question),
+    ...related.filter(inLocale),
+  ].filter(isBrandElicitingPrompt);
 
-  const fromRelated = related
-    .filter((r) => looksLikeLanguage(r, locale.languageCode))
-    .slice(0, Math.max(0, 10 - fromPaa.length))
-    .map((r) => ({ text: r, provenance: ['google'] as string[] }));
+  const generated = await generateTrackerPrompts({
+    topic: topicTrimmed,
+    brand,
+    language: languageNameForLlm(locale.languageCode),
+    observedQuestions: observed,
+    siblingTopics: siblings,
+  });
 
-  const prompts = [...fromPaa, ...fromRelated];
-  for (const t of templates) {
-    if (prompts.length >= 10) break;
-    if (!prompts.some((p) => p.text === t.text)) prompts.push(t);
+  if (generated) {
+    // provenance 'llm' distinguishes these from the Google-sourced rows the wizard badges.
+    return { prompts: generated.map((text) => ({ text, provenance: ['llm'] })), degraded: false as const };
   }
 
-  if (prompts.length === 0) return { prompts: templates.slice(0, 8), degraded: true as const };
-  return { prompts: prompts.slice(0, 10), degraded: false as const };
+  // Generation unavailable: keep whatever Google gave us that can name a brand, then top
+  // up from the templates so the topic is never left empty.
+  const fromGoogle = questions
+    .filter((q) => inLocale(q.question) && isBrandElicitingPrompt(q.question))
+    .slice(0, AI_VIS_PROMPTS_PER_TOPIC)
+    .map((q) => ({ text: q.question, provenance: provenanceFor(q.domain) }));
+  const templates = promptTemplatesForLocale(locale.languageCode, topicTrimmed);
+  const prompts = [...fromGoogle];
+  for (const t of templates) {
+    if (prompts.length >= AI_VIS_PROMPTS_PER_TOPIC) break;
+    if (!prompts.some((x) => x.text === t.text)) prompts.push(t);
+  }
+  return { prompts: prompts.slice(0, AI_VIS_PROMPTS_PER_TOPIC), degraded: true as const };
 }
 
 type GeneratedPrompt = { text: string, provenance: string[] };
@@ -66,6 +97,27 @@ type GeneratedPrompt = { text: string, provenance: string[] };
  * unique index. `claimTopic` below closes that: the buyer is whoever wins the INSERT.
  */
 
+const MAX_TOPIC_CHARS = 200;
+const MAX_SIBLINGS_IN = 24;
+
+/**
+ * Cache identity for a stored pool, beyond the (domain, topic) key.
+ *
+ * `v` retires the pools written by the fixed-template implementation: they contain the
+ * eight substituted frames, which the generator exists to replace, and without a version
+ * every already-generated topic would keep serving them forever.
+ *
+ * `s` is the sibling set the pool was generated against. The prompts partition the service
+ * between the tracked topics, so a pool generated when the brand tracked two topics is
+ * stale once it tracks four.
+ */
+const POOL_VERSION = 2;
+const poolFingerprint = (siblings: string[]): string => siblings
+   .map((t) => t.trim().toLowerCase().replace(/\s+/g, ' '))
+   .filter(Boolean)
+   .sort()
+   .join('|');
+
 /** How long a loser waits for the claim holder's pool before buying its own. */
 const CLAIM_WAIT_MS = 3000;
 const CLAIM_POLL_MS = 400;
@@ -77,9 +129,21 @@ const CLAIM_POLL_MS = 400;
 const CLAIM_STALE_MS = 60_000;
 
 /** What the (domain, topic) row currently is: a finished pool, or somebody's claim. */
-type TopicRow =
-   | { pool: GeneratedPrompt[]; claimAgeMs: null }
-   | { pool: null; claimAgeMs: number | null };
+type TopicRow = {
+   /** A pool that is still valid for this request's version and sibling set. */
+   pool: GeneratedPrompt[] | null;
+   /** Age of somebody's claim, when the row is a claim rather than a pool. */
+   claimAgeMs: number | null;
+   /** A pool that exists but is superseded — the template-era shape, an older version, or
+    *  one generated against a different sibling set. Replaced rather than waited for. */
+    stale: boolean;
+   /** The row's stored text, exactly as read. Claiming a stale row is a compare-and-swap
+    *  against this, so only one concurrent request gets to regenerate it. */
+   raw?: string;
+};
+
+/** What a stored pool looks like from POOL_VERSION 2 on. Version 1 was a bare array. */
+type StoredPool = { v: number; s: string; prompts: GeneratedPrompt[] };
 
 /**
  * The row as it stands. `claimAgeMs` is null when there is no row at all, and a number
@@ -91,22 +155,45 @@ type TopicRow =
  * the claim is then treated as abandoned, which costs a duplicate call in dev and never
  * blocks. Production is Postgres, where the driver returns a real Date.
  */
-async function readTopic(domainId: number, topic: string): Promise<TopicRow> {
+async function readTopic(domainId: number, topic: string, fingerprint: string): Promise<TopicRow> {
    try {
       const row = await queryOne<{ prompts: unknown; created_at: string | Date | null }>(
          'SELECT prompts, created_at FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ? LIMIT 1',
          [domainId, topic],
       );
-      if (!row) return { pool: null, claimAgeMs: null };
-      const prompts = parseJsonish<GeneratedPrompt[]>(row.prompts);
-      if (Array.isArray(prompts) && prompts.length > 0) return { pool: prompts, claimAgeMs: null };
-      const claimedAt = row.created_at ? new Date(row.created_at).getTime() : NaN;
-      return { pool: null, claimAgeMs: Number.isNaN(claimedAt) ? CLAIM_STALE_MS : Date.now() - claimedAt };
+      if (!row) return { pool: null, claimAgeMs: null, stale: false };
+      const parsed = parseJsonish<unknown>(row.prompts);
+
+      // A bare array is a version-1 pool: the eight substituted template frames the
+      // generator replaces. Serving it would mean an already-generated topic never sees a
+      // use-case prompt.
+      const raw = typeof row.prompts === 'string' ? row.prompts : JSON.stringify(row.prompts);
+      if (Array.isArray(parsed)) return { pool: null, claimAgeMs: null, stale: parsed.length > 0, raw };
+
+      const stored = parsed as Partial<StoredPool> & { claim?: unknown };
+      if (Array.isArray(stored.prompts) && stored.prompts.length > 0) {
+         const usable = stored.v === POOL_VERSION && stored.s === fingerprint;
+         // Prompts partition the service between the tracked topics, so a pool generated
+         // against a different sibling set no longer partitions anything.
+         return usable
+            ? { pool: stored.prompts as GeneratedPrompt[], claimAgeMs: null, stale: false }
+            : { pool: null, claimAgeMs: null, stale: true, raw };
+      }
+
+      // Via parseDbTimestamp: SQLite's bare "YYYY-MM-DD HH:MM:SS" read as local time made a
+      // fresh claim look hours old, so a second request treated it as abandoned and bought
+      // its own PAA + LLM.
+      const claimedAt = parseDbTimestamp(row.created_at);
+      return {
+         pool: null,
+         claimAgeMs: Number.isNaN(claimedAt) ? CLAIM_STALE_MS : Date.now() - claimedAt,
+         stale: false,
+      };
    } catch (e) {
       // Best-effort, exactly like the write: a cache lookup that fails must degrade to
       // generating, not 500 past the paid-call and template fallbacks below.
       console.warn('[generate-prompts] cache read failed:', getErrorMessage(e));
-      return { pool: null, claimAgeMs: null };
+      return { pool: null, claimAgeMs: null, stale: false };
    }
 }
 
@@ -137,6 +224,37 @@ async function claimTopic(domainId: number, topic: string): Promise<string | nul
    }
 }
 
+/**
+ * Claim a row that holds a superseded pool.
+ *
+ * The INSERT-based claim cannot work here: the row already exists, so the unique index
+ * rejects it and every concurrent request fell through to buying its own PAA and LLM, then
+ * raced through writeCached. This swaps the stale content for a claim token conditionally
+ * on that content still being there, so exactly one request wins and the losers wait.
+ */
+async function claimStaleTopic(domainId: number, topic: string, raw: string): Promise<string | null> {
+   const token = JSON.stringify({ claim: randomUUID() });
+   try {
+      // created_at moves with the token. Left at the superseded pool's timestamp, the
+      // claim we just took reads as hours old to the next request, which treats it as
+      // abandoned and buys its own generation — the very duplicate this claim prevents.
+      const [, meta] = await db.query(
+         `UPDATE ai_vis_generated_prompts SET prompts = ?, created_at = CURRENT_TIMESTAMP
+          WHERE domain_id = ? AND topic = ? AND prompts = ?`,
+         { replacements: [token, domainId, topic, raw] },
+      ) as [unknown, unknown];
+      // Dialects report affected rows differently; treat an explicit 0 as "someone else
+      // swapped it first" and anything else as a win, which is the safe side — a false win
+      // costs one duplicate generation, a false loss would stall the topic behind a wait.
+      const affected = typeof meta === 'number'
+         ? meta
+         : (meta as { rowCount?: number } | undefined)?.rowCount;
+      return affected === 0 ? null : token;
+   } catch {
+      return null;
+   }
+}
+
 /** Drop our own claim when nothing will fill it. Matches on the token, so it can only
  *  ever remove the row this request inserted. */
 async function releaseTopic(domainId: number, topic: string, token: string): Promise<void> {
@@ -147,25 +265,26 @@ async function releaseTopic(domainId: number, topic: string, token: string): Pro
 }
 
 /** Poll for the claim holder's pool. Null means it did not arrive in time — buy our own. */
-async function waitForCached(domainId: number, topic: string): Promise<GeneratedPrompt[] | null> {
+async function waitForCached(domainId: number, topic: string, fingerprint: string): Promise<GeneratedPrompt[] | null> {
    const deadline = Date.now() + CLAIM_WAIT_MS;
    while (Date.now() < deadline) {
       // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => { setTimeout(r, CLAIM_POLL_MS); });
       // eslint-disable-next-line no-await-in-loop
-      const current = await readTopic(domainId, topic);
+      const current = await readTopic(domainId, topic, fingerprint);
       if (current.pool) return current.pool;
    }
    return null;
 }
 
-async function writeCached(domainId: number, topic: string, prompts: GeneratedPrompt[]): Promise<void> {
+async function writeCached(domainId: number, topic: string, prompts: GeneratedPrompt[], fingerprint: string): Promise<void> {
    // Delete-then-insert rather than ON CONFLICT: the codebase targets both
    // Postgres and SQLite, and the unique index makes this idempotent enough.
+   const envelope: StoredPool = { v: POOL_VERSION, s: fingerprint, prompts };
    await db.query('DELETE FROM ai_vis_generated_prompts WHERE domain_id = ? AND topic = ?', { replacements: [domainId, topic] });
    await db.query(
       'INSERT INTO ai_vis_generated_prompts (domain_id, topic, prompts) VALUES (?, ?, ?)',
-      { replacements: [domainId, topic, JSON.stringify(prompts)] },
+      { replacements: [domainId, topic, JSON.stringify(envelope)] },
    );
 }
 
@@ -180,18 +299,71 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
 
    const domainId = (ownership as { ID: number }).ID;
-   const { topic, refresh } = req.body as { topic?: string, refresh?: boolean };
-   if (!topic?.trim()) return res.status(400).json({ error: 'topic is required' });
+   // Validated, not cast: the body is client input, and a non-string `topic` used to throw
+   // inside .trim() before anything checked it. Bounded too — the topic reaches an LLM
+   // prompt and a database key.
+   const body: Record<string, unknown> = (req.body && typeof req.body === 'object' && !Array.isArray(req.body))
+      ? req.body as Record<string, unknown>
+      : {};
+   const topic = typeof body.topic === 'string' ? body.topic.trim() : '';
+   if (!topic) return res.status(400).json({ error: 'topic is required' });
+   if (topic.length > MAX_TOPIC_CHARS) return res.status(400).json({ error: 'topic is too long' });
+   const refresh = body.refresh === true;
+   // The wizard's other topics: strings only, each bounded, and capped in number. The
+   // domain module caps again for what actually reaches the prompt.
+   const siblings = (Array.isArray(body.siblingTopics) ? body.siblingTopics : [])
+      .filter((t): t is string => typeof t === 'string')
+      .map((t) => t.trim())
+      .filter((t) => t && t.length <= MAX_TOPIC_CHARS)
+      .slice(0, MAX_SIBLINGS_IN);
 
    const locale = await getDomainLocale(domainId);
-   const topicTrimmed = topic.trim();
+   const topicTrimmed = topic;
+   // Market context for the generator. The wizard runs before any config exists, so the
+   // domain is the fallback — the brand is never named in a prompt either way.
+   const cfg = await queryOne<{ brand_name: string }>(
+      'SELECT brand_name FROM ai_vis_configs WHERE domain_id = ? ORDER BY id DESC LIMIT 1',
+      [domainId],
+   ).catch(() => null);
+   const brandName = cfg?.brand_name || (ownership as { domain?: string }).domain || topicTrimmed;
 
-   const existing = refresh ? null : await readTopic(domainId, topicTrimmed);
-   if (existing?.pool) return res.status(200).json({ prompts: existing.pool, degraded: false, cached: true });
+   const fingerprint = poolFingerprint(siblings);
+   const cached = refresh ? null : await readTopic(domainId, topicTrimmed, fingerprint);
+   if (cached?.pool) return res.status(200).json({ prompts: cached.pool, degraded: false, cached: true });
+
+   // A superseded pool is regenerated, but the row still has to be claimed first — leaving
+   // it unclaimed had every concurrent request buy its own PAA and LLM for the same topic.
+   let staleClaim: string | null = null;
+   if (cached?.stale && cached.raw) {
+      staleClaim = await claimStaleTopic(domainId, topicTrimmed, cached.raw);
+      if (!staleClaim) {
+         // Someone else took it: wait for their pool exactly as for any live claim.
+         const waited = await waitForCached(domainId, topicTrimmed, fingerprint);
+         if (waited) return res.status(200).json({ prompts: waited, degraded: false, cached: true });
+      }
+   }
+   // Our claim on the stale row stands in for the INSERT-based one below.
+   const existing = cached?.stale ? null : cached;
 
    if (!isDataForSeoConfigured()) {
+      // PAA is down, but generation only needs the topic — try it before the templates.
+      const generated = await generateTrackerPrompts({
+        topic: topicTrimmed,
+        brand: brandName,
+        language: languageNameForLlm(locale.languageCode),
+        observedQuestions: [],
+        siblingTopics: siblings,
+      });
+      if (generated) {
+        const prompts = generated.map((text) => ({ text, provenance: ['llm'] }));
+        // Cache it: generation costs a model call, and the wizard re-requests every topic
+        // on mount. Non-fatal, like the other write.
+        await writeCached(domainId, topicTrimmed, prompts, fingerprint)
+          .catch((e) => console.warn('[generate-prompts] cache write failed:', getErrorMessage(e)));
+        return res.status(200).json({ prompts, degraded: false });
+      }
       const templates = promptTemplatesForLocale(locale.languageCode, topicTrimmed);
-      return res.status(200).json({ prompts: templates.slice(0, 8), degraded: true });
+      return res.status(200).json({ prompts: templates.slice(0, AI_VIS_PROMPTS_PER_TOPIC), degraded: true });
    }
 
    // Only the claim holder pays. `refresh` is an explicit re-buy, so it skips the claim
@@ -203,11 +375,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    // its pool and only buy if it never lands. A claim older than that: its holder is
    // gone, so ignore it and buy — a successful write replaces it, and nothing has to
    // delete a row this request does not own.
-   let claimToken: string | null = null;
+   let claimToken: string | null = staleClaim;
    let waitForHolder = false;
    if (existing) {
       if (existing.claimAgeMs === null) {
-         claimToken = await claimTopic(domainId, topicTrimmed);
+         claimToken = claimToken ?? await claimTopic(domainId, topicTrimmed);
          // Lost the INSERT: someone claimed it between our read and our write.
          waitForHolder = claimToken === null;
       } else {
@@ -215,7 +387,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
    }
    if (waitForHolder) {
-      const waited = await waitForCached(domainId, topicTrimmed);
+      const waited = await waitForCached(domainId, topicTrimmed, fingerprint);
       if (waited) return res.status(200).json({ prompts: waited, degraded: false, cached: true });
    }
 
@@ -225,10 +397,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          country: locale.countryCode,
          languageCode: locale.languageCode,
       });
-      const result = buildPromptList(locale, topicTrimmed, questions, related);
+      const result = await buildPromptList(locale, topicTrimmed, brandName, siblings, questions, related);
       if (!result.degraded) {
          // Non-fatal: a failed write only means the next visit pays again.
-         await writeCached(domainId, topicTrimmed, result.prompts)
+         await writeCached(domainId, topicTrimmed, result.prompts, fingerprint)
             .catch((e) => console.warn('[generate-prompts] cache write failed:', getErrorMessage(e)));
       } else if (claimToken) {
          // Nothing will fill this claim: templates are never cached.

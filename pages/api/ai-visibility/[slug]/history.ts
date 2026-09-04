@@ -63,7 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // happen to be extracted already and hide that the scan is still mid-phase.
          const extracting = allRows.some((r) => r.brandsAnalyzed === false);
          const series: { you: BrandTriad | null; competitor?: BrandTriad | null } = {
-            you: extracting ? null : triad(computeBrandOverview(rows, s.brand_name || ownBrand)),
+            you: extracting ? null : triad(computeBrandOverview(rows, s.brand_name || ownBrand, domain.domain)),
          };
          // Always emit a competitor point per scan (0-visibility when unnamed that scan)
          // so the trend line is continuous instead of collapsing to a single point.

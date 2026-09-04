@@ -4,8 +4,8 @@
  * scrape the cited pages. Pure helpers (prompt/parse) are unit-tested; the DB-driven
  * chunk mirrors runScanChunk (resumable, idempotent, per-row best effort).
  */
-import { generateText } from 'ai';
-import { deepseek } from '@/src/infrastructure/ai/deepseek';
+import { llmGateway } from '@/src/infrastructure/ai/llmGateway';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import db from '@/database/database';
 import { buildBrandPrompt, parseBrandResponse, RawBrand } from '@/src/core/domain/aiVisibility/brands';
@@ -16,12 +16,28 @@ import { buildBrandPrompt, parseBrandResponse, RawBrand } from '@/src/core/domai
 export { buildBrandPrompt, parseBrandResponse } from '@/src/core/domain/aiVisibility/brands';
 export type { RawBrand } from '@/src/core/domain/aiVisibility/brands';
 
+/**
+ * Through the shared gateway (OpenRouter first), not a direct provider call.
+ *
+ * This used to call DeepSeek directly and swallow every error, so when that account ran out
+ * of balance the phase stopped dead — each answer failed, its row stayed NULL, the "answers
+ * left" count never moved, and nothing was written to the log to say why. The gateway falls
+ * through to its other providers, and a failure is now reported.
+ */
 export async function extractBrandsForRow(answer: string, ownBrand: string): Promise<RawBrand[] | null> {
    try {
-      const { text } = await generateText({ model: deepseek('deepseek-chat'), prompt: buildBrandPrompt(answer, ownBrand), maxOutputTokens: 900 });
-      return parseBrandResponse(text);
-   } catch {
-      return null; // leave the row NULL so a later tick retries
+      const gw = await llmGateway({
+         provider: 'openrouter',
+         maxTokens: 900,
+         jobType: 'ai_vis_brand_extract',
+         messages: [{ role: 'user', content: buildBrandPrompt(answer, ownBrand) }],
+      });
+      return parseBrandResponse(gw.text);
+   } catch (e) {
+      // Loud on purpose: leaving the row NULL is the retry, but a phase that cannot make
+      // progress must say so rather than spin.
+      console.warn('[ai_vis_brands] extraction failed:', getErrorMessage(e));
+      return null;
    }
 }
 
@@ -38,7 +54,11 @@ export async function runBrandChunk(scanId: number, ownBrand: string, limit = AI
       [scanId, limit],
    );
    for (const row of pending) {
-      const brands = await extractBrandsForRow(row.answer || '', ownBrand);
+      // An empty answer names nobody, and there is nothing for a model to read. Recording
+      // that directly keeps ten empty ai_overview rows from spending ten calls a pass —
+      // and from stalling the phase if the model rejects an empty prompt.
+      // eslint-disable-next-line no-await-in-loop
+      const brands = row.answer?.trim() ? await extractBrandsForRow(row.answer, ownBrand) : [];
       if (brands === null) continue; // keep NULL, retry next time
       await db.query('UPDATE ai_vis_results SET brands = ? WHERE id = ? AND brands IS NULL', { replacements: [JSON.stringify(brands), row.id] }).catch(() => {});
    }

@@ -29,13 +29,18 @@ export function toDfsLanguageCode(raw: string | null | undefined, fallback = 'en
   return fallback;
 }
 
+const LLM_LANGUAGE_NAMES: Record<string, string> = {
+  pl: 'Polish (polski)', en: 'English', de: 'German', fr: 'French',
+  es: 'Spanish', it: 'Italian', nl: 'Dutch', pt: 'Portuguese',
+};
+
+/** Just the language name, for prompts that phrase the instruction themselves. */
+export function languageNameForLlm(languageCode: string): string {
+  return LLM_LANGUAGE_NAMES[languageCode.toLowerCase().slice(0, 2)] || 'English';
+}
+
 export function languageInstructionForLlm(languageCode: string): string {
-  const names: Record<string, string> = {
-    pl: 'Polish (polski)', en: 'English', de: 'German', fr: 'French',
-    es: 'Spanish', it: 'Italian', nl: 'Dutch', pt: 'Portuguese',
-  };
-  const code = languageCode.toLowerCase().slice(0, 2);
-  return ` Write ALL topic titles and summaries in ${names[code] || 'English'}.`;
+  return ` Write ALL topic titles and summaries in ${languageNameForLlm(languageCode)}.`;
 }
 
 const ENGLISH_TOPIC_SIGNAL = /\b(and|or|the|services|threats|harassment|detective|infidelity|cuckolding|warsaw)\b/i;

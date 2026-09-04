@@ -9,7 +9,13 @@ export type AiVisScanStatus = {
     *  brand mentions still to extract, brand profiles written. Counts are for display —
     *  `*Pending` is the completion signal, because zero rows is a legitimate result. */
    sourcesTotal: number, sourcesRead: number, brandsPending: number, profilesBuilt: number,
+   /** `*Pending` says whether to keep polling; `*Done` is evidence the phase ran. A scan
+    *  whose phases never ran stops being polled without ever claiming to be finished. */
    sourcesPending: boolean, profilesPending: boolean,
+   sourcesDone: boolean, profilesDone: boolean,
+   /** Engines this scan queries, and the pages it read most recently — for the icons and
+    *  the favicon trail in the progress bar. */
+   models: string[], recentSourceDomains: string[],
 };
 
 export function useAiVisData<T>(slug: string | undefined, view: string) {
@@ -115,7 +121,7 @@ export function useGeneratePrompts(slug: string | undefined) {
    return useMutation(
       // `refresh` bypasses the stored pool and re-buys from DataForSEO — only for
       // the explicit per-topic Generate button, never for the wizard's initial seed.
-      ({ topic, refresh }: { topic: string, refresh?: boolean }) => fetchJson<{ prompts: Array<{ text: string, provenance: string[] }>, degraded?: boolean, cached?: boolean }>(`/api/ai-visibility/${slug}/generate-prompts`, jsonPost({ topic, refresh })),
+      ({ topic, refresh, siblingTopics }: { topic: string, refresh?: boolean, siblingTopics?: string[] }) => fetchJson<{ prompts: Array<{ text: string, provenance: string[] }>, degraded?: boolean, cached?: boolean }>(`/api/ai-visibility/${slug}/generate-prompts`, jsonPost({ topic, refresh, siblingTopics })),
       { onError: toastError },
    );
 }

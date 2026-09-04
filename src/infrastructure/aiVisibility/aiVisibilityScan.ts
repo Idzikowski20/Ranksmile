@@ -16,6 +16,7 @@ import { runModelPrompt, AiModel } from '@/src/infrastructure/dataforseo/datafor
 import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
 import { ownDomainPosition } from '@/src/core/domain/aiVisibility/metrics';
 import { sanitizeModels, AI_VIS_CONCURRENCY, AI_VIS_HARD_CAP_PAIRS, AI_VIS_SCAN_STALE_MS, AI_VIS_SETTINGS } from '@/src/core/domain/aiVisibility/config';
+import { getErrorMessage } from '@/src/core/shared/errors';
 
 type Exec = (sql: string, replacements?: unknown[]) => Promise<[unknown[], number]>;
 
@@ -293,11 +294,64 @@ export async function runBrandsForScan(scanId: number): Promise<void> {
       const { runBrandChunk } = await import('@/src/infrastructure/aiVisibility/aiVisibilityBrands');
       let prevRemaining = Number.POSITIVE_INFINITY;
       for (let i = 0; i < 100; i += 1) {
+         // eslint-disable-next-line no-await-in-loop
          const { remaining } = await runBrandChunk(scanId, ownBrand);
-         if (remaining === 0 || remaining >= prevRemaining) break; // done, or no progress this pass
+         if (remaining === 0) break;
+         if (remaining >= prevRemaining) {
+            // Bailing out is right — retrying a pass that changed nothing would spin — but
+            // it has to be said out loud. Silently stopping here is what made the phase
+            // look frozen with an unexplained "N answers left" and an empty log.
+            console.warn(`[ai_vis_brands] scan ${scanId}: no progress, giving up with ${remaining} answers left`);
+            break;
+         }
          prevRemaining = remaining;
       }
-   } catch { /* brands are optional */ }
+   } catch (e) { console.warn('[ai_vis_brands] scan pass failed:', getErrorMessage(e)); }
+}
+
+/**
+ * The phases the progress bar shows after the answers land: read the cited pages, extract
+ * the brands, aggregate them into profiles.
+ *
+ * These used to run only inside the sidecar's tick, which fires every six hours, so after
+ * a manual scan the bar sat on "Reading sources" until then and the log stayed silent.
+ * Brands were the exception because they were already kicked off here.
+ *
+ * Best-effort and chunked, exactly like the endpoints the sidecar calls; each loop stops
+ * when nothing is left or a pass makes no progress, so a dead host cannot spin forever.
+ */
+async function runFollowOnPhases(scanId: number, ownDomain: string): Promise<void> {
+   const cfg = await queryOne<{ brand_name: string }>(
+      'SELECT c.brand_name FROM ai_vis_scans s JOIN ai_vis_configs c ON c.id = s.config_id WHERE s.id = ? LIMIT 1',
+      [scanId],
+   ).catch(() => null);
+   const ownBrand = cfg?.brand_name || '';
+
+   try {
+      const { runSourceChunk } = await import('@/src/infrastructure/aiVisibility/aiVisibilitySources');
+      let prev = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < 200; i += 1) {
+         // eslint-disable-next-line no-await-in-loop
+         const { done, remaining } = await runSourceChunk(scanId, ownBrand, ownDomain);
+         console.log(`[ai_vis_sources] scan ${scanId}: read ${done}, ${remaining} left`);
+         if (remaining === 0 || remaining >= prev) break;
+         prev = remaining;
+      }
+   } catch (e) { console.warn('[ai_vis_sources] failed:', getErrorMessage(e)); }
+
+   await runBrandsForScan(scanId);
+
+   try {
+      const { runProfileChunk } = await import('@/src/infrastructure/aiVisibility/aiVisibilityProfiles');
+      let prev = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < 100; i += 1) {
+         // eslint-disable-next-line no-await-in-loop
+         const { done, remaining } = await runProfileChunk(scanId);
+         console.log(`[ai_vis_profiles] scan ${scanId}: built ${done}, ${remaining} left`);
+         if (remaining === 0 || remaining >= prev) break;
+         prev = remaining;
+      }
+   } catch (e) { console.warn('[ai_vis_profiles] failed:', getErrorMessage(e)); }
 }
 
 export async function kickAiVisScan(scanId: number, ownDomain: string): Promise<void> {
@@ -306,7 +360,7 @@ export async function kickAiVisScan(scanId: number, ownDomain: string): Promise<
       for (let i = 0; i < 100000; i += 1) {
          const { finished } = await runScanChunk(scanId, ownDomain);
          if (finished) {
-            await runBrandsForScan(scanId);
+            await runFollowOnPhases(scanId, ownDomain);
             const { emitAiVisibilityScanObservations } = await import('@/src/infrastructure/observations/emitObservations');
             await emitAiVisibilityScanObservations(scanId, ownDomain).catch(() => {});
             return;

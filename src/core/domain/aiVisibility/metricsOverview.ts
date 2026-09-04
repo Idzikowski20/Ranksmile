@@ -65,11 +65,70 @@ export function computeOverview(rows: ResultRow[]) {
  *  an empty key silently scores every answer as "brand not named". */
 export const brandKey = (s: string): string => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 
-/** 1-based appearance position of the tracked brand in an answer, or null if unnamed. */
-export function ownBrandPosition(row: ResultRow, ownBrand: string): number | null {
-  const want = brandKey(ownBrand);
-  if (!want) return null;
-  const hit = row.brands.find((b) => brandKey(b.brand) === want);
+/**
+ * The names an extracted mention may carry for the tracked brand.
+ *
+ * The configured brand is often the domain — the setup wizard stores it that way — so
+ * "prodetektyw.pl" has to recognise "ProDetektyw". Anything before the first dot counts,
+ * which is what turns a domain into a brand key.
+ */
+/** The written name split into words, so a match can respect where words begin and end. */
+const brandTokens = (s: string): string[] => s
+   .normalize('NFKC')
+   .toLowerCase()
+   .split(/[^\p{L}\p{N}]+/u)
+   .filter(Boolean);
+
+/**
+ * Does this written brand name begin with the tracked brand, at a word boundary?
+ *
+ * Collapsed keys alone cannot answer that: brandKey drops the separators, so "prodetektyw"
+ * is a prefix of both "ProDetektyw Warszawa" (us, suffixed) and "ProDetektywistyka" (a
+ * different company). Comparing collapsed prefixes of the TOKEN list keeps the boundary
+ * while still equating "Pro Detektyw" with "ProDetektyw" — a raw startsWith would have
+ * claimed the competitor and inflated our own visibility.
+ */
+function startsWithAlias(brand: string, alias: string): boolean {
+   const tokens = brandTokens(brand);
+   let prefix = '';
+   for (const t of tokens) {
+      prefix += brandKey(t);
+      if (prefix === alias) return true;
+      if (prefix.length >= alias.length) return false; // past it without landing on it
+   }
+   return false;
+}
+
+function brandAliases(ownBrand: string, ownDomain?: string): string[] {
+  const firstLabel = (v: string): string => v.split('.')[0] ?? '';
+  return [ownBrand, firstLabel(ownBrand), firstLabel(ownDomain ?? '')]
+    .map(brandKey)
+    .filter(Boolean);
+}
+
+/**
+ * 1-based appearance position of the tracked brand in an answer, or null if unnamed.
+ *
+ * Three ways to recognise ourselves, because a model writes the same company several ways
+ * in one scan — "ProDetektyw", "ProDetektyw Warszawa", "Agencja Detektywistyczna
+ * ProDetektyw". Exact-key matching alone found the first and missed the rest, and when the
+ * configured brand was the domain it matched nothing at all and reported 0% visibility for
+ * a brand the answers named eleven times:
+ *   - the mention's key equals one of our aliases,
+ *   - it starts with one (a suffixed variant),
+ *   - or the extractor attributed it to our domain, which is the strongest signal of all.
+ */
+export function ownBrandPosition(row: ResultRow, ownBrand: string, ownDomain?: string): number | null {
+  const aliases = brandAliases(ownBrand, ownDomain);
+  const own = norm(ownDomain ?? '');
+  if (!aliases.length && !own) return null;
+  // brands are stored in appearance order, so the first match is the earliest position.
+  const hit = row.brands.find((b) => {
+    const key = brandKey(b.brand);
+    if (key && aliases.some((a) => key === a || startsWithAlias(b.brand, a))) return true;
+    const d = norm(b.domain ?? '');
+    return !!own && !!d && (d === own || d.endsWith(`.${own}`));
+  });
   return hit ? hit.pos : null;
 }
 
@@ -89,12 +148,13 @@ export type BrandOverview = {
 function brandRateAndPosition(
   rows: ResultRow[],
   ownBrand: string,
+  ownDomain?: string,
 ): { mentionRate: number; avgPosition: number | null; mentions: number; pairs: number } {
   // A row whose brands column is still NULL has not been through the extraction phase —
   // counting it as "not mentioned" would understate the rate while that phase runs, so it
   // is left out of the denominator and the rate converges as extraction progresses.
   const scored = rows.filter((r) => r.brandsAnalyzed !== false);
-  const positions = scored.map((r) => ownBrandPosition(r, ownBrand)).filter((p): p is number => p != null);
+  const positions = scored.map((r) => ownBrandPosition(r, ownBrand, ownDomain)).filter((p): p is number => p != null);
   return {
     mentions: positions.length,
     pairs: scored.length,
@@ -110,14 +170,14 @@ function brandRateAndPosition(
  * Competitors are scored on. Distinct from computeOverview, which measures citations of a
  * DOMAIN and stays the basis of the per-domain snapshots, source overlap and gap views.
  */
-export function computeBrandOverview(rows: ResultRow[], ownBrand: string): BrandOverview {
+export function computeBrandOverview(rows: ResultRow[], ownBrand: string, ownDomain?: string): BrandOverview {
   const perModelMap = new Map<string, ResultRow[]>();
   for (const r of rows) {
     const list = perModelMap.get(r.model) ?? [];
     list.push(r);
     perModelMap.set(r.model, list);
   }
-  const { mentionRate, avgPosition, mentions, pairs } = brandRateAndPosition(rows, ownBrand);
+  const { mentionRate, avgPosition, mentions, pairs } = brandRateAndPosition(rows, ownBrand, ownDomain);
   return {
     visibilityScore: presenceScore({ mentionRate, avgPosition }),
     mentionRate,
@@ -126,7 +186,7 @@ export function computeBrandOverview(rows: ResultRow[], ownBrand: string): Brand
     pairs,
     perModel: Array.from(perModelMap.entries()).map(([model, list]) => ({
       model,
-      score: presenceScore(brandRateAndPosition(list, ownBrand)),
+      score: presenceScore(brandRateAndPosition(list, ownBrand, ownDomain)),
     })),
   };
 }

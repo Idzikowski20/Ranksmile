@@ -84,4 +84,4 @@ export function languageDisplayName(code: string): string {
   return LANG_NAMES[code.toLowerCase().slice(0, 2)] || 'English';
 }
 
-export { looksPolish, looksLikeLanguage, polishPromptTemplates, promptTemplatesForLocale, toDfsLanguageCode, languageInstructionForLlm, topicsNeedLocalization } from '@/src/core/shared/language';
+export { looksPolish, looksLikeLanguage, polishPromptTemplates, promptTemplatesForLocale, toDfsLanguageCode, languageInstructionForLlm, languageNameForLlm, topicsNeedLocalization } from '@/src/core/shared/language';
