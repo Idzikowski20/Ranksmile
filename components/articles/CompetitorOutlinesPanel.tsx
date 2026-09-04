@@ -96,20 +96,20 @@ export const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Compet
             }}>
               {competitor.serp_title || competitor.title}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <span style={{ fontSize: 11, color: 'var(--koala-text-brand)', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
-              <span style={{ fontSize: 11, color: 'var(--koala-text-disabled)' }}>·</span>
-              <span style={{ fontSize: 11, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
-                {competitor.word_count.toLocaleString()}w
-              </span>
-              {competitor.heading_count != null && (
-                <>
-                  <span style={{ fontSize: 11, color: 'var(--koala-text-disabled)' }}>·</span>
-                  <span style={{ fontSize: 11, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
-                    {competitor.heading_count}h
-                  </span>
-                </>
-              )}
+            {/* Domain only. The word and heading counts are what the gauge is computed
+                from, not something the reader acts on, and at this width they pushed the
+                domain onto a second line. */}
+            <div style={{
+              fontSize: 11,
+              marginTop: 2,
+              color: 'var(--koala-text-brand)',
+              fontFamily: 'var(--font-family-primary)',
+              fontWeight: 500,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {domain}
             </div>
           </div>
         </div>

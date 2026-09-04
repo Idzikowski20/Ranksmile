@@ -96,3 +96,12 @@ it('lets the list scroll instead of growing past the card', async () => {
   expect(scroller.style.overflowY).toBe('auto');
   expect(scroller.style.minHeight).toBe('0');
 });
+
+/** The counts feed the gauge; on the card they pushed the domain onto a second line. */
+it('shows the domain without the word and heading counts', async () => {
+  render(<CompetitorOutlinesPanel {...props} />);
+
+  expect(await screen.findByText('a.pl')).toBeInTheDocument();
+  expect(screen.queryByText(/2,100/)).toBeNull();
+  expect(screen.queryByText(/14h/)).toBeNull();
+});
