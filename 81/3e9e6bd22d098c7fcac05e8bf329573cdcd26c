@@ -1,0 +1,37 @@
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_87fdc9d80693d3::t_467188ca311863 1,448-474,476-480,485-494,497-499,635-647
+__tests__/components/CompetitorOutlinesPanel.test.tsx
+  s_87fdc9d80693d3::t_467188ca311863 83-87
+src/infrastructure/contentPlanner/briefWriter.ts
+  s_87fdc9d80693d3::t_9af6d39bda2bb1 16,509-520,536-539,578-583,634-637
+pages/dashboard/index.tsx
+  s_87fdc9d80693d3::t_9af6d39bda2bb1 27,169-173,365
+services/domainPipeline.ts
+  s_87fdc9d80693d3::t_9af6d39bda2bb1 5-7,26-29
+components/dashboard/DomainSetupProgressBar.tsx
+  s_87fdc9d80693d3::t_9af6d39bda2bb1 36-39
+components/common/ProgressPill.tsx
+  s_87fdc9d80693d3::t_9af6d39bda2bb1 36-38,53-57,209-211
+__tests__/components/DomainSetupProgressBar.test.tsx
+  s_87fdc9d80693d3::t_467188ca311863 22,50-54,58-75
+components/dashboard/RecommendationsSection.tsx
+  s_87fdc9d80693d3::t_9af6d39bda2bb1 73-74,158,169-187
+components/articles/CompetitorOutlinesPanel.tsx
+  s_87fdc9d80693d3::t_9af6d39bda2bb1 52-59,61,189-192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "813e9e6bd22d098c7fcac05e8bf329573cdcd26c",
+  "prompts": {},
+  "sessions": {
+    "s_87fdc9d80693d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0c3b0412-06ad-4c70-9b13-e97ea0a304ad",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
