@@ -289,14 +289,33 @@ export function parseCompetitorCacheJson(raw: string | null | undefined): Compet
 // ("Kontakt z dzieckiem po rozwodzie") is kept.
 const HEADING_FURNITURE = /^(przypisy|bibliografia|zobacz (też|również)|linki zewnętrzne|uwagi|galeria|kategori|spis treści|references|see also|external links|further reading|notes|bibliography|contents|kontakt(?: z nami| z redakcją)?$|dane kontaktowe|formularz kontakt|skontaktuj|napisz do nas|zadzwoń|o nas|o mnie|o firmie|godziny (otwarcia|pracy)|najnowsze (wpisy|artykuły|posty)|ostatnie (wpisy|artykuły|posty)|powiązane (wpisy|artykuły|posty|tematy)|podobne (wpisy|artykuły|posty)|polecane (wpisy|artykuły)|zapraszamy|porozmawiaj ze specjalist|umów (się|wizytę|spotkanie)|newsletter|zapisz się|nasze biur|nasi (detektywi|specjaliści|eksperci)|opinie (klientów|naszych)|polityka (prywatności|cookie)|menu|nawigacja|home\b|strona główna|wróć do|czytaj (też|również|więcej)|sprawdź (też|również)|obserwuj nas|śledź nas|social media|media społecznościowe|newsy|aktualności)/i;
 
-export function competitorHeadingTitles(raw: string | null | undefined): string[] {
+/** The competitor rows of an outlines cache, whichever of its two shapes it was stored in. */
+function cachedCompetitors(raw: string | null | undefined): unknown[] {
   if (!raw) return [];
   const parsed = safeJsonParse<unknown>(raw, null);
-  const list = Array.isArray(parsed)
-    ? parsed
-    : (parsed && typeof parsed === 'object' && Array.isArray((parsed as { competitors?: unknown }).competitors)
-      ? (parsed as { competitors: unknown[] }).competitors
-      : []);
+  if (Array.isArray(parsed)) return parsed;
+  const nested = (parsed as { competitors?: unknown } | null)?.competitors;
+  return Array.isArray(nested) ? nested : [];
+}
+
+/** Page titles of the ranking pages — the only evidence of how a title for this query is shaped. */
+export function competitorPageTitles(raw: string | null | undefined): string[] {
+  const seen = new Set<string>();
+  return cachedCompetitors(raw)
+    .filter((c): c is { serp_title?: unknown; title?: unknown } => Boolean(c) && typeof c === 'object')
+    .map((c) => [c.serp_title, c.title]
+      .find((t): t is string => typeof t === 'string' && t.trim().length >= 8)
+      ?.trim() ?? '')
+    .filter((t) => {
+      if (!t || seen.has(t.toLowerCase())) return false;
+      seen.add(t.toLowerCase());
+      return true;
+    })
+    .slice(0, 10);
+}
+
+export function competitorHeadingTitles(raw: string | null | undefined): string[] {
+  const list = cachedCompetitors(raw);
   const topics: string[] = [];
   const seen = new Set<string>();
   for (const c of list) {

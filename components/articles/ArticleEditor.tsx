@@ -110,6 +110,9 @@ interface Props {
   /** Fires while the outline planner or the article writer is running — the page locks
    *  its own chrome (side-panel actions, Publish) off the same signal as the toolbar. */
   onGeneratingChange?: (busy: boolean) => void;
+  /** Fires once a generated article has landed in the editor — the page re-pulls the
+   *  scores the terminal callback reconciled, which the editor itself never loads. */
+  onGenerated?: () => void | Promise<void>;
   /** Target keyword for Ranksmile scoring context */
   articleKeyword?: string;
   /** Plagiarised sentences to underline in red (view-only; from the Plagiarism panel). */
@@ -1105,7 +1108,7 @@ const ImportBar = ({ url, onChange, onImport, onClose, busy }: { url: string; on
   </form>
 );
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, resumeOutlineReview, highlightTerms, onAiActivity, onGeneratingChange, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl, bottomBarRightReserve = 0 }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, resumeOutlineReview, highlightTerms, onAiActivity, onGeneratingChange, onGenerated, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl, bottomBarRightReserve = 0 }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -1164,6 +1167,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const generationRunRef = useRef(0);
     const generationJobIdRef = useRef<{ runId: number; jobId: string } | null>(null);
     const generationRevealHtmlRef = useRef<{ runId: number; html: string } | null>(null);
+    // The article as the sidecar streams it, one finished section at a time. A ref, not
+    // state: the SSE handler appends to it and the closure would otherwise read stale.
+    const streamRef = useRef('');
+    const [streaming, setStreaming] = useState(false);
     const router = useRouter();
     const [outlineReviewMode, setOutlineReviewMode] = useState(false);
     const outlineAutoStarted = useRef(false);
@@ -1964,6 +1971,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const runId = generationRunRef.current;
       const isCurrentRun = () => generationRunRef.current === runId;
       generationJobIdRef.current = null;
+      streamRef.current = '';
+      setStreaming(false);
       setGenerateBusy(true);
       setGenerateMsg('Starting generation…');
       setGeneratePct(null);
@@ -2002,6 +2011,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               await playReveal(html, true, 'complete', true);
               if (!isCurrentRun()) return;
               toast.success('Article loaded');
+              // Same reconciled scores as a run this editor watched to the end.
+              void onGenerated?.();
               return;
             }
           }
@@ -2071,6 +2082,26 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             const { text } = JSON.parse((event as MessageEvent).data) as { text: string };
             if (text.trim()) setGenerateMsg(text.trim());
           });
+          // Sections arrive in reading order as the sidecar finishes them, so the
+          // document is always a valid prefix of the article — set it whole each time
+          // (see revealHtmlInEditor for why repeated inserts are not an option).
+          source.addEventListener('content', (event) => {
+            if (!isCurrentRun() || !editorCanCommand(editor)) return;
+            const { chunk, offset } = JSON.parse((event as MessageEvent).data) as { chunk: string; offset?: number };
+            if (!chunk) return;
+            const at = typeof offset === 'number' ? offset : streamRef.current.length;
+            if (at === streamRef.current.length) streamRef.current += chunk;
+            else if (at === 0) streamRef.current = chunk; // reconnect replayed from the top
+            else return; // a gap we cannot fill — the final document arrives with 'done'
+            if (!generationRevealHtmlRef.current) {
+              generationRevealHtmlRef.current = { runId, html: editor.getHTML() };
+              setStreaming(true);
+              // A silent setContent emits no update, so the empty-document flag that
+              // keeps the generation skeleton over a blank article would never clear.
+              setDocEmpty(false);
+            }
+            editor.commands.setContent(normalizeListHtml(streamRef.current), { emitUpdate: false });
+          });
           source.addEventListener('done', () => { clearTimeout(timeout); finish(); });
           source.addEventListener('error', (event) => {
             // A server-sent `error` event carries a message and is terminal. A bare
@@ -2090,13 +2121,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
         const artRes = await fetch(`/api/articles/${articleId}`);
         const artData = await artRes.json() as { article?: { content?: string | null } };
-        if (!isCurrentRun()) return;
+        if (!isCurrentRun() || !editorCanCommand(editor)) return;
         const html = artData.article?.content || '';
         if (!html.replace(/<[^>]+>/g, ' ').trim()) {
           throw new Error('Generation finished but no content was returned.');
         }
-        generationRevealHtmlRef.current = { runId, html: editor.getHTML() };
-        await playReveal(html, true, 'preserve', true);
+        if (streamRef.current) {
+          // The reader has been watching the sections land; the final document differs
+          // only by verified links and images, so swap it in without a second fade.
+          editor.commands.setContent(normalizeListHtml(html), { emitUpdate: true });
+          clearEditorHistory(editor);
+        } else {
+          generationRevealHtmlRef.current = { runId, html: editor.getHTML() };
+          await playReveal(html, true, 'preserve', true);
+        }
         if (!isCurrentRun()) return;
         generationRevealHtmlRef.current = null;
         outlineOriginalHtmlRef.current = null;
@@ -2111,12 +2149,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         }
         void clearWizardState(String(articleId));
         toast.success('Article generated');
+        // The terminal callback already reconciled score_data and the coverage snapshot
+        // before the job went 'done', but only `content` was fetched above — the page kept
+        // its pre-generation snapshot and graded the new article against it (AI 38 in
+        // the editor, 76 after a reload). Not awaited: the re-pull can retry for up to
+        // 20s, and the editor must unlock the moment the article is in.
+        void onGenerated?.();
       } catch (e) {
         if (isCurrentRun()) toast.error(getErrorMessage(e) || 'Could not generate the article.');
       } finally {
         if (isCurrentRun()) {
           generationJobIdRef.current = null;
           if (generationRevealHtmlRef.current?.runId === runId) generationRevealHtmlRef.current = null;
+          streamRef.current = '';
+          setStreaming(false);
           setGenerateBusy(false);
           setGeneratePct(null);
           // Back to idle, or the last progress line would linger under "Review outline"
@@ -2637,8 +2683,16 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           <ProgressiveBlur position="top" backgroundColor="var(--koala-bg-primary)" height={72} blurAmount={4} />
           <ProgressiveBlur position="bottom" backgroundColor="var(--koala-bg-primary)" height={80} blurAmount={4} />
         </div>
-        {generateBusy && !outlineReviewMode && (
+        {/* The full-screen card only until the first section lands; from then on the
+            article itself is the progress, and a pill keeps the status line visible. */}
+        {generateBusy && !outlineReviewMode && !streaming && (
           <GenerateWritingOverlay message={generateMsg} pct={generatePct} />
+        )}
+        {generateBusy && streaming && (
+          <div className="nc-gen-stream-pill" role="status" aria-live="polite">
+            <span className="nc-gen-stream-dot" aria-hidden="true" />
+            <span>{generateMsg || 'Writing your article…'}</span>
+          </div>
         )}
         {/* Not while the analysis is still running: there is no outline to review yet, and
             the bar overlapped the progress panel claiming a generation was under way. */}

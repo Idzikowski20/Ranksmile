@@ -1,5 +1,7 @@
 import { projectCcmToCoverageSnapshot } from '@/src/core/intelligence/ccmToCoverageSnapshot';
 import { compile } from '@/src/core/compiler/compile';
+import { enrichCcmWithDaFacts } from '@/src/core/intelligence/enrichCcmWithDaFacts';
+import { researchedFactsToDaSeeds } from '@/src/core/intelligence/loadDaFactSeeds';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 const FIXED_AT = '2026-08-03T12:00:00.000Z';
@@ -123,6 +125,103 @@ describe('projection preserves the grading rubric', () => {
     for (let i = 0; i < RUBRIC_SIZE; i += 1) {
       expect(keptIds.has(`paa-${i}`)).toBe(true);
     }
+  });
+
+  /**
+   * Article 164: 40 facts researched off the ranking pages sat in the graph with their
+   * citation nodes, and the panel showed none — a 30-row rubric left five slots, and the
+   * article's own sentences won them on keyword overlap. Sourced facts are the only rows
+   * that can carry a favicon, so they get their own budget ahead of the article's own text.
+   */
+  it('keeps sourced facts ahead of the article\'s own sentences, most-cited first', () => {
+    const seeds = researchedFactsToDaSeeds({
+      claims: [
+        'Wezwanie do zapłaty powinno zawierać dane stron, kwotę i termin zapłaty.',
+        'Wypowiedzenie najmu jest możliwe przy zaległości za co najmniej dwa pełne okresy.',
+        'Eksmisję wykonuje wyłącznie komornik na podstawie tytułu wykonawczego.',
+      ],
+      sources: [
+        { url: 'https://kancelaria.pl/najemca', source_urls: ['https://kancelaria.pl/najemca'] },
+        { url: 'https://obido.pl/czynsz', source_urls: ['https://obido.pl/czynsz', 'https://goeste.pl/najemca', 'https://rendin.pl/czynsz'] },
+        { url: 'https://nieruchomosc.pl/eksmisja', source_urls: ['https://nieruchomosc.pl/eksmisja', 'https://goeste.pl/najemca'] },
+      ],
+    }, 'tekst artykułu bez tych faktów');
+    const rubric = { ...previous(), items: Array.from({ length: 30 }, (_, i) => rubricItem(i)) };
+    // No digits: a sentence with a number is typed 'statistic', which compaction never
+    // keeps — the article's own sentences have to be plain facts to compete at all.
+    const ownLines = Array.from({ length: 12 }, (_, i) => (
+      `Najemca ${['pierwszy', 'drugi', 'trzeci', 'czwarty'][i % 4]} raz zalega z czynszem i właściciel wysyła wezwanie ${['pisemne', 'polecone', 'kurierem'][i % 3]}.`
+    )).join('\n\n');
+    const model = compile({
+      articleId: 'proj-cited',
+      compiledAt: FIXED_AT,
+      source: { kind: 'plain', text: `# Najemca nie płaci czynszu\n\n## Sekcja\n\n${ownLines}\n` },
+    }).model;
+
+    const snap = projectCcmToCoverageSnapshot(enrichCcmWithDaFacts(model, seeds), {
+      createdAt: FIXED_AT,
+      previous: rubric,
+    });
+
+    const sourced = snap.items.filter((i) => i.webSources?.length);
+    expect(sourced.map((i) => i.webSources?.map((s) => s.domain))).toEqual([
+      ['obido.pl', 'goeste.pl', 'rendin.pl'],
+      ['nieruchomosc.pl', 'goeste.pl'],
+      ['kancelaria.pl'],
+    ]);
+    // The rubric is untouched and the sourced facts did not cost it a row.
+    expect(snap.items.filter((i) => i.id.startsWith('paa-'))).toHaveLength(30);
+    // The article's own sentences only fill what is left after the rubric, the two
+    // heading intents and the sourced facts: 35 - 30 - 2 - 3 = 0 — the heading intents
+    // are groups, not knowledge, and never displace a sourced fact.
+    const ownKept = snap.items.filter((i) => i.type !== 'intent' && i.reason === 'ccm' && !i.webSources?.length);
+    expect(ownKept).toHaveLength(0);
+    expect(snap.items.filter((i) => i.type === 'intent' && i.reason === 'ccm')).toHaveLength(2);
+  });
+
+  it('lets the article\'s own sentences fill only the budget left after sourced facts', () => {
+    const seeds = researchedFactsToDaSeeds({
+      claims: ['Eksmisję wykonuje wyłącznie komornik na podstawie tytułu wykonawczego.'],
+      sources: [{ url: 'https://kancelaria.pl/najemca' }],
+    }, 'tekst artykułu');
+    const ownLines = Array.from({ length: 12 }, (_, i) => (
+      `Najemca ${['pierwszy', 'drugi', 'trzeci', 'czwarty'][i % 4]} raz zalega z czynszem i właściciel wysyła wezwanie ${['pisemne', 'polecone', 'kurierem'][i % 3]}.`
+    )).join('\n\n');
+    const model = compile({
+      articleId: 'proj-own',
+      compiledAt: FIXED_AT,
+      source: { kind: 'plain', text: `# Najemca nie płaci czynszu\n\n## Sekcja\n\n${ownLines}\n` },
+    }).model;
+    const rubric = { ...previous(), items: Array.from({ length: 28 }, (_, i) => rubricItem(i)) };
+
+    const snap = projectCcmToCoverageSnapshot(enrichCcmWithDaFacts(model, seeds), {
+      createdAt: FIXED_AT,
+      previous: rubric,
+    });
+
+    // 35 - 28 rubric - 2 heading intents - 1 sourced = 4 of the article's own sentences.
+    const ownKept = snap.items.filter((i) => i.type !== 'intent' && i.reason === 'ccm' && !i.webSources?.length);
+    expect(ownKept).toHaveLength(4);
+    expect(ownKept.every((i) => i.label.startsWith('Najemca'))).toBe(true);
+    expect(snap.items.filter((i) => i.webSources?.length)).toHaveLength(1);
+  });
+
+  it('caps sourced facts at CITED_FACTS_MAX instead of letting the overflow back in as own sentences', () => {
+    const claims = Array.from({ length: 30 }, (_, i) => (
+      `Fakt ze strony rankingowej numer ${i} o zaległym czynszu i wezwaniu do zapłaty.`
+    ));
+    const seeds = researchedFactsToDaSeeds({
+      claims,
+      sources: claims.map((_, i) => ({ url: `https://strona${i}.pl/czynsz` })),
+    }, 'tekst artykułu');
+    const rubric = { ...previous(), items: Array.from({ length: 5 }, (_, i) => rubricItem(i)) };
+
+    const snap = projectCcmToCoverageSnapshot(enrichCcmWithDaFacts(bigModel(), seeds), {
+      createdAt: FIXED_AT,
+      previous: rubric,
+    });
+
+    expect(snap.items.filter((i) => i.webSources?.length)).toHaveLength(20);
   });
 
   it('keeps a true early-answer grade sticky across projections', () => {

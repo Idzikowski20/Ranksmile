@@ -30,6 +30,7 @@ import {
   enrichWithWieSynthesis,
   parseCompetitorCacheJson,
   competitorHeadingTitles,
+  competitorPageTitles,
 } from '@/src/infrastructure/contentPlanner/fromArticleInputs';
 import {
   compileAndValidateWritePlan,
@@ -515,6 +516,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           .slice(0, 10),
         language: lang,
         competitorHeadings: competitorHeadingTitles(article.competitor_outlines_cache),
+        competitorTitles: competitorPageTitles(article.competitor_outlines_cache),
         // Cron runs resolve no org and skip the budget gate entirely, so there is nothing
         // to charge — same shape deep-analysis uses for its coverage spend.
         onTokens: orgId == null ? undefined : (tokens) => recordAiTokens(orgId, tokens),
