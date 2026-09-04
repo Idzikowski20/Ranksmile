@@ -1,0 +1,46 @@
+src/infrastructure/contentPlanner/briefWriter.ts
+  s_87fdc9d80693d3::t_73c4948d60234d 443-465
+python-sidecar/pipeline/section_writer.py
+  s_87fdc9d80693d3::t_1f667630edc634 63-65
+  s_87fdc9d80693d3::t_a8bdd54e6299e0 156-158
+  s_87fdc9d80693d3::t_e3d61ee3044328 266-272
+python-sidecar/tests/test_section_writer.py
+  s_87fdc9d80693d3::t_cfe4da70340b1b 231,236-239
+  s_87fdc9d80693d3::t_5df7dafd55f21f 82-84,86-88
+  s_87fdc9d80693d3::t_c660676a7dbc64 240-242
+__tests__/lib/contentPlanner/briefWriter.test.ts
+  s_87fdc9d80693d3::t_65638438d0e059 549-564
+  s_87fdc9d80693d3::t_2706f468a15cd5 263-266
+src/core/intelligence/ccmToCoverageSnapshot.ts
+  s_87fdc9d80693d3::t_4efc8fdc2fe4b4 19
+  s_87fdc9d80693d3::t_125a025c0e5951 199-202,206,208-210,221-222
+  s_87fdc9d80693d3::t_360ebcf83f823a 217-219,223-224,226
+pages/api/articles/[id]/generate-stream.ts
+  s_87fdc9d80693d3::t_672832d20290be 116-119
+components/articles/ArticleEditor.tsx
+  s_87fdc9d80693d3::t_a2696571664288 2124
+  s_87fdc9d80693d3::t_22f6bfe18fdb9c 2099-2101
+  s_87fdc9d80693d3::t_0d68ffc1144c5d 2155-2157
+  s_87fdc9d80693d3::t_6f4d6b2c865bae 2014-2015
+__tests__/lib/intelligence/ccmToCoverageSnapshot.test.ts
+  s_87fdc9d80693d3::t_33aba30f438f77 150-159,161,177,205,207-224
+  s_87fdc9d80693d3::t_07d82ed6078264 174-176,178-204,206
+python-sidecar/pipeline/article_pipeline.py
+  s_87fdc9d80693d3::t_74c5d5018f1c92 300-303
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "77cb95142c2d5bd9d02020b5c6c62d3a3496ced6",
+  "prompts": {},
+  "sessions": {
+    "s_87fdc9d80693d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0c3b0412-06ad-4c70-9b13-e97ea0a304ad",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
