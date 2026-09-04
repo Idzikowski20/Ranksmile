@@ -23,8 +23,13 @@ const collect = async (chunks: string[]) => {
 it('dispatches every frame, however the chunks cut them', async () => {
   const frames = 'event: status\ndata: {"done":1,"total":2}\n\nevent: status\ndata: {"done":2,"total":2}\n\nevent: done\ndata: {"ok":true}\n\n';
   const whole = await collect([frames]);
-  // Cut mid-frame, mid-JSON and between frames — the buffer has to reassemble all three.
-  const split = await collect([frames.slice(0, 20), frames.slice(20, 61), frames.slice(61)]);
+  // One cut lands inside the blank-line separator (after its first newline), one inside
+  // the second frame's JSON — the buffer has to reassemble both.
+  const inSeparator = frames.indexOf('\n\n') + 1;
+  const inJson = frames.indexOf('"done":2') + 3;
+  expect(frames[inSeparator - 1]).toBe('\n');
+  expect(frames[inSeparator]).toBe('\n');
+  const split = await collect([frames.slice(0, inSeparator), frames.slice(inSeparator, inJson), frames.slice(inJson)]);
   const expected = [
     ['status', { done: 1, total: 2 }],
     ['status', { done: 2, total: 2 }],

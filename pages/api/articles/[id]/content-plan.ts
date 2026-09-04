@@ -99,6 +99,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
   const articleIdSql = await getArticleIdSql();
 
+  // A section brief can outlast a proxy's idle timeout; while the outline streams, a
+  // comment frame keeps the connection open between counts. Declared outside the try so
+  // the catch can stop it before ending the response.
+  let heartbeat: ReturnType<typeof setInterval> | null = null;
+  const stopHeartbeat = () => { if (heartbeat) { clearInterval(heartbeat); heartbeat = null; } };
+
   try {
     const rows = await db.query<ArticlePlanRow>(
       `SELECT id, target_keyword, score_data, competitor_outlines_cache, language, ai_info_to_cover
@@ -288,10 +294,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
       flushSse(res);
     };
-    // A section brief can outlast a proxy's idle timeout; a comment frame keeps the
-    // connection open between counts.
-    let heartbeat: ReturnType<typeof setInterval> | null = null;
-    const stopHeartbeat = () => { if (heartbeat) { clearInterval(heartbeat); heartbeat = null; } };
     const reply = (status: number, body: Record<string, unknown>) => {
       if (!streaming) return res.status(status).json(body);
       stopHeartbeat();
@@ -470,6 +472,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Generic on the wire — the message may carry provider or database detail — and
     // logged here in full.
     if (res.headersSent) {
+      stopHeartbeat();
       console.error('[content-plan] failed mid-stream:', error);
       res.write(`event: error\ndata: ${JSON.stringify({ status: 500, error: 'Could not plan the outline. Try again.' })}\n\n`);
       return res.end();
