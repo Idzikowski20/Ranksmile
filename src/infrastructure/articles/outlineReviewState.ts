@@ -56,3 +56,27 @@ export function isOutlineAwaitingReview(article: OutlineReviewInput | null | und
   // is the only signal that an outline was produced and never turned into an article.
   return hasPlannerBundle(article.scoreData);
 }
+
+/** A body somebody actually wrote — prose, not the planning document the outline renders as. */
+export function isWrittenArticleHtml(html: string | null | undefined): boolean {
+  const doc = html || '';
+  return stripHtmlToPlain(doc).length > 0 && !isReviewOutlineHtml(doc);
+}
+
+/**
+ * Whether the editor opens in outline review.
+ *
+ * `?reviewOutline=1` survives in browser history and in the wizard's "Open editor" link
+ * long after the article was generated. Honouring it over a written body replaced
+ * article 166 with its own outline in the editor, and the next autosave persisted the
+ * outline as the article. The param only ever means "review the plan" — a plan whose
+ * article exists has nothing left to review. A resumed review is the row's own state.
+ */
+export function shouldEnterOutlineReview(input: {
+  content?: string | null;
+  fromQuery: boolean;
+  resume?: boolean;
+}): boolean {
+  if (input.resume) return true;
+  return input.fromQuery && !isWrittenArticleHtml(input.content);
+}

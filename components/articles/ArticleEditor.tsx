@@ -17,6 +17,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import type { ScoreData, NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
+import { shouldEnterOutlineReview } from '@/src/infrastructure/articles/outlineReviewState';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '@/src/infrastructure/highlightColors';
 import { EC } from './editorChrome';
 import RanksmileImageNode from './RanksmileImageNode';
@@ -2219,11 +2220,32 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // outline read as the finished article.
     useEffect(() => {
       if (!router.isReady) return;
-      setOutlineReviewMode(router.query.reviewOutline === '1' || Boolean(resumeOutlineReview));
+      const fromQuery = router.query.reviewOutline === '1';
+      const enter = shouldEnterOutlineReview({ content, fromQuery, resume: resumeOutlineReview });
+      setOutlineReviewMode(enter);
+      // A stale param over a written article is dropped from the URL too, so history and
+      // the wizard's link stop asking on every open.
+      if (fromQuery && !enter) {
+        const q = { ...router.query };
+        delete q.reviewOutline;
+        void router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [router.isReady, router.query.reviewOutline, resumeOutlineReview]);
 
     useEffect(() => {
-      if (!outlineReviewMode) outlineAutoStarted.current = false;
+      if (outlineReviewMode) return;
+      outlineAutoStarted.current = false;
+      // Review ended without a generation (the param went away): the plan is still in
+      // the document, and with autosave no longer suspended it would be saved as the
+      // article. Put the article back. Generation clears the ref before flipping the
+      // mode, so a written article is never overwritten here.
+      const original = outlineOriginalHtmlRef.current;
+      outlineOriginalHtmlRef.current = null;
+      if (original && editorCanCommand(editor) && editor.getHTML() !== original) {
+        editor.commands.setContent(original, { emitUpdate: true });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [outlineReviewMode]);
 
     /**
