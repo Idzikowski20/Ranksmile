@@ -2,70 +2,31 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
+import {
+  completePhases, emptyPhases, failPhases, mergePhases, phasesFromStage, type AnalysisPhases,
+} from '@/src/core/domain/articles/analysisPhases';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Button } from '../../components/koala/core';
 import { useAppBanner } from '../../components/koala/shell';
 import { Icon } from '../../components/koala/icons';
-import ProgressCard, { type ProgressState } from '../../components/articles/ProgressCard';
+import AnalysisProgressPanel from '../../components/articles/AnalysisProgressPanel';
 
 /** Transient failures dominate here; three tries five seconds apart, then stop. */
 const AUTO_RETRY_MAX = 3;
 const AUTO_RETRY_SECONDS = 5;
-
-// ── Must match the API handler ────────────────────────────────────────
-const STEPS = [
-  { key: 'fetch', label: 'Fetching page content' },
-  { key: 'metadata', label: 'Extracting title and metadata' },
-  { key: 'structure', label: 'Analyzing content structure' },
-  { key: 'nlp', label: 'Extracting keywords and NLP terms' },
-  { key: 'serp', label: 'Analyzing SERP competitors' },
-  { key: 'score', label: 'Computing content score' },
-  { key: 'image', label: 'Uploading featured image' },
-  { key: 'save', label: 'Saving article' },
-] as const;
-
-type StepStatus = 'pending' | 'running' | 'done' | 'error';
-
-const STEP_STATE: Record<StepStatus, ProgressState> = {
-  pending: 'pending',
-  running: 'active',
-  done: 'done',
-  error: 'error',
-};
-
-interface StepState {
-  key: string;
-  label: string;
-  status: StepStatus;
-  errorMessage?: string;
-}
 
 interface AnalysisProgressPayload {
   articleId?: number;
   jobId?: string;
   step?: string;
   currentStage?: string;
+  stageProgress?: number;
+  phases?: AnalysisPhases | null;
   message?: string;
   status?: string;
   progressMessage?: string;
   error?: string | null;
 }
-
-type StageName = 'fetch_page' | 'scrape_serp' | 'classify_content' | 'extract_terms' | 'score_ranking' | 'ai_search' | 'finalizing' | 'done';
-
-const STAGE_ORDER: StageName[] = [
-  'fetch_page', 'scrape_serp', 'classify_content', 'extract_terms', 'score_ranking', 'ai_search', 'finalizing',
-];
-
-const STAGE_TO_STEPS: Record<string, string[]> = {
-  fetch_page: ['fetch', 'metadata', 'structure'],
-  scrape_serp: ['serp'],
-  classify_content: ['nlp'],
-  extract_terms: ['nlp'],
-  score_ranking: ['score'],
-  ai_search: [],
-  finalizing: ['image', 'save'],
-};
 
 const PAGE_RUN_PREFIX = 'ranksmile-deep-analysis-page:';
 
@@ -96,50 +57,12 @@ function clearPageRun(key: string) {
   sessionStorage.removeItem(key);
 }
 
-function applyStageToSteps(stage: string, prev: StepState[]): StepState[] {
-  if (stage === 'done') return prev.map((s) => ({ ...s, status: 'done' as StepStatus }));
-  const stageIdx = STAGE_ORDER.indexOf(stage as StageName);
-  if (stageIdx === -1) return prev;
-  return prev.map((s) => {
-    for (let i = 0; i < stageIdx; i += 1) {
-      const completedStepKeys = STAGE_TO_STEPS[STAGE_ORDER[i]] || [];
-      if (completedStepKeys.includes(s.key)) return { ...s, status: 'done' as StepStatus };
-    }
-    const currentStepKeys = STAGE_TO_STEPS[stage] || [];
-    if (currentStepKeys.includes(s.key) && s.status !== 'done') return { ...s, status: 'running' as StepStatus };
-    return s;
-  });
-}
-
-function markFailedStep(
-  prev: StepState[],
-  step: string | undefined,
-  currentStage: string | undefined,
-  message: string,
-): StepState[] {
-  const direct = step && prev.find((item) => item.key === step);
-  const mappedKeys = direct
-    ? []
-    : [currentStage, step].flatMap((stage) => (stage ? STAGE_TO_STEPS[stage] || [] : []));
-  const mapped = prev.find((item) => mappedKeys.includes(item.key) && item.status === 'running')
-    || prev.find((item) => mappedKeys.includes(item.key) && item.status !== 'done');
-  const failed = direct
-    || mapped
-    || prev.find((item) => item.status === 'running')
-    || prev.find((item) => item.status === 'pending');
-  if (!failed) return prev;
-  return prev.map((item) => (
-    item.key === failed.key ? { ...item, status: 'error', errorMessage: message } : item
-  ));
-}
-
 const DeepAnalysisPage: NextPage = () => {
   const router = useRouter();
   const { url, keywords: kwParam, country, domainId: domainIdParam, flow: flowParam, language: languageParam, mode: modeParam } = router.query;
 
-  const [steps, setSteps] = useState<StepState[]>(
-    STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })),
-  );
+  // The same typed phases the editor's side panel renders, so both views are one UI.
+  const [phases, setPhases] = useState<AnalysisPhases>(emptyPhases());
   const [articleId, setArticleId] = useState<number | null>(null);
   const [recoveryArticleId, setRecoveryArticleId] = useState<number | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -256,12 +179,12 @@ const DeepAnalysisPage: NextPage = () => {
                 }
               } else if (currentEvent === 'error') {
                 const message = data.message || 'Analysis failed';
-                setSteps((prev) => markFailedStep(prev, data.step, data.currentStage, message));
+                setPhases((prev) => failPhases(prev, message));
                 setOverallError(message);
                 clearPageRun(runSessionKey);
               } else if (currentEvent === 'done') {
                 if (data.articleId) setArticleId(data.articleId);
-                setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' as StepStatus })));
+                setPhases((prev) => completePhases(prev));
                 setAllDone(true);
                 clearPageRun(runSessionKey);
               }
@@ -317,7 +240,7 @@ const DeepAnalysisPage: NextPage = () => {
           // Mark the in-flight step too, exactly as the `failed` branch below does.
           // Stopping the poll alone left the step list spinning behind the banner, so the
           // page said both "gone" and "still working" at once.
-          setSteps((prev) => markFailedStep(prev, undefined, undefined, message));
+          setPhases((prev) => failPhases(prev, message));
           setOverallError(message);
           clearPageRun(runSessionKey);
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -332,26 +255,31 @@ const DeepAnalysisPage: NextPage = () => {
           if (articleId) writePageRun(runSessionKey, articleId, data.jobId);
         }
 
+        // Typed phases when the sidecar patched them; the coarse stage otherwise — the
+        // same fallback the editor's hook and job-progress use.
+        const advance = (prev: AnalysisPhases): AnalysisPhases => {
+          if (data.phases) return data.phases;
+          if (!data.currentStage) return prev;
+          return mergePhases(prev, phasesFromStage(data.currentStage, data.stageProgress ?? 0));
+        };
+
         if (data.status === 'failed') {
           const message = data.error || data.progressMessage || data.message || 'Analysis failed';
-          setSteps((prev) => markFailedStep(prev, data.step, data.currentStage, message));
+          setPhases((prev) => failPhases(advance(prev), message));
           setOverallError(message);
           clearPageRun(runSessionKey);
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
           return;
         }
         if (data.status === 'done') {
-          setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' as StepStatus })));
+          setPhases((prev) => completePhases(prev));
           setAllDone(true);
           clearPageRun(runSessionKey);
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
           return;
         }
 
-        const stage = data.currentStage as string | undefined;
-        if (stage) {
-          setSteps((prev) => applyStageToSteps(stage, prev));
-        }
+        setPhases(advance);
       } catch { /* network errors are non-fatal for polling */ }
     };
 
@@ -392,7 +320,7 @@ const DeepAnalysisPage: NextPage = () => {
     setArticleId(null);
     setJobId(null);
     setAllDone(false);
-    setSteps(STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })));
+    setPhases(emptyPhases());
     clearPageRun(runSessionKey);
     startedRef.current = false;
     setRetryCount((c) => c + 1);
@@ -473,15 +401,9 @@ const DeepAnalysisPage: NextPage = () => {
         <p className="koala-wizard-subtitle">{subtitle}</p>
       </div>
 
-      <div aria-label="Deep analysis progress" aria-live="polite">
-        <ProgressCard
-          rows={steps.map((step) => ({
-            id: step.key,
-            label: step.label,
-            detail: step.errorMessage,
-            state: STEP_STATE[step.status],
-          }))}
-        />
+      {/* The editor's own analysis panel — one UI for the wizard and the side column. */}
+      <div aria-label="Deep analysis progress">
+        <AnalysisProgressPanel phases={phases} />
       </div>
 
       {/* The message itself is the banner above the topbar; only the choices stay here.

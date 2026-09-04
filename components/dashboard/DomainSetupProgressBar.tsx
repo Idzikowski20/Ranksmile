@@ -56,7 +56,7 @@ const DomainSetupProgressBar = ({ setup, onRetry }: { setup?: SetupStatus; onRet
             steps={steps}
             ariaLabel="Domain analysis details"
             error={setup.error || 'The analysis stopped before it finished.'}
-            action={{ label: 'Retry', onClick: onRetry }}
+            actions={[{ label: 'Retry', onClick: onRetry, primary: true }]}
          />
       );
    }

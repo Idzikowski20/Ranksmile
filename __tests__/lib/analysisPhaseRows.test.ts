@@ -34,7 +34,7 @@ describe('analysisPhaseGroups', () => {
       fetchingSerp: { status: 'DONE' },
       crawlingSerp: { status: 'RUNNING', total: 10 },
     });
-    expect(rows(phases).google[0]).toMatchObject({ state: 'done', label: 'Got 10 search results' });
+    expect(rows(phases).google.find((r) => r.id === 'serp')).toMatchObject({ state: 'done', label: 'Got 10 search results' });
   });
 
   it('marks a phase that errored', () => {

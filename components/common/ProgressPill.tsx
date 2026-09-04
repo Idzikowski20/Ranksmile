@@ -50,7 +50,7 @@ export const Spinner = ({ size = 20 }: { size?: number }) => (
    />
 );
 
-const Check = ({ size = 20 }: { size?: number }) => (
+export const Check = ({ size = 20 }: { size?: number }) => (
    <span
       aria-hidden="true"
       style={{
@@ -144,11 +144,15 @@ export type ProgressPillProps = {
    ariaLabel?: string;
    /** The run stopped: shown in place of the phase line, with the failed step marked. */
    error?: string;
-   /** The one control a stopped run needs — Retry. A sibling of the pill, never inside it. */
-   action?: { label: string; onClick: () => void };
+   /** Controls the state needs — Retry, Cancel, Save. Siblings of the pill, never inside it. */
+   actions?: Array<{ label: string; onClick: () => void; primary?: boolean; busy?: boolean }>;
+   /** Replaces the spinner when the job is waiting on the reader rather than working. */
+   leadIcon?: React.ReactNode;
 };
 
-const ProgressPill = ({ title, steps, footer, rightReserve = 0, ariaLabel = 'Progress details', error, action }: ProgressPillProps) => {
+const ProgressPill = ({
+   title, steps, footer, rightReserve = 0, ariaLabel = 'Progress details', error, actions = [], leadIcon,
+}: ProgressPillProps) => {
    const [hovered, setHovered] = useState(false);
    // Pinned wins over hover: reading the timeline while the pointer is elsewhere (or on a
    // touch screen, where there is no hover at all) needs the panel to stay put.
@@ -248,7 +252,9 @@ const ProgressPill = ({ title, steps, footer, rightReserve = 0, ariaLabel = 'Pro
                   boxShadow: LIFT,
                }}
             >
-               <span style={{ display: 'inline-flex', flexShrink: 0 }}>{error ? <Failed size={24} /> : <Spinner size={24} />}</span>
+               <span style={{ display: 'inline-flex', flexShrink: 0 }}>
+                  {error ? <Failed size={24} /> : (leadIcon ?? <Spinner size={24} />)}
+               </span>
                <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
                   <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                      <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>{title}</span>
@@ -273,27 +279,32 @@ const ProgressPill = ({ title, steps, footer, rightReserve = 0, ariaLabel = 'Pro
                   </span>
                </span>
             </button>
-            {action && (
+            {actions.map((a) => (
                <button
+                  key={a.label}
                   type="button"
-                  onClick={action.onClick}
+                  onClick={a.onClick}
+                  disabled={a.busy}
                   style={{
                      flexShrink: 0,
                      padding: '0 18px',
                      borderRadius: RADIUS,
-                     border: 'none',
-                     background: ON_SURFACE,
-                     color: SURFACE,
+                     // Primary is the light pill on the dark row; secondary keeps the dark
+                     // surface and an on-surface hairline, so Save always reads first.
+                     border: a.primary ? 'none' : `1px solid color-mix(in srgb, ${ON_SURFACE} 35%, transparent)`,
+                     background: a.primary ? ON_SURFACE : SURFACE,
+                     color: a.primary ? SURFACE : ON_SURFACE,
                      fontFamily: FONT,
                      fontSize: 14,
                      fontWeight: 600,
-                     cursor: 'pointer',
+                     cursor: a.busy ? 'progress' : 'pointer',
+                     opacity: a.busy ? 0.7 : 1,
                      boxShadow: LIFT,
                   }}
                >
-                  {action.label}
+                  {a.label}
                </button>
-            )}
+            ))}
             </div>
          </div>
       </div>

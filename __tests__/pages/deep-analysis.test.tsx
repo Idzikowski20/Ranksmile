@@ -144,8 +144,8 @@ describe('DeepAnalysisPage', () => {
     const next = screen.getByRole('button', { name: 'Content type' });
     expect(next).toBeDisabled();
 
-    expect(container.querySelectorAll('.progress-row--pending')).toHaveLength(8);
-    expect(container.querySelectorAll('.progress-row-marker--pending')).toHaveLength(8);
+    expect(container.querySelectorAll('.progress-row--pending')).toHaveLength(7);
+    expect(container.querySelectorAll('.progress-row-marker--pending')).toHaveLength(7);
     await act(async () => {
       stream.release('event: created\ndata: {"articleId":177}\n\n');
     });
@@ -155,8 +155,11 @@ describe('DeepAnalysisPage', () => {
     await act(async () => {
       stream.release('event: created\ndata: {"articleId":177,"jobId":"job_177_1"}\n\n');
     });
-    await waitFor(() => expect(container.querySelectorAll('.progress-row')).toHaveLength(8));
-    await waitFor(() => expect(container.querySelector('.progress-row--active [role="status"]')).toBeInTheDocument());
+    await waitFor(() => expect(container.querySelectorAll('.progress-row')).toHaveLength(7));
+    // The shared panel voices progress through one live region, so the marker itself is
+    // presentation-only — the row's state class is what says "in progress".
+    await waitFor(() => expect(container.querySelector('.progress-row--active')).toBeInTheDocument());
+    expect(screen.getByText('Importing page content')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/articles/job-progress?jobId=job_177_1');
 
     await waitFor(() => expect(next).toBeEnabled());
@@ -179,10 +182,10 @@ describe('DeepAnalysisPage', () => {
     await waitFor(() => expect(container.querySelector('.progress-row--error')).toBeInTheDocument());
     const errorRow = container.querySelector<HTMLElement>('.progress-row--error');
     if (!errorRow) throw new Error('Expected fetch step to be in the error state');
-    expect(within(errorRow).getByText('Fetching page content')).toBeInTheDocument();
+    expect(within(errorRow).getByText('Importing page content')).toBeInTheDocument();
     expect(errorRow).toHaveTextContent('Fetch failed');
     expect(errorRow.querySelector('.progress-row-marker--error')).toBeInTheDocument();
-    expect(container.querySelectorAll('.progress-row--pending')).toHaveLength(7);
+    expect(container.querySelectorAll('.progress-row--pending')).toHaveLength(6);
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
   });
 
@@ -312,7 +315,7 @@ describe('DeepAnalysisPage', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent("Couldn't analyze search results"));
     const errorRows = container.querySelectorAll<HTMLElement>('.progress-row--error');
     expect(errorRows).toHaveLength(1);
-    expect(errorRows[0]).toHaveTextContent('Analyzing SERP competitors');
+    expect(errorRows[0]).toHaveTextContent('Getting search results');
     expect(errorRows[0]).toHaveTextContent("Couldn't analyze search results. Please try again.");
     expect(screen.getByRole('alert')).toHaveTextContent("Couldn't analyze search results");
     expect(screen.queryByText('SERP collection failed')).not.toBeInTheDocument();
@@ -407,8 +410,8 @@ describe('DeepAnalysisPage', () => {
     const { container } = renderPage();
 
     await waitFor(() => {
-      expect(container.querySelectorAll('.progress-row--done')).toHaveLength(8);
-      expect(container.querySelectorAll('.progress-row-marker--done')).toHaveLength(8);
+      expect(container.querySelectorAll('.progress-row--done')).toHaveLength(7);
+      expect(container.querySelectorAll('.progress-row-marker--done')).toHaveLength(7);
     });
     expect(fetchMock).toHaveBeenCalledWith('/api/articles/job-progress?jobId=job_177_1');
   });

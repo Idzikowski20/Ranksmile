@@ -89,3 +89,32 @@ export function phasesFromStage(stage: string, stagePercent: number): AnalysisPh
       return {};
   }
 }
+
+const PHASE_ORDER: (keyof AnalysisPhases)[] = [
+  'importingContent', 'fetchingSerp', 'crawlingSerp', 'loadingCompetitors', 'aiSearch',
+];
+
+/**
+ * The run stopped: the phase in flight carries the error, or — when nothing had started —
+ * the first phase that never ran. One row turns red; the rest stay where they were.
+ */
+export function failPhases(prev: AnalysisPhases | null, message: string): AnalysisPhases {
+  const base = prev ?? emptyPhases();
+  const at = PHASE_ORDER.find((k) => base[k].status === 'RUNNING')
+    ?? PHASE_ORDER.find((k) => base[k].status === 'NEW')
+    ?? PHASE_ORDER[PHASE_ORDER.length - 1];
+  return { ...base, [at]: { ...base[at], status: 'ERROR', error: message } };
+}
+
+/** The job reported done: every phase is, whatever the last patch said. */
+export function completePhases(prev: AnalysisPhases | null): AnalysisPhases {
+  const base = prev ?? emptyPhases();
+  const done = <T extends SimplePhase>(phase: T): T => ({ ...phase, status: 'DONE' as const, error: null });
+  return {
+    importingContent: done(base.importingContent),
+    fetchingSerp: done(base.fetchingSerp),
+    crawlingSerp: done(base.crawlingSerp),
+    loadingCompetitors: done(base.loadingCompetitors),
+    aiSearch: done(base.aiSearch),
+  };
+}
