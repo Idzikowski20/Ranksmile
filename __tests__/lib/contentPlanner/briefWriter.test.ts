@@ -637,6 +637,19 @@ describe('writeOutlineBrief batching', () => {
  * One section per call means the completion cap has to shrink with it: the flat
  * whole-outline budget let every call — and every retry — bill for fifteen sections.
  */
+/** The pill counts sections as their briefs land, in completion order. */
+it('reports each section brief as it lands', async () => {
+  const seen: Array<[number, number]> = [];
+  await writeOutlineBrief({
+    keyword: 'k',
+    bundle: bundle(),
+    brandKnowledge: BRAND,
+    llmEdit: async () => ({ html: GOOD, tokens: 1 }),
+    onProgress: (done, total) => { seen.push([done, total]); },
+  });
+  expect(seen).toEqual([[1, 2], [2, 2]]);
+});
+
 describe('briefMaxTokens', () => {
   it('scales with the sections a call actually briefs, with a writable floor and a ceiling', () => {
     // The floor fits one whole section's brief; a tight cap cuts the JSON mid-object.

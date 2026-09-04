@@ -30,23 +30,42 @@ export function generationSteps(status: string): ProgressStep[] {
    ];
 }
 
+/**
+ * Outline planning as the planner reports it: one call per section brief, counted as
+ * they land. Before the first count the request is reading competitors and planning
+ * the structure; a saved outline being read back has no count at all.
+ */
+export function outlineSteps(progress?: { done: number; total: number }, planningLabel?: string): ProgressStep[] {
+   if (planningLabel) return [{ label: planningLabel, state: 'active' }];
+   const briefing = Boolean(progress && progress.total > 0);
+   return [
+      { label: 'Reading competitors and planning the structure', state: briefing ? 'done' : 'active' },
+      {
+         label: 'Writing section briefs',
+         state: briefing ? 'active' : 'idle',
+         detail: briefing ? `${progress?.done} / ${progress?.total} sections` : undefined,
+      },
+   ];
+}
+
 type Props = {
    mode: 'outline' | 'article';
-   /** The sidecar's status line (article) — unused for the outline, which reports nothing. */
+   /** The sidecar's status line (article). */
    status?: string;
    /** Overrides the outline label — reading a saved outline back is not planning one. */
    planningLabel?: string;
+   /** Section briefs written so far (outline) — from the content-plan stream. */
+   outlineProgress?: { done: number; total: number };
    rightReserve?: number;
 };
 
 /** Progress for planning an outline or writing an article, in the AI Visibility bar's shape. */
-const GenerationProgressBar = ({ mode, status = '', planningLabel, rightReserve }: Props) => {
+const GenerationProgressBar = ({ mode, status = '', planningLabel, outlineProgress, rightReserve }: Props) => {
    if (mode === 'outline') {
-      // One call, no counters to show: the request returns the whole outline at once.
       return (
          <ProgressPill
             title="Planning your outline"
-            steps={[{ label: planningLabel || 'Reading competitors and writing section briefs', state: 'active' }]}
+            steps={outlineSteps(outlineProgress, planningLabel)}
             ariaLabel="Outline progress details"
             rightReserve={rightReserve}
          />

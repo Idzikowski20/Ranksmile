@@ -18,6 +18,7 @@ import type { ScoreData, NlpTerm } from '@/src/infrastructure/articles/contentSc
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 import { shouldEnterOutlineReview } from '@/src/infrastructure/articles/outlineReviewState';
+import readSse from '@/src/core/shared/readSse';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '@/src/infrastructure/highlightColors';
 import { EC } from './editorChrome';
 import RanksmileImageNode from './RanksmileImageNode';
@@ -1161,6 +1162,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
      * told the planner was running again — and had no way to tell that it wasn't.
      */
     const [outlineRestoring, setOutlineRestoring] = useState(false);
+    // Section briefs written so far, off the content-plan stream; the pill counts them.
+    const [outlineProgress, setOutlineProgress] = useState<{ done: number; total: number } | undefined>();
     const [generateBusy, setGenerateBusy] = useState(false);
     // Empty while idle. This doubles as the outline bar's status line, and seeding it
     // with "Generating article…" meant a bar that was waiting for the reviewer claimed a
@@ -1944,16 +1947,36 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       outlineRequestRef.current = request;
       outlineOriginalHtmlRef.current ??= editor.getHTML();
       setOutlineBusy(true);
+      setOutlineProgress(undefined);
       try {
-        const res = await fetch(articleId ? `/api/articles/${articleId}/content-plan` : '/api/articles/generate-outline', {
+        // The article route streams the per-section count; the keyword-only route is one
+        // plain reply. A non-stream reply (an early 4xx, or a proxy that dropped the
+        // header) is read as JSON either way.
+        const res = await fetch(articleId ? `/api/articles/${articleId}/content-plan?stream=1` : '/api/articles/generate-outline', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(articleId ? { persist: true } : { keyword: kw }),
           signal: request.signal,
         });
-        const data = await res.json() as { headings?: ApprovedOutlineHeading[]; error?: string };
+        type OutlineReply = { headings?: ApprovedOutlineHeading[]; error?: string; status?: number };
+        let data: OutlineReply = {};
+        let replyOk = res.ok;
+        if (res.headers.get('content-type')?.includes('text/event-stream')) {
+          await readSse(res, (event, payload) => {
+            if (outlineRequestRef.current !== request) return;
+            if (event === 'status') {
+              const { done, total } = payload as { done?: number; total?: number };
+              if (typeof done === 'number' && typeof total === 'number') setOutlineProgress({ done, total });
+            } else if (event === 'done' || event === 'error') {
+              data = payload as OutlineReply;
+              replyOk = event === 'done';
+            }
+          });
+        } else {
+          data = await res.json() as OutlineReply;
+        }
         if (outlineRequestRef.current !== request || request.signal.aborted) return;
         const headings = Array.isArray(data.headings) ? data.headings : [];
-        if (!res.ok || headings.length === 0) throw new Error(data.error || 'Could not generate an outline.');
+        if (!replyOk || headings.length === 0) throw new Error(data.error || 'Could not generate an outline.');
         const html = reviewOutlineToHtml(headings);
         await playReveal(html, true, 'preserve');
         if (outlineRequestRef.current !== request || request.signal.aborted) return;
@@ -1964,6 +1987,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         if (outlineRequestRef.current === request) {
           outlineRequestRef.current = null;
           setOutlineBusy(false);
+          setOutlineProgress(undefined);
         }
       }
     };
@@ -2730,6 +2754,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             mode={generateBusy ? 'article' : 'outline'}
             status={generateMsg}
             planningLabel={outlineRestoring ? 'Loading saved outline' : undefined}
+            outlineProgress={outlineProgress}
             rightReserve={bottomBarRightReserve}
           />
         )}

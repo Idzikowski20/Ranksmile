@@ -109,6 +109,8 @@ export type BriefWriterInput = {
   language?: string;
   /** Charged to the org's shared pool: the gate that blocks the call also has to see it. */
   onTokens?: (tokens: number) => void | Promise<void>;
+  /** A section's brief landed — `done` of `total`, in completion order. Feeds the progress pill. */
+  onProgress?: (done: number, total: number) => void;
   signal?: AbortSignal;
   llmEdit?: (userPrompt: string, systemPrompt: string) => Promise<{ html: string; tokens: number }>;
 };
@@ -637,7 +639,13 @@ export async function writeOutlineBrief(input: BriefWriterInput): Promise<Approv
   // In parallel, but bounded: the batches share no state, so the reviewer waits on the
   // slowest one rather than on their sum — while a 15-section outline firing 15 calls at
   // once (30 with retries) is what a provider throttles into a failed brief.
-  const results = await mapPool(batches, BRIEF_CONCURRENCY, (batch) => runBriefBatch(input, batch));
+  let done = 0;
+  const results = await mapPool(batches, BRIEF_CONCURRENCY, async (batch) => {
+    const result = await runBriefBatch(input, batch);
+    done += 1;
+    input.onProgress?.(done, batches.length);
+    return result;
+  });
 
   const written = new Map<number, { heading: string; instructions: string[] }>();
   let title = '';

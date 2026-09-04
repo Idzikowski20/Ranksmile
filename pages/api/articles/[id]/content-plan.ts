@@ -12,6 +12,7 @@ import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { flushHeaders, flushSse } from '@/src/core/shared/types/api';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import {
   aiIntelFromScoreData,
@@ -275,6 +276,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const over = await orgBudgetBlocked(orgId);
     if (over) return res.status(429).json(over);
 
+    // `?stream=1`: the brief is one call per section and the editor's pill wants the
+    // count, so the reply becomes SSE — `status {done,total}` per section, then the same
+    // payload as the JSON reply under `done` (or `error`). Plain JSON otherwise.
+    const streaming = req.query.stream === '1';
+    const send = (event: string, data: Record<string, unknown>) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      flushSse(res);
+    };
+    const reply = (status: number, body: Record<string, unknown>) => {
+      if (!streaming) return res.status(status).json(body);
+      send(status >= 400 ? 'error' : 'done', { status, ...body });
+      return res.end();
+    };
+    if (streaming) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.status(200);
+      flushHeaders(res);
+      send('status', { done: 0, total: result.bundle.briefs.length });
+    }
+
     // Brand knowledge finally reaches the planner. Without it the only company facts in
     // scope were the competitors', which is exactly how a rival's address, licence number
     // and testimonials ended up as instructions in a reviewed outline.
@@ -292,6 +316,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       competitorHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
       competitorTitles: competitorPageTitles(row.competitor_outlines_cache),
       onTokens: (tokens) => recordAiTokens(orgId, tokens),
+      onProgress: streaming ? (done, total) => send('status', { done, total }) : undefined,
     });
     // Instructions are never reconstructed mechanically. reviewOutlineFromBundle used to
     // catch a failed brief and hand the reviewer "Pokryj <heading> z przypisanymi claims"
@@ -313,7 +338,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
       if (!headings.length) headings = outlineHeadingsFromBundle(result.bundle.outline);
       if (!headings.length) {
-        return res.status(503).json({
+        return reply(503, {
           error: 'Could not write the outline brief. Try again in a moment.',
           cause: 'brief_writer_failed',
           headings: [],
@@ -360,7 +385,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         // 200 with headings that were never stored puts the reviewer straight back into
         // the bug, losing the brief on the next refresh with nothing to explain it.
         console.warn('[content-plan] brief persist failed:', getErrorMessage(e));
-        return res.status(503).json({
+        return reply(503, {
           error: 'The outline was created but could not be saved. Try again.',
           cause: 'brief_persist_failed',
           headings: [],
@@ -393,7 +418,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         claimCount: result.bundle.targetKg.claims.length,
         analysisRunning,
       });
-      return res.status(422).json({
+      return reply(422, {
         error: gap.message,
         cause: gap.code,
         validatorReason: reason ?? null,
@@ -409,7 +434,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
-    return res.status(200).json({
+    return reply(200, {
       ok: true,
       canWrite: result.canWrite,
       blueprint: result.bundle.blueprint,
@@ -428,6 +453,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       questionCount: result.bundle.targetKg.questions.length,
     });
   } catch (error) {
+    // Once the stream is open the status line is gone; the failure travels as an event.
+    if (res.headersSent) {
+      res.write(`event: error\ndata: ${JSON.stringify({ status: 500, error: getErrorMessage(error) || 'content-plan failed' })}\n\n`);
+      return res.end();
+    }
     return res.status(500).json({ error: getErrorMessage(error) || 'content-plan failed' });
   }
 }
