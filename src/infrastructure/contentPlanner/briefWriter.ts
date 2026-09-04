@@ -494,15 +494,16 @@ type BriefAttempt = {
 const MIN_SECTION_COVERAGE = 0.8;
 const BRIEF_ATTEMPTS = 2;
 /**
- * Sections per call.
+ * Sections per call: one.
  *
  * One call for the whole outline had to fit ~6 instructions × 13 sections in a single
- * reply — the failure that shipped twelve stub sections. Batching bounds every reply to
- * something a model comfortably completes. Not one call per section: the brand document,
- * the terms, the ranking-page titles and the fact sheet are repeated in every prompt, so
- * thirteen calls would pay that preamble thirteen times to save nothing.
+ * reply — the failure that shipped twelve stub sections. Five per call bounded the reply;
+ * one per call bounds the wait. The calls run in parallel, so the outline is ready when
+ * the slowest single section is, not the slowest batch of five — the same split that
+ * made section-level writing several times faster. The preamble (brand document, terms,
+ * ranking titles, fact sheet) is repeated per call; input tokens are the cheap side.
  */
-const BRIEF_BATCH_SIZE = 5;
+const BRIEF_BATCH_SIZE = 1;
 
 /** One call: complete, charge, parse, pair. `null` when the call or the parse failed. */
 async function runBriefAttempt(

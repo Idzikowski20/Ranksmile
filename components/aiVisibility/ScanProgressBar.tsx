@@ -1,12 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { AiVisScanStatus } from '../../services/aiVisibility';
 import { ModelIcon } from './modelIcons';
 import DomainFavicon from '../common/DomainFavicon';
+import ProgressPill, { phaseState, type ProgressStep } from '../common/ProgressPill';
 
-const FONT = 'var(--font-family-primary)';
-const SURFACE = 'var(--koala-bg-inverse)';
-const ON_SURFACE = 'var(--koala-text-on-inverse)';
-const LIFT = '0 16px 48px rgba(0,0,0,0.28)';
 /**
  * Marks sit on the dark pill, so each gets its own opaque disc — the same treatment as the
  * engine badges elsewhere (bg-primary on border-primary). A translucent wash let the dark
@@ -14,75 +11,13 @@ const LIFT = '0 16px 48px rgba(0,0,0,0.28)';
  */
 const MARK_BG = 'var(--koala-bg-primary)';
 const MARK_BORDER = 'var(--koala-border-primary)';
-/** Card radius from DESIGN.md — the pill matches the timeline above it. */
-const RADIUS = 16;
 
-type StepState = 'done' | 'active' | 'idle';
-type Step = {
-   label: string;
-   state: StepState;
-   detail?: string;
+type Step = ProgressStep & {
    /** Engines this step queries — an icon each, so the row names what it is working on. */
    models?: string[];
    /** The page the phase is on right now — one mark, not a trail. */
    domain?: string;
 };
-
-/** Decorative: the pill's single status region announces the phase, so a spinner per step
- *  would have screen readers reading "Loading" several times at once.
- *  data-aiv-spin sits on this span because it is the element carrying the animation —
- *  `animation` does not inherit, so the reduced-motion rule must target it directly. */
-const Spinner = ({ size = 20 }: { size?: number }) => (
-   <span
-      aria-hidden="true"
-      data-aiv-spin
-      style={{
-         width: size,
-         height: size,
-         borderRadius: '50%',
-         border: '2px solid currentColor',
-         borderBottomColor: 'transparent',
-         display: 'inline-block',
-         animation: 'aiv-spin 0.8s linear infinite',
-      }}
-   />
-);
-
-const Check = ({ size = 20 }: { size?: number }) => (
-   <span
-      aria-hidden="true"
-      style={{
-         width: size,
-         height: size,
-         borderRadius: '50%',
-         background: 'var(--koala-status-success)',
-         color: 'var(--koala-text-on-brand)',
-         display: 'inline-flex',
-         alignItems: 'center',
-         justifyContent: 'center',
-         flexShrink: 0,
-      }}
-   >
-      <svg viewBox="0 0 24 24" width={size * 0.6} height={size * 0.6} fill="none" aria-hidden="true">
-         <path d="m4.5 12.75 6 6 9-13.5" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-   </span>
-);
-
-const Pending = ({ size = 20 }: { size?: number }) => (
-   <span
-      aria-hidden="true"
-      style={{
-         width: size,
-         height: size,
-         borderRadius: '50%',
-         border: '2px solid currentColor',
-         opacity: 0.35,
-         display: 'inline-block',
-         flexShrink: 0,
-      }}
-   />
-);
 
 /**
  * The four phases the pipeline actually runs, each with the counter its own table can
@@ -117,7 +52,7 @@ function buildSteps(scan?: AiVisScanStatus): Step[] {
    const profilesIn = answersIn && (scan?.profilesDone ?? false);
 
    // Reached once the answers are in: every follow-on phase starts then, together.
-   const phase = (reached: boolean, complete: boolean): StepState => (!reached ? 'idle' : complete ? 'done' : 'active');
+   const phase = phaseState;
 
    return [
       {
@@ -186,9 +121,6 @@ const MARK: React.CSSProperties = {
 };
 
 const StepMarks = ({ step }: { step: Step }) => {
-   // Only while the step is live: a finished step's tick is the information, and an idle
-   // one has nothing to show yet.
-   if (step.state !== 'active') return null;
    if (step.models?.length) {
       return (
          <MarkRow>
@@ -208,41 +140,14 @@ const StepMarks = ({ step }: { step: Step }) => {
    return null;
 };
 
-const StepRow = ({ step, last }: { step: Step; last: boolean }) => (
-   <div style={{ display: 'flex', gap: 12 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 20 }}>
-         {step.state === 'done' ? <Check /> : step.state === 'active' ? <Spinner /> : <Pending />}
-         {!last && <div aria-hidden="true" style={{ flex: 1, width: 1, minHeight: 8, margin: '4px 0', background: 'currentColor', opacity: 0.25 }} />}
-      </div>
-      <div style={{ minWidth: 0, flex: 1, paddingBottom: last ? 0 : 10 }}>
-         <div style={{ display: 'flex', gap: 12, alignItems: 'center', minHeight: 20 }}>
-            <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 500, opacity: step.state === 'idle' ? 0.6 : 1 }}>
-               {step.label}
-            </span>
-            <span style={{ flex: 1, minWidth: 0, display: 'flex', paddingLeft: 4 }}><StepMarks step={step} /></span>
-            {step.detail && (
-               <span style={{ flexShrink: 0, fontSize: 12, opacity: 0.75, fontVariantNumeric: 'tabular-nums' }}>{step.detail}</span>
-            )}
-         </div>
-      </div>
-   </div>
-);
-
 /**
- * Scan progress for AI Visibility: a compact pill pinned to the bottom of the content
- * column, which reveals the full phase timeline on hover or keyboard focus.
+ * Scan progress for AI Visibility.
  *
  * The scan itself runs server-side — the sidecar drives `run-chunk` until every
  * (prompt × model) pair is answered — so leaving the page does not stop it. The pill only
  * polls the scan record; that is what the footer line promises.
  */
 const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScanStatus }) => {
-   const [hovered, setHovered] = useState(false);
-   // Pinned wins over hover: reading the timeline while the pointer is elsewhere (or on a
-   // touch screen, where there is no hover at all) needs the panel to stay put.
-   const [pinned, setPinned] = useState(false);
-   const open = pinned || hovered;
-
    // One chime when the last phase drains. `wasBusy` starts false, so a page opened after
    // a scan already finished stays silent — the sound marks a transition, not a state.
    const wasBusy = useRef(false);
@@ -265,110 +170,15 @@ const ScanProgressBar = ({ visible, scan }: { visible: boolean; scan?: AiVisScan
 
    if (!visible) return null;
 
-   const steps = buildSteps(scan);
-   const activeIndex = steps.findIndex((s) => s.state === 'active');
-   const current = activeIndex >= 0 ? steps[activeIndex] : steps[steps.length - 1];
-   const doneCount = steps.filter((s) => s.state === 'done').length;
+   const steps = buildSteps(scan).map((s) => ({ ...s, marks: <StepMarks step={s} /> }));
 
    return (
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 24, zIndex: 200, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-         <style>{'@keyframes aiv-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { [data-aiv-spin] { animation: none !important; } }'}</style>
-
-         {/* Hover lives on the wrapper, not the pill: closing on the pill's mouseleave shut
-             the timeline before the pointer could arrive. The 8px gap is padding inside the
-             timeline's positioner rather than an offset, so the pointer never leaves the
-             subtree on the way up. */}
-         <div
-            style={{ position: 'relative', pointerEvents: 'auto', width: 'min(680px, calc(100vw - 48px))' }}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-         >
-            {/* Timeline, above the pill */}
-            <div
-               style={{
-                  position: 'absolute',
-                  bottom: '100%',
-                  left: 0,
-                  right: 0,
-                  paddingBottom: 8,
-                  pointerEvents: open ? 'auto' : 'none',
-               }}
-            >
-            <div
-               role="region"
-               aria-label="Scan progress details"
-               style={{
-                  borderRadius: 16,
-                  background: SURFACE,
-                  color: ON_SURFACE,
-                  boxShadow: LIFT,
-                  fontFamily: FONT,
-                  overflow: 'hidden',
-                  opacity: open ? 1 : 0,
-                  transform: open ? 'translateY(0)' : 'translateY(4px)',
-                  transition: 'opacity 150ms ease, transform 150ms ease',
-               }}
-            >
-               <div style={{ padding: 20 }}>
-                  {steps.map((s, i) => <StepRow key={s.label} step={s} last={i === steps.length - 1} />)}
-               </div>
-               <div style={{ padding: '10px 20px', fontSize: 12, opacity: 0.75, borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-                  You can leave this page — the scan keeps running in the background.
-               </div>
-            </div>
-            </div>
-
-            {/* Collapsed pill */}
-            <button
-               type="button"
-               onClick={() => setPinned((v) => !v)}
-               onFocus={() => setHovered(true)}
-               onBlur={() => setHovered(false)}
-               aria-expanded={open}
-               aria-pressed={pinned}
-               title={pinned ? 'Unpin the phase timeline' : 'Pin the phase timeline open'}
-               style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 20px',
-                  borderRadius: RADIUS,
-                  border: 'none',
-                  background: SURFACE,
-                  color: ON_SURFACE,
-                  fontFamily: FONT,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  boxShadow: LIFT,
-               }}
-            >
-               <span style={{ display: 'inline-flex', flexShrink: 0 }}><Spinner size={24} /></span>
-               <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
-                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                     <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                        Building your report
-                     </span>
-                     <span style={{ fontSize: 12, opacity: 0.7, flexShrink: 0 }}>
-                        {doneCount} of {steps.length} steps done
-                     </span>
-                     <span style={{ flex: 1 }} />
-                     <span style={{ fontSize: 12, opacity: 0.6, flexShrink: 0 }}>
-                        {pinned ? 'Click to unpin' : 'Click to keep open'}
-                     </span>
-                  </span>
-                  {/* The one live region: it names the phase, which is what actually changes. */}
-                  <span
-                     role="status"
-                     aria-live="polite"
-                     style={{ fontSize: 12, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                  >
-                     {current.label}{current.detail ? ` · ${current.detail}` : ''}
-                  </span>
-               </span>
-            </button>
-         </div>
-      </div>
+      <ProgressPill
+         title="Building your report"
+         steps={steps}
+         ariaLabel="Scan progress details"
+         footer="You can leave this page — the scan keeps running in the background."
+      />
    );
 };
 

@@ -5,12 +5,11 @@ import { computeOpportunityScore } from '@/src/core/domain/keywords/enrichment';
 import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import { introFactorsFromScoreData } from '@/src/core/domain/aiScore/liveFactors';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
-import { Button, Gauge } from '../koala/core';
+import { Button } from '../koala/core';
 import { KoalaPanelHeader } from '../koala/layout';
 import { useArticleKeywords } from '../../services/articleKeywords';
 import type { KeywordItem } from './KeywordResearchSection';
 import KeywordResearchSection from './KeywordResearchSection';
-import DomainFavicon from '../common/DomainFavicon';
 import WriteOptimizePanel from './WriteOptimizePanel';
 import PublishExportPanel from './PublishExportPanel';
 import PrePublishPanel from './PrePublishPanel';
@@ -21,35 +20,7 @@ import { useCompetitors } from '../../services/competitors';
 import { useCoverageHistoryDelta } from '../../hooks/articles/useCoverageHistoryDelta';
 import PipelineStatusStrip from './PipelineStatusStrip';
 
-interface CompetitorHeading {
-  level: number;
-  text: string;
-}
-interface Competitor {
-  url: string;
-  domain: string;
-  title: string;
-  serp_title?: string;
-  word_count: number;
-  heading_count?: number;
-  serp_position?: number;
-  headings: CompetitorHeading[];
-  seoScore?: number;
-}
-
-const stripWww = (host: string): string => host.replace(/^www\./, '');
-
-/** Relative SEO score vs peer median — mirrors lib/competitorScan.ts. */
-function peerSeoScore(comp: Competitor, all: Competitor[]): number {
-  if (all.length === 0) return 0;
-  const words = all.map((c) => c.word_count ?? 0).filter((n) => n > 0);
-  const headings = all.map((c) => c.heading_count ?? 0).filter((n) => n > 0);
-  const medianWords = words.length ? words.slice().sort((a, b) => a - b)[Math.floor(words.length / 2)] : 1;
-  const medianHeadings = headings.length ? headings.slice().sort((a, b) => a - b)[Math.floor(headings.length / 2)] : 1;
-  const wordScore = comp.word_count > 0 ? Math.min((comp.word_count / medianWords) * 100, 100) : 0;
-  const headingScore = (comp.heading_count ?? 0) > 0 ? Math.min(((comp.heading_count ?? 0) / medianHeadings) * 100, 100) : 0;
-  return Math.round(wordScore * 0.7 + headingScore * 0.3);
-}
+import { CompetitorCard, withSeoScores, type Competitor } from './CompetitorOutlinesPanel';
 
 interface Props {
   plainText: string;
@@ -196,98 +167,6 @@ const WorkflowRow = ({
   </button>
 );
 
-/* ── Competitor card (inline, read-only) ────────────────────────────── */
-const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; defaultOpen?: boolean }) => {
-  const [open, setOpen] = useState(defaultOpen ?? false);
-  const domain = competitor.domain || (() => {
-    try { return new URL(competitor.url).hostname.replace(/^www\./, ''); } catch { return competitor.url; }
-  })();
-  const seoScore = competitor.seoScore ?? 0;
-
-  return (
-    <div style={{ border: '1px solid var(--koala-bg-secondary)', borderRadius: 8, overflow: 'hidden', background: 'var(--koala-bg-tertiary)' }}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          width: '100%',
-display: 'flex',
-alignItems: 'flex-start',
-justifyContent: 'space-between',
-          padding: '8px 10px',
-background: 'transparent',
-border: 'none',
-cursor: 'pointer',
-gap: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'inline-flex', flexShrink: 0, width: 14, height: 14, alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
-            <DomainFavicon domain={domain} size={14} style={{ borderRadius: 2 }} />
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontSize: 12,
-fontWeight: 600,
-color: 'var(--koala-text-primary)',
-fontFamily: 'var(--font-family-primary)',
-              overflow: 'hidden',
-textOverflow: 'ellipsis',
-whiteSpace: 'nowrap',
-            }}>
-              {competitor.serp_title || competitor.title}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <span style={{ fontSize: 11, color: 'var(--koala-text-brand)', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
-              <span style={{ fontSize: 11, color: 'var(--koala-text-disabled)' }}>·</span>
-              <span style={{ fontSize: 11, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
-                {competitor.word_count.toLocaleString()}w
-              </span>
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginTop: 1 }}>
-          <div style={{ display: 'inline-flex', transform: 'scale(0.72)', transformOrigin: 'center right' }}>
-            <Gauge score={seoScore} size="sm" />
-          </div>
-          <svg viewBox="0 0 20 20" width={13} height={13} fill="currentColor"
-            style={{ color: 'var(--koala-text-disabled)', transition: 'transform 0.15s', transform: open ? 'rotate(90deg)' : 'none' }}>
-            <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
-          </svg>
-        </div>
-      </button>
-
-      {open && (
-        <div style={{ borderTop: '1px solid var(--koala-bg-secondary)', padding: '6px 10px 8px' }}>
-          <a
-            href={competitor.url} target="_blank" rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            style={{ fontSize: 10, color: 'var(--koala-text-brand)', fontFamily: 'var(--font-family-primary)', textDecoration: 'none', wordBreak: 'break-all', display: 'block', marginBottom: 6, lineHeight: 1.4 }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.textDecoration = 'underline'; }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.textDecoration = 'none'; }}
-          >
-            {competitor.url.replace(/^https?:\/\//, '').substring(0, 60)}{competitor.url.length > 66 ? '…' : ''}
-          </a>
-          {competitor.headings.map((h, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginLeft: (h.level - 1) * 8, marginBottom: 1 }}>
-              <span style={{ fontSize: 10, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)', flexShrink: 0, width: 14, textAlign: 'right' }}>h{h.level}</span>
-              <span style={{
-                fontSize: 11,
-color: h.level === 1 ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)',
-                fontFamily: 'var(--font-family-primary)',
-fontWeight: h.level === 1 ? 600 : 400,
-                overflow: 'hidden',
-textOverflow: 'ellipsis',
-whiteSpace: 'nowrap',
-lineHeight: 1.4,
-              }} title={h.text}>{h.text}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
 /* ── Main panel ────────────────────────────────────────────────────── */
 const ContentScorePanel = ({
   plainText,
@@ -358,21 +237,7 @@ const ContentScorePanel = ({
   const [isLoadingCompetitors, setIsLoadingCompetitors] = useState(false);
   const compQ = useCompetitors(domainSlug, competitorOpen ? keyword : undefined);
 
-  const displayCompetitors = useMemo(() => {
-    const apiList = compQ.data?.competitors || [];
-    const byUrl = new Map(apiList.map((c) => [c.url.replace(/\/$/, ''), c]));
-    const byDomain = new Map(apiList.map((c) => [stripWww(c.domain || ''), c]));
-    return competitors.map((comp) => {
-      const domain = comp.domain || (() => {
-        try { return new URL(comp.url).hostname.replace(/^www\./, ''); } catch { return ''; }
-      })();
-      const api = byUrl.get(comp.url.replace(/\/$/, '')) || byDomain.get(stripWww(domain));
-      return {
-        ...comp,
-        seoScore: api?.seoScore ?? comp.seoScore ?? peerSeoScore(comp, competitors),
-      };
-    });
-  }, [competitors, compQ.data]);
+  const displayCompetitors = useMemo(() => withSeoScores(competitors, compQ.data?.competitors), [competitors, compQ.data]);
 
   // Keyword research state
   const [keywords, setKeywords] = useState<KeywordItem[]>([]);

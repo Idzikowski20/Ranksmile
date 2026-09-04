@@ -5,6 +5,11 @@ jest.mock('../../components/common/DomainFavicon', () => ({
   __esModule: true,
   default: () => null,
 }));
+// The scanned-score lookup is react-query; the panel must render (with the peer estimate)
+// without a QueryClient, exactly as it does before the store has scanned anything.
+jest.mock('../../services/competitors', () => ({
+  useCompetitors: () => ({ data: undefined }),
+}));
 
 const CACHED = JSON.stringify({
   competitors: [
@@ -68,4 +73,26 @@ it.each([
 
   await screen.findByText('Detektyw Warszawa');
   expect(screen.queryByRole('button', { name: /Generate brief/ })).toBeNull();
+});
+
+/** Outline review used to show the competitors without the score every other view has. */
+it('grades every competitor with a gauge, peer-relative when nothing was scanned', async () => {
+  const { container } = render(<CompetitorOutlinesPanel {...props} />);
+
+  await screen.findByText('Detektyw Warszawa');
+  // The longer, more-structured page is the peer median or above: 100. The other lands
+  // below it on both words and headings.
+  expect(screen.getByText('100')).toBeInTheDocument();
+  expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(2);
+});
+
+/** The list is the panel's only scroll container; without minHeight 0 it grew past the
+ *  card and `overflow: hidden` cut the last competitors off. */
+it('lets the list scroll instead of growing past the card', async () => {
+  render(<CompetitorOutlinesPanel {...props} />);
+  await screen.findByText('Detektyw Warszawa');
+
+  const scroller = document.querySelector('.styled-scrollbar') as HTMLElement;
+  expect(scroller.style.overflowY).toBe('auto');
+  expect(scroller.style.minHeight).toBe('0');
 });

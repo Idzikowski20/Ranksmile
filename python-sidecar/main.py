@@ -234,6 +234,13 @@ async def _generate_article(req: GenerateRequest, on_status=None, on_chunk=None)
         existing_articles=domain_articles,
         internal_links=req.internal_links,
     )
+    # The last phase the editor's progress bar can show: everything below rewrites the
+    # article (links verified, images injected) with no other status to report.
+    if on_status:
+        try:
+            await on_status("Checking links & images…")
+        except Exception as exc:
+            print(f"[generate] status callback failed: {exc}")
 
     # The Writer links from the allowlist; strip any internal URL it invented anyway.
     # Runs even when internal_links is off — the prompt instruction to not link
