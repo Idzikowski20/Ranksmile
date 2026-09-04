@@ -511,11 +511,14 @@ const BRIEF_BATCH_SIZE = 1;
 const BRIEF_CONCURRENCY = 6;
 
 /**
- * Completion budget for one call: ~6 instructions per section plus JSON scaffolding,
- * with headroom for a reasoning model. The floor keeps a single-section call writable.
+ * Completion budget for one call: ~6 instructions per section plus JSON scaffolding.
+ *
+ * The floor is a whole single-section brief (6 × 40 Polish words ≈ 700 tokens) with room
+ * for the JSON around it, not a tight fit — a reply cut mid-object costs the section its
+ * brief. `wieLlmComplete` pins reasoning effort to minimal, so this budget is the answer.
  */
 export function briefMaxTokens(sections: number): number {
-  return Math.max(1200, Math.min(6000, 400 + Math.max(1, sections) * 800));
+  return Math.max(2000, Math.min(6000, 400 + Math.max(1, sections) * 800));
 }
 
 /** One call: complete, charge, parse, pair. `null` when the call or the parse failed. */

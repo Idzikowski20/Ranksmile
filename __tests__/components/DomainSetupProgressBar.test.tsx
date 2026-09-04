@@ -58,14 +58,14 @@ it('keeps the pill on failure, marks the stage it died in, and offers Retry', ()
 
 /** The stage a failed job died in is the one the timeline marks, not the first row. */
 it('marks the stage the job died in as failed', () => {
-  render(<DomainSetupProgressBar onRetry={() => undefined} setup={status({ status: 'failed', error: 'boom' })} />);
   const { container } = render(
     <DomainSetupProgressBar onRetry={() => undefined} setup={status({ status: 'failed', error: 'boom' })} />,
   );
-  // Two ticks (gsc, keywords), one danger marker for topics, two pending rings.
-  const markers = container.querySelectorAll('[aria-hidden="true"] svg');
-  expect(markers.length).toBeGreaterThanOrEqual(3);
-  expect(screen.getAllByText('Clustering and modeling topics').length).toBeGreaterThan(0);
+  // The row that died carries the danger marker; the ones before it keep their ticks.
+  const states = Array.from(container.querySelectorAll('[data-pill-state]'))
+    .map((n) => n.getAttribute('data-pill-state'));
+  expect(states).toEqual(['done', 'done', 'failed', 'idle', 'idle']);
+  expect(screen.getByText('Clustering and modeling topics')).toBeInTheDocument();
 });
 
 /** Materialization keeps the job open; dropping the pill there claimed it had finished. */

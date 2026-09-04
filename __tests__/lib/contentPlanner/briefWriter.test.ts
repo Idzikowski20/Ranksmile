@@ -639,9 +639,10 @@ describe('writeOutlineBrief batching', () => {
  */
 describe('briefMaxTokens', () => {
   it('scales with the sections a call actually briefs, with a writable floor and a ceiling', () => {
-    expect(briefMaxTokens(1)).toBe(1200);
+    // The floor fits one whole section's brief; a tight cap cuts the JSON mid-object.
+    expect(briefMaxTokens(1)).toBe(2000);
     expect(briefMaxTokens(5)).toBe(4400);
     expect(briefMaxTokens(20)).toBe(6000);
-    expect(briefMaxTokens(0)).toBe(1200);
+    expect(briefMaxTokens(0)).toBe(2000);
   });
 });

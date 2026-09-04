@@ -114,12 +114,16 @@ const Pending = ({ size = 20 }: { size?: number }) => (
    />
 );
 
-const StepIcon = ({ state }: { state: ProgressStepState }) => {
-   if (state === 'done') return <Check />;
-   if (state === 'active') return <Spinner />;
-   if (state === 'failed') return <Failed />;
-   return <Pending />;
-};
+const StepIcon = ({ state }: { state: ProgressStepState }) => (
+   // The marker is the only place a row's state is visible — it carries no text — so it
+   // names that state for tests and for anything inspecting the timeline.
+   <span data-pill-state={state} style={{ display: 'inline-flex', flexShrink: 0 }}>
+      {state === 'done' ? <Check /> : null}
+      {state === 'active' ? <Spinner /> : null}
+      {state === 'failed' ? <Failed /> : null}
+      {state === 'idle' ? <Pending /> : null}
+   </span>
+);
 
 const StepRow = ({ step, last }: { step: ProgressStep; last: boolean }) => (
    <div style={{ display: 'flex', gap: 12 }}>
