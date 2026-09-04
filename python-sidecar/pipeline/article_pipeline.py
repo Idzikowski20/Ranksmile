@@ -116,6 +116,17 @@ async def _chat(
     return content
 
 
+def _section_max_tokens(expected_words: int) -> int:
+    """Completion budget for one section.
+
+    Polish runs ~3 tokens a word, and the ceiling the prompt states is 1.2x the target;
+    the old flat 1200 was sized for a 60-word paragraph and would cut a 400-word section
+    mid-list. Floor for tiny sections, cap so a runaway budget cannot burn the slot.
+    """
+    words = expected_words if isinstance(expected_words, int) and expected_words > 0 else 200
+    return max(1500, min(6000, 400 + words * 4))
+
+
 def _strip_code_fences(html: str) -> str:
     final_html = (html or "").strip()
     for prefix in ("```html", "```"):
@@ -218,6 +229,7 @@ async def run_pipeline(
     existing_articles: list[dict] | None = None,
     internal_links: bool = True,
     on_status=None,
+    on_chunk=None,
 ) -> str:
     top_terms = [t["term"] for t in serp_data.get("terms", [])[:25]]
     terms_str = ", ".join(top_terms) if top_terms else "brak danych NLP"
@@ -274,72 +286,68 @@ async def run_pipeline(
         if not isinstance(compiled_write_plan, dict):
             raise ValueError("compiled_write_plan must be an object")
 
-        # Short list per paragraph — the full block would be re-sent for every paragraph.
-        # quota="0–1": write_markdown runs once per paragraph, so the article-level
-        # "2–5" quota would ask for 2–5 links in EACH paragraph, compounding well past
-        # the intended per-article total as the plan grows more paragraphs.
-        paragraph_links_block = (
+        # Short list per section — the full block would be re-sent for every section.
+        section_links_block = (
             format_internal_link_block(
                 link_articles, language, limit=12,
                 # Link generously. "dokładnie 1, jeśli DOKŁADNIE pasuje" shipped 3 links
-                # against the reference's 12: most topical paragraphs (mechanizmy, techniki)
+                # against the reference's 12: most topical sections (mechanizmy, techniki)
                 # never name a service-page slug, so they linked nothing. The reference
                 # links on a RELATED concept — "uporczywe nękanie" -> /stalking-nekanie/,
                 # "przemoc psychiczna" -> /przemoc-psychiczna/ — not an exact match.
                 # enforce_internal_links still unwraps anything off-list, so being liberal
                 # here is safe.
-                quota="1 (wyjątkowo 2), gdy akapit dotyka tematu powiązanego z pozycją z listy — linkuj chętnie na luźno powiązane pojęcia, nie tylko przy dokładnym dopasowaniu (jeśli nic nie pasuje, 0)",
+                quota="1-2 na sekcję, gdy fragment dotyka tematu powiązanego z pozycją z listy — linkuj chętnie na luźno powiązane pojęcia, nie tylko przy dokładnym dopasowaniu (jeśli nic nie pasuje, 0)",
             )
             if internal_links else ""
         )
         link_note = (
-            "\n\nJeśli akapit zawiera markdown link `[tekst](url)`, zachowaj go dokładnie "
+            "\n\nJeśli tekst zawiera markdown link `[tekst](url)`, zachowaj go dokładnie "
             "— nie usuwaj i nie wymyślaj nowych adresów."
             if language.startswith("pl") else
-            "\n\nIf the paragraph contains a markdown link `[text](url)`, preserve it "
+            "\n\nIf the text contains a markdown link `[text](url)`, preserve it "
             "exactly — don't drop it or invent new ones."
         ) if internal_links else ""
+        section_count = len(compiled_write_plan.get("knowledge_packs") or [])
         written = 0
 
-        async def write_markdown(prompt: str) -> str:
+        async def write_markdown(prompt: str, expected_words: int) -> str:
             nonlocal written
             written += 1
             if on_status:
                 # Status feedback must never break the write.
                 try:
-                    # Paragraphs, not sections: write_markdown runs once per paragraph
-                    # plan, so a 12-section outline reports well past 12.
-                    await on_status(f"Writing paragraph {written}…")
+                    await on_status(f"Writing section {min(written, section_count)}/{section_count}…")
                 except Exception as exc:
                     print(f"[generate] status callback failed: {exc}")
-            # Brand context travels with every paragraph — the writer is stateless, and
-            # without it no paragraph could name the agency the brief's "nawiąż do nas"
+            # Brand context travels with every section — the writer is stateless, and
+            # without it no section could name the agency the brief's "nawiąż do nas"
             # bullets refer to.
             name_line = (
-                f"BRAND NAME: {brand_name.strip()} - when this paragraph references us, "
+                f"BRAND NAME: {brand_name.strip()} - when this section references us, "
                 "use this exact name.\n"
                 if brand_name.strip() else ""
             )
-            paragraph_brand = (
-                "\n\nBRAND (use as context where the plan asks to reference us; "
+            section_brand = (
+                "\n\nBRAND (use as context where the brief asks to reference us; "
                 f"never invent facts):\n{name_line}{brand_knowledge.strip()[:1200]}"
                 if brand_knowledge.strip() else ""
             )
             return await _chat(
                 f"Keyword: {keyword}\nLanguage: {language}\nTone: {tone}"
-                f"{paragraph_brand}{style_block}\n\n"
-                f"{prompt}{paragraph_links_block}",
-                max_tokens=1200,
+                f"{section_brand}{style_block}\n\n"
+                f"{prompt}{section_links_block}",
+                max_tokens=_section_max_tokens(expected_words),
                 system="Write SEO content as Markdown only. Never emit HTML.",
             )
 
         async def rewrite_markdown(markdown: str) -> str:
             return await _chat(
-                f"Rewrite this Markdown block for clarity and factual precision. "
-                f"Preserve its Markdown structure exactly — a bullet list stays a bullet "
-                f"list with its bold label, a table stays a table, a paragraph stays a "
-                f"paragraph. Markdown only.{link_note}\n\n{markdown}",
-                max_tokens=1200,
+                f"Rewrite this Markdown section for clarity and factual precision. "
+                f"Preserve its Markdown structure exactly — a list stays a list, a table "
+                f"stays a table, a paragraph stays a paragraph, headings stay where they "
+                f"are. Markdown only.{link_note}\n\n{markdown}",
+                max_tokens=_section_max_tokens(len(markdown.split())),
                 system="You are an editorial judge. Return only rewritten Markdown.",
             )
 
@@ -349,8 +357,20 @@ async def run_pipeline(
             except Exception as exc:
                 print(f"[generate] status callback failed: {exc}")
 
+        async def on_section(_index: int, html: str) -> None:
+            if not on_chunk:
+                return
+            # Streaming is feedback, never a precondition for the write.
+            try:
+                await on_chunk(html)
+            except Exception as exc:
+                print(f"[generate] chunk callback failed: {exc}")
+
         compiled = await run_compiled_write_plan(
             compiled_write_plan, write_markdown, rewrite_markdown, external_links,
+            on_section=on_section if on_chunk else None,
+            language=language,
+            brand_name=brand_name,
         )
         if not compiled.html:
             raise RuntimeError("compiled_write_plan produced empty HTML")

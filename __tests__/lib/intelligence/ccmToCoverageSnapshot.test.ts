@@ -1,5 +1,7 @@
 import { projectCcmToCoverageSnapshot } from '@/src/core/intelligence/ccmToCoverageSnapshot';
 import { compile } from '@/src/core/compiler/compile';
+import { enrichCcmWithDaFacts } from '@/src/core/intelligence/enrichCcmWithDaFacts';
+import { researchedFactsToDaSeeds } from '@/src/core/intelligence/loadDaFactSeeds';
 import type { CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 
 const FIXED_AT = '2026-08-03T12:00:00.000Z';
@@ -123,6 +125,44 @@ describe('projection preserves the grading rubric', () => {
     for (let i = 0; i < RUBRIC_SIZE; i += 1) {
       expect(keptIds.has(`paa-${i}`)).toBe(true);
     }
+  });
+
+  /**
+   * Article 164: 40 facts researched off the ranking pages sat in the graph with their
+   * citation nodes, and the panel showed none — a 30-row rubric left five slots, and the
+   * article's own sentences won them on keyword overlap. Sourced facts are the only rows
+   * that can carry a favicon, so they get their own budget ahead of the article's own text.
+   */
+  it('keeps sourced facts ahead of the article\'s own sentences, most-cited first', () => {
+    const seeds = researchedFactsToDaSeeds({
+      claims: [
+        'Wezwanie do zapłaty powinno zawierać dane stron, kwotę i termin zapłaty.',
+        'Wypowiedzenie najmu jest możliwe przy zaległości za co najmniej dwa pełne okresy.',
+        'Eksmisję wykonuje wyłącznie komornik na podstawie tytułu wykonawczego.',
+      ],
+      sources: [
+        { url: 'https://kancelaria.pl/najemca', source_urls: ['https://kancelaria.pl/najemca'] },
+        { url: 'https://obido.pl/czynsz', source_urls: ['https://obido.pl/czynsz', 'https://goeste.pl/najemca', 'https://rendin.pl/czynsz'] },
+        { url: 'https://nieruchomosc.pl/eksmisja', source_urls: ['https://nieruchomosc.pl/eksmisja', 'https://goeste.pl/najemca'] },
+      ],
+    }, 'tekst artykułu bez tych faktów');
+    const rubric = { ...previous(), items: Array.from({ length: 30 }, (_, i) => rubricItem(i)) };
+
+    const snap = projectCcmToCoverageSnapshot(enrichCcmWithDaFacts(bigModel(), seeds), {
+      createdAt: FIXED_AT,
+      previous: rubric,
+    });
+
+    const sourced = snap.items.filter((i) => i.webSources?.length);
+    expect(sourced.map((i) => i.webSources?.map((s) => s.domain))).toEqual([
+      ['obido.pl', 'goeste.pl', 'rendin.pl'],
+      ['nieruchomosc.pl', 'goeste.pl'],
+      ['kancelaria.pl'],
+    ]);
+    // The rubric is untouched and the sourced facts did not cost it a row.
+    expect(snap.items.filter((i) => i.id.startsWith('paa-'))).toHaveLength(30);
+    // The article's own sentences only fill what is left after both.
+    expect(snap.items.filter((i) => i.reason === 'ccm' && !i.webSources?.length)).toHaveLength(2);
   });
 
   it('keeps a true early-answer grade sticky across projections', () => {

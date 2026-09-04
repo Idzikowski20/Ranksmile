@@ -103,6 +103,8 @@ export type BriefWriterInput = {
   headingTerms?: string[];
   /** H2/H3 titles of the pages that rank — what the topic requires, in their words. */
   competitorHeadings?: string[];
+  /** Page titles of the pages that rank — the pattern the H1 has to match. */
+  competitorTitles?: string[];
   language?: string;
   /** Charged to the org's shared pool: the gate that blocks the call also has to see it. */
   onTokens?: (tokens: number) => void | Promise<void>;
@@ -386,6 +388,11 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
     .filter(Boolean)
     .slice(0, COMPETITOR_HEADINGS);
 
+  const competitorTitles = (input.competitorTitles || [])
+    .map(asEvidence)
+    .filter(Boolean)
+    .slice(0, 10);
+
   const factSheet = buildFactSheet(bundle.targetKg.claims);
 
   // Numbered globally, never by position in the batch — "n" is how a brief is paired back
@@ -434,12 +441,21 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
       : '',
     '',
     `Working H1: ${bundle.outline?.h1 || input.keyword}`,
-    // Without a brand document the model has no basis for "what we are, who we serve" and
-    // would fill it with invented marketing — the same failure the no-facts rule prevents
-    // inside sections.
-    brand
-      ? 'Rewrite it as a real page title: what we are, who we serve, why us. Keep the keyword in it.'
-      : 'Rewrite it as a descriptive page title for the topic. Claim nothing about any company.',
+    // "What we are, who we serve, why us" shipped "Najemca nie płaci czynszu —
+    // licencjonowana agencja detektywistyczna dla właścicieli w Warszawie i okolicach":
+    // a company description, not a promise to the reader. The ranking titles are the
+    // only evidence of what a title for this query looks like, so the model averages
+    // them instead of describing us.
+    ...(competitorTitles.length
+      ? [`RANKING TITLES — how the pages that rank title themselves:\n<evidence>${competitorTitles.join(' | ')}</evidence>`]
+      : []),
+    'Write the H1: the keyword (or its natural inflected form) first, then what the reader'
+      + ' gets — the question answered, the outcome, the guide. Match the average length and'
+      + ' shape of RANKING TITLES (a question, "co zrobić", "krok po kroku", a year — whatever'
+      + ' most of them do); never copy one.'
+      + (input.brandName ? ` End with a short brand suffix such as "Poradnik ${input.brandName}".` : '')
+      + ' Never describe the company in the title (what we are, where we operate, our licence)'
+      + ' — a title promises what the reader will learn.',
     '',
     // Headings only: the evidence is what makes this block expensive, and repeating every
     // section's evidence in every batch would cost more than the single call it replaced.

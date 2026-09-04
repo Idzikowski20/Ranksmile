@@ -1,11 +1,10 @@
 import asyncio
 
-from pipeline.editorial_judge import review_paragraph
-from pipeline.section_writer import Coverage, ParagraphResult
+from pipeline.editorial_judge import review_section
+from pipeline.section_writer import Coverage, SectionResult
 
 
-BASE = ParagraphResult(
-    paragraph_id="p1",
+BASE = SectionResult(
     section_id="s1",
     markdown="First markdown.",
     summary="First markdown",
@@ -24,7 +23,7 @@ async def _rewrite(markdown: str) -> str:
 
 
 def test_judge_rewrites_low_confidence_without_mutating_writer_result():
-    reviewed = asyncio.run(review_paragraph(BASE, _rewrite))
+    reviewed = asyncio.run(review_section(BASE, _rewrite))
 
     assert reviewed.base is BASE
     assert reviewed.rewritten is True
@@ -34,8 +33,8 @@ def test_judge_rewrites_low_confidence_without_mutating_writer_result():
 
 
 def test_judge_rewrites_critical_gap_even_when_confident():
-    reviewed = asyncio.run(review_paragraph(
-        ParagraphResult(**{**BASE.__dict__, "confidence": 0.9}),
+    reviewed = asyncio.run(review_section(
+        SectionResult(**{**BASE.__dict__, "confidence": 0.9}),
         _rewrite,
         critical_gaps=("missing_fact",),
     ))
@@ -44,18 +43,18 @@ def test_judge_rewrites_critical_gap_even_when_confident():
     assert "critical_gap:missing_fact" in reviewed.judge_notes
 
 
-def test_judge_never_rewrites_an_empty_paragraph():
+def test_judge_never_rewrites_an_empty_section():
     """
     Article 13 shipped "Wklej prosze akapit Markdown, ktory mam przeredagowac." as prose:
-    an empty paragraph was sent to the rewriter, whose prompt then carried no paragraph,
-    and the model's request for input became the article's text.
+    an empty block was sent to the rewriter, whose prompt then carried no text, and the
+    model's request for input became the article's text.
     """
-    empty = ParagraphResult(**{**BASE.__dict__, "markdown": "", "confidence": 0.1})
+    empty = SectionResult(**{**BASE.__dict__, "markdown": "", "confidence": 0.1})
 
     async def exploding_rewrite(markdown: str) -> str:
-        raise AssertionError("rewrite must not be called for an empty paragraph")
+        raise AssertionError("rewrite must not be called for an empty section")
 
-    reviewed = asyncio.run(review_paragraph(empty, exploding_rewrite))
+    reviewed = asyncio.run(review_section(empty, exploding_rewrite))
 
     assert reviewed.markdown == ""
     assert reviewed.rewritten is False
@@ -66,11 +65,8 @@ def test_judge_keeps_the_original_when_the_rewrite_comes_back_blank():
     async def blank_rewrite(markdown: str) -> str:
         return "   "
 
-    reviewed = asyncio.run(review_paragraph(BASE, blank_rewrite))
+    reviewed = asyncio.run(review_section(BASE, blank_rewrite))
 
     assert reviewed.markdown == "First markdown."
-    # Nothing was rewritten — the original was kept — so the flag says so, matching the
-    # empty-paragraph case above. It read True here, which made an untouched paragraph
-    # look like reviewed prose to anything counting rewrites.
     assert reviewed.rewritten is False
     assert "rewrite_empty_kept_original" in reviewed.judge_notes

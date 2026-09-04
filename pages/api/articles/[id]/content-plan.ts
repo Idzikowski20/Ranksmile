@@ -17,6 +17,7 @@ import {
   aiIntelFromScoreData,
   competitorsFromScoreData,
   competitorHeadingTitles,
+  competitorPageTitles,
   diagnosePlannerInputs,
   enrichWithCorpusClaims,
   enrichWithWieSynthesis,
@@ -289,6 +290,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .slice(0, 10),
       language: row.language || undefined,
       competitorHeadings: competitorHeadingTitles(row.competitor_outlines_cache),
+      competitorTitles: competitorPageTitles(row.competitor_outlines_cache),
       onTokens: (tokens) => recordAiTokens(orgId, tokens),
     });
     // Instructions are never reconstructed mechanically. reviewOutlineFromBundle used to

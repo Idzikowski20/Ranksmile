@@ -4992,6 +4992,43 @@ html.editor-route .app-content {
   padding: 24px 16px;
 }
 
+/* Status pill while the article streams in section by section */
+.nc-gen-stream-pill {
+  position: absolute;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--koala-bg-primary, #FFFFFF);
+  border: 1px solid var(--koala-border, #E5E5E5);
+  box-shadow: 0 4px 16px rgba(26, 26, 26, 0.08);
+  font-family: var(--font-family-primary);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--koala-text-secondary, #575757);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.nc-gen-stream-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--koala-brand, #F84416);
+  animation: nc-gen-stream-pulse 1.2s ease-in-out infinite;
+}
+@keyframes nc-gen-stream-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nc-gen-stream-dot { animation: none; }
+}
+
 /* Content editor side panel — Koala chrome (same surface as panel body) */
 .editor-side-toolbar {
   padding: 10px 12px;

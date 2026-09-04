@@ -111,8 +111,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
     const delta = streamDelta(sentLength, job.stream_text ?? '');
     if (delta.chunk) {
+      // `offset` is where this chunk starts in the stored stream. EventSource reconnects
+      // on a transport drop and this handler starts over at 0, so without it the
+      // client would append the whole article a second time.
+      send(res, 'content', { chunk: delta.chunk, offset: sentLength });
       sentLength = delta.nextLength;
-      send(res, 'content', { chunk: delta.chunk });
     }
     if (job.status === 'done') {
       send(res, 'done', { html: job.stream_text ?? '' });

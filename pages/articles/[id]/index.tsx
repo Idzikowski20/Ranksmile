@@ -512,7 +512,12 @@ const ArticleEditorPage: NextPage = () => {
   const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
   const [analysisReloadKey, setAnalysisReloadKey] = useState(0);
 
-  const onAnalysisComplete = useCallback(async () => {
+  /**
+   * Re-pull the article's scores after a server-side reconcile (deep analysis or
+   * generation). Shared: the generation path used to refetch only `content`, so the
+   * panel graded the new article against the pre-generation coverage snapshot.
+   */
+  const pullArticleScores = useCallback(async () => {
     const articleId = typeof id === 'string' ? id : null;
     if (articleId) {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -554,9 +559,13 @@ const ArticleEditorPage: NextPage = () => {
         await new Promise((resolve) => { setTimeout(resolve, 1000); });
       }
     }
+  }, [id]);
+
+  const onAnalysisComplete = useCallback(async () => {
+    await pullArticleScores();
     setAnalysisReloadKey((k) => k + 1);
     toast.success('Analysis complete');
-  }, [id]);
+  }, [pullArticleScores]);
   const onAnalysisError = useCallback((message: string) => {
     toast.error(message);
     // Unlock the editor — failed runs may leave status='analyzing' in local state until refetch.
@@ -2252,6 +2261,7 @@ const ArticleEditorPage: NextPage = () => {
               highlightTerms={highlightTerms}
               onAiActivity={setRanksmileAiActive}
               onGeneratingChange={setGenerationBusy}
+              onGenerated={pullArticleScores}
               articleKeyword={article?.target_keyword || ''}
               plagiarismSentences={plagSentences}
               plagiarismFocused={plagFocused}
