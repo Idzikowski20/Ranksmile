@@ -30,7 +30,15 @@ function activeSummary(groups: ReturnType<typeof analysisPhaseGroups>): string {
   return rows.some((r) => r.state === 'done') ? 'Analysis in progress' : 'Waiting to start';
 }
 
-const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases }) => (
+/**
+ * `maxWidth` is the one thing the two hosts disagree on: the editor's side column is
+ * 320px wide, so the list is capped to keep it off the borders, while the wizard page
+ * has a 576px column and the cap left every label wrapping onto three lines.
+ */
+const AnalysisProgressPanel: React.FC<{
+  phases: AnalysisPhases;
+  maxWidth?: React.CSSProperties['maxWidth'];
+}> = ({ phases, maxWidth = 340 }) => (
   // Centred in the panel rather than pinned to the top: for most of a run this is the
   // only thing in the column, and a short list hugging the toolbar reads as a leftover
   // fragment instead of the thing the user is waiting on. Centred horizontally too —
@@ -41,7 +49,7 @@ const AnalysisProgressPanel: React.FC<{ phases: AnalysisPhases }> = ({ phases })
     justifyContent: 'center',
     gap: 16,
     minHeight: '100%',
-    maxWidth: 340,
+    maxWidth,
     margin: '0 auto',
     padding: '8px 24px',
   }}

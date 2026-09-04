@@ -403,7 +403,8 @@ const DeepAnalysisPage: NextPage = () => {
 
       {/* The editor's own analysis panel — one UI for the wizard and the side column. */}
       <div aria-label="Deep analysis progress">
-        <AnalysisProgressPanel phases={phases} />
+        {/* The wizard column is 576px; the editor's 320px cap would wrap every label. */}
+        <AnalysisProgressPanel phases={phases} maxWidth="100%" />
       </div>
 
       {/* The message itself is the banner above the topbar; only the choices stay here.
