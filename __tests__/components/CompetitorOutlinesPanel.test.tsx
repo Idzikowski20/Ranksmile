@@ -80,10 +80,11 @@ it('grades every competitor with a gauge, peer-relative when nothing was scanned
   const { container } = render(<CompetitorOutlinesPanel {...props} />);
 
   await screen.findByText('Detektyw Warszawa');
-  // The longer, more-structured page is the peer median or above: 100. The other lands
-  // below it on both words and headings.
-  expect(screen.getByText('100')).toBeInTheDocument();
-  expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(2);
+  // One gauge per competitor — the card chevrons are svgs too, so count the score text
+  // the gauge itself renders. The longer, more-structured page is the peer median or
+  // above: 100. The other lands below it on both words and headings.
+  const scores = container.querySelectorAll('[data-testid="gauge-score"]');
+  expect(Array.from(scores).map((n) => n.textContent)).toEqual(['100', '64']);
 });
 
 /** The list is the panel's only scroll container; without minHeight 0 it grew past the

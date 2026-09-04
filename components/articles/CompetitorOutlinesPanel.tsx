@@ -49,9 +49,16 @@ export function withSeoScores(
   scanned: ReadonlyArray<{ url: string; domain?: string; seoScore?: number }> = [],
 ): Competitor[] {
   const byUrl = new Map(scanned.map((c) => [c.url.replace(/\/$/, ''), c]));
-  const byDomain = new Map(scanned.map((c) => [stripWww(c.domain || ''), c]));
+  // Domain is a fallback only where it identifies one page. Two scanned URLs on the same
+  // host would otherwise hand every unmatched page of that host the last one's score.
+  const perDomain = new Map<string, { url: string; domain?: string; seoScore?: number } | null>();
+  for (const c of scanned) {
+    const host = stripWww(c.domain || '');
+    if (!host) continue;
+    perDomain.set(host, perDomain.has(host) ? null : c);
+  }
   return competitors.map((comp) => {
-    const api = byUrl.get(comp.url.replace(/\/$/, '')) || byDomain.get(stripWww(domainOf(comp)));
+    const api = byUrl.get(comp.url.replace(/\/$/, '')) || perDomain.get(stripWww(domainOf(comp))) || undefined;
     return { ...comp, seoScore: api?.seoScore ?? comp.seoScore ?? peerSeoScore(comp, competitors) };
   });
 }
@@ -179,7 +186,10 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scanned = useCompetitors(domainSlug, keyword || undefined);
-  const scored = useMemo(() => withSeoScores(competitors, scanned.data?.competitors), [competitors, scanned.data]);
+  // `keepPreviousData` holds the last keyword's scores while the new query loads, which
+  // would score this keyword's competitors from another keyword's scan.
+  const scannedRows = scanned.isPreviousData ? undefined : scanned.data?.competitors;
+  const scored = useMemo(() => withSeoScores(competitors, scannedRows), [competitors, scannedRows]);
 
   useEffect(() => {
     // Try cache first

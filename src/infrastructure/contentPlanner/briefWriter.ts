@@ -13,6 +13,7 @@
  */
 import type { ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
 import type { ContentPlannerBundle, SectionBrief, TargetClaim } from '@/src/core/domain/contentPlanner/types';
+import { mapPool } from '@/src/core/shared/mapPool';
 
 /**
  * Terms are handed to the model as phrases to weave in, and the NLP list is not written
@@ -505,6 +506,18 @@ const BRIEF_ATTEMPTS = 2;
  */
 const BRIEF_BATCH_SIZE = 1;
 
+/** Calls in flight at once. Enough to keep the wait near one section, short of a burst
+ *  the provider throttles — each call may also spend a retry. */
+const BRIEF_CONCURRENCY = 6;
+
+/**
+ * Completion budget for one call: ~6 instructions per section plus JSON scaffolding,
+ * with headroom for a reasoning model. The floor keeps a single-section call writable.
+ */
+export function briefMaxTokens(sections: number): number {
+  return Math.max(1200, Math.min(6000, 400 + Math.max(1, sections) * 800));
+}
+
 /** One call: complete, charge, parse, pair. `null` when the call or the parse failed. */
 async function runBriefAttempt(
   input: BriefWriterInput,
@@ -520,8 +533,10 @@ async function runBriefAttempt(
     const res = await wieLlmComplete({
       userPrompt: user,
       systemPrompt: system,
-      // Reasoning models share this budget; 15 sections × 6 instructions needs headroom.
-      maxTokens: 6000,
+      // Sized for the sections this call actually briefs, not the whole outline: with one
+      // section per call the old flat 6000 let every retry bill a 15-section budget, and
+      // the ledger counts prompt + completion + reasoning together.
+      maxTokens: briefMaxTokens(batch.length),
       temperature: 0.4,
       json: true,
       signal: input.signal,
@@ -558,11 +573,14 @@ async function runBriefAttempt(
   const sections = Array.isArray(parsed.sections) ? (parsed.sections as LlmSection[]) : [];
   const written = new Map<number, { heading: string; instructions: string[] }>();
   sections.forEach((section, i) => {
-    const n = typeof section?.n === 'number' && Number.isInteger(section.n) ? section.n - 1 : i;
     // Positional fallback resolves within this batch, not the whole outline: reply #1 of
     // the batch covering sections 6-10 is section 6, and treating it as section 1 would
-    // overwrite another batch's brief.
-    const index = n >= 0 && n < bundle.briefs.length ? n : (batch[i] ?? i);
+    // overwrite another batch's brief — with one section per call that discarded the
+    // brief of every section but the first whenever the model omitted `n`.
+    const echoed = typeof section?.n === 'number' && Number.isInteger(section.n) ? section.n - 1 : null;
+    const index = echoed !== null && echoed >= 0 && echoed < bundle.briefs.length
+      ? echoed
+      : (batch[i] ?? i);
     if (!batch.includes(index)) return;
     if (written.has(index)) return;
     written.set(index, {
@@ -613,9 +631,10 @@ export async function writeOutlineBrief(input: BriefWriterInput): Promise<Approv
     batches.push(bundle.briefs.map((_, n) => n).slice(i, i + BRIEF_BATCH_SIZE));
   }
 
-  // In parallel: the batches share no state, and the reviewer waits on the slowest one
-  // rather than on their sum.
-  const results = await Promise.all(batches.map((batch) => runBriefBatch(input, batch)));
+  // In parallel, but bounded: the batches share no state, so the reviewer waits on the
+  // slowest one rather than on their sum — while a 15-section outline firing 15 calls at
+  // once (30 with retries) is what a provider throttles into a failed brief.
+  const results = await mapPool(batches, BRIEF_CONCURRENCY, (batch) => runBriefBatch(input, batch));
 
   const written = new Map<number, { heading: string; instructions: string[] }>();
   let title = '';

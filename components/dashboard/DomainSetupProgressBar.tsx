@@ -33,7 +33,10 @@ export function setupSteps(setup: SetupStatus): ProgressStep[] {
 
 /** True while the pill has something to show: the job is queued, running, or stopped. */
 export function isSetupShown(setup?: SetupStatus): boolean {
-   return setup?.status === 'queued' || setup?.status === 'running' || setup?.status === 'failed';
+   if (!setup) return false;
+   // 'finalizing' included: the pipeline has finished its stages but the result is still
+   // being materialized, and dropping the pill there claimed the analysis was over.
+   return ['queued', 'running', 'finalizing', 'failed'].includes(setup.status);
 }
 
 /**

@@ -1,4 +1,4 @@
-import { writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
+import { briefMaxTokens, writeOutlineBrief } from '@/src/infrastructure/contentPlanner/briefWriter';
 import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
 
 const BRAND = 'ProDetektyw — licencjonowana agencja detektywistyczna, ul. Mazowiecka 11/49 Warszawa. '
@@ -445,20 +445,58 @@ describe('writeOutlineBrief partial replies', () => {
     ]);
   });
 
-  it('keeps the fuller of the two attempts rather than the last one', async () => {
-    const replies = [GOOD, PARTIAL];
-
+  /**
+   * One section per call, so "fuller attempt" is per section: a call whose first reply
+   * covered nothing retries, and the attempt that did cover it wins. Keyed off the
+   * prompt rather than a shared queue — the calls run concurrently, so a queue would
+   * hand its entries out in whatever order the pool happened to start them.
+   */
+  it('retries a section whose first reply covered nothing, and keeps the fuller attempt', async () => {
+    const seen: string[] = [];
     const headings = await writeOutlineBrief({
       keyword: 'k',
       bundle: bundle(),
       brandKnowledge: BRAND,
-      llmEdit: async () => ({ html: replies.shift() ?? PARTIAL, tokens: 1 }),
+      llmEdit: async (user: string) => {
+        const forSection2 = user.includes('2. role: Zakres usług');
+        seen.push(forSection2 ? 's2' : 's1');
+        // Section 2's first reply briefs the wrong section, so nothing lands for it.
+        if (forSection2 && seen.filter((x) => x === 's2').length === 1) {
+          return { html: JSON.stringify({ sections: [{ n: 1, heading: 'x', instructions: ['x'] }] }), tokens: 1 };
+        }
+        return { html: GOOD, tokens: 1 };
+      },
     });
 
-    // Each section's first reply covered it, so neither call spends a retry.
-    expect(replies).toEqual([]);
-    expect(headings?.[1].instructions).toHaveLength(2);
-    expect(headings?.[2].instructions).toEqual(['Wypunktuj usługi.']);
+    expect(seen.filter((x) => x === 's1')).toHaveLength(1);
+    expect(seen.filter((x) => x === 's2')).toHaveLength(2);
+    expect(headings?.[2].instructions).toEqual(['Wypunktuj usługi dla osób prywatnych i firm.']);
+  });
+
+  /**
+   * A model that omits `n` used to lose its brief on every call but the first: the reply's
+   * position was read as a global index, and section 6's batch does not contain index 0.
+   */
+  it('pairs an n-less reply with the section its own call was given', async () => {
+    const headings = await writeOutlineBrief({
+      keyword: 'k',
+      bundle: bundle(),
+      brandKnowledge: BRAND,
+      llmEdit: async (user: string) => ({
+        html: JSON.stringify({
+          title: 'T',
+          sections: [{
+            heading: user.includes('2. role: Zakres usług') ? 'Zakres usług i cennik' : 'Kim jesteśmy',
+            instructions: [user.includes('2. role: Zakres usług') ? 'Druga.' : 'Pierwsza.'],
+          }],
+        }),
+        tokens: 1,
+      }),
+    });
+
+    expect(headings?.[1].instructions).toEqual(['Pierwsza.']);
+    expect(headings?.[2].text).toBe('Zakres usług i cennik');
+    expect(headings?.[2].instructions).toEqual(['Druga.']);
   });
 
   it('falls back to the planner objective only for sections still missing after retries', async () => {
@@ -592,5 +630,18 @@ describe('writeOutlineBrief batching', () => {
     expect(c.seen).toHaveLength(2);
     expect(c.seen[0].user).toContain('FULL OUTLINE');
     expect(c.seen[1].user).toContain('2. role: Zakres usług');
+  });
+});
+
+/**
+ * One section per call means the completion cap has to shrink with it: the flat
+ * whole-outline budget let every call — and every retry — bill for fifteen sections.
+ */
+describe('briefMaxTokens', () => {
+  it('scales with the sections a call actually briefs, with a writable floor and a ceiling', () => {
+    expect(briefMaxTokens(1)).toBe(1200);
+    expect(briefMaxTokens(5)).toBe(4400);
+    expect(briefMaxTokens(20)).toBe(6000);
+    expect(briefMaxTokens(0)).toBe(1200);
   });
 });

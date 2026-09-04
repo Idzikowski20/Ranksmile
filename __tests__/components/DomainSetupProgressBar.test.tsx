@@ -19,6 +19,7 @@ it('maps the job row onto the five stages, with the running stage\'s own percent
   expect(steps[2].detail).toBe('40%');
   // 0 and 100 say nothing a spinner or a tick does not already say.
   expect(setupSteps(status({ stagePercent: 0 }))[2].detail).toBeUndefined();
+  expect(setupSteps(status({ stagePercent: 100 }))[2].detail).toBeUndefined();
 });
 
 it('leaves once the job is done', () => {
@@ -46,6 +47,29 @@ it('keeps the pill on failure, marks the stage it died in, and offers Retry', ()
 
   expect(screen.getByRole('status')).toHaveTextContent('GSC token expired');
   expect(screen.getByText("We couldn't finish analyzing your domain")).toBeInTheDocument();
+  // The timeline marks the stage the job died in — the two before it stay done.
+  expect(setupSteps(status({ status: 'failed' })).map((s) => s.state))
+    .toEqual(['done', 'done', 'active', 'idle', 'idle']);
+  const failed = screen.getByText('Clustering and modeling topics').closest('div')?.parentElement;
+  expect(failed).toBeTruthy();
   screen.getByRole('button', { name: 'Retry' }).click();
   expect(onRetry).toHaveBeenCalledTimes(1);
+});
+
+/** The stage a failed job died in is the one the timeline marks, not the first row. */
+it('marks the stage the job died in as failed', () => {
+  render(<DomainSetupProgressBar onRetry={() => undefined} setup={status({ status: 'failed', error: 'boom' })} />);
+  const { container } = render(
+    <DomainSetupProgressBar onRetry={() => undefined} setup={status({ status: 'failed', error: 'boom' })} />,
+  );
+  // Two ticks (gsc, keywords), one danger marker for topics, two pending rings.
+  const markers = container.querySelectorAll('[aria-hidden="true"] svg');
+  expect(markers.length).toBeGreaterThanOrEqual(3);
+  expect(screen.getAllByText('Clustering and modeling topics').length).toBeGreaterThan(0);
+});
+
+/** Materialization keeps the job open; dropping the pill there claimed it had finished. */
+it('stays up while the job is finalizing', () => {
+  render(<DomainSetupProgressBar onRetry={() => undefined} setup={status({ status: 'finalizing' })} />);
+  expect(screen.getByRole('status')).toBeInTheDocument();
 });

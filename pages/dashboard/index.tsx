@@ -24,7 +24,7 @@ import AiVisibilityPerformance from '../../components/dashboard/AiVisibilityPerf
 import RecommendationsSection, { RecommendationItem } from '../../components/dashboard/RecommendationsSection';
 import RecentlyEdited, { RecentlyEditedItem } from '../../components/dashboard/RecentlyEdited';
 import LearnSection from '../../components/dashboard/LearnSection';
-import DomainSetupProgressBar from '../../components/dashboard/DomainSetupProgressBar';
+import DomainSetupProgressBar, { isSetupShown } from '../../components/dashboard/DomainSetupProgressBar';
 import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
 import { useAiVisHistory } from '../../services/aiVisibility';
 import fetchJson from '@/src/infrastructure/http/fetchJson';
@@ -165,6 +165,11 @@ const DashboardPage: NextPage = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup?.status, activeDomainSlug]);
+
+  // An empty recommendation list means something different while the scan is unfinished.
+  const setupAnalysisState = setup && isSetupShown(setup)
+    ? (setup.status === 'failed' ? 'failed' as const : 'running' as const)
+    : undefined;
 
   // On transition to done, refresh the dashboard data queries
   useEffect(() => {
@@ -357,6 +362,7 @@ const DashboardPage: NextPage = () => {
                       coverage={setup?.auditCounts}
                       hasBlogPath={hasBlogPath}
                       settingsHref={settingsHref}
+                      analysis={setupAnalysisState}
                     />
                   ),
                 },

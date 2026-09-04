@@ -33,6 +33,9 @@ const RADIUS = 16;
  *  would have screen readers reading "Loading" several times at once.
  *  data-aiv-spin sits on this span because it is the element carrying the animation —
  *  `animation` does not inherit, so the reduced-motion rule must target it directly. */
+const SPIN_CSS = '@keyframes aiv-spin { to { transform: rotate(360deg); } }'
+   + ' @media (prefers-reduced-motion: reduce) { [data-aiv-spin] { animation: none !important; } }';
+
 export const Spinner = ({ size = 20 }: { size?: number }) => (
    <span
       aria-hidden="true"
@@ -47,7 +50,11 @@ export const Spinner = ({ size = 20 }: { size?: number }) => (
          flexShrink: 0,
          animation: 'aiv-spin 0.8s linear infinite',
       }}
-   />
+   >
+      {/* The keyframes travel with the spinner: used outside the pill (the editor's
+          auto-save chip), the animation had no definition and no reduced-motion rule. */}
+      <style>{SPIN_CSS}</style>
+   </span>
 );
 
 export const Check = ({ size = 20 }: { size?: number }) => (
@@ -176,10 +183,6 @@ const ProgressPill = ({
             pointerEvents: 'none',
          }}
       >
-         <style>
-            {'@keyframes aiv-spin { to { transform: rotate(360deg); } }'
-               + ' @media (prefers-reduced-motion: reduce) { [data-aiv-spin] { animation: none !important; } }'}
-         </style>
 
          {/* Hover lives on the wrapper, not the pill: closing on the pill's mouseleave shut
              the timeline before the pointer could arrive. The 8px gap is padding inside the
@@ -203,6 +206,9 @@ const ProgressPill = ({
                <div
                   role="region"
                   aria-label={ariaLabel}
+                  // Opacity hides it from the eye only: closed, the phase labels were
+                  // still in the accessibility tree under an aria-expanded="false" pill.
+                  aria-hidden={!open}
                   style={{
                      borderRadius: 16,
                      background: SURFACE,

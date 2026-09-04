@@ -70,6 +70,8 @@ interface Props {
   hasBlogPath?: boolean;
   /** Where the domain-settings blog-path field lives (no-path empty-state link). */
   settingsHref?: string;
+  /** The domain analysis has not produced recommendations yet — running, or stopped. */
+  analysis?: 'running' | 'failed';
 }
 
 const RowSkeleton = ({ divider }: { divider?: boolean }) => (
@@ -153,7 +155,7 @@ const SectionShell = ({ children, listItems }: { children?: React.ReactNode; lis
 };
 
 const RecommendationsSection = ({
-  items, total, faviconDomain, viewHref, loading, coverage, hasBlogPath, settingsHref,
+  items, total, faviconDomain, viewHref, loading, coverage, hasBlogPath, settingsHref, analysis,
 }: Props) => {
   if (loading) {
     return (
@@ -161,6 +163,25 @@ const RecommendationsSection = ({
         <RowSkeleton />
         <RowSkeleton divider />
         <Container padding="xl"><Skeleton width={150} height={13} /></Container>
+      </SectionShell>
+    );
+  }
+  if (items.length === 0 && analysis) {
+    // An empty list means nothing yet while the analysis is in flight, and a failed run
+    // has produced no verdict at all — "Your domain looks healthy" would be a claim the
+    // scan never made. The pill carries the progress and the Retry.
+    return (
+      <SectionShell>
+        <Flex direction="column" align="center" gap="lg" paddingTop="3xl" paddingBottom="3xl" paddingLeft="2xl" paddingRight="2xl" className="text-center">
+          <Text as="span" size="lg" bold>
+            {analysis === 'failed' ? 'We could not finish analyzing your domain' : 'Analyzing your domain'}
+          </Text>
+          <Text as="span" size="md" variant="muted" className="max-w-[420px] leading-relaxed">
+            {analysis === 'failed'
+              ? 'Recommendations appear once a scan completes. Retry it from the progress bar at the bottom of the screen.'
+              : 'Recommendations appear here as soon as the scan finishes.'}
+          </Text>
+        </Flex>
       </SectionShell>
     );
   }
