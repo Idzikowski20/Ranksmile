@@ -1,0 +1,22 @@
+__tests__/lib/readSse.test.ts
+  s_87fdc9d80693d3::t_702160558ddb57 26-27,29,32
+  s_87fdc9d80693d3::t_4bd77e60e3a7bb 28,30-31
+pages/api/articles/[id]/content-plan.ts
+  s_87fdc9d80693d3::t_702160558ddb57 102-107,475
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b66fe79e910128cc862b739f3623f699ac02a885",
+  "prompts": {},
+  "sessions": {
+    "s_87fdc9d80693d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0c3b0412-06ad-4c70-9b13-e97ea0a304ad",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
