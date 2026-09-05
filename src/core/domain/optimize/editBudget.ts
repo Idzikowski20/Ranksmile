@@ -51,7 +51,10 @@ export function budgetForAction(action: string, base: EditBudget): EditBudget {
     add_facts: { maxNewWords: 200, maxDeletedWords: 80, maxModifiedParagraphs: 6 },
     expand_section: { maxNewWords: 300, maxDeletedWords: 150, maxModifiedParagraphs: 10 },
     expand_existing_paragraph: { maxNewWords: 300, maxDeletedWords: 150, maxModifiedParagraphs: 10 },
-    rewrite_section: { maxNewWords: 450, maxDeletedWords: 300, maxModifiedParagraphs: 20, allowNewHeading: true },
+    // maxChangeRatio 1: a rewrite replaces the section's wording by definition. Under the
+    // strategy ratios (0.35–0.85) the action could never pass the safety gate — a bullet
+    // intro turned into prose scored 0.96 and was thrown away every time.
+    rewrite_section: { maxNewWords: 450, maxDeletedWords: 300, maxModifiedParagraphs: 20, maxChangeRatio: 1, allowNewHeading: true },
     add_subsection: { maxNewWords: 350, maxDeletedWords: 100, maxModifiedParagraphs: 12, allowNewHeading: true },
     // maxChangeRatio 1: this step APPENDS a section, so the safety gate measures it
     // against an empty "before" and the ratio is 1.0 by definition — the metric asks

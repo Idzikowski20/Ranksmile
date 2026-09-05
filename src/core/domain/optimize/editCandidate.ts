@@ -46,6 +46,8 @@ export type EditCandidate = {
   priority: EditCandidatePriority;
   /** Suggested action for planner. */
   suggestedAction?: string;
+  /** The bare term/phrase behind a term or heading gap — what a section bundle weaves. */
+  phrase?: string;
 };
 
 export function clamp01(n: number): number {
@@ -60,7 +62,10 @@ export function priorityToTier(p: EditCandidatePriority): EditCandidatePriorityT
 }
 
 export function makeCandidate(
-  partial: Omit<EditCandidate, 'intentFit' | 'topicDrift' | 'commercialDrift' | 'factualRisk' | 'gapId' | 'reason' | 'expectedOutcome' | 'priorityTier'> & {
+  partial: Omit<
+    EditCandidate,
+    'intentFit' | 'topicDrift' | 'commercialDrift' | 'factualRisk' | 'gapId' | 'reason' | 'expectedOutcome' | 'priorityTier'
+  > & {
     intentFit?: number;
     topicDrift?: number;
     commercialDrift?: number;
@@ -83,6 +88,7 @@ export function makeCandidate(
     priorityTier: partial.priorityTier ?? priorityToTier(partial.priority),
     priority: partial.priority,
     suggestedAction: partial.suggestedAction,
+    phrase: partial.phrase,
     intentFit: clamp01(partial.intentFit ?? 0.5),
     topicDrift: clamp01(partial.topicDrift ?? 0),
     commercialDrift: clamp01(partial.commercialDrift ?? 0),

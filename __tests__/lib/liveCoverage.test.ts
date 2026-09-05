@@ -27,17 +27,17 @@ describe('liveCoverageItems', () => {
     const out = liveCoverageItems(snap, 'the widget is great', '<p>the widget is great</p>');
 
     expect(snap).toEqual(snapCopy); // input items unchanged (deep-equal original)
-    expect(out).not.toBe(snap);     // new array
+    expect(out).not.toBe(snap); // new array
   });
 
-  it('frozen-type items are the SAME object reference (verbatim); flipped presence item is a NEW object', () => {
-    const frozen = item({ id: 'f1', type: 'fact', label: 'widget', covered: false });
+  it('an untouched item is the SAME object reference; a flipped item is a NEW object', () => {
+    const absentFact = item({ id: 'f1', type: 'fact', label: 'Prokurator grozi konsekwencjami.', covered: false });
     const entity = item({ id: 'e1', type: 'entity', label: 'widget', covered: false });
-    const snap = [frozen, entity];
+    const snap = [absentFact, entity];
     const out = liveCoverageItems(snap, 'the widget is great', '<p>the widget is great</p>');
 
-    expect(out[0]).toBe(frozen);        // verbatim same reference
-    expect(out[1]).not.toBe(entity);    // new object (covered flipped)
+    expect(out[0]).toBe(absentFact); // verbatim same reference
+    expect(out[1]).not.toBe(entity); // new object (covered flipped)
     expect(out[1].covered).toBe(true);
   });
 
@@ -53,13 +53,17 @@ describe('liveCoverageItems', () => {
     expect(out[0].covered).toBe(false);
   });
 
-  it('judge-only types (fact, definition, ...) are NEVER changed by presence check', () => {
-    const frozenTypes: CoverageItem['type'][] = ['fact', 'definition', 'comparison', 'example', 'process', 'statistic', 'expectation', 'warning'];
-    for (const type of frozenTypes) {
-      const snap = [item({ id: `${type}-1`, type, label: 'gizmo', covered: false })];
-      const out = liveCoverageItems(snap, 'this text clearly mentions gizmo many times', '<p>gizmo</p>');
-      expect(out[0].covered).toBe(false);
-      expect(out[0]).toBe(snap[0]);
+  it('knowledge types (fact, definition, ...) are credited when the text states them, never downgraded', () => {
+    // Facts woven into body prose are how Surfer's Auto-Optimize moves the AI score; freezing
+    // them until an LLM regrade meant no AO edit could register live.
+    const types: CoverageItem['type'][] = ['fact', 'definition', 'comparison', 'example', 'process', 'statistic', 'expectation', 'warning'];
+    for (const type of types) {
+      const stated = [item({ id: `${type}-1`, type, label: 'Karanie ciszą jest formą szantażu emocjonalnego', covered: false })];
+      const out = liveCoverageItems(stated, 'Karanie ciszą to znana forma szantażu emocjonalnego.', '<p>x</p>');
+      expect(out[0].covered).toBe(true);
+      const graded = [item({ id: `${type}-2`, type, label: 'Karanie ciszą jest formą szantażu emocjonalnego', covered: true, quality: 5 })];
+      const kept = liveCoverageItems(graded, 'zupełnie inny tekst o czym innym', '<p>x</p>');
+      expect(kept[0]).toBe(graded[0]);
     }
   });
 
@@ -79,8 +83,7 @@ describe('liveCoverageItems', () => {
       quality: 0,
       importance: 'critical',
     })];
-    const long =
-      'Cuckolding to konsensualna praktyka w związku, w której partnerzy świadomie ustalają granice '
+    const long = 'Cuckolding to konsensualna praktyka w związku, w której partnerzy świadomie ustalają granice '
       + 'i komunikację wokół fantazji o udziale trzeciej osoby. Nie jest to tożsame ze zdradą bez zgody, '
       + 'bo kluczowa jest jawność, negocjacja zasad i bezpieczeństwo emocjonalne obu stron w relacji.';
     const html = `<h3>Czym jest cuckolding?</h3><p>${long}</p>`;
@@ -125,7 +128,8 @@ describe('liveCoverageItems', () => {
   describe('paa toggling', () => {
     it('covered true when FAQ has H3 question + answer paragraph', () => {
       const snap = [item({ id: 'p1', type: 'paa', label: 'Kiedy można oskarżyć o nękanie', covered: false })];
-      const html = '<h2>FAQ</h2><h3>Kiedy można oskarżyć o nękanie?</h3><p>Można zgłosić, gdy zachowania są uporczywe i budzą uzasadnioną obawę o zdrowie lub życie.</p>';
+      const html = '<h2>FAQ</h2><h3>Kiedy można oskarżyć o nękanie?</h3>'
+        + '<p>Można zgłosić, gdy zachowania są uporczywe i budzą uzasadnioną obawę o zdrowie lub życie.</p>';
       const out = liveCoverageItems(snap, 'text', html);
       expect(out[0].covered).toBe(true);
     });
@@ -140,7 +144,8 @@ describe('liveCoverageItems', () => {
         covered: false,
         quality: 0,
       })];
-      const html = '<h3>Czy inwigilacja jest legalna?</h3><p>Inwigilacja może być legalna tylko gdy spełnia ustawowe warunki i ma podstawę prawną.</p>';
+      const html = '<h3>Czy inwigilacja jest legalna?</h3>'
+        + '<p>Inwigilacja może być legalna tylko gdy spełnia ustawowe warunki i ma podstawę prawną.</p>';
       const out = liveCoverageItems(snap, 'text', html);
       expect(out[0].covered).toBe(true);
       expect(out[0].quality).toBeGreaterThan(0);
@@ -179,7 +184,10 @@ describe('liveCoverageItems', () => {
     ];
     const before = computeCoverageScores(liveCoverageItems(snap, 'original text', '<p>original</p>'), false);
     // Edit text/html but frozen item's coverage cannot move.
-    const after = computeCoverageScores(liveCoverageItems(snap, 'original text plus some fact repeated', '<p>original plus some fact repeated</p>'), false);
+    const after = computeCoverageScores(
+      liveCoverageItems(snap, 'original text plus some fact repeated', '<p>original plus some fact repeated</p>'),
+      false,
+    );
     expect(after.overall).toBe(before.overall);
   });
 });

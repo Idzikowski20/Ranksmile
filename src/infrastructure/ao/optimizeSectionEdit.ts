@@ -30,8 +30,7 @@ export function computeTermUsageGaps(scoreData: ScoreData | undefined, articleHt
       const current = countOccurrences(plainText, t.term, t.term_words_regexps);
       const min = Math.max(1, Math.round(t.target_count * 0.7));
       const max = Math.round(t.target_count * 1.5);
-      const status: TermUsageStatus =
-         current === 0 ? 'missing' : current < min ? 'low' : current > max ? 'overuse' : 'ok';
+      const status: TermUsageStatus = current === 0 ? 'missing' : current < min ? 'low' : current > max ? 'overuse' : 'ok';
       return { term: t.term, current, target: t.target_count, status };
    });
 }
@@ -99,8 +98,7 @@ export function resolveOptimizeDoneOutcome(opts: {
 }): OptimizeDoneOutcome {
    if (opts.changedCount > 0) return 'improved';
    if (opts.rejectedUnusable > 0) return 'no_usable_edit';
-   const already =
-      opts.initialContent >= opts.targetContent
+   const already = opts.initialContent >= opts.targetContent
       || (opts.initialSeo >= opts.targetSeo && opts.initialAi >= opts.targetAi);
    return already ? 'already_optimal' : 'no_change';
 }

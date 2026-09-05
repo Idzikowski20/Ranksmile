@@ -35,14 +35,12 @@ function mapSafetyReason(r: RejectReason): AoRejectionReason {
 
 function mapDecisionToGate(d: CandidateGateDecision): GateResult {
   if (d.decision === 'accept') return { ok: true, detail: d.reason };
-  const reason: AoRejectionReason =
-    d.decision === 'score_inconclusive'
-      ? 'SCORE_INCONCLUSIVE'
-      : d.decision === 'reject_regression'
-        ? 'CONTENT_SCORE_REGRESSION'
-        : d.decision === 'reject_metric_tolerance'
-          ? (d.reason.includes('seo') ? 'SEO_REGRESSION' : 'AI_SEARCH_REGRESSION')
-          : 'QUALITY_GATE_FAILED';
+  let reason: AoRejectionReason = 'QUALITY_GATE_FAILED';
+  if (d.decision === 'score_inconclusive') reason = 'SCORE_INCONCLUSIVE';
+  else if (d.decision === 'reject_regression') reason = 'CONTENT_SCORE_REGRESSION';
+  else if (d.decision === 'reject_metric_tolerance') {
+    reason = d.reason.includes('seo') ? 'SEO_REGRESSION' : 'AI_SEARCH_REGRESSION';
+  }
   return { ok: false, reason, detail: `${d.decision}:${d.reason}` };
 }
 
@@ -82,7 +80,9 @@ export function runSemanticPreservationGate(opts: {
     }
   }
   for (const ent of opts.critical.keyEntities.filter((e) => e.importance === 'critical')) {
-    if (!unitSemanticallyPresent(ent, opts.afterHtml)) {
+    // Regression only, like definitions and answers: an entity the article never carried
+    // is not something the edit lost.
+    if (unitSemanticallyPresent(ent, opts.beforeHtml) && !unitSemanticallyPresent(ent, opts.afterHtml)) {
       return { ok: false, reason: 'PRIMARY_ENTITY_LOST', detail: ent.text };
     }
   }

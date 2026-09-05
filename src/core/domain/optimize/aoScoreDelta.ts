@@ -98,8 +98,7 @@ export function makeScoreDelta(
     };
   }
   const delta = Math.round(after) - Math.round(before);
-  const direction: ScoreDirection =
-    delta > 0 ? 'up' : delta < 0 ? 'down' : 'unchanged';
+  const direction: ScoreDirection = delta > 0 ? 'up' : delta < 0 ? 'down' : 'unchanged';
   return { before, after, delta, direction, availability: 'available' };
 }
 

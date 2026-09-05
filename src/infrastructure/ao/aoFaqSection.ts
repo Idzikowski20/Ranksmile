@@ -46,21 +46,16 @@ export function selectFaqQuestions(opts: {
   const selected: UncoveredAiQuestion[] = [];
   const seen = new Set<string>();
 
-  for (const q of opts.questions) {
-    if (selected.length >= budget) break;
-    const label = (q.label || '').trim();
-    if (label.length < 8) continue;
-    if (textHitsForbidden(label, opts.profile)) continue;
-
-    const key = label.toLowerCase().replace(/\s+/g, ' ');
-    if (seen.has(key)) continue;
-
-    // Redundant if content tokens (minus stopwords) are already in body
-    const STOP = new Set([
-      'czym', 'jaka', 'jaki', 'jakie', 'jak', 'dlaczego', 'czy', 'co', 'to',
-      'jest', 'są', 'oraz', 'what', 'when', 'where', 'which', 'does',
-      'the', 'and', 'for', 'with', 'from', 'znaczy', 'oznacza',
-    ]);
+  // Redundant if content tokens (minus stopwords) are already in body
+  const STOP = new Set([
+    'czym', 'jaka', 'jaki', 'jakie', 'jak', 'dlaczego', 'czy', 'co', 'to',
+    'jest', 'są', 'oraz', 'what', 'when', 'where', 'which', 'does',
+    'the', 'and', 'for', 'with', 'from', 'znaczy', 'oznacza',
+  ]);
+  const worthAsking = (q: UncoveredAiQuestion, label: string, key: string): boolean => {
+    if (label.length < 8) return false;
+    if (textHitsForbidden(label, opts.profile)) return false;
+    if (seen.has(key)) return false;
     const tokens = key
       .split(/\s+/)
       .map((w) => w.replace(/[^\p{L}\p{N}]+/gu, ''))
@@ -68,8 +63,7 @@ export function selectFaqQuestions(opts: {
     const hitRatio = tokens.length
       ? tokens.filter((t) => plainLow.includes(t)).length / tokens.length
       : 0;
-    if (hitRatio >= 0.85) continue;
-
+    if (hitRatio >= 0.85) return false;
     const scored = scoreCandidateAgainstProfile(
       makeCandidate({
         id: q.id,
@@ -80,10 +74,17 @@ export function selectFaqQuestions(opts: {
       }),
       opts.profile,
     );
-    if (scored.commercialDrift > 0.5 || scored.intentFit < 0.45) continue;
+    return !(scored.commercialDrift > 0.5 || scored.intentFit < 0.45);
+  };
 
-    seen.add(key);
-    selected.push({ id: q.id, label });
+  for (const q of opts.questions) {
+    if (selected.length >= budget) break;
+    const label = (q.label || '').trim();
+    const key = label.toLowerCase().replace(/\s+/g, ' ');
+    if (worthAsking(q, label, key)) {
+      seen.add(key);
+      selected.push({ id: q.id, label });
+    }
   }
 
   return selected;
@@ -100,7 +101,13 @@ export function mergeFaqHtml(articleHtml: string, faqHtml: string): string {
 
   const start = detectFaqSectionStart(articleHtml);
   if (start != null) {
-    return `${articleHtml.slice(0, start).trimEnd()}\n${trimmedFaq}`;
+    // Replace the old FAQ section only — up to the next H2. Slicing to the end of the
+    // document dropped every section written after the Q&A block (five sections and
+    // ~600 words of a 13-section article in one run).
+    const rest = articleHtml.slice(start + 1);
+    const nextH2 = rest.search(/<h2\b/i);
+    const tail = nextH2 >= 0 ? `\n${rest.slice(nextH2)}` : '';
+    return `${articleHtml.slice(0, start).trimEnd()}\n${trimmedFaq}${tail}`;
   }
   return `${articleHtml.trimEnd()}\n\n${trimmedFaq}`;
 }
@@ -151,7 +158,7 @@ export function validateFaqHtmlStructure(
   }
 
   // Each H3 must be followed by a non-empty <p> before the next H3/H2/end
-  for (let i = 0; i < h3Matches.length; i++) {
+  for (let i = 0; i < h3Matches.length; i += 1) {
     const h3 = h3Matches[i];
     const start = (h3.index ?? 0) + h3[0].length;
     const end = i + 1 < h3Matches.length

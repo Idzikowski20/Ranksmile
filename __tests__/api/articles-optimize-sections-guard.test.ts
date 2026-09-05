@@ -1,4 +1,15 @@
-jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
+import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
+import { getOrgUsage5h } from '@/src/infrastructure/ai/aiTokenUsage';
+import { buildArticleContext } from '@/src/infrastructure/articles/articleContext';
+import { needsTermEnrichment } from '@/src/infrastructure/articles/articleKeywordDiscovery';
+import { getCurrentUserId } from '../../utils/getUser';
+import verifyUser from '../../utils/verifyUser';
+import handler from '../../pages/api/articles/optimize-sections';
+
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({
+  withOrgPaymentAccess: (h: unknown) => h,
+  withOrgAccessPolicy: (h: unknown) => h,
+}));
 // Tenancy / auth guards + Precision AO contracts for optimize-sections.
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' } }));
 jest.mock('cheerio', () => jest.requireActual('cheerio'));
@@ -9,6 +20,10 @@ jest.mock('@/src/infrastructure/identity/tenancy', () => ({ assertArticleAccess:
 // Opening-policy enforcement rewrites the lead independently of term coverage and
 // consumes LLM calls, which breaks this suite's precision-guard assertions. It has
 // its own suite (__tests__/lib/wie/openingPolicyEnforce.test.ts) — no-op it here.
+// The post-run coverage regrade is an LLM judge pass; the guard test has no model.
+jest.mock('@/src/infrastructure/coverage/regradeCoverageSnapshot', () => ({
+  regradeCoverageSnapshot: jest.fn().mockResolvedValue(null),
+}));
 jest.mock('@/src/infrastructure/wie/enforceOpeningPolicy', () => ({
   enforceOpeningPolicy: jest.fn(async (opts: { html: string }) => ({
     html: opts.html, attempted: false, applied: false, usedHeuristic: false, tokens: 0,
@@ -18,10 +33,24 @@ jest.mock('@/src/infrastructure/wie/enforceOpeningPolicy', () => ({
 
 jest.mock('@/src/infrastructure/articles/articleContext', () => ({
   buildArticleContext: jest.fn(async () => ({
-    articleId: 1, keyword: 'k', scoreData: { terms: [], words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 },
+    articleId: 1,
+    keyword: 'k',
+    scoreData: { terms: [], words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 },
     breakdown: null,
-    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 },
-    paa: [], terms: [], competitors: [],
+    coverage: {
+      schemaVersion: 1,
+      judgeVersion: 'v1',
+      promptVersion: 'v1',
+      model: 'm',
+      createdAt: '',
+      items: [],
+      buckets: [],
+      answersMainQuestionEarly: false,
+      overall: 0,
+    },
+    paa: [],
+    terms: [],
+    competitors: [],
   })),
 }));
 const recordAiTokens = jest.fn(async (_orgId: number | null | undefined, _tokens: number) => {});
@@ -42,14 +71,6 @@ jest.mock('@/src/infrastructure/articles/articleKeywordDiscovery', () => ({
 jest.mock('@/src/infrastructure/articles/articleSql', () => ({
   getArticleIdSql: jest.fn(async () => 'id'),
 }));
-
-import handler from '../../pages/api/articles/optimize-sections';
-import verifyUser from '../../utils/verifyUser';
-import { getCurrentUserId } from '../../utils/getUser';
-import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
-import { getOrgUsage5h } from '@/src/infrastructure/ai/aiTokenUsage';
-import { buildArticleContext } from '@/src/infrastructure/articles/articleContext';
-import { needsTermEnrichment } from '@/src/infrastructure/articles/articleKeywordDiscovery';
 
 const mockNeedsTermEnrichment = needsTermEnrichment as jest.MockedFunction<typeof needsTermEnrichment>;
 const mockBuildArticleContext = buildArticleContext as jest.MockedFunction<typeof buildArticleContext>;
@@ -101,31 +122,43 @@ async function runHandler(bodyOverrides: Record<string, unknown> = {}): Promise<
   for (const call of res.write.mock.calls as unknown as [string][]) {
     const raw = call[0];
     const m = /^event: (.+)\ndata: (.+)\n\n$/.exec(raw);
-    if (!m) continue;
-    frames.push({ event: m[1], data: JSON.parse(m[2]) as Record<string, unknown> });
+    if (m) frames.push({ event: m[1], data: JSON.parse(m[2]) as Record<string, unknown> });
   }
   return frames;
 }
 
 /** Long enough section that a small sentence insert passes EditSafetyGate. */
-const LONG_SECTION =
-  '<h2>Guide</h2><p>'
-  + Array(80).fill('helpful guide content about usage and setup details here').join(' ')
-  + '</p>';
+const LONG_SECTION = `<h2>Guide</h2><p>${
+  Array(80).fill('helpful guide content about usage and setup details here').join(' ')
+}</p>`;
 
 const ctxWithMissingTerm = {
   articleId: 1,
   keyword: 'gizmo',
   scoreData: {
     terms: [{ term: 'gizmo', target_count: 5 }],
-    words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0,
+    words_target: 0,
+    words_min: 0,
+    words_max: 0,
+    headings_target: 0,
+    headings_min: 0,
+    headings_max: 0,
   },
   breakdown: null,
   coverage: {
-    schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '',
-    items: [], buckets: [], answersMainQuestionEarly: false, overall: 0,
+    schemaVersion: 1,
+    judgeVersion: 'v1',
+    promptVersion: 'v1',
+    model: 'm',
+    createdAt: '',
+    items: [],
+    buckets: [],
+    answersMainQuestionEarly: false,
+    overall: 0,
   },
-  paa: [], terms: [], competitors: [],
+  paa: [],
+  terms: [],
+  competitors: [],
 };
 
 beforeEach(() => {
@@ -179,11 +212,10 @@ it('covered content yields no accepted section edit', async () => {
 it('records tokens when a precision edit is accepted', async () => {
   mockBuildArticleContext.mockResolvedValueOnce(ctxWithMissingTerm as never);
 
-  const edited =
-    LONG_SECTION.replace(
-      '</p>',
-      ' A short clarification about gizmo usage.</p>',
-    );
+  const edited = LONG_SECTION.replace(
+    '</p>',
+    ' A short clarification about gizmo usage.</p>',
+  );
 
   (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
     ok: true,
@@ -201,7 +233,7 @@ it('rejects unsafe LLM rewrite via EditSafetyGate (no section accept)', async ()
   mockBuildArticleContext.mockResolvedValueOnce(ctxWithMissingTerm as never);
 
   // Full rewrite — fails CHANGE_RATIO / PRESERVATION
-  const rewrite = '<h2>Guide</h2><p>' + Array(80).fill('completely different text about other topics').join(' ') + '</p>';
+  const rewrite = `<h2>Guide</h2><p>${Array(80).fill('completely different text about other topics').join(' ')}</p>`;
   (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
     ok: true,
     json: async () => ({
@@ -253,11 +285,10 @@ it('precision prompt asks for a bounded operation (not whole-article rewrite)', 
 it('accepted precision edit emits section with Precision reason', async () => {
   mockBuildArticleContext.mockResolvedValueOnce(ctxWithMissingTerm as never);
 
-  const edited =
-    LONG_SECTION.replace(
-      '</p>',
-      ' A short clarification about gizmo usage.</p>',
-    );
+  const edited = LONG_SECTION.replace(
+    '</p>',
+    ' A short clarification about gizmo usage.</p>',
+  );
 
   (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
     ok: true,
@@ -285,11 +316,24 @@ it('emits a terms SSE event when NLP enrichment grows the term list', async () =
     { term: 'prywatny detektyw', target_count: 2 },
   ];
   mockBuildArticleContext.mockResolvedValueOnce({
-    articleId: 1, keyword: 'detektyw warszawa',
+    articleId: 1,
+    keyword: 'detektyw warszawa',
     scoreData: { terms: thinTerms, words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 },
     breakdown: null,
-    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 },
-    paa: [], terms: [], competitors: [],
+    coverage: {
+      schemaVersion: 1,
+      judgeVersion: 'v1',
+      promptVersion: 'v1',
+      model: 'm',
+      createdAt: '',
+      items: [],
+      buckets: [],
+      answersMainQuestionEarly: false,
+      overall: 0,
+    },
+    paa: [],
+    terms: [],
+    competitors: [],
   } as never);
   mockNeedsTermEnrichment.mockReturnValueOnce(true);
   mockEnrichNlpTermsIfNeeded.mockResolvedValueOnce(enrichedTerms);
@@ -314,11 +358,24 @@ it('restores terms from article_terms instead of shrinking score_data', async ()
     source: 'serp',
   }));
   mockBuildArticleContext.mockResolvedValueOnce({
-    articleId: 1, keyword: 'detektyw warszawa',
+    articleId: 1,
+    keyword: 'detektyw warszawa',
     scoreData: { terms: thinTerms, words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 },
     breakdown: null,
-    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 },
-    paa: [], terms: tableTerms, competitors: [],
+    coverage: {
+      schemaVersion: 1,
+      judgeVersion: 'v1',
+      promptVersion: 'v1',
+      model: 'm',
+      createdAt: '',
+      items: [],
+      buckets: [],
+      answersMainQuestionEarly: false,
+      overall: 0,
+    },
+    paa: [],
+    terms: tableTerms,
+    competitors: [],
   } as never);
   const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
   const termsEvt = events.find((e) => e.event === 'terms');

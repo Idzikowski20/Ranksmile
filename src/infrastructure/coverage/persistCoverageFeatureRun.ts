@@ -27,15 +27,17 @@ function resolveStore(explicit?: FeatureStore): FeatureStore {
   if (existing) return existing;
   // Jest / unit tests: never pull Sequelize (uuid ESM breaks).
   if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+    // eslint-disable-next-line global-require
     const { createMemoryFeatureStore } = require('@/src/infrastructure/stores/featureStoreCore') as typeof import('@/src/infrastructure/stores/featureStoreCore');
     return resolveFeatureStore(() => createMemoryFeatureStore());
   }
   try {
     // Lazy-load DB store so unit tests that pass `store` never import sequelize.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line global-require
     const { createDbFeatureStore } = require('@/src/infrastructure/stores/featureStore') as typeof import('@/src/infrastructure/stores/featureStore');
     return resolveFeatureStore(() => createDbFeatureStore());
   } catch {
+    // eslint-disable-next-line global-require
     const { createMemoryFeatureStore } = require('@/src/infrastructure/stores/featureStoreCore') as typeof import('@/src/infrastructure/stores/featureStoreCore');
     return resolveFeatureStore(() => createMemoryFeatureStore());
   }

@@ -63,6 +63,8 @@ describe('computeOptimizeLiveSnapshot', () => {
 
   it('does not collapse AI Search to 0 when live coverage fails but citation summary is healthy', () => {
     // AO rewrite can break FAQ presence checks → live coverage 0 while idle resolveAiScore stays ~65.
+    // Bare mentions (judge quality ≤ 2): a substantive judge grade (≥ 3) now survives the
+    // heading check, so only these can drop live.
     const items: CoverageItem[] = [
       {
         id: 'q1',
@@ -72,7 +74,7 @@ describe('computeOptimizeLiveSnapshot', () => {
         importance: 'critical',
         source: 'llm',
         covered: true,
-        quality: 5,
+        quality: 2,
       },
       {
         id: 'q2',
@@ -82,11 +84,10 @@ describe('computeOptimizeLiveSnapshot', () => {
         importance: 'recommended',
         source: 'llm',
         covered: true,
-        quality: 4,
+        quality: 1,
       },
     ];
-    const badHtml =
-      '<h1>Tytul</h1><p>Ogolny tekst bez slowa kluczowego z pytan.</p><p>Drugi paragraf tez ogolny bez FAQ.</p>';
+    const badHtml = '<h1>Tytul</h1><p>Ogolny tekst bez slowa kluczowego z pytan.</p><p>Drugi paragraf tez ogolny bez FAQ.</p>';
     const summary = healthySummary();
     const expected = computeAiSearchScore(summary);
 

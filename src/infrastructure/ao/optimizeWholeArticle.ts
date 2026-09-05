@@ -40,7 +40,7 @@ RULES:
 
 ${STOP_SLOP_RULES}`;
 
-const OUTPUT_RULE = `OUTPUT: ONLY the full article's raw HTML. No markdown code fences, no commentary.`;
+const OUTPUT_RULE = 'OUTPUT: ONLY the full article\'s raw HTML. No markdown code fences, no commentary.';
 
 function uncoveredAiCheckpoints(ctx: ArticleContext): string[] {
   const primary = (ctx.coverage?.items || [])
@@ -179,9 +179,9 @@ function focusBlock(focus: StepFocus, ctx: ArticleContext | null, html: string, 
     if (batch.length) {
       lines.push(
         `AI Search — improve coverage for these checkpoints (max ${batch.length} this round). `
-        + `For each: weave an answer into a full H2 section with several readable paragraphs (not a one-line stub). `
-        + `Do NOT try to answer ALL questions inline — uncovered AI Search Q&A will be added in a separate FAQ section:\n`
-        + batch.map((l) => `- ${l}`).join('\n'),
+        + 'For each: weave an answer into a full H2 section with several readable paragraphs (not a one-line stub). '
+        + `Do NOT try to answer ALL questions inline — uncovered AI Search Q&A will be added in a separate FAQ section:\n${
+         batch.map((l) => `- ${l}`).join('\n')}`,
       );
     }
     if (guideLines) lines.push(`Apply these guidelines:\n${guideLines}`);
@@ -241,8 +241,7 @@ export function buildWholeArticlePrompt(opts: {
   // When minimal mode still has term debt, allow normal (not patch-only) edits so
   // the model can redistribute phrases — "less" was too timid for 20+ missing terms.
   // ai-only already uses normal via editModeForFocus.
-  const effectiveEditMode: EditMode =
-    opts.focusInstruction
+  const effectiveEditMode: EditMode = opts.focusInstruction
       ? 'less'
       : (mode === 'minimal' && focus === 'seo-terms')
         ? 'normal'

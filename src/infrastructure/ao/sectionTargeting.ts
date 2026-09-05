@@ -45,8 +45,7 @@ export function scoreSectionsForTarget(opts: {
     const optimizationOpportunity = intentRelevance * topicCoverageGap;
     const criticalRisk = isCritical ? 0.4 : 0;
     const commercialRisk = isCommercial ? 0.35 : 0;
-    const total =
-      intentRelevance * 0.45
+    const total = intentRelevance * 0.45
       + topicCoverageGap * 0.25
       + optimizationOpportunity * 0.2
       - criticalRisk

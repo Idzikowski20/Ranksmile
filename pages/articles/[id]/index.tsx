@@ -8,6 +8,32 @@ import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { isOutlineAwaitingReview } from '@/src/infrastructure/articles/outlineReviewState';
 import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
+import { resolveArticleEntry, articleEntryHref } from '@/src/core/domain/articles/articleFlow';
+import { emptyPhases, type AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
+import { computeOptimizeLiveSnapshot } from '@/src/infrastructure/articles/computeLiveArticleScores';
+import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
+import { liveCoverageItems, scoreDeltaGate } from '@/src/infrastructure/coverage/liveCoverage';
+import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
+import { filterSyntheticCitationTemplates } from '@/src/infrastructure/articles/citationPrompts';
+import { substituteOptimizerPlaceholders } from '@/src/infrastructure/ao/optimizePostHtml';
+import { collectOptimizerPositions } from '@/src/core/domain/optimize/resolveAll';
+import type { PMDocLike } from '@/src/core/domain/optimize/resolveAll';
+import { authClient } from '@/src/infrastructure/auth/client';
+import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '@/src/infrastructure/articles/contentScore';
+import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
+import { computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
+import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
+import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '@/src/core/domain/articles/deepAnalysisProgress';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { isAbortError } from '@/src/core/shared/abortSignal';
+import type { SectionEvent } from '@/src/infrastructure/ao/optimizeSectionEvents';
+import { buildReviewDoc } from '@/src/infrastructure/ao/optimizeReviewDoc';
+import { prefersReducedMotion } from '@/components/motion/gsap';
+import type { ArticleEditorHandle } from '@/src/core/shared/types/editor';
+import type { Editor } from '@tiptap/core';
+import type { Node as PMNode } from '@tiptap/pm/model';
+import { parseJsonish } from '@/src/core/shared/types/json';
 import AppShell from '../../../components/common/AppShell';
 import { Button } from '../../../components/koala/core';
 import { Icon } from '../../../components/koala/icons';
@@ -25,44 +51,18 @@ import AutoOptimizeProgressBar from '../../../components/articles/AutoOptimizePr
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
 import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
 import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
-import { resolveArticleEntry, articleEntryHref } from '@/src/core/domain/articles/articleFlow';
 import AnalysisProgressPanel from '../../../components/articles/AnalysisProgressPanel';
 import CompetitorOutlinesPanel from '../../../components/articles/CompetitorOutlinesPanel';
 import { Spinner } from '../../../components/common/ProgressPill';
-import { emptyPhases, type AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
-import { computeOptimizeLiveSnapshot } from '@/src/infrastructure/articles/computeLiveArticleScores';
-import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
-import { liveCoverageItems, scoreDeltaGate } from '@/src/infrastructure/coverage/liveCoverage';
-import { computeCoverageScores } from '@/src/core/domain/coverage/aiCoverage';
-import { filterSyntheticCitationTemplates } from '@/src/infrastructure/articles/citationPrompts';
 import AoScoreFloat from '../../../components/articles/AoScoreFloat';
-import { substituteOptimizerPlaceholders } from '@/src/infrastructure/ao/optimizePostHtml';
-import { collectOptimizerPositions } from '@/src/core/domain/optimize/resolveAll';
-import type { PMDocLike } from '@/src/core/domain/optimize/resolveAll';
-import { authClient } from '@/src/infrastructure/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
 import { useContentSettings } from '../../../services/contentSettings';
 import { useArticleKeywords } from '../../../services/articleKeywords';
-import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '@/src/infrastructure/articles/contentScore';
-import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
-import { computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
-import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
-import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
-import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '@/src/core/domain/articles/deepAnalysisProgress';
-import { getErrorMessage } from '@/src/core/shared/errors';
-import { isAbortError } from '@/src/core/shared/abortSignal';
-import type { SectionEvent } from '@/src/infrastructure/ao/optimizeSectionEvents';
-import { buildReviewDoc } from '@/src/infrastructure/ao/optimizeReviewDoc';
 import { optimizeStore } from '../../../components/articles/optimizeStore';
 import { useBackgroundDeepAnalysis } from '../../../hooks/useBackgroundDeepAnalysis';
-import { prefersReducedMotion } from '@/components/motion/gsap';
-import type { ArticleEditorHandle } from '@/src/core/shared/types/editor';
-import type { Editor } from '@tiptap/core';
-import type { Node as PMNode } from '@tiptap/pm/model';
 import type { PlagiarismResult } from '../../../components/articles/PlagiarismPanel';
 import type { AiReadabilityResult } from '../../../components/articles/PrePublishPanel';
-import { parseJsonish } from '@/src/core/shared/types/json';
 import ArticleEditor from '../../../components/articles/ArticleEditorClient';
 import type { HeadingItem } from '../../../components/articles/ArticleEditor';
 
@@ -209,7 +209,8 @@ const IcoDots = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path fil
 const IcoChevronR = () => (<svg width={18} height={18} viewBox="0 0 24 24"><path {...sIco} d="m9 18l6-6l-6-6" /></svg>);
 
 /* Menu row used by the ⋯ actions menu */
-const MenuRow = ({ icon, label, sub, chevron, onClick, disabled }: { icon: React.ReactNode; label: string; sub?: string; chevron?: boolean; onClick?: () => void; disabled?: boolean }) => (
+type MenuRowProps = { icon: React.ReactNode; label: string; sub?: string; chevron?: boolean; onClick?: () => void; disabled?: boolean };
+const MenuRow = ({ icon, label, sub, chevron, onClick, disabled }: MenuRowProps) => (
   <button
     type="button"
     onClick={disabled ? undefined : onClick}
@@ -453,8 +454,8 @@ const ArticleEditorPage: NextPage = () => {
   const [gscPicture, setGscPicture] = useState('');
   useEffect(() => {
     fetch('/api/gsc/accounts', { credentials: 'include' })
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => { const a = d?.accounts?.[0]; if (a?.picture) setGscPicture(a.picture); })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { const a = d?.accounts?.[0]; if (a?.picture) setGscPicture(a.picture); })
       .catch(() => {});
   }, []);
   const commentAuthor: CommentAuthor = useMemo(() => ({
@@ -488,6 +489,8 @@ const ArticleEditorPage: NextPage = () => {
   const [optimizeState, setOptimizeState] = useState<'idle' | 'optimizing' | 'reviewing'>('idle');
   const preReviewHtmlRef = useRef<string>(''); // snapshot for AO-8 cancel/restore
   const optimizeMetaRef = useRef<{ changedCount: number; creditDeducted: boolean; promptVersion: string }>({ changedCount: 0, creditDeducted: false, promptVersion: '' });
+  // The coverage snapshot the run re-judged on its result; persisted by the AO Save.
+  const optimizeCoverageRef = useRef<CoverageSnapshot | null>(null);
   // AO-8b: results-panel inputs captured during the SSE run — pre-optimize content score
   // baseline (gauge/ScoreTrio delta) + the changed sections' display data (word-delta stats).
   const preScoreRef = useRef<number>(0);
@@ -606,7 +609,6 @@ const ArticleEditorPage: NextPage = () => {
   const editorLocked = isDeepAnalyzing || generationBusy;
   /** Same flag the editor reads for its bottom bar — the side panel has to agree with it. */
 
-
   useEffect(() => {
     if (!isDeepAnalyzing) return;
     setPanelCollapsed(false);
@@ -644,8 +646,8 @@ const ArticleEditorPage: NextPage = () => {
   useEffect(() => {
     if (!id) return;
     fetch(`/api/articles/${id}/comments`)
-      .then(r => r.json())
-      .then(d => setCommentThreads(d.threads || []))
+      .then((r) => r.json())
+      .then((d) => setCommentThreads(d.threads || []))
       .catch(() => {});
   }, [id, commentsVersion]);
 
@@ -762,11 +764,11 @@ const ArticleEditorPage: NextPage = () => {
           // Fetch other articles in the same domain for internal linking
           if (art.domain_id) {
             Promise.all([
-              fetch(`/api/domains`).then((r) => r.json()),
+              fetch('/api/domains').then((r) => r.json()),
               fetch(`/api/articles?domainId=${art.domain_id}`).then((r) => r.json()),
             ])
               .then(([dd, d]) => {
-                const dom = (dd.domains || []).find((d: DomainType) => d.ID === art.domain_id);
+                const dom = (dd.domains || []).find((dm: DomainType) => dm.ID === art.domain_id);
                 if (dom?.domain) setDomainBaseUrl(`https://${dom.domain}`);
                 const others = (d.articles || [])
                   .filter((a: { id: number; status?: string }) => a.id !== art.id && a.status === 'published')
@@ -810,7 +812,7 @@ const ArticleEditorPage: NextPage = () => {
             }
           }
         }
-      }
+      },
       )
       .catch(() => {
         if (!cancelled) toast.error('Failed to load article');
@@ -1036,7 +1038,13 @@ const ArticleEditorPage: NextPage = () => {
       coverageItems: filterSyntheticCitationTemplates(coverageItems, keyword),
       answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
     });
-    const updatedScoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number; _content_score?: number; _ao_meta?: { changes: number; promptVersion: string; creditDeducted: boolean } } = {
+    const updatedScoreData: ScoreData & {
+      _heading_count?: number;
+      _paragraph_count?: number;
+      _computed_score?: number;
+      _content_score?: number;
+      _ao_meta?: { changes: number; promptVersion: string; creditDeducted: boolean };
+    } = {
       ...scoreData,
       terms: updatedTerms,
       _heading_count: scored.headings,
@@ -1103,6 +1111,9 @@ const ArticleEditorPage: NextPage = () => {
         meta_description: article?.meta_description,
         meta_url: article?.meta_url,
         ...(versionType ? { version_type: versionType } : {}),
+        ...(versionType === 'auto_optimize' && optimizeCoverageRef.current
+          ? { coverage_snapshot: optimizeCoverageRef.current }
+          : {}),
         ...(internalLinksCache ? { internal_links_cache: internalLinksCache } : {}),
       }),
     });
@@ -1284,7 +1295,6 @@ const ArticleEditorPage: NextPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- doSave closes over latest editor state
   }, [ranksmileDockOpen]);
 
-
   const handleAcceptReject = async (action: 'accept' | 'reject') => {
     if (!id) return;
     try {
@@ -1420,7 +1430,7 @@ const ArticleEditorPage: NextPage = () => {
       //    parallel array so we can map normalised positions back to original offsets.
       const normCh = (ch: string) =>
         ch.replace(/[–—‐‑‒―]/g, '-')
-          .replace(/[\s ]+/g, ' ')
+          .replace(/[\s\u00a0]+/g, ' ')
           .toLowerCase();
 
       const buildNormMap = (src: string) => {
@@ -1542,6 +1552,7 @@ const ArticleEditorPage: NextPage = () => {
     setScanningSectionId(null);
     changedSectionsRef.current = [];
     optimizeStore.clear();
+    optimizeCoverageRef.current = null;
     autoLinksRanRef.current = false;
     setOptimizeState('optimizing');
     setIsAutoOptimizing(true);
@@ -1636,6 +1647,13 @@ const ArticleEditorPage: NextPage = () => {
                   current_count: countOccurrences(plain, t.term),
                 })),
               }));
+            }
+          } else if (eventType === 'coverage') {
+            const { snapshot } = payload as { snapshot: CoverageSnapshot | null };
+            if (snapshot?.items?.length) {
+              optimizeCoverageRef.current = snapshot;
+              setCoverageSnapshot(snapshot);
+              setCoverageItems([...snapshot.items]);
             }
           } else if (eventType === 'meta') {
             const m = payload as { total: number; wholeArticle?: boolean };
@@ -1802,13 +1820,13 @@ const ArticleEditorPage: NextPage = () => {
     if (!editor || !article?.id || !internalArticles.length) return;
     try {
       const html: string = editor.getHTML();
-      const plainText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       const res = await fetch('/api/articles/suggest-internal-links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           articleId: article.id,
-          content: plainText,
+          content: plain,
           keyword: article.target_keyword || '',
           articles: internalArticles,
         }),
@@ -2223,25 +2241,24 @@ const ArticleEditorPage: NextPage = () => {
           {/* ── Auto-save status (floating, bottom-left) — only while saving/unsaved.
               Same dark surface as the progress pill, one size down. ── */}
           {autoSaveState !== 'saved' && (
-          <div
-            role="status"
-            title={autoSaveState === 'saving' ? 'Saving…' : 'Unsaved changes'}
-            style={{
-              position: 'absolute', bottom: 12, left: 12, zIndex: 80,
-              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 12,
-              background: 'var(--koala-bg-inverse)', color: 'var(--koala-text-on-inverse)',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
-              fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)',
-              whiteSpace: 'nowrap', pointerEvents: 'none',
-            }}
-          >
-            {autoSaveState === 'saving'
-              ? <Spinner size={14} />
-              : <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--koala-status-warning)', flexShrink: 0 }} />}
-            {autoSaveState === 'saving' ? 'Saving…' : 'Unsaved'}
-          </div>
+            <div
+              role="status"
+              title={autoSaveState === 'saving' ? 'Saving…' : 'Unsaved changes'}
+              style={{
+                position: 'absolute', bottom: 12, left: 12, zIndex: 80,
+                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 12,
+                background: 'var(--koala-bg-inverse)', color: 'var(--koala-text-on-inverse)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
+                fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)',
+                whiteSpace: 'nowrap', pointerEvents: 'none',
+              }}
+            >
+              {autoSaveState === 'saving'
+                ? <Spinner size={14} />
+                : <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--koala-status-warning)', flexShrink: 0 }} />}
+              {autoSaveState === 'saving' ? 'Saving…' : 'Unsaved'}
+            </div>
           )}
-
 
           {/* ── Editor card (white rounded, padding-right for panel) ── */}
           <div
@@ -2294,7 +2311,22 @@ const ArticleEditorPage: NextPage = () => {
               onCreateComment={async (quote, draft) => {
                 // Optimistic: show a pending pin instantly, reconcile after the POST.
                 const tmp = `tmp_${Math.random().toString(36).slice(2, 10)}`;
-                setCommentThreads((prev) => [...prev, { id: tmp, parentId: null, quote, text: draft.text, images: draft.images, author: commentAuthor.name, color: commentAuthor.color, avatar: commentAuthor.avatar, resolved: false, reactions: {}, createdAt: Date.now(), updatedAt: null, replies: [], pending: true }]);
+                setCommentThreads((prev) => [...prev, {
+                  id: tmp,
+                  parentId: null,
+                  quote,
+                  text: draft.text,
+                  images: draft.images,
+                  author: commentAuthor.name,
+                  color: commentAuthor.color,
+                  avatar: commentAuthor.avatar,
+                  resolved: false,
+                  reactions: {},
+                  createdAt: Date.now(),
+                  updatedAt: null,
+                  replies: [],
+                  pending: true,
+                }]);
                 try {
                   const r = await fetch(`/api/articles/${id}/comments`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2326,41 +2358,41 @@ const ArticleEditorPage: NextPage = () => {
 
           {/* ── Compact actions bar (shown when the side panel is hidden) ── */}
           <AnimatePresence>
-          {panelCollapsed && (
-            <motion.div
-              key="collapsedbar"
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18, delay: 0.12 }}
-              style={{
-                position: 'absolute', top: 14, right: 12, zIndex: 95, display: 'flex', alignItems: 'center', gap: 6,
-              }}>
-              <div ref={actionsRef} style={{ position: 'relative', display: 'inline-flex' }}>
-                <IconBtn disabled={editorLocked} onClick={() => { setActionsMenu((o) => !o); setVoiceOpen(false); }} title="More"><IcoDots /></IconBtn>
-                {actionsMenu && (
-                  <div style={{
-                    position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200, minWidth: 244,
-                    background: 'var(--koala-bg-primary)', borderRadius: 12, padding: '6px 0',
-                    boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)',
-                    animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
-                  }}>
-                    <MenuRow disabled={editorLocked} icon={<IcoClock />} label="Version history" onClick={() => { setPanelCollapsed(false); setShowHistory(true); setActionsMenu(false); }} />
-                    <MenuRow disabled={editorLocked} icon={<IcoGear />} label="Settings" onClick={() => { setShowCustomization(true); setActionsMenu(false); }} />
-                    <div style={{ position: 'relative' }}>
-                      <MenuRow disabled={editorLocked} icon={<IcoVoice />} label="Voice" sub="SERP based" chevron onClick={() => setVoiceOpen((v) => !v)} />
-                      {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200 }} />}
+            {panelCollapsed && (
+              <motion.div
+                key="collapsedbar"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, delay: 0.12 }}
+                style={{
+                  position: 'absolute', top: 14, right: 12, zIndex: 95, display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                <div ref={actionsRef} style={{ position: 'relative', display: 'inline-flex' }}>
+                  <IconBtn disabled={editorLocked} onClick={() => { setActionsMenu((o) => !o); setVoiceOpen(false); }} title="More"><IcoDots /></IconBtn>
+                  {actionsMenu && (
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200, minWidth: 244,
+                      background: 'var(--koala-bg-primary)', borderRadius: 12, padding: '6px 0',
+                      boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)',
+                      animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
+                    }}>
+                      <MenuRow disabled={editorLocked} icon={<IcoClock />} label="Version history" onClick={() => { setPanelCollapsed(false); setShowHistory(true); setActionsMenu(false); }} />
+                      <MenuRow disabled={editorLocked} icon={<IcoGear />} label="Settings" onClick={() => { setShowCustomization(true); setActionsMenu(false); }} />
+                      <div style={{ position: 'relative' }}>
+                        <MenuRow disabled={editorLocked} icon={<IcoVoice />} label="Voice" sub="SERP based" chevron onClick={() => setVoiceOpen((v) => !v)} />
+                        {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200 }} />}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-              <IconBtn disabled={editorLocked} onClick={() => setPanelCollapsed(false)} title="Show side panel"><IcoPanel /></IconBtn>
-              <WpPublishButton
-                disabled={editorLocked || !id}
-                onClick={() => { void openPublishPanel(); }}
-              />
-            </motion.div>
-          )}
+                  )}
+                </div>
+                <IconBtn disabled={editorLocked} onClick={() => setPanelCollapsed(false)} title="Show side panel"><IcoPanel /></IconBtn>
+                <WpPublishButton
+                  disabled={editorLocked || !id}
+                  onClick={() => { void openPublishPanel(); }}
+                />
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {/* ── Right panel (absolute, two cards stacked) ───────────
@@ -2368,59 +2400,59 @@ const ArticleEditorPage: NextPage = () => {
               so initial x: PANEL_W+24 parks the panel outside the clip and it can stay
               invisible if the spring never commits — empty gray gutter, no Publish/score. */}
           {!panelCollapsed && (
-          <div
-            className="ce-right-panel"
-            style={{
-              position: 'absolute',
-              top: 0, right: 0, bottom: 0,
-              width: PANEL_W,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: PANEL_GAP,
-              zIndex: 90,
-            }}
-          >
-            {/* Top card: action icons + preview */}
-            <div className="koala-panel editor-side-toolbar" style={{ position: 'relative', zIndex: voiceOpen ? 150 : undefined }}>
-              {/* Left: action icon buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {/* Version History */}
-                <span data-tour="version" style={{ display: 'inline-flex' }}>
-                  <IconBtn disabled={editorLocked} onClick={() => { setShowHistory((v) => !v); }} title="Version History">
-                    <IcoClock />
-                  </IconBtn>
-                </span>
+            <div
+              className="ce-right-panel"
+              style={{
+                position: 'absolute',
+                top: 0, right: 0, bottom: 0,
+                width: PANEL_W,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: PANEL_GAP,
+                zIndex: 90,
+              }}
+            >
+              {/* Top card: action icons + preview */}
+              <div className="koala-panel editor-side-toolbar" style={{ position: 'relative', zIndex: voiceOpen ? 150 : undefined }}>
+                {/* Left: action icon buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  {/* Version History */}
+                  <span data-tour="version" style={{ display: 'inline-flex' }}>
+                    <IconBtn disabled={editorLocked} onClick={() => { setShowHistory((v) => !v); }} title="Version History">
+                      <IcoClock />
+                    </IconBtn>
+                  </span>
 
-                {/* Voice */}
-                <div ref={voiceRef} data-tour="voice" style={{ position: 'relative', display: 'inline-flex' }}>
-                  <IconBtn disabled={editorLocked} onClick={() => setVoiceOpen((v) => !v)} title="Voice">
-                    <IcoVoice />
-                  </IconBtn>
-                  {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200 }} />}
+                  {/* Voice */}
+                  <div ref={voiceRef} data-tour="voice" style={{ position: 'relative', display: 'inline-flex' }}>
+                    <IconBtn disabled={editorLocked} onClick={() => setVoiceOpen((v) => !v)} title="Voice">
+                      <IcoVoice />
+                    </IconBtn>
+                    {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200 }} />}
+                  </div>
+
+                  {/* Settings (customization panel) */}
+                  <span data-tour="settings" style={{ display: 'inline-flex' }}>
+                    <IconBtn disabled={editorLocked} onClick={() => setShowCustomization(true)} title="Settings"><IcoGear /></IconBtn>
+                  </span>
                 </div>
 
-                {/* Settings (customization panel) */}
-                <span data-tour="settings" style={{ display: 'inline-flex' }}>
-                  <IconBtn disabled={editorLocked} onClick={() => setShowCustomization(true)} title="Settings"><IcoGear /></IconBtn>
-                </span>
+                {/* Right: panel toggle + Publish */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span data-tour="hide-panel" style={{ display: 'inline-flex' }}>
+                    <IconBtn disabled={editorLocked} onClick={() => { setPanelCollapsed(true); setVoiceOpen(false); }} title="Hide side panel"><IcoPanel /></IconBtn>
+                  </span>
+                  <WpPublishButton
+                    data-tour="publish"
+                    disabled={editorLocked || !id}
+                    onClick={() => { void openPublishPanel(); }}
+                  />
+                </div>
               </div>
 
-              {/* Right: panel toggle + Publish */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span data-tour="hide-panel" style={{ display: 'inline-flex' }}>
-                  <IconBtn disabled={editorLocked} onClick={() => { setPanelCollapsed(true); setVoiceOpen(false); }} title="Hide side panel"><IcoPanel /></IconBtn>
-                </span>
-                <WpPublishButton
-                  data-tour="publish"
-                  disabled={editorLocked || !id}
-                  onClick={() => { void openPublishPanel(); }}
-                />
-              </div>
-            </div>
-
-            {/* Bottom card: keyword + content score OR panel */}
-            <div className="koala-panel editor-side-panel-card">
-              {isDeepAnalyzing ? (
+              {/* Bottom card: keyword + content score OR panel */}
+              <div className="koala-panel editor-side-panel-card">
+                {isDeepAnalyzing ? (
                 // Entered the editor before the analysis finished — show what the
                 // pipeline is doing instead of an empty Content Score.
                 //
@@ -2428,105 +2460,105 @@ const ArticleEditorPage: NextPage = () => {
                 // when the first patch had not landed yet swapped this for a second,
                 // older progress panel plus the background-queue chips, so the column
                 // changed shape mid-run and showed NER work the user never asked about.
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
-                  <AnalysisProgressPanel phases={analysisPhases ?? emptyPhases()} />
-                </div>
-              ) : outlineReviewMode ? (
+                  <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
+                    <AnalysisProgressPanel phases={analysisPhases ?? emptyPhases()} />
+                  </div>
+                ) : outlineReviewMode ? (
                 // Outline review: the competitor structures are the only reference that
                 // helps here. A Content Score of an outline is meaningless — it grades an
                 // article that has not been written — and the terms panel invites edits
                 // to a document whose whole purpose is to be replaced by the generator.
-                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                  <CompetitorOutlinesPanel
-                    articleId={article.id}
-                    keyword={article.target_keyword || ''}
-                    cachedOutlines={article.competitor_outlines_cache}
-                    domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
-                  />
-                </div>
-              ) : ranksmileDockOpen ? (
-                // Docked Ranksmile pane — the editor portals RanksmileChatPanel into this element.
-                <div ref={setRanksmileDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
-              ) : showHistory ? (
-                <VersionHistoryPanel
-                  articleId={article.id}
-                  currentWordCount={wordCount}
-                  currentScore={liveContentScore}
-                  onClose={() => setShowHistory(false)}
-                  onRestore={handleRestoreVersion}
-                />
-              ) : (
-                <>
-                  {/* ContentScorePanel fills remaining height */}
-                  <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
-                    <ContentScorePanel
-                      plainText={plainText}
-                      wordCount={wordCount}
-                      headingCount={headingCount}
-                      scoreData={scoreData}
-                      internalLinksCount={internalLinksCount}
-                      onLiveScores={handlePanelScores}
-                      html={editorHtml}
-                      scoreDeltas={aoScoresReady && aoLiveSnapshot ? (() => {
-                        const aiBase = aiVisibilityBaselineRef.current;
-                        const seoBase = preScoreRef.current;
-                        const contentBase = preContentScoreRef.current;
-                        const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || scoreData?.ai_score != null;
-                        const seoDelta = Math.round(aoLiveSnapshot.seo) - Math.round(seoBase);
-                        const aiDelta = Math.round(aoLiveSnapshot.ai) - Math.round(aiBase);
-                        const overallDelta = Math.round(aoLiveSnapshot.overall) - Math.round(contentBase);
-                        return {
-                          seo: seoDelta !== 0 ? seoDelta : undefined,
-                          overall: overallDelta !== 0 ? overallDelta : undefined,
-                          ai: hasAi && aiDelta !== 0 ? aiDelta : undefined,
-                        };
-                      })() : undefined}
-                      optimizeLiveScores={aoScoresReady && aoLiveSnapshot ? {
-                        seo: aoLiveSnapshot.seo,
-                        ai: aoLiveSnapshot.ai,
-                        overall: aoLiveSnapshot.overall,
-                      } : undefined}
-                      keyword={article?.target_keyword || ''}
-                      onAutoOptimize={() => handleAutoOptimizeSections()}
-                      isAutoOptimizing={isAutoOptimizing}
-                      optimizeState={optimizeState}
-                      onCancelOptimize={() => setCancelModalOpen(true)}
-                      onSaveOptimize={() => setSaveModalOpen(true)}
-                      optimizeSaving={optimizeSaving}
-                      saveState={autoSaveState}
+                  <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                    <CompetitorOutlinesPanel
                       articleId={article.id}
-                      domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
+                      keyword={article.target_keyword || ''}
                       cachedOutlines={article.competitor_outlines_cache}
-                      fallbackScore={article.content_score}
-                      title={article.title || ''}
-                      metaTitle={article.meta_title || ''}
-                      metaDescription={article.meta_description || ''}
-                      onMetaTitleChange={handleMetaTitleChange}
-                      onMetaDescriptionChange={handleMetaDescriptionChange}
-                      highlightTerms={highlightTerms}
-                      onHighlightTermsChange={setHighlightTerms}
-                      initialPlagiarism={initialPlagiarism}
-                      initialAiReadability={initialAiReadability}
-                      featuredImage={featuredImage}
-                      onFeaturedImageChange={setFeaturedImage}
-                      isDone={article.status === 'accepted'}
-                      onMarkDone={() => handleAcceptReject('accept')}
-                      aiVisibilitySummary={aiVisibilitySummary}
-                      coverageItems={aoLiveSnapshot ? aoLiveSnapshot.liveItems : liveAiCoverage.items}
-                      coverageBuckets={aoLiveSnapshot ? aoLiveSnapshot.buckets : liveAiCoverage.buckets}
-                      coverageSnapshot={coverageSnapshot}
-                      aiCoverageScore={aoLiveSnapshot ? aoLiveSnapshot.ai : (liveAiCoverage.overall ?? aiCoverageScore)}
-                      isRunningAiVisibility={isRunningAiVisibility}
-                      onRunAiVisibility={handleRunAiVisibility}
-                      onApplyReadability={handleApplyReadability}
-                      onPlagiarismHighlight={handlePlagiarismHighlight}
-                      readabilityAccepted={readabilityAcceptKey}
+                      domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
                     />
                   </div>
-                </>
-              )}
+                ) : ranksmileDockOpen ? (
+                // Docked Ranksmile pane — the editor portals RanksmileChatPanel into this element.
+                  <div ref={setRanksmileDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
+                ) : showHistory ? (
+                  <VersionHistoryPanel
+                    articleId={article.id}
+                    currentWordCount={wordCount}
+                    currentScore={liveContentScore}
+                    onClose={() => setShowHistory(false)}
+                    onRestore={handleRestoreVersion}
+                  />
+                ) : (
+                  <>
+                    {/* ContentScorePanel fills remaining height */}
+                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
+                      <ContentScorePanel
+                        plainText={plainText}
+                        wordCount={wordCount}
+                        headingCount={headingCount}
+                        scoreData={scoreData}
+                        internalLinksCount={internalLinksCount}
+                        onLiveScores={handlePanelScores}
+                        html={editorHtml}
+                        scoreDeltas={aoScoresReady && aoLiveSnapshot ? (() => {
+                          const aiBase = aiVisibilityBaselineRef.current;
+                          const seoBase = preScoreRef.current;
+                          const contentBase = preContentScoreRef.current;
+                          const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || scoreData?.ai_score != null;
+                          const seoDelta = Math.round(aoLiveSnapshot.seo) - Math.round(seoBase);
+                          const aiDelta = Math.round(aoLiveSnapshot.ai) - Math.round(aiBase);
+                          const overallDelta = Math.round(aoLiveSnapshot.overall) - Math.round(contentBase);
+                          return {
+                            seo: seoDelta !== 0 ? seoDelta : undefined,
+                            overall: overallDelta !== 0 ? overallDelta : undefined,
+                            ai: hasAi && aiDelta !== 0 ? aiDelta : undefined,
+                          };
+                        })() : undefined}
+                        optimizeLiveScores={aoScoresReady && aoLiveSnapshot ? {
+                          seo: aoLiveSnapshot.seo,
+                          ai: aoLiveSnapshot.ai,
+                          overall: aoLiveSnapshot.overall,
+                        } : undefined}
+                        keyword={article?.target_keyword || ''}
+                        onAutoOptimize={() => handleAutoOptimizeSections()}
+                        isAutoOptimizing={isAutoOptimizing}
+                        optimizeState={optimizeState}
+                        onCancelOptimize={() => setCancelModalOpen(true)}
+                        onSaveOptimize={() => setSaveModalOpen(true)}
+                        optimizeSaving={optimizeSaving}
+                        saveState={autoSaveState}
+                        articleId={article.id}
+                        domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
+                        cachedOutlines={article.competitor_outlines_cache}
+                        fallbackScore={article.content_score}
+                        title={article.title || ''}
+                        metaTitle={article.meta_title || ''}
+                        metaDescription={article.meta_description || ''}
+                        onMetaTitleChange={handleMetaTitleChange}
+                        onMetaDescriptionChange={handleMetaDescriptionChange}
+                        highlightTerms={highlightTerms}
+                        onHighlightTermsChange={setHighlightTerms}
+                        initialPlagiarism={initialPlagiarism}
+                        initialAiReadability={initialAiReadability}
+                        featuredImage={featuredImage}
+                        onFeaturedImageChange={setFeaturedImage}
+                        isDone={article.status === 'accepted'}
+                        onMarkDone={() => handleAcceptReject('accept')}
+                        aiVisibilitySummary={aiVisibilitySummary}
+                        coverageItems={aoLiveSnapshot ? aoLiveSnapshot.liveItems : liveAiCoverage.items}
+                        coverageBuckets={aoLiveSnapshot ? aoLiveSnapshot.buckets : liveAiCoverage.buckets}
+                        coverageSnapshot={coverageSnapshot}
+                        aiCoverageScore={aoLiveSnapshot ? aoLiveSnapshot.ai : (liveAiCoverage.overall ?? aiCoverageScore)}
+                        isRunningAiVisibility={isRunningAiVisibility}
+                        onRunAiVisibility={handleRunAiVisibility}
+                        onApplyReadability={handleApplyReadability}
+                        onPlagiarismHighlight={handlePlagiarismHighlight}
+                        readabilityAccepted={readabilityAcceptKey}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
           )}
         </div>
 
@@ -2697,7 +2729,8 @@ const ArticleEditorPage: NextPage = () => {
                     setLinkNavIdx(next);
                     const editor = editorRef.current?.getEditor();
                     if (editor) {
-                      editor.chain().focus().setTextSelection({ from: positions[next], to: positions[next] + 1 }).scrollIntoView().run();
+                      editor.chain().focus().setTextSelection({ from: positions[next], to: positions[next] + 1 }).scrollIntoView()
+                        .run();
                     }
                   }}
                   style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 6, border: 'none', background: 'var(--koala-bg-secondary)', color: 'var(--koala-text-disabled)', cursor: 'pointer', fontSize: 13, transition: 'background 0.15s, color 0.15s' }}

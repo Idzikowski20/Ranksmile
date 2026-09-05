@@ -155,9 +155,7 @@ export function diffWords(aText: string, bText: string): { left: WordSeg[]; righ
    let i = 0;
    let j = 0;
    while (i < n && j < m) {
-      if (a[i] === b[j]) { pushSeg(left, 'equal', a[i]); pushSeg(right, 'equal', b[j]); i += 1; j += 1; }
-      else if (dp[i + 1][j] >= dp[i][j + 1]) { pushSeg(left, 'removed', a[i]); i += 1; }
-      else { pushSeg(right, 'added', b[j]); j += 1; }
+      if (a[i] === b[j]) { pushSeg(left, 'equal', a[i]); pushSeg(right, 'equal', b[j]); i += 1; j += 1; } else if (dp[i + 1][j] >= dp[i][j + 1]) { pushSeg(left, 'removed', a[i]); i += 1; } else { pushSeg(right, 'added', b[j]); j += 1; }
    }
    while (i < n) { pushSeg(left, 'removed', a[i]); i += 1; }
    while (j < m) { pushSeg(right, 'added', b[j]); j += 1; }
@@ -193,9 +191,7 @@ export function diffBlocks(originalHtml: string, newHtml: string): DiffBlock[] {
    let i = 0;
    let j = 0;
    while (i < n && j < m) {
-      if (key(O[i]) === key(N[j])) { ops.push({ type: 'equal', o: O[i], n: N[j] }); i += 1; j += 1; }
-      else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ type: 'removed', o: O[i] }); i += 1; }
-      else { ops.push({ type: 'added', n: N[j] }); j += 1; }
+      if (key(O[i]) === key(N[j])) { ops.push({ type: 'equal', o: O[i], n: N[j] }); i += 1; j += 1; } else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ type: 'removed', o: O[i] }); i += 1; } else { ops.push({ type: 'added', n: N[j] }); j += 1; }
    }
    while (i < n) { ops.push({ type: 'removed', o: O[i] }); i += 1; }
    while (j < m) { ops.push({ type: 'added', n: N[j] }); j += 1; }

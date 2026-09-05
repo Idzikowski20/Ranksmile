@@ -45,79 +45,80 @@ const PRACTICAL_ACTIONS = new Set([
   'add_facts',
 ]);
 
+type RxFailure = { reason: string; detail: string };
+
 /**
  * Reject Wikipedia-checklist / placeholder edits even when SEO/AI score rose.
+ *
+ * Every check reads the whole document, so with `beforeHtml` the verdict is a
+ * regression check: only a failure the before-state did not already have counts.
+ * An article that never carried an expert marker vetoed each of its own edits on
+ * "no_expert_voice" — 8 of 11 sections in one 13-section run.
  */
 export function evaluateRxQualityGate(opts: {
   afterHtml: string;
+  beforeHtml?: string;
   action: string;
   synthesis?: CompetitorSynthesis | null;
 }): RxGateResult {
-  const html = opts.afterHtml || '';
+  const after = failures(opts.afterHtml, opts.action, opts.synthesis);
+  if (!after.length) return { ok: true };
+  if (opts.beforeHtml == null) return { ok: false, ...after[0] };
+  const inherited = new Set(failures(opts.beforeHtml, opts.action, opts.synthesis).map((f) => f.reason));
+  const introduced = after.find((f) => !inherited.has(f.reason));
+  return introduced ? { ok: false, ...introduced } : { ok: true };
+}
+
+/** Every check the document fails, independently — order is severity. */
+function failures(
+  afterHtml: string,
+  action: string,
+  synthesis: CompetitorSynthesis | null | undefined,
+): RxFailure[] {
+  const out: RxFailure[] = [];
+  const html = afterHtml || '';
   const plain = stripTags(html);
+  const wordCount = plain.split(/\s+/).length;
+  const practical = PRACTICAL_ACTIONS.has(action);
 
   if (EDITOR_PLACEHOLDER_RE.test(html) || EDITOR_PLACEHOLDER_RE.test(plain)) {
-    return { ok: false, reason: 'placeholder', detail: 'editor placeholder in content' };
+    out.push({ reason: 'placeholder', detail: 'editor placeholder in content' });
   }
 
-  const practical = PRACTICAL_ACTIONS.has(opts.action);
-  if (practical && DEFINITION_HEAVY_RE.test(plain) && !hasConcreteExample(plain, opts.synthesis)) {
-    // Only veto when the edit is long enough to have included an example
-    if (plain.split(/\s+/).length >= 80) {
-      return { ok: false, reason: 'no_example', detail: 'practical section lacks concrete example' };
-    }
+  // Only veto when the edit is long enough to have included an example
+  if (practical && DEFINITION_HEAVY_RE.test(plain) && !hasConcreteExample(plain, synthesis) && wordCount >= 80) {
+    out.push({ reason: 'no_example', detail: 'practical section lacks concrete example' });
   }
 
   const lens = paragraphLengths(html);
-  if (lens.length >= 4 && paragraphCv(lens) < 0.12) {
-    const allMid = lens.every((n) => n >= 55 && n <= 85);
-    if (allMid) {
-      return { ok: false, reason: 'uniform_paragraphs', detail: `cv=${paragraphCv(lens).toFixed(3)}` };
-    }
+  if (lens.length >= 4 && paragraphCv(lens) < 0.12 && lens.every((n) => n >= 55 && n <= 85)) {
+    out.push({ reason: 'uniform_paragraphs', detail: `cv=${paragraphCv(lens).toFixed(3)}` });
   }
 
-  if (
-    opts.synthesis?.expert_claims?.length
-    && practical
-    && plain.split(/\s+/).length >= 100
-    && !EXPERT_MARKER_RE.test(plain)
-  ) {
-    return { ok: false, reason: 'no_expert_voice', detail: 'missing expert markers despite synthesis claims' };
+  if (synthesis?.expert_claims?.length && practical && wordCount >= 100 && !EXPERT_MARKER_RE.test(plain)) {
+    out.push({ reason: 'no_expert_voice', detail: 'missing expert markers despite synthesis claims' });
   }
 
   // Information Gain: practical rewrite that only restates critical labels without new detail
-  if (
-    practical
-    && opts.synthesis?.critical?.length
-    && plain.split(/\s+/).length >= 90
-  ) {
-    const criticalHits = opts.synthesis.critical.filter((c) =>
+  if (practical && synthesis?.critical?.length && wordCount >= 90) {
+    const criticalHits = synthesis.critical.filter((c) =>
       plain.toLowerCase().includes(c.toLowerCase().slice(0, Math.min(40, c.length))),
     ).length;
-    const hasGain =
-      hasConcreteExample(plain, opts.synthesis)
+    const hasGain = hasConcreteExample(plain, synthesis)
       || EXPERT_MARKER_RE.test(plain)
       || /\b(art\.|§|krok|zrób|nie płać|zgłoś|zbierz)\b/i.test(plain);
     if (criticalHits >= 2 && !hasGain) {
-      return {
-        ok: false,
-        reason: 'low_information_gain',
-        detail: 'covers critical labels without new actionable detail',
-      };
+      out.push({ reason: 'low_information_gain', detail: 'covers critical labels without new actionable detail' });
     }
   }
 
   const eeat = scoreEeat(html);
   if (eeat.reasons.includes('fake_credentials_penalty')) {
-    return { ok: false, reason: 'fake_credentials', detail: 'invented credentials / guarantees' };
+    out.push({ reason: 'fake_credentials', detail: 'invented credentials / guarantees' });
   }
-  if (practical && plain.split(/\s+/).length >= 100 && eeat.score < EEAT_SOFT_FLOOR) {
-    return {
-      ok: false,
-      reason: 'eeat_below_floor',
-      detail: `eeat=${eeat.score} < ${EEAT_SOFT_FLOOR}`,
-    };
+  if (practical && wordCount >= 100 && eeat.score < EEAT_SOFT_FLOOR) {
+    out.push({ reason: 'eeat_below_floor', detail: `eeat=${eeat.score} < ${EEAT_SOFT_FLOOR}` });
   }
 
-  return { ok: true };
+  return out;
 }

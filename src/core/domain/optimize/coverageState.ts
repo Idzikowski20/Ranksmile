@@ -39,3 +39,5 @@ export const ADEQUATE_QUALITY_MIN = 3;
  * When SEO is strong and AI is weak, AO must deepen answers to this floor (not stop at 3).
  */
 export const AI_SCORE_QUALITY_TARGET = 4;
+/** Judge's top grade — the only one that lets the gauge reach 100. */
+export const AI_SCORE_QUALITY_MAX = 5;
