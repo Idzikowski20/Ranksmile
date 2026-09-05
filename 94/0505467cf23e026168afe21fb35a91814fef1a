@@ -1,0 +1,79 @@
+__tests__/lib/computeOptimizeLiveSnapshot.test.ts
+  s_c7c90ce5d12296::t_255e50d5524012 75,85,88-89
+src/core/domain/optimize/aoScoreDelta.ts
+  s_c7c90ce5d12296::t_255e50d5524012 101-102
+src/core/domain/optimize/editCandidate.ts
+  s_c7c90ce5d12296::t_255e50d5524012 63
+src/core/domain/optimize/editSafetyGate.ts
+  s_c7c90ce5d12296::t_255e50d5524012 76-77,102,183
+src/infrastructure/ao/optimizeSectionEvents.ts
+  s_c7c90ce5d12296::t_255e50d5524012 52-57,60-65,67-69,71-105
+src/infrastructure/coverage/regradeCoverageSnapshot.ts
+  s_c7c90ce5d12296::t_255e50d5524012 89-94
+__tests__/api/articles-optimize-sections-guard.test.ts
+  s_c7c90ce5d12296::t_255e50d5524012 1,21,23-24,46-53,104-105,111-114,121,125-126,128,182-186,204,256-260,288,291-292,317,320-321
+pages/api/articles/[id]/index.ts
+  s_c7c90ce5d12296::t_255e50d5524012 5-6,9,26-31,33-34,36-40,42-45,49-57,62-74,77-79,81-87,89-91,93-95,97-100,104-111,113-126,128-130,134-142,144-159,161-168,170-188,190-219,222-225,227-238,253-275,277-285,288-305,308-325,327-330,334-363
+pages/api/articles/optimize-sections.ts
+  s_c7c90ce5d12296::t_255e50d5524012 3-4,11-16,27-30,40,43-47,50-53,61-64,79-81,85-96,100-103,105-112,124-125,128,135-137,142-151,156-158,163-177,181-185,187-196,200-201,205-216,224,226-230,232-233,235-302,305-340,343-352,355-426,428-429,433-448,450-459,461-463,466-510,513-521,523-596,598-694,696,698-701,706-725,727-730,734-849,851,853-858,860-863,866-887,889-891,893-910,912-944
+src/infrastructure/ao/optimizationPlanner.ts
+  s_c7c90ce5d12296::t_255e50d5524012 25-26,63,65,143,259,261,281,330-331,333-334
+src/infrastructure/coverage/coverageStore.ts
+  s_c7c90ce5d12296::t_255e50d5524012 68
+src/infrastructure/wie/rxQualityGate.ts
+  s_c7c90ce5d12296::t_255e50d5524012 56,60,63-68,72-76,79-85,89-94,97-98,102-106,112,114-119,122
+src/infrastructure/articles/articleSql.ts
+  s_c7c90ce5d12296::t_255e50d5524012 27,32-33
+src/infrastructure/coverage/buildCoverageSnapshot.ts
+  s_c7c90ce5d12296::t_255e50d5524012 74-76,189
+src/infrastructure/coverage/persistCoverageFeatureRun.ts
+  s_c7c90ce5d12296::t_255e50d5524012 35
+src/infrastructure/ao/sectionTargeting.ts
+  s_c7c90ce5d12296::t_255e50d5524012 48-49
+src/infrastructure/ao/runPrecisionOptimize.ts
+  s_c7c90ce5d12296::t_255e50d5524012 15,17,74,98-99,123,144-146,176-187,189-190,199,206,297-299,335,355-356,451-476,481,492,495-510,512-515,519,522,534-535,537,539,602-603,605,610,617-618,628-629,639-640,653-654,671,691,723,725,733,757,803,870,891-892,897,908,920,922
+src/infrastructure/ao/optimizeGuidelineRouting.ts
+  s_c7c90ce5d12296::t_255e50d5524012 8,18-19,108,110
+src/infrastructure/coverage/harvestAiCoverage.ts
+  s_c7c90ce5d12296::t_255e50d5524012 319-320
+src/infrastructure/ao/aoFaqSection.ts
+  s_c7c90ce5d12296::t_255e50d5524012 49-63,71-72,83,85-86,103,154
+src/infrastructure/coverage/liveCoverage.ts
+  s_c7c90ce5d12296::t_255e50d5524012 28,36-38,183-187,194-195
+src/infrastructure/ao/optimizeSectionEdit.ts
+  s_c7c90ce5d12296::t_255e50d5524012 33-34,102-103
+src/infrastructure/ao/optimizationPolicy.ts
+  s_c7c90ce5d12296::t_255e50d5524012 12,18
+__tests__/lib/liveCoverage.test.ts
+  s_c7c90ce5d12296::t_255e50d5524012 30,33-34,36,39-40,56-62,82-83,128,143,182
+src/infrastructure/ao/wordDiff.ts
+  s_c7c90ce5d12296::t_255e50d5524012 158-160,196-198
+src/infrastructure/ao/aoQualityGates.ts
+  s_c7c90ce5d12296::t_255e50d5524012 38-45,85
+src/infrastructure/ao/optimizeWholeArticle.ts
+  s_c7c90ce5d12296::t_255e50d5524012 43,182-184,244-245
+src/infrastructure/ao/editPlan.ts
+  s_c7c90ce5d12296::t_255e50d5524012 100,103,121-125,157-158,166-189,220
+pages/articles/[id]/index.tsx
+  s_c7c90ce5d12296::t_255e50d5524012 28,32-37,39-42,47-56,59-62,65,212,456-457,609,647-648,765,769,813,1039,1287,1423,1805,1811,2226-2242,2245,2297,2329-2352,2354-2363,2371-2392,2394-2399,2402-2405,2408-2423,2431-2434,2439-2496,2499-2523,2526-2527,2529,2700
+src/core/domain/optimize/editBudget.ts
+  s_c7c90ce5d12296::t_255e50d5524012 54
+src/infrastructure/ao/buildCandidates.ts
+  s_c7c90ce5d12296::t_255e50d5524012 7,52-54,57-66,81,87-90,110-119,121-126,128-133,135,143,146,151,158-162,180,182-185,203,206-207,212-215,239,255,278-289,292,294,314
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "940505467cf23e026168afe21fb35a91814fef1a",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
