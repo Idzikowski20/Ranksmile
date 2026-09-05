@@ -1,0 +1,63 @@
+src/infrastructure/rankTracking/dfsRateLimiter.ts
+  s_c7c90ce5d12296::t_d13b71e4442c5e 38
+components/koala/core/dataTable/dataTable.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 17,19,22,29
+components/koala/core/compactSelect/compactSelect.tsx
+  s_c7c90ce5d12296::t_d13b71e4442c5e 171,180
+pages/legal/cookies.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 2,4,22
+src/infrastructure/billing/billingAuditShared.ts
+  s_c7c90ce5d12296::t_ce46402b5d19d1 5
+pages/legal/privacy.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 2,4,25,28,219
+components/performance/PerformanceLineChart.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 110,113
+pages/no-access.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 3,24,31
+src/composition/siteAudit.ts
+  s_c7c90ce5d12296::t_ce46402b5d19d1 2,13
+pages/billing/checkout/[plan].tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 3,23-33,460,463
+pages/articles/deep-analysis.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 164,194
+src/core/domain/contentPlanner/knowledgeCompletion.ts
+  s_c7c90ce5d12296::t_ce46402b5d19d1 10
+components/koala/index.ts
+  s_c7c90ce5d12296::t_ce46402b5d19d1 44-52
+src/infrastructure/keywords/keywordResearchCompute.ts
+  s_c7c90ce5d12296::t_ce46402b5d19d1 11
+pages/sites/[domain]/keyword-list.tsx
+  s_c7c90ce5d12296::t_d9a6255c503ba7 7-9
+pages/api/sites.ts
+  s_c7c90ce5d12296::t_ce46402b5d19d1 81-85,97
+pages/legal/terms.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 2,4,108,114
+components/billing/CheckoutStripeProvider.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 14,31,303,421,438,441,509,511,541
+pages/legal/dpa.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 2,4,14,28
+components/koala/primitives/Input.tsx
+  s_c7c90ce5d12296::t_ce46402b5d19d1 194
+src/composition/gsc.ts
+  s_c7c90ce5d12296::t_ce46402b5d19d1 1,6
+.eslintrc.json
+  s_c7c90ce5d12296::t_fa4cb3e638d4d4 2-32,43-152,154-221,223-255,257-267,270,272
+src/composition/billing.ts
+  s_c7c90ce5d12296::t_ce46402b5d19d1 2,11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "522a37ca771be150a5af07032ce673a5e88a319e",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
