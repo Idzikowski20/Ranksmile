@@ -457,9 +457,11 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                     ? `You're currently on ${lockedSlug}${currentBilling ? ` (${currentBilling})` : ''}. Downgrades to a lower plan are not available here — pick a higher plan or manage billing from settings.`
                     : 'Downgrades are not available on this page. Choose a higher plan or manage billing from settings.'}
               </p>
-              <Link href="/plans" style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Icon name="ArrowLeft" size={16} />
-                Back to plans
+              <Link href="/plans" passHref>
+                <a style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="ArrowLeft" size={16} />
+                  Back to plans
+                </a>
               </Link>
             </div>
           ) : stripeCheckoutEnabled && !isUpgrade ? (

@@ -159,9 +159,7 @@ function _kwPlacement(html: string, keyword: string): number {
    const h2s = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)];
    if (h2s.some((m) => allTokensPresent(m[1].replace(/<[^>]+>/g, ' '), kwToks))) score += 5;
 
-   const first100 = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/)
-.slice(0, 100)
-.join(' ');
+   const first100 = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).slice(0, 100).join(' ');
    if (allTokensPresent(first100, kwToks)) score += 4;
 
    return score; // max 15

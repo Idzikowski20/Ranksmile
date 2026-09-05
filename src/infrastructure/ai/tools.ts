@@ -150,8 +150,7 @@ export function buildTools(ctx: ToolCtx) {
 
     list_missing_terms: tool({
       description: 'List NLP terms the article under-uses (current count below the minimum), biggest gap first.',
-      inputSchema: z.object({ limit: z.number().int().positive().max(50)
-.optional() }),
+      inputSchema: z.object({ limit: z.number().int().positive().max(50).optional() }),
       execute: async ({ limit }) => {
         const text = workingText(ctx.$);
         const gaps = (ctx.scoreData?.terms || [])
@@ -439,8 +438,7 @@ export function buildTools(ctx: ToolCtx) {
         html: z.string(),
         position: z.enum(['start', 'end', 'after_sid', 'before_sid']),
         sid: z.number().int().optional(),
-        level: z.number().int().min(2).max(4)
-.optional(),
+        level: z.number().int().min(2).max(4).optional(),
       }),
       execute: async ({ heading, html, position, sid, level }) => {
         if (ctx.writeCount >= MAX_WRITES) return { ok: false, summary: 'edit limit reached for this turn' };

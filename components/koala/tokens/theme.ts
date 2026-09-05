@@ -123,7 +123,7 @@ const tokens = {
 } as const;
 
 const space = {
-  0: koalaSpace['0'],
+  '0': koalaSpace['0'],
   '2xs': koalaSpace['0.5'],
   xs: koalaSpace['1'],
   sm: koalaSpace['1.5'],
@@ -135,7 +135,7 @@ const space = {
 } as const;
 
 const radius = {
-  0: koalaRadius.none,
+  '0': koalaRadius.none,
   '2xs': '3px',
   xs: '4px',
   sm: '5px',
@@ -147,7 +147,7 @@ const radius = {
 } as const;
 
 const border = {
-  0: '0px', md: '1px', lg: '1.5px', xl: '2px', '2xl': '4px',
+  '0': '0px', md: '1px', lg: '1.5px', xl: '2px', '2xl': '4px',
 } as const;
 
 const elevation = {

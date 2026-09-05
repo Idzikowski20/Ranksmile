@@ -506,8 +506,10 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
         {loadError ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480, marginBottom: 16 }}>
             <p style={{ margin: 0, fontSize: 14, color: 'var(--koala-status-danger)', fontFamily: F }}>{loadError}</p>
-            <Link href="/plans" style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500 }}>
-              ← Back to plans
+            <Link href="/plans" passHref>
+              <a style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500 }}>
+                ← Back to plans
+              </a>
             </Link>
           </div>
         ) : null}

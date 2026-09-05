@@ -609,6 +609,7 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                     <>
                       <span
                         aria-hidden
+                        className="rs-tax-spinner"
                         style={{
                           width: 14,
                           height: 14,
@@ -621,7 +622,7 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                         }}
                       />
                       <span style={{ color: MUTED, fontSize: 13 }}>Calculating…</span>
-                      <style>{'@keyframes rs-tax-spin{to{transform:rotate(360deg)}}'}</style>
+                      <style>{'@keyframes rs-tax-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.rs-tax-spinner{animation:none}}'}</style>
                     </>
                   ) : taxAmountCents != null
                     ? formatEuroCents(taxAmountCents)

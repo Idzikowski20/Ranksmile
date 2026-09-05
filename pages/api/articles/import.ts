@@ -120,8 +120,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const fetched = await fetchWithHttp(url);
          html = fetched.html;
          pageUrl = fetched.finalUrl;
-         const quickWc = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/)
-.filter(Boolean).length;
+         const quickWc = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
          console.log(`[import] HTTP fetch: ${html.length} chars, ~${quickWc} words`);
          if (quickWc < 300) {
             console.log('[import] HTTP fetch too short, falling back to Puppeteer');
@@ -212,8 +211,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Also try scoring all <div> and <section> elements by paragraph density
       $('div, section').each((_, el) => {
          const pCount = $(el).find('p').length;
-         const wc = $(el).text().replace(/\s+/g, ' ').trim()
-.split(' ').length;
+         const wc = $(el).text().replace(/\s+/g, ' ').trim().split(' ').length;
          // Favour elements with multiple paragraphs and high word count
          const score = wc + pCount * 30;
          if (pCount >= 3 && wc > bestWordCount) {
@@ -260,9 +258,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             const items = $(el).children('li').map((_i, li) => {
                const t = $(li).text().trim();
                return t ? `<li>${escapeHtml(t)}</li>` : '';
-            }).get()
-.filter(Boolean)
-.join('');
+            }).get().filter(Boolean).join('');
             if (items) contentParts.push(`<${tag}>${items}</${tag}>`);
          } else if (tag === 'blockquote') {
             const text = $(el).text().trim();

@@ -8,8 +8,7 @@ import db from '../../../../database/database';
 import { readLocalSCData } from '../../../../utils/searchConsole';
 
 const cleanHost = (raw: string) => (raw || '')
-   .replace(/^sc-domain:/i, '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim()
-.toLowerCase();
+   .replace(/^sc-domain:/i, '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim().toLowerCase();
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);

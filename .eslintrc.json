@@ -82,7 +82,9 @@
       {
         "allowUnsafeDynamicCyclicDependency": true
       }
-    ]
+    ],
+    "quote-props": "off",
+    "newline-per-chained-call": "off"
   },
   "overrides": [
     {

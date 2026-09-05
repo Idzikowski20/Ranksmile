@@ -43,8 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // upload failure we keep the original URL (and data: URLs are left untouched).
       const data = sidecarRes.data as { url?: string } & Record<string, unknown>;
       if (data?.url && /^https?:\/\//i.test(data.url)) {
-         const fname = String(prompt || keyword || 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-.slice(0, 40) || 'image';
+         const fname = String(prompt || keyword || 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'image';
          const r2 = await uploadImageFromUrl(data.url, fname);
          if (r2) data.url = r2;
       }

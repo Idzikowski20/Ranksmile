@@ -19,8 +19,7 @@ const addressSchema = z.object({
 });
 
 const bodySchema = z.object({
-  billingEmail: z.string().email().max(254).optional()
-.nullable(),
+  billingEmail: z.string().email().max(254).optional().nullable(),
   taxId: z.string().max(32).optional().nullable(),
   address: addressSchema,
 });

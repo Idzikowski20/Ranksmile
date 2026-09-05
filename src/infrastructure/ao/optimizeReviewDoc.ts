@@ -3,8 +3,7 @@ import type { SectionEvent } from '@/src/infrastructure/ao/optimizeSectionEvents
 
 /** Escape a value for safe interpolation into a double-quoted HTML attribute. */
 const escAttr = (v: string | number): string =>
-   String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
-.replace(/>/g, '&gt;');
+   String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 export type OptimizerStatus = 'queued' | 'scanning' | 'pending' | 'active' | 'improved';
 

@@ -66,8 +66,7 @@ const BRIEF_TIMEOUT_MS = 25_000;
 
 /** Readable title from a URL's last path segment — page_audits often stores a null title. */
 function titleFromSlug(url: string): string {
-  const seg = url.replace(/^https?:\/\/[^/]+/i, '').replace(/[?#].*$/, '').replace(/\/+$/, '').split('/')
-.pop() || '';
+  const seg = url.replace(/^https?:\/\/[^/]+/i, '').replace(/[?#].*$/, '').replace(/\/+$/, '').split('/').pop() || '';
   const words = seg.replace(/-/g, ' ').trim();
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : url;
 }

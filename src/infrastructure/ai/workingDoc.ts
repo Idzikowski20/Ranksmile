@@ -43,8 +43,7 @@ export function buildOutline($: cheerio.CheerioAPI): string {
     const sid = $(el).attr('data-sid');
     if (sid == null) return; // skip unindexed nodes (shouldn't happen post-reindex)
     const tag = (el as cheerio.Element).tagName || (el as { name?: string }).name || '?';
-    const preview = $(el).text().replace(/\s+/g, ' ').trim()
-.slice(0, 80);
+    const preview = $(el).text().replace(/\s+/g, ' ').trim().slice(0, 80);
     lines.push(`[sid ${sid}] <${tag}> ${preview}`);
   });
   return lines.join('\n');
