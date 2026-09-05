@@ -38,7 +38,7 @@ export async function getDomainIdForWorkspace(workspaceId: number): Promise<numb
 
 export async function createArticleFromWp(p: { domainId: number; title: string; keyword: string; content: string }): Promise<number | undefined> {
    const articleIdSql = await getArticleIdSql();
-   const cols = "domain_id, title, target_keyword, content, status, source, created_at, updated_at";
+   const cols = 'domain_id, title, target_keyword, content, status, source, created_at, updated_at';
    const vals = "?, ?, ?, ?, 'draft', 'wordpress', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP";
    if (process.env.DATABASE_URL) {
       const rows = await db.query<{ id: number }>(

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getSubscriptionDetails } from '@/src/infrastructure/billing/subscriptionDetails';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

@@ -421,8 +421,8 @@ export async function fetchPage(url: string): Promise<{ html: string; timing: Fe
 export async function computeAudit(
    url: string,
    keyword: string,
-   enrich?: (url: string, keyword: string, youHtml: string) => Promise<RealAuditData | null>,
-   findLinks?: (url: string, keyword: string) => Promise<AuditInternalLink[] | null>,
+   enrich?: (u: string, k: string, youHtml: string) => Promise<RealAuditData | null>,
+   findLinks?: (u: string, k: string) => Promise<AuditInternalLink[] | null>,
 ): Promise<AuditResult> {
    const { html, timing } = await fetchPage(url);
    let real: RealAuditData | null = null;

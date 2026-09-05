@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getSetupStatus } from '@/src/infrastructure/cron/domainPipeline';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { getSetupStatus } from '@/src/infrastructure/cron/domainPipeline';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

@@ -1,16 +1,16 @@
 // POST /api/articles/publish
 // Publikuje artykuł do WordPress lub własnego Next.js i auto-dodaje keyword do Ranksmile
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { publishToWordPress, publishToNextJs } from '@/src/infrastructure/wordpress/wordpressPublish';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows, ArticleRow } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -62,7 +62,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       // Pobierz publish target konfigurację
       const publishTarget = await queryOne<{ url: string; api_key: string }>(
-         `SELECT * FROM publish_targets WHERE domain_id = ? AND type = ? LIMIT 1`,
+         'SELECT * FROM publish_targets WHERE domain_id = ? AND type = ? LIMIT 1',
          [article.domain_id, target],
       );
       if (!publishTarget) {
@@ -111,7 +111,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (article.target_keyword) {
          try {
             const existing = await queryRows<{ ID: number }>(
-               `SELECT "ID" FROM keyword WHERE domain = ? AND keyword = ? LIMIT 1`,
+               'SELECT "ID" FROM keyword WHERE domain = ? AND keyword = ? LIMIT 1',
                [article.domain_id?.toString() || '', article.target_keyword],
             );
             if (existing.length === 0) {

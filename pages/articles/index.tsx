@@ -4,6 +4,10 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { CSSTransition } from 'react-transition-group';
+import { useQuery, useQueryClient } from 'react-query';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
+import { buildArticleWorkspaceLinks } from '@/src/core/domain/articles/articleWorkspaceLinks';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import ArticleList from '../../components/articles/ArticleList';
 import AddDomain from '../../components/domains/AddDomain';
@@ -13,10 +17,6 @@ import { Button, CompactSelect, SearchBar, useTableLoadMore } from '../../compon
 import { useFetchDomains } from '../../services/domains';
 import { useFetchSettings } from '../../services/settings';
 import { useWorkspaces } from '../../services/workspaces';
-import { useQuery, useQueryClient } from 'react-query';
-import { getErrorMessage } from '@/src/core/shared/errors';
-import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
-import { buildArticleWorkspaceLinks } from '@/src/core/domain/articles/articleWorkspaceLinks';
 
 type ArticleRow = {
   id: number | string;

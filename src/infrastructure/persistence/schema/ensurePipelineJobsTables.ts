@@ -43,11 +43,11 @@ export async function ensurePipelineJobsTables(): Promise<void> {
     .catch((e) => ignoreExisting('pipeline_jobs', e));
 
   await db
-    .query(`CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_key ON pipeline_jobs (job_key, status)`)
+    .query('CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_key ON pipeline_jobs (job_key, status)')
     .catch((e) => ignoreExisting('idx_pipeline_jobs_key', e));
 
   await db
-    .query(`CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_status ON pipeline_jobs (status, created_at)`)
+    .query('CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_status ON pipeline_jobs (status, created_at)')
     .catch((e) => ignoreExisting('idx_pipeline_jobs_status', e));
 
   await db
@@ -121,7 +121,7 @@ export async function insertPipelineJob(row: PipelineJobRow): Promise<number> {
   );
   const insertId = (result as { insertId?: number } | undefined)?.insertId;
   if (typeof insertId === 'number') return insertId;
-  const [rows] = await db.query(`SELECT id FROM pipeline_jobs WHERE job_key = ? ORDER BY id DESC LIMIT 1`, {
+  const [rows] = await db.query('SELECT id FROM pipeline_jobs WHERE job_key = ? ORDER BY id DESC LIMIT 1', {
     replacements: [row.job_key],
   });
   const list = rows as Array<{ id: number }>;
@@ -144,9 +144,9 @@ export async function findActiveJobByKey(jobKey: string): Promise<PipelineJobRow
   if (r.status === 'done' && finished && Date.now() - finished > 5 * 60 * 1000) return null;
   // Stale queued/running (Redis wipe / dead worker) — allow a fresh enqueue
   if (
-    (r.status === 'queued' || r.status === 'running') &&
-    created &&
-    Date.now() - created > 2 * 60 * 1000
+    (r.status === 'queued' || r.status === 'running')
+    && created
+    && Date.now() - created > 2 * 60 * 1000
   ) {
     return null;
   }

@@ -339,4 +339,3 @@ export function competitorHeadingTitles(raw: string | null | undefined): string[
   }
   return topics.slice(0, 40);
 }
-

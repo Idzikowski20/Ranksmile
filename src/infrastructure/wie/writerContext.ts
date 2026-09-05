@@ -48,11 +48,9 @@ export async function buildWieWriteContext(opts: {
   readerBrief?: ReaderBrief | null;
 }): Promise<WieWriteContext> {
   const keyword = (opts.keyword || '').trim();
-  const synthesis =
-    opts.synthesis
+  const synthesis = opts.synthesis
     ?? parseCompetitorSynthesis(opts.scoreData?.competitor_synthesis ?? null);
-  const readerBrief =
-    opts.readerBrief
+  const readerBrief = opts.readerBrief
     ?? (keyword ? buildHeuristicReaderBrief({ keyword, title: opts.title, paa: opts.paa }) : null);
 
   let policy: PolicyBundle | null = null;

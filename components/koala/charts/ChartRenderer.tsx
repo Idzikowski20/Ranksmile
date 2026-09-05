@@ -163,8 +163,7 @@ export function ChartRenderer({
   if (!labels.length || innerWidth <= 0 || innerHeight <= 0) return null;
 
   const yTicks = config.showGrid && !config.minimal ? yScale.ticks(5) : [];
-  const yTicksRight =
-    config.showGrid && !config.minimal && dualAxis && seriesYScales?.[1]
+  const yTicksRight = config.showGrid && !config.minimal && dualAxis && seriesYScales?.[1]
       ? seriesYScales[1].ticks(5)
       : [];
   const compact = config.compactLabels;

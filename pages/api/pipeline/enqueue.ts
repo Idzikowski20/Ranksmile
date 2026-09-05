@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { enqueueJob, PipelineQueueDisabledError } from '@/src/infrastructure/pipeline/pipelineQueue';
 import type { QueueName } from '@/src/core/domain/pipeline/queuePriorities';
 import { QUEUE_PRIORITY } from '@/src/core/domain/pipeline/queuePriorities';
 import { isQueueEnabled } from '@/src/infrastructure/workers/registry';
 import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
 
 /**
  * POST /api/pipeline/enqueue
@@ -49,8 +49,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void>
 
   const userId = await getCurrentUserId(req, res);
   const workspaceId = body.workspaceId ?? userId ?? '0';
-  const payload =
-    body.payload && typeof body.payload === 'object'
+  const payload = body.payload && typeof body.payload === 'object'
       ? (body.payload as Record<string, unknown>)
       : { ...body };
 

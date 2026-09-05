@@ -81,12 +81,12 @@ const TOPICS: Topic[] = [
 /* ── Primitive components ──────────────────────────────────────── */
 const SemicircleGauge = ({ score, size = 48 }: { score: number; size?: number }) => {
   const s = Math.max(0, Math.min(100, score));
-  const angle = (180 * (1 - s / 100)) * Math.PI / 180;
+  const angle = ((180 * (1 - s / 100)) * Math.PI) / 180;
   const x = 150 + 120 * Math.cos(angle);
   const y = 150 - 120 * Math.sin(angle);
   const color = s < 33 ? C.red : s < 67 ? C.yellow : C.green;
   return (
-    <svg viewBox="0 0 300 175" width={size} height={size * 175 / 300} style={{ verticalAlign: 'middle' }}>
+    <svg viewBox="0 0 300 175" width={size} height={(size * 175) / 300} style={{ verticalAlign: 'middle' }}>
       <path fill="transparent" stroke={C.g20} strokeWidth={30} strokeLinecap="round" d="M 270 150 A 120 120 0 0 0 30 150" />
       <path fill="transparent" stroke={color} strokeWidth={30} strokeLinecap="round" d={`M ${x} ${y} A 120 120 0 0 0 30 150`} />
       <text x="150" y="90" fill={C.g120} textAnchor="middle" dominantBaseline="text-before-edge" fontFamily={F} fontWeight={500} fontSize={72} style={{ letterSpacing: '0.02em' }}>{s}</text>
@@ -604,7 +604,9 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose, articleId, init
                   Pick at least five URLs for the most relevant results. <LearnMore />
                 </SectionHeader>
 
-                {slug ? <CompetitorsSection slug={slug} keyword={keyword} onSelectionChange={queueRecalc} /> : <div style={{ padding: 16, fontSize: 14, color: C.g100, fontFamily: F }}>Select a domain to load competitors.</div>}
+                {slug
+                  ? <CompetitorsSection slug={slug} keyword={keyword} onSelectionChange={queueRecalc} />
+                  : <div style={{ padding: 16, fontSize: 14, color: C.g100, fontFamily: F }}>Select a domain to load competitors.</div>}
               </div>
 
               {/* Content Structure */}

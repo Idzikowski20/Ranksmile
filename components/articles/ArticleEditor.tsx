@@ -20,11 +20,6 @@ import { isUsableArticleHtml } from '@/src/core/domain/articles/htmlUsable';
 import { shouldEnterOutlineReview } from '@/src/infrastructure/articles/outlineReviewState';
 import readSse from '@/src/core/shared/readSse';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '@/src/infrastructure/highlightColors';
-import { EC } from './editorChrome';
-import RanksmileImageNode from './RanksmileImageNode';
-import ContentOptimizer from './contentOptimizerNode';
-import RanksmileBubbleMenu, { RanksmileLinkModal } from './RanksmileBubbleMenu';
-import { CommentHighlight, CommentAnchor } from './comments/commentHighlightExtension';
 import { TableKit } from '@tiptap/extension-table';
 import Typography from '@tiptap/extension-typography';
 import CharacterCount from '@tiptap/extension-character-count';
@@ -35,6 +30,23 @@ import Superscript from '@tiptap/extension-superscript';
 import { TextStyle, Color } from '@tiptap/extension-text-style';
 import { Details, DetailsSummary, DetailsContent } from '@tiptap/extension-details';
 import Youtube from '@tiptap/extension-youtube';
+import { revealHtmlInEditor, editorCanCommand } from '@/components/editor/revealHtmlProgressive';
+import clearEditorHistory from '@/components/editor/clearEditorHistory';
+import { normalizeListHtml } from '@/src/core/domain/editor/normalizeListHtml';
+import { readJsonResponse } from '@/src/core/shared/readJsonResponse';
+import { clearWizardState } from '@/src/infrastructure/articles/wizardState';
+import {
+  collectApprovedOutline,
+  outlineForReview,
+  reviewOutlineToHtml,
+} from '@/src/infrastructure/contentPlanner/reviewOutline';
+import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
+import type { ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
+import { EC } from './editorChrome';
+import RanksmileImageNode from './RanksmileImageNode';
+import ContentOptimizer from './contentOptimizerNode';
+import RanksmileBubbleMenu, { RanksmileLinkModal } from './RanksmileBubbleMenu';
+import { CommentHighlight, CommentAnchor } from './comments/commentHighlightExtension';
 import { TermHighlight } from './termHighlightExtension';
 import { PlagiarismHighlight } from './plagiarismHighlightExtension';
 import { TIP_BUBBLE_BASE } from './tipBubble';
@@ -50,18 +62,6 @@ import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 import OutlineGenerateBar from './OutlineGenerateBar';
 import GenerationProgressBar from './GenerationProgressBar';
 import ArticleGenerationSkeleton from './ArticleGenerationSkeleton';
-import { revealHtmlInEditor, editorCanCommand } from '@/components/editor/revealHtmlProgressive';
-import clearEditorHistory from '@/components/editor/clearEditorHistory';
-import { normalizeListHtml } from '@/src/core/domain/editor/normalizeListHtml';
-import { readJsonResponse } from '@/src/core/shared/readJsonResponse';
-import { clearWizardState } from '@/src/infrastructure/articles/wizardState';
-import {
-  collectApprovedOutline,
-  outlineForReview,
-  reviewOutlineToHtml,
-} from '@/src/infrastructure/contentPlanner/reviewOutline';
-import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
-import type { ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
 
 function collectOutlineHeadings(ed: Editor): Array<{ level: number; text: string }> {
   const out: Array<{ level: number; text: string }> = [];
@@ -1097,7 +1097,12 @@ const ImportBar = ({ url, onChange, onImport, onClose, busy }: { url: string; on
   </form>
 );
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, resumeOutlineReview, highlightTerms, onAiActivity, onGeneratingChange, onGenerated, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl, bottomBarRightReserve = 0 }: Props) => {
+const ArticleEditor = ({
+  content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange,
+  onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, resumeOutlineReview,
+  highlightTerms, onAiActivity, onGeneratingChange, onGenerated, articleKeyword, comments, threads, commentAuthor, commentArticleId,
+  onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl, bottomBarRightReserve = 0,
+}: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -1171,7 +1176,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const revealAbortRef = useRef<AbortController | null>(null);
     const revealPlayingRef = useRef(false);
     const mountRevealDone = useRef(false);
-    const [ranksmileResponse, setRanksmileResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
+    const [ranksmileResponse, setRanksmileResponse] = useState<{
+      action?: string;
+      message: string;
+      content: string | null;
+      changelog?: Array<{ tool: string; summary: string }>;
+      steps?: number;
+      pendingAction?: PendingAction | null;
+    } | null>(null);
     const [publishing, setPublishing] = useState(false);
     // Live streaming state for the agent (SSE): per-tool activity, the in-progress text, token usage.
     const [ranksmileActivity, setRanksmileActivity] = useState<Array<{ tool: string; done: boolean; error?: boolean }>>([]);
@@ -1194,8 +1206,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     draftRangeRef.current = commentDraft ? { from: commentDraft.from, to: commentDraft.to } : null;
     const ranksmileInputRef = useRef<HTMLTextAreaElement>(null);
     const ranksmileScrollRef = useRef<HTMLDivElement>(null);
-    const handleRanksmileSubmitRef = useRef<
-      ((overridePrompt?: string, overrideSelection?: { text: string; from: number; to: number } | null) => Promise<void>) | null
+    const handleRanksmileSubmitRef = useRef<((overridePrompt?: string, overrideSelection?: { text: string; from: number; to: number } | null) => Promise<void>) | null
     >(null);
     // The "/ask" slash item opens Ranksmile via this ref (the handler is defined further down).
     const slashAskRanksmileRef = useRef<() => void>(() => {});
@@ -1223,7 +1234,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const iv = setInterval(() => { void refreshOrgUsage(); }, 60000);
       return () => { window.removeEventListener('focus', onFocus); clearInterval(iv); };
     }, [ranksmileOpen, refreshOrgUsage]);
-
 
     type RanksmileMsg = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
     const [ranksmileHistory, setRanksmileHistory] = useState<RanksmileMsg[]>([]);
@@ -1481,7 +1491,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       } catch (err) {
         const e = err as { name?: string; message?: string };
         if (e?.name === 'AbortError') return; // user pressed Stop
-        const errMsg = 'Error: ' + e.message;
+        const errMsg = `Error: ${e.message}`;
         setRanksmileResponse({ message: errMsg, content: null });
         setRanksmileHistory((prev) => {
           const next = [...prev, { role: 'assistant' as const, message: errMsg }];
@@ -1512,7 +1522,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           default:
             editor.chain().focus().insertContentAt(
               { from: ranksmileSelection.from, to: ranksmileSelection.to },
-              ranksmileResponse.content || ''
+              ranksmileResponse.content || '',
             ).run();
             break;
         }
@@ -1543,8 +1553,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const ranksmileOpenRef = useRef(ranksmileOpen);
     ranksmileOpenRef.current = ranksmileOpen;
     const ranksmileMetaRef = useRef<{ metaTitle?: string; metaDescription?: string } | null>(null);
-    const ranksmileOriginalRef = useRef<string>('');                  // pre-edit HTML, for the diff preview
-    const ranksmileAbortRef = useRef<AbortController | null>(null);   // for Stop/Cancel
+    const ranksmileOriginalRef = useRef<string>(''); // pre-edit HTML, for the diff preview
+    const ranksmileAbortRef = useRef<AbortController | null>(null); // for Stop/Cancel
 
     // The agent never publishes; it PROPOSES (pendingAction). The user confirms here, and we call the
     // existing publish endpoint, which publishes the SAVED article.
@@ -1584,7 +1594,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       publishing,
       canApply: Boolean(ranksmileResponse && (ranksmileResponse.content || ranksmileResponse.action === 'delete_selection' || ranksmileMetaRef.current)),
       canCompare: Boolean(ranksmileResponse?.content && ranksmileOriginalRef.current),
-      usage: { conversation: ranksmileUsageDetail.input, lastInput: ranksmileUsageDetail.input, lastOutput: ranksmileUsageDetail.output, totalInput: ranksmileTotals.input, totalOutput: ranksmileTotals.output },
+      usage: {
+        conversation: ranksmileUsageDetail.input,
+        lastInput: ranksmileUsageDetail.input,
+        lastOutput: ranksmileUsageDetail.output,
+        totalInput: ranksmileTotals.input,
+        totalOutput: ranksmileTotals.output,
+      },
       orgUsage,
       suggestions: ['Add missing keywords', 'Improve the weakest ranking signal', 'Add an FAQ section', 'Rewrite the intro'],
       inputRef: ranksmileInputRef,
@@ -1643,9 +1659,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       // more robustly than a naive split) with a split fallback if unavailable.
       const words = ed.storage.characterCount?.words?.() ?? text.split(/\s+/).filter(Boolean).length;
       const json = ed.getJSON();
-      const content = json.content || [];
-      const headings = content.filter((n: JSONContent) => n.type === 'heading').length;
-      const paragraphs = content.filter((n: JSONContent) => n.type === 'paragraph' && n.content?.length).length;
+      const nodes = json.content || [];
+      const headings = nodes.filter((n: JSONContent) => n.type === 'heading').length;
+      const paragraphs = nodes.filter((n: JSONContent) => n.type === 'paragraph' && n.content?.length).length;
       onChangeRef.current(html, text, words, headings, paragraphs);
       if (onHeadingsChangeRef.current) {
         const items: HeadingItem[] = [];
@@ -1752,7 +1768,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => {
       if (!editor) return;
       if (ranksmileOpen && ranksmileSelection) {
-        editor.chain().unsetHighlight().setTextSelection({ from: ranksmileSelection.from, to: ranksmileSelection.to }).setHighlight({ color: 'rgba(242, 153, 100, 0.15)' }).run();
+        editor.chain().unsetHighlight().setTextSelection({ from: ranksmileSelection.from, to: ranksmileSelection.to }).setHighlight({ color: 'rgba(242, 153, 100, 0.15)' })
+.run();
         ranksmileHlRangeRef.current = { from: ranksmileSelection.from, to: ranksmileSelection.to };
       } else if (ranksmileHlRangeRef.current) {
         // Remove the Ranksmile highlight from its EXACT range. The cursor may have moved off it, so
@@ -1976,7 +1993,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         }
       }
     };
-
 
     const handleWriteWithAi = async (opts?: {
       approvedOutline?: ApprovedOutlineHeading[];
@@ -2411,7 +2427,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }, undefined, { shallow: true });
     };
 
-
     // Repaint comment decorations when the comment list changes (no-op tx forces
     // the decorations prop to re-run, reading the latest commentsRef).
     useEffect(() => {
@@ -2683,7 +2698,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                   const wRect = wrap.getBoundingClientRect();
                   const end = editor.view.coordsAtPos(selection.to);
                   const start = editor.view.coordsAtPos(selection.from);
-                  setCommentDraft({ quote: selection.text, from: selection.from, to: selection.to, top: end.bottom - wRect.top + 8, left: (start.left + end.right) / 2 - wRect.left });
+                  setCommentDraft({
+                    quote: selection.text,
+                    from: selection.from,
+                    to: selection.to,
+                    top: end.bottom - wRect.top + 8,
+                    left: (start.left + end.right) / 2 - wRect.left,
+                  });
                 } : undefined}
               />
             )}

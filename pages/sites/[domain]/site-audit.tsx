@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { AUDIT_URL_PATH, sitePath } from '@/src/infrastructure/navigation/index';
+import type { SiteAuditTab } from '@/src/infrastructure/siteAudit/types';
+import { useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import SiteAuditOverview from '../../../components/siteAudit/SiteAuditOverview';
@@ -16,13 +19,10 @@ import { SiteAuditIssueDetailSkeleton, SiteAuditOverviewSkeleton, SiteAuditTable
 import { CrawlLimitIndicator } from '../../../components/siteAudit/CrawlLimitPopover';
 import CrawlLimitUpgradeBanner from '../../../components/siteAudit/CrawlLimitUpgradeBanner';
 import { Button, Tabs } from '../../../components/koala/core';
-import { AUDIT_URL_PATH, sitePath } from '@/src/infrastructure/navigation/index';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { useSiteAuditCompareCrawls, useSiteAuditCrawledPages, useSiteAuditIssueDetail, useSiteAuditOverview } from '../../../services/siteAudit';
 import { useRunSetup, useSetupStatus } from '../../../services/domainPipeline';
-import type { SiteAuditTab } from '@/src/infrastructure/siteAudit/types';
-import { useQueryClient } from 'react-query';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -216,7 +216,7 @@ const SiteAuditPage: NextPage = () => {
               {setupQ.data?.auditCounts
                 ? ` — ${setupQ.data.auditCounts.audited}/${setupQ.data.auditCounts.total} pages`
                 : ''}
-              {`. UI read-only until crawl finishes.`}
+              {'. UI read-only until crawl finishes.'}
             </span>
             <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
           </div>

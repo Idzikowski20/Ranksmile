@@ -3,13 +3,13 @@
 // We mint an api_key, hand it to the plugin's connect-verify route, and store the
 // connection scoped to the user's workspace.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUser } from '../../../utils/getUser';
 import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 import { createConnection, mintApiKey } from '@/src/infrastructure/wordpress/wpConnection';
 import { wpRestFetch } from '@/src/infrastructure/wordpress/wpRest';
 import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUser } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

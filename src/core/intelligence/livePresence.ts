@@ -59,9 +59,8 @@ export function applyLivePresence(
       return { ...node, status: next };
     }
     if (isEntityNode(node)) {
-      const present =
-        presentInText(hay, node.canonicalName) ||
-        node.aliases.some((a) => presentInText(hay, a));
+      const present = presentInText(hay, node.canonicalName)
+        || node.aliases.some((a) => presentInText(hay, a));
       const next = liveFactStatus(node.status, present);
       if (next === node.status) return node;
       flipped.push(node.id);
@@ -82,8 +81,7 @@ export function applyLivePresence(
   const withIntents: KgNode[] = draftModel.knowledge.graph.nodes.map((node) => {
     if (!isIntentNode(node)) return node;
     const supporters = q.neighbors(node.id, 'supports', 'in').filter(isFactNode);
-    const present =
-      supporters.length > 0
+    const present = supporters.length > 0
         ? supporters.some((f) => f.status === 'covered' || f.status === 'partial')
         : presentInText(hay, node.label);
     const next = liveFactStatus(node.status, present);

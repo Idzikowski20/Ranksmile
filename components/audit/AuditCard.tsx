@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Gauge, MenuList, MenuListItem } from '../koala/core';
 import { AuditCardDTO } from '@/src/core/domain/audit/types';
+import { Gauge, MenuList, MenuListItem } from '../koala/core';
 
 const FONT = 'var(--font-family-primary)';
 

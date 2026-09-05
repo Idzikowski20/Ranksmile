@@ -460,7 +460,6 @@ export const ACCENT_SWATCHES: Record<AccentName, string> = {
   softgreen: softGreen[500],
 };
 
-
 /**
  * The accent-driven CSS variables, per accent, for the pre-hydration script in
  * `_document`. Without it a saved accent renders orange for one frame on every reload,

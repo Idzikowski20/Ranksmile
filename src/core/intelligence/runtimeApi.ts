@@ -138,8 +138,7 @@ export async function compileArticle(
   opts: CompileArticleOpts,
 ): Promise<CompileArticleResult> {
   const store = opts.store;
-  const previous =
-    opts.mode === 'incremental' && store
+  const previous = opts.mode === 'incremental' && store
       ? (await store.get(opts.articleId)) ?? undefined
       : undefined;
 

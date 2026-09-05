@@ -41,7 +41,8 @@ const LegendRow = ({ n, label, color }: { n: number; label: string; color: strin
 const PICKER_W = 300;
 // Rendered in a portal because the cards row is `overflow-x: auto`, which would clip
 // an in-flow absolutely-positioned dropdown. Fixed-positioned to the trigger's rect.
-const Picker = ({ rect, candidates, exclude, onPick, onClose }: { rect: DOMRect | null; candidates: string[]; exclude: string[]; onPick: (b: string) => void; onClose: () => void }) => {
+type PickerProps = { rect: DOMRect | null; candidates: string[]; exclude: string[]; onPick: (b: string) => void; onClose: () => void };
+const Picker = ({ rect, candidates, exclude, onPick, onClose }: PickerProps) => {
    const [q, setQ] = useState('');
    if (!rect || typeof document === 'undefined') return null;
    const list = candidates.filter((c) => !exclude.includes(c) && c.toLowerCase().includes(q.trim().toLowerCase()));
@@ -79,7 +80,16 @@ const Picker = ({ rect, candidates, exclude, onPick, onClose }: { rect: DOMRect 
    );
 };
 
-const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, activeDomain, onCompare }: { cards: Card[]; candidates: string[]; ownLabel: string; selected: string[]; onSelected: (b: string[]) => void; activeDomain?: string | null; onCompare?: (domain: string) => void }) => {
+type MentionGapCardsProps = {
+   cards: Card[];
+   candidates: string[];
+   ownLabel: string;
+   selected: string[];
+   onSelected: (b: string[]) => void;
+   activeDomain?: string | null;
+   onCompare?: (domain: string) => void;
+};
+const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, activeDomain, onCompare }: MentionGapCardsProps) => {
    const [addOpen, setAddOpen] = useState(false);
    const [swapFor, setSwapFor] = useState<string | null>(null);
    const [pickerRect, setPickerRect] = useState<DOMRect | null>(null);
@@ -103,7 +113,15 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                         <Button type="button" variant="transparent" size="sm" onClick={(e) => { stop(e); const r = e.currentTarget.getBoundingClientRect(); setPickerRect(r); setSwapFor((s) => (s === card.domain ? null : card.domain)); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, fontWeight: 600, fontFamily: FONT, maxWidth: 220 }}>
                            <DomainFavicon domain={card.domain} size={16} />
                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.domain}</span> <ChevronDown /></Button>
-                        {swapFor === card.domain ? <Picker rect={pickerRect} candidates={candidates} exclude={selected} onPick={(b) => { onSelected(selected.map((x) => (x === card.domain ? b : x))); setSwapFor(null); }} onClose={() => setSwapFor(null)} /> : null}
+                        {swapFor === card.domain ? (
+                           <Picker
+                              rect={pickerRect}
+                              candidates={candidates}
+                              exclude={selected}
+                              onPick={(b) => { onSelected(selected.map((x) => (x === card.domain ? b : x))); setSwapFor(null); }}
+                              onClose={() => setSwapFor(null)}
+                           />
+                        ) : null}
                      </div>
                      <Button type="button" variant="transparent" size="sm" aria-label="Remove" onClick={(e) => { stop(e); onSelected(selected.filter((x) => x !== card.domain)); }} icon={<XIcon />} style={{ flexShrink: 0, color: '#9F9FA9' }} />
                   </div>
@@ -119,7 +137,15 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
             ))}
             <div style={{ position: 'relative', flexShrink: 0, display: 'flex' }}>
                <Button type="button" variant="secondary" size="sm" aria-label="Add brand" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPickerRect(r); setAddOpen((o) => !o); }} icon={<PlusIcon />} style={{ width: 56, height: '100%', color: '#71717B' }} />
-               {addOpen ? <Picker rect={pickerRect} candidates={candidates} exclude={selected} onPick={(b) => { onSelected([...selected, b]); setAddOpen(false); }} onClose={() => setAddOpen(false)} /> : null}
+               {addOpen ? (
+                  <Picker
+                     rect={pickerRect}
+                     candidates={candidates}
+                     exclude={selected}
+                     onPick={(b) => { onSelected([...selected, b]); setAddOpen(false); }}
+                     onClose={() => setAddOpen(false)}
+                  />
+               ) : null}
             </div>
          </div>
       </div>

@@ -11,7 +11,7 @@ import { fetchSitemapUrls } from '@/src/infrastructure/seo/fetchSitemapUrls';
  */
 export async function gatherBlogUrls(domainId: number, domainName: string): Promise<string[]> {
    const rows = await db.query<{ blog_paths: string | null }>(
-      `SELECT blog_paths FROM domain WHERE "ID" = ?`,
+      'SELECT blog_paths FROM domain WHERE "ID" = ?',
       { replacements: [domainId], type: QueryTypes.SELECT },
    );
    let segments: string[] = [];

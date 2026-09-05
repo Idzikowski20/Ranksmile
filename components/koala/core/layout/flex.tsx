@@ -1,6 +1,6 @@
 import styled from '@emotion/styled';
-import {Container, type ContainerProps} from './container';
-import {theme} from '../theme';
+import { Container, type ContainerProps } from './container';
+import { theme } from '../theme';
 
 const omitFlexProps = new Set<string>([
   'as',
@@ -30,14 +30,14 @@ export interface FlexProps
     FlexLayoutProps {}
 
 export const Flex = styled(Container, {
-  shouldForwardProp: prop => !omitFlexProps.has(prop as string),
+  shouldForwardProp: (prop) => !omitFlexProps.has(prop as string),
 })<FlexProps>`
-  display: ${p => p.display ?? 'flex'};
-  ${p => p.gap && `gap: ${p.gap};`}
-  ${p => p.direction && `flex-direction: ${p.direction};`}
-  ${p => p.wrap && `flex-wrap: ${p.wrap};`}
-  ${p => p.flex && `flex: ${p.flex};`}
-  ${p => {
+  display: ${(p) => p.display ?? 'flex'};
+  ${(p) => p.gap && `gap: ${p.gap};`}
+  ${(p) => p.direction && `flex-direction: ${p.direction};`}
+  ${(p) => p.wrap && `flex-wrap: ${p.wrap};`}
+  ${(p) => p.flex && `flex: ${p.flex};`}
+  ${(p) => {
     if (!p.justify) return '';
     const map: Record<string, string> = {
       start: 'flex-start',
@@ -49,7 +49,7 @@ export const Flex = styled(Container, {
     };
     return `justify-content: ${map[p.justify] ?? p.justify};`;
   }}
-  ${p => {
+  ${(p) => {
     if (!p.align) return '';
     const map: Record<string, string> = {
       start: 'flex-start',

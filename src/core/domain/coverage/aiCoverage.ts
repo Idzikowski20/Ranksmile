@@ -50,15 +50,15 @@ export interface CoverageItem {
   readonly importance: Importance;
   readonly source: CoverageSource;
   readonly covered: boolean;
-  readonly quality: number;            // 0..5
-  readonly confidence?: number;        // 0..1
+  readonly quality: number; // 0..5
+  readonly confidence?: number; // 0..1
   readonly needsExpansion?: boolean;
   readonly missing?: readonly string[];
-  readonly reason?: string;            // WHY uncovered/shallow — captured on the judge call, feeds the Recommendation Engine
+  readonly reason?: string; // WHY uncovered/shallow — captured on the judge call, feeds the Recommendation Engine
   readonly sectionId?: string;
-  readonly parentId?: string | null;   // graph-ready (flat in A)
-  readonly relatedIds?: readonly string[];  // graph-ready (empty in A)
-  readonly depth?: number;             // graph-ready (0 in A)
+  readonly parentId?: string | null; // graph-ready (flat in A)
+  readonly relatedIds?: readonly string[]; // graph-ready (empty in A)
+  readonly depth?: number; // graph-ready (0 in A)
   readonly provenance?: CoverageProvenance;
   /** LLM engines that generated/surfaced this question (AI Search checklist). */
   readonly llmSources?: readonly LlmCoverageSource[];
@@ -70,11 +70,11 @@ export interface CoverageItem {
 export interface CoverageVerdict {
   id: string;
   covered: boolean;
-  quality: number;            // 0..5
-  confidence: number;         // 0..1
+  quality: number; // 0..5
+  confidence: number; // 0..1
   needsExpansion?: boolean;
   missing?: string[];
-  reason?: string;            // WHY — same LLM call; feeds the Recommendation Engine (no re-judge)
+  reason?: string; // WHY — same LLM call; feeds the Recommendation Engine (no re-judge)
   sectionId?: string;
 }
 
@@ -91,7 +91,7 @@ export interface BucketScore {
   covered: number;
   earned: number;
   max: number;
-  score: number;              // 0..100
+  score: number; // 0..100
 }
 
 /** Harvested semantic topic → coverage item ids (AI Search accordion). */
@@ -101,15 +101,15 @@ export type CoverageTopicGroup = {
 };
 
 export interface CoverageSnapshot {
-  readonly schemaVersion: 1;               // envelope shape; parseSnapshot gates on this. A prompt tweak does NOT bump it.
-  readonly judgeVersion: string;           // 'promptVersion|model|temperature' — cache key + staleness detector
-  readonly promptVersion: string;          // just the prompt tag, e.g. 'v1'
-  readonly model: string;                  // e.g. 'deepseek-chat'
+  readonly schemaVersion: 1; // envelope shape; parseSnapshot gates on this. A prompt tweak does NOT bump it.
+  readonly judgeVersion: string; // 'promptVersion|model|temperature' — cache key + staleness detector
+  readonly promptVersion: string; // just the prompt tag, e.g. 'v1'
+  readonly model: string; // e.g. 'deepseek-chat'
   readonly createdAt: string;
   readonly items: readonly CoverageItem[]; // ALREADY GRADED
   readonly buckets: readonly BucketScore[];
-  readonly answersMainQuestionEarly: boolean;  // promoted onto the domain model (scorer needs no CoverageResult)
-  readonly overall: number;                // 0..100
+  readonly answersMainQuestionEarly: boolean; // promoted onto the domain model (scorer needs no CoverageResult)
+  readonly overall: number; // 0..100
   /** Optional harvested topic grouping for Info to cover UI. */
   readonly topics?: readonly CoverageTopicGroup[];
 }
@@ -235,11 +235,11 @@ export interface CoverageJudge {
 }
 
 const INTENT_ITEMS: ReadonlyArray<Omit<CoverageItem, 'covered' | 'quality'>> = [
-  { id: 'intent-answer-main',  label: 'Answer the main question',             type: 'intent', category: 'intent', importance: 'critical',    source: 'llm' },
-  { id: 'intent-answer-early', label: 'Answer the main question early',       type: 'intent', category: 'intent', importance: 'critical',    source: 'llm' },
-  { id: 'intent-expectations', label: 'Set expectations for the content',     type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
-  { id: 'intent-who',          label: "Identify who it's for",                type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
-  { id: 'intent-why',          label: 'Explain why it matters to the reader', type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
+  { id: 'intent-answer-main', label: 'Answer the main question', type: 'intent', category: 'intent', importance: 'critical', source: 'llm' },
+  { id: 'intent-answer-early', label: 'Answer the main question early', type: 'intent', category: 'intent', importance: 'critical', source: 'llm' },
+  { id: 'intent-expectations', label: 'Set expectations for the content', type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
+  { id: 'intent-who', label: "Identify who it's for", type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
+  { id: 'intent-why', label: 'Explain why it matters to the reader', type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
 ];
 
 /** Ids of the five fixed intro-intent checkpoints. They are graded by the introduction

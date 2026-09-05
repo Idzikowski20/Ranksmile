@@ -3,9 +3,6 @@
 // and sideloads images). Body: { articleId, status?: 'draft'|'publish' }.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
@@ -14,6 +11,9 @@ import { permalinkHash } from '@/src/infrastructure/wordpress/wpDraft';
 import { cleanHtmlForWordPress } from '@/src/infrastructure/wordpress/wpContentClean';
 import { logRun } from '@/src/infrastructure/ao/optimizeLog';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 
 type ArticleRow = {
    id: number; domain_id: number; title: string | null; content: string | null;

@@ -119,14 +119,13 @@ export function buildInvalidationGraph(
     [...dirtyNodeIds].some((id) => {
       const n = q.node(id);
       return n?.kind === 'intent';
-    }) ||
-    model.ast.blocks.some((b) => b.type === 'heading' && dirtyBlocks.has(b.blockId))
+    })
+    || model.ast.blocks.some((b) => b.type === 'heading' && dirtyBlocks.has(b.blockId))
   ) {
     dirtyPassIds.push('intent');
   }
 
-  const dirtyProjectionIds =
-    dirtyNodeIds.size > 0 ? ['coverage', 'action_graph'] : [];
+  const dirtyProjectionIds = dirtyNodeIds.size > 0 ? ['coverage', 'action_graph'] : [];
 
   return {
     dirtyBlockIds: [...dirtyBlocks],

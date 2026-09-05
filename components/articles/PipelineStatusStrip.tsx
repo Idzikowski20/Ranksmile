@@ -21,7 +21,6 @@ type JobsResponse = {
   jobs: PipelineJob[];
 };
 
-
 const QUEUE_LABEL: Record<string, string> = {
   serp: 'SERP',
   serp_crawl: 'SERP',
@@ -67,9 +66,8 @@ export function dedupeActiveJobs(jobs: PipelineJob[]): PipelineJob[] {
       byQueue.set(j.queue, j);
       continue;
     }
-    const prefer =
-      (j.status === 'running' && prev.status !== 'running') ||
-      (j.status === prev.status && j.id > prev.id);
+    const prefer = (j.status === 'running' && prev.status !== 'running')
+      || (j.status === prev.status && j.id > prev.id);
     if (prefer) byQueue.set(j.queue, j);
   }
   return Array.from(byQueue.values()).sort((a, b) => b.id - a.id).slice(0, 4);

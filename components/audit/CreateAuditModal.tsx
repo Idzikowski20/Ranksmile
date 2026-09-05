@@ -51,8 +51,7 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
       setDraft('');
    };
    const onKwKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addChip(draft); }
-      else if (e.key === 'Backspace' && !draft && chips.length) setChips((c) => c.slice(0, -1));
+      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addChip(draft); } else if (e.key === 'Backspace' && !draft && chips.length) setChips((c) => c.slice(0, -1));
    };
 
    const keywords = draft.trim() ? [...chips, draft.trim()].filter((v, i, a) => a.indexOf(v) === i) : chips;

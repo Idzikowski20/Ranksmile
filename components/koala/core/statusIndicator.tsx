@@ -17,7 +17,7 @@ const StatusIndicator = forwardRef<HTMLSpanElement, StatusIndicatorProps>(
       className={`koala-status-indicator koala-status-indicator--${variant} ${animate ? 'koala-status-indicator--animate' : ''} ${className}`}
       {...rest}
     />
-  )
+  ),
 );
 StatusIndicator.displayName = 'StatusIndicator';
 export default StatusIndicator;

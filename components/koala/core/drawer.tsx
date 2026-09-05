@@ -67,7 +67,7 @@ export function Drawer({
         <div className="koala-drawer-body">{children}</div>
       </aside>
     </div>,
-    document.body
+    document.body,
   );
 }
 

@@ -12,8 +12,8 @@ import {
 } from '@/src/infrastructure/billing/planLimits';
 import { getOrgPlanUsage } from '@/src/infrastructure/billing/planUsage';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

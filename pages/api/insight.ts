@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../database/database';
 import { getCountryInsight, getKeywordsInsight, getPagesInsight } from '../../utils/insight';
 import { fetchDomainSCData, getSearchConsoleApiInfo, readLocalSCData, hasValidSCAuth } from '../../utils/searchConsole';
@@ -6,7 +7,6 @@ import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import Domain from '../../database/models/domain';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type SCInsightRes = {
    data: InsightDataType | null,

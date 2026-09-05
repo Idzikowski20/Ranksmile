@@ -203,7 +203,7 @@ export function runContentPlanner(input: RunContentPlannerInput): RunContentPlan
   let outline = outlineLoop.outline;
   let briefs = briefLoop.briefs;
   let outlineValidation = outlineLoop.validation;
-  let briefValidation = briefLoop.validation;
+  const briefValidation = briefLoop.validation;
   let improveValidation: ValidationResult | null = null;
 
   if (outlineLoop.validation.ok && briefLoop.validation.ok && outline) {

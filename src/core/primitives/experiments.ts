@@ -26,8 +26,7 @@ export function assignExperimentBucket(
   subjectKey: string,
 ): ExperimentRef {
   const variants = experiment.variants.length ? experiment.variants : ['control'];
-  const weights =
-    experiment.weights && experiment.weights.length === variants.length
+  const weights = experiment.weights && experiment.weights.length === variants.length
       ? experiment.weights
       : variants.map(() => 1);
   const total = weights.reduce((a, b) => a + b, 0) || 1;

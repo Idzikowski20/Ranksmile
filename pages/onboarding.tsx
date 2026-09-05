@@ -2,9 +2,9 @@ import type { NextPage } from 'next';
 import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { useMarkOnboardingComplete } from '@/src/infrastructure/onboardingStatus';
 import OnboardingShell from '../components/onboarding/OnboardingShell';
 import OnboardingSurvey from '../components/onboarding/OnboardingSurvey';
-import { useMarkOnboardingComplete } from '@/src/infrastructure/onboardingStatus';
 
 const OnboardingPage: NextPage = () => {
    const router = useRouter();

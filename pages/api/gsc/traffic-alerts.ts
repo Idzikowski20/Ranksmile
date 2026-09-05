@@ -1,12 +1,12 @@
 // GET /api/gsc/traffic-alerts?workspaceId=  → this week's drop tiers for the workspace's domain(s).
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 import { getWeeklyDrops } from '../../../src/composition/gsc';
 import type { DropResult } from '../../../src/core/domain/gsc/drops';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

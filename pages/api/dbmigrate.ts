@@ -1,11 +1,11 @@
 import { Sequelize } from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getCallerRole } from '@/src/infrastructure/identity/members';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getCallerRole } from '@/src/infrastructure/identity/members';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type MigrationGetResponse = {
    hasMigrations: boolean,
@@ -32,7 +32,7 @@ function getSequelizeForMigrations(): Sequelize {
    if (process.env.NODE_ENV === 'production') {
       throw new Error('DATABASE_URL required in production');
    }
-   // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+   // eslint-disable-next-line global-require
    const sqlite3 = require('sqlite3');
    return new Sequelize({
       dialect: 'sqlite',

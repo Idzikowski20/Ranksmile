@@ -162,8 +162,7 @@ export function parseEditorialJudgeResult(raw: unknown): EditorialJudgeResult {
     ? o.vs_top5 as Record<string, unknown>
     : {};
   const overallRaw = vs.overall;
-  let overall: 'wins' | 'ties' | 'loses' =
-    overallRaw === 'wins' || overallRaw === 'ties' || overallRaw === 'loses'
+  let overall: 'wins' | 'ties' | 'loses' = overallRaw === 'wins' || overallRaw === 'ties' || overallRaw === 'loses'
       ? overallRaw
       : 'ties';
   // Soften: if Judge lists worse features including opening/eeat, don't allow full wins
@@ -296,8 +295,8 @@ export async function runEditorialJudge(opts: {
         };
       };
 
-      let llm = chatLlm();
-      let res = await tryOnce(llm);
+      const llm = chatLlm();
+      const res = await tryOnce(llm);
       if (!res.ok) return { status: 'skipped_error', reason: res.reason };
       text = res.text;
       tokens = res.tokens;

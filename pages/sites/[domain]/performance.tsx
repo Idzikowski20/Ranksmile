@@ -5,16 +5,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
-import AppShell from '../../../components/common/AppShell';
-import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { PageHeader } from '../../../components/koala/layout';
-import { Button, CompactSelect, PageFilterBar, Modal, ModalFooter, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, Tabs, ToolRibbon, Pagination, getPaginationCaption } from '../../../components/koala/core';
-import { Card, FeedbackPopover } from '../../../components/koala/product';
-import { TrendDeltaBadge } from '../../../components/koala/product/helpers/TrendDeltaBadge';
-import { Icon } from '../../../components/koala/icons/Icon';
-import PerformanceLineChart from '../../../components/performance/PerformanceLineChart';
-import { useFetchDomains } from '../../../services/domains';
-import countries from '../../../utils/countries';
 import {
   DATE_PRESETS,
   DEVICE_OPTIONS,
@@ -49,6 +39,16 @@ import {
   normalizePath,
   parseDateKey,
 } from '@/src/infrastructure/performance/formatters';
+import AppShell from '../../../components/common/AppShell';
+import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { PageHeader } from '../../../components/koala/layout';
+import { Button, CompactSelect, PageFilterBar, Modal, ModalFooter, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, Tabs, ToolRibbon, Pagination, getPaginationCaption } from '../../../components/koala/core';
+import { Card, FeedbackPopover } from '../../../components/koala/product';
+import { TrendDeltaBadge } from '../../../components/koala/product/helpers/TrendDeltaBadge';
+import { Icon } from '../../../components/koala/icons/Icon';
+import PerformanceLineChart from '../../../components/performance/PerformanceLineChart';
+import { useFetchDomains } from '../../../services/domains';
+import countries from '../../../utils/countries';
 import { slugToDomain } from '../../../utils/slugToDomain';
 
 const KeywordFilterModal = dynamic(() => import('../../../components/performance/KeywordFilterModal'), { ssr: false });
@@ -95,7 +95,6 @@ function ChevronRight() {
     </svg>
   );
 }
-
 
 function CalendarIcon() {
   return (
@@ -470,7 +469,7 @@ function PerformanceMetricTable({
   page: number;
   pageSize: number;
   total: number;
-  onPageChange: (page: number) => void;
+  onPageChange: (next: number) => void;
 }) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   return (
@@ -572,7 +571,6 @@ function PerformanceMetricTable({
     </>
   );
 }
-
 
 const PerformancePage: NextPage = () => {
   const router = useRouter();

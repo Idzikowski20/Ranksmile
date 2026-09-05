@@ -1,6 +1,6 @@
 import React from 'react';
-import { SortUpDown } from './icons';
 import type { SortDir } from '@/hooks/useSortState';
+import { SortUpDown } from './icons';
 
 const SortableHeader = ({ label, sortKey, activeKey, dir, width, onSort, align = 'flex-end' }: {
   label: string; sortKey: string; activeKey: string; dir: SortDir; width: number; onSort: (k: string) => void;

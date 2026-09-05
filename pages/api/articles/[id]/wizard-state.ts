@@ -4,14 +4,14 @@
 //   body { clear: true }  → null it out (wizard finished / generation started)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await ensureArticlesTables();

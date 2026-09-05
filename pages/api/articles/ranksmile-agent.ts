@@ -4,7 +4,6 @@
 // as Server-Sent Events; a terminal `done` event carries the final HTML to apply.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { streamText, isStepCount } from 'ai';
-import verifyUser from '../../../utils/verifyUser';
 import { chatLlm, deepseek } from '@/src/infrastructure/ai/deepseek';
 import { makeWorkingDoc, stripDataImages, restoreDataImages, stripSids } from '@/src/infrastructure/ai/workingDoc';
 import { buildTools } from '@/src/infrastructure/ai/tools';
@@ -12,13 +11,14 @@ import { buildSystemPrompt } from '@/src/infrastructure/ai/systemPrompt';
 import { sseEvent } from '@/src/infrastructure/ai/sse';
 import { extractJsonObject, isRanksmileReplyShape } from '@/src/infrastructure/ai/extractJson';
 import { splitRanksmileThinkingAndMessage, stripEmoji } from '@/src/infrastructure/ai/text';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 import type { ToolCtx } from '@/src/infrastructure/ai/types';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { flushSse } from '@/src/core/shared/types/api';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
 
 export const config = { api: { responseLimit: '10mb' } };
 
@@ -126,7 +126,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Answer = text after the last tool result; thinking = narration before it (collapsed in UI).
       // Do NOT fall back to fullText when the answer slice is empty — that leaks thinking into the reply.
       const split = splitRanksmileThinkingAndMessage(streamedText || fullText, thinkingLen);
-      let thinking = stripEmoji(split.thinking);
+      const thinking = stripEmoji(split.thinking);
       let message = split.message;
       const finalUsage = await Promise.resolve(result.totalUsage).catch(() => undefined);
 

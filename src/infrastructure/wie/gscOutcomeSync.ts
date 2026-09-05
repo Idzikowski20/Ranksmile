@@ -51,7 +51,7 @@ export async function syncArticleOutcomeFromGsc(articleId: number): Promise<GscO
   if (row.domain_id == null) return { articleId, ok: false, reason: 'no_domain' };
 
   const domainRow = await queryOne<{ domain: string }>(
-    `SELECT domain FROM domain WHERE "ID" = ? LIMIT 1`,
+    'SELECT domain FROM domain WHERE "ID" = ? LIMIT 1',
     [row.domain_id],
   );
   if (!domainRow?.domain) return { articleId, ok: false, reason: 'domain_not_found' };

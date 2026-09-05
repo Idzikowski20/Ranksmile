@@ -1,8 +1,8 @@
 // POST /api/wie/write — shared WIE Writer (Think context → LLM → Judge)
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { wieWrite } from '@/src/infrastructure/wie/writer';
+import verifyUser from '../../../utils/verifyUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

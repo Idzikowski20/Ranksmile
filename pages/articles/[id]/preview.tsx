@@ -2,14 +2,14 @@ import type { GetServerSideProps, NextApiRequest, NextApiResponse, NextPage } fr
 import Head from 'next/head';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
-import ArticleBlogPreview from '../../../components/articles/ArticleBlogPreview';
-import { Icon } from '../../../components/koala/icons';
-import db from '../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { queryOne } from '@/src/infrastructure/db/query';
 import type { ArticleRow } from '@/src/infrastructure/db/query';
 import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
+import db from '../../../database/database';
+import { Icon } from '../../../components/koala/icons';
+import ArticleBlogPreview from '../../../components/articles/ArticleBlogPreview';
 import { getCurrentUser } from '../../../utils/getUser';
 
 type PreviewArticle = {

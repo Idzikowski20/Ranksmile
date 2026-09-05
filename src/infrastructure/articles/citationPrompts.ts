@@ -28,8 +28,7 @@ export function remapLegacyCitationItem(item: CoverageItem): CoverageItem {
 }
 
 /** Retired crime/legal fill-ins — strip from snapshots when keyword is not a legal topic. */
-export const LEGAL_CRIME_TEMPLATE_RE =
-  /\b(kiedy można (zgłosić|zglosic|oskarżyć|oskarzyc)|oskarżyć o|oskarzyc o|zgłosić .+ na policj|zglosic .+ na policj|emocjonalne\?|ile grozi za|wykroczenie czy przestępstwo|dowody są potrzebne w sprawie|postępowanie w sprawie|uporczywe)\b/i;
+export const LEGAL_CRIME_TEMPLATE_RE = /\b(kiedy można (zgłosić|zglosic|oskarżyć|oskarzyc)|oskarżyć o|oskarzyc o|zgłosić .+ na policj|zglosic .+ na policj|emocjonalne\?|ile grozi za|wykroczenie czy przestępstwo|dowody są potrzebne w sprawie|postępowanie w sprawie|uporczywe)\b/i;
 
 const LEGAL_KEYWORD_SIGNAL = /\b(nękanie|stalking|molestowanie|przemoc domowa|stalker|harassment)\b/i;
 

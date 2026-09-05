@@ -1,16 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Cryptr from 'cryptr';
+import { getAccessibleWorkspaceIds, getActiveWorkspaceId, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import Keyword from '../../database/models/keyword';
 import getdomainStats from '../../utils/domains';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getAccessibleWorkspaceIds, getActiveWorkspaceId, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import { checkSerchConsoleIntegration, removeLocalSCData } from '../../utils/searchConsole';
 import { removeFromRetryQueue } from '../../utils/scraper';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { clearDomainIdsCache } from '../../lib/domainIdsCache';
 
 type DomainsGetRes = {

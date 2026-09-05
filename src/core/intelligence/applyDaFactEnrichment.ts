@@ -23,8 +23,7 @@ export async function applyDaFactEnrichment(opts: {
   /** Fact Engine v3 LLM gap locate (default true). */
   readonly llmGaps?: boolean;
 }): Promise<CanonicalContentModel> {
-  const plain =
-    opts.contentHtml != null && opts.contentHtml !== ''
+  const plain = opts.contentHtml != null && opts.contentHtml !== ''
       ? htmlToPlain(opts.contentHtml)
       : opts.model.ast.blocks.map((b) => b.text).join(' ');
 

@@ -1,6 +1,5 @@
-import type { ComparePeriod, RankAnalyticsSummary, RankTrackingRow } from '@/src/core/shared/types/rankTracking';
+import type { ComparePeriod, RankAnalyticsSummary, RankTrackingRow, RankTrackingConfigRow } from '@/src/core/shared/types/rankTracking';
 import { buildRankResultsPage } from '@/src/infrastructure/rankTracking/results';
-import type { RankTrackingConfigRow } from '@/src/core/shared/types/rankTracking';
 import { ANALYTICS_VERSION } from '@/src/infrastructure/rankTracking/constants';
 import {
   activeRankDevice,

@@ -1,20 +1,11 @@
 import type { GetServerSideProps, NextApiRequest, NextApiResponse, NextPage } from 'next';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React from 'react';
 import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from 'react-query';
 import { loadStripe } from '@stripe/stripe-js';
-import AppShell from '../../../components/common/AppShell';
-import { Icon } from '../../../components/koala/icons';
-import {
-  addressFromStripeEvent,
-  CheckoutStripeProvider,
-  type CheckoutStripeHandle,
-  type CompanyState,
-} from '../../../components/billing/CheckoutStripeProvider';
-import CheckoutKoalaBody from '../../../components/billing/CheckoutKoalaBody';
-import { CheckoutPageSkeleton } from '../../../components/billing/CheckoutPageSkeleton';
 import type { CheckoutFieldErrors } from '@/src/infrastructure/billing/checkoutValidation';
 import {
   BillingPeriod,
@@ -28,8 +19,18 @@ import { isAllowedSubscriptionChange, type UpgradePreview } from '@/src/infrastr
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import type { SubscriptionDetails } from '@/src/infrastructure/billing/subscriptionDetails';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
-import { getCurrentUser } from '../../../utils/getUser';
 import { isStripeCheckoutConfigured, type PlanSlug } from '@/src/core/domain/billing/prices';
+import { getCurrentUser } from '../../../utils/getUser';
+import { CheckoutPageSkeleton } from '../../../components/billing/CheckoutPageSkeleton';
+import CheckoutKoalaBody from '../../../components/billing/CheckoutKoalaBody';
+import {
+  addressFromStripeEvent,
+  CheckoutStripeProvider,
+  type CheckoutStripeHandle,
+  type CompanyState,
+} from '../../../components/billing/CheckoutStripeProvider';
+import { Icon } from '../../../components/koala/icons';
+import AppShell from '../../../components/common/AppShell';
 
 const F = 'var(--font-family-primary)';
 
@@ -456,10 +457,10 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                     ? `You're currently on ${lockedSlug}${currentBilling ? ` (${currentBilling})` : ''}. Downgrades to a lower plan are not available here — pick a higher plan or manage billing from settings.`
                     : 'Downgrades are not available on this page. Choose a higher plan or manage billing from settings.'}
               </p>
-              <a href="/plans" style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Link href="/plans" style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Icon name="ArrowLeft" size={16} />
                 Back to plans
-              </a>
+              </Link>
             </div>
           ) : stripeCheckoutEnabled && !isUpgrade ? (
             <CheckoutStripeProvider

@@ -32,8 +32,7 @@ export const liveScoreWorker: PipelineWorker = {
     });
 
     const geo = computeGeoCues(html, scores.plainText);
-    const coveragePct =
-      scores.liveItems.length > 0
+    const coveragePct = scores.liveItems.length > 0
         ? Math.round(
             (scores.liveItems.filter((i) => i.covered).length / scores.liveItems.length) * 100,
           )

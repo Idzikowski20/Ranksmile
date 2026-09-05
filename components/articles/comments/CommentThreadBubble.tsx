@@ -128,7 +128,12 @@ const CommentThreadBubble = ({ thread, author, articleId, onChanged, onClose, st
     // Discord-style floating burst on add.
     if (added) {
       const r = ev.currentTarget.getBoundingClientRect();
-      const parts = Array.from({ length: 6 }, () => ({ dx: (Math.random() - 0.5) * 70, dy: -70 - Math.random() * 70, dur: 0.9 + Math.random() * 0.5, rot: (Math.random() - 0.5) * 50 }));
+      const parts = Array.from({ length: 6 }, () => ({
+        dx: (Math.random() - 0.5) * 70,
+        dy: -70 - Math.random() * 70,
+        dur: 0.9 + Math.random() * 0.5,
+        rot: (Math.random() - 0.5) * 50,
+      }));
       const id = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       setBursts((prev) => [...prev, { id, emoji, x: r.left + r.width / 2, y: r.top, parts }]);
       setTimeout(() => setBursts((prev) => prev.filter((b) => b.id !== id)), 1500);

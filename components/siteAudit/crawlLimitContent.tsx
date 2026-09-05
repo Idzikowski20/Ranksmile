@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
-import { Button } from '../koala/core';
 import { getPlanCheckoutHref } from '@/src/core/domain/billing/plans';
+import { Button } from '../koala/core';
 
 export function WarningIcon() {
   return (

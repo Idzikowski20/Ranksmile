@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import {
   enqueueAnalyzeDag,
   FlowProducerStageError,
 } from '@/src/infrastructure/pipeline/flowProducer';
 import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
 
 /**
  * POST /api/pipeline/analyze — Etap 2+ FlowProducer DAG (or sequential fallback).

@@ -1,22 +1,35 @@
 {
-  "extends": ["next/core-web-vitals", "airbnb-base"],
-  "rules":{
-   "linebreak-style": 0,
-   "indent":"off",
-   "no-undef":"off",
-   "no-console": "off",
-   "camelcase":"off",
-   "object-curly-newline":"off",
-   "no-use-before-define": "off",
-   "no-restricted-syntax": "off",
-   "no-await-in-loop": "off",
-   "arrow-body-style":"off",
-   "max-len": ["error", {"code": 150, "ignoreComments": true, "ignoreUrls": true}],
-   "import/no-extraneous-dependencies": "off",
-   "no-unused-vars": "off",
-   "implicit-arrow-linebreak": "off",
-   "function-paren-newline": "off",
-   "import/extensions": [
+  "extends": [
+    "next/core-web-vitals",
+    "airbnb-base"
+  ],
+  "rules": {
+    "linebreak-style": 0,
+    "indent": "off",
+    "no-undef": "off",
+    "no-console": "off",
+    "camelcase": "off",
+    "object-curly-newline": "off",
+    "no-use-before-define": "off",
+    "no-restricted-syntax": "off",
+    "no-await-in-loop": "off",
+    "arrow-body-style": "off",
+    "max-len": [
+      "error",
+      {
+        "code": 180,
+        "ignoreComments": true,
+        "ignoreUrls": true,
+        "ignoreStrings": true,
+        "ignoreTemplateLiterals": true,
+        "ignoreRegExpLiterals": true
+      }
+    ],
+    "import/no-extraneous-dependencies": "off",
+    "no-unused-vars": "off",
+    "implicit-arrow-linebreak": "off",
+    "function-paren-newline": "off",
+    "import/extensions": [
       "error",
       "ignorePackages",
       {
@@ -26,143 +39,235 @@
         "ts": "never",
         "tsx": "never"
       }
-   ]
- },
- "overrides": [
-   {
-     "files": ["components/koala/**/*"],
-     "rules": {
-       "no-restricted-imports": ["error", {
-         "patterns": [
-           {
-             "group": ["**/pages/**", "pages/**"],
-             "message": "Koala components must not import from pages/ — keep UI layer free of route modules."
-           },
-           {
-             "group": ["stripe", "stripe/*", "**/stripe", "**/stripe/*", "@stripe/*"],
-             "message": "Koala components must not import Stripe — billing belongs in pages/api and lib."
-           },
-           {
-             "group": ["bullmq", "bullmq/*"],
-             "message": "Koala components must not import BullMQ — queue workers belong in scripts/lib."
-           },
-           {
-             "group": ["ioredis", "ioredis/*"],
-             "message": "Koala components must not import ioredis — Redis clients belong in lib/scripts."
-           },
-           {
-             "group": ["**/dataforseo", "**/dataforseo/**", "**/dataforseoLlm", "**/dataforseoBudget"],
-             "message": "Koala components must not import DataForSEO — SEO providers belong in lib/providers."
-           }
-         ]
-       }]
-     }
-   },
-   {
-     "files": ["pages/**/*.{ts,tsx,js,jsx}", "components/**/*.{ts,tsx,js,jsx}"],
-    "excludedFiles": [
-      "components/koala/charts/**/*"
     ],
-    "rules": {
-      "no-restricted-imports": ["error", {
-        "patterns": [
+    "no-continue": "off",
+    "no-plusplus": "off",
+    "no-nested-ternary": "off",
+    "import/prefer-default-export": "off",
+    "no-void": "off",
+    "consistent-return": "off",
+    "no-underscore-dangle": "off",
+    "no-bitwise": "off",
+    "import/no-named-as-default": "off",
+    "prefer-destructuring": "off",
+    "no-confusing-arrow": "off",
+    "object-property-newline": "off",
+    "no-param-reassign": [
+      "error",
+      {
+        "props": false
+      }
+    ],
+    "no-cond-assign": [
+      "error",
+      "except-parens"
+    ],
+    "no-empty": [
+      "error",
+      {
+        "allowEmptyCatch": true
+      }
+    ],
+    "no-restricted-exports": [
+      "error",
+      {
+        "restrictedNamedExports": [
+          "then"
+        ]
+      }
+    ],
+    "class-methods-use-this": "off",
+    "import/no-cycle": [
+      "error",
+      {
+        "allowUnsafeDynamicCyclicDependency": true
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "components/koala/**/*"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
           {
-            "group": [
-              "**/components/charts",
-              "**/components/charts/**",
-              "components/charts",
-              "components/charts/**",
-              "**/common/ChartSlim",
-              "**/common/ChartSlim.*",
-              "**/shimmering-text",
-              "**/shimmering-text.*"
-            ],
-            "message": "Cleanup Freeze: legacy components/charts and ChartSlim/shimmer are deleted. Use koala/charts Chart/Sparkline."
-          },
-          {
-            "group": [
-              "**/components/keywords",
-              "**/components/keywords/**",
-              "components/keywords",
-              "components/keywords/**",
-              "**/components/ideas",
-              "**/components/ideas/**",
-              "components/ideas",
-              "components/ideas/**",
-              "**/components/insight",
-              "**/components/insight/**",
-              "components/insight",
-              "components/insight/**",
-              "**/domains/DomainSettings",
-              "**/domains/DomainSettings.*"
-            ],
-            "message": "Cleanup Freeze: legacy keywords/ideas/insight/DomainSettings removed. Use rankTracking, keywordResearch, or koala product tables."
-          },
-          {
-            "group": [
-              "**/koala/charts/ChartRenderer",
-              "**/koala/charts/ChartRenderer.*",
-              "**/koala/charts/HeatmapRenderer",
-              "**/koala/charts/HeatmapRenderer.*",
-              "**/koala/charts/ChartTooltip",
-              "**/koala/charts/ChartTooltip.*",
-              "**/koala/charts/ChartLegend",
-              "**/koala/charts/ChartLegend.*",
-              "**/koala/charts/presets",
-              "**/koala/charts/presets.*",
-              "**/koala/charts/formatters",
-              "**/koala/charts/formatters/**",
-              "**/koala/charts/chartMotion",
-              "**/koala/charts/chartMotion.*",
-              "**/koala/charts/Heatmap",
-              "**/koala/charts/Heatmap.*"
-            ],
-            "message": "Visualization internals are private. Import only Chart or Sparkline from koala/charts (or widgets from koala/product)."
+            "patterns": [
+              {
+                "group": [
+                  "**/pages/**",
+                  "pages/**"
+                ],
+                "message": "Koala components must not import from pages/ \u2014 keep UI layer free of route modules."
+              },
+              {
+                "group": [
+                  "stripe",
+                  "stripe/*",
+                  "**/stripe",
+                  "**/stripe/*",
+                  "@stripe/*"
+                ],
+                "message": "Koala components must not import Stripe \u2014 billing belongs in pages/api and lib."
+              },
+              {
+                "group": [
+                  "bullmq",
+                  "bullmq/*"
+                ],
+                "message": "Koala components must not import BullMQ \u2014 queue workers belong in scripts/lib."
+              },
+              {
+                "group": [
+                  "ioredis",
+                  "ioredis/*"
+                ],
+                "message": "Koala components must not import ioredis \u2014 Redis clients belong in lib/scripts."
+              },
+              {
+                "group": [
+                  "**/dataforseo",
+                  "**/dataforseo/**",
+                  "**/dataforseoLlm",
+                  "**/dataforseoBudget"
+                ],
+                "message": "Koala components must not import DataForSEO \u2014 SEO providers belong in lib/providers."
+              }
+            ]
           }
         ]
-      }]
+      }
+    },
+    {
+      "files": [
+        "pages/**/*.{ts,tsx,js,jsx}",
+        "components/**/*.{ts,tsx,js,jsx}"
+      ],
+      "excludedFiles": [
+        "components/koala/charts/**/*"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/components/charts",
+                  "**/components/charts/**",
+                  "components/charts",
+                  "components/charts/**",
+                  "**/common/ChartSlim",
+                  "**/common/ChartSlim.*",
+                  "**/shimmering-text",
+                  "**/shimmering-text.*"
+                ],
+                "message": "Cleanup Freeze: legacy components/charts and ChartSlim/shimmer are deleted. Use koala/charts Chart/Sparkline."
+              },
+              {
+                "group": [
+                  "**/components/keywords",
+                  "**/components/keywords/**",
+                  "components/keywords",
+                  "components/keywords/**",
+                  "**/components/ideas",
+                  "**/components/ideas/**",
+                  "components/ideas",
+                  "components/ideas/**",
+                  "**/components/insight",
+                  "**/components/insight/**",
+                  "components/insight",
+                  "components/insight/**",
+                  "**/domains/DomainSettings",
+                  "**/domains/DomainSettings.*"
+                ],
+                "message": "Cleanup Freeze: legacy keywords/ideas/insight/DomainSettings removed. Use rankTracking, keywordResearch, or koala product tables."
+              },
+              {
+                "group": [
+                  "**/koala/charts/ChartRenderer",
+                  "**/koala/charts/ChartRenderer.*",
+                  "**/koala/charts/HeatmapRenderer",
+                  "**/koala/charts/HeatmapRenderer.*",
+                  "**/koala/charts/ChartTooltip",
+                  "**/koala/charts/ChartTooltip.*",
+                  "**/koala/charts/ChartLegend",
+                  "**/koala/charts/ChartLegend.*",
+                  "**/koala/charts/presets",
+                  "**/koala/charts/presets.*",
+                  "**/koala/charts/formatters",
+                  "**/koala/charts/formatters/**",
+                  "**/koala/charts/chartMotion",
+                  "**/koala/charts/chartMotion.*",
+                  "**/koala/charts/Heatmap",
+                  "**/koala/charts/Heatmap.*"
+                ],
+                "message": "Visualization internals are private. Import only Chart or Sparkline from koala/charts (or widgets from koala/product)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "lib/projections/**/*.{ts,tsx}",
+        "lib/planner/**/*.{ts,tsx}",
+        "lib/intelligence/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "cheerio",
+                  "cheerio/*",
+                  "jsdom",
+                  "jsdom/*"
+                ],
+                "message": "CIA ADR-001: projections/planner/intelligence must not parse HTML \u2014 use CCM + GraphQuery."
+              },
+              {
+                "group": [
+                  "**/engines/coverageEngine",
+                  "**/engines/coverageEngine.*",
+                  "**/coverageSnapshotToKg*",
+                  "**/coverageSnapshotToCcm*",
+                  "**/aiCoverageJudge*",
+                  "**/buildCoverageSnapshot*"
+                ],
+                "message": "CIA ADR-025/035: no coverage engine/adapter/judge SoT imports in consumer zones."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "lib/compiler/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/lib/ao/**",
+                  "**/ao/**",
+                  "**/lib/wie/**",
+                  "**/wie/**"
+                ],
+                "message": "CIA: compiler must not depend on AO/WIE consumers."
+              }
+            ]
+          }
+        ]
+      }
     }
-   },
-   {
-     "files": [
-       "lib/projections/**/*.{ts,tsx}",
-       "lib/planner/**/*.{ts,tsx}",
-       "lib/intelligence/**/*.{ts,tsx}"
-     ],
-     "rules": {
-       "no-restricted-imports": ["error", {
-         "patterns": [
-           {
-             "group": ["cheerio", "cheerio/*", "jsdom", "jsdom/*"],
-             "message": "CIA ADR-001: projections/planner/intelligence must not parse HTML — use CCM + GraphQuery."
-           },
-           {
-             "group": [
-               "**/engines/coverageEngine",
-               "**/engines/coverageEngine.*",
-               "**/coverageSnapshotToKg*",
-               "**/coverageSnapshotToCcm*",
-               "**/aiCoverageJudge*",
-               "**/buildCoverageSnapshot*"
-             ],
-             "message": "CIA ADR-025/035: no coverage engine/adapter/judge SoT imports in consumer zones."
-           }
-         ]
-       }]
-     }
-   },
-   {
-     "files": ["lib/compiler/**/*.{ts,tsx}"],
-     "rules": {
-       "no-restricted-imports": ["error", {
-         "patterns": [
-           {
-             "group": ["**/lib/ao/**", "**/ao/**", "**/lib/wie/**", "**/wie/**"],
-             "message": "CIA: compiler must not depend on AO/WIE consumers."
-           }
-         ]
-       }]
-     }
-   }
- ]
+  ]
 }

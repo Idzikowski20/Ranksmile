@@ -3,12 +3,12 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
-import AppShell from '../../../components/common/AppShell';
-import OrderConfirmationBody from '../../../components/billing/OrderConfirmationBody';
-import Button from '../../../components/koala/primitives/Button';
 import type { BillingConfirmation } from '@/src/infrastructure/billing/billingConfirmation';
 import { fetchBootstrapOrNull } from '@/src/infrastructure/http/fetchBootstrap';
 import type { BootstrapData } from '@/src/infrastructure/http/getBootstrap';
+import AppShell from '../../../components/common/AppShell';
+import OrderConfirmationBody from '../../../components/billing/OrderConfirmationBody';
+import Button from '../../../components/koala/primitives/Button';
 
 const F = 'var(--font-family-primary)';
 

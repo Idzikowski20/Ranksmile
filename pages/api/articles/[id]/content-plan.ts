@@ -3,11 +3,8 @@
 // body: { produceArticle?: boolean, persist?: boolean }
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import type { NlpTerm } from '@/src/infrastructure/articles/contentScore';
@@ -43,6 +40,9 @@ import {
 import type { AdaptiveOutline } from '@/src/core/domain/contentPlanner/types';
 import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
 import type { PlannerTargets, StructuralBenchmark } from '@/src/core/domain/benchmark/types';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 /**
  * Structure-only rescue for a failed brief: the planner's own H1 and section headings,

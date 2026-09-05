@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from '@emotion/styled';
+import { levelCss } from '@/src/core/shared/serviceStatus';
 import { MenuList } from '../koala/core/menuList';
 import { Icon } from '../koala/icons/Icon';
 import { semantic } from '../koala/tokens/semantic';
 import { spacing } from '../koala/tokens/spacing';
 import { fontWeight } from '../koala/tokens/typography';
-import { levelCss } from '@/src/core/shared/serviceStatus';
 import { useServiceStatus } from '../../services/serviceStatus';
 
 const TriggerBtn = styled.button`

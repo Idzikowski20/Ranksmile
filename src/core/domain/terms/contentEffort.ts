@@ -28,11 +28,9 @@ export type ContentEffortInsight = {
    at?: string;
 };
 
-const FIRST_PERSON_RE =
-   /\b(i|we|my|our|me|I've|we've|I'm|we're|ja|my|nasz[aey]?|mój|moja|moje|nasze|zauważyłem|zauważyłam|przetestowałem|przetestowałam|w praktyce|w naszym|u nas)\b/i;
+const FIRST_PERSON_RE = /\b(i|we|my|our|me|I've|we've|I'm|we're|ja|my|nasz[aey]?|mój|moja|moje|nasze|zauważyłem|zauważyłam|przetestowałem|przetestowałam|w praktyce|w naszym|u nas)\b/i;
 
-const DATA_HINT_RE =
-   /\b(\d{1,3}(?:[.,]\d+)?%|\d{2,}\s*(?:users?|klient|osób|respondent|ankiet|badań|badań|studies|survey|sample|n\s*=)|(?:nasze|our)\s+(?:dane|data|badanie|research|wyniki|results)|tabela|wykres|chart|table)\b/i;
+const DATA_HINT_RE = /\b(\d{1,3}(?:[.,]\d+)?%|\d{2,}\s*(?:users?|klient|osób|respondent|ankiet|badań|badań|studies|survey|sample|n\s*=)|(?:nasze|our)\s+(?:dane|data|badanie|research|wyniki|results)|tabela|wykres|chart|table)\b/i;
 
 const STOCK_ALT_RE = /^(image|photo|picture|img|zdjęcie|obraz|foto|screenshot|untitled|dsc_?\d+|img_?\d+)$/i;
 
@@ -165,15 +163,13 @@ export function datesAuthorScore(html: string, plainText: string): { earned: num
    let score = 0;
    const blob = `${html || ''}\n${plainText || ''}`;
 
-   const hasAuthor =
-      /itemprop=["']author["']/i.test(blob)
+   const hasAuthor = /itemprop=["']author["']/i.test(blob)
       || /rel=["']author["']/i.test(blob)
       || /\b(author|autor|napisane przez|written by|by\s+[A-ZÀ-Ö][\w.-]+)/i.test(blob)
       || /class=["'][^"']*author[^"']*["']/i.test(html || '');
    if (hasAuthor) score += 3;
 
-   const hasBio =
-      /\b(bio|o autorze|about the author|expertise|doświadczenie)\b/i.test(blob)
+   const hasBio = /\b(bio|o autorze|about the author|expertise|doświadczenie)\b/i.test(blob)
       || /itemprop=["']description["']/i.test(html || '');
    if (hasBio) score += 1;
 
@@ -469,8 +465,8 @@ export function buildEffortOptimizeGuidance(input: {
 
    return (
       'EFFORT (hard to cheaply replicate — NOT an AI detector):\n'
-      + 'Improve these gaps surgically while keeping language and structure rules:\n'
-      + unique.map((g) => `- ${g.instruction}`).join('\n')
+      + `Improve these gaps surgically while keeping language and structure rules:\n${
+       unique.map((g) => `- ${g.instruction}`).join('\n')}`
    );
 }
 

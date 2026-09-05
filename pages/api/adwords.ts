@@ -4,11 +4,11 @@ import { OAuth2Client } from 'google-auth-library';
 import { readFile, writeFile } from 'fs/promises';
 import Cryptr from 'cryptr';
 import getConfig from 'next/config';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../utils/adwords';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type adwordsValidateResp = {
    valid: boolean
@@ -63,14 +63,14 @@ const getAdwordsAuthUrl = async (req: NextApiRequest, res: NextApiResponse) => {
       `adwords_oauth_state=${nonce}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600${secure}`,
    );
    const state = JSON.stringify({ userId, nonce });
-   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth/oauthchooseaccount`
-      + `?access_type=offline`
-      + `&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fadwords`
-      + `&response_type=code`
+   const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth/oauthchooseaccount'
+      + '?access_type=offline'
+      + '&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fadwords'
+      + '&response_type=code'
       + `&client_id=${encodeURIComponent(client_id)}`
       + `&redirect_uri=${encodeURIComponent(redirectURL)}`
       + `&state=${encodeURIComponent(state)}`
-      + `&service=lso&o2v=2&theme=glif&flowName=GeneralOAuthFlow`;
+      + '&service=lso&o2v=2&theme=glif&flowName=GeneralOAuthFlow';
    return res.status(200).json({ url: authUrl });
 };
 

@@ -8,15 +8,13 @@ import {
   KoalaSettingsRow,
   KoalaPanel,
   KoalaEmptyState,
-} from '../koala/layout';
-import {
+
   SentryTable,
   SentryTableHead,
   SentryTableBody,
   SentryTableRow,
   SentryTableCell,
-  SentryTableHeaderCell,
-} from '../koala/layout';
+  SentryTableHeaderCell } from '../koala/layout';
 
 const font = 'var(--font-family-primary)';
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');

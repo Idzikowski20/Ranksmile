@@ -3,12 +3,12 @@
 // each config into one profile row per brand (what Competitors reads). One chunk per scan
 // per call → drained over ticks.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { findScansNeedingProfiles, runProfileChunk } from '@/src/infrastructure/aiVisibility/aiVisibilityProfiles';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isInternalPipelineRequest } from '@/src/infrastructure/aiVisibility/internalPipelineAuth';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (!isInternalPipelineRequest(req)) return res.status(401).json({ error: 'unauthorized' });

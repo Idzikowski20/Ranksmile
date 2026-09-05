@@ -91,8 +91,6 @@ type TriggerArgs = { baseUrl: string; cronSecret: string };
 const JOB_CONFIRM_ATTEMPTS = 4;
 const JOB_CONFIRM_DELAY_MS = 500;
 
-
-
 /** Deep-analysis creates its job row after the SSE 200 has already been flushed (a plain
  * JSON error would arrive as an SSE error frame past that point instead) — so a successful
  * HTTP handshake alone doesn't mean the job was durably created. Poll for the row directly

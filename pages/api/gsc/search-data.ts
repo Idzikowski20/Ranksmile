@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import {
   cronRefreshSearchConsoleData,
   getDomainSearchConsoleData,
 } from '@/src/infrastructure/gsc/domainSearchData';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../database/database';
+import verifyUser from '../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 /** Custom date ranges can return up to 25k×2 query/page rows — above Next's 4mb default. */
 export const config = {

@@ -5,17 +5,17 @@
 // Input:  { articleId, content, keyword, articles: [{id, title, url}] }
 // Output: { suggestions: [{ anchorText, articleId, articleTitle, url, context }] }
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
-import db from '../../../database/database';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne } from '@/src/infrastructure/db/query';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
+import { getCurrentUserId } from '../../../utils/getUser';
+import db from '../../../database/database';
+import verifyUser from '../../../utils/verifyUser';
 
 export interface LinkSuggestion {
   anchorText: string;
@@ -76,7 +76,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (over) return res.status(429).json(over);
 
   // Truncate content to keep prompt reasonable (first ~12000 chars)
-  const trimmedContent = content.length > 12000 ? content.slice(0, 12000) + '…' : content;
+  const trimmedContent = content.length > 12000 ? `${content.slice(0, 12000)}…` : content;
 
   const articleList = articles
     .map((a, i) => `${i + 1}. ID=${a.id} | Title: "${a.title}" | URL: ${a.url}`)

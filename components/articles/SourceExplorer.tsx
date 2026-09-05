@@ -3,8 +3,8 @@
  * Editor-zone chrome; Koala CSS vars only.
  */
 import React from 'react';
-import DomainFavicon from '../common/DomainFavicon';
 import type { CanonicalClaim, ClaimEvidence, SourceDiversity } from '@/src/core/domain/knowledgeEngine/types';
+import DomainFavicon from '../common/DomainFavicon';
 
 const F = 'var(--font-family-primary)';
 

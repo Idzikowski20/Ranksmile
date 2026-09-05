@@ -1,6 +1,6 @@
 import type { GetServerSideProps } from 'next';
-import { PUBLIC_ROUTES, SITE_URL } from '../components/landing/content';
 import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
+import { PUBLIC_ROUTES, SITE_URL } from '../components/landing/content';
 
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   const urls = PUBLIC_ROUTES.map((route) => {

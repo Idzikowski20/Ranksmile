@@ -1,8 +1,8 @@
 import React from 'react';
-import ProgressCard from './ProgressCard';
 import { analysisPhaseGroups, type PhaseRow } from '@/src/core/domain/articles/analysisPhaseRows';
-import { AiEngineIcons, GoogleEngineIcon } from './EngineIcons';
 import type { AnalysisPhases } from '@/src/core/domain/articles/analysisPhases';
+import ProgressCard from './ProgressCard';
+import { AiEngineIcons, GoogleEngineIcon } from './EngineIcons';
 
 const STATE_LABEL: Record<PhaseRow['state'], string> = {
   done: 'Done',

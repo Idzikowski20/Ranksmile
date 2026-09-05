@@ -4,8 +4,6 @@
 // writes result back to job row, streams SSE to frontend.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { computeContentScore, countOccurrences } from '@/src/infrastructure/articles/contentScore';
@@ -22,12 +20,10 @@ import {
   scaleTermRangesToWordCount,
 } from '@/src/core/domain/competitors/termCalibration';
 import { runArticleAiPipeline } from '@/src/infrastructure/articles/articleAiPipeline';
-import { computeOverallContentScore, resolveAiScore } from '@/src/core/domain/aiScore/aiSearchScore';
+import { computeOverallContentScore, resolveAiScore, AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { ArticleFact } from '@/src/infrastructure/articles/articleFacts';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { carriedScoreData } from '@/src/core/domain/articles/carriedScoreData';
-
-type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: number };
 import {
   discoverRankingKeywords,
   enrichNlpTermsIfNeeded,
@@ -39,11 +35,8 @@ import { keywordFromUrl, resolveAnalysisSeedKeyword } from '@/src/infrastructure
 import { resolveFactKeyword } from '@/src/infrastructure/keywords/resolveFactKeyword';
 import { persistAiVisibilityRun } from '@/src/infrastructure/aiVisibility/aiVisibilityStore';
 import { persistCoverageFeatureRun } from '@/src/infrastructure/coverage/persistCoverageFeatureRun';
-import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import { sidecarBase, nextjsUrl } from '@/src/infrastructure/http/sidecar';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
-import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
 import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 import { getErrorMessage } from '@/src/core/shared/errors';
@@ -59,6 +52,12 @@ import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage
 import { replaceArticleTerms, replaceCompetitors } from '@/src/infrastructure/articles/articleAnalysisStorage';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { publicDeepAnalysisError } from '@/src/core/domain/articles/deepAnalysisErrors';
+import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
+
+type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: number };
 
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -250,8 +249,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(403).json({ error: 'Access denied.' });
       }
     }
-  } else {
-    if (reqDomainId) {
+  } else if (reqDomainId) {
       if (isCron) {
         resolvedDomainId = Number(reqDomainId);
         if (!Number.isFinite(resolvedDomainId)) {
@@ -273,7 +271,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!fallback) return res.status(403).json({ error: 'No accessible domain to create the article under.' });
       resolvedDomainId = fallback;
     }
-  }
 
   const locale = await resolveContentLocale({
     domainId: resolvedDomainId,
@@ -385,7 +382,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       let workspaceDomain = '';
       if (artRow[0]?.domain_id) {
         const dom = await db.query<{ domain: string | null }>(
-          `SELECT domain FROM domain WHERE "ID" = ? LIMIT 1`,
+          'SELECT domain FROM domain WHERE "ID" = ? LIMIT 1',
           { replacements: [artRow[0].domain_id], type: QueryTypes.SELECT },
         );
         workspaceDomain = dom[0]?.domain || '';
@@ -444,7 +441,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     );
     // Verify row was actually claimed (SELECT is dialect-safe vs. UPDATE result inspection)
     const claimedRows = await db.query<{ status: string; attempts: number }>(
-      `SELECT status, attempts FROM analysis_jobs WHERE id = ?`,
+      'SELECT status, attempts FROM analysis_jobs WHERE id = ?',
       { replacements: [jobId], type: QueryTypes.SELECT },
     );
     if (!claimedRows.length || claimedRows[0].status !== 'running') {
@@ -475,7 +472,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const heartbeat = setInterval(() => {
       void db.query(
-        `UPDATE analysis_jobs SET updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'`,
+        'UPDATE analysis_jobs SET updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = \'running\'',
         { replacements: [jobId] },
       ).catch(() => {});
     }, 25_000);
@@ -497,7 +494,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       console.error('[deep-analysis] sidecar error:', errText);
       if (await abortIfSuperseded(res, articleId, jobId)) return;
       await db.query(
-        `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        'UPDATE analysis_jobs SET status = \'failed\', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         { replacements: [errText, jobId] },
       );
       await db.query(
@@ -602,7 +599,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       let workspaceDomain = '';
       if (artRow[0]?.domain_id) {
         const dom = await db.query<{ domain: string | null }>(
-          `SELECT domain FROM domain WHERE "ID" = ? LIMIT 1`,
+          'SELECT domain FROM domain WHERE "ID" = ? LIMIT 1',
           { replacements: [artRow[0].domain_id], type: QueryTypes.SELECT },
         );
         workspaceDomain = dom[0]?.domain || '';
@@ -661,7 +658,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ownDomain: hostFromUrl(url),
       plainText: plainTextEarly,
     });
-    const normalizeMergedTerms = (terms: NlpTerm[]) => terms.map((t) => ({
+    const normalizeMergedTerms = (list: NlpTerm[]) => list.map((t) => ({
       ...t,
       suggested_min: t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
       suggested_max: t.suggested_max ?? Math.max(t.suggested_min ?? 1, Math.round((t.target_count || 1) * 1.5)),
@@ -834,8 +831,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const seoScore = seoScoreFromAudit != null
       ? Math.min(100, seoScoreFromAudit + Math.min(2, linkCount))
       : computeContentScore(
-        plainText, wordCount, headingCount, scoreData, paragraphCount, linkCount,
-        pageContent, resolvedKeyword || '',
+        plainText, wordCount, headingCount, scoreData, paragraphCount, linkCount, pageContent, resolvedKeyword || '',
       );
     // Keyword mode creates an EMPTY draft — a score computed on empty content is a
     // misleading 0 that the editor panel would prefer over its live computation.
@@ -984,15 +980,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const setClauses: string[] = [
-      `title = COALESCE(NULLIF(?, ''), title)`,
-      `meta_title = COALESCE(NULLIF(?, ''), meta_title)`,
-      `meta_description = COALESCE(NULLIF(?, ''), meta_description)`,
-      `content = COALESCE(NULLIF(?, ''), content)`,
-      `featured_image = COALESCE(NULLIF(?, ''), featured_image)`,
-      `word_count = ?`,
-      `score_data = ?`,
-      `content_score = COALESCE(?, content_score)`,
-      `updated_at = CURRENT_TIMESTAMP`,
+      'title = COALESCE(NULLIF(?, \'\'), title)',
+      'meta_title = COALESCE(NULLIF(?, \'\'), meta_title)',
+      'meta_description = COALESCE(NULLIF(?, \'\'), meta_description)',
+      'content = COALESCE(NULLIF(?, \'\'), content)',
+      'featured_image = COALESCE(NULLIF(?, \'\'), featured_image)',
+      'word_count = ?',
+      'score_data = ?',
+      'content_score = COALESCE(?, content_score)',
+      'updated_at = CURRENT_TIMESTAMP',
     ];
     const replacements: unknown[] = [
       articleTitle,
@@ -1006,11 +1002,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     ];
 
     if (rankingScore !== null) {
-      setClauses.push(`ranking_score = ?`);
+      setClauses.push('ranking_score = ?');
       replacements.push(rankingScore);
     }
     if (rankingSignals !== null) {
-      setClauses.push(`ranking_signals = ?`);
+      setClauses.push('ranking_signals = ?');
       replacements.push(rankingSignals);
     }
     replacements.push(articleId);
@@ -1167,7 +1163,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           + ` median=${harvest.stats.medianQuestionsPerTopic} latency=${JSON.stringify(harvest.stats.providerLatency)}`,
         );
 
-        let llmQuestions = harvest.llmQuestions;
+        const llmQuestions = harvest.llmQuestions;
         let paaQuestions: Array<{ question: string }> = [];
 
         // When harvest is thin, seed from sidecar AI-visibility citations.
@@ -1388,7 +1384,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       ai_coverage_score: coverageSnapshot?.overall ?? null,
     });
     return res.end();
-
   } catch (err) {
     const e = err as { name?: string };
     const errorMessage = e.name === 'AbortError' ? 'Pipeline timed out after 180s' : getErrorMessage(err);
@@ -1398,7 +1393,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.end();
     }
     await db.query(
-      `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      'UPDATE analysis_jobs SET status = \'failed\', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       { replacements: [errorMessage, jobId] },
     ).catch(() => {});
     await db.query(

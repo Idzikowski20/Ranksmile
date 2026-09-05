@@ -28,8 +28,7 @@ export const visibilityWorker: PipelineWorker = {
       version: 1,
       contributors: [{ id: 'visibility', label: 'AI visibility', delta: visibility }],
     };
-    const actions: Action[] =
-      visibility < 40
+    const actions: Action[] = visibility < 40
         ? [
             {
               id: `vis-boost-${keyword.slice(0, 24)}`,

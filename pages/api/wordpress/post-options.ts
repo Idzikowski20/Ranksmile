@@ -3,14 +3,14 @@
 // list_post_details_options route for the site's post types / categories / tags / authors
 // (all returned as { value, label }), plus a static status list and any existing wp_post_id.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
 import { wpRestFetch } from '@/src/infrastructure/wordpress/wpRest';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 
 // WordPress post statuses the plugin accepts (resolve_post_status validates against these).
 const STATUSES = [

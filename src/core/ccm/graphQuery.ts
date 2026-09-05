@@ -125,9 +125,9 @@ export function graphQuery(model: CanonicalContentModel): GraphQuery {
     return graph.nodes.filter((n): n is EntityNode => {
       if (!isEntityNode(n)) return false;
       if (
-        filter?.canonicalName &&
-        n.canonicalName.toLocaleLowerCase('pl') !==
-          filter.canonicalName.toLocaleLowerCase('pl')
+        filter?.canonicalName
+        && n.canonicalName.toLocaleLowerCase('pl')
+          !== filter.canonicalName.toLocaleLowerCase('pl')
       ) {
         return false;
       }
@@ -180,9 +180,9 @@ export function graphQuery(model: CanonicalContentModel): GraphQuery {
     const matches: SubgraphMatch[] = [];
     for (const root of roots) {
       if (
-        pattern.requiredStatuses &&
-        'status' in root &&
-        !pattern.requiredStatuses.includes(root.status as CoverageStatus)
+        pattern.requiredStatuses
+        && 'status' in root
+        && !pattern.requiredStatuses.includes(root.status as CoverageStatus)
       ) {
         continue;
       }
@@ -239,8 +239,7 @@ export function graphQuery(model: CanonicalContentModel): GraphQuery {
     const edgeIds = reasoning.edges
       .filter((e) => ids.has(e.from) || ids.has(e.to))
       .map((e) => e.id);
-    const confidence =
-      related.reduce((s, n) => s + n.confidence, 0) / Math.max(related.length, 1);
+    const confidence = related.reduce((s, n) => s + n.confidence, 0) / Math.max(related.length, 1);
     return {
       nodeIds: [...ids],
       edgeIds,

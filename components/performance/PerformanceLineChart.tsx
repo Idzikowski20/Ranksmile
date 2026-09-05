@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
+import type { ChartPoint } from '@/src/infrastructure/performance/types';
 import { Chart } from '../koala/charts';
 import type { ChartPreparedData, ChartSeries, ChartSeriesKind } from '../koala/charts';
-import { ChartLegend } from '../koala/charts/ChartLegend';
 import { chartColors } from '../koala/tokens/chart';
 import { Icon } from '../koala/icons/Icon';
-import type { ChartPoint } from '@/src/infrastructure/performance/types';
 
 type VisibleMetrics = { clicks: boolean; impressions: boolean; ctr: boolean; position: boolean };
 
@@ -88,9 +87,6 @@ export default function PerformanceLineChart({
             Traffic trend
           </span>
         </div>
-        {legendItems.length > 1 ? (
-          <ChartLegend items={legendItems} />
-        ) : null}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
           <span
             style={{
@@ -111,9 +107,10 @@ export default function PerformanceLineChart({
         <Chart
           preset="TrafficTrend"
           data={prepared}
+          legendItems={legendItems}
           state={data.length && (prepared.series?.length ?? 0) > 0 ? 'ready' : 'empty'}
           emptyDescription="No chart data for this filter."
-          overrides={{ height: 260, legend: false }}
+          overrides={{ height: 260, legend: legendItems.length > 1 }}
           aria-label="Performance traffic trend"
         />
       </div>

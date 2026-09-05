@@ -7,10 +7,10 @@ import type {
   RewriteStep,
   TargetKnowledgeGraph,
   ValidationResult,
+  SectionBrief,
 } from '@/src/core/domain/contentPlanner/types';
 import type { ClaimValidationItem } from '@/src/core/domain/contentPlanner/postWriteValidators';
 import { stubWriteSection } from '@/src/core/domain/contentPlanner/sectionWriter';
-import type { SectionBrief } from '@/src/core/domain/contentPlanner/types';
 
 export function buildRewritePlan(opts: {
   outline: AdaptiveOutline;
@@ -145,7 +145,7 @@ export function runKnowledgeCompletion(opts: {
         next.splice(ti, 0, quick);
         html = before + next.join('');
       } else {
-        const intro = `<p>Chcesz działać od razu? Zacznij od Quick Start poniżej — teoria dopiero potem.</p>`;
+        const intro = '<p>Chcesz działać od razu? Zacznij od Quick Start poniżej — teoria dopiero potem.</p>';
         html = html.replace(/<h1[\s\S]*?<\/h1>/i, (m) => `${m}\n${intro}`);
       }
       applied++;

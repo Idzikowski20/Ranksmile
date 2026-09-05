@@ -154,17 +154,16 @@ export function projectCcmToCoverageSnapshot(
       }
       continue;
     }
-    const keepExtra =
-      // Intent rows ALWAYS survive. The CCM graph models facts and questions, not the
-      // five intro-intent checkpoints the coverage judge grades — so a projection that
-      // dropped them left the intent bucket at max 0 with weight 3, capping AI Search
-      // near ~35 on every generated article no matter how good the intro was.
-      prev.category === 'intent' ||
-      prev.type === 'intent' ||
-      (prev.llmSources?.length ?? 0) > 0 ||
-      prev.source === 'paa' ||
-      prev.source === 'serp' ||
-      prev.source === 'competitors';
+    // Intent rows ALWAYS survive. The CCM graph models facts and questions, not the
+    // five intro-intent checkpoints the coverage judge grades — so a projection that
+    // dropped them left the intent bucket at max 0 with weight 3, capping AI Search
+    // near ~35 on every generated article no matter how good the intro was.
+    const keepExtra = prev.category === 'intent'
+      || prev.type === 'intent'
+      || (prev.llmSources?.length ?? 0) > 0
+      || prev.source === 'paa'
+      || prev.source === 'serp'
+      || prev.source === 'competitors';
     if (keepExtra) {
       labelIndex.set(key, items.length);
       rubricKeys.add(key);
@@ -180,9 +179,8 @@ export function projectCcmToCoverageSnapshot(
   // can take it back, so coverage stays inflated even after the article stops answering
   // the main question early. Upgrade = invalidate the carried grade when the article's
   // content hash changes and re-grade instead of inheriting.
-  const answersMainQuestionEarly =
-    opts.previous?.answersMainQuestionEarly === true ||
-    intents.some((i) => i.primary && isCovered(i.status));
+  const answersMainQuestionEarly = opts.previous?.answersMainQuestionEarly === true
+    || intents.some((i) => i.primary && isCovered(i.status));
 
   // Cap CCM dump — UI checklist must stay near AI_COVERAGE_MAX (not 100+ facts).
   // The rubric carried over above is the grading standard, so it is held out of

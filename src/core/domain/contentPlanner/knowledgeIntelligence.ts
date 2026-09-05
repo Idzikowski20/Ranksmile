@@ -20,8 +20,7 @@ import type {
   TargetClaim,
   TargetKnowledgeGraph,
   TargetQuestion,
-} from '@/src/core/domain/contentPlanner/types';
-import type { CompetitorProfile } from '@/src/core/domain/contentPlanner/types';
+ CompetitorProfile } from '@/src/core/domain/contentPlanner/types';
 
 export type AiSearchIntelInput = {
   answers?: string[];

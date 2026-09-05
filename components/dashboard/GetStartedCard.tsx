@@ -1,10 +1,10 @@
 import React from 'react';
 import { useRouter } from 'next/router';
+import { useOnboardingChecklist } from '@/hooks/useOnboardingChecklist';
 import { Flex, Stack } from '../koala/core/layout';
 import { Text } from '../koala/core/text';
 import { Button } from '../koala/core';
 import { ActionWidget } from '../koala/product';
-import { useOnboardingChecklist } from '@/hooks/useOnboardingChecklist';
 
 const Chevron = () => (
   <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
@@ -28,7 +28,7 @@ const ClockIcon = () => (
   </svg>
 );
 
-const Ring = ({pct}: {pct: number}) => {
+const Ring = ({ pct }: {pct: number}) => {
   const r = 18;
   const c = 2 * Math.PI * r;
   return (
@@ -44,7 +44,7 @@ const Ring = ({pct}: {pct: number}) => {
 
 const GetStartedCard = () => {
   const router = useRouter();
-  const {pct, nextStep, loading} = useOnboardingChecklist();
+  const { pct, nextStep, loading } = useOnboardingChecklist();
   if (loading || !nextStep) return null;
 
   const href = nextStep.href || '';

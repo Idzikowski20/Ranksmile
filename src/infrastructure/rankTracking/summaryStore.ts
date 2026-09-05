@@ -122,8 +122,7 @@ export async function computeSummaryPayload(
 
   const withDelta = rows.map((r) => {
     const dev = pickDeviceResult(r, device);
-    const delta =
-      dev.position != null && dev.previousPosition != null
+    const delta = dev.position != null && dev.previousPosition != null
         ? dev.previousPosition - dev.position
         : 0;
     return { row: r, delta, dev };
@@ -279,7 +278,7 @@ export async function completeRunWithSummary(input: {
 /** Idempotent backfill: skip if summary exists for completed run. */
 export async function backfillSummariesForConfig(config: RankTrackingConfigRow): Promise<number> {
   const runs = await queryRows<RankCheckRunRow>(
-    `SELECT * FROM rank_check_runs WHERE config_id = ? AND status = 'completed' ORDER BY id ASC`,
+    'SELECT * FROM rank_check_runs WHERE config_id = ? AND status = \'completed\' ORDER BY id ASC',
     [config.id],
   );
   let inserted = 0;

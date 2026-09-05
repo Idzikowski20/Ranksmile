@@ -3,6 +3,16 @@ import generateEmail from '@/utils/generateEmail';
 import parseKeywords from '@/utils/parseKeywords';
 import { getAppSettings } from '@/pages/api/settings';
 import { sendMail } from '@/src/infrastructure/email/sendMail';
+import { paymentFailedEmailHtml } from '@/src/infrastructure/email/paymentFailedEmail';
+import { abandonedCheckoutEmailHtml } from '@/src/infrastructure/email/abandonedCheckoutEmail';
+import { starterNudgeEmailHtml } from '@/src/infrastructure/email/starterNudgeEmail';
+import {
+  backoffMs,
+  EMAIL_JOB_TYPE_ABANDONED_CHECKOUT,
+  EMAIL_JOB_TYPE_PAYMENT_FAILED,
+  EMAIL_JOB_TYPE_STARTER_NUDGE,
+  type EmailJobRow,
+} from './emailTypes';
 import {
   claimEmailJob,
   getEmailJobById,
@@ -11,16 +21,6 @@ import {
   markEmailSent,
   markEmailSkipped,
 } from './emailJobState';
-import {
-  backoffMs,
-  EMAIL_JOB_TYPE_ABANDONED_CHECKOUT,
-  EMAIL_JOB_TYPE_PAYMENT_FAILED,
-  EMAIL_JOB_TYPE_STARTER_NUDGE,
-  type EmailJobRow,
-} from './emailTypes';
-import { paymentFailedEmailHtml } from '@/src/infrastructure/email/paymentFailedEmail';
-import { abandonedCheckoutEmailHtml } from '@/src/infrastructure/email/abandonedCheckoutEmail';
-import { starterNudgeEmailHtml } from '@/src/infrastructure/email/starterNudgeEmail';
 
 function parsePayload(raw: string | null): Record<string, unknown> {
   if (!raw) return {};

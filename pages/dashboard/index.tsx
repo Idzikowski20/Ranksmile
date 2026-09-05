@@ -4,14 +4,16 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { CSSTransition } from 'react-transition-group';
 import { useQuery, useQueryClient } from 'react-query';
+import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
+import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
+import fetchJson from '@/src/infrastructure/http/fetchJson';
+import { isActionableRecommendation } from '@/src/core/domain/recommendations/actionable';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { KoalaPage, DashboardLayout as KoalaDashboardLayout } from '../../components/koala/layout';
 import { FeedbackPopover, Card, AnalyticsMetricItem } from '../../components/koala/product';
 import { Button } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
-import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
-import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
 import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSection';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
@@ -27,8 +29,6 @@ import LearnSection from '../../components/dashboard/LearnSection';
 import DomainSetupProgressBar, { isSetupShown } from '../../components/dashboard/DomainSetupProgressBar';
 import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
 import { useAiVisHistory } from '../../services/aiVisibility';
-import fetchJson from '@/src/infrastructure/http/fetchJson';
-import { isActionableRecommendation } from '@/src/core/domain/recommendations/actionable';
 
 const formatShortDate = (dateStr: string): string => {
   if (!dateStr) return '';
@@ -180,7 +180,6 @@ const DashboardPage: NextPage = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup?.status]);
-
 
   // Until the pipeline's state is KNOWN, don't flash the empty "set blog path" prompt.
   // Pending = the status query is still loading, or a job is about to be kicked ('none').

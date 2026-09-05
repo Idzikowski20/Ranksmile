@@ -3,15 +3,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import * as cheerio from 'cheerio';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
-import { firstAccessibleDomainId, verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import type { ScoreData, NlpTerm } from '@/src/infrastructure/articles/contentScore';
 import { uploadImageFromUrl } from '@/src/infrastructure/http/uploadToBlob';
-import { renderPage } from '../../../utils/spaScraper';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { countOccurrences } from '@/src/infrastructure/articles/contentScore';
 import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
@@ -22,12 +17,17 @@ import { isSidecarConfigured } from '@/src/infrastructure/http/sidecar';
 import { escapeHtml } from '@/src/infrastructure/email/layout';
 import { publicAppUrl } from '@/src/infrastructure/config/serviceUrls';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { renderPage } from '../../../utils/spaScraper';
+import { firstAccessibleDomainId, verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 
 class BlockedUrlError extends Error {}
 
 const FETCH_HEADERS = {
    'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+   Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
    'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.8',
 };
 
@@ -120,7 +120,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const fetched = await fetchWithHttp(url);
          html = fetched.html;
          pageUrl = fetched.finalUrl;
-         const quickWc = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+         const quickWc = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/)
+.filter(Boolean).length;
          console.log(`[import] HTTP fetch: ${html.length} chars, ~${quickWc} words`);
          if (quickWc < 300) {
             console.log('[import] HTTP fetch too short, falling back to Puppeteer');
@@ -199,20 +200,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       let bestWordCount = 0;
 
       // Score every candidate
-      for (const sel of candidateSelectors) {
-         $(sel).each((_, el) => {
-            const wc = $(el).text().replace(/\s+/g, ' ').trim().split(' ').length;
-            if (wc > bestWordCount) {
-               bestWordCount = wc;
-               bestEl = el;
-            }
-         });
-      }
+      $(candidateSelectors.join(', ')).each((_, el) => {
+         const wc = $(el).text().replace(/\s+/g, ' ').trim()
+            .split(' ').length;
+         if (wc > bestWordCount) {
+            bestWordCount = wc;
+            bestEl = el;
+         }
+      });
 
       // Also try scoring all <div> and <section> elements by paragraph density
       $('div, section').each((_, el) => {
          const pCount = $(el).find('p').length;
-         const wc = $(el).text().replace(/\s+/g, ' ').trim().split(' ').length;
+         const wc = $(el).text().replace(/\s+/g, ' ').trim()
+.split(' ').length;
          // Favour elements with multiple paragraphs and high word count
          const score = wc + pCount * 30;
          if (pCount >= 3 && wc > bestWordCount) {
@@ -256,10 +257,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             const text = $(el).text().trim();
             if (text.split(/\s+/).length >= 3) contentParts.push(`<p>${escapeHtml(text)}</p>`);
          } else if (tag === 'ul' || tag === 'ol') {
-            const items = $(el).children('li').map((_, li) => {
+            const items = $(el).children('li').map((_i, li) => {
                const t = $(li).text().trim();
                return t ? `<li>${escapeHtml(t)}</li>` : '';
-            }).get().filter(Boolean).join('');
+            }).get()
+.filter(Boolean)
+.join('');
             if (items) contentParts.push(`<${tag}>${items}</${tag}>`);
          } else if (tag === 'blockquote') {
             const text = $(el).text().trim();
@@ -288,7 +291,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Fallback: chunk plain text into paragraphs
       const contentHtml = contentParts.length > 2
          ? contentParts.join('\n')
-         : plainText.match(/[^\n]{80,}/g)?.map(c => `<p>${escapeHtml(c.trim())}</p>`).join('\n') || `<p>${escapeHtml(title)}</p>`;
+         : plainText.match(/[^\n]{80,}/g)?.map((c) => `<p>${escapeHtml(c.trim())}</p>`).join('\n') || `<p>${escapeHtml(title)}</p>`;
 
       // Extract-only mode — the Content Editor imports directly into the current
       // (already-created) article, so we just return the parsed HTML and metadata

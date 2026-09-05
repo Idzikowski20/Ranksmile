@@ -1,8 +1,5 @@
 // POST /api/articles/[id]/execute-action — Action → Executor (LLM/WP/manual)
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { runActionExecution } from '@/src/infrastructure/ao/runActionExecution';
@@ -12,6 +9,9 @@ import {
   ensureKnowledgeLayerTables,
 } from '@/src/infrastructure/persistence/schema/ensureGrowthMetaTables';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();

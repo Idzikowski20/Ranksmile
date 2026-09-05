@@ -1,10 +1,10 @@
 // GET /api/ai-usage — the current organization's AI token usage for the 5h window (for the ring).
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../utils/verifyUser';
-import { getCurrentUserId } from '../../utils/getUser';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getOrgUsage5h, AI_TOKEN_LIMIT_5H, AI_WINDOW_MS, windowStart } from '@/src/infrastructure/ai/aiTokenUsage';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../utils/getUser';
+import verifyUser from '../../utils/verifyUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

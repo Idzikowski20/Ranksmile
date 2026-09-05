@@ -1,16 +1,16 @@
 // POST /api/articles/social-posts  { articleId }
 // Generates 3 social-media promo post variants from the article via the sidecar.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { callSidecar } from '@/src/infrastructure/http/sidecar';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CompetitorDTO } from '@/src/core/domain/competitors/competitor';
 import { useCompetitors, useScanCompetitors, useSelectCompetitors } from '../../services/competitors';
-import { Gauge } from '../koala/core';
-import { Toggle } from '../koala/core';
+import { Gauge, Toggle } from '../koala/core';
 import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';

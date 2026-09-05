@@ -10,6 +10,7 @@ import {
 } from '@/src/core/domain/terms/contentEffort';
 import { termWeight } from '@/src/core/domain/terms/termWeight';
 import { countOccurrences, normalizePl, tokenize, wordMatch } from '@/src/core/domain/terms/termMatch';
+import type { NlpTerm } from '@/src/core/domain/terms/types';
 
 export { countOccurrences } from '@/src/core/domain/terms/termMatch';
 
@@ -37,7 +38,6 @@ export function setSeoScore(scoreData: { seo_score?: number; _seo_score_at?: num
    scoreData.seo_score = value;
    scoreData._seo_score_at = at;
 }
-import type { NlpTerm } from '@/src/core/domain/terms/types';
 export type { NlpTerm };
 
 // Content Score formula — targets derived from average of top-10 competitor pages.
@@ -159,7 +159,9 @@ function _kwPlacement(html: string, keyword: string): number {
    const h2s = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)];
    if (h2s.some((m) => allTokensPresent(m[1].replace(/<[^>]+>/g, ' '), kwToks))) score += 5;
 
-   const first100 = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).slice(0, 100).join(' ');
+   const first100 = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/)
+.slice(0, 100)
+.join(' ');
    if (allTokensPresent(first100, kwToks)) score += 4;
 
    return score; // max 15
@@ -196,7 +198,7 @@ function _faqCoverage(html: string, questions: string[]): number {
 
    const bodyText = html.replace(/<[^>]+>/g, ' ').toLowerCase();
    const headings = [...html.matchAll(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/gi)]
-      .map(m => m[1].replace(/<[^>]+>/g, '').toLowerCase());
+      .map((m) => m[1].replace(/<[^>]+>/g, '').toLowerCase());
 
    // Short stopwords to strip from questions before matching
    const STOP = new Set(['co', 'jak', 'czy', 'ile', 'kiedy', 'gdzie', 'dlaczego', 'czym',
@@ -205,11 +207,11 @@ function _faqCoverage(html: string, questions: string[]): number {
    let covered = 0;
    for (const q of questions) {
       const words = q.toLowerCase().replace(/[?!.,]/g, '').split(/\s+/)
-         .filter(w => w.length > 3 && !STOP.has(w));
+         .filter((w) => w.length > 3 && !STOP.has(w));
       if (words.length === 0) { covered++; continue; }
 
-      const bodyHit = words.filter(w => bodyText.includes(w)).length / words.length >= 0.7;
-      const headingHit = headings.some(h => words.filter(w => h.includes(w)).length / words.length >= 0.6);
+      const bodyHit = words.filter((w) => bodyText.includes(w)).length / words.length >= 0.7;
+      const headingHit = headings.some((h) => words.filter((w) => h.includes(w)).length / words.length >= 0.6);
       if (bodyHit || headingHit) covered++;
    }
 
@@ -315,10 +317,8 @@ export function collectScoreSlots(
    // ── Core structural signals — scored even without competitor terms, so the gauge tracks edits ──
    const wordsTarget = Math.max(scoreData.words_target || 0, 1);
    const headingsTarget = Math.max(scoreData.headings_target || 0, 1);
-   push('words', 'Word count', Math.min(wordCount / wordsTarget, 1) * 20, 20,
-      `Expand the article toward ~${scoreData.words_target || wordsTarget} words`);
-   push('headings', 'Headings', Math.min(headingCount / headingsTarget, 1) * 10, 10,
-      `Add headings toward ~${scoreData.headings_target || headingsTarget} (use H3 inside H2 sections)`);
+   push('words', 'Word count', Math.min(wordCount / wordsTarget, 1) * 20, 20, `Expand the article toward ~${scoreData.words_target || wordsTarget} words`);
+   push('headings', 'Headings', Math.min(headingCount / headingsTarget, 1) * 10, 10, `Add headings toward ~${scoreData.headings_target || headingsTarget} (use H3 inside H2 sections)`);
 
    // ── NLP terms — prefer activated `article_terms` entity coverage items when present,
    // else fall back to the legacy scoreData.terms path (dual-read, zero regression).
@@ -359,37 +359,31 @@ export function collectScoreSlots(
             .replace(/<[^>]+>/g, ' ')
             .toLowerCase();
          const placed = headingTerms.filter((t) => headingText.includes(t.term.toLowerCase())).length;
-         push('headingTerms', 'Heading terms', (placed / headingTerms.length) * 5, 5,
-            `${placed}/${headingTerms.length} heading terms in a heading`);
+         push('headingTerms', 'Heading terms', (placed / headingTerms.length) * 5, 5, `${placed}/${headingTerms.length} heading terms in a heading`);
       }
    }
 
    if (scoreData.paragraphs_target && paragraphCount !== undefined) {
-      push('paragraphs', 'Paragraphs', Math.min(paragraphCount / Math.max(scoreData.paragraphs_target, 1), 1) * 5, 5,
-         `Aim for ~${scoreData.paragraphs_target} paragraphs`);
+      push('paragraphs', 'Paragraphs', Math.min(paragraphCount / Math.max(scoreData.paragraphs_target, 1), 1) * 5, 5, `Aim for ~${scoreData.paragraphs_target} paragraphs`);
    }
 
    // ── HTML + keyword signals ──
    if (html && keyword) {
-      push('kwPlacement', 'Keyword placement', _kwPlacement(html, keyword), 15,
-         `Put "${keyword}" in the H1, at least one H2, and the first 100 words`);
+      push('kwPlacement', 'Keyword placement', _kwPlacement(html, keyword), 15, `Put "${keyword}" in the H1, at least one H2, and the first 100 words`);
       push('readability', 'Readability', _readability(html), 10, 'Keep paragraphs ~120–450 characters of readable prose under each heading');
       push('externalLinks', 'External links', _externalLinks(html), 5, 'Cite 3–7 authoritative external sources');
       const titleScore = _titleQuality(html, keyword);
       if (titleScore !== null) {
-         push('title', 'Title tag', titleScore, 7,
-            `Put "${keyword}" near the start of the title (readable length ~30–70 chars)`);
+         push('title', 'Title tag', titleScore, 7, `Put "${keyword}" near the start of the title (readable length ~30–70 chars)`);
       }
       const metaScore = _metaDescQuality(html, keyword);
       if (metaScore !== null) push('meta', 'Meta description', metaScore, 5, `Include "${keyword}" in a 140–165 char meta description`);
 
       const stuffing = keywordStuffingScore(plainText, keyword);
-      push('stuffing', 'Keyword stuffing', stuffing.earned, stuffing.max,
-         'Ease off exact-match keyword repeats — density looks spammy');
+      push('stuffing', 'Keyword stuffing', stuffing.earned, stuffing.max, 'Ease off exact-match keyword repeats — density looks spammy');
 
       const early = earlyAnswerScore(html, plainText, keyword);
-      push('earlyAnswer', 'Early answer', early.earned, early.max,
-         'Answer the query in the first ~100 words / first ~5–6k HTML chars');
+      push('earlyAnswer', 'Early answer', early.earned, early.max, 'Answer the query in the first ~100 words / first ~5–6k HTML chars');
    }
 
    // ── HTML-only signals ──
@@ -397,27 +391,23 @@ export function collectScoreSlots(
       // Image frequency vs the cohort (Surfer-style). Zero-image cohorts emit no target.
       if (scoreData.images_target && scoreData.images_target > 0) {
          const imgCount = (html.match(/<img\b/gi) || []).length;
-         push('images', 'Images', Math.min(imgCount / scoreData.images_target, 1) * 4, 4,
-            `Add images toward ~${scoreData.images_target} (ranking pages average that many)`);
+         push('images', 'Images', Math.min(imgCount / scoreData.images_target, 1) * 4, 4, `Add images toward ~${scoreData.images_target} (ranking pages average that many)`);
       }
       const imgScore = _imageAltCoverage(html);
       if (imgScore !== null) push('imageAlt', 'Image alt text', imgScore, 4, 'Add descriptive alt text to every image');
       push('lists', 'Lists', _listUsage(html), 3, 'Add a bullet or numbered list with 3+ items');
 
       const datesAuthor = datesAuthorScore(html, plainText);
-      push('datesAuthor', 'Author & dates', datesAuthor.earned, datesAuthor.max,
-         'Show an author (and bio) plus clear publish/update dates');
+      push('datesAuthor', 'Author & dates', datesAuthor.earned, datesAuthor.max, 'Show an author (and bio) plus clear publish/update dates');
 
       const extract = aiExtractabilityScore(html, plainText, scoreData.paa_questions);
-      push('aiExtract', 'AI extractability', extract.earned, extract.max,
-         'Use dense structure, descriptive alts, and findable PAA answers in plain text');
+      push('aiExtract', 'AI extractability', extract.earned, extract.max, 'Use dense structure, descriptive alts, and findable PAA answers in plain text');
    }
 
    // ── Originality / replicability (plain text) ──
    if (plainText.trim().length > 0) {
       const thin = thinOriginalityScore(plainText);
-      push('originality', 'Originality', thin.earned, thin.max,
-         'Add unique specifics — thin or template-like text is cheap to replicate');
+      push('originality', 'Originality', thin.earned, thin.max, 'Add unique specifics — thin or template-like text is cheap to replicate');
    }
 
    // ── FAQ coverage ──
@@ -543,8 +533,8 @@ export function buildWhatsMissingOptimizeGuidance(opts: {
       .slice(0, 10);
    if (!gaps.length) return '';
    return (
-      "WHAT'S MISSING (close these SEO score gaps — highest points first):\n"
-      + gaps.map((g) => `- +${g.missingPoints} pts — ${g.label}: ${g.hint}`).join('\n')
+      `WHAT'S MISSING (close these SEO score gaps — highest points first):\n${
+       gaps.map((g) => `- +${g.missingPoints} pts — ${g.label}: ${g.hint}`).join('\n')}`
    );
 }
 

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import type { BillingConfirmation } from '@/src/infrastructure/billing/billingConfirmation';
 import Button from '../koala/primitives/Button';
 import { Textarea } from '../koala/core';
 import { Icon } from '../koala/icons';
 import { shadow } from '../koala/tokens/effects';
 import { BounceSmileyAnimation } from '../common/BounceSmileyAnimation';
-import type { BillingConfirmation } from '@/src/infrastructure/billing/billingConfirmation';
 
 const F = 'var(--font-family-primary)';
 const BORDER = 'var(--koala-border-primary)';

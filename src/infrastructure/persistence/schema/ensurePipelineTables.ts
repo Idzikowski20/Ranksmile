@@ -87,7 +87,7 @@ export async function ensurePipelineTables(): Promise<void> {
    )`);
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_sa_snapshots_domain ON site_audit_crawl_snapshots(domain_id, crawled_at DESC)'); } catch (e) { ignoreExisting('idx_sa_snapshots_domain', e); }
 
-   for (const t of ['domain_gsc_pages','domain_keywords','domain_topics','domain_competitors','domain_recommendations','page_audits']) {
+   for (const t of ['domain_gsc_pages', 'domain_keywords', 'domain_topics', 'domain_competitors', 'domain_recommendations', 'page_audits']) {
       try { await db.query(`CREATE INDEX IF NOT EXISTS idx_${t}_domain ON ${t}(domain_id)`); } catch (e) { ignoreExisting(`idx_${t}_domain`, e); }
    }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_jobs_domain_type ON analysis_jobs(domain_id, job_type)'); } catch (e) { ignoreExisting('idx_jobs_domain_type', e); }

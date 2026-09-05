@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from 'react';
+import { scoreColor } from '@/src/infrastructure/config/scoreColor';
+import type { CrawledPageRow, CrawledPagesReport } from '@/src/infrastructure/siteAudit/types';
 import {
   Button,
   CompactSelect,
@@ -10,23 +12,19 @@ import {
   KoalaPanel,
   KoalaPanelBody,
   KoalaPanelHeader,
-} from '../koala/layout';
-import {
+
   SentryTable,
   SentryTableBody,
   SentryTableCell,
   SentryTableHead,
   SentryTableHeaderCell,
-  SentryTableRow,
-} from '../koala/layout';
+  SentryTableRow } from '../koala/layout';
 import CrawledPagesManageColumns, {
   DEFAULT_CRAWLED_PAGE_VISIBLE,
   type CrawledPageColumnKey,
 } from './CrawledPagesManageColumns';
 import { UrlCell } from './AuditUrlCell';
 import { BotIcon, PRIMARY_BOTS } from './aiSearchBots';
-import { scoreColor } from '@/src/infrastructure/config/scoreColor';
-import type { CrawledPageRow, CrawledPagesReport } from '@/src/infrastructure/siteAudit/types';
 
 type SortKey = 'score' | 'url' | 'title' | 'statusCode' | 'issues' | 'depth';
 

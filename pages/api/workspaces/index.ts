@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { getActiveWorkspaceId, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
 import { listWorkspaces, createWorkspace } from '@/src/infrastructure/identity/workspaces';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);

@@ -1,9 +1,9 @@
 /** Simple word-overlap relevance: fraction of keyword words (len > 2) found in target */
 export function computeRelevanceScore(keyword: string, targetKeyword: string): number {
-  const kwWords = keyword.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-  const targetWords = new Set(targetKeyword.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+  const kwWords = keyword.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  const targetWords = new Set(targetKeyword.toLowerCase().split(/\s+/).filter((w) => w.length > 2));
   if (kwWords.length === 0 || targetWords.size === 0) return 0;
-  const overlap = kwWords.filter(w => targetWords.has(w)).length;
+  const overlap = kwWords.filter((w) => targetWords.has(w)).length;
   return overlap / kwWords.length;
 }
 

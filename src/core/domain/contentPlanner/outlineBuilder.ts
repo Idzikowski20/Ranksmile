@@ -34,8 +34,7 @@ function topicSeeds(
 ): TopicSeed[] {
   const seeds: TopicSeed[] = [];
   for (const name of blueprint.requiredSections) {
-    const importance =
-      /quick start|quick answer|szybka|szybki start|pierwsze kroki/i.test(name) ? 10
+    const importance = /quick start|quick answer|szybka|szybki start|pierwsze kroki/i.test(name) ? 10
         : /mistake|błąd|cost|koszt/i.test(name) ? 8
           : /faq/i.test(name) ? 4
             : /summary|podsum/i.test(name) ? 2
@@ -364,8 +363,7 @@ export function buildSectionBriefs(
     const mustAnswer = s.assignedQuestionIds
       .map((id) => questionMap.get(id)?.question)
       .filter((q): q is string => Boolean(q));
-    const sectionPriority: PriorityClass =
-      s.importance >= 9 ? 'critical'
+    const sectionPriority: PriorityClass = s.importance >= 9 ? 'critical'
         : s.importance >= 7 ? 'high'
           : s.importance >= 4 ? 'medium'
             : 'low';
@@ -408,7 +406,7 @@ export function buildSectionBriefs(
         nextSection: next?.heading ?? null,
         transition: prev
           ? `Po „${prev.heading}” przejdź naturalnie do „${s.heading}” bez powtarzania definicji.`
-          : `Otwórz sekcję action-first — bez „X to proces…”.`,
+          : 'Otwórz sekcję action-first — bez „X to proces…”.',
         tone,
         avoidRepeating: prev
           ? [prev.heading, ...prev.assignedClaimIds.slice(0, 2).map((id) => claimMap.get(id)?.statement || '').filter(Boolean)]

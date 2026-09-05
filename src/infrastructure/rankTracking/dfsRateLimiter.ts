@@ -35,7 +35,7 @@ export async function withDfsRateLimit<T>(fn: () => Promise<T>): Promise<T> {
           } catch (e) {
             lastErr = e;
             if (!isRetryable(e) || attempt === MAX_RETRIES - 1) break;
-            await new Promise((r) => setTimeout(r, BASE_BACKOFF_MS * (attempt + 1)));
+            await new Promise<void>((done) => { setTimeout(done, BASE_BACKOFF_MS * (attempt + 1)); });
           }
         }
         active -= 1;

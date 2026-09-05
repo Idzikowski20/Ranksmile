@@ -37,7 +37,6 @@ export function buildActionGraph(
   const intents = q.findIntents();
   const facts = q.findFacts();
 
-
   for (const fact of facts) {
     if (fact.status === 'weak' || !hasEvidence(model, fact.id)) {
       priority += 1;

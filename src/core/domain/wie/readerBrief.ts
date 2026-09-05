@@ -19,8 +19,7 @@ export function buildHeuristicReaderBrief(opts: {
   const blob = `${opts.keyword} ${opts.title || ''} ${(opts.paa || []).join(' ')}`;
   const emotion = HIGH_EMOTION_RE.test(blob) ? 'high' : 'medium';
   const searchIntent = COMMERCIAL_RE.test(blob) ? 'commercial' : 'informational';
-  const desiredOutcome =
-    emotion === 'high'
+  const desiredOutcome = emotion === 'high'
       ? 'Feel understood, know what to do next, trust an expert path.'
       : 'Get a clear answer and actionable steps without fluff.';
 

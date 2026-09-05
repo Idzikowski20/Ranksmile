@@ -1,10 +1,9 @@
-"use client";
+'use client';
 
-import React, { useId } from "react";
-import { motion } from "motion/react";
+import React, { useId } from 'react';
+import { motion } from 'motion/react';
 
-const SMILEY_PATH =
-  "M91.4595 26.5015C102.568 12.8345 123.432 12.8345 134.54 26.5015C140.447 33.7678 149.618 37.5668 158.932 36.6049C176.451 34.7958 191.204 49.5488 189.395 67.0678C188.433 76.382 192.232 85.5535 199.498 91.4595C213.165 102.568 213.165 123.432 199.498 134.54C192.232 140.447 188.433 149.618 189.395 158.932C191.204 176.451 176.451 191.204 158.932 189.395C149.618 188.433 140.447 192.232 134.54 199.498C123.432 213.165 102.568 213.165 91.4595 199.498C85.5535 192.232 76.382 188.433 67.0678 189.395C49.5488 191.204 34.7958 176.451 36.6049 158.932C37.5668 149.618 33.7678 140.447 26.5015 134.54C12.8345 123.432 12.8345 102.568 26.5015 91.4595C33.7678 85.5535 37.5668 76.382 36.6049 67.0678C34.7958 49.5488 49.5488 34.7958 67.0678 36.6049C76.382 37.5668 85.5535 33.7678 91.4595 26.5015Z";
+const SMILEY_PATH = 'M91.4595 26.5015C102.568 12.8345 123.432 12.8345 134.54 26.5015C140.447 33.7678 149.618 37.5668 158.932 36.6049C176.451 34.7958 191.204 49.5488 189.395 67.0678C188.433 76.382 192.232 85.5535 199.498 91.4595C213.165 102.568 213.165 123.432 199.498 134.54C192.232 140.447 188.433 149.618 189.395 158.932C191.204 176.451 176.451 191.204 158.932 189.395C149.618 188.433 140.447 192.232 134.54 199.498C123.432 213.165 102.568 213.165 91.4595 199.498C85.5535 192.232 76.382 188.433 67.0678 189.395C49.5488 191.204 34.7958 176.451 36.6049 158.932C37.5668 149.618 33.7678 140.447 26.5015 134.54C12.8345 123.432 12.8345 102.568 26.5015 91.4595C33.7678 85.5535 37.5668 76.382 36.6049 67.0678C34.7958 49.5488 49.5488 34.7958 67.0678 36.6049C76.382 37.5668 85.5535 33.7678 91.4595 26.5015Z';
 
 const REST_X = 24.661;
 const REST_Y = 109.888;
@@ -43,12 +42,12 @@ function SmileyFace({
   return (
     <g fill="none">
       <g
-        className={animateRotate ? "smily-face-spin" : undefined}
+        className={animateRotate ? 'smily-face-spin' : undefined}
         filter={`url(#${filterId})`}
         style={
           animateRotate
             ? undefined
-            : { transformBox: "view-box", transformOrigin: "113px 113px" }
+            : { transformBox: 'view-box', transformOrigin: '113px 113px' }
         }
       >
         <path d={SMILEY_PATH} fill="#50B9FF" />
@@ -56,11 +55,11 @@ function SmileyFace({
       </g>
       <circle cx="80.5" cy="112.5" r="7.5" fill="#00558E" />
       <g
-        className={animateRotate ? "smily-eye-blink" : undefined}
+        className={animateRotate ? 'smily-eye-blink' : undefined}
         style={
           animateRotate
             ? undefined
-            : { transformBox: "view-box", transformOrigin: "130.5px 112.5px" }
+            : { transformBox: 'view-box', transformOrigin: '130.5px 112.5px' }
         }
       >
         <path
@@ -134,7 +133,7 @@ export function BounceSmileyAnimation({
   animateRotate = true,
   mood = 'happy',
 }: BounceSmileyAnimationProps) {
-  const uid = useId().replace(/:/g, "");
+  const uid = useId().replace(/:/g, '');
   const filterId = `filter0_i_bounce_smiley_${uid}`;
   const paintId = `paint0_radial_bounce_smiley_${uid}`;
 
@@ -146,7 +145,7 @@ export function BounceSmileyAnimation({
         viewBox="0 0 226 226"
         xmlns="http://www.w3.org/2000/svg"
         className={className}
-        style={{ display: "inline-block", flexShrink: 0, verticalAlign: "middle" }}
+        style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'middle' }}
         aria-hidden="true"
       >
         <SmileyFace filterId={filterId} paintId={paintId} animateRotate={animateRotate} mood={mood} />
@@ -156,19 +155,19 @@ export function BounceSmileyAnimation({
 
   return (
     <svg
-      className={className || "w-full h-full"}
+      className={className || 'w-full h-full'}
       viewBox="0 0 280 360"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
       <motion.g
-        style={{ transformBox: "view-box", transformOrigin: "113px 113px" }}
+        style={{ transformBox: 'view-box', transformOrigin: '113px 113px' }}
         initial={entrance ? { x: ENTER_X, y: ENTER_Y } : { x: REST_X, y: REST_Y }}
         animate={{ x: REST_X, y: REST_Y }}
         transition={
           entrance
             ? {
-                type: "spring",
+                type: 'spring',
                 stiffness: 16.5234375,
                 damping: 4.1015625,
                 mass: 1,

@@ -15,11 +15,11 @@ import { locationCodeFor, isDataForSeoConfigured } from '@/src/infrastructure/da
 import { toDfsLanguageCode } from '@/src/core/shared/language';
 import { filterCitations } from '@/src/core/domain/aiVisibility/blockedDomains';
 import { DFS_SERP_AI_ELEMENT } from '@/src/infrastructure/dataforseo/dataforseoBudget';
+import type { LlmCitation } from '@/src/core/domain/aiVisibility/citation';
 
 const BASE = 'https://api.dataforseo.com/v3';
 
 export type AiModel = 'ai_overview' | 'ai_mode' | 'chat_gpt' | 'perplexity' | 'gemini';
-import type { LlmCitation } from '@/src/core/domain/aiVisibility/citation';
 export type { LlmCitation };
 export type LlmAnswer = { text: string, citations: LlmCitation[], fanOutQueries: string[], costUsd: number };
 
@@ -64,7 +64,6 @@ export const isRetryable = (e: unknown): boolean => {
    if (status && status >= 400 && status < 500) return false;
    return err?.code === 'ECONNABORTED' || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNRESET';
 };
-
 
 /**
  * Fan-out sub-queries the engine generated while answering. llm_responses expose

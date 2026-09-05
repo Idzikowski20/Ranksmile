@@ -42,6 +42,8 @@ function colors(variant: ButtonVariant) {
       return { bg: 'transparent', hover: semantic.button.ghost.bgHover, fg: semantic.button.ghost.fg, border: 'transparent' };
     case 'link':
       return { bg: 'transparent', hover: 'transparent', fg: semantic.text.link, border: 'transparent' };
+    default:
+      return { bg: 'transparent', hover: 'transparent', fg: semantic.text.link, border: 'transparent' };
   }
 }
 

@@ -70,8 +70,7 @@ export async function runCcmCompileCron(
   opts: RunCcmCompileCronOpts,
 ): Promise<RunCcmCompileCronResult> {
   const limit = Math.min(Math.max(opts.limit ?? 20, 1), 100);
-  const candidates =
-    opts.candidates ?? (await listCcmCompileCandidates(limit));
+  const candidates = opts.candidates ?? (await listCcmCompileCandidates(limit));
 
   const results: CcmCronArticleResult[] = [];
   let refreshed = 0;

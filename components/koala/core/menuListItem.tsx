@@ -27,7 +27,7 @@ const MenuListItem = forwardRef<HTMLButtonElement, MenuListItemProps>(
       className = '',
       ...rest
     },
-    ref
+    ref,
   ) => {
     const cls = `koala-menu-list-item koala-menu-list-item--${priority} ${className}`;
     const inner = (
@@ -63,7 +63,7 @@ const MenuListItem = forwardRef<HTMLButtonElement, MenuListItemProps>(
         {inner}
       </button>
     );
-  }
+  },
 );
 MenuListItem.displayName = 'MenuListItem';
 export default MenuListItem;

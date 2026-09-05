@@ -35,9 +35,8 @@ export function projectCoverage(model: CanonicalContentModel): CoverageView {
   const factRatio = totalFacts === 0 ? 1 : coveredFacts.length / totalFacts;
   const intentRatio = totalIntents === 0 ? 1 : coveredIntentIds.length / totalIntents;
   const evidenceRatio = totalFacts === 0 ? 1 : factsWithEvidence / totalFacts;
-  const overall =
-    Math.round((0.45 * factRatio + 0.35 * intentRatio + 0.2 * evidenceRatio) * 1000) /
-    1000;
+  const overall = Math.round((0.45 * factRatio + 0.35 * intentRatio + 0.2 * evidenceRatio) * 1000)
+    / 1000;
 
   return {
     overall,

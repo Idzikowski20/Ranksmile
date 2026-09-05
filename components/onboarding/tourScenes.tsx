@@ -21,11 +21,11 @@
  */
 import React, { useRef } from 'react';
 import styled from '@emotion/styled';
-import { semantic } from '../koala/tokens/semantic';
-import { typeface } from '../koala/tokens/typography';
 import {
   DURATION, EASE, gsap, prefersReducedMotion, registerMotionPlugins, useGSAP,
 } from '@/components/motion/gsap';
+import { semantic } from '../koala/tokens/semantic';
+import { typeface } from '../koala/tokens/typography';
 
 /** Ink on the window surface — flips with the window because bg-primary does. */
 const ink = (pct: number) => `color-mix(in srgb, ${semantic.background.primary} ${pct}%, transparent)`;
@@ -1138,4 +1138,3 @@ export function KeywordResearchScene({ accent }: TourSceneProps) {
     </Scene>
   );
 }
-

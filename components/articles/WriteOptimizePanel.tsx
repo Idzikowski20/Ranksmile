@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Badge, type BadgeAppearance } from '../koala/core/badge/badge';
 import { useOpenReveal } from '@/components/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '@/src/infrastructure/articles/contentScore';
@@ -7,12 +6,13 @@ import { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicGroup } from '@/src/core/domain/coverage/infoToCoverTopics';
 import { faviconUrl } from '@/src/core/shared/faviconUrl';
+import type { Action } from '@/src/core/primitives/types';
+import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
 import DomainFavicon from '../common/DomainFavicon';
 import ScoreTrio from './ScoreTrio';
 import SourceExplorer from './SourceExplorer';
 import { TIP_BUBBLE_BASE } from './tipBubble';
-import type { Action } from '@/src/core/primitives/types';
-import type { CanonicalClaim } from '@/src/core/domain/knowledgeEngine/types';
+import { Badge, type BadgeAppearance } from '../koala/core/badge/badge';
 
 const F = 'var(--font-family-primary)';
 
@@ -67,7 +67,7 @@ interface Props {
   /** CIE immutable Knowledge Graph (optional — enables Knowledge Coverage UI). */
   knowledgeGraph?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeGraph | null;
   knowledgeCoverageReport?: import('@/src/core/domain/knowledgeEngine/types').KnowledgeCoverageReport | null;
-};
+}
 
 /* ── Reusable: hover tooltip (portal → never clipped by the panel overflow) ── */
 const Tip = ({ text, children, block }: { text: string; children: React.ReactNode; block?: boolean }) => {
@@ -465,7 +465,6 @@ const WriteOptimizePanel = ({
   const [aiGrouping, setAiGrouping] = usePersist('wo:aiGrouping', true);
   const [aiSort, setAiSort] = usePersist<AiSort>('wo:aiSort', 'missing');
 
-
   // Highlighting is active only while this panel is open (Write & Optimize view),
   // following the toggle; cleared when the panel unmounts.
   useEffect(() => { onHighlightTermsChange?.(hlTerms); }, [hlTerms, onHighlightTermsChange]);
@@ -511,9 +510,9 @@ const WriteOptimizePanel = ({
     const map = new Map<string, CanonicalClaim[]>();
     for (const c of cieClaims) {
       const key = c.cluster || 'Unassigned';
-      const list = map.get(key) || [];
-      list.push(c);
-      map.set(key, list);
+      const bucket = map.get(key) || [];
+      bucket.push(c);
+      map.set(key, bucket);
     }
     return [...map.entries()]
       .map(([cluster, claims]) => ({ cluster, claims }))
@@ -557,7 +556,7 @@ const WriteOptimizePanel = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', fontFamily: F }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes growOut { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }`}</style>
+      <style>{'@keyframes spin { to { transform: rotate(360deg); } } @keyframes growOut { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }'}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0' }}>

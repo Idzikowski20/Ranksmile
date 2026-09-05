@@ -1,9 +1,9 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {Stack} from '../koala/core/layout';
-import {Text, Heading} from '../koala/core/text';
+import { authClient } from '@/src/infrastructure/auth/client';
+import { Stack } from '../koala/core/layout';
+import { Text, Heading } from '../koala/core/text';
 import Skeleton from './Skeleton';
-import {authClient} from '@/src/infrastructure/auth/client';
 
 const timeGreeting = (hour: number | null): string => {
   if (hour === null) return 'Welcome back';
@@ -20,7 +20,7 @@ interface Props {
   clicksHref: string;
 }
 
-const DashboardGreeting = ({clicksTotal, deltaPct, hasData, loading, clicksHref}: Props) => {
+const DashboardGreeting = ({ clicksTotal, deltaPct, hasData, loading, clicksHref }: Props) => {
   const [hour, setHour] = useState<number | null>(null);
   useEffect(() => { setHour(new Date().getHours()); }, []);
 

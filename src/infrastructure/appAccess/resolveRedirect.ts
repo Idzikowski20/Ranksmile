@@ -45,8 +45,8 @@ export function resolveRedirect(
     }
     default: {
       const _exhaustive: never = resolved.state;
-      return { redirect: '/plans', replace, reason: reason as AppStateReason };
       void _exhaustive;
+      return { redirect: '/plans', replace, reason: reason as AppStateReason };
     }
   }
 }

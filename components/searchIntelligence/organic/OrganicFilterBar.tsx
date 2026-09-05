@@ -1,12 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import {
-  Button,
-  CompactSelect,
-  Input,
-  PageFilterBar,
-  SearchBar,
-  type SelectOptionOrSection,
-} from '../../koala/core';
 import type { OrganicFilters } from '@/src/infrastructure/organicResearch/filter';
 import {
   kdFilterFromValue,
@@ -17,6 +9,14 @@ import {
   volumeFilterValue,
 } from '@/src/infrastructure/organicResearch/filter';
 import type { SearchIntent } from '@/src/infrastructure/organicResearch/types';
+import {
+  Button,
+  CompactSelect,
+  Input,
+  PageFilterBar,
+  SearchBar,
+  type SelectOptionOrSection,
+} from '../../koala/core';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -83,7 +83,7 @@ function RangeApply({
 }: {
   from: string;
   to: string;
-  onApply: (from: number | null, to: number | null) => void;
+  onApply: (fromValue: number | null, toValue: number | null) => void;
   close: () => void;
 }) {
   const [f, setF] = useState(from);

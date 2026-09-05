@@ -204,8 +204,6 @@ const Icon = ({ type, color = 'currentColor', size = 16, title = '', classes = '
         return <ResearchIcon size={size} color={color} />;
       case 'domains':
         return <DashboardIcon size={size} color={color} />;
-      case 'search':
-        return <ContentEditorIcon size={size} color={color} />;
       case 'lock':
         return <LockIcon {...props} />;
       case 'image':

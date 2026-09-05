@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import ScoreGauge from './ScoreGauge';
 import { ARTICLE_GREEN_AT } from '@/src/infrastructure/config/scoreColor';
+import ScoreGauge from './ScoreGauge';
 
 interface Version {
   id: number;
@@ -36,8 +36,8 @@ const formatTime = (iso: string): { date: string; relative: string } => {
   const diffH = Math.floor(diffMs / 3600000);
   const diffD = Math.floor(diffH / 24);
 
-  const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' +
-    d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const dateStr = `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${
+    d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
 
   let relative: string;
   if (diffH < 1) relative = 'less than an hour ago';

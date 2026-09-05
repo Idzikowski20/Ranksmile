@@ -33,8 +33,8 @@ export function recordCcmCompileMetric(m: Omit<CcmCompileMetric, 'at'> & { at?: 
   if (recent.length > MAX) recent.shift();
   totals[row.outcome] += 1;
   console.info(
-    `[ccm-metric] article=${row.articleId} outcome=${row.outcome} ms=${row.ms}` +
-      (row.error ? ` err=${row.error}` : ''),
+    `[ccm-metric] article=${row.articleId} outcome=${row.outcome} ms=${row.ms}${
+      row.error ? ` err=${row.error}` : ''}`,
   );
 }
 

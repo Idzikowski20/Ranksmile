@@ -44,10 +44,8 @@ export function clampMenuPosition(
   return { left, top };
 }
 
-export const RANKSMILE_PRESET_IMPROVE =
-  'Improve the writing of the selected text. Keep meaning and SEO terms.';
-export const RANKSMILE_PRESET_EXPAND =
-  'Expand the selected text with useful detail. Keep tone and SEO terms.';
+export const RANKSMILE_PRESET_IMPROVE = 'Improve the writing of the selected text. Keep meaning and SEO terms.';
+export const RANKSMILE_PRESET_EXPAND = 'Expand the selected text with useful detail. Keep tone and SEO terms.';
 
 export function ranksmilePresetVoice(voice: string): string {
   return `Rewrite the selected text in a ${voice} voice. Keep meaning.`;

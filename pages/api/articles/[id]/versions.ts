@@ -1,15 +1,15 @@
 // GET  /api/articles/[id]/versions  — list versions
 // POST /api/articles/[id]/versions  — save current state as version, then restore a version
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -33,7 +33,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
 async function getVersions(id: string, res: NextApiResponse) {
    try {
-      const rows = await queryRows<{ id: number; article_id: number; version_type: string | null; created_at: string | null; score_data: string | null; content_length: number | null }>(
+      type VersionRow = { id: number; article_id: number; version_type: string | null; created_at: string | null; score_data: string | null; content_length: number | null };
+      const rows = await queryRows<VersionRow>(
          `SELECT id, article_id, version_type, created_at, score_data,
                  LENGTH(content) AS content_length
           FROM article_versions
@@ -75,7 +76,7 @@ async function restoreVersion(id: string, req: NextApiRequest, res: NextApiRespo
 
       // 2. Fetch the version to restore
       const version = await queryOne<{ content: string | null; score_data: string | null }>(
-         `SELECT content, score_data FROM article_versions WHERE id = ? AND article_id = ? LIMIT 1`,
+         'SELECT content, score_data FROM article_versions WHERE id = ? AND article_id = ? LIMIT 1',
          [versionId, id],
       );
       if (!version) return res.status(404).json({ error: 'Version not found' });

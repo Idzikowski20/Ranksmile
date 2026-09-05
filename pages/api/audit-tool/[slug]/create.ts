@@ -1,13 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
 import { enqueueAudit } from '@/src/infrastructure/siteAudit/auditRunner';
 import { langForCountry } from '@/src/core/domain/audit/country';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { saveWizardState, clearWizardState } from '@/src/infrastructure/articles/wizardState';
+import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
 import { Switch } from '../../components/koala/core';
-import { saveWizardState, clearWizardState } from '@/src/infrastructure/articles/wizardState';
 import { useArticle } from '../../services/article';
-import { articleOutlineReviewHref } from '@/src/core/domain/articles/articleFlow';
 
 const WritingModePage: NextPage = () => {
   const router = useRouter();
@@ -106,8 +106,7 @@ const WritingModePage: NextPage = () => {
       <h2 className="koala-wizard-title">Select writing mode</h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {card(mode === 'write', () => setMode('write'), (
-          <>
+        {card(mode === 'write', () => setMode('write'), (<>
             {preview(4)}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span className="koala-wizard-card-title">
@@ -119,8 +118,7 @@ const WritingModePage: NextPage = () => {
           </>
         ))}
 
-        {card(mode === 'generate', () => setMode('generate'), (
-          <>
+        {card(mode === 'generate', () => setMode('generate'), (<>
             {preview(8)}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <span className="koala-wizard-card-title" style={{ color: 'var(--koala-brand, #F84416)' }}>

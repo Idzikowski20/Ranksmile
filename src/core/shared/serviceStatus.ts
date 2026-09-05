@@ -63,14 +63,11 @@ export function buildServiceStatus(
     push('jobs', 'Background jobs', 'degraded');
     push('ai', 'AI analysis', 'degraded');
   } else {
-    if (ready.neon == null) { /* skip when not reported */ }
-    else push('data', 'Data platform', ready.neon ? 'ok' : 'down');
+    if (ready.neon == null) { /* skip when not reported */ } else push('data', 'Data platform', ready.neon ? 'ok' : 'down');
 
-    if (ready.redis == null) { /* optional in non-prod */ }
-    else push('jobs', 'Background jobs', ready.redis ? 'ok' : 'degraded');
+    if (ready.redis == null) { /* optional in non-prod */ } else push('jobs', 'Background jobs', ready.redis ? 'ok' : 'degraded');
 
-    if (ready.sidecar == null) { /* optional off Railway */ }
-    else push('ai', 'AI analysis', ready.sidecar ? 'ok' : 'degraded');
+    if (ready.sidecar == null) { /* optional off Railway */ } else push('ai', 'AI analysis', ready.sidecar ? 'ok' : 'degraded');
   }
 
   const overall = services.reduce<ServiceLevel>((acc, s) => worst(acc, s.level), 'ok');

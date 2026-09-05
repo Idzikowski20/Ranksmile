@@ -21,12 +21,12 @@ type AvatarProps = React.ImgHTMLAttributes<HTMLImageElement> & {
 };
 
 const VARIANT_COLORS: Record<AvatarVariant, { bg: string; text: string }> = {
-  primary:   { bg: '#F84416', text: '#fff' },
+  primary: { bg: '#F84416', text: '#fff' },
   secondary: { bg: '#FDE8D8', text: '#09090B' },
-  success:   { bg: '#34D399', text: '#065F46' },
-  warning:   { bg: '#FBBF24', text: '#92400E' },
-  error:     { bg: '#F87171', text: '#991B1B' },
-  info:      { bg: '#60A5FA', text: '#1E40AF' },
+  success: { bg: '#34D399', text: '#065F46' },
+  warning: { bg: '#FBBF24', text: '#92400E' },
+  error: { bg: '#F87171', text: '#991B1B' },
+  info: { bg: '#60A5FA', text: '#1E40AF' },
 };
 
 function badgePx(avatarSize: number): number {
@@ -120,7 +120,7 @@ const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(
         ) : null}
       </span>
     );
-  }
+  },
 );
 Avatar.displayName = 'Avatar';
 
@@ -134,7 +134,7 @@ const AvatarButton = forwardRef<HTMLButtonElement, AvatarButtonProps>(
     <button ref={ref} className={`koala-avatar-button ${className}`} style={{ width: size, height: size, padding: 0 }} {...rest}>
       {avatar}
     </button>
-  )
+  ),
 );
 AvatarButton.displayName = 'AvatarButton';
 

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import type { IssueDetailLayout, IssueInstance, SiteAuditIssueDetailPayload } from '@/src/infrastructure/siteAudit/types';
 import {
   Badge,
   Button,
@@ -15,16 +16,13 @@ import {
   KoalaPanel,
   KoalaPanelBody,
   KoalaPanelHeader,
-} from '../koala/layout';
-import {
+
   SentryTable,
   SentryTableBody,
   SentryTableCell,
   SentryTableHead,
   SentryTableHeaderCell,
-  SentryTableRow,
-} from '../koala/layout';
-import type { IssueDetailLayout, IssueInstance, SiteAuditIssueDetailPayload } from '@/src/infrastructure/siteAudit/types';
+  SentryTableRow } from '../koala/layout';
 import { UrlCell } from './AuditUrlCell';
 import IssueHelpContent from './IssueHelpContent';
 

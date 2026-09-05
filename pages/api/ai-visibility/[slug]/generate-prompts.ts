@@ -1,9 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomUUID } from 'crypto';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { getPeopleAlsoAsk, isDataForSeoConfigured } from '@/src/infrastructure/dataforseo/dataforseo';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import {
@@ -19,6 +15,10 @@ import { queryOne } from '@/src/infrastructure/db/query';
 import { parseDbTimestamp } from '@/src/infrastructure/db/timestamps';
 import { parseJsonish } from '@/src/core/shared/types/json';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 /** Provenance tag from where Google surfaced the question. */
 const provenanceFor = (domain: string): string[] => {

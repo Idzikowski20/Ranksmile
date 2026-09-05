@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { authClient } from '@/src/infrastructure/auth/client';
+import type { PendingAction } from '@/src/infrastructure/ai/types';
+import { shouldShowRanksmileAnswerStream } from '@/src/infrastructure/ai/text';
 import RanksmileMessage from './RanksmileMessage';
 import ContextUsageRing from './ContextUsageRing';
 import IconRanksmile from './IconRanksmile';
@@ -9,9 +12,6 @@ import { Button, Chip } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import { KoalaEmptyState } from '../koala/layout';
 import { useProfile } from '../../services/profile';
-import { authClient } from '@/src/infrastructure/auth/client';
-import type { PendingAction } from '@/src/infrastructure/ai/types';
-import { shouldShowRanksmileAnswerStream } from '@/src/infrastructure/ai/text';
 
 /** Figma AiChatInput message length (node 11595:412570). */
 const PROMPT_CHAR_LIMIT = 2200;

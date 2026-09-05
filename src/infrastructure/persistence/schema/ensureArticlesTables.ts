@@ -208,70 +208,70 @@ export async function ensureArticlesTables() {
    // progress sentence. IF NOT EXISTS on the Postgres path keeps the server log clean.
    // status_text / stream_text carry the two generation channels (lib/streamText).
    if (isPostgres) {
-      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS progress_json TEXT`); } catch {}
-      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS status_text TEXT`); } catch {}
-      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS stream_text TEXT`); } catch {}
+      try { await db.query('ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS progress_json TEXT'); } catch {}
+      try { await db.query('ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS status_text TEXT'); } catch {}
+      try { await db.query('ALTER TABLE analysis_jobs ADD COLUMN IF NOT EXISTS stream_text TEXT'); } catch {}
    } else {
-      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN progress_json TEXT`); } catch {}
-      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN status_text TEXT`); } catch {}
-      try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN stream_text TEXT`); } catch {}
+      try { await db.query('ALTER TABLE analysis_jobs ADD COLUMN progress_json TEXT'); } catch {}
+      try { await db.query('ALTER TABLE analysis_jobs ADD COLUMN status_text TEXT'); } catch {}
+      try { await db.query('ALTER TABLE analysis_jobs ADD COLUMN stream_text TEXT'); } catch {}
    }
 
    // New columns for AI ranking score
    if (isPostgres) {
-      try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_score INTEGER`); } catch {}
-      try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_signals JSONB`); } catch {}
-      try { await db.query(`ALTER TABLE articles ADD COLUMN ai_info_to_cover JSONB`); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN ranking_score INTEGER'); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN ranking_signals JSONB'); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN ai_info_to_cover JSONB'); } catch {}
    } else {
-      try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_score INTEGER`); } catch {}
-      try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_signals TEXT`); } catch {}
-      try { await db.query(`ALTER TABLE articles ADD COLUMN ai_info_to_cover TEXT`); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN ranking_score INTEGER'); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN ranking_signals TEXT'); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN ai_info_to_cover TEXT'); } catch {}
    }
 
    // Wizard language (used by generation to write in the analysed language)
-   try { await db.query(`ALTER TABLE articles ADD COLUMN language TEXT DEFAULT 'pl'`); } catch {}
+   try { await db.query('ALTER TABLE articles ADD COLUMN language TEXT DEFAULT \'pl\''); } catch {}
 
    // Ranking content gathered at the deep-analysis step (Google Search + AI-cited
    // sources) — shown in the New-Content wizard "Ranking content" panel.
-   try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_sources TEXT`); } catch {}
+   try { await db.query('ALTER TABLE articles ADD COLUMN ranking_sources TEXT'); } catch {}
 
    // Saved New-Content wizard progress (step + selections) so an unfinished draft
    // can be resumed from the Content Editor. Cleared once generation starts.
-   try { await db.query(`ALTER TABLE articles ADD COLUMN wizard_state TEXT`); } catch {}
+   try { await db.query('ALTER TABLE articles ADD COLUMN wizard_state TEXT'); } catch {}
 
    // Which planner/writer pipeline produced the article — so a later quality drop
    // can be traced back to the version that wrote it.
-   try { await db.query(`ALTER TABLE articles ADD COLUMN pipeline_version TEXT`); } catch {}
+   try { await db.query('ALTER TABLE articles ADD COLUMN pipeline_version TEXT'); } catch {}
 
    // Cached Plagiarism Check result so it survives reloads (avoids re-scanning).
-   try { await db.query(`ALTER TABLE articles ADD COLUMN plagiarism_json TEXT`); } catch {}
+   try { await db.query('ALTER TABLE articles ADD COLUMN plagiarism_json TEXT'); } catch {}
 
    // Cached AI Readability rubric result (10-criteria LLM assessment).
-   try { await db.query(`ALTER TABLE articles ADD COLUMN ai_readability_json TEXT`); } catch {}
+   try { await db.query('ALTER TABLE articles ADD COLUMN ai_readability_json TEXT'); } catch {}
 
    // WordPress publish tracking: the remote post id (so re-publish UPDATES it instead
    // of creating a duplicate) and its last-known status (draft / publish).
-   try { await db.query(`ALTER TABLE articles ADD COLUMN wp_post_id INTEGER`); } catch {}
-   try { await db.query(`ALTER TABLE articles ADD COLUMN wp_post_status TEXT`); } catch {}
+   try { await db.query('ALTER TABLE articles ADD COLUMN wp_post_id INTEGER'); } catch {}
+   try { await db.query('ALTER TABLE articles ADD COLUMN wp_post_status TEXT'); } catch {}
 
    // Threaded comments: replies (parent_id), resolved threads, edit timestamp.
-   try { await db.query(`ALTER TABLE article_comments ADD COLUMN parent_id TEXT`); } catch {}
-   try { await db.query(`ALTER TABLE article_comments ADD COLUMN resolved INTEGER DEFAULT 0`); } catch {}
-   try { await db.query(`ALTER TABLE article_comments ADD COLUMN updated_at TIMESTAMP`); } catch {}
-   try { await db.query(`ALTER TABLE article_comments ADD COLUMN reactions_json TEXT`); } catch {}
-   try { await db.query(`ALTER TABLE article_comments ADD COLUMN avatar_url TEXT`); } catch {}
+   try { await db.query('ALTER TABLE article_comments ADD COLUMN parent_id TEXT'); } catch {}
+   try { await db.query('ALTER TABLE article_comments ADD COLUMN resolved INTEGER DEFAULT 0'); } catch {}
+   try { await db.query('ALTER TABLE article_comments ADD COLUMN updated_at TIMESTAMP'); } catch {}
+   try { await db.query('ALTER TABLE article_comments ADD COLUMN reactions_json TEXT'); } catch {}
+   try { await db.query('ALTER TABLE article_comments ADD COLUMN avatar_url TEXT'); } catch {}
    // 1 when authored by the article owner (authenticated), 0 for anonymous share-token reviewers.
    // Anonymous reviewers may not edit/delete owner comments — this is the non-spoofable flag for that.
-   try { await db.query(`ALTER TABLE article_comments ADD COLUMN is_owner INTEGER DEFAULT 0`); } catch {}
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_comments_article ON article_comments(article_id)`); } catch {}
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_comments_parent ON article_comments(parent_id)`); } catch {}
+   try { await db.query('ALTER TABLE article_comments ADD COLUMN is_owner INTEGER DEFAULT 0'); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_article_comments_article ON article_comments(article_id)'); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_article_comments_parent ON article_comments(parent_id)'); } catch {}
 
    // Migrations dla SQLite (Postgres dostaje kolumny już w CREATE TABLE)
    if (!isPostgres) {
-      try { await db.query(`ALTER TABLE articles ADD COLUMN featured_image TEXT`); } catch {}
-      try { await db.query(`ALTER TABLE articles ADD COLUMN competitor_outlines_cache TEXT`); } catch {}
-      try { await db.query(`ALTER TABLE articles ADD COLUMN internal_links_cache TEXT`); } catch {}
-      try { await db.query(`ALTER TABLE articles ADD COLUMN content_score INTEGER DEFAULT 0`); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN featured_image TEXT'); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN competitor_outlines_cache TEXT'); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN internal_links_cache TEXT'); } catch {}
+      try { await db.query('ALTER TABLE articles ADD COLUMN content_score INTEGER DEFAULT 0'); } catch {}
    }
 
    // Indeksy
@@ -282,23 +282,23 @@ export async function ensureArticlesTables() {
    // domain-scoped lookups with no index coverage at all.
    let domainUpdatedIndexReady = false;
    try {
-      await db.query(`CREATE INDEX IF NOT EXISTS idx_articles_domain_updated ON articles(domain_id, updated_at DESC)`);
+      await db.query('CREATE INDEX IF NOT EXISTS idx_articles_domain_updated ON articles(domain_id, updated_at DESC)');
       domainUpdatedIndexReady = true;
    } catch {}
    if (domainUpdatedIndexReady) {
-      try { await db.query(`DROP INDEX IF EXISTS idx_articles_domain`); } catch {}
+      try { await db.query('DROP INDEX IF EXISTS idx_articles_domain'); } catch {}
    }
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status)`); } catch {}
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_competitors_article ON article_competitors(article_id)`); } catch {}
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_terms_article ON article_terms(article_id)`); } catch {}
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_ai_visibility_runs_article ON ai_visibility_runs(article_id)`); } catch {}
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_ai_visibility_citations_run ON ai_visibility_citations(run_id)`); } catch {}
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_versions_article ON article_versions(article_id)`); } catch {}
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_keywords_article ON article_keywords(article_id)`); } catch {}
-   try { await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_article_keywords_uid ON article_keywords(uid)`); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status)'); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_article_competitors_article ON article_competitors(article_id)'); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_article_terms_article ON article_terms(article_id)'); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_visibility_runs_article ON ai_visibility_runs(article_id)'); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_visibility_citations_run ON ai_visibility_citations(run_id)'); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_article_versions_article ON article_versions(article_id)'); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_article_keywords_article ON article_keywords(article_id)'); } catch {}
+   try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_article_keywords_uid ON article_keywords(uid)'); } catch {}
 
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_status ON analysis_jobs(status)`); } catch {}
-   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article ON analysis_jobs(article_id)`); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_analysis_jobs_status ON analysis_jobs(status)'); } catch {}
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article ON analysis_jobs(article_id)'); } catch {}
    // Covers the in-flight guard's per-article/job_type/status lookup and loadCandidates'
    // per-article created_at ordering, which the single-column article index above can't
    // satisfy without a scan+sort as the job table grows.

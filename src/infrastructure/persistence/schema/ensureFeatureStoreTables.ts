@@ -38,13 +38,13 @@ export async function ensureFeatureStoreTables(): Promise<void> {
 
   await db
     .query(
-      `CREATE INDEX IF NOT EXISTS idx_growth_obs_article ON growth_observations (article_id, observed_at)`,
+      'CREATE INDEX IF NOT EXISTS idx_growth_obs_article ON growth_observations (article_id, observed_at)',
     )
     .catch((e) => ignoreExisting('idx_growth_obs_article', e));
 
   await db
     .query(
-      `CREATE INDEX IF NOT EXISTS idx_growth_obs_domain ON growth_observations (domain_id, observed_at)`,
+      'CREATE INDEX IF NOT EXISTS idx_growth_obs_domain ON growth_observations (domain_id, observed_at)',
     )
     .catch((e) => ignoreExisting('idx_growth_obs_domain', e));
 
@@ -73,7 +73,7 @@ export async function ensureFeatureStoreTables(): Promise<void> {
 
   await db
     .query(
-      `CREATE INDEX IF NOT EXISTS idx_growth_feat_id ON growth_feature_versions (feature_id, created_at)`,
+      'CREATE INDEX IF NOT EXISTS idx_growth_feat_id ON growth_feature_versions (feature_id, created_at)',
     )
     .catch((e) => ignoreExisting('idx_growth_feat_id', e));
 

@@ -26,7 +26,7 @@ export async function ensureCalibrationTables(): Promise<void> {
     .catch(() => undefined);
   await db
     .query(
-      `CREATE INDEX IF NOT EXISTS idx_calibration_ws ON calibration_models (workspace_id, version)`,
+      'CREATE INDEX IF NOT EXISTS idx_calibration_ws ON calibration_models (workspace_id, version)',
     )
     .catch(() => undefined);
   checked = true;
@@ -57,13 +57,12 @@ export async function loadLatestCalibration(
 ): Promise<CalibrationModel | null> {
   await ensureCalibrationTables();
   const [rows] = await db.query(
-    `SELECT * FROM calibration_models WHERE workspace_id = ? ORDER BY version DESC LIMIT 1`,
+    'SELECT * FROM calibration_models WHERE workspace_id = ? ORDER BY version DESC LIMIT 1',
     { replacements: [workspaceId] },
   );
   const r = (rows as Array<Record<string, unknown>>)[0];
   if (!r) return null;
-  const weights =
-    typeof r.weights_json === 'string'
+  const weights = typeof r.weights_json === 'string'
       ? (JSON.parse(r.weights_json) as number[])
       : (r.weights_json as number[]);
   return {

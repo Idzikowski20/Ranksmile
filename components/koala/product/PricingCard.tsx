@@ -1,7 +1,5 @@
 import React from 'react';
 import styled from '@emotion/styled';
-import { Button } from '../core';
-import { BenefitItem } from './BenefitItem';
 import type {
   BenefitState,
   CtaState,
@@ -9,6 +7,8 @@ import type {
 } from '@/src/core/domain/pricing/planDefinition';
 import { ctaLabel } from '@/src/core/domain/pricing/planDefinition';
 import type { BillingPeriod } from '@/src/core/domain/billing/plans';
+import { BenefitItem } from './BenefitItem';
+import { Button } from '../core';
 import { semantic } from '../tokens/semantic';
 import { typeface, textScale, fontWeight } from '../tokens/typography';
 import { spacing } from '../tokens/spacing';

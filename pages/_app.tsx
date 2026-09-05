@@ -8,11 +8,11 @@ import { useRouter } from 'next/router';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Hydrate } from 'react-query/hydration';
 import { parseWorkspaceId } from '@/src/core/domain/navigation/activeWorkspace';
+import { ApplicationShell } from '@/src/infrastructure/appAccess/ApplicationShell';
 import { IconDefaultsProvider } from '../components/koala/core/IconDefaultsProvider';
 import { KoalaThemeProvider } from '../components/koala/theme';
 import AppToaster from '../components/common/AppToaster';
 import TopProgressBar from '../components/common/TopProgressBar';
-import { ApplicationShell } from '@/src/infrastructure/appAccess/ApplicationShell';
 import { AppBannerProvider } from '../components/koala/shell';
 
 const GlobalSmoothCaret = dynamic(

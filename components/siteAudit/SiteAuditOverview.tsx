@@ -1,4 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import type {
+  PageBucket,
+  SiteAuditIssue,
+  SiteAuditOverviewPayload,
+  ThematicReport,
+} from '@/src/infrastructure/siteAudit/types';
 import { Button } from '../koala/core';
 import { RadialComparisonWidget, RADIAL_SEGMENT_COLORS } from '../koala/product';
 import type { RadialSegment } from '../koala/product';
@@ -8,12 +14,6 @@ import SiteAuditScoreGauge from './SiteAuditScoreGauge';
 import IssueTrendArea from './IssueTrendArea';
 import OverviewInfoPopper, { type OverviewPopperKind } from './overviewPoppers';
 import { BotRow, PRIMARY_BOTS } from './aiSearchBots';
-import type {
-  PageBucket,
-  SiteAuditIssue,
-  SiteAuditOverviewPayload,
-  ThematicReport,
-} from '@/src/infrastructure/siteAudit/types';
 
 const FONT = 'var(--font-family-primary)';
 

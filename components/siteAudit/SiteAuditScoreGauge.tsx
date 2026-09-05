@@ -189,8 +189,7 @@ export default function SiteAuditScoreGauge({
   variant,
   showLabel = true,
 }: Props) {
-  const resolved: SiteAuditScoreGaugeVariant =
-    variant ?? (size >= 88 ? 'watchtower' : 'compact');
+  const resolved: SiteAuditScoreGaugeVariant = variant ?? (size >= 88 ? 'watchtower' : 'compact');
 
   if (resolved === 'compact') {
     return <CompactGauge score={score} size={size} />;

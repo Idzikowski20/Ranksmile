@@ -28,7 +28,8 @@ export function OverviewInfoPopperContent({ kind }: { kind: OverviewPopperKind }
         <>
           <PopperHeading>Site Health</PopperHeading>
           <PopperParagraph>
-            The Site Health score is based on the number of errors and warnings found on your site, and their uniqueness. The higher the score, the fewer problems your site has, the better it is optimized for search engines, and the more user-friendly it is.
+            The Site Health score is based on the number of errors and warnings found on your site, and their uniqueness.
+            The higher the score, the fewer problems your site has, the better it is optimized for search engines, and the more user-friendly it is.
           </PopperParagraph>
           <PopperParagraph>
             The average industry score is based on the score of each website associated with the selected industry. This list of sites is based on Traffic Analytics data. For more information about the Site Health score, see{' '}
@@ -51,14 +52,16 @@ export function OverviewInfoPopperContent({ kind }: { kind: OverviewPopperKind }
     case 'info-blocked-ai-search':
       return (
         <PopperParagraph>
-          Pages blocked from AI search bots prevent your content from appearing in AI-generated responses and search results, which negatively affects your AI Search Health and potential visibility.
+          Pages blocked from AI search bots prevent your content from appearing in AI-generated responses and search results,
+          which negatively affects your AI Search Health and potential visibility.
         </PopperParagraph>
       );
     case 'info-errors':
       return (
         <>
           <PopperParagraph>
-            The number of issues of the highest severity detected on your website during the last audit. You can also see the difference in the number of errors found during your previous and last audits.
+            The number of issues of the highest severity detected on your website during the last audit.
+            You can also see the difference in the number of errors found during your previous and last audits.
           </PopperParagraph>
           <PopperParagraph>
             The trend graph below shows how your website&apos;s health has improved over the last seven audits.
@@ -69,7 +72,8 @@ export function OverviewInfoPopperContent({ kind }: { kind: OverviewPopperKind }
       return (
         <>
           <PopperParagraph>
-            The number of issues of medium severity detected on your website during the last audit. You can also see the difference in the number of warnings found during your previous and last audits.
+            The number of issues of medium severity detected on your website during the last audit.
+            You can also see the difference in the number of warnings found during your previous and last audits.
           </PopperParagraph>
           <PopperParagraph>
             The trend graph below shows how your website&apos;s health has improved over the last seven audits.
@@ -83,10 +87,13 @@ export function OverviewInfoPopperContent({ kind }: { kind: OverviewPopperKind }
             Here you can see if SiteAuditBot was able to access your robots.txt file and the number of changes made to this file (if any) since the previous crawl.
           </PopperParagraph>
           <PopperParagraph>
-            Even a minor change to this file may negatively affect your website&apos;s indexability. Unplanned and ill-considered updates may dramatically damage your website&apos;s rankings.
+            Even a minor change to this file may negatively affect your website&apos;s indexability.
+            Unplanned and ill-considered updates may dramatically damage your website&apos;s rankings.
           </PopperParagraph>
           <PopperParagraph>
-            robots.txt file is used to instruct search engines what content on your website they should crawl. The Site Audit tool searches for any changes in the robots.txt rules for the main subdomain that is specified in your crawler settings. Please note that each subdomain can have its own robots.txt.
+            robots.txt file is used to instruct search engines what content on your website they should crawl.
+            The Site Audit tool searches for any changes in the robots.txt rules for the main subdomain that is specified in your crawler settings.
+            Please note that each subdomain can have its own robots.txt.
           </PopperParagraph>
         </>
       );
@@ -104,7 +111,8 @@ export function OverviewInfoPopperContent({ kind }: { kind: OverviewPopperKind }
           </PopperParagraph>
           <PopperHeading>How does it work with Site Health?</PopperHeading>
           <PopperParagraph>
-            Maintaining Site Health is crucial for AI search engines, but AI SEO requires some additional strategies, including enhanced use of structured data, internal linking, and additional files.
+            Maintaining Site Health is crucial for AI search engines, but AI SEO requires some additional strategies,
+            including enhanced use of structured data, internal linking, and additional files.
           </PopperParagraph>
         </>
       );

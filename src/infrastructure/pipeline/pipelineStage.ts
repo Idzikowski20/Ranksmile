@@ -11,15 +11,15 @@ const STAGE_ORDER: PipelineStageId[] = ['0', '0.5', '1', '1.5', '2', '2b', '3', 
 
 /** Numeric rank for comparisons (2 and 2b share rank 2). */
 const STAGE_RANK: Record<PipelineStageId, number> = {
-  '0': 0,
-  '0.5': 0.5,
-  '1': 1,
-  '1.5': 1.5,
-  '2': 2,
+  0: 0,
+  0.5: 0.5,
+  1: 1,
+  1.5: 1.5,
+  2: 2,
   '2b': 2,
-  '3': 3,
-  '4': 4,
-  '5': 5,
+  3: 3,
+  4: 4,
+  5: 5,
 };
 
 /** Minimum stage at which a worker id becomes available. */

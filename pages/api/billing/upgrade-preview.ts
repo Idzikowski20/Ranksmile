@@ -11,8 +11,8 @@ import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { getStripe } from '@/src/infrastructure/billing/stripe';
 import { assertStripeModeOrThrow } from '@/src/infrastructure/billing/stripeMode';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
-import { getCurrentUser } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUser } from '../../../utils/getUser';
 
 const schema = z.object({
   planSlug: z.string().min(1),

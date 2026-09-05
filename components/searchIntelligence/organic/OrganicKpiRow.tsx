@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Sparkline } from '../../koala/charts';
 import type { OrganicMetrics } from '@/src/infrastructure/organicResearch/types';
+import { Sparkline } from '../../koala/charts';
 
 const FONT = 'var(--font-family-primary)';
 

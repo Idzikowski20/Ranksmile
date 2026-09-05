@@ -27,9 +27,9 @@ const W_TRAFFIC = 0.3;
  */
 export function strikingDistance(position: number): number {
   if (!Number.isFinite(position) || position <= 0) return 0;
-  if (position <= 3) return 0.25;                       // already top — little upside
+  if (position <= 3) return 0.25; // already top — little upside
   if (position <= 20) return 0.55 + ((position - 4) / 16) * 0.45; // 4→0.55 … 20→1.0
-  if (position <= 30) return 0.5 - ((position - 20) / 10) * 0.25;  // 20→0.5 … 30→0.25
+  if (position <= 30) return 0.5 - ((position - 20) / 10) * 0.25; // 20→0.5 … 30→0.25
   if (position <= 50) return 0.15;
   return 0.05;
 }

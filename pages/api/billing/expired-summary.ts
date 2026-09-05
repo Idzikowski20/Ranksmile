@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
-import db from '../../../database/database';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { countActionableRecommendations, type RecFilterable } from '@/src/core/domain/recommendations/actionable';
 import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
+import db from '../../../database/database';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getUserDomainIds } from '../articles/index';
 

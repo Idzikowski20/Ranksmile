@@ -10,7 +10,6 @@ import {
 } from '@/src/infrastructure/billing/stripeBillingSync';
 import { getOrgBillingState, getOrgIdByStripeCustomerId, updateOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { BillingSource, ensureCorrelationId } from '@/src/infrastructure/billing/billingAudit';
-import db from '../../../database/database';
 import { getCheckoutPlan } from '@/src/core/domain/billing/plans';
 import { getAppOrigin } from '@/src/infrastructure/config/appOrigin';
 import { claimBillingEmailAndEnqueue } from '@/src/infrastructure/billing/billingEmailClaim';
@@ -21,6 +20,7 @@ import {
 } from '@/src/infrastructure/notifications/emailTypes';
 import { ABANDONED_CHECKOUT_SUBJECT } from '@/src/infrastructure/email/abandonedCheckoutEmail';
 import { paymentFailedEmailSubject } from '@/src/infrastructure/email/paymentFailedEmail';
+import db from '../../../database/database';
 
 export const config = {
   api: { bodyParser: false },

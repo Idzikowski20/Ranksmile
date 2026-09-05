@@ -1,13 +1,13 @@
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useAddRankKeywords, useRankConfigs, useRankKeywordsList, useRemoveRankKeywords } from '../../../services/rankTracking';
 import { normalizeKeyword } from '@/src/core/shared/types/rankTracking';
+import type { OrganicKeyword } from '@/src/infrastructure/organicResearch/types';
+import { useAddRankKeywords, useRankConfigs, useRankKeywordsList, useRemoveRankKeywords } from '../../../services/rankTracking';
 import { Button, Checkbox } from '../../koala/core';
 import { KeywordDifficultyDot } from '../../koala/product/helpers/KeywordDifficultyDot';
 import { KeywordIntentBadge } from '../../koala/product/helpers/KeywordIntentBadge';
 import { TrendDeltaBadge } from '../../koala/product/helpers/TrendDeltaBadge';
-import type { OrganicKeyword } from '@/src/infrastructure/organicResearch/types';
 import { formatCompact } from './OrganicKpiRow';
 import { DEFAULT_VISIBLE, OrganicColumnMenu, type ColumnId } from './OrganicColumnMenu';
 import { ExpandedPanel } from './OrganicKeywordExpand';
@@ -404,7 +404,6 @@ export default function OrganicKeywordsTable({
     else setSelected(new Set(rows.map((r) => r.id)));
   };
 
-
   const colCount = 2 + visibleCols.length;
 
   return (
@@ -507,7 +506,6 @@ export default function OrganicKeywordsTable({
           </div>
         </div>
       </div>
-
 
       <div className="koala-table-wrap">
         <table className="koala-table" style={{ minWidth: 960 }}>

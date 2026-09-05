@@ -2,13 +2,13 @@
 // sidecar scheduler. Finds configs due for a 14-day refresh (oldest first, capped),
 // enqueues a scan for each, and returns the scanIds for the sidecar to drive.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { findDueConfigIds, enqueueAiVisScan } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isInternalPipelineRequest } from '@/src/infrastructure/aiVisibility/internalPipelineAuth';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (!isInternalPipelineRequest(req)) return res.status(401).json({ error: 'unauthorized' });
@@ -24,8 +24,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          for (const configId of configIds) {
             // Per-item guard: one failing enqueue must not abort the batch and
             // strand the configs already enqueued this tick.
-            try { await enqueueAiVisScan(configId); }
-            catch (e) { console.warn(`[ai-vis due-scans] enqueue failed for config ${configId}:`, getErrorMessage(e)); }
+            try { await enqueueAiVisScan(configId); } catch (e) { console.warn(`[ai-vis due-scans] enqueue failed for config ${configId}:`, getErrorMessage(e)); }
          }
          // Return ALL currently-queued scans (this tick's PLUS any orphaned by an
          // earlier partial failure). findDueConfigIds excludes configs that already

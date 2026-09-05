@@ -134,6 +134,7 @@ function ToolButton({ editor, command, isActive, onClick, children }: {
       case 'toggleUnderline': chain.toggleUnderline().run(); break;
       case 'toggleStrike': chain.toggleStrike().run(); break;
       case 'unsetAllMarks': chain.unsetAllMarks().clearNodes().run(); break;
+      default: break;
     }
   }, [editor, command]);
 

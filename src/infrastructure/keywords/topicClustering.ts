@@ -181,10 +181,10 @@ Rules:
 }
 
 /** Group cluster keywords into content ideas (head + long-tail variants). */
-export function buildIdeas(clusterKeywords: EnrichedKeyword[], clusterIndex: number): TopicIdea[] {
-   if (clusterKeywords.length === 0) return [];
+export function buildIdeas(keywords: EnrichedKeyword[], clusterIndex: number): TopicIdea[] {
+   if (keywords.length === 0) return [];
 
-   const sorted = [...clusterKeywords].sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
+   const sorted = [...keywords].sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
    const used = new Set<string>();
    const ideas: TopicIdea[] = [];
 

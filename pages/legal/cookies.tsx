@@ -1,6 +1,7 @@
 import type { NextPage } from 'next';
-import LegalLayout from '../../components/legal/LegalLayout';
+import Link from 'next/link';
 import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
+import LegalLayout from '../../components/legal/LegalLayout';
 
 const CookiesPage: NextPage = () => (
   <LegalLayout
@@ -18,7 +19,7 @@ const CookiesPage: NextPage = () => (
       {' '}
       and the Ranksmile application. It should be read with our
       {' '}
-      <a href="/legal/privacy">Privacy Policy</a>
+      <Link href="/legal/privacy">Privacy Policy</Link>
       .
     </p>
 

@@ -1,6 +1,7 @@
 import type { NextPage } from 'next';
-import LegalLayout from '../../components/legal/LegalLayout';
+import Link from 'next/link';
 import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
+import LegalLayout from '../../components/legal/LegalLayout';
 
 const TermsPage: NextPage = () => (
   <LegalLayout
@@ -104,13 +105,13 @@ const TermsPage: NextPage = () => (
     <p>
       Our
       {' '}
-      <a href="/legal/privacy">Privacy Policy</a>
+      <Link href="/legal/privacy">Privacy Policy</Link>
       {' '}
       explains how we process personal data as a controller
       for account and product operations. Where we process personal data on your behalf as a
       processor, the
       {' '}
-      <a href="/legal/dpa">Data Processing Addendum</a>
+      <Link href="/legal/dpa">Data Processing Addendum</Link>
       {' '}
       applies.
     </p>

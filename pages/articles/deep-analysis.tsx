@@ -161,7 +161,7 @@ const DeepAnalysisPage: NextPage = () => {
         let buffer = '';
         let currentEvent = '';
 
-        function processLine(line: string) {
+        const processLine = (line: string) => {
           if (runGeneration !== runGenerationRef.current) return;
           if (line.startsWith('event: ')) {
             currentEvent = line.slice(7).trim();
@@ -191,7 +191,7 @@ const DeepAnalysisPage: NextPage = () => {
             } catch { /* skip parse errors from partial chunks */ }
             currentEvent = '';
           }
-        }
+        };
 
         while (true) {
           const { done, value } = await reader.read();

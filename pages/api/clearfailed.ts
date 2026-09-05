@@ -1,7 +1,7 @@
 import { writeFile } from 'fs/promises';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../utils/verifyUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import verifyUser from '../../utils/verifyUser';
 
 type SettingsGetResponse = {
    cleared?: boolean,

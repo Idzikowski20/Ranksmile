@@ -1,6 +1,7 @@
 import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { useAiVisibilityGuard } from '@/hooks/useAiVisibilityGuard';
 import AppShell from '../common/AppShell';
 import DomainSubLayout from '../domains/DomainSubLayout';
 import AiVisibilityToolbar from './AiVisibilityToolbar';
@@ -9,7 +10,6 @@ import ScanProgressBar, { isScanBusy } from './ScanProgressBar';
 import { SkeletonBars } from './SkeletonBlocks';
 import { Button, ToolRibbon } from '../koala/core';
 import type { PromptOption } from './types';
-import { useAiVisibilityGuard } from '@/hooks/useAiVisibilityGuard';
 import { useAiVisScanStatus } from '../../services/aiVisibility';
 import { useFetchDomains } from '../../services/domains';
 import { slugToDomain } from '../../utils/slugToDomain';

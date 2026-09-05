@@ -27,7 +27,7 @@ export async function ensureDomainEventTables(): Promise<void> {
     )
     .catch((e) => ignoreExisting('growth_domain_events', e));
   await db
-    .query(`CREATE INDEX IF NOT EXISTS idx_growth_events_article ON growth_domain_events (article_id, at)`)
+    .query('CREATE INDEX IF NOT EXISTS idx_growth_events_article ON growth_domain_events (article_id, at)')
     .catch((e) => ignoreExisting('idx_growth_events_article', e));
   checked = true;
 }
@@ -48,7 +48,7 @@ export async function ensureKnowledgeLayerTables(): Promise<void> {
     .catch((e) => ignoreExisting('growth_knowledge_layers', e));
   await db
     .query(
-      `CREATE INDEX IF NOT EXISTS idx_growth_kg_article ON growth_knowledge_layers (article_id, created_at)`,
+      'CREATE INDEX IF NOT EXISTS idx_growth_kg_article ON growth_knowledge_layers (article_id, created_at)',
     )
     .catch((e) => ignoreExisting('idx_growth_kg_article', e));
 }

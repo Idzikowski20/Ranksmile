@@ -28,7 +28,7 @@ export type RootIntentCoverage = {
 const PLACEHOLDER_RE = /Editor:\s*dodaj|\[placeholder\]|TODO:|FIXME|\{\{[^}]+\}\}/i;
 const LAST_UPDATED_RE = /Last\s*Updated|Ostatnia\s+aktualizacja/i;
 const WIKI_LEAD_RE = /^(?:<h1[^>]*>[^<]*<\/h1>\s*)?(?:<p[^>]*>)?\s*[A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż][^.!?]{0,80}\s+(?:to|jest|oznacza)\b/i;
-const ACTION_STEPS_RE = /(?:^|\n)\s*(?:1[\.\)]|krok\s*1|co\s+robić|nie\s+płać|zgłoś|zachowaj\s+dowody)/im;
+const ACTION_STEPS_RE = /(?:^|\n)\s*(?:1[.)]|krok\s*1|co\s+robić|nie\s+płać|zgłoś|zachowaj\s+dowody)/im;
 const WHAT_TO_DO_RE = /co\s+(?:zrobić|robić)|jak\s+się\s+zachować|plan\s+działań/i;
 
 function stripTags(html: string): string {

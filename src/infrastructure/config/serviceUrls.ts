@@ -8,8 +8,8 @@ export const LOCAL_SIDECAR_URL = 'http://127.0.0.1:8001';
 
 function isProductionRuntime(): boolean {
   return (
-    process.env.NODE_ENV === 'production' ||
-    Boolean(process.env.RAILWAY_ENVIRONMENT)
+    process.env.NODE_ENV === 'production'
+    || Boolean(process.env.RAILWAY_ENVIRONMENT)
   );
 }
 

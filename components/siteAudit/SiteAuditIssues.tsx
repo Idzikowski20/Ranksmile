@@ -1,8 +1,4 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Badge, Button, CompactSelect, SegmentedControl } from '../koala/core';
-import { KoalaEmptyState, KoalaPanel, KoalaPanelBody } from '../koala/layout';
-import InfoPopper, { dashedLinkStyle, PopperParagraph } from './InfoPopper';
-import HowToFixPopper from './HowToFixPopper';
 import {
   CATEGORY_LABELS,
   EXTRA_CATEGORIES,
@@ -15,6 +11,10 @@ import type {
   SiteAuditIssueSummary,
   SiteAuditIssuesReport,
 } from '@/src/infrastructure/siteAudit/types';
+import { Badge, Button, CompactSelect, SegmentedControl } from '../koala/core';
+import { KoalaEmptyState, KoalaPanel, KoalaPanelBody } from '../koala/layout';
+import InfoPopper, { dashedLinkStyle, PopperParagraph } from './InfoPopper';
+import HowToFixPopper from './HowToFixPopper';
 
 type SeverityFilter = 'all' | IssueSeverity;
 type TriggeredFilter = 'with_issues' | 'with_new_issues';

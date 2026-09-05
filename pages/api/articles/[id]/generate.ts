@@ -66,7 +66,8 @@ const BRIEF_TIMEOUT_MS = 25_000;
 
 /** Readable title from a URL's last path segment — page_audits often stores a null title. */
 function titleFromSlug(url: string): string {
-  const seg = url.replace(/^https?:\/\/[^/]+/i, '').replace(/[?#].*$/, '').replace(/\/+$/, '').split('/').pop() || '';
+  const seg = url.replace(/^https?:\/\/[^/]+/i, '').replace(/[?#].*$/, '').replace(/\/+$/, '').split('/')
+.pop() || '';
   const words = seg.replace(/-/g, ' ').trim();
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : url;
 }
@@ -474,7 +475,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         // left the title null we derive a readable one from the slug.
         try {
           const audited = await db.query<{ url: string; title: string | null }>(
-            `SELECT url, title FROM page_audits WHERE domain_id = ? LIMIT 100`,
+            'SELECT url, title FROM page_audits WHERE domain_id = ? LIMIT 100',
             { replacements: [article.domain_id], type: QueryTypes.SELECT },
           );
           for (const p of audited) {

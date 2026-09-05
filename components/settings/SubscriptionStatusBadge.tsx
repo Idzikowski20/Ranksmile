@@ -1,7 +1,7 @@
 import React from 'react';
+import type { SubscriptionDetails } from '@/src/infrastructure/billing/subscriptionDetails';
 import { Badge, type BadgeAppearance } from '../koala/core/badge/badge';
 import { Icon } from '../koala/icons/Icon';
-import type { SubscriptionDetails } from '@/src/infrastructure/billing/subscriptionDetails';
 
 export type SubscriptionBadgeTone = 'success' | 'neutral' | 'warning';
 

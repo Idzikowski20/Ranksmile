@@ -13,9 +13,8 @@ import {
   type AuditRow,
 } from '@/src/infrastructure/siteAudit/issues';
 import { pagesWithSingleIncoming } from '@/src/infrastructure/siteAudit/incomingLinkGraph';
-import type { PageAuditSignals } from '@/src/infrastructure/siteAudit/types';
+import type { PageAuditSignals, IssueSeverity } from '@/src/infrastructure/siteAudit/types';
 import { normalizeForIncoming } from '@/src/infrastructure/siteAudit/redirectScan';
-import type { IssueSeverity } from '@/src/infrastructure/siteAudit/types';
 
 export type CrawlSnapshotMetrics = {
   pagesCrawled: number;
@@ -242,7 +241,7 @@ export async function getCrawlSnapshot(
 /** Backfill a snapshot when crawl data exists but history was never recorded. */
 export async function ensureCrawlSnapshot(domainId: number, domain: string): Promise<void> {
   const existing = await queryOne<{ n: number }>(
-    `SELECT COUNT(*) AS n FROM site_audit_crawl_snapshots WHERE domain_id = ?`,
+    'SELECT COUNT(*) AS n FROM site_audit_crawl_snapshots WHERE domain_id = ?',
     [domainId],
   );
   if ((existing?.n ?? 0) > 0) return;

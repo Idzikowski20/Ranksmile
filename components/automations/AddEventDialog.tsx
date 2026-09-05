@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { AutomationPublishMode } from '@/src/core/shared/types/automations';
 import Modal, { ModalBody, ModalFooter } from '../koala/core/modal/modal';
 import { Button, Input, Select, Alert } from '../koala/core';
 import { Form, FormField, FormSection, FieldHint } from '../koala/forms';
-import type { AutomationPublishMode } from '@/src/core/shared/types/automations';
 
 export type AddEventDialogProps = {
   open: boolean;

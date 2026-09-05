@@ -30,8 +30,7 @@ export function curateConceptsFromTerms(opts: {
 
     const tokens = key.split(/\s+/).filter(Boolean);
     const isConcept = tokens.length >= 2;
-    const importance: Importance =
-      (t.doc_freq ?? 0) >= 5 || (t.salience ?? 0) >= 60 ? 'critical' : 'recommended';
+    const importance: Importance = (t.doc_freq ?? 0) >= 5 || (t.salience ?? 0) >= 60 ? 'critical' : 'recommended';
 
     const item: CoverageItem = {
       id: `${isConcept ? 'concept' : 'term'}-${key.slice(0, 48)}`,

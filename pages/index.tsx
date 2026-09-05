@@ -1,15 +1,14 @@
-import type { GetServerSideProps, NextPage } from 'next';
+import type { GetServerSideProps, NextPage, NextApiRequest, NextApiResponse } from 'next';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import type { NextApiRequest, NextApiResponse } from 'next';
 import { dehydrate, QueryClient } from 'react-query';
-import AppLoading from '../components/common/AppLoading';
-import { PlanExpired } from '../components/billing/PlanExpired';
-import { getCurrentUser } from '../utils/getUser';
 import { getBootstrap } from '@/src/infrastructure/http/getBootstrap';
 import type { BootstrapData } from '@/src/infrastructure/http/getBootstrap';
 import { isPlanExpired } from '@/src/infrastructure/appAccess/isPlanExpired';
+import AppLoading from '../components/common/AppLoading';
+import { PlanExpired } from '../components/billing/PlanExpired';
+import { getCurrentUser } from '../utils/getUser';
 import { LandingPage } from '../components/landing/LandingPage';
 
 type HomeProps = {

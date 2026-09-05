@@ -57,6 +57,8 @@ function colors(variant: ButtonVariant) {
         fg: semantic.text.link,
         border: 'transparent',
       };
+    default:
+      return { bg: 'transparent', hover: 'transparent', fg: semantic.text.link, border: 'transparent' };
   }
 }
 

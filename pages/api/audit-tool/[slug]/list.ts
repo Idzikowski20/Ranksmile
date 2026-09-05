@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
 import { queryRows } from '@/src/infrastructure/db/query';
 import type { AuditCardDTO, AuditStatus } from '@/src/core/domain/audit/types';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../../database/database';
+import verifyUser from '../../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 
 type ListRow = {
    id: number, url: string, keyword: string, status: string,

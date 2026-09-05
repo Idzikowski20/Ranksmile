@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { searchconsole_v1 } from '@googleapis/searchconsole';
+import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
 import GscAccount from '../../../database/models/gscAccount';
-import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
-import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type GscSiteEntry = { siteUrl?: string | null; permissionLevel?: string | null };
 

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import styled from '@emotion/styled';
-import { Icon } from '../icons/Icon';
 import type {
   CompareCell,
   CompareSection,
@@ -15,6 +14,7 @@ import {
   trackPricingEvent,
 } from '@/src/core/domain/pricing/planDefinition';
 import type { BillingPeriod } from '@/src/core/domain/billing/plans';
+import { Icon } from '../icons/Icon';
 import type { PricingCardAction } from './PricingCard';
 import { semantic } from '../tokens/semantic';
 import { typeface, textScale, fontWeight } from '../tokens/typography';

@@ -3,12 +3,12 @@
 // each config that still has unread sources. One chunk per scan per call → drained over
 // ticks, so a 250-source scan never blocks a request.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { findScansNeedingSources, runSourceChunk } from '@/src/infrastructure/aiVisibility/aiVisibilitySources';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isInternalPipelineRequest } from '@/src/infrastructure/aiVisibility/internalPipelineAuth';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../../database/database';
 
 /** Leaves headroom under the sidecar's 120s call timeout for the surrounding queries. */
 const REQUEST_BUDGET_MS = 90_000;

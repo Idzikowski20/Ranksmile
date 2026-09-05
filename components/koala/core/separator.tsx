@@ -12,7 +12,7 @@ const Separator = forwardRef<HTMLHRElement, SeparatorProps>(
       className={`koala-separator koala-separator--${orientation} ${className}`}
       {...rest}
     />
-  )
+  ),
 );
 Separator.displayName = 'Separator';
 export default Separator;

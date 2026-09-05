@@ -1,15 +1,14 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { CompactSelect } from '../koala/core';
-import { KoalaEmptyState, KoalaPanel, KoalaPanelBody } from '../koala/layout';
-import InfoPopper, { dashedLinkStyle } from './InfoPopper';
-import HowToFixPopper from './HowToFixPopper';
-import { getCatalogEntry } from '@/src/infrastructure/siteAudit/issueCatalog';
-import { SEVERITY_GROUP_INFO } from '@/src/infrastructure/siteAudit/issueCatalog';
+import { getCatalogEntry, SEVERITY_GROUP_INFO } from '@/src/infrastructure/siteAudit/issueCatalog';
 import type {
   CompareCrawlsReport,
   CompareCrawlsRow,
   SiteAuditIssueSummary,
 } from '@/src/infrastructure/siteAudit/types';
+import { CompactSelect } from '../koala/core';
+import { KoalaEmptyState, KoalaPanel, KoalaPanelBody } from '../koala/layout';
+import InfoPopper, { dashedLinkStyle } from './InfoPopper';
+import HowToFixPopper from './HowToFixPopper';
 
 type Props = {
   report: CompareCrawlsReport;

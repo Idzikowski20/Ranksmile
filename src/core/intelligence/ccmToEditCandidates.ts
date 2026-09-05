@@ -16,10 +16,8 @@ export function ccmRecommendationsToEditCandidates(
 ): EditCandidate[] {
   const limit = opts.limit ?? 8;
   return recs.slice(0, limit).map((r) => {
-    const priority: EditCandidate['priority'] =
-      r.priority >= 8 ? 'critical' : r.priority >= 3 ? 'recommended' : 'optional';
-    const priorityTier: 0 | 1 | 2 | 5 =
-      priority === 'critical' ? 0 : r.evidenceRequired ? 1 : priority === 'recommended' ? 2 : 5;
+    const priority: EditCandidate['priority'] = r.priority >= 8 ? 'critical' : r.priority >= 3 ? 'recommended' : 'optional';
+    const priorityTier: 0 | 1 | 2 | 5 = priority === 'critical' ? 0 : r.evidenceRequired ? 1 : priority === 'recommended' ? 2 : 5;
     return makeCandidate({
       id: `ccm-${r.id}`,
       gapId: `ccm:rec:${r.id}`,

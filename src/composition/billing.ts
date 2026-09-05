@@ -1,5 +1,5 @@
 import type { BillingInvoice } from '../core/domain/billing/invoice';
-import { listOrgBillingInvoices as useCase } from '../core/application/billing/listOrgBillingInvoices';
+import { listOrgBillingInvoices as runUseCase } from '../core/application/billing/listOrgBillingInvoices';
 import { createStripeInvoiceRepository } from '../infrastructure/billing/stripe/stripeInvoiceRepository';
 
 /**
@@ -8,5 +8,5 @@ import { createStripeInvoiceRepository } from '../infrastructure/billing/stripe/
  * implementation or the use-case's port parameter.
  */
 export function listOrgBillingInvoices(orgId: number, limit = 40): Promise<BillingInvoice[]> {
-  return useCase(createStripeInvoiceRepository(), orgId, limit);
+  return runUseCase(createStripeInvoiceRepository(), orgId, limit);
 }

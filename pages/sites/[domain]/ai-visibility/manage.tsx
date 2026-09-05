@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { AI_VIS_PROMPT_LIMIT, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
 import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
 import { Modal, Button } from '../../../../components/koala/core';
@@ -11,7 +12,6 @@ import { slugToDomain } from '../../../../utils/slugToDomain';
 import PromptSelector from '../../../../components/aiVisibility/PromptSelector';
 import type { WizardTopic, WizardPrompt } from '../../../../components/aiVisibility/wizardTypes';
 import { useAiVisConfig, useSaveAiVisConfig, useStartAiVisScan, useGeneratePrompts } from '../../../../services/aiVisibility';
-import { AI_VIS_PROMPT_LIMIT, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
 
 const FONT = 'var(--font-family-primary)';
 

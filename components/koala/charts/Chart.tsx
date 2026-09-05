@@ -168,8 +168,7 @@ export function Chart({
     );
   }
 
-  const hasData =
-    (normalizedData.labels?.length ?? 0) > 0
+  const hasData = (normalizedData.labels?.length ?? 0) > 0
     || (normalizedData.heatmap?.length ?? 0) > 0;
   if (!hasData) {
     return <EmptyState description={emptyDescription ?? 'No history'} />;

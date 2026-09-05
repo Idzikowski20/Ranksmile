@@ -51,7 +51,7 @@ export async function fetchSerperUrls(opts: {
       return { urls, paaQuestions };
     } catch (err: unknown) {
       lastErr = err;
-      await new Promise((r) => setTimeout(r, 400 * 2 ** attempt));
+      await new Promise<void>((resolve) => { setTimeout(resolve, 400 * 2 ** attempt); });
     }
   }
   console.warn('[fetchSerperUrls] failed after retries:', lastErr);

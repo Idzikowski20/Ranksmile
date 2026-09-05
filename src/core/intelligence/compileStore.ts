@@ -1,8 +1,7 @@
 import type { CanonicalContentModel } from '@/src/core/ccm/types/ccm';
 import type { ActionGraph } from '@/src/core/ccm/types/actionGraph';
 import { parseCcm, serializeCcm } from '@/src/core/ccm/serialize';
-import type { CompileEvent } from '@/src/core/intelligence/consumerContext';
-import type { ConsumerContext, ConsumerResult, ContentConsumer } from '@/src/core/intelligence/consumerContext';
+import type { CompileEvent, ConsumerContext, ConsumerResult, ContentConsumer } from '@/src/core/intelligence/consumerContext';
 
 export type HistoryAppendAck = {
   readonly articleId: string;

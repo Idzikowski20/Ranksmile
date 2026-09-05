@@ -278,7 +278,7 @@ export function AIVoiceButton({
       ) : (
         <MicIcon size={16} />
       )}
-      <style>{`@keyframes ranksmile-voice-spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{'@keyframes ranksmile-voice-spin { to { transform: rotate(360deg); } }'}</style>
     </button>
   );
 }
@@ -409,11 +409,9 @@ export function AIVoicePanel({
         >
           {!supported
             ? 'Voice input not supported in this browser'
-            : error
-              ? error
-              : listening
+            : error || (listening
                 ? 'Listening...'
-                : 'Click to speak'}
+                : 'Click to speak')}
         </p>
       </div>
     </div>

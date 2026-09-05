@@ -241,7 +241,7 @@ export async function llmGateway(req: LlmGatewayRequest): Promise<LlmGatewayResp
         return { text, provider, model, estimatedCost, actualCost, attempts };
       } catch (err: unknown) {
         lastErr = err;
-        await new Promise((r) => setTimeout(r, 200 * 2 ** i));
+        await new Promise<void>((resolve) => { setTimeout(resolve, 200 * 2 ** i); });
       }
     }
   }

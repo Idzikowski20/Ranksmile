@@ -26,8 +26,8 @@ export interface ArticleContext {
   articleId: number;
   keyword: string;
   language?: string;
-  scoreData: ScoreData | null;     // null when the article has no score_data yet — no fabricated empty
-  breakdown: null;                 // wired in a later sub-project if needed; kept null-typed in B
+  scoreData: ScoreData | null; // null when the article has no score_data yet — no fabricated empty
+  breakdown: null; // wired in a later sub-project if needed; kept null-typed in B
   coverage: CoverageSnapshot | null;
   paa: string[];
   terms: ArticleTermRow[];
@@ -68,7 +68,7 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
   const terms = await readArticleTerms(articleId);
 
   const [compRows] = (await db.query(
-    `SELECT domain, url, title, headings_json, terms_json FROM article_competitors WHERE article_id = ?`,
+    'SELECT domain, url, title, headings_json, terms_json FROM article_competitors WHERE article_id = ?',
     { replacements: [articleId] },
   )) as [Array<Record<string, unknown>>, unknown];
   const competitors: CompetitorContext[] = (compRows ?? []).map((c) => {

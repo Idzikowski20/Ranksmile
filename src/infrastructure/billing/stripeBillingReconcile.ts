@@ -115,7 +115,7 @@ export async function reconcileStripeBilling(opts?: {
       if (!orgId) continue;
 
       const [rows] = await db.query(
-        `SELECT stripe_subscription_id FROM organizations WHERE id = ? LIMIT 1`,
+        'SELECT stripe_subscription_id FROM organizations WHERE id = ? LIMIT 1',
         { replacements: [orgId] },
       );
       const current = (rows as Array<{ stripe_subscription_id: string | null }>)[0]?.stripe_subscription_id;

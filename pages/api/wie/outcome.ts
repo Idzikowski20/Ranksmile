@@ -1,8 +1,6 @@
 // GET/POST /api/wie/outcome — Performance Loop (metrics → pattern effectiveness)
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import {
   applyOutcomeLearning,
@@ -10,6 +8,8 @@ import {
   readWieLastRun,
   type OutcomeMetrics,
 } from '@/src/infrastructure/wie/outcomeLearning';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
 
 function parseMetrics(raw: unknown): OutcomeMetrics | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;

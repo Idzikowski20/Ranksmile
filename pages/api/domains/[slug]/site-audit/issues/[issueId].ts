@@ -1,7 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../../../utils/verifyDomainOwnership';
 import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
 import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import { buildIssueDetail } from '@/src/infrastructure/siteAudit/buildIssueDetail';
@@ -9,6 +6,9 @@ import { loadSiteAuditContext } from '@/src/infrastructure/siteAudit/issues';
 import type { AuditRow } from '@/src/infrastructure/siteAudit/issues';
 import type { SiteAuditIssueDetailPayload } from '@/src/infrastructure/siteAudit/types';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { verifyDomainOwnershipBySlug } from '../../../../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../../../../utils/getUser';
+import verifyUser from '../../../../../../utils/verifyUser';
 
 async function handler(
   req: NextApiRequest,
@@ -46,7 +46,7 @@ async function handler(
   const domain = meta?.domain ?? slug;
 
   const job = await queryOne<{ updated_at: string | null }>(
-    `SELECT updated_at FROM analysis_jobs WHERE id = ? LIMIT 1`,
+    'SELECT updated_at FROM analysis_jobs WHERE id = ? LIMIT 1',
     [`dsetup_${domainId}`],
   );
 

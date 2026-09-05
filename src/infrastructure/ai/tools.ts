@@ -112,7 +112,7 @@ export function buildTools(ctx: ToolCtx) {
           sid,
           tag: node?.tagName || node?.name || '?',
           text: el.text().trim(),
-          html: el.html() || '',          // inner HTML (for op:'replace')
+          html: el.html() || '', // inner HTML (for op:'replace')
           outerHtml: ctx.$.html(el) || '', // whole block incl. its own tag
         };
       },
@@ -150,7 +150,8 @@ export function buildTools(ctx: ToolCtx) {
 
     list_missing_terms: tool({
       description: 'List NLP terms the article under-uses (current count below the minimum), biggest gap first.',
-      inputSchema: z.object({ limit: z.number().int().positive().max(50).optional() }),
+      inputSchema: z.object({ limit: z.number().int().positive().max(50)
+.optional() }),
       execute: async ({ limit }) => {
         const text = workingText(ctx.$);
         const gaps = (ctx.scoreData?.terms || [])
@@ -219,7 +220,7 @@ export function buildTools(ctx: ToolCtx) {
       description: 'AI-search visibility: how likely AI assistants cite this article for the keyword, plus extractability. Higher is better.',
       inputSchema: z.object({}),
       execute: async () => {
-        if (ctx.cache.aiSearch) return ctx.cache.aiSearch;            // per-run cache
+        if (ctx.cache.aiSearch) return ctx.cache.aiSearch; // per-run cache
         if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable' };
         // Until edited, report the persisted AI-search number the UI shows (matches the panel);
         // re-run the live sidecar check only after the article changed.
@@ -273,7 +274,7 @@ export function buildTools(ctx: ToolCtx) {
       description: 'Scan the article for plagiarism against the web; returns uniqueness %, the total number of flagged passages, and a few examples.',
       inputSchema: z.object({}),
       execute: async () => {
-        if (ctx.cache.plagiarism) return ctx.cache.plagiarism;        // per-run cache
+        if (ctx.cache.plagiarism) return ctx.cache.plagiarism; // per-run cache
         if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable' };
         try {
           const m = await getSeoMeta(ctx);
@@ -284,7 +285,7 @@ export function buildTools(ctx: ToolCtx) {
           }, SIDECAR_TIMEOUT);
           const out = {
             uniqueness: d.uniqueness ?? null,
-            matched: d.matched ?? 0,        // TOTAL flagged passages (model can say "37 found, showing 3")
+            matched: d.matched ?? 0, // TOTAL flagged passages (model can say "37 found, showing 3")
             checked: d.checked ?? 0,
             sample_matches: (d.matches || []).slice(0, 3).map((x) => ({ text: x.text, domain: x.domain, url: x.url })),
           };
@@ -364,7 +365,7 @@ export function buildTools(ctx: ToolCtx) {
           const applied = await callSidecar<ApplyReadabilityResponse>('/apply-ai-readability', { content: current, suggestions, keyword: kw }, ACTION_TIMEOUT);
           const newHtml = (applied.content || '').trim();
           if (!newHtml) return { ok: false, summary: 'readability rewrite returned empty' };
-          const wd = makeWorkingDoc(newHtml);    // re-annotates sids; flows into finalHtml diff
+          const wd = makeWorkingDoc(newHtml); // re-annotates sids; flows into finalHtml diff
           ctx.$ = wd.$;
           ctx.htmlDirty = true;
           ctx.writeCount += 1;
@@ -438,7 +439,8 @@ export function buildTools(ctx: ToolCtx) {
         html: z.string(),
         position: z.enum(['start', 'end', 'after_sid', 'before_sid']),
         sid: z.number().int().optional(),
-        level: z.number().int().min(2).max(4).optional(),
+        level: z.number().int().min(2).max(4)
+.optional(),
       }),
       execute: async ({ heading, html, position, sid, level }) => {
         if (ctx.writeCount >= MAX_WRITES) return { ok: false, summary: 'edit limit reached for this turn' };

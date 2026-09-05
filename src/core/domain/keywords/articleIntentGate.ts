@@ -17,10 +17,8 @@ export type KeywordArticleIntentInput = {
   outlineTitles?: string[];
 };
 
-const MILITARY_TOKENS =
-  /\b(wojna|wojenny|militarn|armia|nato|rosja|ukrain|bro[nń]|geopolity|konflikt zbrojn|hybrydow[ae])/gi;
-const BUSINESS_TOKENS =
-  /\b(firma|firm|biznes|strategi|szkoleni|resilien|zarz[aą]dz|pracownik|organizacj|leadership|change management)/gi;
+const MILITARY_TOKENS = /\b(wojna|wojenny|militarn|armia|nato|rosja|ukrain|bro[nń]|geopolity|konflikt zbrojn|hybrydow[ae])/gi;
+const BUSINESS_TOKENS = /\b(firma|firm|biznes|strategi|szkoleni|resilien|zarz[aą]dz|pracownik|organizacj|leadership|change management)/gi;
 
 function countMatches(re: RegExp, text: string): number {
   const flags = re.flags.includes('g') ? re.flags : `${re.flags}g`;

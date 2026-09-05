@@ -6,13 +6,13 @@
 //   DELETE /api/articles/[id]/comments?commentId    — remove (root deletes its replies)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes } from 'crypto';
-import db from '../../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { emitCommentChange } from '@/src/infrastructure/http/commentBus';
 import { getCommentAccessKind } from '@/src/infrastructure/identity/commentAccess';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../../database/database';
 
 type Row = {
    id: string; quote: string; body: string; images_json: string; author: string; color: string;
@@ -100,7 +100,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          );
          emitCommentChange(String(id), { type: 'create', commentId, parentId });
          return res.status(200).json({
-            comment: { id: commentId, parentId: parentId || null, quote: q, text, images, author, color, avatar, resolved: false, reactions: {}, createdAt: Date.now(), updatedAt: null },
+            comment: {
+               id: commentId, parentId: parentId || null, quote: q, text, images, author, color, avatar, resolved: false, reactions: {}, createdAt: Date.now(), updatedAt: null,
+            },
          });
       }
 
@@ -108,21 +110,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const { commentId, text, resolved, reaction } = req.body || {};
          if (!commentId) return res.status(400).json({ error: 'commentId is required' });
          if (typeof resolved === 'boolean') {
-            await db.query(`UPDATE article_comments SET resolved = ? WHERE id = ? AND article_id = ?`,
+            await db.query('UPDATE article_comments SET resolved = ? WHERE id = ? AND article_id = ?',
                { replacements: [resolved ? 1 : 0, commentId, id] });
          }
          if (typeof text === 'string') {
-            await db.query(`UPDATE article_comments SET body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND article_id = ?`,
+            await db.query('UPDATE article_comments SET body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND article_id = ?',
                { replacements: [text, commentId, id] });
          }
          // Toggle a reactor for an emoji (read-modify-write on reactions_json).
          if (reaction && reaction.emoji && reaction.author) {
-            const row = await queryOne<{ reactions_json: string | null }>(`SELECT reactions_json FROM article_comments WHERE id = ? AND article_id = ?`, [commentId, id]);
+            const row = await queryOne<{ reactions_json: string | null }>('SELECT reactions_json FROM article_comments WHERE id = ? AND article_id = ?', [commentId, id]);
             const current = parseReactions(row?.reactions_json ?? null);
             const who = new Set(current[reaction.emoji] || []);
             if (who.has(reaction.author)) who.delete(reaction.author); else who.add(reaction.author);
             if (who.size) current[reaction.emoji] = [...who]; else delete current[reaction.emoji];
-            await db.query(`UPDATE article_comments SET reactions_json = ? WHERE id = ? AND article_id = ?`,
+            await db.query('UPDATE article_comments SET reactions_json = ? WHERE id = ? AND article_id = ?',
                { replacements: [JSON.stringify(current), commentId, id] });
          }
          emitCommentChange(String(id), { type: 'update', commentId });
@@ -133,7 +135,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const { commentId } = req.query;
          if (!commentId) return res.status(400).json({ error: 'commentId is required' });
          // Deleting a root removes its whole thread (replies anchored to it).
-         await db.query(`DELETE FROM article_comments WHERE article_id = ? AND (id = ? OR parent_id = ?)`,
+         await db.query('DELETE FROM article_comments WHERE article_id = ? AND (id = ? OR parent_id = ?)',
             { replacements: [id, commentId, commentId] });
          emitCommentChange(String(id), { type: 'delete', commentId });
          return res.status(200).json({ ok: true });

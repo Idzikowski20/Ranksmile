@@ -40,7 +40,16 @@ export { Badge } from './core';
 export type { BadgeProps } from './core/badge/badge';
 export { Flag } from './icons/Flag';
 export type { FlagProps } from './icons/Flag';
-export * from './motion';
+export {
+  fade,
+  slide,
+  dialogMotion,
+  popoverMotion,
+  dropdownMotion,
+  tooltipMotion,
+  toastMotion,
+  pressable,
+} from './motion';
 export {
   Switch,
   Toggle,
@@ -48,7 +57,6 @@ export {
   Tooltip,
   HoverTooltip,
   SlideOverPanel,
-  theme,
   IconDefaultsProvider,
   Container,
   Flex,
@@ -66,8 +74,6 @@ export {
   Pagination,
   getPaginationCaption,
   SegmentedControl,
-  FormField,
-  Form,
   Link,
   Drawer,
   SearchBar,
@@ -94,7 +100,6 @@ export {
 export type { ContainerProps, FlexProps, GridProps, StackProps, TextProps, HeadingProps } from './core';
 export type { SelectOption, SelectSection, SelectOptionOrSection, CompactSelectProps } from './core';
 export type { MenuListProps } from './core';
-export type { KoalaTheme, SentryTheme } from './core/theme';
 export * from '../ranksmile/icons';
 export * from './shell';
 export { Chart, Sparkline } from './charts';

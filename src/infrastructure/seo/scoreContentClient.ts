@@ -10,7 +10,7 @@ export async function scoreContent(
   keyword: string,
   scoreData: ScoreData | Record<string, unknown> | null,
   articleTitle: string,
-  articleMetaDescription: string
+  articleMetaDescription: string,
 ): Promise<ScoreContentResult | null> {
   const base = sidecarUrl();
   const controller = new AbortController();

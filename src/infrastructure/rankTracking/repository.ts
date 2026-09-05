@@ -91,7 +91,7 @@ export async function updateConfig(
   if (patch.serp_depth !== undefined) { fields.push('serp_depth = ?'); vals.push(patch.serp_depth); }
   if (patch.schedule_interval !== undefined) { fields.push('schedule_interval = ?'); vals.push(patch.schedule_interval); }
   if (patch.schedule_every_n_days !== undefined) { fields.push('schedule_every_n_days = ?'); vals.push(patch.schedule_every_n_days); }
-  if (patch.is_active !== undefined) { fields.push(`is_active = ?`); vals.push(patch.is_active); }
+  if (patch.is_active !== undefined) { fields.push('is_active = ?'); vals.push(patch.is_active); }
   if (patch.location_name !== undefined) { fields.push('location_name = ?'); vals.push(patch.location_name); }
   if (!fields.length) return;
   vals.push(configId, domainId);
@@ -129,7 +129,7 @@ export async function countActiveKeywords(configId: number, transaction?: import
     return Number(row?.c ?? 0);
   }
   const row = await queryOne<{ c: number }>(
-    `SELECT COUNT(*) AS c FROM rank_tracking_keywords WHERE config_id = ? AND archived_at IS NULL`,
+    'SELECT COUNT(*) AS c FROM rank_tracking_keywords WHERE config_id = ? AND archived_at IS NULL',
     [configId],
   );
   return Number(row?.c ?? 0);
@@ -140,7 +140,7 @@ export async function addKeywords(configId: number, keywords: string[]): Promise
   await db.transaction(async (transaction) => {
     const activeCount = await countActiveKeywords(configId, transaction);
     const existing = await queryRows<RankTrackingKeywordRow>(
-      `SELECT * FROM rank_tracking_keywords WHERE config_id = ?`,
+      'SELECT * FROM rank_tracking_keywords WHERE config_id = ?',
       [configId],
     );
     // Note: queryRows ignores tx on some paths — re-read inside PG with transaction for norms
@@ -248,12 +248,12 @@ export async function claimRun(configId: number): Promise<RankCheckRunRow | unde
     );
   }
   const pending = await queryOne<RankCheckRunRow>(
-    `SELECT * FROM rank_check_runs WHERE config_id = ? AND status IN ('pending', 'partial', 'running') ORDER BY id ASC LIMIT 1`,
+    'SELECT * FROM rank_check_runs WHERE config_id = ? AND status IN (\'pending\', \'partial\', \'running\') ORDER BY id ASC LIMIT 1',
     [configId],
   );
   if (!pending) return undefined;
   await db.query(
-    `UPDATE rank_check_runs SET status = 'running', started_at = COALESCE(started_at, CURRENT_TIMESTAMP), attempts = attempts + 1 WHERE id = ?`,
+    'UPDATE rank_check_runs SET status = \'running\', started_at = COALESCE(started_at, CURRENT_TIMESTAMP), attempts = attempts + 1 WHERE id = ?',
     { replacements: [pending.id] },
   );
   return { ...pending, status: 'running', attempts: pending.attempts + 1 };
@@ -261,7 +261,7 @@ export async function claimRun(configId: number): Promise<RankCheckRunRow | unde
 
 export async function getActiveRun(configId: number): Promise<RankCheckRunRow | undefined> {
   return queryOne<RankCheckRunRow>(
-    `SELECT * FROM rank_check_runs WHERE config_id = ? AND status IN ('pending', 'running', 'partial') ORDER BY id DESC LIMIT 1`,
+    'SELECT * FROM rank_check_runs WHERE config_id = ? AND status IN (\'pending\', \'running\', \'partial\') ORDER BY id DESC LIMIT 1',
     [configId],
   );
 }
@@ -287,7 +287,7 @@ export async function updateRun(
 export async function reclaimStaleRuns(): Promise<number> {
   const cutoff = new Date(Date.now() - STALE_RUN_SECS * 1000).toISOString();
   const [, meta] = await db.query(
-    `UPDATE rank_check_runs SET status = 'partial' WHERE status = 'running' AND started_at < ?`,
+    'UPDATE rank_check_runs SET status = \'partial\' WHERE status = \'running\' AND started_at < ?',
     { replacements: [cutoff] },
   );
   return typeof meta === 'number' ? meta : (meta as { rowCount?: number })?.rowCount ?? 0;

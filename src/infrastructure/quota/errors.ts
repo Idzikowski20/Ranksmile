@@ -3,7 +3,9 @@ import type { PlanLimitPayload } from '@/src/infrastructure/quota/types';
 
 export class PlanLimitError extends Error {
   readonly code = 'plan_limit' as const;
+
   readonly status = 402;
+
   readonly payload: PlanLimitPayload;
 
   constructor(payload: Omit<PlanLimitPayload, 'error' | 'code' | 'upgradePath'> & { upgradePath?: string }) {
