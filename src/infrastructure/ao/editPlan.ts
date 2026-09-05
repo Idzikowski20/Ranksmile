@@ -309,26 +309,33 @@ export function buildTrimPrompt(opts: {
   ].join('\n');
 }
 
+/** Bundle values come from the SERP and the coverage judge; one line each, bounded, so a
+ * fact cannot break out of its list item into an instruction of its own. */
+const BUNDLE_ITEM_MAX_CHARS = 240;
+function bundleItem(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().slice(0, BUNDLE_ITEM_MAX_CHARS);
+}
+
 function bundleBlock(bundle: SectionBundle): string {
   const lines: string[] = ['SECTION OBJECTIVES — close every item below inside THIS section only:'];
   if (bundle.headingTerm) {
-    lines.push(`HEADING — rewrite the <h2> so it naturally contains "${bundle.headingTerm}" (keep its meaning, no second heading).`);
+    lines.push(`HEADING — rewrite the <h2> so it naturally contains "${bundleItem(bundle.headingTerm)}" (keep its meaning, no second heading).`);
   }
   if (bundle.objectives.length) {
-    lines.push('OBJECTIVES:', ...bundle.objectives.map((o) => `- ${o}`));
+    lines.push('OBJECTIVES:', ...bundle.objectives.map((o) => `- ${bundleItem(o)}`));
   }
   if (bundle.facts.length) {
     lines.push(
       'FACTS — attach each as a subordinate clause to the existing sentence it supports, '
       + 'or as one short sentence right after it. No new headings, no bullet dumps, no FAQ:',
-      ...bundle.facts.map((f) => `- ${f}`),
+      ...bundle.facts.map((f) => `- ${bundleItem(f)}`),
     );
   }
   if (bundle.terms.length) {
     lines.push(
       'TERMS — weave each into an existing sentence or list item; inflect it to fit the grammar '
       + '(a declined form counts). Skip a term only when it truly does not belong here:',
-      ...bundle.terms.map((t) => `- ${t}`),
+      ...bundle.terms.map((t) => `- ${bundleItem(t)}`),
     );
   }
   return lines.join('\n');
