@@ -76,6 +76,9 @@ export async function regradeCoverageSnapshot(opts: {
     .filter((i) => i.type !== 'paa' || isUsefulCitationPrompt(i.label, opts.keyword))
     .map(remapLegacyCitationItem);
   const knowledgeJudge = judgeCoverageItems(opts.plainText, knowledgeItems);
+  // Awaited in the Promise.all below; the noop catch only keeps an intro-judge failure
+  // from leaving this one as an unhandled rejection.
+  knowledgeJudge.catch(() => undefined);
   const intentResult = await analyzeIntroduction(introPlain, opts.keyword, deepseekIntroJudge);
   const serpQuestions = workingSnap.items
     .filter((i) => i.type === 'paa' || i.category === 'knowledge')

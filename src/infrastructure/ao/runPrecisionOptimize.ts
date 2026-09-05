@@ -582,7 +582,8 @@ export async function runPrecisionOptimizeV4(opts: {
     return { candidates, planned };
   };
   const first = buildPlan(opts.html);
-  const targetingStats = first.planned.targeting;
+  // Summed over every pass — the run's numbers, not the first plan's.
+  const targetingStats = { ...first.planned.targeting };
   let { steps } = first.planned;
   trace.push({
     step: 'edit_plan',
@@ -591,7 +592,7 @@ export async function runPrecisionOptimizeV4(opts: {
       steps: steps.length,
       candidates: first.candidates.length,
       strategy: policy.strategy,
-      targeting: targetingStats,
+      targeting: first.planned.targeting,
     },
   });
 
@@ -951,7 +952,13 @@ export async function runPrecisionOptimizeV4(opts: {
       if (opts.signal?.aborted || targetsReached() || stagnation >= STAGNATION_WINDOW) break;
       const again = buildPlan(working.html);
       steps = again.planned.steps.filter((s) => !(s.gapIds?.length && s.gapIds.every((g) => resolvedGapIds.has(g))));
-      trace.push({ step: 'edit_plan', metadata: { pass, steps: steps.length, candidates: again.candidates.length } });
+      targetingStats.skippedNoTarget += again.planned.targeting.skippedNoTarget;
+      targetingStats.usedFallback += again.planned.targeting.usedFallback;
+      targetingStats.assigned += again.planned.targeting.assigned;
+      trace.push({
+        step: 'edit_plan',
+        metadata: { pass, steps: steps.length, candidates: again.candidates.length, targeting: again.planned.targeting },
+      });
       if (!steps.length) break;
     }
     const acceptedBeforePass = accepted;

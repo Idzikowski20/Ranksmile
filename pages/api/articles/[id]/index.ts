@@ -113,7 +113,8 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
   } = req.body;
   // A coverage snapshot Auto-Optimize regraded on the body being saved. Only with the
   // body: a snapshot for text that is not being stored would grade the wrong article.
-  const coverageSnapshotJson = typeof requestedContent === 'string' && parseSnapshot(coverage_snapshot)
+  // Cleared again below when the body is refused.
+  let coverageSnapshotJson = typeof requestedContent === 'string' && parseSnapshot(coverage_snapshot)
     ? JSON.stringify(coverage_snapshot)
     : null;
   // Reassigned below when the body is refused; every later use reads this one. Typed
@@ -177,6 +178,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
       console.warn(`[articles/[id]] refused to overwrite article ${id} with its outline — body kept`);
       content = undefined;
       contentKept = true;
+      coverageSnapshotJson = null;
     }
 
     // Merge ONTO the stored blob, never replace it. The editor loads its score_data

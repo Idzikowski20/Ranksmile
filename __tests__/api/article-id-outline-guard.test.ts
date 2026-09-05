@@ -81,3 +81,19 @@ it('accepts an edited article over a written article', async () => {
   await put({ content: edited });
   expect(savedContent()).toBe(edited);
 });
+
+/** The UPDATE's `ai_info_to_cover` replacement (the slot before the id). */
+const savedSnapshot = () => {
+  const call = mockQuery.mock.calls.find(([sql]) => String(sql).includes('UPDATE articles'));
+  const { replacements } = call?.[1] as { replacements: unknown[] };
+  return replacements[replacements.length - 2];
+};
+
+it('drops the coverage snapshot together with a refused outline body', async () => {
+  mockQueryOne.mockResolvedValue({ content_score: 90, score_data: null, content: ARTICLE });
+  const snapshot = { schemaVersion: 1, items: [], buckets: [], overall: 88 };
+  await put({ content: OUTLINE, coverage_snapshot: snapshot });
+  expect(savedContent()).toBeNull();
+  // The snapshot graded the Auto-Optimized body; the body kept is the older stored one.
+  expect(savedSnapshot()).toBeNull();
+});

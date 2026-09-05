@@ -310,3 +310,31 @@ describe('engine — A/B variants are opt-in', () => {
     expect(calls).toHaveLength(r.bodyAccepted + r.rejected);
   });
 });
+
+describe('bundle overflow — what the model never saw is not resolved', () => {
+  const { splitSections } = jest.requireActual<typeof import('@/src/infrastructure/articles/articleSections')>(
+    '@/src/infrastructure/articles/articleSections',
+  );
+  const sections: Section[] = splitSections(html);
+  const ids = sections.map((s) => s.id);
+  const critical = buildCriticalContentMap({ html, profile, sectionIds: ids });
+  const terms = Array.from({ length: 9 }, (_, i) => makeCandidate({
+    id: `seo-t${i}`,
+    gapId: `seo:term:t${i}`,
+    source: 'seo_term',
+    targetSectionId: ids[0],
+    phrase: `termin${i}`,
+    targetGap: `Naturally include the term "termin${i}" once in an existing paragraph.`,
+    priority: 'recommended',
+    intentFit: 0.6,
+    suggestedAction: 'insert_sentence',
+  }));
+  const planned = planPrecisionStepsV4({ candidates: terms, profile, critical, html, maxSteps: 6 });
+  const bundle = planned.steps.find((s) => s.bundle)!;
+
+  it('records gapIds only for the items that made it into the bundle', () => {
+    expect(bundle.bundle!.terms).toHaveLength(6);
+    expect(bundle.gapIds).toEqual(bundle.bundle!.terms.map((t) => `seo:term:${t.replace('termin', 't')}`));
+    expect(bundle.gapIds).not.toContain('seo:term:t8');
+  });
+});

@@ -215,18 +215,30 @@ export function buildSectionBundleSteps(input: {
 
     const bundle: SectionBundle = { terms: [], facts: [], objectives: [] };
     const count = () => bundle.terms.length + bundle.facts.length + bundle.objectives.length + (bundle.headingTerm ? 1 : 0);
+    // Only the gaps the model is actually shown get resolved on success; the overflow
+    // stays open so the next pass can pick it up.
+    const gapIds: string[] = [];
     for (const c of group) {
       if (count() >= itemCap) break;
+      let taken = false;
       if (c.suggestedAction === 'enrich_heading' && !bundle.headingTerm) {
         bundle.headingTerm = c.phrase ?? c.targetGap;
+        taken = true;
       } else if (c.source === 'seo_term' || c.source === 'entity') {
-        // The overflow still rides in every step's shared weave list.
-        if (bundle.terms.length < BUNDLE_MAX_TERMS) bundle.terms.push(c.phrase ?? c.targetGap);
+        if (bundle.terms.length < BUNDLE_MAX_TERMS) {
+          bundle.terms.push(c.phrase ?? c.targetGap);
+          taken = true;
+        }
       } else if (c.source === 'ai_coverage' || c.source === 'paa' || c.source === 'visibility') {
-        if (bundle.facts.length < BUNDLE_MAX_FACTS) bundle.facts.push(c.targetGap);
+        if (bundle.facts.length < BUNDLE_MAX_FACTS) {
+          bundle.facts.push(c.targetGap);
+          taken = true;
+        }
       } else if (bundle.objectives.length < BUNDLE_MAX_OBJECTIVES) {
         bundle.objectives.push(c.targetGap);
+        taken = true;
       }
+      if (taken && c.gapId) gapIds.push(c.gapId);
     }
 
     const action: PrecisionAction = group.some((c) => c.suggestedAction === 'rewrite_section')
@@ -256,7 +268,7 @@ export function buildSectionBundleSteps(input: {
       id: `bundle-${sec.id}`,
       sectionId: sec.id,
       candidateId: group[0].id,
-      gapIds: group.map((c) => c.gapId),
+      gapIds,
       bundle,
       sectionHeading: sec.headingText,
       articleWords: input.articleWords,

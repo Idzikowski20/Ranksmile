@@ -73,6 +73,11 @@ describe('a second pass closes what the first left open', () => {
     const present = TERMS.filter((t) => r.html.includes(t)).length;
     expect(present).toBeGreaterThanOrEqual(3);
     expect(r.trace.events.some((e) => e.step === 'edit_plan' && e.metadata?.pass === 2)).toBe(true);
+    // The run's targeting numbers cover every pass, not just the first plan.
+    const plans = r.trace.events.filter((e) => e.step === 'edit_plan');
+    const assigned = plans.reduce((n, e) => n + Number((e.metadata?.targeting as { assigned?: number } | undefined)?.assigned ?? 0), 0);
+    expect(r.targeting.assigned).toBe(assigned);
+    expect(plans.length).toBeGreaterThan(1);
   });
 
   it('stops after one pass when asked to', async () => {
