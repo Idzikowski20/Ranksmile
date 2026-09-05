@@ -313,7 +313,9 @@ export function buildTrimPrompt(opts: {
  * fact cannot break out of its list item into an instruction of its own. */
 const BUNDLE_ITEM_MAX_CHARS = 240;
 function bundleItem(value: string): string {
-  return value.replace(/\s+/g, ' ').trim().slice(0, BUNDLE_ITEM_MAX_CHARS);
+  // Control characters (C0 + DEL) become spaces like any other whitespace would.
+  // eslint-disable-next-line no-control-regex
+  return value.replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, BUNDLE_ITEM_MAX_CHARS);
 }
 
 function bundleBlock(bundle: SectionBundle): string {

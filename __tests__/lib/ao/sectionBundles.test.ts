@@ -163,6 +163,13 @@ describe('bundle prompt — facts as clauses, terms inflected, heading enriched'
     expect(p).toContain('- a b');
   });
 
+  it('drops control characters from bundle items', () => {
+    const hostile = { ...step, bundle: { ...step.bundle!, terms: ['a\x00b\x1fc\x7fd'] } };
+    const p = buildPrecisionStepPrompt(hostile, '<h2>x</h2><p>y</p>');
+    expect(p).toContain('- a b c d');
+    expect(p).not.toMatch(/[\x00-\x08\x0e-\x1f\x7f]/);
+  });
+
   it('asks for facts as subordinate clauses in existing sentences, never a FAQ', () => {
     const p = buildPrecisionStepPrompt(step, '<h2>x</h2><p>y</p>');
     expect(p).toMatch(/FACTS[\s\S]*clause/i);
