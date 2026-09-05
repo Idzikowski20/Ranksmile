@@ -122,8 +122,7 @@ export function runBenchmark(
   }
 
   const completeMatches = matches.filter((m) => m.missingRoles.length === 0).length;
-  const base =
-    matches.length === 0
+  const base = matches.length === 0
       ? gaps.length === 0
         ? 1
         : 0
@@ -143,8 +142,7 @@ export const benchmarkConsumer: ContentConsumer<BenchmarkReport> = {
   id: 'benchmark',
   accept(context: ConsumerContext): ConsumerResult<BenchmarkReport> {
     const peer = context.peerResults?.benchmark;
-    const competitor =
-      peer && typeof peer === 'object' && peer !== null && 'knowledge' in peer
+    const competitor = peer && typeof peer === 'object' && peer !== null && 'knowledge' in peer
         ? (peer as CanonicalContentModel)
         : undefined;
     const result = runBenchmark(context.model, {

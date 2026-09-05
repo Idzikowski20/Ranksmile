@@ -164,7 +164,7 @@ export function RadialComparisonWidget({
             {deltaLabel ? (
               <TrendDeltaBadge
                 delta={deltaLabel}
-                positive={deltaPositive ?? (deltaLabel.startsWith('-') ? false : true)}
+                positive={deltaPositive ?? (!deltaLabel.startsWith('-'))}
                 variant="outline"
                 size="sm"
               />

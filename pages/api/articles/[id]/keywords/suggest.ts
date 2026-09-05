@@ -1,13 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../../database/database';
-import verifyUser from '../../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../../../utils/adwords';
 import { computeRelevanceScore } from '@/src/core/domain/keywords/enrichment';
-import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../../../utils/getUser';
+import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../../../utils/adwords';
+import verifyUser from '../../../../../utils/verifyUser';
+import db from '../../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -26,7 +26,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { targetKeyword, country = 'US' } = req.body;
 
   // Get article + domain info
-  const art = await queryOne<{ target_keyword: string | null; title: string | null; domain_id: number | null; domain: string | null; slug: string | null; search_console: string | null }>(
+  type ArtRow = { target_keyword: string | null; title: string | null; domain_id: number | null; domain: string | null; slug: string | null; search_console: string | null };
+  const art = await queryOne<ArtRow>(
     `SELECT a.target_keyword, a.title, a.domain_id, d.domain, d.slug, d.search_console
      FROM articles a LEFT JOIN domain d ON d."ID" = a.domain_id WHERE a.id = ?`,
     [id],
@@ -45,7 +46,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // Get existing keywords to deduplicate
   const existing = await queryRows<{ keyword: string | null }>(
-    `SELECT keyword FROM article_keywords WHERE article_id = ?`,
+    'SELECT keyword FROM article_keywords WHERE article_id = ?',
     [id],
   );
   const existingSet = new Set(existing.map((r) => r.keyword?.toLowerCase()));

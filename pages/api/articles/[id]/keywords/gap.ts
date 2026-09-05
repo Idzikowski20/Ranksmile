@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../../database/database';
-import verifyUser from '../../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { queryRows, queryOne } from '@/src/infrastructure/db/query';
 import type { ArticleRow } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../../../utils/getUser';
+import verifyUser from '../../../../../utils/verifyUser';
+import db from '../../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -25,12 +25,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // Get article keywords + competitor outlines cache
   const art = await queryOne<Pick<ArticleRow, 'competitor_outlines_cache'>>(
-    `SELECT competitor_outlines_cache FROM articles WHERE id = ?`,
+    'SELECT competitor_outlines_cache FROM articles WHERE id = ?',
     [id],
   );
 
   const keywords = await queryRows<{ keyword: string }>(
-    `SELECT keyword FROM article_keywords WHERE article_id = ?`,
+    'SELECT keyword FROM article_keywords WHERE article_id = ?',
     [id],
   );
   const ourKeywords = new Set(keywords.map((r) => r.keyword.toLowerCase()));

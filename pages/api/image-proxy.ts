@@ -19,7 +19,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    let decoded: string;
    try {
       decoded = decodeURIComponent(url);
-      new URL(decoded); // validate
+      void new URL(decoded); // validate
    } catch {
       return res.status(400).json({ error: 'Invalid URL' });
    }
@@ -28,7 +28,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const response = await ssrfSafeFetch(decoded, {
          headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9',
          },
       });

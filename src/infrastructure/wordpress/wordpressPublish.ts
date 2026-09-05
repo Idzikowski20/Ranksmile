@@ -1,10 +1,10 @@
 // WordPress REST API client for publishing articles
 
 export interface WPPublishOptions {
-   wpUrl: string;          // e.g. https://myblog.com
-   apiKey: string;         // WordPress Application Password (base64: user:password)
+   wpUrl: string; // e.g. https://myblog.com
+   apiKey: string; // WordPress Application Password (base64: user:password)
    title: string;
-   content: string;        // HTML
+   content: string; // HTML
    slug?: string;
    excerpt?: string;
    status?: 'draft' | 'publish' | 'pending';

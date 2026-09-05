@@ -19,10 +19,10 @@ describe('getOptimizeRecommendations', () => {
     const current: SnapMap = new Map([
       ['/page-2-keyword/', { clicks: 40, impressions: 5000, position: 18 }], // prime opportunity
       ['/already-ranking/', { clicks: 900, impressions: 6000, position: 2 }], // little upside
-      ['/no-visibility/', { clicks: 0, impressions: 0, position: 40 }],       // filtered out
+      ['/no-visibility/', { clicks: 0, impressions: 0, position: 40 }], // filtered out
     ]);
     const previous: SnapMap = new Map([
-      ['/page-2-keyword/', { clicks: 60, impressions: 5200, position: 11 }],  // recently slipped
+      ['/page-2-keyword/', { clicks: 60, impressions: 5200, position: 11 }], // recently slipped
       ['/already-ranking/', { clicks: 950, impressions: 6100, position: 2 }],
     ]);
 

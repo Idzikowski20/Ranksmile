@@ -1,12 +1,12 @@
 // GET  /api/wordpress/connections?workspaceId=  → list WP connections for a workspace.
 // DELETE /api/wordpress/connections  { id, workspaceId }  → disconnect (also tells the plugin).
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUser } from '../../../utils/getUser';
 import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 import { listConnectionsForWorkspace, deleteConnection } from '@/src/infrastructure/wordpress/wpConnection';
 import { wpRestFetch } from '@/src/infrastructure/wordpress/wpRest';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUser } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

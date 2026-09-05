@@ -30,11 +30,11 @@ export type DfsKeyword = {
    keyword: string,
    search_volume: number | null,
    cpc: number | null,
-   competition: number | null,                  // 0–1 (Google Ads scale)
+   competition: number | null, // 0–1 (Google Ads scale)
    competition_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN' | null,
-   keyword_difficulty: number | null,           // 0–100
-   search_intent: string | null,                // informational | commercial | transactional | navigational
-   position: number | null,                      // only set for ranked-keyword results
+   keyword_difficulty: number | null, // 0–100
+   search_intent: string | null, // informational | commercial | transactional | navigational
+   position: number | null, // only set for ranked-keyword results
 };
 
 export const isDataForSeoConfigured = (): boolean => (

@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../database/database';
 import Keyword from '../../database/models/keyword';
 import parseKeywords from '../../utils/parseKeywords';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type KeywordGetResponse = {
    keyword?: KeywordType | null

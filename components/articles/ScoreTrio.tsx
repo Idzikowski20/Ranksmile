@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import ScoreGauge from './ScoreGauge';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import { ARTICLE_GREEN_AT } from '@/src/infrastructure/config/scoreColor';
+import ScoreGauge from './ScoreGauge';
 
 const F = 'var(--font-family-primary)';
 

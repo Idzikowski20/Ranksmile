@@ -42,8 +42,7 @@ export function buildNarrativePlan(opts: {
   synthesis?: CompetitorSynthesis | null;
 }): NarrativePlan {
   const openingDec = opts.policy?.decisions.find((d) => d.id === 'opening');
-  const openingMove: NarrativePlan['openingMove'] =
-    openingDec?.value === 'definition_first'
+  const openingMove: NarrativePlan['openingMove'] = openingDec?.value === 'definition_first'
     || (!openingDec && opts.synthesis?.opening_style?.definition_first && !opts.synthesis.opening_style.problem_first)
       ? 'definition_first'
       : 'problem_first';
@@ -82,8 +81,7 @@ export function buildNarrativePlan(opts: {
   }
 
   const emotion = opts.readerBrief?.emotion || 'medium';
-  const ctaPlacement: NarrativePlan['ctaPlacement'] =
-    emotion === 'high' ? 'last_10_percent' : emotion === 'low' ? 'none' : 'soft_inline';
+  const ctaPlacement: NarrativePlan['ctaPlacement'] = emotion === 'high' ? 'last_10_percent' : emotion === 'low' ? 'none' : 'soft_inline';
   if (ctaPlacement !== 'none') {
     push({
       role: 'cta',

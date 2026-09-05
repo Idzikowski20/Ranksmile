@@ -86,8 +86,7 @@ export function mapStripeInvoice(
   const periodStartUnix = firstPeriod?.start ?? inv.period_start ?? null;
   const periodEndUnix = firstPeriod?.end ?? inv.period_end ?? null;
 
-  const paymentMethodLabel =
-    formatPaymentMethodLabel(inv.default_payment_method) ?? opts?.fallbackPaymentMethodLabel ?? null;
+  const paymentMethodLabel = formatPaymentMethodLabel(inv.default_payment_method) ?? opts?.fallbackPaymentMethodLabel ?? null;
 
   return {
     id: inv.id,

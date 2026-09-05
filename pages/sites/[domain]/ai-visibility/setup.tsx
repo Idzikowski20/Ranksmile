@@ -2,6 +2,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AI_VIS_PROMPT_LIMIT, brandFromDomain } from '@/src/core/domain/aiVisibility/config';
 import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
 import { Modal, Button, Input } from '../../../../components/koala/core';
@@ -10,7 +11,6 @@ import { slugToDomain } from '../../../../utils/slugToDomain';
 import PromptSelector from '../../../../components/aiVisibility/PromptSelector';
 import type { WizardTopic, WizardPrompt } from '../../../../components/aiVisibility/wizardTypes';
 import { useSaveAiVisConfig, useStartAiVisScan, useGeneratePrompts, useAiVisConfig } from '../../../../services/aiVisibility';
-import { AI_VIS_PROMPT_LIMIT, brandFromDomain } from '@/src/core/domain/aiVisibility/config';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -70,7 +70,7 @@ const AiVisibilitySetup: NextPage = () => {
       (async () => {
          let titles: string[] = [];
          try {
-            let r = await fetch(`/api/domains/${slug}/topics`);
+            const r = await fetch(`/api/domains/${slug}/topics`);
             let j = await r.json();
             if (j.needsLocalization) {
                const reg = await fetch(`/api/domains/${slug}/topics/regenerate`, { method: 'POST' });

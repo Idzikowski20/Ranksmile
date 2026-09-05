@@ -29,8 +29,7 @@ type Props = {
 
 /** "Resets at 14:30" — local time the shared org pool refills. */
 const resetLabel = (resetsAt: number) => {
-  try { return new Date(resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-  catch { return ''; }
+  try { return new Date(resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return ''; }
 };
 
 const CARD_W = 252;

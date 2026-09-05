@@ -1,6 +1,6 @@
+import { getPreviousCrawlMetrics } from '@/src/infrastructure/siteAudit/crawlSnapshot';
 import type { IPreviousCrawlRepository } from '../../core/domain/siteAudit/previousCrawlRepository';
 import type { PreviousCrawlMetrics } from '../../core/domain/siteAudit/crawlDeltas';
-import { getPreviousCrawlMetrics } from '@/src/infrastructure/siteAudit/crawlSnapshot';
 
 /**
  * DB-backed IPreviousCrawlRepository. Maps the (wider) crawl-snapshot metrics

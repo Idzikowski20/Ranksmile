@@ -39,8 +39,13 @@ export const SlashCommand = Extension.create<SlashOptions>({
             const left = Math.min(rect.left, window.innerWidth - W - 12);
             // Flip above the caret if there isn't room below.
             const below = window.innerHeight - rect.bottom;
-            if (below < 380) popup.style.top = `${Math.max(8, rect.top - 8)}px`, popup.style.transform = 'translateY(-100%)';
-            else popup.style.top = `${rect.bottom + 6}px`, popup.style.transform = 'none';
+            if (below < 380) {
+              popup.style.top = `${Math.max(8, rect.top - 8)}px`;
+              popup.style.transform = 'translateY(-100%)';
+            } else {
+              popup.style.top = `${rect.bottom + 6}px`;
+              popup.style.transform = 'none';
+            }
             popup.style.left = `${Math.max(8, left)}px`;
           };
 

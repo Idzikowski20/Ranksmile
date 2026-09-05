@@ -2,7 +2,6 @@
 // Intelligent SEO content assistant — analyzes or edits article content via DeepSeek API.
 // Supports: selection mode (bubble menu), article mode (top toolbar), slash commands, and scoring.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
 import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 import { countOccurrences } from '@/src/infrastructure/articles/contentScore';
 import { SIGNAL_TACTICS } from '@/src/core/domain/seo/signalTactics';
@@ -10,12 +9,13 @@ import { ANTI_HALLUCINATION_RULES } from '@/src/core/domain/seo/antiHallucinatio
 import { scoreContent, type RankingSignal } from '@/src/infrastructure/seo/scoreContentClient';
 import { extractJsonObject, isRanksmileReplyShape, stripCodeFence } from '@/src/infrastructure/ai/extractJson';
 import { stripEmoji } from '@/src/infrastructure/ai/text';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '@/src/infrastructure/ai/aiTokenUsage';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
 
 export const config = { api: { responseLimit: '10mb' } };
 
@@ -61,9 +61,9 @@ function detectRanksmileAction(prompt: string, mode: 'selection' | 'article'): R
 function shouldUseScoring(prompt: string, action: RanksmileAction): boolean {
   const p = prompt.toLowerCase();
   return (
-    action === 'optimize_selection' ||
-    action === 'optimize_article' ||
-    /\b(score|seo|optymalizuj|optimize|ranking|x-algorithm|content score|oceń seo|sprawdź seo)\b/.test(p)
+    action === 'optimize_selection'
+    || action === 'optimize_article'
+    || /\b(score|seo|optymalizuj|optimize|ranking|x-algorithm|content score|oceń seo|sprawdź seo)\b/.test(p)
   );
 }
 
@@ -105,8 +105,8 @@ function buildScoreContext(scoreData: ScoreData, plainText: string, htmlContent:
   }
 
   const totalTerms = scoreData.terms.length;
-  const totalScore = Math.round(wordScore + headingScore + paraScore +
-    (scoreData.terms.reduce((sum, t) => {
+  const totalScore = Math.round(wordScore + headingScore + paraScore
+    + (scoreData.terms.reduce((sum, t) => {
       const actual = countOccurrences(plainText, t.term, t.term_words_regexps);
       return sum + Math.min(actual / Math.max(t.target_count, 1), 1);
     }, 0) / totalTerms) * termsWeight);
@@ -183,7 +183,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           keyword as string,
           scoreData || {},
           articleTitle || '',
-          articleMetaDescription || ''
+          articleMetaDescription || '',
         );
 
         if (scoreResult?.ranking_signals?.signals?.length) {
@@ -197,7 +197,7 @@ RANKING SCORE: ${scoreResult.ranking_score}/100
 WEAKEST SIGNALS:
 ${weakSignals.map((s: ScoredRankingSignal, i: number) =>
   `${i + 1}. ${s.name}: ${s.score}/100 (${s.verdict}) — ${s.recommendation || 'needs improvement'}
-   HOW TO FIX: ${SIGNAL_TACTICS[s.name] || 'Improve this signal.'}`
+   HOW TO FIX: ${SIGNAL_TACTICS[s.name] || 'Improve this signal.'}`,
 ).join('\n\n')}
 
 ${action === 'analysis_only'
@@ -214,7 +214,7 @@ ${action === 'analysis_only'
 
     let extraContext = '';
     if (scoreData?.terms?.length) {
-      extraContext += '\n\n' + buildScoreContext(scoreData, plainText, leanContent);
+      extraContext += `\n\n${buildScoreContext(scoreData, plainText, leanContent)}`;
     }
     if (internalArticles.length > 0) {
       extraContext += '\n\nINTERNAL LINKING TARGETS (articles you can link to):';

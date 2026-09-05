@@ -10,8 +10,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const body =
-    req.body && typeof req.body === 'object'
+  const body = req.body && typeof req.body === 'object'
       ? (req.body as Record<string, unknown>)
       : {};
   const qLimit = typeof req.query.limit === 'string' ? parseInt(req.query.limit, 10) : NaN;

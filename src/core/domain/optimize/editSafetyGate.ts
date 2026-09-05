@@ -73,8 +73,8 @@ function lcsLength(a: string, b: string): number {
   // Two-row DP
   let prev = new Array<number>(n + 1).fill(0);
   let curr = new Array<number>(n + 1).fill(0);
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
+  for (let i = 1; i <= m; i += 1) {
+    for (let j = 1; j <= n; j += 1) {
       if (A[i - 1] === B[j - 1]) curr[j] = prev[j - 1] + 1;
       else curr[j] = Math.max(prev[j], curr[j - 1]);
     }
@@ -99,7 +99,7 @@ function modifiedParagraphCount(beforeHtml: string, afterHtml: string): number {
   const after = extractParagraphs(afterHtml);
   const max = Math.max(before.length, after.length);
   let mod = 0;
-  for (let i = 0; i < max; i++) {
+  for (let i = 0; i < max; i += 1) {
     if ((before[i] || '') !== (after[i] || '')) mod += 1;
   }
   return mod;
@@ -180,7 +180,8 @@ export function runEditSafetyGate(input: SafetyGateInput): SafetyGateResult {
 
   // Preservation: if almost everything changed but word count similar — already CHANGE_RATIO.
   // Extra: after must retain a chunk of before when before was non-trivial.
-  if (beforeWords >= 40 && ratio > 0.85) {
+  // A budget that permits a full rewrite (ratio 1) has nothing to preserve.
+  if (beforeWords >= 40 && ratio > Math.max(0.85, budget.maxChangeRatio)) {
     return fail('PRESERVATION', 'section rewritten');
   }
 

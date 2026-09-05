@@ -1,19 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '@/src/infrastructure/ai/aiTokenUsage';
 import { splitSections, normalizeHtmlForDiff } from '@/src/infrastructure/articles/articleSections';
 import { buildArticleSectionDiffEvents } from '@/src/infrastructure/ao/optimizeSectionEvents';
+import { logRun } from '@/src/infrastructure/ao/optimizeLog';
+import { plannedHeadingsFromScoreData, missingPlannedHeadings } from '@/src/core/domain/optimize/plannedSections';
+import { resolveLiveAiScore } from '@/src/core/domain/optimize/liveAiScore';
 import { buildWholeArticlePrompt } from '@/src/infrastructure/ao/optimizeWholeArticle';
 import {
-   stripFences,
-   isUsableEdit,
-   isUsableWholeArticleEdit,
-   shouldChargeCredit,
-   resolveOptimizeDoneOutcome,
-   computeTermUsageGaps,
+  stripFences,
+  isUsableEdit,
+  isUsableWholeArticleEdit,
+  shouldChargeCredit,
+  resolveOptimizeDoneOutcome,
+  computeTermUsageGaps,
 } from '@/src/infrastructure/ao/optimizeSectionEdit';
 import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
@@ -23,11 +24,12 @@ import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '@/src/infrastructur
 import { filterUsefulNlpTerms } from '@/src/core/domain/competitors/termCalibration';
 import { termsForOptimize } from '@/src/infrastructure/articles/mergeArticleTerms';
 import { liveCoverageItems } from '@/src/infrastructure/coverage/liveCoverage';
+import { computeCoverageScores, type CoverageSnapshot } from '@/src/core/domain/coverage/aiCoverage';
 import {
-   collectUncoveredAiQuestions,
-   buildFaqSectionPrompt,
-   selectFaqQuestions,
-   validateFaqHtmlStructure,
+  collectUncoveredAiQuestions,
+  buildFaqSectionPrompt,
+  selectFaqQuestions,
+  validateFaqHtmlStructure,
 } from '@/src/infrastructure/ao/aoFaqSection';
 import { applyGatedFaqMerge } from '@/src/infrastructure/ao/applyGatedFaq';
 import { buildCriticalContentMap } from '@/src/core/domain/optimize/criticalContentMap';
@@ -37,20 +39,19 @@ import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '@/src/core/domain/op
 import { structureIssues } from '@/src/core/domain/articles/validateStructure';
 import { scoreArticleHtml } from '@/src/infrastructure/articles/scoreArticleHtml';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import db from '../../../database/database';
 import { buildGuidelines } from '@/src/infrastructure/engines/recommendationEngine';
 import {
-   DEFAULT_MAX_ROUNDS,
-   selectOptimizeMode,
-   shouldSkipOptimize,
-   TARGET_AI,
-   TARGET_SEO,
+  DEFAULT_MAX_ROUNDS,
+  selectOptimizeMode,
+  shouldSkipOptimize,
+  TARGET_AI,
+  TARGET_SEO,
 } from '@/src/core/domain/optimize/optimizeMode';
 import {
-   maxRoundsForPhase,
-   resolveOptimizePhase,
-   targetContentForPhase,
-   type AoMeta,
+  maxRoundsForPhase,
+  resolveOptimizePhase,
+  targetContentForPhase,
+  type AoMeta,
 } from '@/src/core/domain/optimize/runPhase';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { throwIfAborted } from '@/src/core/shared/abortSignal';
@@ -58,16 +59,21 @@ import { queryOne } from '@/src/infrastructure/db/query';
 import { flushSse, flushHeaders } from '@/src/core/shared/types/api';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import {
-   buildProfileFromContext,
-   resolveOptimizationStrategy,
-   resolveOptimizationPolicy,
-   runPrecisionOptimizeV4,
+  buildProfileFromContext,
+  resolveOptimizationStrategy,
+  resolveOptimizationPolicy,
+  runPrecisionOptimizeV4,
 } from '@/src/infrastructure/ao/runPrecisionOptimize';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../database/database';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
 
 export const config = { api: { responseLimit: '10mb' } };
 
 const PROMPT_VERSION = 'ao-precision-v4.1';
+/** Where the client keeps the run metadata inside score_data. */
+const AO_META_KEY = '_ao_meta' as const;
 
 type ChatCompletion = {
    content: string;
@@ -76,40 +82,40 @@ type ChatCompletion = {
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-   return value && typeof value === 'object' && !Array.isArray(value)
-      ? value as Record<string, unknown>
-      : null;
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }
 
 function parseChatCompletion(raw: unknown): ChatCompletion {
-   const data = asRecord(raw);
-   const usage = asRecord(data?.usage);
-   const choices = data?.choices;
-   const firstChoice = Array.isArray(choices) ? asRecord(choices[0]) : null;
-   const message = asRecord(firstChoice?.message);
-   const tokenCount = Number(usage?.total_tokens);
+  const data = asRecord(raw);
+  const usage = asRecord(data?.usage);
+  const choices = data?.choices;
+  const firstChoice = Array.isArray(choices) ? asRecord(choices[0]) : null;
+  const message = asRecord(firstChoice?.message);
+  const tokenCount = Number(usage?.total_tokens);
 
-   return {
-      content: typeof message?.content === 'string' ? message.content : '',
-      finishReason: firstChoice?.finish_reason ?? firstChoice?.finishReason,
-      totalTokens: Number.isFinite(tokenCount) ? tokenCount : 0,
-   };
+  return {
+    content: typeof message?.content === 'string' ? message.content : '',
+    finishReason: firstChoice?.finish_reason ?? firstChoice?.finishReason,
+    totalTokens: Number.isFinite(tokenCount) ? tokenCount : 0,
+  };
 }
 
 function scoreSeo(
-   html: string,
-   scoreData: ScoreData | undefined,
-   keyword: string,
-   ctx?: ArticleContext | null,
+  html: string,
+  scoreData: ScoreData | undefined,
+  keyword: string,
+  ctx?: ArticleContext | null,
 ): number {
-   if (!scoreData) return 0;
-   return scoreArticleHtml({
-      html,
-      scoreData,
-      keyword,
-      coverageItems: ctx?.coverage?.items,
-      answersMainQuestionEarly: !!ctx?.coverage?.answersMainQuestionEarly,
-   }).seo;
+  if (!scoreData) return 0;
+  return scoreArticleHtml({
+    html,
+    scoreData,
+    keyword,
+    coverageItems: ctx?.coverage?.items,
+    answersMainQuestionEarly: !!ctx?.coverage?.answersMainQuestionEarly,
+  }).seo;
 }
 
 function scoreAiFromContext(ctx: ArticleContext | null, html: string, latestAiScore: number): number {
@@ -121,99 +127,107 @@ function scoreAiFromContext(ctx: ArticleContext | null, html: string, latestAiSc
       coverageItems: ctx.coverage.items,
       answersMainQuestionEarly: !!ctx.coverage.answersMainQuestionEarly,
     }).ai;
-    // Live FAQ presence can collapse to 0 after a rewrite while visibility summary stays healthy.
-    return Math.max(live, ctx.scoreData.ai_score ?? 0, latestAiScore);
+      // Live wins when the scorer produced one; stored/latest only fill a collapsed 0
+      // (FAQ presence dropping after a rewrite). max() of all three pinned a damaged
+      // article at its stored score and skipped it as already_optimal.
+    return resolveLiveAiScore({ live, stored: ctx.scoreData.ai_score, latest: latestAiScore });
   }
   // score_data.ai_score === 0 is a common facts-V2 miss — prefer recomputed visibility score.
-  return Math.max(ctx?.scoreData?.ai_score ?? 0, latestAiScore);
+  return resolveLiveAiScore({ live: null, stored: ctx?.scoreData?.ai_score, latest: latestAiScore });
 }
 
 /** Latest AI-visibility score for an article — same query as pages/api/articles/[id]/index.ts:46-52.
  *  A failed score read must NOT break optimize (worst case: no AI-takeover), so any error -> 0.
  *  When the stored run score is 0 but summary_json has citation readiness, recompute (article 159). */
 async function readLatestAiScore(articleId: number): Promise<number> {
-   try {
-      const row = await queryOne<{ score: number | null; summary_json: string | null }>(
-         `SELECT score, summary_json
+  try {
+    const row = await queryOne<{ score: number | null; summary_json: string | null }>(
+      `SELECT score, summary_json
           FROM ai_visibility_runs
           WHERE article_id = ?
           ORDER BY created_at DESC, id DESC
           LIMIT 1`,
-         [articleId],
-      );
-      const stored = row?.score ?? 0;
-      if (stored > 0) return stored;
-      const summary = safeJsonParse<AiVisibilitySummary | null>(row?.summary_json, null);
-      if (summary) return Math.max(stored, computeAiSearchScore(summary));
-      return stored;
-   } catch {
-      return 0;
-   }
+      [articleId],
+    );
+    const stored = row?.score ?? 0;
+    if (stored > 0) return stored;
+    const summary = safeJsonParse<AiVisibilitySummary | null>(row?.summary_json, null);
+    if (summary) return Math.max(stored, computeAiSearchScore(summary));
+    return stored;
+  } catch {
+    return 0;
+  }
 }
 
 /** Citation prompts that still need coverage — FAQ fallback when ai_info_to_cover is null. */
 async function readWeakVisibilityPrompts(articleId: number): Promise<Array<{ id: string; label: string }>> {
-   try {
-      const row = await queryOne<{ summary_json: string | null }>(
-         `SELECT summary_json
+  try {
+    const row = await queryOne<{ summary_json: string | null }>(
+      `SELECT summary_json
           FROM ai_visibility_runs
           WHERE article_id = ?
           ORDER BY created_at DESC, id DESC
           LIMIT 1`,
-         [articleId],
-      );
-      const summary = safeJsonParse<AiVisibilitySummary | null>(row?.summary_json, null);
-      if (!summary?.citations?.length) return [];
-      return summary.citations
-         .filter((c) => (c.answer_readiness_score ?? 0) < 60)
-         .map((c, i) => ({
-            id: `vis-${i}`,
-            label: (c.prompt || '').replace(/\s+/g, ' ').trim(),
-         }))
-         .filter((q) => q.label.length >= 8)
-         .slice(0, 12);
-   } catch {
-      return [];
-   }
+      [articleId],
+    );
+    const summary = safeJsonParse<AiVisibilitySummary | null>(row?.summary_json, null);
+    if (!summary?.citations?.length) return [];
+    return summary.citations
+      .filter((c) => (c.answer_readiness_score ?? 0) < 60)
+      .map((c, i) => ({
+        id: `vis-${i}`,
+        label: (c.prompt || '').replace(/\s+/g, ' ').trim(),
+      }))
+      .filter((q) => q.label.length >= 8)
+      .slice(0, 12);
+  } catch {
+    return [];
+  }
 }
 
 async function persistScoreDataTerms(
-   articleId: number | undefined,
-   nextScoreData: ScoreData,
-   scoreData: ScoreData | undefined,
-   res: NextApiResponse,
-   previousCount: number,
+  articleId: number | undefined,
+  nextScoreData: ScoreData,
+  scoreData: ScoreData | undefined,
+  res: NextApiResponse,
+  previousCount: number,
 ): Promise<void> {
-   if (!articleId || nextScoreData.terms.length <= previousCount) return;
-   try {
-      const articleIdSql = await getArticleIdSql();
-      await db.query(
-         `UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`,
-         { replacements: [JSON.stringify(nextScoreData), articleId] },
-      );
-   } catch { /* non-fatal */ }
-   if (scoreData) Object.assign(scoreData, { terms: nextScoreData.terms });
-   sse(res, 'terms', { terms: nextScoreData.terms });
+  if (!articleId || nextScoreData.terms.length <= previousCount) return;
+  try {
+    const articleIdSql = await getArticleIdSql();
+    await db.query(
+      `UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`,
+      { replacements: [JSON.stringify(nextScoreData), articleId] },
+    );
+  } catch { /* non-fatal */ }
+  if (scoreData) Object.assign(scoreData, { terms: nextScoreData.terms });
+  sse(res, 'terms', { terms: nextScoreData.terms });
 }
 
 function sse(res: NextApiResponse, event: string, data: object) {
-   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-   flushSse(res);
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  flushSse(res);
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-   // Cron secret, same as deep-analysis / content-plan / generate: Surfer exposes
-   // Auto-Optimize over API for bulk workflows, and ours was the one pipeline stage
-   // that could only be driven from a browser session.
-   const { assertCronSecret } = await import('@/src/infrastructure/cron/cronAuth');
-   const isCron = assertCronSecret(req);
-   if (!isCron) {
-      const authorized = await verifyUser(req, res);
-      if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
-   }
-   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  // Cron secret, same as deep-analysis / content-plan / generate: Surfer exposes
+  // Auto-Optimize over API for bulk workflows, and ours was the one pipeline stage
+  // that could only be driven from a browser session.
+  const { assertCronSecret } = await import('@/src/infrastructure/cron/cronAuth');
+  const isCron = assertCronSecret(req);
+  if (!isCron) {
+    const authorized = await verifyUser(req, res);
+    if (authorized !== 'authorized') {
+      res.status(401).json({ error: authorized });
+      return;
+    }
+  }
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
 
-   const { content, articleId, scoreData, targetScore, maxRounds, optimizationStrategy: strategyRaw } = req.body as {
+  const { content, articleId, scoreData, targetScore, maxRounds, optimizationStrategy: strategyRaw } = req.body as {
       content: string;
       articleId?: number;
       scoreData?: ScoreData;
@@ -221,727 +235,812 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       maxRounds?: number;
       optimizationStrategy?: string;
    };
-   if (!content) return res.status(400).json({ error: 'content is required' });
+  if (!content) {
+    res.status(400).json({ error: 'content is required' });
+    return;
+  }
 
-   const strategyFromBody = resolveOptimizationStrategy(
-      strategyRaw,
-      process.env.AO_WHOLE_ARTICLE_FALLBACK,
-   );
-   let optimizationStrategy = strategyFromBody;
+  const strategyFromBody = resolveOptimizationStrategy(
+    strategyRaw,
+    process.env.AO_WHOLE_ARTICLE_FALLBACK,
+  );
+  let optimizationStrategy = strategyFromBody;
 
-   let userId: string | null = null;
-   try { userId = await getCurrentUserId(req, res); } catch { userId = null; }
+  let userId: string | null = null;
+  try { userId = await getCurrentUserId(req, res); } catch { userId = null; }
 
-   // Cron runs resolve no session user — same shape as content-plan and generate.
-   if (articleId !== undefined && !isCron) {
-      if (!(await assertArticleAccess(userId, Number(articleId)))) {
-         return res.status(403).json({ error: 'Access denied.' });
-      }
-   }
+  // Cron runs resolve no session user — same shape as content-plan and generate.
+  if (articleId !== undefined && !isCron) {
+    if (!(await assertArticleAccess(userId, Number(articleId)))) {
+      res.status(403).json({ error: 'Access denied.' });
+      return;
+    }
+  }
 
-   // Credit gate: block before any SSE output if the org's 5h token pool is exhausted.
-   let orgId: number | null = null;
-   if (userId != null) {
-      try { orgId = (await ensureUserTenancy(String(userId))).orgId; } catch { orgId = null; }
-   }
-   if (orgId != null) {
-      const usage = await getOrgUsage5h(orgId);
-      if (usage.over) {
-         return res.status(429).json({ error: 'org_limit', resetsAt: usage.resetsAt, used: usage.used, limit: usage.limit });
-      }
-   }
+  // Credit gate: block before any SSE output if the org's 5h token pool is exhausted.
+  let orgId: number | null = null;
+  if (userId != null) {
+    try { orgId = (await ensureUserTenancy(String(userId))).orgId; } catch { orgId = null; }
+  }
+  if (orgId != null) {
+    const usage = await getOrgUsage5h(orgId);
+    if (usage.over) {
+      res.status(429).json({ error: 'org_limit', resetsAt: usage.resetsAt, used: usage.used, limit: usage.limit });
+      return;
+    }
+  }
 
-   res.setHeader('Content-Type', 'text/event-stream');
-   res.setHeader('Cache-Control', 'no-cache, no-transform');
-   res.setHeader('Connection', 'keep-alive');
-   res.setHeader('X-Accel-Buffering', 'no');
-   res.setHeader('Content-Encoding', 'identity');
-   res.status(200);
-   flushHeaders(res);
-   res.write(':ok\n\n');
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Content-Encoding', 'identity');
+  res.status(200);
+  flushHeaders(res);
+  res.write(':ok\n\n');
 
-   const llm = chatLlm();
-   const apiKey = llm.apiKey;
-   if (!apiKey) {
-      sse(res, 'error', { message: `${llm.keyEnv} not configured` });
-      return res.end();
-   }
+  const llm = chatLlm();
+  const { apiKey } = llm;
+  if (!apiKey) {
+    sse(res, 'error', { message: `${llm.keyEnv} not configured` });
+    res.end();
+    return;
+  }
 
-   // Abort on client disconnect — stop mid-run and emit nothing further.
-   const controller = new AbortController();
-   let aborted = false;
-   const onClose = () => { aborted = true; controller.abort(); };
-   req.on('close', onClose);
-   req.on('aborted', onClose);
+  // Abort on client disconnect — stop mid-run and emit nothing further.
+  const controller = new AbortController();
+  let aborted = false;
+  const onClose = () => { aborted = true; controller.abort(); };
+  req.on('close', onClose);
+  req.on('aborted', onClose);
 
-   try {
-      throwIfAborted(controller.signal);
-      let workingHtml = content;
-      let ctx = articleId != null ? await buildArticleContext(Number(articleId)) : null;
+  const startedAt = Date.now();
+  try {
+    throwIfAborted(controller.signal);
+    let workingHtml = content;
+    let ctx = articleId != null ? await buildArticleContext(Number(articleId)) : null;
 
-      throwIfAborted(controller.signal);
+    throwIfAborted(controller.signal);
 
-      const aoMeta = (scoreData as (ScoreData & { _ao_meta?: AoMeta }) | undefined)?._ao_meta
-         ?? (ctx?.scoreData as (ScoreData & { _ao_meta?: AoMeta }) | null)?._ao_meta;
+    const aoMeta = (scoreData as (ScoreData & { _ao_meta?: AoMeta }) | undefined)?.[AO_META_KEY]
+         ?? (ctx?.scoreData as (ScoreData & { _ao_meta?: AoMeta }) | null)?.[AO_META_KEY];
 
-      // Restore full term list from article_terms + score_data (never shrink to PK splits).
-      if (ctx?.scoreData && ctx.keyword) {
-         const mergedTerms = termsForOptimize({
-            scoreDataTerms: ctx.scoreData.terms,
-            tableTerms: ctx.terms,
-         });
-         const prevCount = ctx.scoreData.terms?.length ?? 0;
-         if (mergedTerms.length > prevCount) {
-            const nextScoreData = { ...ctx.scoreData, terms: mergedTerms };
-            ctx = { ...ctx, scoreData: nextScoreData };
-            await persistScoreDataTerms(articleId, nextScoreData, scoreData, res, prevCount);
-         } else if (mergedTerms.length !== prevCount) {
-            const nextScoreData = { ...ctx.scoreData, terms: mergedTerms };
-            ctx = { ...ctx, scoreData: nextScoreData };
-            if (scoreData) Object.assign(scoreData, { terms: mergedTerms });
-         }
-      }
-
-      // Enrich only when still thin after merge.
-      if (ctx && ctx.scoreData && ctx.keyword) {
-         const competitorDomains = (ctx.competitors || []).map((c) => c.domain).filter(Boolean);
-         const baseTerms = termsForOptimize({
-            scoreDataTerms: ctx.scoreData.terms,
-            tableTerms: ctx.terms,
-         });
-         if (needsTermEnrichment(baseTerms, ctx.keyword)) {
-            if (aborted) throw new DOMException('Aborted', 'AbortError');
-            let ownDomain: string | undefined;
-            try {
-               const articleIdSql = await getArticleIdSql();
-               const row = await queryOne<{ meta_url: string | null }>(
-                  `SELECT meta_url FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-                  [articleId],
-               );
-               if (row?.meta_url) {
-                  ownDomain = new URL(row.meta_url.startsWith('http') ? row.meta_url : `https://${row.meta_url}`).hostname.replace(/^www\./, '');
-               }
-            } catch { /* optional */ }
-            const merged = await enrichNlpTermsIfNeeded({
-               terms: baseTerms,
-               primaryKeyword: ctx.keyword,
-               languageCode: ctx.language,
-               competitorDomains,
-               ownDomain,
-               plainText: workingHtml.replace(/<[^>]+>/g, ' '),
-               signal: controller.signal,
-            });
-            const useful = filterUsefulNlpTerms(merged);
-            if (useful.length > baseTerms.length) {
-               const nextScoreData = { ...ctx.scoreData, terms: useful };
-               ctx = { ...ctx, scoreData: nextScoreData };
-               await persistScoreDataTerms(articleId, nextScoreData, scoreData, res, baseTerms.length);
-            }
-         }
-      }
-
-      const initialSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
-      const initialAi = ctx && articleId != null
-         ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
-         : 0;
-      const initialContent = computeOverallContentScore(initialSeo, initialAi);
-      const phase = resolveOptimizePhase({
-         contentScore: initialContent,
-         aoMeta,
-         hasPriorAutoOptimizeVersion: (aoMeta?.runs ?? 0) >= 1,
+    // Restore full term list from article_terms + score_data (never shrink to PK splits).
+    if (ctx?.scoreData && ctx.keyword) {
+      const mergedTerms = termsForOptimize({
+        scoreDataTerms: ctx.scoreData.terms,
+        tableTerms: ctx.terms,
       });
+      const prevCount = ctx.scoreData.terms?.length ?? 0;
+      if (mergedTerms.length > prevCount) {
+        const nextScoreData = { ...ctx.scoreData, terms: mergedTerms };
+        ctx = { ...ctx, scoreData: nextScoreData };
+        await persistScoreDataTerms(articleId, nextScoreData, scoreData, res, prevCount);
+      } else if (mergedTerms.length !== prevCount) {
+        const nextScoreData = { ...ctx.scoreData, terms: mergedTerms };
+        ctx = { ...ctx, scoreData: nextScoreData };
+        if (scoreData) Object.assign(scoreData, { terms: mergedTerms });
+      }
+    }
+
+    // Enrich only when still thin after merge.
+    if (ctx && ctx.scoreData && ctx.keyword) {
+      const competitorDomains = (ctx.competitors || []).map((c) => c.domain).filter(Boolean);
+      const baseTerms = termsForOptimize({
+        scoreDataTerms: ctx.scoreData.terms,
+        tableTerms: ctx.terms,
+      });
+      if (needsTermEnrichment(baseTerms, ctx.keyword)) {
+        if (aborted) throw new DOMException('Aborted', 'AbortError');
+        let ownDomain: string | undefined;
+        try {
+          const articleIdSql = await getArticleIdSql();
+          const row = await queryOne<{ meta_url: string | null }>(
+            `SELECT meta_url FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+            [articleId],
+          );
+          if (row?.meta_url) {
+            ownDomain = new URL(row.meta_url.startsWith('http') ? row.meta_url : `https://${row.meta_url}`).hostname.replace(/^www\./, '');
+          }
+        } catch { /* optional */ }
+        const merged = await enrichNlpTermsIfNeeded({
+          terms: baseTerms,
+          primaryKeyword: ctx.keyword,
+          languageCode: ctx.language,
+          competitorDomains,
+          ownDomain,
+          plainText: workingHtml.replace(/<[^>]+>/g, ' '),
+          signal: controller.signal,
+        });
+        const useful = filterUsefulNlpTerms(merged);
+        if (useful.length > baseTerms.length) {
+          const nextScoreData = { ...ctx.scoreData, terms: useful };
+          ctx = { ...ctx, scoreData: nextScoreData };
+          await persistScoreDataTerms(articleId, nextScoreData, scoreData, res, baseTerms.length);
+        }
+      }
+    }
+
+    const initialSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
+    const initialAi = ctx && articleId != null
+      ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
+      : 0;
+    const initialContent = computeOverallContentScore(initialSeo, initialAi);
+    const phase = resolveOptimizePhase({
+      contentScore: initialContent,
+      aoMeta,
+      hasPriorAutoOptimizeVersion: (aoMeta?.runs ?? 0) >= 1,
+    });
       // Surfer-model routing, from CURRENT scores: weak article -> rebuild toward its
       // own content plan; strong SEO -> touch-ups; strong SEO + weak AI -> AI only.
-      const liveMode = selectOptimizeMode(initialSeo, initialAi, phase);
-      const rebuild = liveMode === 'full';
-      const plannedHeadings: string[] = (() => {
-         const sd = (ctx?.scoreData ?? scoreData) as Record<string, unknown> | undefined;
-         // The planner's own field is `heading`; reading `title` (which does not exist
-            // on OutlineSection) silently produced an empty list on every run.
-            const planner = sd?.content_planner_v2 as
-            | { bundle?: { outline?: { sections?: Array<{ heading?: string; title?: string }> } } }
-            | undefined;
-         return (planner?.bundle?.outline?.sections ?? [])
-            .map((x) => (x?.heading || x?.title || '').trim())
-            .filter((t) => t.length >= 8);
-      })();
+    const liveMode = selectOptimizeMode(initialSeo, initialAi, phase);
+    const rebuild = liveMode === 'full';
+    // The headings the writer produced (compiled_write_plan), never the planner's
+    // outline draft — that one carries competitor navigation scraped off the SERP.
+    const plannedHeadings = plannedHeadingsFromScoreData(ctx?.scoreData ?? scoreData);
+    const missingPlanned = missingPlannedHeadings(plannedHeadings, splitSections(workingHtml));
 
-      const TARGET_SEO_SCORE = phase === 'first_run'
-         ? Math.min(100, Math.max(TARGET_SEO, Number(targetScore) || TARGET_SEO))
-         : Math.min(100, Math.max(85, Number(targetScore) || 90));
-      const TARGET_AI_SCORE = TARGET_AI;
-      const TARGET_CONTENT_SCORE = targetContentForPhase(phase);
-      const MAX_ROUNDS = Math.min(6, Math.max(1, Number(maxRounds) || maxRoundsForPhase(phase) || DEFAULT_MAX_ROUNDS));
+    const TARGET_SEO_SCORE = phase === 'first_run'
+      ? Math.min(100, Math.max(TARGET_SEO, Number(targetScore) || TARGET_SEO))
+      : Math.min(100, Math.max(85, Number(targetScore) || 90));
+    const TARGET_AI_SCORE = TARGET_AI;
+    const TARGET_CONTENT_SCORE = targetContentForPhase(phase);
+    const MAX_ROUNDS = Math.min(6, Math.max(1, Number(maxRounds) || maxRoundsForPhase(phase) || DEFAULT_MAX_ROUNDS));
 
-      let changedCount = 0;
-      let rejectedUnusable = 0;
-      let aiTokens = 0;
-      let roundsRun = 0;
-      let finalSeo = 0;
-      let finalAi = 0;
-      let finalContent = 0;
-      let trimmedMeta: { trimmed: boolean; ignoredLift: number } = { trimmed: false, ignoredLift: 0 };
-      let aoBaselinePayload: Record<string, unknown> | null = null;
-      let aoDeltasPayload: Record<string, unknown> | null = null;
-      let aoTraceSummary: Record<string, unknown> | null = null;
-      let runBaselineScores: AoScores = { seo: initialSeo, content: initialContent, ai: initialAi };
-      let runBaselineWordCount = countWordsFromHtml(workingHtml);
-      let bodyAccepted = 0;
-      let bodyRejected = 0;
-      let faqAccepted = false;
-      let faqStructurallyValid: boolean | null = null;
-      let faqChanged = false;
-      let targetingSkippedNoTarget = 0;
-      let targetingUsedFallback = 0;
-      const seoEntityGapsBefore = computeTermUsageGaps(ctx?.scoreData ?? scoreData, workingHtml)
-         .filter((g) => g.status === 'missing' || g.status === 'low').length;
+    let changedCount = 0;
+    let rejectedUnusable = 0;
+    let aiTokens = 0;
+    let roundsRun = 0;
+    let finalSeo = 0;
+    let finalAi = 0;
+    let finalContent = 0;
+    const trimmedMeta: { trimmed: boolean; ignoredLift: number } = { trimmed: false, ignoredLift: 0 };
+    let aoBaselinePayload: Record<string, unknown> | null = null;
+    let aoDeltasPayload: Record<string, unknown> | null = null;
+    let aoTraceSummary: Record<string, unknown> | null = null;
+    let regradedCoverage: CoverageSnapshot | null = null;
+    let runBaselineScores: AoScores = { seo: initialSeo, content: initialContent, ai: initialAi };
+    let runBaselineWordCount = countWordsFromHtml(workingHtml);
+    let bodyAccepted = 0;
+    let bodyRejected = 0;
+    let faqAccepted = false;
+    let faqStructurallyValid: boolean | null = null;
+    let faqChanged = false;
+    let targetingSkippedNoTarget = 0;
+    let targetingUsedFallback = 0;
+    const seoEntityGapsBefore = computeTermUsageGaps(ctx?.scoreData ?? scoreData, workingHtml)
+      .filter((g) => g.status === 'missing' || g.status === 'low').length;
 
-      const originalHtml = content;
+    const originalHtml = content;
 
-      // P0 safety no-op: targets already met → zero LLM (before candidates / FAQ).
-      // Judged against the REQUESTED targets: an express run asking for 100 on an
-      // article already at 90/85 must still work, not return already_optimal.
-      if (shouldSkipOptimize(initialSeo, initialAi)
-         && initialSeo >= TARGET_SEO_SCORE && initialAi >= TARGET_AI_SCORE) {
-         sse(res, 'meta', {
-            total: MAX_ROUNDS,
-            targetSeo: TARGET_SEO_SCORE,
-            targetAi: TARGET_AI_SCORE,
-            targetContent: TARGET_CONTENT_SCORE,
-            maxRounds: MAX_ROUNDS,
-            phase,
-            wholeArticle: false,
-            optimizationStrategy: 'precision',
-         });
-         sse(res, 'done', {
-            changedCount: 0, total: MAX_ROUNDS, promptVersion: PROMPT_VERSION,
-            creditDeducted: false, rounds: 0, phase, outcome: 'already_optimal',
-            seo: initialSeo, ai: initialAi, content: initialContent,
-            targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE, targetContent: TARGET_CONTENT_SCORE,
-            trimmed: false, ignoredLift: 0,
-            wholeArticle: false,
-            optimizationStrategy: 'precision',
-         });
-         return;
-      }
+    // P0 safety no-op: targets already met → zero LLM (before candidates / FAQ).
+    // Judged against the REQUESTED targets: an express run asking for 100 on an
+    // article already at 90/85 must still work, not return already_optimal.
+    // Scores alone cannot see a missing section (its terms live on in the neighbours):
+    // an article that lost planned sections is never "already optimal".
+    if (shouldSkipOptimize(initialSeo, initialAi)
+         && initialSeo >= TARGET_SEO_SCORE && initialAi >= TARGET_AI_SCORE
+         && missingPlanned.length === 0) {
+      sse(res, 'meta', {
+        total: MAX_ROUNDS,
+        targetSeo: TARGET_SEO_SCORE,
+        targetAi: TARGET_AI_SCORE,
+        targetContent: TARGET_CONTENT_SCORE,
+        maxRounds: MAX_ROUNDS,
+        phase,
+        wholeArticle: false,
+        optimizationStrategy: 'precision',
+      });
+      sse(res, 'done', {
+        changedCount: 0,
+        total: MAX_ROUNDS,
+        promptVersion: PROMPT_VERSION,
+        creditDeducted: false,
+        rounds: 0,
+        phase,
+        outcome: 'already_optimal',
+        seo: initialSeo,
+        ai: initialAi,
+        content: initialContent,
+        targetSeo: TARGET_SEO_SCORE,
+        targetAi: TARGET_AI_SCORE,
+        targetContent: TARGET_CONTENT_SCORE,
+        trimmed: false,
+        ignoredLift: 0,
+        wholeArticle: false,
+        optimizationStrategy: 'precision',
+      });
+      return;
+    }
 
-      // Diagnose after baseline scores (skip already handled). Honor explicit body strategy.
-      const explicitStrategy = strategyRaw === 'precision'
+    // Diagnose after baseline scores (skip already handled). Honor explicit body strategy.
+    const explicitStrategy = strategyRaw === 'precision'
          || strategyRaw === 'enrichment'
          || strategyRaw === 'deep_optimize'
          || strategyRaw === 'whole_article_fallback';
-      let aoPolicy = resolveOptimizationPolicy({
-         strategy: explicitStrategy && strategyFromBody !== 'whole_article_fallback'
-            ? strategyFromBody
-            : undefined,
-         scores: { seo: initialSeo, content: initialContent, ai: initialAi },
-         html: workingHtml,
-         sectionCount: splitSections(workingHtml).length,
-         uncoveredCoverage: ctx?.coverage?.items?.filter((i) => !i.covered).length ?? 0,
-         keyword: ctx?.keyword || '',
-         plainText: workingHtml.replace(/<[^>]+>/g, ' '),
-      });
-      if (strategyFromBody === 'whole_article_fallback') {
-         optimizationStrategy = 'whole_article_fallback';
-      } else {
-         optimizationStrategy = aoPolicy.strategy;
-      }
+    const aoPolicy = resolveOptimizationPolicy({
+      strategy: explicitStrategy && strategyFromBody !== 'whole_article_fallback'
+        ? strategyFromBody
+        : undefined,
+      scores: { seo: initialSeo, content: initialContent, ai: initialAi },
+      html: workingHtml,
+      sectionCount: splitSections(workingHtml).length,
+      uncoveredCoverage: ctx?.coverage?.items?.filter((i) => !i.covered).length ?? 0,
+      keyword: ctx?.keyword || '',
+      plainText: workingHtml.replace(/<[^>]+>/g, ' '),
+    });
+    if (strategyFromBody === 'whole_article_fallback') {
+      optimizationStrategy = 'whole_article_fallback';
+    } else {
+      optimizationStrategy = aoPolicy.strategy;
+    }
 
-      sse(res, 'meta', {
-         total: MAX_ROUNDS,
-         targetSeo: TARGET_SEO_SCORE,
-         targetAi: TARGET_AI_SCORE,
-         targetContent: TARGET_CONTENT_SCORE,
-         maxRounds: MAX_ROUNDS,
-         phase,
-         wholeArticle: optimizationStrategy === 'whole_article_fallback',
-         optimizationStrategy,
-      });
+    sse(res, 'meta', {
+      total: MAX_ROUNDS,
+      targetSeo: TARGET_SEO_SCORE,
+      targetAi: TARGET_AI_SCORE,
+      targetContent: TARGET_CONTENT_SCORE,
+      maxRounds: MAX_ROUNDS,
+      phase,
+      wholeArticle: optimizationStrategy === 'whole_article_fallback',
+      optimizationStrategy,
+    });
 
-      try {
-         if (
-            optimizationStrategy === 'precision'
+    try {
+      if (
+        optimizationStrategy === 'precision'
             || optimizationStrategy === 'enrichment'
             || optimizationStrategy === 'deep_optimize'
-         ) {
-            roundsRun = 1;
-            const latestAi = articleId != null ? await readLatestAiScore(Number(articleId)) : 0;
-            const visibilityPrompts = articleId != null
-               ? await readWeakVisibilityPrompts(Number(articleId))
-               : [];
+      ) {
+        roundsRun = 1;
+        const latestAi = articleId != null ? await readLatestAiScore(Number(articleId)) : 0;
+        const visibilityPrompts = articleId != null
+          ? await readWeakVisibilityPrompts(Number(articleId))
+          : [];
 
-            const ccmExtra =
-               articleId != null
-                  ? await import('@/src/core/intelligence/loadCcmEditCandidates')
-                      .then((m) =>
-                         m.loadCcmEditCandidatesForArticle({
-                            articleId: Number(articleId),
-                            html: workingHtml,
-                         }),
-                      )
-                      .catch(() => [] as const)
-                  : [];
+        const ccmExtra = articleId != null
+          ? await import('@/src/core/intelligence/loadCcmEditCandidates')
+            .then((m) =>
+              m.loadCcmEditCandidatesForArticle({
+                articleId: Number(articleId),
+                html: workingHtml,
+              }),
+            )
+            .catch(() => [] as const)
+          : [];
 
-            const v4 = await runPrecisionOptimizeV4({
-               runId: `ao-${articleId ?? 'anon'}-${Date.now()}`,
-               html: workingHtml,
-               ctx,
-               scoreData: ctx?.scoreData ?? scoreData,
-               keyword: ctx?.keyword || '',
-               latestAiFallback: latestAi,
-               visibilityPrompts,
-               extraCandidates: ccmExtra,
-               rebuild,
-               plannedHeadings,
-               policy: aoPolicy,
-               maxSteps: aoPolicy.maxSteps,
-               targetSeo: TARGET_SEO_SCORE,
-               targetAi: TARGET_AI_SCORE,
-               signal: controller.signal,
-               llmEdit: async (prompt) => {
-                  const { wieLlmComplete, wieWriterSystemPrompt } = await import('@/src/infrastructure/wie/writer');
-                  return wieLlmComplete({
-                     userPrompt: prompt,
-                     systemPrompt: wieWriterSystemPrompt(),
-                     signal: controller.signal,
-                     maxTokens: 4000,
-                     temperature: 0.2,
-                  });
-               },
+        const v4 = await runPrecisionOptimizeV4({
+          runId: `ao-${articleId ?? 'anon'}-${Date.now()}`,
+          html: workingHtml,
+          ctx,
+          scoreData: ctx?.scoreData ?? scoreData,
+          keyword: ctx?.keyword || '',
+          latestAiFallback: latestAi,
+          visibilityPrompts,
+          extraCandidates: ccmExtra,
+          rebuild,
+          plannedHeadings,
+          policy: aoPolicy,
+          maxSteps: aoPolicy.maxSteps,
+          targetSeo: TARGET_SEO_SCORE,
+          targetAi: TARGET_AI_SCORE,
+          // Express (6 rounds) earns a third pass; the default run gets two.
+          maxPasses: MAX_ROUNDS >= 6 ? 3 : 2,
+          signal: controller.signal,
+          llmEdit: async (prompt) => {
+            const { wieLlmComplete, wieWriterSystemPrompt } = await import('@/src/infrastructure/wie/writer');
+            return wieLlmComplete({
+              userPrompt: prompt,
+              systemPrompt: wieWriterSystemPrompt(),
+              signal: controller.signal,
+              maxTokens: 4000,
+              temperature: 0.2,
             });
+          },
+        });
 
-            aiTokens += v4.tokens;
-            rejectedUnusable += v4.rejected;
-            bodyRejected += v4.rejected;
-            bodyAccepted = v4.rolledBack ? 0 : v4.bodyAccepted;
-            targetingSkippedNoTarget = v4.targeting.skippedNoTarget;
-            targetingUsedFallback = v4.targeting.usedFallback;
-            workingHtml = v4.html;
-            if (!v4.rolledBack && v4.changed > 0) {
-               changedCount += v4.changed;
+        aiTokens += v4.tokens;
+        rejectedUnusable += v4.rejected;
+        bodyRejected += v4.rejected;
+        bodyAccepted = v4.rolledBack ? 0 : v4.bodyAccepted;
+        targetingSkippedNoTarget = v4.targeting.skippedNoTarget;
+        targetingUsedFallback = v4.targeting.usedFallback;
+        workingHtml = v4.html;
+        if (!v4.rolledBack && v4.changed > 0) {
+          changedCount += v4.changed;
+        }
+        finalSeo = v4.finalScores.seo;
+        finalAi = v4.finalScores.ai;
+        finalContent = v4.finalScores.content;
+        runBaselineScores = v4.baseline.scores;
+        runBaselineWordCount = v4.baseline.wordCount;
+        aoBaselinePayload = {
+          runId: v4.baseline.runId,
+          documentHash: v4.baseline.documentHash,
+          scores: v4.baseline.scores,
+          wordCount: v4.baseline.wordCount,
+        };
+        aoDeltasPayload = v4.deltas as unknown as Record<string, unknown>;
+        aoTraceSummary = v4.trace.summary();
+
+        // WIE Performance Loop: remember pattern ids used in this AO run
+        if (articleId != null && !v4.rolledBack) {
+          try {
+            const { extractPatternIdsFromTraceEvents, saveWieLastRun } = await import('@/src/infrastructure/wie/outcomeLearning');
+            const patternIds = extractPatternIdsFromTraceEvents(v4.trace.events);
+            if (patternIds.length) {
+              const dnaEv = v4.trace.events.find((e) => typeof e.metadata?.dna_version === 'number');
+              await saveWieLastRun(Number(articleId), {
+                at: new Date().toISOString(),
+                runId: v4.baseline.runId,
+                patternIds,
+                dna_version: typeof dnaEv?.metadata?.dna_version === 'number'
+                  ? dnaEv.metadata.dna_version
+                  : undefined,
+              });
             }
-            finalSeo = v4.finalScores.seo;
-            finalAi = v4.finalScores.ai;
-            finalContent = v4.finalScores.content;
-            runBaselineScores = v4.baseline.scores;
-            runBaselineWordCount = v4.baseline.wordCount;
-            aoBaselinePayload = {
-               runId: v4.baseline.runId,
-               documentHash: v4.baseline.documentHash,
-               scores: v4.baseline.scores,
-               wordCount: v4.baseline.wordCount,
-            };
-            aoDeltasPayload = v4.deltas as unknown as Record<string, unknown>;
-            aoTraceSummary = v4.trace.summary();
+          } catch {
+            /* non-fatal */
+          }
+        }
+        sse(res, 'progress', {
+          round: 1,
+          processed: 1,
+          seo: finalSeo,
+          ai: finalAi,
+          content: finalContent,
+          mode: selectOptimizeMode(finalSeo, finalAi, phase),
+          phase,
+          targetSeo: TARGET_SEO_SCORE,
+          targetAi: TARGET_AI_SCORE,
+          targetContent: TARGET_CONTENT_SCORE,
+          changed: v4.rolledBack ? 0 : v4.changed,
+          rolledBack: v4.rolledBack,
+          deltas: v4.deltas,
+        });
+      } else {
+        // Controlled whole-article fallback — explicit body/env flag only (never auto from diagnosis).
+        for (let round = 1; round <= MAX_ROUNDS && !aborted; round += 1) {
+          roundsRun = round;
+          const snapshot = ctx?.coverage ?? null;
+          const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
+          const seoScore = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
+          const aiScore = ctx && articleId != null
+            ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
+            : 0;
+          const mode = selectOptimizeMode(seoScore, aiScore, phase);
 
-            // WIE Performance Loop: remember pattern ids used in this AO run
-            if (articleId != null && !v4.rolledBack) {
-               try {
-                  const { extractPatternIdsFromTraceEvents, saveWieLastRun } = await import('@/src/infrastructure/wie/outcomeLearning');
-                  const patternIds = extractPatternIdsFromTraceEvents(v4.trace.events);
-                  if (patternIds.length) {
-                     const dnaEv = v4.trace.events.find((e) => typeof e.metadata?.dna_version === 'number');
-                     await saveWieLastRun(Number(articleId), {
-                        at: new Date().toISOString(),
-                        runId: v4.baseline.runId,
-                        patternIds,
-                        dna_version: typeof dnaEv?.metadata?.dna_version === 'number'
-                           ? dnaEv.metadata.dna_version
-                           : undefined,
-                     });
-                  }
-               } catch {
-                  /* non-fatal */
-               }
-            }
-            sse(res, 'progress', {
-               round: 1,
-               processed: 1,
-               seo: finalSeo,
-               ai: finalAi,
-               content: finalContent,
-               mode: selectOptimizeMode(finalSeo, finalAi, phase),
-               phase,
-               targetSeo: TARGET_SEO_SCORE,
-               targetAi: TARGET_AI_SCORE,
-               targetContent: TARGET_CONTENT_SCORE,
-               changed: v4.rolledBack ? 0 : v4.changed,
-               rolledBack: v4.rolledBack,
-               deltas: v4.deltas,
-            });
-         } else {
-            // Controlled whole-article fallback — explicit body/env flag only (never auto from diagnosis).
-            for (let round = 1; round <= MAX_ROUNDS && !aborted; round += 1) {
-               roundsRun = round;
-               const snapshot = ctx?.coverage ?? null;
-               const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
-               const seoScore = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
-               const aiScore = ctx && articleId != null
-                  ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
-                  : 0;
-               const mode = selectOptimizeMode(seoScore, aiScore, phase);
+          const promptPack = buildWholeArticlePrompt({
+            ctx,
+            html: workingHtml,
+            guidelines,
+            seoScore,
+            aiScore,
+            phase,
+            mode,
+          });
 
-               const promptPack = buildWholeArticlePrompt({
-                  ctx,
-                  html: workingHtml,
-                  guidelines,
-                  seoScore,
-                  aiScore,
-                  phase,
-                  mode,
-               });
-
-               let newHtml = workingHtml;
-               const MAX_ATTEMPTS = 3;
-               for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-                  try {
-                     const surgicalHint = attempt > 1
-                        ? '\n\nIMPORTANT: Previous reply was truncated or incomplete. Make SMALLER surgical edits only '
+          let newHtml = workingHtml;
+          const MAX_ATTEMPTS = 3;
+          for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+            try {
+              const surgicalHint = attempt > 1
+                ? '\n\nIMPORTANT: Previous reply was truncated or incomplete. Make SMALLER surgical edits only '
                           + '(a few paragraphs or one section). Return the COMPLETE article HTML — do not omit later sections.'
-                        : '';
-                     const { wieLlmComplete } = await import('@/src/infrastructure/wie/writer');
-                     const completed = await wieLlmComplete({
-                        userPrompt: `${promptPack.userInstruction}${surgicalHint}\n\n${workingHtml}`,
-                        systemPrompt: promptPack.systemPrompt,
-                        maxTokens: 8000,
-                        temperature: 0.3,
-                        signal: controller.signal,
-                     });
-                     aiTokens += completed.tokens;
-                     const cleaned = completed.html;
-                     if (!isUsableWholeArticleEdit(cleaned, workingHtml, undefined)) {
-                        rejectedUnusable += 1;
-                        if (attempt < MAX_ATTEMPTS) continue;
-                        break;
-                     }
-                     newHtml = cleaned;
+                : '';
+              const { wieLlmComplete } = await import('@/src/infrastructure/wie/writer');
+              const completed = await wieLlmComplete({
+                userPrompt: `${promptPack.userInstruction}${surgicalHint}\n\n${workingHtml}`,
+                systemPrompt: promptPack.systemPrompt,
+                maxTokens: 8000,
+                temperature: 0.3,
+                signal: controller.signal,
+              });
+              aiTokens += completed.tokens;
+              const cleaned = completed.html;
+              if (!isUsableWholeArticleEdit(cleaned, workingHtml, undefined)) {
+                rejectedUnusable += 1;
+                if (attempt >= MAX_ATTEMPTS) break;
+              } else {
+                newHtml = cleaned;
 
-                     const issues = structureIssues(newHtml);
-                     if (issues.length > 0 && attempt === 1) {
-                        const retryPack = buildWholeArticlePrompt({
-                           ctx,
-                           html: newHtml,
-                           guidelines,
-                           seoScore,
-                           aiScore,
-                           phase,
-                           mode,
-                        });
-                        const structurePrompt = `${retryPack.systemPrompt}\n\nSTRUCTURE FIX REQUIRED:\n${issues.join('\n')}`;
-                        try {
-                           const retryCompleted = await wieLlmComplete({
-                              userPrompt: `Fix structure issues and return complete HTML.\n\n${newHtml}`,
-                              systemPrompt: structurePrompt,
-                              maxTokens: 8000,
-                              temperature: 0.3,
-                              signal: controller.signal,
-                           });
-                           aiTokens += retryCompleted.tokens;
-                           const retryCleaned = retryCompleted.html;
-                           if (isUsableWholeArticleEdit(retryCleaned, workingHtml, undefined)) {
-                              newHtml = retryCleaned;
-                           } else {
-                              rejectedUnusable += 1;
-                           }
-                        } catch { /* non-fatal */ }
-                     }
-                     break;
-                  } catch (error) {
-                     if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
-                     if (attempt === MAX_ATTEMPTS) newHtml = workingHtml;
-                  }
-               }
-
-               if (aborted) break;
-
-               const roundChanged = normalizeHtmlForDiff(workingHtml) !== normalizeHtmlForDiff(newHtml);
-               if (roundChanged) {
-                  workingHtml = newHtml;
-                  changedCount += 1;
-                  // Whole-article pass counts as body work for outcome classification
-                  bodyAccepted += 1;
-               }
-
-               finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
-               finalAi = ctx && articleId != null
-                  ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
-                  : 0;
-               finalContent = computeOverallContentScore(finalSeo, finalAi);
-               sse(res, 'progress', {
-                  round,
-                  processed: round,
-                  seo: finalSeo,
-                  ai: finalAi,
-                  content: finalContent,
-                  mode,
-                  phase,
-                  targetSeo: TARGET_SEO_SCORE,
-                  targetAi: TARGET_AI_SCORE,
-                  targetContent: TARGET_CONTENT_SCORE,
-                  changed: roundChanged ? 1 : 0,
-               });
-
-               const hitContentTarget = finalContent >= TARGET_CONTENT_SCORE;
-               const hitSeoAi = finalSeo >= TARGET_SEO_SCORE && finalAi >= TARGET_AI_SCORE;
-               const plainForCov = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-               const liveItems = ctx?.coverage?.items?.length
-                  ? liveCoverageItems(ctx.coverage.items, plainForCov, workingHtml)
-                  : [];
-               const stillUncovered = collectUncoveredAiQuestions(liveItems).length;
-               if ((hitContentTarget || hitSeoAi) && stillUncovered === 0) break;
-               if ((hitContentTarget || hitSeoAi) && !roundChanged) break;
-               if (!roundChanged && round >= 2) break;
-               if (!roundChanged && finalContent >= TARGET_CONTENT_SCORE - 5) break;
+                const issues = structureIssues(newHtml);
+                if (issues.length > 0 && attempt === 1) {
+                  const retryPack = buildWholeArticlePrompt({
+                    ctx,
+                    html: newHtml,
+                    guidelines,
+                    seoScore,
+                    aiScore,
+                    phase,
+                    mode,
+                  });
+                  const structurePrompt = `${retryPack.systemPrompt}\n\nSTRUCTURE FIX REQUIRED:\n${issues.join('\n')}`;
+                  try {
+                    const retryCompleted = await wieLlmComplete({
+                      userPrompt: `Fix structure issues and return complete HTML.\n\n${newHtml}`,
+                      systemPrompt: structurePrompt,
+                      maxTokens: 8000,
+                      temperature: 0.3,
+                      signal: controller.signal,
+                    });
+                    aiTokens += retryCompleted.tokens;
+                    const retryCleaned = retryCompleted.html;
+                    if (isUsableWholeArticleEdit(retryCleaned, workingHtml, undefined)) {
+                      newHtml = retryCleaned;
+                    } else {
+                      rejectedUnusable += 1;
+                    }
+                  } catch { /* non-fatal */ }
+                }
+                break;
+              }
+            } catch (error) {
+              if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
+              if (attempt === MAX_ATTEMPTS) newHtml = workingHtml;
             }
-         }
+          }
 
-         // FAQ round — residual AI Qs only (not a success path when body=0 + SEO gaps remain).
-         // Structural validation hard-rejects wall-of-text before score gates.
-         if (
-            !aborted
+          if (aborted) break;
+
+          const roundChanged = normalizeHtmlForDiff(workingHtml) !== normalizeHtmlForDiff(newHtml);
+          if (roundChanged) {
+            workingHtml = newHtml;
+            changedCount += 1;
+            // Whole-article pass counts as body work for outcome classification
+            bodyAccepted += 1;
+          }
+
+          finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
+          finalAi = ctx && articleId != null
+            ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
+            : 0;
+          finalContent = computeOverallContentScore(finalSeo, finalAi);
+          sse(res, 'progress', {
+            round,
+            processed: round,
+            seo: finalSeo,
+            ai: finalAi,
+            content: finalContent,
+            mode,
+            phase,
+            targetSeo: TARGET_SEO_SCORE,
+            targetAi: TARGET_AI_SCORE,
+            targetContent: TARGET_CONTENT_SCORE,
+            changed: roundChanged ? 1 : 0,
+          });
+
+          const hitContentTarget = finalContent >= TARGET_CONTENT_SCORE;
+          const hitSeoAi = finalSeo >= TARGET_SEO_SCORE && finalAi >= TARGET_AI_SCORE;
+          const plainForCov = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          const liveItems = ctx?.coverage?.items?.length
+            ? liveCoverageItems(ctx.coverage.items, plainForCov, workingHtml)
+            : [];
+          const stillUncovered = collectUncoveredAiQuestions(liveItems).length;
+          if ((hitContentTarget || hitSeoAi) && stillUncovered === 0) break;
+          if ((hitContentTarget || hitSeoAi) && !roundChanged) break;
+          if (!roundChanged && round >= 2) break;
+          if (!roundChanged && finalContent >= TARGET_CONTENT_SCORE - 5) break;
+        }
+      }
+
+      // FAQ round — residual AI Qs only (not a success path when body=0 + SEO gaps remain).
+      // Structural validation hard-rejects wall-of-text before score gates.
+      if (
+        !aborted
             && ctx
             && articleId != null
             && !shouldSkipOptimize(finalSeo || initialSeo, finalAi || initialAi)
             && aoPolicy.faq.enabled
-         ) {
-            const plainForFaq = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-            const liveForFaq = ctx.coverage?.items?.length
-               ? liveCoverageItems(ctx.coverage.items, plainForFaq, workingHtml)
-               : [];
-            let uncovered = collectUncoveredAiQuestions(liveForFaq);
-            if (uncovered.length === 0 && ctx.paa?.length) {
-               uncovered = ctx.paa.slice(0, 12).map((label, i) => ({ id: `paa-${i}`, label }));
-            }
-            if (uncovered.length === 0) {
-               uncovered = await readWeakVisibilityPrompts(Number(articleId));
-            }
-            const profile = buildProfileFromContext(ctx, workingHtml);
-            // Residual: only questions not already covered after body (selectFaqQuestions drops high token hitRatio)
-            const gated = selectFaqQuestions({
-               questions: uncovered,
-               profile,
-               articlePlainText: plainForFaq,
-               maxQuestions: Math.min(5, aoPolicy.faq.maxQuestions, uncovered.length),
-            });
+      ) {
+        const plainForFaq = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const liveForFaq = ctx.coverage?.items?.length
+          ? liveCoverageItems(ctx.coverage.items, plainForFaq, workingHtml)
+          : [];
+        let uncovered = collectUncoveredAiQuestions(liveForFaq);
+        if (uncovered.length === 0 && ctx.paa?.length) {
+          uncovered = ctx.paa.slice(0, 12).map((label, i) => ({ id: `paa-${i}`, label }));
+        }
+        if (uncovered.length === 0) {
+          uncovered = await readWeakVisibilityPrompts(Number(articleId));
+        }
+        const profile = buildProfileFromContext(ctx, workingHtml);
+        // Residual: only questions not already covered after body (selectFaqQuestions drops high token hitRatio)
+        const gated = selectFaqQuestions({
+          questions: uncovered,
+          profile,
+          articlePlainText: plainForFaq,
+          maxQuestions: Math.min(5, aoPolicy.faq.maxQuestions, uncovered.length),
+        });
 
-            // P0.3: FAQ is residual coverage, not a substitute for missing body SEO work.
-            // Still allow FAQ for remaining AI questions, but workOutcome will be faq_only when bodyAccepted=0.
-            const skipFaqForEmptyBodySeo =
-               bodyAccepted === 0
+        // P0.3: FAQ is residual coverage, not a substitute for missing body SEO work.
+        // Still allow FAQ for remaining AI questions, but workOutcome will be faq_only when bodyAccepted=0.
+        const skipFaqForEmptyBodySeo = bodyAccepted === 0
                && seoEntityGapsBefore > 0
                && gated.length === 0;
 
-            if (gated.length > 0 && !skipFaqForEmptyBodySeo) {
-               const faqPrompt = buildFaqSectionPrompt({
-                  keyword: ctx.keyword || '',
-                  questions: gated.map((q) => q.label),
-                  articleExcerpt: plainForFaq,
-                  language: ctx.language || 'pl',
-               });
-               try {
-                  const faqRes = await fetch(llm.url, {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                     body: JSON.stringify({
-                        model: llm.model,
-                        max_tokens: 4000,
-                        temperature: 0.3,
-                        messages: [
-                           { role: 'system', content: faqPrompt.systemPrompt },
-                           { role: 'user', content: faqPrompt.userInstruction },
-                        ],
-                     }),
-                     signal: controller.signal,
-                  });
-                  if (faqRes.ok) {
-                     const faqData = parseChatCompletion(await faqRes.json());
-                     aiTokens += faqData.totalTokens;
-                     const faqHtml = stripFences(faqData.content);
-                     const structure = validateFaqHtmlStructure(faqHtml, {
-                        language: ctx.language || 'pl',
-                        expectedQuestionCount: gated.length,
-                     });
-                     faqStructurallyValid = structure.ok;
-                     if (!structure.ok) {
-                        rejectedUnusable += 1;
-                        sse(res, 'progress', {
-                           round: roundsRun + 1,
-                           processed: roundsRun + 1,
-                           phase: 'faq',
-                           changed: 0,
-                           faqRejected: true,
-                           reason: structure.reason,
-                        });
-                     } else if (isUsableEdit(faqHtml)) {
-                        const workingScores: AoScores = {
-                           seo: finalSeo || initialSeo,
-                           content: finalContent || initialContent,
-                           ai: finalAi || initialAi,
-                        };
-                        const latestAi = await readLatestAiScore(Number(articleId));
-                        const critical = buildCriticalContentMap({
-                           html: originalHtml,
-                           profile,
-                           sectionIds: splitSections(originalHtml).map((s) => s.id),
-                        });
-                        const faqGate = applyGatedFaqMerge({
-                           originalHtml,
-                           workingHtml,
-                           faqHtml,
-                           baselineScores: runBaselineScores,
-                           workingScores,
-                           baselineWordCount: runBaselineWordCount,
-                           critical,
-                           policy: aoPolicy.gate,
-                           scoreHtml: (html) => {
-                              const seo = scoreSeo(html, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
-                              const ai = scoreAiFromContext(ctx, html, latestAi);
-                              return {
-                                 scores: {
-                                    seo,
-                                    content: computeOverallContentScore(seo, ai),
-                                    ai,
-                                 },
-                                 aiAvailability: 'available',
-                              };
-                           },
-                        });
-
-                        if (faqGate.rolledBack) {
-                           workingHtml = faqGate.html;
-                           changedCount = 0;
-                           bodyAccepted = 0;
-                           faqAccepted = false;
-                           faqChanged = false;
-                           rejectedUnusable += 1;
-                           finalSeo = faqGate.scores.seo;
-                           finalAi = faqGate.scores.ai;
-                           finalContent = faqGate.scores.content;
-                           aoDeltasPayload = faqGate.deltas as unknown as Record<string, unknown>;
-                        } else if (faqGate.accepted) {
-                           workingHtml = faqGate.html;
-                           changedCount += 1;
-                           faqAccepted = true;
-                           faqChanged = true;
-                           finalSeo = faqGate.scores.seo;
-                           finalAi = faqGate.scores.ai;
-                           finalContent = faqGate.scores.content;
-                           aoDeltasPayload = faqGate.deltas as unknown as Record<string, unknown>;
-                        } else {
-                           rejectedUnusable += 1;
-                        }
-
-                        sse(res, 'progress', {
-                           round: roundsRun + 1,
-                           processed: roundsRun + 1,
-                           seo: finalSeo,
-                           ai: finalAi,
-                           content: finalContent,
-                           phase: 'faq',
-                           changed: faqGate.accepted ? 1 : 0,
-                           rolledBack: faqGate.rolledBack,
-                           faqRejected: !faqGate.accepted && !faqGate.rolledBack,
-                           reason: faqGate.reason,
-                           deltas: faqGate.deltas,
-                        });
-                     }
-                  }
-               } catch { /* non-fatal */ }
-            }
-         }
-
-         if (!aborted && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)) {
-            const sectionEvents = buildArticleSectionDiffEvents(originalHtml, workingHtml);
-            for (const ev of sectionEvents) {
-               sse(res, 'section', ev);
-            }
-         }
-
-      } finally {
-         if (!aborted && orgId != null && shouldChargeCredit(changedCount, aiTokens)) {
-            await recordAiTokens(orgId, aiTokens);
-         }
-      }
-
-      if (aborted) return;
-
-      const creditDeducted = orgId != null && shouldChargeCredit(changedCount, aiTokens);
-      const seoEntityGapsAfter = computeTermUsageGaps(ctx?.scoreData ?? scoreData, workingHtml)
-         .filter((g) => g.status === 'missing' || g.status === 'low').length;
-      const workOutcome = resolveAoWorkOutcome({
-         bodyAccepted,
-         faqAccepted,
-         seoEntityGapsBefore,
-         seoEntityGapsAfter,
-         alreadyOptimal: false,
-      });
-      const legacyOutcome = resolveOptimizeDoneOutcome({
-         changedCount,
-         rejectedUnusable,
-         initialSeo,
-         initialAi,
-         initialContent,
-         targetSeo: TARGET_SEO_SCORE,
-         targetAi: TARGET_AI_SCORE,
-         targetContent: TARGET_CONTENT_SCORE,
-      });
-      // Prefer work-class outcome when FAQ-only / incomplete; keep legacy for no_change paths
-      const outcome = (workOutcome === 'faq_only' || workOutcome === 'partial_body' || workOutcome === 'incomplete_no_body')
-         ? workOutcome
-         : legacyOutcome;
-
-      // CCM after AO (07-runtime) — non-fatal; use final HTML even if client hasn't saved yet
-      if (articleId != null && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)) {
-         void import('@/src/core/intelligence/compileAfterArticleChange')
-            .then((m) =>
-               m.compileAfterArticleChange({
-                  articleId: Number(articleId),
-                  compiledAt: new Date().toISOString(),
-                  contentHtml: workingHtml,
-                  mode: 'full',
-               }),
-            )
-            .then((r) => {
-               if (!r.ok) console.warn('[ccm] compile after AO skipped:', r.error);
-            })
-            .catch((err: unknown) => {
-               console.warn('[ccm] compile after AO failed (non-fatal):', getErrorMessage(err));
+        if (gated.length > 0 && !skipFaqForEmptyBodySeo) {
+          const faqPrompt = buildFaqSectionPrompt({
+            keyword: ctx.keyword || '',
+            questions: gated.map((q) => q.label),
+            articleExcerpt: plainForFaq,
+            language: ctx.language || 'pl',
+          });
+          try {
+            const faqRes = await fetch(llm.url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: llm.model,
+                max_tokens: 4000,
+                temperature: 0.3,
+                messages: [
+                  { role: 'system', content: faqPrompt.systemPrompt },
+                  { role: 'user', content: faqPrompt.userInstruction },
+                ],
+              }),
+              signal: controller.signal,
             });
+            if (faqRes.ok) {
+              const faqData = parseChatCompletion(await faqRes.json());
+              aiTokens += faqData.totalTokens;
+              const faqHtml = stripFences(faqData.content);
+              const structure = validateFaqHtmlStructure(faqHtml, {
+                language: ctx.language || 'pl',
+                expectedQuestionCount: gated.length,
+              });
+              faqStructurallyValid = structure.ok;
+              if (!structure.ok) {
+                rejectedUnusable += 1;
+                sse(res, 'progress', {
+                  round: roundsRun + 1,
+                  processed: roundsRun + 1,
+                  phase: 'faq',
+                  changed: 0,
+                  faqRejected: true,
+                  reason: structure.reason,
+                });
+              } else if (isUsableEdit(faqHtml)) {
+                const workingScores: AoScores = {
+                  seo: finalSeo || initialSeo,
+                  content: finalContent || initialContent,
+                  ai: finalAi || initialAi,
+                };
+                const latestAi = await readLatestAiScore(Number(articleId));
+                const critical = buildCriticalContentMap({
+                  html: originalHtml,
+                  profile,
+                  sectionIds: splitSections(originalHtml).map((s) => s.id),
+                });
+                const faqGate = applyGatedFaqMerge({
+                  originalHtml,
+                  workingHtml,
+                  faqHtml,
+                  baselineScores: runBaselineScores,
+                  workingScores,
+                  baselineWordCount: runBaselineWordCount,
+                  critical,
+                  policy: aoPolicy.gate,
+                  scoreHtml: (html) => {
+                    const seo = scoreSeo(html, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
+                    const ai = scoreAiFromContext(ctx, html, latestAi);
+                    return {
+                      scores: {
+                        seo,
+                        content: computeOverallContentScore(seo, ai),
+                        ai,
+                      },
+                      aiAvailability: 'available',
+                    };
+                  },
+                });
+
+                if (faqGate.rolledBack) {
+                  workingHtml = faqGate.html;
+                  changedCount = 0;
+                  bodyAccepted = 0;
+                  faqAccepted = false;
+                  faqChanged = false;
+                  rejectedUnusable += 1;
+                  finalSeo = faqGate.scores.seo;
+                  finalAi = faqGate.scores.ai;
+                  finalContent = faqGate.scores.content;
+                  aoDeltasPayload = faqGate.deltas as unknown as Record<string, unknown>;
+                } else if (faqGate.accepted) {
+                  workingHtml = faqGate.html;
+                  changedCount += 1;
+                  faqAccepted = true;
+                  faqChanged = true;
+                  finalSeo = faqGate.scores.seo;
+                  finalAi = faqGate.scores.ai;
+                  finalContent = faqGate.scores.content;
+                  aoDeltasPayload = faqGate.deltas as unknown as Record<string, unknown>;
+                } else {
+                  rejectedUnusable += 1;
+                }
+
+                sse(res, 'progress', {
+                  round: roundsRun + 1,
+                  processed: roundsRun + 1,
+                  seo: finalSeo,
+                  ai: finalAi,
+                  content: finalContent,
+                  phase: 'faq',
+                  changed: faqGate.accepted ? 1 : 0,
+                  rolledBack: faqGate.rolledBack,
+                  faqRejected: !faqGate.accepted && !faqGate.rolledBack,
+                  reason: faqGate.reason,
+                  deltas: faqGate.deltas,
+                });
+              }
+            }
+          } catch { /* non-fatal */ }
+        }
       }
 
-      sse(res, 'done', {
-         changedCount, total: MAX_ROUNDS, promptVersion: PROMPT_VERSION,
-         creditDeducted, rounds: roundsRun, phase, outcome,
-         userMessage: aoOutcomeUserMessage(workOutcome),
-         seo: finalSeo, ai: finalAi, content: finalContent,
-         targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE, targetContent: TARGET_CONTENT_SCORE,
-         trimmed: trimmedMeta.trimmed, ignoredLift: trimmedMeta.ignoredLift,
-         wholeArticle: optimizationStrategy === 'whole_article_fallback',
-         optimizationStrategy,
-         baseline: aoBaselinePayload,
-         deltas: aoDeltasPayload,
-         traceSummary: aoTraceSummary,
-         metrics: {
-            bodyAccepted,
-            bodyRejected,
-            faqAccepted,
-            faqStructurallyValid,
-            bodyChanged: bodyAccepted > 0,
-            faqChanged,
-            seoEntityGapsBefore,
-            seoEntityGapsAfter,
-            targetingSkippedNoTarget,
-            targetingUsedFallback,
-         },
-      });
-   } catch (error) {
-      if (aborted || (error instanceof DOMException && error.name === 'AbortError')) return;
-      if (!aborted) sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });
-   } finally {
-      req.off('close', onClose);
-      req.off('aborted', onClose);
-      res.end();
-   }
+      // Re-judge the optimized article. Live scoring only estimates: facts are credited by
+      // token readiness, quality floors stop at 4, and answersMainQuestionEarly is frozen
+      // from the last grade — so a run that rewrote the intro and wove twenty facts used
+      // to report +5. Surfer re-scores after Auto-Optimize; so do we. The client carries
+      // the regraded snapshot to Save, where it becomes the stored coverage.
+      if (
+        !aborted
+            && ctx?.coverage
+            && ctx.keyword
+            && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)
+      ) {
+        try {
+          const { regradeCoverageSnapshot } = await import('@/src/infrastructure/coverage/regradeCoverageSnapshot');
+          const plainForRegrade = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          const regraded = await regradeCoverageSnapshot({
+            snapshot: ctx.coverage,
+            plainText: plainForRegrade,
+            html: workingHtml,
+            keyword: ctx.keyword,
+            force: true,
+          });
+          if (regraded && !aborted) {
+            const liveItems = liveCoverageItems(regraded.items, plainForRegrade, workingHtml);
+            const graded = computeCoverageScores(liveItems, !!regraded.answersMainQuestionEarly);
+            regradedCoverage = { ...regraded, items: [...liveItems], buckets: graded.buckets, overall: graded.overall };
+            const aiBefore = finalAi || initialAi;
+            finalAi = graded.overall;
+            finalSeo = finalSeo || initialSeo;
+            finalContent = computeOverallContentScore(finalSeo, finalAi);
+            sse(res, 'coverage', { snapshot: regradedCoverage, ai: finalAi, aiBefore });
+            sse(res, 'progress', {
+              round: roundsRun + 2,
+              processed: roundsRun + 2,
+              seo: finalSeo,
+              ai: finalAi,
+              content: finalContent,
+              phase: 'regrade',
+              changed: 0,
+            });
+          }
+        } catch (err) {
+          console.warn('[optimize-sections] coverage regrade failed (non-fatal):', getErrorMessage(err));
+        }
+      }
+
+      if (!aborted && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)) {
+        const sectionEvents = buildArticleSectionDiffEvents(originalHtml, workingHtml);
+        for (const ev of sectionEvents) {
+          sse(res, 'section', ev);
+        }
+      }
+    } finally {
+      if (!aborted && orgId != null && shouldChargeCredit(changedCount, aiTokens)) {
+        await recordAiTokens(orgId, aiTokens);
+      }
+    }
+
+    if (aborted) return;
+
+    const creditDeducted = orgId != null && shouldChargeCredit(changedCount, aiTokens);
+    const seoEntityGapsAfter = computeTermUsageGaps(ctx?.scoreData ?? scoreData, workingHtml)
+      .filter((g) => g.status === 'missing' || g.status === 'low').length;
+    const workOutcome = resolveAoWorkOutcome({
+      bodyAccepted,
+      faqAccepted,
+      seoEntityGapsBefore,
+      seoEntityGapsAfter,
+      alreadyOptimal: false,
+    });
+    const legacyOutcome = resolveOptimizeDoneOutcome({
+      changedCount,
+      rejectedUnusable,
+      initialSeo,
+      initialAi,
+      initialContent,
+      targetSeo: TARGET_SEO_SCORE,
+      targetAi: TARGET_AI_SCORE,
+      targetContent: TARGET_CONTENT_SCORE,
+    });
+      // Prefer work-class outcome when FAQ-only / incomplete; keep legacy for no_change paths
+    const outcome = (workOutcome === 'faq_only' || workOutcome === 'partial_body' || workOutcome === 'incomplete_no_body')
+      ? workOutcome
+      : legacyOutcome;
+
+    // No CCM compile here: the client may still reject every change, and compiling the
+    // unsaved result rewrote the article's coverage state (a copy with three sections
+    // cut out then scored as fully covered). The save route compiles on save.
+
+    // Run telemetry — the only record of what AO did, how long it took and what it
+    // cost, so runs can be compared against Surfer's (~50 s, one pass per section).
+    if (articleId != null) {
+      logRun({
+        articleId: Number(articleId),
+        kind: 'auto-optimize',
+        before: originalHtml,
+        after: workingHtml,
+        beforeScore: Math.round(initialContent),
+        afterScore: Math.round(finalContent || initialContent),
+        meta: {
+          promptVersion: PROMPT_VERSION,
+          outcome,
+          workOutcome,
+          strategy: optimizationStrategy,
+          phase,
+          rounds: roundsRun,
+          ms: Date.now() - startedAt,
+          tokens: aiTokens,
+          changedCount,
+          rejectedUnusable,
+          bodyAccepted,
+          faqAccepted,
+          seo: { before: initialSeo, after: finalSeo },
+          ai: { before: initialAi, after: finalAi, regraded: regradedCoverage != null },
+          targeting: { skippedNoTarget: targetingSkippedNoTarget, usedFallback: targetingUsedFallback },
+          trace: aoTraceSummary,
+        },
+      }).catch(() => undefined);
+    }
+
+    sse(res, 'done', {
+      changedCount,
+      total: MAX_ROUNDS,
+      promptVersion: PROMPT_VERSION,
+      creditDeducted,
+      rounds: roundsRun,
+      phase,
+      outcome,
+      userMessage: aoOutcomeUserMessage(workOutcome),
+      seo: finalSeo,
+      ai: finalAi,
+      content: finalContent,
+      targetSeo: TARGET_SEO_SCORE,
+      targetAi: TARGET_AI_SCORE,
+      targetContent: TARGET_CONTENT_SCORE,
+      trimmed: trimmedMeta.trimmed,
+      ignoredLift: trimmedMeta.ignoredLift,
+      wholeArticle: optimizationStrategy === 'whole_article_fallback',
+      optimizationStrategy,
+      baseline: aoBaselinePayload,
+      deltas: aoDeltasPayload,
+      traceSummary: aoTraceSummary,
+      coverage: regradedCoverage,
+      metrics: {
+        bodyAccepted,
+        bodyRejected,
+        faqAccepted,
+        faqStructurallyValid,
+        bodyChanged: bodyAccepted > 0,
+        faqChanged,
+        seoEntityGapsBefore,
+        seoEntityGapsAfter,
+        targetingSkippedNoTarget,
+        targetingUsedFallback,
+      },
+    });
+  } catch (error) {
+    if (aborted || (error instanceof DOMException && error.name === 'AbortError')) return;
+    if (!aborted) sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });
+  } finally {
+    req.off('close', onClose);
+    req.off('aborted', onClose);
+    res.end();
+  }
 }
 
 export default withOrgPaymentAccess(handler);

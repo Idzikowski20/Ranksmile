@@ -1,17 +1,17 @@
 // POST /api/articles/backfill  — backfill content_score from score_data + GSC keywords
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { readLocalSCData } from '../../../utils/searchConsole';
-import { buildGscUrlKeywordMap, normalizeUrlForMatch } from '../../../utils/gsc';
-import Domain from '../../../database/models/domain';
-import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { queryAffected } from '@/src/core/shared/types/db';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../database/database';
+import verifyUser from '../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { readLocalSCData } from '../../../utils/searchConsole';
+import { buildGscUrlKeywordMap, normalizeUrlForMatch } from '../../../utils/gsc';
+import Domain from '../../../database/models/domain';
+import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -102,7 +102,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
 
       const scRows = await queryRows<{ url: string | null }>(
-         `SELECT url FROM site_context WHERE domain_id = ?`,
+         'SELECT url FROM site_context WHERE domain_id = ?',
          [domainId],
       );
       const scUrls: string[] = scRows.map((r) => r.url).filter((u): u is string => Boolean(u));

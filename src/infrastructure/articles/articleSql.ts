@@ -24,13 +24,15 @@ export async function getArticleIdColumn(): Promise<'id' | 'ID'> {
       return articleIdColumnCache;
     }
 
-    const rows = await db.query<{ name: string }>(`PRAGMA table_info(articles)`, { type: QueryTypes.SELECT });
+    const rows = await db.query<{ name: string }>('PRAGMA table_info(articles)', { type: QueryTypes.SELECT });
     const names = rows.map((row) => row.name);
     articleIdColumnCache = names.includes('ID') ? 'ID' : 'id';
     return articleIdColumnCache;
   } catch {
-    articleIdColumnCache = isPostgres ? 'ID' : 'id';
-    return articleIdColumnCache;
+    // Not cached: a lookup that failed because the DB was unreachable (still booting, a
+    // blip) used to pin the guess for the process lifetime, and every article query then
+    // died with `column "ID" does not exist` until the server restarted.
+    return isPostgres ? 'ID' : 'id';
   }
 }
 

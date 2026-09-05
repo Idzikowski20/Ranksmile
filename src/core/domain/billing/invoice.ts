@@ -49,11 +49,11 @@ export const STATUS_LABEL: Record<BillingInvoiceStatus, string> = {
 /** Vendor-neutral status mapping — takes a plain string, not a Stripe type. */
 export function mapInvoiceStatus(status: string | null): BillingInvoiceStatus {
   if (
-    status === 'paid' ||
-    status === 'open' ||
-    status === 'draft' ||
-    status === 'void' ||
-    status === 'uncollectible'
+    status === 'paid'
+    || status === 'open'
+    || status === 'draft'
+    || status === 'void'
+    || status === 'uncollectible'
   ) {
     return status;
   }

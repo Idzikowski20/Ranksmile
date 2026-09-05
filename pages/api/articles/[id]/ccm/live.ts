@@ -1,8 +1,6 @@
 // POST /api/articles/[id]/ccm/live — live presence overlay (no persist, no new facts)
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../../../utils/verifyUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
-import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { ensureCcmTables } from '@/src/infrastructure/persistence/schema/ensureCcmTables';
@@ -10,6 +8,8 @@ import { SqlCompileStore } from '@/src/core/intelligence/sqlCompileStore';
 import { getCcm, projectArticleIntelligence } from '@/src/core/intelligence/runtimeApi';
 import { applyLivePresence } from '@/src/core/intelligence/livePresence';
 import { buildActionGraph } from '@/src/core/planner/actionGraphBuilder';
+import { getCurrentUserId } from '../../../../../utils/getUser';
+import verifyUser from '../../../../../utils/verifyUser';
 
 type Body = {
   plainText?: string;
@@ -35,8 +35,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const body = req.body && typeof req.body === 'object' ? (req.body as Body) : {};
-  const plain =
-    typeof body.plainText === 'string' && body.plainText.trim()
+  const plain = typeof body.plainText === 'string' && body.plainText.trim()
       ? body.plainText
       : typeof body.html === 'string'
         ? htmlToPlain(body.html)

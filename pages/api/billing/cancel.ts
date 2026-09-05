@@ -4,8 +4,8 @@ import { assertCanManage } from '@/src/infrastructure/identity/members';
 import { getStripe, isStripeConfigured } from '@/src/infrastructure/billing/stripe';
 import { syncSubscriptionToOrg } from '@/src/infrastructure/billing/stripeBillingSync';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

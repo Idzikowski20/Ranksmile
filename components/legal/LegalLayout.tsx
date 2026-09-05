@@ -390,8 +390,7 @@ export default function LegalLayout({
 }) {
   const agreements = LEGAL_DOCS.filter((d) => d.group === 'agreements');
   const policies = LEGAL_DOCS.filter((d) => d.group === 'policies');
-  const metaDescription =
-    description
+  const metaDescription = description
     || `${title} for Ranksmile — SEO content workspace.`;
 
   return (

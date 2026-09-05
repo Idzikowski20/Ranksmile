@@ -9,13 +9,12 @@ import {
   ENRICHMENT_EDIT_BUDGET,
   PRECISION_SECTION_BUDGET,
 } from '@/src/core/domain/optimize/editBudget';
-import type { ScoreGatePolicy } from '@/src/core/domain/optimize/aoScoreDelta';
+import type { ScoreGatePolicy, AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 import {
   DEEP_SCORE_GATE_POLICY,
   ENRICHMENT_SCORE_GATE_POLICY,
   STRICT_SCORE_GATE_POLICY,
 } from '@/src/core/domain/optimize/aoScoreDelta';
-import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
 import { TARGET_AI, TARGET_SEO } from '@/src/core/domain/optimize/optimizeMode';
 import { countWordsFromHtml } from '@/src/infrastructure/ao/aoBaseline';
 

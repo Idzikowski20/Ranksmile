@@ -4,16 +4,19 @@ import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProf
 import { textHitsForbidden } from '@/src/core/domain/optimize/intentProfile';
 import type { CoverageItem } from '@/src/core/domain/coverage/aiCoverage';
 import { AI_SEARCH_CHECKPOINT_TYPES } from '@/src/core/domain/coverage/aiCoverage';
-import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_TARGET } from '@/src/core/domain/optimize/coverageState';
+import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_MAX } from '@/src/core/domain/optimize/coverageState';
 import type { TermUsageGap } from '@/src/infrastructure/ao/optimizeSectionEdit';
 import type { Section } from '@/src/infrastructure/articles/articleSections';
 import type { OptimizationStrategy } from '@/src/infrastructure/ao/optimizationPolicy';
+import { findSectionForHeading, missingPlannedHeadings } from '@/src/core/domain/optimize/plannedSections';
 
 export type BuildCandidatesInput = {
   profile: ArticleIntentProfile;
   /** Common competitor H2 titles — sections the ranking pages carry (Surfer-style). */
   competitorHeadings?: string[];
   termGaps?: TermUsageGap[];
+  /** SERP heading terms no H2/H3 of the article carries yet. */
+  headingTerms?: string[];
   coverageItems?: readonly CoverageItem[];
   paaQuestions?: string[];
   visibilityPrompts?: Array<{ id: string; label: string }>;
@@ -49,21 +52,23 @@ function countWords(html: string): number {
   return t ? t.split(/\s+/).length : 0;
 }
 
-/** Meaningful words of a heading — used to match a planned heading against a live section. */
-function headingWords(title: string): string[] {
-  return (title || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 3);
+function coverageSource(type: CoverageItem['type']): EditCandidate['source'] {
+  if (type === 'paa' || type === 'question' || type === 'intent') return 'paa';
+  if (type === 'entity') return 'entity';
+  return 'ai_coverage';
 }
 
-/** The live section that corresponds to a planned heading (word overlap, same 0.6 rule
- *  as the "already covered" check below). */
-function findSectionForHeading(sections: Section[], title: string): Section | undefined {
-  const words = headingWords(title);
-  if (!words.length) return undefined;
-  return sections.find((sec) => {
-    const text = (sec.headingText || '').toLowerCase();
-    if (!text) return false;
-    return words.filter((w) => text.includes(w)).length / words.length >= 0.6;
-  });
+function coverageGapId(source: EditCandidate['source'], it: CoverageItem): string {
+  if (source === 'entity') return `coverage:entity:${slug(it.label)}`;
+  if (source === 'paa') return `coverage:question:${slug(it.label)}`;
+  return `coverage:item:${slug(it.id || it.label)}`;
+}
+
+function coverageAction(o: {
+  isIntent: boolean; covered: boolean; introThin: boolean; source: EditCandidate['source'];
+}): string {
+  if (o.isIntent && !o.covered && o.introThin) return 'rewrite_section';
+  return o.source === 'entity' ? 'add_facts' : 'improve_direct_answer';
 }
 
 /** Evaluate section — strong gets no section_quality candidate. */
@@ -78,22 +83,23 @@ export function classifySectionQuality(sec: Section): 'strong' | 'medium' | 'wea
 /** Gaps + justified section candidates only (evaluate all ≠ generate all). */
 export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[] {
   const out: EditCandidate[] = [];
-  const profile = input.profile;
+  const { profile } = input;
   const sectionHint = input.defaultSectionId;
   const strategy = input.strategy || 'precision';
   const skipLowNlp = Boolean(input.seoStrong && input.aiWeak);
 
   if (!skipLowNlp) {
-    for (const g of input.termGaps || []) {
-      if (g.status !== 'missing' && g.status !== 'low') continue;
-      const gap = g.term;
-      if (textHitsForbidden(gap, profile)) continue;
+    const gaps = (input.termGaps || []).filter(
+      (g) => (g.status === 'missing' || g.status === 'low') && !textHitsForbidden(g.term, profile),
+    );
+    for (const g of gaps) {
       out.push(
         makeCandidate({
           id: `seo-${g.term}`,
           gapId: `seo:term:${slug(g.term)}`,
           source: 'seo_term',
           targetSectionId: sectionHint,
+          phrase: g.term,
           targetGap: `Naturally include the term "${g.term}" once in an existing paragraph.`,
           reason: `Missing or low NLP term "${g.term}"`,
           expectedOutcome: { type: 'generic', id: `seo:term:${slug(g.term)}` },
@@ -107,59 +113,74 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
     }
   }
 
-  for (const it of input.coverageItems || []) {
-    if (it.category !== 'intent' && it.category !== 'knowledge' && it.category !== 'authority') {
-      continue;
-    }
-    if (!AI_SEARCH_CHECKPOINT_TYPES.has(it.type)) continue;
-    // Presence/"Covered" at quality 3 still caps AI gauge ~50s. When AI is weak, keep
-    // deepening until AI_SCORE_QUALITY_TARGET so score can climb toward 70+.
-    const qualityDone = input.aiWeak ? AI_SCORE_QUALITY_TARGET : ADEQUATE_QUALITY_MIN;
-    if (it.covered && it.quality >= qualityDone) continue;
-    if (textHitsForbidden(it.label, profile)) continue;
+  for (const term of (input.headingTerms || []).filter((t) => !textHitsForbidden(t, profile))) {
+    out.push(
+      makeCandidate({
+        id: `heading-${term}`,
+        gapId: `seo:heading:${slug(term)}`,
+        source: 'seo_term',
+        targetSectionId: sectionHint,
+        phrase: term,
+        targetGap: `Include "${term}" in the section heading (H2).`,
+        reason: `Ranking pages carry "${term}" in a heading; ours do not`,
+        expectedOutcome: { type: 'generic', id: `seo:heading:${slug(term)}` },
+        priority: 'recommended',
+        priorityTier: 3,
+        suggestedAction: 'enrich_heading',
+        intentFit: 0.55,
+        factualRisk: 0.1,
+      }),
+    );
+  }
 
-    const source: EditCandidate['source'] =
-      it.type === 'paa' || it.type === 'question' || it.type === 'intent'
-        ? 'paa'
-        : it.type === 'entity'
-          ? 'entity'
-          : 'ai_coverage';
+  // The intro answers the main question, says who the article is for and why it
+  // matters (Surfer's Upfront Intent Alignment). An intent gap belongs there — as a
+  // rewrite into prose when the lead never answered, a strengthened answer when it did.
+  const intro = input.sections?.find((s) => s.index === 0);
+  const introThin = intro != null && classifySectionQuality(intro) !== 'strong';
 
-    const gapId =
-      source === 'entity'
-        ? `coverage:entity:${slug(it.label)}`
-        : source === 'paa'
-          ? `coverage:question:${slug(it.label)}`
-          : `coverage:item:${slug(it.id || it.label)}`;
+  // The gauge is quality/5 × 85 (+15 early answer): with every item at 4 it tops out
+  // near 83. While AI is weak, a 4 is still a gap to deepen; 5 is done.
+  const qualityDone = input.aiWeak ? AI_SCORE_QUALITY_MAX : ADEQUATE_QUALITY_MIN;
+  const checkpoints = (input.coverageItems || []).filter(
+    (it) => (it.category === 'intent' || it.category === 'knowledge' || it.category === 'authority')
+      && AI_SEARCH_CHECKPOINT_TYPES.has(it.type)
+      && !(it.covered && it.quality >= qualityDone)
+      && !textHitsForbidden(it.label, profile),
+  );
+  for (const it of checkpoints) {
+    const source = coverageSource(it.type);
+    const gapId = coverageGapId(source, it);
 
-    const tier: 0 | 2 = it.importance === 'critical' ? 0 : 2;
     const shallow = it.covered && it.quality > 0 && it.quality < qualityDone;
+    // Uncovered first; deepening an answer that exists comes after.
+    const tier: 0 | 1 | 2 | 3 = (it.importance === 'critical' ? 0 : 2) + (shallow ? 1 : 0) as 0 | 1 | 2 | 3;
+    const isIntent = it.type === 'intent' && intro != null;
 
     out.push(
       makeCandidate({
         id: `cov-${it.id}`,
         gapId,
         source,
-        targetSectionId: sectionHint,
+        targetSectionId: isIntent ? intro.id : sectionHint,
         targetGap: it.label,
         reason: shallow
-          ? `Shallow AI answer (quality ${it.quality}/${AI_SCORE_QUALITY_TARGET}): ${it.label}`
+          ? `Shallow AI answer (quality ${it.quality}/${qualityDone}): ${it.label}`
           : `Uncovered ${source}: ${it.label}`,
         expectedOutcome: { type: 'coverage_item_resolved', id: gapId },
         priority: priorityFromImportance(it.importance),
         priorityTier: tier,
-        suggestedAction: source === 'entity' ? 'add_facts' : 'improve_direct_answer',
+        suggestedAction: coverageAction({ isIntent, covered: it.covered, introThin, source }),
         intentFit: 0.55,
         factualRisk: profile.sensitiveDomain ? 0.45 : 0.2,
       }),
     );
   }
 
-  for (let i = 0; i < (input.paaQuestions || []).length; i++) {
-    const label = input.paaQuestions![i];
-    if (!label || label.length < 8) continue;
-    if (textHitsForbidden(label, profile)) continue;
-    if (out.some((c) => c.targetGap === label)) continue;
+  (input.paaQuestions || []).forEach((label, i) => {
+    if (!label || label.length < 8) return;
+    if (textHitsForbidden(label, profile)) return;
+    if (out.some((c) => c.targetGap === label)) return;
     const gapId = `coverage:question:${slug(label)}`;
     out.push(
       makeCandidate({
@@ -177,12 +198,12 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
         factualRisk: 0.25,
       }),
     );
-  }
+  });
 
-  for (const v of input.visibilityPrompts || []) {
-    if (!v.label || v.label.length < 8) continue;
-    if (textHitsForbidden(v.label, profile)) continue;
-    if (out.some((c) => c.targetGap === v.label)) continue;
+  (input.visibilityPrompts || []).forEach((v) => {
+    if (!v.label || v.label.length < 8) return;
+    if (textHitsForbidden(v.label, profile)) return;
+    if (out.some((c) => c.targetGap === v.label)) return;
     const gapId = `coverage:visibility:${slug(v.label)}`;
     out.push(
       makeCandidate({
@@ -200,19 +221,18 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
         factualRisk: 0.3,
       }),
     );
-  }
+  });
 
   if (input.sections?.length) {
-    const allowSectionEdits =
-      strategy === 'enrichment'
+    const allowSectionEdits = strategy === 'enrichment'
       || strategy === 'deep_optimize'
       || (strategy === 'precision' && input.aiWeak);
 
     if (allowSectionEdits) {
-      for (const sec of input.sections) {
-        const q = classifySectionQuality(sec);
-        if (q === 'strong') continue;
-        if (strategy === 'precision' && q !== 'weak') continue;
+      const graded = input.sections
+        .map((sec) => ({ sec, q: classifySectionQuality(sec) }))
+        .filter(({ q }) => q !== 'strong' && !(strategy === 'precision' && q !== 'weak'));
+      for (const { sec, q } of graded) {
         const gapId = `section:quality:${sec.id}`;
         out.push(
           makeCandidate({
@@ -236,7 +256,7 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
     }
   }
 
-    // Missing sections, the way Surfer adds them: a topic the ranking pages share a
+  // Missing sections, the way Surfer adds them: a topic the ranking pages share a
   // heading for and the article does not cover gets a whole new section, not a
   // sentence squeezed into an existing one. Capped hard — two per run keeps AO from
   // rebuilding the article's shape wholesale.
@@ -252,7 +272,7 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
   ];
   const missingCap = input.rebuild ? 5 : 3;
   if (headingSources.length && input.sections?.length) {
-    const sections = input.sections;
+    const { sections } = input;
     const articleText = sections.map((sec) => sec.html).join(' ')
       .replace(/<[^>]+>/g, ' ')
       .toLowerCase();
@@ -275,23 +295,32 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
       return sections[0];
     };
 
-    let added = 0;
-    for (const { title: rawTitle, planned, plannedIndex } of headingSources) {
-      if (added >= missingCap) break;
-      // A section the PLAN intended is structural damage whatever the score or strategy
-      // says — the degraded-article test sat at SEO 68 (mode seo-first, strategy
-      // precision) with seven planned sections gone, and both prior gates skipped the
-      // rebuild entirely. Competitor-heading suggestions stay behind the old gate:
-      // they are a nice-to-have, not the article's own contract.
-      if (!planned && !(input.rebuild || strategy !== 'precision')) continue;
-      const title = (rawTitle || '').trim();
-      if (title.length < 8 || title.length > 90) continue;
-      if (textHitsForbidden(title, profile)) continue;
+    // A planned section is missing when no heading is left for it — its words usually
+    // survive in the neighbouring sections, so the body-text rule below never saw it.
+    const missingPlanned = new Set(missingPlannedHeadings(plannedTitles, sections));
+
+    // A section the PLAN intended is structural damage whatever the score or strategy
+    // says — the degraded-article test sat at SEO 68 (mode seo-first, strategy
+    // precision) with seven planned sections gone, and both prior gates skipped the
+    // rebuild entirely. Competitor-heading suggestions stay behind the old gate:
+    // they are a nice-to-have, not the article's own contract.
+    const wanted = (src: { title: string; planned: boolean }): boolean => {
+      if (!src.planned && !(input.rebuild || strategy !== 'precision')) return false;
+      const title = (src.title || '').trim();
+      if (title.length < 8 || title.length > 90) return false;
+      if (textHitsForbidden(title, profile)) return false;
+      if (src.planned) return missingPlanned.has(src.title);
       // Covered when the heading's meaningful words already appear in the article.
       const words = title.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 3);
-      if (!words.length) continue;
+      if (!words.length) return false;
       const hits = words.filter((w) => articleText.includes(w)).length;
-      if (hits / words.length >= 0.6) continue;
+      return hits / words.length < 0.6;
+    };
+
+    let added = 0;
+    for (const { title: rawTitle, planned, plannedIndex } of headingSources.filter(wanted)) {
+      if (added >= missingCap) break;
+      const title = rawTitle.trim();
       out.push(
         makeCandidate({
           id: `missing-section-${slug(title)}`,
@@ -311,5 +340,5 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
     }
   }
 
-return sortCandidatesByPriority(out);
+  return sortCandidatesByPriority(out);
 }

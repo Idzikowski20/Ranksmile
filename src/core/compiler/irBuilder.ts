@@ -11,8 +11,7 @@ import type {
 import { parseSpoHeuristic } from '@/src/core/ccm/builders/factEngine';
 
 /** Multi-word Proper Nouns + single Capitalized tokens (len≥4). */
-const MULTI_ENTITY =
-  /\b[\p{Lu}][\p{L}\p{M}]+(?:\s+[\p{Lu}][\p{L}\p{M}]+)+\b/gu;
+const MULTI_ENTITY = /\b[\p{Lu}][\p{L}\p{M}]+(?:\s+[\p{Lu}][\p{L}\p{M}]+)+\b/gu;
 const SINGLE_ENTITY = /\b[\p{Lu}][\p{L}\p{M}]{3,}\b/gu;
 
 function extractSurfaces(text: string): string[] {

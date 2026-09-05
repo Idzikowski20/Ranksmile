@@ -474,7 +474,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         // left the title null we derive a readable one from the slug.
         try {
           const audited = await db.query<{ url: string; title: string | null }>(
-            `SELECT url, title FROM page_audits WHERE domain_id = ? LIMIT 100`,
+            'SELECT url, title FROM page_audits WHERE domain_id = ? LIMIT 100',
             { replacements: [article.domain_id], type: QueryTypes.SELECT },
           );
           for (const p of audited) {

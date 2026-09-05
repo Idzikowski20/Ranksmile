@@ -1,7 +1,7 @@
 import type Stripe from 'stripe';
-import type { IInvoiceRepository } from '../../../core/domain/billing/invoiceRepository';
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { getStripe, isStripeConfigured } from '@/src/infrastructure/billing/stripe';
+import type { IInvoiceRepository } from '../../../core/domain/billing/invoiceRepository';
 import { formatPaymentMethodLabel, mapStripeInvoice } from './stripeInvoiceMapper';
 
 /**

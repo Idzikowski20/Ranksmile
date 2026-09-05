@@ -4,12 +4,9 @@
 // job result and AI-visibility — as one JSON, for comparing our scoring against Ranksmile.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { ScoreData, computeContentScore, computeContentScoreBreakdown, updateTermsCoverage } from '@/src/infrastructure/articles/contentScore';
-import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows, queryOne } from '@/src/infrastructure/db/query';
@@ -18,6 +15,9 @@ import type { ArticleRow } from '@/src/infrastructure/db/query';
 import { parseJsonish } from '@/src/core/shared/types/json';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { compileArticle } from '@/src/core/intelligence/runtimeApi';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 const parse = (v: unknown): unknown => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
 

@@ -25,8 +25,8 @@ export function actionsFromObservations(observations: readonly Observation[]): A
         type: 'rewrite_section',
         title: o.title.startsWith('Low CTR') ? `Improve CTR: ${o.title.replace(/^Low CTR:\s*/i, '')}` : o.title,
         instruction:
-          o.detail ||
-          'Rewrite title/meta and strengthen the opening to improve click-through from search.',
+          o.detail
+          || 'Rewrite title/meta and strengthen the opening to improve click-through from search.',
         expectedLift: liftFromSeverity(o.severity),
         confidence: o.confidence ?? 0.65,
         cost: costFromSeverity(o.severity),
@@ -70,8 +70,8 @@ export function actionsFromObservations(observations: readonly Observation[]): A
         type: 'cover_question',
         title: 'Recover AI Visibility',
         instruction:
-          o.detail ||
-          'Cover prompts where visibility dropped — strengthen answers and citations for AI search.',
+          o.detail
+          || 'Cover prompts where visibility dropped — strengthen answers and citations for AI search.',
         expectedLift: Math.max(8, Math.abs(Math.round(o.score ?? 10))),
         confidence: o.confidence ?? 0.7,
         cost: 'medium',

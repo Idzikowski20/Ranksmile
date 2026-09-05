@@ -2,13 +2,13 @@ import type { NextPage } from 'next';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
+import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import SourcesTable, { SourceRow } from '../../../../components/aiVisibility/SourcesTable';
 import MentionGapCards from '../../../../components/aiVisibility/MentionGapCards';
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { HoverTooltip, Toggle, SearchBar, Button } from '../../../../components/koala/core';
 import { useAiVisSources, useAiVisData } from '../../../../services/aiVisibility';
-import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
 
 const SourceDetailModal = dynamic(
   () => import('../../../../components/aiVisibility/SourceDetailModal'),
@@ -18,7 +18,15 @@ const SourceDetailModal = dynamic(
 const FONT = 'var(--font-family-primary)';
 
 type GapCard = { domain: string; gap: number; shared: number; you: number };
-type SourcesData = { pending?: boolean; sources?: SourceRow[]; gapCards?: GapCard[]; gapCandidates?: string[]; ownLabel?: string; compareSources?: SourceRow[]; compareLabel?: string };
+type SourcesData = {
+   pending?: boolean;
+   sources?: SourceRow[];
+   gapCards?: GapCard[];
+   gapCandidates?: string[];
+   ownLabel?: string;
+   compareSources?: SourceRow[];
+   compareLabel?: string;
+};
 type PromptRow = { id: number; topic: string; text: string; perModel: Array<{ model: string }> };
 type PromptsData = { pending?: boolean; prompts?: PromptRow[] };
 type ModalState = { list: SourceRow[]; index: number; navigable: boolean };

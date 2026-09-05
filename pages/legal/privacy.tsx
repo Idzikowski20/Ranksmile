@@ -1,6 +1,7 @@
 import type { NextPage } from 'next';
-import LegalLayout from '../../components/legal/LegalLayout';
+import Link from 'next/link';
 import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
+import LegalLayout from '../../components/legal/LegalLayout';
 
 const PrivacyPage: NextPage = () => (
   <LegalLayout
@@ -21,10 +22,10 @@ const PrivacyPage: NextPage = () => (
     <p>
       Cookie-specific details are in our
       {' '}
-      <a href="/legal/cookies">Cookie Policy</a>
+      <Link href="/legal/cookies">Cookie Policy</Link>
       . Where we process personal data on a customer&apos;s behalf as a processor, see the
       {' '}
-      <a href="/legal/dpa">Data Processing Addendum</a>
+      <Link href="/legal/dpa">Data Processing Addendum</Link>
       .
     </p>
 
@@ -215,7 +216,7 @@ const PrivacyPage: NextPage = () => (
       przenoszalność, skarga do UODO). Szczegóły celów, podstaw i odbiorców — w angielskiej treści
       powyżej. Polityka cookies:
       {' '}
-      <a href="/legal/cookies">/legal/cookies</a>
+      <Link href="/legal/cookies">/legal/cookies</Link>
       .
     </div>
   </LegalLayout>

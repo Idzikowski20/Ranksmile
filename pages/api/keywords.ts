@@ -1,19 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Op } from 'sequelize';
+import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../database/database';
 import Keyword from '../../database/models/keyword';
 import Domain from '../../database/models/domain';
 import { getAppSettings } from './settings';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import parseKeywords from '../../utils/parseKeywords';
 import { integrateKeywordSCData, readLocalSCData } from '../../utils/searchConsole';
 import refreshAndUpdateKeywords from '../../utils/refresh';
 import { getKeywordsVolume, updateKeywordsVolumeData } from '../../utils/adwords';
 import { removeFromRetryQueue } from '../../utils/scraper';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 export async function userOwnsAllKeywords(ids: Array<number | string>, userId: string | null): Promise<boolean> {
    if (!ids.length) return false;

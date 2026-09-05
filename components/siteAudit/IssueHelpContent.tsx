@@ -1,7 +1,7 @@
 import React from 'react';
-import { Badge } from '../koala/core';
 import { getCatalogEntry } from '@/src/infrastructure/siteAudit/issueCatalog';
 import type { IssueHelpContent as IssueHelp } from '@/src/infrastructure/siteAudit/types';
+import { Badge } from '../koala/core';
 
 const LINK_BLUE = '#2563EB';
 

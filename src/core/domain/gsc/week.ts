@@ -7,7 +7,7 @@ export function weekStartFor(now: Date): string {
    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
    const isoDow = d.getUTCDay() === 0 ? 7 : d.getUTCDay(); // Mon=1..Sun=7
    d.setUTCDate(d.getUTCDate() - (isoDow - 1)); // this week's Monday
-   d.setUTCDate(d.getUTCDate() - 7);            // previous week's Monday
+   d.setUTCDate(d.getUTCDate() - 7); // previous week's Monday
    return d.toISOString().slice(0, 10);
 }
 

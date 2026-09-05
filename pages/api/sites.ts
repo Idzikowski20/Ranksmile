@@ -1,16 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth, searchconsole_v1 } from '@googleapis/searchconsole';
 import Cryptr from 'cryptr';
+import { getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
+import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
 import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
-import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
 import { readLocalSCData, getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../utils/searchConsole';
-import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type GSCSite = {
   siteUrl: string;
@@ -78,6 +78,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse<SitesResponse>)
     ? await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } } })
     : [];
   const domainStats: Record<string, DomainStats> = {};
+  const toChartPoint = (s: SearchAnalyticsStat) => ({
+    date: s.date,
+    clicks: s.clicks || 0,
+    impressions: s.impressions || 0,
+  });
 
   for (const d of configuredDomains) {
     const plain = d.get({ plain: true });
@@ -89,11 +94,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<SitesResponse>)
       impressions: plain.scImpressions || 0,
       clicks: plain.scVisits || 0,
       position: plain.scPosition ? Math.round(plain.scPosition) : 0,
-      chart: recentStats.map((s: SearchAnalyticsStat) => ({
-        date: s.date,
-        clicks: s.clicks || 0,
-        impressions: s.impressions || 0,
-      })),
+      chart: recentStats.map(toChartPoint),
     };
 
     // Stale-while-revalidate: if we haven't refreshed in >18h, kick a background GSC

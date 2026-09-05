@@ -2,12 +2,12 @@ import type { NextPage } from 'next';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
+import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import FanoutTable from '../../../../components/aiVisibility/FanoutTable';
 import { FanoutPageSkeleton } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { SearchBar, SegmentedControl, Button } from '../../../../components/koala/core';
 import { useAiVisData, useAiVisFanout, type FanoutByQueryRow, type FanoutByPromptRow } from '../../../../services/aiVisibility';
-import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
 
 const AiVisDetailModal = dynamic(
   () => import('../../../../components/aiVisibility/AiVisDetailModal'),

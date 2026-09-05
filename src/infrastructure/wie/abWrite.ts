@@ -65,8 +65,7 @@ export function scoreAbVariant(opts: {
     action: opts.action,
     synthesis: opts.synthesis,
   });
-  const delta =
-    (opts.scores.content - opts.working.content)
+  const delta = (opts.scores.content - opts.working.content)
     + 0.5 * (opts.scores.seo - opts.working.seo)
     + 0.5 * (opts.scores.ai - opts.working.ai);
   const rxH = scoreRxHeuristics(opts.sectionHtml, opts.synthesis);

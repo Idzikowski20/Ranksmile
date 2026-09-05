@@ -1,8 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
@@ -10,6 +6,10 @@ import { aggregateSources, buildSnapshotsForScan, rankCompetitors, rankBrandProf
 import { loadScanResultRows, loadScanRows, getDisplayScan, getPreviousDisplayScan } from '@/src/infrastructure/aiVisibility/aiVisibilityRead';
 import { refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 // Compare never renders a competitor's Sources → drop them to bound the payload.
 const withoutSources = (s: DomainSnapshot): DomainSnapshot => ({ ...s, sources: [] });
@@ -65,10 +65,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             const cited = (d: string): boolean => d === compareParam || d.endsWith(`.${compareParam}`);
             const compPrompts = new Set(all.filter((r) => r.citations.some((c) => cited(NORM(c.domain)))).map((r) => r.promptId));
             const urlPrompts = new Map<string, Set<number>>();
-            for (const r of all) for (const c of r.citations) {
+            for (const r of all) {
+ for (const c of r.citations) {
                const set = urlPrompts.get(c.url) ?? new Set<number>();
                set.add(r.promptId); urlPrompts.set(c.url, set);
             }
+}
             compareSources = aggregateSources(all, ownBrand)
                .filter((s) => { const ps = urlPrompts.get(s.url); return !!ps && Array.from(ps).some((id) => compPrompts.has(id)); })
                .map((s) => ({ ...s, compMentioned: true }));
@@ -177,12 +179,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
          // Brands recognised across the scoped rows (mention count + avg appearance pos).
          const brandMap = new Map<string, { brand: string, domain: string, mentions: number, posSum: number }>();
-         for (const r of scoped) for (const b of r.brands) {
+         for (const r of scoped) {
+ for (const b of r.brands) {
             const key = b.brand.toLowerCase();
             const e = brandMap.get(key) ?? { brand: b.brand, domain: b.domain, mentions: 0, posSum: 0 };
             e.mentions += 1; e.posSum += b.pos; if (!e.domain && b.domain) e.domain = b.domain;
             brandMap.set(key, e);
          }
+}
          const brands = Array.from(brandMap.values())
             .map((b) => ({ brand: b.brand, domain: b.domain, mentions: b.mentions, avgPosition: Math.round((b.posSum / b.mentions) * 10) / 10 }))
             .sort((a, b) => b.mentions - a.mentions);
@@ -347,13 +351,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          // is the same slice the reference tool returns per prompt (brand + avg position).
          const brandDomains = (rows2: ResultRow[]): string[] => {
             const posByDomain = new Map<string, { sum: number; n: number }>();
-            for (const r of rows2) for (const b of r.brands) {
+            for (const r of rows2) {
+ for (const b of r.brands) {
                if (!b.domain) continue;
                const d = NORM(b.domain);
                const e = posByDomain.get(d) ?? { sum: 0, n: 0 };
                e.sum += b.pos; e.n += 1;
                posByDomain.set(d, e);
             }
+}
             return Array.from(posByDomain.entries())
                .sort((a, b) => (a[1].sum / a[1].n) - (b[1].sum / b[1].n))
                .slice(0, 5)
@@ -377,7 +383,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                const pov = computeBrandOverview(pr, scanBrand, domain.domain);
                return { id, text: promptMeta.get(id)?.text || '', visibility: pov.visibilityScore, mentionRate: pov.mentionRate, avgPosition: pov.avgPosition, brands: brandDomains(pr) };
             });
-            return { topic, promptCount: prompts.length, visibility: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition, brands: brandDomains(topicRows), prompts };
+            return {
+               topic,
+               promptCount: prompts.length,
+               visibility: ov.visibilityScore,
+               mentionRate: ov.mentionRate,
+               avgPosition: ov.avgPosition,
+               brands: brandDomains(topicRows),
+               prompts,
+            };
          }).sort((a, b) => b.visibility - a.visibility);
 
          const overall = computeBrandOverview(all, scanBrand, domain.domain);

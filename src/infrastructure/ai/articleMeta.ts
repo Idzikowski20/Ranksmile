@@ -55,7 +55,7 @@ export async function resolveArticleSeoMeta(articleId: number): Promise<ArticleS
       if (!article) return { ...DEFAULTS };
 
       const competitorRows = await queryRows<{ domain: string | null; url: string | null }>(
-         `SELECT domain, url FROM article_competitors WHERE article_id = ?`,
+         'SELECT domain, url FROM article_competitors WHERE article_id = ?',
          [articleId],
       );
       const storedCompetitorDomains = competitorRows

@@ -1,5 +1,6 @@
 import {
   computeCoverageScores,
+  type CoverageResult,
   type CoverageSnapshot,
 } from '@/src/core/domain/coverage/aiCoverage';
 import { analyzeIntroduction, deepseekIntroJudge, introCoverageItems } from '@/src/infrastructure/articles/introductionAnalyzer';
@@ -9,6 +10,7 @@ import { compactCoverageSnapshotItems, AI_COVERAGE_MAX } from '@/src/infrastruct
 import {
   buildRegradedCoverageSnapshot,
   introPlainTextFromHtml,
+  judgeCoverageItems,
 } from '@/src/infrastructure/coverage/buildCoverageSnapshot';
 import { chatLlm } from '@/src/infrastructure/ai/deepseek';
 
@@ -66,6 +68,17 @@ export async function regradeCoverageSnapshot(opts: {
     : opts.snapshot;
 
   const introPlain = introPlainTextFromHtml(opts.html, opts.plainText);
+  // Knowledge rows do not depend on the intro verdict: their judge runs while the intro
+  // judge runs. Only the intent rows wait for it (a small second judge call). The two
+  // passes used to run back to back — ~30 s of every Auto-Optimize run.
+  const knowledgeItems = workingSnap.items
+    .filter((i) => i.category !== 'intent' && i.type !== 'intent')
+    .filter((i) => i.type !== 'paa' || isUsefulCitationPrompt(i.label, opts.keyword))
+    .map(remapLegacyCitationItem);
+  const knowledgeJudge = judgeCoverageItems(opts.plainText, knowledgeItems);
+  // Awaited in the Promise.all below; the noop catch only keeps an intro-judge failure
+  // from leaving this one as an unhandled rejection.
+  knowledgeJudge.catch(() => undefined);
   const intentResult = await analyzeIntroduction(introPlain, opts.keyword, deepseekIntroJudge);
   const serpQuestions = workingSnap.items
     .filter((i) => i.type === 'paa' || i.category === 'knowledge')
@@ -86,13 +99,18 @@ export async function regradeCoverageSnapshot(opts: {
   // they are never re-checked against the keyword the article is written for. Article 93
   // was graded on 23 variants of "Ile kosztuje detektyw za godzinę?" while writing about
   // emotional blackmail — knowledge fell to 37 and the AI score to 43, against 84 for the
-  // same pipeline on a clean harvest. Only `paa` rows are gated: a harvested fact or
-  // entity ("poczucie winy") is legitimately about the topic without naming the keyword.
-  const knowledgeItems = workingSnap.items
-    .filter((i) => i.category !== 'intent' && i.type !== 'intent')
-    .filter((i) => i.type !== 'paa' || isUsefulCitationPrompt(i.label, opts.keyword))
-    .map(remapLegacyCitationItem);
+  // same pipeline on a clean harvest. Only `paa` rows are gated (knowledgeItems above): a
+  // harvested fact or entity ("poczucie winy") is legitimately about the topic without
+  // naming the keyword.
   const itemsToJudge = [...intentGraded, ...knowledgeItems];
+  const [knowledge, intent] = await Promise.all([
+    knowledgeJudge,
+    judgeCoverageItems(opts.plainText, intentGraded),
+  ]);
+  const judged: CoverageResult = {
+    items: [...intent.result.items, ...knowledge.result.items],
+    answersMainQuestionEarly: intentResult.answerStartsEarly,
+  };
 
   return buildRegradedCoverageSnapshot({
     items: itemsToJudge,
@@ -100,6 +118,7 @@ export async function regradeCoverageSnapshot(opts: {
     html: opts.html,
     answersMainQuestionEarly: intentResult.answerStartsEarly,
     baseSnapshot: workingSnap,
+    judged,
   });
 }
 

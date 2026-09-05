@@ -182,7 +182,8 @@ const MentionTable = ({ rows, brand, ownLabel }: { rows: MentionSource[]; brand:
    );
 };
 
-const MentionsSection = ({ brand, ownLabel, mentions, sources, gap }: { brand: string; ownLabel: string; mentions: number; sources: MentionSource[]; gap: { gap: number; shared: number; you: number } }) => (
+type MentionsSectionProps = { brand: string; ownLabel: string; mentions: number; sources: MentionSource[]; gap: { gap: number; shared: number; you: number } };
+const MentionsSection = ({ brand, ownLabel, mentions, sources, gap }: MentionsSectionProps) => (
    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Mentions <span style={{ color: 'var(--koala-text-secondary)', fontWeight: 400 }}>{mentions}</span></span>
@@ -202,7 +203,9 @@ const MentionsSection = ({ brand, ownLabel, mentions, sources, gap }: { brand: s
 
 const PromptsTable = ({ prompts }: { prompts: Array<{ promptId: number; text: string; avgPosition: number | null }> }) => {
    const [asc, setAsc] = useState(true);
-   const sorted = useMemo(() => [...prompts].sort((a, b) => (asc ? (a.avgPosition ?? Infinity) - (b.avgPosition ?? Infinity) : (b.avgPosition ?? -Infinity) - (a.avgPosition ?? -Infinity))), [prompts, asc]);
+   const sorted = useMemo(() => [...prompts].sort((a, b) => (asc
+      ? (a.avgPosition ?? Infinity) - (b.avgPosition ?? Infinity)
+      : (b.avgPosition ?? -Infinity) - (a.avgPosition ?? -Infinity))), [prompts, asc]);
    return (
       <div style={{ overflow: 'hidden' }}>
          <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary)', fontSize: 13, color: 'var(--koala-text-secondary)' }}>

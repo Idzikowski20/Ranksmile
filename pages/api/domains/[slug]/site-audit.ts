@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensurePipelineTables } from '@/src/infrastructure/persistence/schema/ensurePipelineTables';
 import { buildSiteAuditOverview } from '@/src/infrastructure/siteAudit/buildOverview';
 import { resolveSiteAuditPageLimit } from '@/src/infrastructure/siteAudit/pageLimit';
 import type { SiteAuditOverviewPayload } from '@/src/infrastructure/siteAudit/types';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
 
 async function handler(
   req: NextApiRequest,

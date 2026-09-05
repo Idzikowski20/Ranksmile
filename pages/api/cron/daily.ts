@@ -1,12 +1,8 @@
 // GET /api/cron/daily — Railway cron (SSOT via cron.js)
 // Automatycznie generuje artykuł dla każdej aktywnej domeny z topics
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import Domain from '../../../database/models/domain';
-import { getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../../utils/searchConsole';
 import { ensureGscSnapshotTables } from '@/src/infrastructure/persistence/schema/ensureGscSnapshotTables';
 import { captureWeeklySnapshot, weekStartFor } from '@/src/infrastructure/gsc/gscSnapshots';
-import { getWeeklyDrops } from '../../../src/composition/gsc';
 import { buildGscDigest, type DomainDigest } from '@/src/infrastructure/gsc/gscDigestEmail';
 import { sendMail } from '@/src/infrastructure/email/sendMail';
 import { queryRows, type ArticleRow } from '@/src/infrastructure/db/query';
@@ -16,6 +12,10 @@ import { withCronWatchdog } from '@/src/infrastructure/cron/cronWatchdog';
 import { cronSecrets } from '@/src/infrastructure/cron/cronAuth';
 import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '@/src/infrastructure/cron/autopilot';
 import { nextjsUrl } from '@/src/infrastructure/config/serviceUrls';
+import { getWeeklyDrops } from '../../../src/composition/gsc';
+import { getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../../utils/searchConsole';
+import Domain from '../../../database/models/domain';
+import db from '../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -64,8 +64,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const [domRows] = await db.query('SELECT d."ID" AS id, d.domain, d.workspace_id FROM domain d');
          const allDomains = domRows as Array<{ id: number; domain: string; workspace_id: number | null }>;
          for (const dom of allDomains) {
-            try { await captureWeeklySnapshot(dom.domain, dom.id, thisWeek); }
-            catch (e) { console.error('[cron] snapshot failed for', dom.domain, e); }
+            try { await captureWeeklySnapshot(dom.domain, dom.id, thisWeek); } catch (e) { console.error('[cron] snapshot failed for', dom.domain, e); }
          }
 
          const [orgRows] = await db.query('SELECT id, name, last_gsc_digest_sent_at FROM organizations');
@@ -96,8 +95,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                const html = buildGscDigest({ orgName: org.name, domains: digests });
                let anySent = false;
                for (const to of emails) {
-                  try { const { sent } = await sendMail({ to, subject: `Weekly Ranksmile Performance - ${org.name}`, html }); anySent = anySent || sent; }
-                  catch (e) { console.error('[cron] digest email failed for', to, e); }
+                  try { const { sent } = await sendMail({ to, subject: `Weekly Ranksmile Performance - ${org.name}`, html }); anySent = anySent || sent; } catch (e) { console.error('[cron] digest email failed for', to, e); }
                }
                if (anySent) {
                   await db.query('UPDATE organizations SET last_gsc_digest_sent_at = CURRENT_TIMESTAMP WHERE id = ?', { replacements: [org.id] });
@@ -129,7 +127,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          if (!topics.length) continue;
 
          const usedRows = await queryRows<ArticleRow>(
-            `SELECT target_keyword FROM articles WHERE domain_id = ?`,
+            'SELECT target_keyword FROM articles WHERE domain_id = ?',
             [domain.ID],
          );
          const usedTopics = usedRows.map((r) => r.target_keyword);
@@ -164,7 +162,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             // longer exists, so only discard when no job actually landed.
             if (articleId) {
                const job = await queryRows<{ id: string }>(
-                  `SELECT id FROM analysis_jobs WHERE article_id = ? AND job_type = 'deep_analysis' LIMIT 1`,
+                  'SELECT id FROM analysis_jobs WHERE article_id = ? AND job_type = \'deep_analysis\' LIMIT 1',
                   [articleId],
                ).catch(() => []);
                if (!job.length) {

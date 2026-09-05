@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Badge, Checkbox, HoverTooltip, TableLoadMore } from '../koala/core';
-import ScoreGauge from './ScoreGauge';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import { ARTICLE_GREEN_AT } from '@/src/infrastructure/config/scoreColor';
+import { Badge, Checkbox, HoverTooltip, TableLoadMore } from '../koala/core';
+import ScoreGauge from './ScoreGauge';
 import { Icon } from '../koala/icons/Icon';
 import GeneratingStage from './GeneratingStage';
 

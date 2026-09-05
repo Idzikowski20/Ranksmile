@@ -168,7 +168,7 @@ export function CompactSelect<T extends SelectKey = string>(props: CompactSelect
       if (current.has(opt.value)) current.delete(opt.value);
       else current.add(opt.value);
       const next = flat.filter((o) => current.has(o.value));
-      (props.onChange as ((options: SelectOption<T>[]) => void) | undefined)?.(next);
+      (props.onChange as ((chosen: SelectOption<T>[]) => void) | undefined)?.(next);
       return;
     }
     (props.onChange as ((option: SelectOption<T>) => void) | undefined)?.(opt);
@@ -177,7 +177,7 @@ export function CompactSelect<T extends SelectKey = string>(props: CompactSelect
 
   const clear = () => {
     if (props.multiple) {
-      (props.onChange as ((options: SelectOption<T>[]) => void) | undefined)?.([]);
+      (props.onChange as ((chosen: SelectOption<T>[]) => void) | undefined)?.([]);
     } else {
       (props.onChange as ((option: SelectOption<T>) => void) | undefined)?.({ value: '' as T, label: '' });
     }

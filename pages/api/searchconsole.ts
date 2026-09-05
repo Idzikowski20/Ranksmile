@@ -1,13 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../database/database';
-import verifyUser from '../../utils/verifyUser';
-import { getCurrentUserId } from '../../utils/getUser';
 import {
   cronRefreshSearchConsoleData,
   getDomainSearchConsoleData,
 } from '@/src/infrastructure/gsc/domainSearchData';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { assertCronSecret } from '@/src/infrastructure/cron/cronAuth';
+import db from '../../database/database';
+import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
 
 /**
  * Legacy alias — same handler as /api/gsc/search-data.

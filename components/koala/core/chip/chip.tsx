@@ -116,8 +116,7 @@ export function Chip({
   // Only render the shell as a button when it actually handles a click.
   const asButton = Boolean(onClick);
 
-  const leading =
-    typeof icon === 'string' ? <Icon name={icon} size={s.icon} weight="bold" /> : icon;
+  const leading = typeof icon === 'string' ? <Icon name={icon} size={s.icon} weight="bold" /> : icon;
 
   return (
     <Root

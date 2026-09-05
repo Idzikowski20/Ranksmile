@@ -79,8 +79,7 @@ export function assembleArticle(opts: {
   sectionHtmls: string[];
   introHtml?: string;
 }): string {
-  const intro =
-    opts.introHtml
+  const intro = opts.introHtml
     || `<p>Chcesz ${escapeHtml(opts.h1)}, ale nie wiesz od czego zacząć? Poniżej znajdziesz praktyczny plan działania — bez pustych obietnic.</p>`;
   const body = opts.sectionHtmls.map(humanizeSectionHtml).filter(Boolean).join('\n');
   return `<h1>${escapeHtml(opts.h1)}</h1>\n${intro}\n${body}`;

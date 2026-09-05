@@ -80,7 +80,6 @@ const OutlineButton = ({ label, disabled, onClick }: { label: React.ReactNode; d
   </button>
 );
 
-
 const Spinner = () => (
   <span style={{ display: 'inline-block', width: 13, height: 13, border: '2px solid rgba(63,63,71,0.25)', borderTopColor: 'var(--koala-text-secondary)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
 );
@@ -232,7 +231,7 @@ const PrePublishPanel = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', fontFamily: F }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>

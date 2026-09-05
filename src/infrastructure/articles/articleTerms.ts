@@ -15,7 +15,7 @@ export interface ArticleTermRow {
    term: string;
    term_type: 'keyword' | 'topic' | 'entity' | 'question';
    source: CoverageSource;
-   importance: number;          // 0..1
+   importance: number; // 0..1
    target_min: number;
    target_max: number;
    current_count: number;

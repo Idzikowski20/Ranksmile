@@ -3,7 +3,7 @@
  */
 import { MAX_CLAIMS_PER_SECTION } from '@/src/core/domain/knowledgeEngine/constants';
 import type { PlannerTargets } from '@/src/core/domain/benchmark/types';
-import type { KnowledgeGraph } from '@/src/core/domain/knowledgeEngine/types';
+import type { KnowledgeGraph, PlannerQualityMetrics } from '@/src/core/domain/knowledgeEngine/types';
 import type {
   AdaptiveOutline,
   SectionBrief,
@@ -11,7 +11,6 @@ import type {
   ValidationIssue,
   ValidationResult,
 } from '@/src/core/domain/contentPlanner/types';
-import type { PlannerQualityMetrics } from '@/src/core/domain/knowledgeEngine/types';
 
 export type PlannerValidateInput = {
   outline: AdaptiveOutline | null;

@@ -3,15 +3,15 @@
 // Falls back to sitemap parsing, then Puppeteer for JS-rendered SPAs.
 // Returns { links: [{ url, title }] }
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
-import { renderPage } from '../../../utils/spaScraper';
 import { ssrfSafeFetch } from '@/src/infrastructure/http/ssrfGuard';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { renderPage } from '../../../utils/spaScraper';
+import verifyUser from '../../../utils/verifyUser';
 
 const FETCH_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8',
 };
 

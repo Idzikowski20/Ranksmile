@@ -1,13 +1,13 @@
 // GET /api/wordpress/status?articleId=X — is a WordPress site connected for this
 // article's workspace? Drives the editor's Export → WordPress UI.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);

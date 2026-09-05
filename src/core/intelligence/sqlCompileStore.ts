@@ -113,14 +113,12 @@ export class SqlCompileStore implements CompileStore {
 
   async appendEvent(articleId: string, event: CompileEvent): Promise<void> {
     await ensureCcmTables();
-    const ccmVersion =
-      'ccmVersion' in event
+    const ccmVersion = 'ccmVersion' in event
         ? event.ccmVersion
         : 'toVersion' in event
           ? event.toVersion
           : 0;
-    const recordedAt =
-      'at' in event && typeof event.at === 'string' ? event.at : new Date().toISOString();
+    const recordedAt = 'at' in event && typeof event.at === 'string' ? event.at : new Date().toISOString();
     await queryRows(
       `INSERT INTO cia_compile_events (article_id, ccm_version, event_type, event_json, recorded_at)
        VALUES (?, ?, ?, ?, ?)`,

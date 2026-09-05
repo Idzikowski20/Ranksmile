@@ -137,7 +137,7 @@ export function enrichCcmWithDaFacts(
         endOffset: Math.min(snippet.length, 80),
         snippet,
         evidenceKind: 'context',
-        confidence: confidence,
+        confidence,
         status: 'covered',
       };
       nodes.push(ev);

@@ -5,7 +5,7 @@ import { countOccurrences } from '@/src/infrastructure/articles/contentScore';
 
 export interface RoutedGuideline {
   guideline: Guideline;
-  confidence: number;   // [0,1]
+  confidence: number; // [0,1]
   reason: string;
   priority: number;
 }
@@ -15,8 +15,8 @@ const W_HEADING = 1.0;
 const W_BODY = 0.6;
 const W_FREQ = 0.5;
 const W_SECTION = 3.0;
-const MATCH_THRESHOLD = 0.15;                          // below this, the guideline falls back (Task 2)
-const CONFIDENCE_NORM = W_HEADING + W_BODY + W_FREQ;   // a strong non-sectionId match ~ confidence 1
+const MATCH_THRESHOLD = 0.15; // below this, the guideline falls back (Task 2)
+const CONFIDENCE_NORM = W_HEADING + W_BODY + W_FREQ; // a strong non-sectionId match ~ confidence 1
 
 const IMPORTANCE_WEIGHT: Record<Importance, number> = { critical: 3, recommended: 2, optional: 1 };
 export const importanceWeight = (imp: Importance): number => IMPORTANCE_WEIGHT[imp];
@@ -105,9 +105,9 @@ export function assignGuidelinesToSections(
       reason = best.reason;
     } else {
       const fb = fallbackSection(guideline, sections);
-      if (!fb) continue;                       // no sections at all — nothing to route to
+      if (!fb) continue; // no sections at all — nothing to route to
       target = fb.section;
-      confidence = 0.1;                        // low — it is a guess
+      confidence = 0.1; // low — it is a guess
       reason = fb.reason;
     }
     const priority = importanceWeight(guideline.importance) * guideline.projectedLift * confidence;

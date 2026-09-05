@@ -154,7 +154,7 @@ async function pollGenerateDone(opts: {
       if (j.status === 'done' || j.status === 'completed') return true;
       if (j.status === 'error' || j.status === 'failed') return false;
     }
-    await new Promise((r) => setTimeout(r, 3000));
+    await new Promise<void>((resolve) => { setTimeout(resolve, 3000); });
   }
   return false;
 }
@@ -267,7 +267,7 @@ export async function runWieEvalSuite(opts: WieEvalOptions): Promise<WieEvalResu
     `SELECT content, content_score, score_data, ai_info_to_cover FROM articles WHERE ${idSql} = ? LIMIT 1`,
     [articleId],
   );
-  let htmlBefore = afterGen?.content || row.content || '';
+  const htmlBefore = afterGen?.content || row.content || '';
   await writeFile(path.join(outDir, 'article.before.html'), htmlBefore || '<!-- empty -->', 'utf-8');
 
   // ── AO ─────────────────────────────────────────────────────────
@@ -367,11 +367,11 @@ export async function runWieEvalSuite(opts: WieEvalOptions): Promise<WieEvalResu
 
   // Competitors / terms / coverage
   const competitors = await queryRows<{ domain: string | null; url: string | null; title: string | null; headings_json: string | null }>(
-    `SELECT domain, url, title, headings_json FROM article_competitors WHERE article_id = ? LIMIT 10`,
+    'SELECT domain, url, title, headings_json FROM article_competitors WHERE article_id = ? LIMIT 10',
     [articleId],
   );
   const terms = await queryRows<{ term: string }>(
-    `SELECT term FROM article_terms WHERE article_id = ? LIMIT 200`,
+    'SELECT term FROM article_terms WHERE article_id = ? LIMIT 200',
     [articleId],
   ).catch(() => [] as Array<{ term: string }>);
 
@@ -432,13 +432,13 @@ export async function runWieEvalSuite(opts: WieEvalOptions): Promise<WieEvalResu
     try {
       const heads = c.headings_json ? JSON.parse(c.headings_json) as unknown : null;
       if (Array.isArray(heads)) {
-        plain += ' ' + heads.filter((h): h is string => typeof h === 'string').slice(0, 12).join(' ');
+        plain += ` ${heads.filter((h): h is string => typeof h === 'string').slice(0, 12).join(' ')}`;
       }
     } catch { /* ignore */ }
     return { label: `Top${i + 1}`, title: c.title || undefined, plain };
   });
 
-  let benchmark = doBench
+  const benchmark = doBench
     ? buildCompetitorBenchmark({ aoHtml: htmlAfter, competitors: competitorDocs })
     : null;
 
@@ -586,7 +586,7 @@ export async function runWieEvalSuite(opts: WieEvalOptions): Promise<WieEvalResu
   );
   await writeFile(
     path.join(outDir, 'logs.jsonl'),
-    logs.map((l) => JSON.stringify(l)).join('\n') + '\n',
+    `${logs.map((l) => JSON.stringify(l)).join('\n')}\n`,
     'utf-8',
   );
 

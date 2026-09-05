@@ -1,5 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Op } from 'sequelize';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { assertCronSecret } from '@/src/infrastructure/cron/cronAuth';
+import { ensureUserTenancy, getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 import db from '../../database/database';
 import Keyword from '../../database/models/keyword';
 import Domain from '../../database/models/domain';
@@ -8,10 +11,7 @@ import { getAppSettings } from './settings';
 import verifyUser from '../../utils/verifyUser';
 import parseKeywords from '../../utils/parseKeywords';
 import { scrapeKeywordFromGoogle } from '../../utils/scraper';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
-import { assertCronSecret } from '@/src/infrastructure/cron/cronAuth';
 import { getCurrentUserId } from '../../utils/getUser';
-import { ensureUserTenancy, getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 
 type KeywordsRefreshRes = {

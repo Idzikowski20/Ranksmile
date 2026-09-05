@@ -30,8 +30,7 @@ export type AutomationEventRow = {
 
 export function mapAutomationEvent(row: AutomationEventRow): AutomationEvent {
   const publishMode: AutomationPublishMode = row.publish_mode === 'live' ? 'live' : 'draft';
-  const status: AutomationEventStatus =
-    row.status === 'created' || row.status === 'failed' ? row.status : 'scheduled';
+  const status: AutomationEventStatus = row.status === 'created' || row.status === 'failed' ? row.status : 'scheduled';
   return {
     id: row.id,
     domainId: row.domain_id,

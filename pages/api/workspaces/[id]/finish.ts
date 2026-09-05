@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getCurrentUserId } from '../../../../utils/getUser';
 import { finishWorkspaceSetup } from '@/src/infrastructure/identity/workspaces';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../../utils/getUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);
@@ -24,7 +24,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const { default: db } = await import('../../../../database/database');
       const { QueryTypes } = await import('sequelize');
       const drows = await db.query<{ id: number }>(
-         `SELECT "ID" as id FROM domain WHERE workspace_id = ? LIMIT 1`,
+         'SELECT "ID" as id FROM domain WHERE workspace_id = ? LIMIT 1',
          { replacements: [wsId], type: QueryTypes.SELECT },
       );
       const domainId = drows[0]?.id;

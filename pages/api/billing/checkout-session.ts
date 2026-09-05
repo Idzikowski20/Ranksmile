@@ -9,8 +9,8 @@ import { getStripe } from '@/src/infrastructure/billing/stripe';
 import { getStripePriceId, type PlanSlug } from '@/src/core/domain/billing/prices';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { getAppOrigin } from '@/src/infrastructure/config/appOrigin';
-import { getCurrentUser } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUser } from '../../../utils/getUser';
 
 type CheckoutMode = 'trial' | 'upfront';
 

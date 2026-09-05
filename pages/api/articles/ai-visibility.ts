@@ -1,11 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { computeOverallContentScore } from '@/src/core/domain/aiScore/aiSearchScore';
 import { persistAiVisibilityRun } from '@/src/infrastructure/aiVisibility/aiVisibilityStore';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
@@ -14,6 +11,9 @@ import { runArticleAiPipeline } from '@/src/infrastructure/articles/articleAiPip
 import { buildCompetitorBenchmarks } from '@/src/infrastructure/competitors/competitorAuditScore';
 import { computeContentScore } from '@/src/infrastructure/articles/contentScore';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 
 function domainFromUrl(url: string): string {
    try {
@@ -57,7 +57,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
       const competitorRows = await queryRows<{ domain: string | null; url: string | null }>(
-         `SELECT domain, url FROM article_competitors WHERE article_id = ?`,
+         'SELECT domain, url FROM article_competitors WHERE article_id = ?',
          [articleId],
       );
 

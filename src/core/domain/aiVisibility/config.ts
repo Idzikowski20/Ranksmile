@@ -38,7 +38,7 @@ export const AI_VIS_SCAN_STALE_MS = 10 * 60 * 1000; // a `running` scan older th
  *  Tiered refresh (DataForSEO budget guidance): core keywords scan most often,
  *  long-tail least — measured from finished_at of the latest completed scan. */
 export const AI_VIS_SETTINGS = {
-   REFRESH_INTERVAL_DAYS: 7,        // legacy default (= supporting tier)
+   REFRESH_INTERVAL_DAYS: 7, // legacy default (= supporting tier)
    MANUAL_REFRESH_COOLDOWN_DAYS: 3, // legacy default (= supporting tier)
    SCHEDULER_TICK_HOURS: 6,
    SCHEDULER_BATCH_LIMIT: 5,

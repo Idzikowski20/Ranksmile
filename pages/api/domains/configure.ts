@@ -2,16 +2,16 @@
 // Creates a domain + site_context with selected language and pages
 import type { CreationAttributes } from 'sequelize';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import Domain from '../../../database/models/domain';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '@/src/infrastructure/identity/tenancy';
 import { getWorkspace } from '@/src/infrastructure/identity/workspaces';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { mergeGscProperty } from '@/src/core/domain/gsc/gscProperty';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import Domain from '../../../database/models/domain';
+import db from '../../../database/database';
 import { clearDomainIdsCache } from '../../../lib/domainIdsCache';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

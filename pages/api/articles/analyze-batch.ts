@@ -2,10 +2,6 @@
 // Triggers deep-analysis for all unscored articles in a domain.
 // Fire-and-forget — returns immediately, analyses run in background with capped concurrency.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
-import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
@@ -13,6 +9,10 @@ import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { mapPool } from '@/src/core/shared/mapPool';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 
 const ANALYZE_BATCH_CONCURRENCY = 3;
 

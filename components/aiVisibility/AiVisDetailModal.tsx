@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
 import { Button, CompactSelect } from '../koala/core';
 import TrendLineChart from './TrendLineChart';
 import { SkeletonBox } from './SkeletonBlocks';
-import { AI_VIS_MODEL_LABEL } from '@/src/core/domain/aiVisibility/config';
 import { ModelIcon, isKnownModel } from './modelIcons';
 import { useAiVisPromptDetail, useAiVisFanoutDetail, type AiVisDetailPayload } from '../../services/aiVisibility';
 import { AiVisSlidePortal, aiVisOverlayZ } from './AiVisSlidePortal';

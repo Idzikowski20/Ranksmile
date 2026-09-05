@@ -1,14 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../../database/database';
-import verifyUser from '../../../../../utils/verifyUser';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getAdwordsCredentials, getKeywordsVolume } from '../../../../../utils/adwords';
 import { computeRelevanceScore, checkCoverage } from '@/src/core/domain/keywords/enrichment';
-import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { queryOne } from '@/src/infrastructure/db/query';
 import type { ArticleRow } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../../../utils/getUser';
+import { getAdwordsCredentials, getKeywordsVolume } from '../../../../../utils/adwords';
+import verifyUser from '../../../../../utils/verifyUser';
+import db from '../../../../../database/database';
 
 const isPostgres = !!process.env.DATABASE_URL;
 
@@ -34,7 +34,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // Get article target keyword for relevance scoring
   const art = await queryOne<Pick<ArticleRow, 'target_keyword' | 'domain_id'>>(
-    `SELECT a.target_keyword, a.domain_id FROM articles a WHERE a.id = ?`,
+    'SELECT a.target_keyword, a.domain_id FROM articles a WHERE a.id = ?',
     [id],
   );
   const tk = targetKeyword || art?.target_keyword || '';
@@ -43,7 +43,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let resolvedCountry = country;
   if (art?.domain_id && !req.body.country) {
     try {
-      const dom = await queryOne<{ search_console: string | null }>(`SELECT search_console FROM domain WHERE "ID" = ?`, [art.domain_id]);
+      const dom = await queryOne<{ search_console: string | null }>('SELECT search_console FROM domain WHERE "ID" = ?', [art.domain_id]);
       if (dom?.search_console) {
         const sc = typeof dom.search_console === 'string' ? JSON.parse(dom.search_console) : dom.search_console;
         // Country from GSC: stored as alpha-2 code like 'PL', 'US'
@@ -53,7 +53,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   // Try Ads volume enrichment (fails gracefully if Ads not configured)
-  let volumeData: Record<string, number> = {};
+  const volumeData: Record<string, number> = {};
   try {
     const creds = await getAdwordsCredentials();
     if (creds) {
@@ -63,7 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const result = await getKeywordsVolume(kwObjs);
       if (result.volumes && typeof result.volumes === 'object') {
         for (const [kwId, vol] of Object.entries(result.volumes)) {
-          const idx = parseInt(kwId);
+          const idx = parseInt(kwId, 10);
           if (idx < keywords.length) volumeData[keywords[idx]] = vol as number;
         }
       }

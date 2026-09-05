@@ -3,14 +3,14 @@
 // DELETE /api/articles/publish-targets?id=X
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 
-import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { queryOne } from '@/src/infrastructure/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -28,7 +28,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!owns) return res.status(403).json({ error: 'Access denied.' });
 
       const [rows] = await db.query(
-         `SELECT id, domain_id, type, url, created_at FROM publish_targets WHERE domain_id = ?`,
+         'SELECT id, domain_id, type, url, created_at FROM publish_targets WHERE domain_id = ?',
          { replacements: [domainId] },
       );
       return res.status(200).json({ targets: rows });
@@ -44,7 +44,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       // Upsert — nadpisz jeśli istnieje
       await db.query(
-         `DELETE FROM publish_targets WHERE domain_id = ? AND type = ?`,
+         'DELETE FROM publish_targets WHERE domain_id = ? AND type = ?',
          { replacements: [domain_id, type] },
       );
       const [insertId] = await db.query(
@@ -58,14 +58,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method === 'DELETE') {
       const { id } = req.query;
       const target = await queryOne<{ domain_id: number }>(
-         `SELECT domain_id FROM publish_targets WHERE id = ? LIMIT 1`,
+         'SELECT domain_id FROM publish_targets WHERE id = ? LIMIT 1',
          [id],
       );
       if (!target) return res.status(404).json({ error: 'Publish target not found' });
       const owns = await verifyDomainOwnershipById(Number(target.domain_id), userId);
       if (!owns) return res.status(403).json({ error: 'Access denied.' });
 
-      await db.query(`DELETE FROM publish_targets WHERE id = ?`, { replacements: [id] });
+      await db.query('DELETE FROM publish_targets WHERE id = ?', { replacements: [id] });
       return res.status(200).json({ deleted: true });
    }
 

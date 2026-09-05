@@ -99,8 +99,8 @@ export function replayCompileFromSource(
 ): CompileResult {
   const result = compile(opts);
   if (
-    expectedDeterministicHash !== undefined &&
-    result.model.compiler.deterministicHash !== expectedDeterministicHash
+    expectedDeterministicHash !== undefined
+    && result.model.compiler.deterministicHash !== expectedDeterministicHash
   ) {
     throw new ReplayError(
       'HASH_MISMATCH',

@@ -117,7 +117,7 @@ const IconBtn = styled.button`
   }
 `;
 
-const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+const Input = forwardRef<HTMLInputElement, InputProps>((
   {
     size = 'md',
     monospace = false,
@@ -130,7 +130,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     ...rest
   },
   ref,
-) {
+) => {
   const [revealed, setRevealed] = useState(false);
   const isPassword = type === 'password' || revealable;
   const resolvedType = isPassword && revealable ? (revealed ? 'text' : 'password') : type;
@@ -191,5 +191,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     </Wrapper>
   );
 });
+Input.displayName = 'Input';
 
 export default Input;

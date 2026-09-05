@@ -3,8 +3,7 @@ import { normalizeTerm } from '@/src/core/domain/terms/termUtils';
 import type { LlmCoverageSource } from '@/src/infrastructure/coverage/llmCoverageQuestions';
 import { computeQuestionScore, maxSourceWeight } from '@/src/infrastructure/harvest/questionScore';
 
-const QUESTION_PREFIX_RE =
-  /^(jak|czy|co|czym|ile|kiedy|gdzie|dlaczego|jaki|jaka|jakie|na czym polega|w jaki sposob|what|how|why|is|are|does|do)\b\s+/i;
+const QUESTION_PREFIX_RE = /^(jak|czy|co|czym|ile|kiedy|gdzie|dlaczego|jaki|jaka|jakie|na czym polega|w jaki sposob|what|how|why|is|are|does|do)\b\s+/i;
 
 export type HarvestEvidence = {
   engine: LlmCoverageSource | string;

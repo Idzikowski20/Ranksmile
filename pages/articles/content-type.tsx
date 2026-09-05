@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { saveWizardState } from '@/src/infrastructure/articles/wizardState';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Button } from '../../components/koala/core';
 import { Icon } from '../../components/koala/icons/Icon';
-import { saveWizardState } from '@/src/infrastructure/articles/wizardState';
 import { useArticle } from '../../services/article';
 
 type ContentTypeOption = {

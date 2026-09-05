@@ -48,9 +48,8 @@ const factNotOrphan: GraphConstraint = {
   check(q) {
     const out: ConstraintViolation[] = [];
     for (const fact of q.findFacts({ status: ['covered', 'partial'] })) {
-      const hasSupport =
-        q.neighbors(fact.id, 'supportedBy', 'out').length > 0 ||
-        q.neighbors(fact.id, 'statedIn', 'out').length > 0;
+      const hasSupport = q.neighbors(fact.id, 'supportedBy', 'out').length > 0
+        || q.neighbors(fact.id, 'statedIn', 'out').length > 0;
       if (!hasSupport) {
         out.push({
           constraintId: 'fact_not_orphan',
@@ -141,9 +140,8 @@ const questionHasIntent: GraphConstraint = {
   check(q) {
     const out: ConstraintViolation[] = [];
     for (const question of q.findQuestions()) {
-      const linked =
-        q.neighbors(question.id, 'answers', 'out').some(isIntentNode) ||
-        q.neighbors(question.id, 'answeredBy', 'in').some(isIntentNode);
+      const linked = q.neighbors(question.id, 'answers', 'out').some(isIntentNode)
+        || q.neighbors(question.id, 'answeredBy', 'in').some(isIntentNode);
       if (!linked) {
         out.push({
           constraintId: 'question_has_intent',

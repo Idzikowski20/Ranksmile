@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { queryRows } from '@/src/infrastructure/db/query';
+import type { SqlReplacements } from '@/src/core/shared/types/db';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { queryRows } from '@/src/infrastructure/db/query';
-import type { SqlReplacements } from '@/src/core/shared/types/db';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -32,11 +32,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   const replacements: SqlReplacements = [domain.ID];
 
   if (checkKeyword) {
-    sql += ` AND ak.keyword = ?`;
+    sql += ' AND ak.keyword = ?';
     replacements.push(checkKeyword);
   }
 
-  sql += ` ORDER BY article_count DESC, ak.keyword`;
+  sql += ' ORDER BY article_count DESC, ak.keyword';
 
   const rows = await queryRows<{ keyword: string; article_id: number; title: string; article_count: number }>(sql, replacements);
 

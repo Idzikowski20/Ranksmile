@@ -3,11 +3,11 @@
  *  (Article schema / <article> / RSS) is layered on top in the API endpoint. */
 
 export interface SegmentCandidate {
-  segment: string;       // content segment, e.g. "blog"
-  slugChildren: number;  // count of /<segment>/<slug> children with a slug-like child
-  avgSlugLen: number;    // average length of those child slugs (longer ⇒ more article-like)
-  dateShare: number;     // fraction of children whose path carries a year (article-ish)
-  score: number;         // composite ranking score (higher = more blog-like)
+  segment: string; // content segment, e.g. "blog"
+  slugChildren: number; // count of /<segment>/<slug> children with a slug-like child
+  avgSlugLen: number; // average length of those child slugs (longer ⇒ more article-like)
+  dateShare: number; // fraction of children whose path carries a year (article-ish)
+  score: number; // composite ranking score (higher = more blog-like)
 }
 
 const WRAPPER = new Set(['en', 'pl', 'de', 'fr', 'es', 'category', 'tag', 'page']);

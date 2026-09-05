@@ -12,9 +12,19 @@ import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 import { buildIntentProfile, type ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { filterCandidatesByIntent, filterPlanStepsByAction } from '@/src/infrastructure/ao/intentGuard';
 import { buildEditCandidates } from '@/src/infrastructure/ao/buildCandidates';
-import { buildPrecisionEditPlan, buildPrecisionStepPrompt, type PrecisionPlanStep } from '@/src/infrastructure/ao/editPlan';
+import {
+  buildPrecisionEditPlan,
+  buildPrecisionStepPrompt,
+  buildSectionBundleSteps,
+  buildTrimPrompt,
+  type PrecisionPlanStep,
+  type SectionBundle,
+} from '@/src/infrastructure/ao/editPlan';
+import { countOccurrences } from '@/src/core/domain/terms/termMatch';
+import { resolveLiveAiScore } from '@/src/core/domain/optimize/liveAiScore';
+import { articleWordsFromScoreData, type ArticleWords } from '@/src/core/domain/optimize/lengthBudget';
 import type { EditCandidate } from '@/src/core/domain/optimize/editCandidate';
-import { captureAoBaseline, htmlMatchesNormalized, type AoBaseline } from '@/src/infrastructure/ao/aoBaseline';
+import { captureAoBaseline, countWordsFromHtml, htmlMatchesNormalized, type AoBaseline } from '@/src/infrastructure/ao/aoBaseline';
 import { makeSnapshot, type AoDocumentSnapshot } from '@/src/infrastructure/ao/aoSnapshot';
 import type { AoScores, ScoreAvailability, ScoreGatePolicy } from '@/src/core/domain/optimize/aoScoreDelta';
 import { makeScoreDeltaSet, isOverallFlat, OVERALL_FLAT_EPSILON } from '@/src/core/domain/optimize/aoScoreDelta';
@@ -66,12 +76,13 @@ export function extractHeadings(html: string): string[] {
 export function buildProfileFromContext(
   ctx: ArticleContext | null,
   html: string,
+  keyword?: string,
 ): ArticleIntentProfile {
   const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   const h1 = (html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i) || [])[1];
   const title = h1 ? h1.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
   return buildIntentProfile({
-    keyword: ctx?.keyword || '',
+    keyword: keyword || ctx?.keyword || '',
     title,
     headings: extractHeadings(html),
     plainText: plain,
@@ -95,8 +106,12 @@ export function scoreHtmlToAoScores(opts: {
       answersMainQuestionEarly: !!opts.ctx?.coverage?.answersMainQuestionEarly,
     })
     : { seo: 0, ai: opts.latestAiFallback ?? 0, overall: 0 };
-  const seo = scored.seo;
-  const ai = Math.max(scored.ai, opts.latestAiFallback ?? 0, opts.ctx?.scoreData?.ai_score ?? 0);
+  const { seo } = scored;
+  const ai = resolveLiveAiScore({
+    live: scored.ai,
+    stored: opts.ctx?.scoreData?.ai_score,
+    latest: opts.latestAiFallback,
+  });
   const content = computeOverallContentScore(seo, ai);
   return { seo, content, ai };
 }
@@ -105,6 +120,8 @@ export function collectPrecisionCandidates(opts: {
   ctx: ArticleContext | null;
   html: string;
   profile: ArticleIntentProfile;
+  /** Term targets; falls back to the context's score_data. */
+  scoreData?: ScoreData;
   competitorHeadings?: string[];
   visibilityPrompts?: Array<{ id: string; label: string }>;
   defaultSectionId?: string;
@@ -120,12 +137,20 @@ export function collectPrecisionCandidates(opts: {
   const liveItems = opts.ctx?.coverage?.items?.length
     ? liveCoverageItems(opts.ctx.coverage.items, plain, opts.html)
     : [];
-  const termGaps = computeTermUsageGaps(opts.ctx?.scoreData ?? undefined, opts.html);
+  const scoreData = opts.scoreData ?? opts.ctx?.scoreData ?? undefined;
+  const termGaps = computeTermUsageGaps(scoreData, opts.html);
   const sections = splitSections(opts.html);
+  // Terms the SERP puts in H2/H3 that none of ours carry — Surfer enriches a heading
+  // with these on every run.
+  const headingsText = extractHeadings(opts.html).join(' ');
+  const headingTerms = (scoreData?.terms ?? [])
+    .filter((t) => t.in_headings && countOccurrences(headingsText, t.term, t.term_words_regexps) === 0)
+    .map((t) => t.term);
   const base = buildEditCandidates({
     profile: opts.profile,
     competitorHeadings: opts.competitorHeadings,
     termGaps,
+    headingTerms,
     coverageItems: liveItems,
     paaQuestions: opts.ctx?.paa,
     visibilityPrompts: opts.visibilityPrompts,
@@ -141,9 +166,10 @@ export function collectPrecisionCandidates(opts: {
   const seen = new Set(base.map((c) => c.gapId));
   const merged = [...base];
   for (const c of opts.extraCandidates) {
-    if (seen.has(c.gapId)) continue;
-    seen.add(c.gapId);
-    merged.push(c);
+    if (!seen.has(c.gapId)) {
+      seen.add(c.gapId);
+      merged.push(c);
+    }
   }
   return merged;
 }
@@ -163,49 +189,113 @@ export function planPrecisionStepsV4(opts: {
   html: string;
   maxSteps?: number;
   baseBudget?: import('@/src/core/domain/optimize/editBudget').EditBudget;
+  articleWords?: ArticleWords;
 }): PlanPrecisionResult {
   const sections = splitSections(opts.html);
   const guarded = filterCandidatesByIntent(opts.candidates, opts.profile);
   const assigned: EditCandidate[] = [];
   let skippedNoTarget = 0;
   let usedFallback = 0;
+  // Terms with no section of their own rotate over the body sections instead of all
+  // landing on the one best-scored fallback: 22 of them on a single section blew its
+  // word and paragraph budgets and the whole bundle was thrown away.
+  const bodySections = sections.filter(
+    (s) => s.index > 0 && !opts.critical.commercialSections.some((c) => c.sectionId === s.id),
+  );
+  let rotation = 0;
 
   for (const c of guarded) {
     if (c.suggestedAction === 'add_missing_section' && c.targetSectionId) {
       assigned.push(c);
-      continue;
+    } else {
+      const isSeoEntity = c.source === 'seo_term' || c.source === 'entity';
+      const target = selectSectionTarget({
+        sections,
+        candidate: c,
+        critical: opts.critical,
+        allowSeoEntityFallback: isSeoEntity,
+      });
+      if (!target) {
+        skippedNoTarget += 1;
+      } else {
+        let { sectionId } = target;
+        if (target.usedFallback) {
+          usedFallback += 1;
+          if (bodySections.length) {
+            sectionId = bodySections[rotation % bodySections.length].id;
+            rotation += 1;
+          }
+        }
+        assigned.push({ ...c, targetSectionId: sectionId });
+      }
     }
-    const isSeoEntity = c.source === 'seo_term' || c.source === 'entity';
-    const target = selectSectionTarget({
-      sections,
-      candidate: c,
-      critical: opts.critical,
-      allowSeoEntityFallback: isSeoEntity,
-    });
-    if (!target) {
-      skippedNoTarget += 1;
-      continue;
-    }
-    if (target.usedFallback) usedFallback += 1;
-    assigned.push({ ...c, targetSectionId: target.sectionId });
   }
 
   const targeting = { skippedNoTarget, usedFallback, assigned: assigned.length };
   if (!assigned.length) return { steps: [], targeting };
 
+  // Appending steps (new sections) stay one per candidate and honour maxSteps. Every
+  // other gap folds into its section's bundle: one edit per section, sections without
+  // gaps untouched, never throttled by maxSteps — a 13-section article is visited
+  // section by section, the way Surfer's Auto-Optimize works.
+  const appending = assigned.filter((c) => c.suggestedAction === 'add_missing_section');
   const defaultSectionId = assigned[0].targetSectionId || sections[0]?.id || 'none';
   const byId = new Map(assigned.map((c) => [c.id, c]));
   const plan = buildPrecisionEditPlan({
-    candidates: assigned,
+    candidates: appending,
     profile: opts.profile,
     defaultSectionId,
     maxSteps: opts.maxSteps ?? 6,
     baseBudget: opts.baseBudget,
   });
+  const bundles = buildSectionBundleSteps({
+    candidates: assigned,
+    sections,
+    baseBudget: opts.baseBudget,
+    articleWords: opts.articleWords,
+  });
+  const headingOf = new Map(sections.map((s) => [s.id, s.headingText]));
+  const appendingSteps = filterPlanStepsByAction(plan.steps, byId, opts.profile)
+    .map((s) => ({ ...s, sectionHeading: headingOf.get(s.sectionId) }));
   return {
-    steps: filterPlanStepsByAction(plan.steps, byId, opts.profile),
+    steps: [...appendingSteps, ...bundles],
     targeting,
   };
+}
+
+/** Model calls in flight for bundle edits. */
+const PARALLEL_EDITS = 4;
+
+function concurrencyLimiter(n: number): <T>(fn: () => Promise<T>) => Promise<T> {
+  let active = 0;
+  const queue: Array<() => void> = [];
+  return <T>(fn: () => Promise<T>) => new Promise<T>((resolve, reject) => {
+    const run = () => {
+      active += 1;
+      fn().then(resolve, reject).finally(() => {
+        active -= 1;
+        queue.shift()?.();
+      });
+    };
+    if (active < n) run();
+    else queue.push(run);
+  });
+}
+
+/**
+ * The step's section in the current document. Ids hash (index, heading): once a section
+ * is inserted earlier, every later id changes and the heading is what still matches —
+ * the second restored section of a run used to be dropped here without a trace.
+ */
+function findStepSection(
+  sections: ReturnType<typeof splitSections>,
+  step: PrecisionPlanStep,
+): ReturnType<typeof splitSections>[number] | undefined {
+  const byId = sections.find((s) => s.id === step.sectionId);
+  if (byId) return byId;
+  const heading = (step.sectionHeading ?? '').trim();
+  if (!heading) return undefined;
+  return sections.find((s) => s.headingText.trim() === heading);
 }
 
 /** @deprecated use planPrecisionStepsV4 */
@@ -291,15 +381,24 @@ function replaceSectionHtml(working: string, sectionHtml: string, afterHtml: str
 export function verifyExpectedOutcome(opts: {
   expectedOutcomeId?: string;
   gapClaim?: string;
+  bundle?: SectionBundle;
   afterHtml: string;
 }): boolean {
   const plain = opts.afterHtml.replace(/<[^>]+>/g, ' ').toLowerCase();
-  const claim = (opts.gapClaim || '').toLowerCase();
-  if (opts.expectedOutcomeId?.startsWith('coverage:') || opts.expectedOutcomeId?.startsWith('section:')) {
-    const tokens = claim.split(/\s+/).filter((w) => w.length > 4).slice(0, 4);
+  const claimLanded = (claim: string): boolean => {
+    const tokens = claim.toLowerCase().split(/\s+/).filter((w) => w.length > 4).slice(0, 4);
     if (!tokens.length) return false;
     const hits = tokens.filter((t) => plain.includes(t)).length;
     return hits >= Math.ceil(tokens.length * 0.6);
+  };
+  if (opts.bundle) {
+    // A bundle earned its edit when at least one of its items is now in the section.
+    return opts.bundle.terms.some((t) => countOccurrences(plain, t) > 0)
+      || (opts.bundle.headingTerm != null && countOccurrences(plain, opts.bundle.headingTerm) > 0)
+      || opts.bundle.facts.some(claimLanded);
+  }
+  if (opts.expectedOutcomeId?.startsWith('coverage:') || opts.expectedOutcomeId?.startsWith('section:')) {
+    return claimLanded(opts.gapClaim || '');
   }
   return false;
 }
@@ -327,12 +426,15 @@ export async function runPrecisionOptimizeV4(opts: {
   /** Requested stop targets (express asks for 100); default v4.1 constants. */
   targetSeo?: number;
   targetAi?: number;
+  /** Passes over the article: a second pass re-plans on the edited text and closes what
+   *  the first left open, the way a second Surfer run does. Default 2. */
+  maxPasses?: number;
   llmEdit: LlmEditFn;
   scoreHtml?: ScoreHtmlFn;
   signal?: AbortSignal;
 }): Promise<PrecisionV4Result> {
   const trace = createAoTrace(opts.runId);
-  const profile = buildProfileFromContext(opts.ctx, opts.html);
+  const profile = buildProfileFromContext(opts.ctx, opts.html, opts.keyword);
   const sections0 = splitSections(opts.html);
   const critical = buildCriticalContentMap({
     html: opts.html,
@@ -352,8 +454,7 @@ export async function runPrecisionOptimizeV4(opts: {
   });
   const scoreHtml = opts.scoreHtml ?? defaultScore;
 
-  const synthesis: CompetitorSynthesis | null =
-    opts.ctx?.competitorSynthesis
+  const synthesis: CompetitorSynthesis | null = opts.ctx?.competitorSynthesis
     ?? parseCompetitorSynthesis(opts.scoreData?.competitor_synthesis ?? null);
   const readerBrief: ReaderBrief | null = opts.ctx?.readerBrief ?? null;
 
@@ -448,39 +549,50 @@ export async function runPrecisionOptimizeV4(opts: {
   });
   trace.push({ step: 'critical_content', metadata: { defs: critical.definitions.length } });
 
-  const candidates = collectPrecisionCandidates({
-    ctx: opts.ctx,
-    html: opts.html,
-    profile,
-    // H2s the ranking pages share — same list the ArticleContext already loads.
-    competitorHeadings: (opts.ctx?.competitors ?? [])
-      .flatMap((c) => c.headings ?? [])
-      .filter((h, i, all) => all.indexOf(h) === i),
-    visibilityPrompts: opts.visibilityPrompts,
-    strategy: policy.strategy,
-    seoStrong: policy.seoStrong,
-    aiWeak: policy.aiWeak,
-    rebuild: opts.rebuild,
-    plannedHeadings: opts.plannedHeadings,
-    extraCandidates: opts.extraCandidates,
-  });
-  const planned = planPrecisionStepsV4({
-    candidates,
-    profile,
-    critical,
-    html: opts.html,
-    maxSteps,
-    baseBudget: policy.editBudget,
-  });
-  const targetingStats = planned.targeting;
-  let steps = planned.steps;
+  const scoreDataForPlan = opts.scoreData ?? opts.ctx?.scoreData ?? undefined;
+  // The plan is rebuilt from the document as it stands, so a later pass sees what the
+  // earlier one closed and what it left open.
+  const buildPlan = (docHtml: string) => {
+    const candidates = collectPrecisionCandidates({
+      ctx: opts.ctx,
+      html: docHtml,
+      profile,
+      scoreData: scoreDataForPlan,
+      // H2s the ranking pages share — same list the ArticleContext already loads.
+      competitorHeadings: (opts.ctx?.competitors ?? [])
+        .flatMap((c) => c.headings ?? [])
+        .filter((h, i, all) => all.indexOf(h) === i),
+      visibilityPrompts: opts.visibilityPrompts,
+      strategy: policy.strategy,
+      seoStrong: policy.seoStrong,
+      aiWeak: policy.aiWeak,
+      rebuild: opts.rebuild,
+      plannedHeadings: opts.plannedHeadings,
+      extraCandidates: opts.extraCandidates,
+    });
+    const planned = planPrecisionStepsV4({
+      candidates,
+      profile,
+      critical,
+      html: docHtml,
+      maxSteps,
+      baseBudget: policy.editBudget,
+      articleWords: articleWordsFromScoreData(scoreDataForPlan, countWordsFromHtml(docHtml)) ?? undefined,
+    });
+    return { candidates, planned };
+  };
+  const first = buildPlan(opts.html);
+  // Summed over every pass — the run's numbers, not the first plan's.
+  const targetingStats = { ...first.planned.targeting };
+  let { steps } = first.planned;
   trace.push({
     step: 'edit_plan',
     metadata: {
+      pass: 1,
       steps: steps.length,
-      candidates: candidates.length,
+      candidates: first.candidates.length,
       strategy: policy.strategy,
-      targeting: targetingStats,
+      targeting: first.planned.targeting,
     },
   });
 
@@ -489,37 +601,42 @@ export async function runPrecisionOptimizeV4(opts: {
   let rejected = 0;
   let accepted = 0;
   let stagnation = 0;
-  let abBudgetLeft = 2;
+  // A/B writing doubles the model calls on the first steps. Off unless asked for:
+  // Surfer finishes a run in under a minute on one pass per section.
+  let abBudgetLeft = process.env.AO_AB_WRITE === '1' ? 2 : 0;
   const STAGNATION_WINDOW = 3;
   const resolvedGapIds = new Set<string>();
+  const maxPasses = Math.max(1, opts.maxPasses ?? 2);
+  const targetsReached = () => (
+    Math.round(working.scores.seo) >= (opts.targetSeo ?? TARGET_SEO)
+    && Math.round(working.scores.ai) >= (opts.targetAi ?? TARGET_AI)
+  );
+  // Prefetched calls settle outside the loop body; a const holder keeps the closure honest.
+  const spent = { tokens: 0 };
 
-  for (let i = 0; i < steps.length; i++) {
-    if (opts.signal?.aborted) break;
-
-    // Early stop: targets reached. The caller's targets, not the constants — express
-    // requests 100 and used to be silently stopped at the default 90/85.
-    if (
-      Math.round(working.scores.seo) >= (opts.targetSeo ?? TARGET_SEO)
-      && Math.round(working.scores.ai) >= (opts.targetAi ?? TARGET_AI)
-    ) {
-      trace.push({ step: 'edit_plan', metadata: { stop: 'targets_reached' } });
-      break;
-    }
-    if (stagnation >= STAGNATION_WINDOW) {
-      trace.push({ step: 'edit_plan', metadata: { stop: 'stagnation' } });
-      break;
-    }
-
-    const step = steps[i];
+  type Prefetched = Map<string, Promise<{ html: string; tokens: number }>>;
+  // One step: model call, gates, accept. A function, not a loop body, so its closures
+  // are declared once and every early exit is a plain return.
+  const runStep = async (step: PrecisionPlanStep, i: number, prefetched: Prefetched): Promise<void> => {
     if (step.gapId && resolvedGapIds.has(step.gapId)) {
-      continue;
+      return;
+    }
+    if (step.gapIds?.length && step.gapIds.every((g) => resolvedGapIds.has(g))) {
+      return;
     }
 
     const sections = splitSections(working.html);
-    const section = sections.find((s) => s.id === step.sectionId);
+    const section = findStepSection(sections, step);
     if (!section) {
       rejected += 1;
-      continue;
+      trace.push({
+        step: 'candidate_apply',
+        candidateId: step.candidateId,
+        sectionId: step.sectionId,
+        reason: 'SECTION_NOT_FOUND',
+        metadata: { action: step.action, detail: step.sectionHeading || step.sectionId },
+      });
+      return;
     }
 
     const runAb = shouldAbWriteStep({
@@ -531,12 +648,21 @@ export async function runPrecisionOptimizeV4(opts: {
     const promptA = buildPrecisionStepPrompt(step, section.html, promptOpts);
     let afterA = section.html;
     try {
-      const result = await opts.llmEdit(promptA);
-      tokens += result.tokens;
+      const pre = prefetched.get(step.id);
+      const result = pre ? await pre : await opts.llmEdit(promptA);
+      if (!pre) tokens += result.tokens;
       afterA = result.html || section.html;
-    } catch {
+    } catch (err) {
       rejected += 1;
-      continue;
+      // On the record: nine of eleven steps once vanished here with no trace at all.
+      trace.push({
+        step: 'candidate_apply',
+        candidateId: step.candidateId,
+        sectionId: step.sectionId,
+        reason: 'LLM_ERROR',
+        metadata: { action: step.action, detail: err instanceof Error ? err.message : String(err) },
+      });
+      return;
     }
 
     let afterSection = afterA;
@@ -599,23 +725,60 @@ export async function runPrecisionOptimizeV4(opts: {
       });
     }
 
-    const tempHtml = applyStepHtml(working.html, section.html, afterSection, section.id, step.action);
-    if (tempHtml.trim() === working.html.trim()) continue;
+    let tempHtml = applyStepHtml(working.html, section.html, afterSection, section.id, step.action);
+    if (tempHtml.trim() === working.html.trim()) {
+      trace.push({
+        step: 'candidate_apply',
+        candidateId: step.candidateId,
+        sectionId: step.sectionId,
+        reason: 'NO_CHANGE',
+        metadata: { action: step.action, detail: 'model returned the section unchanged' },
+      });
+      return;
+    }
 
-    const safety = runLocalSafetyGate({
+    const gateEdit = (html: string) => runLocalSafetyGate({
       // An appended section is measured against the empty string, not the anchor: the
       // anchor is untouched, so comparing "anchor" to "new section" reported the whole
       // anchor as deleted and the whole new section as added.
       beforeHtml: step.action === 'add_missing_section' ? '' : section.html,
-      afterHtml: afterSection,
+      afterHtml: html,
       budget: step.budget,
       profile,
       stepId: step.id,
     });
+    let safety = gateEdit(afterSection);
+    if (!safety.ok && step.bundle && safety.reason === 'WORD_BUDGET') {
+      // One trim pass instead of a reject — see buildTrimPrompt.
+      try {
+        const addedWords = Math.max(0, countWordsFromHtml(afterSection) - countWordsFromHtml(section.html));
+        const trimmed = await opts.llmEdit(buildTrimPrompt({ step, addedWords, editedHtml: afterSection }));
+        tokens += trimmed.tokens;
+        if (trimmed.html) {
+          afterSection = trimmed.html;
+          tempHtml = applyStepHtml(working.html, section.html, afterSection, section.id, step.action);
+          safety = gateEdit(afterSection);
+          trace.push({
+            step: 'candidate_apply',
+            candidateId: step.candidateId,
+            sectionId: step.sectionId,
+            metadata: { action: step.action, trimmed: true, ok: safety.ok, addedWords },
+          });
+        }
+      } catch {
+        /* keep the first verdict */
+      }
+    }
     if (!safety.ok) {
       rejected += 1;
-      trace.push({ step: 'candidate_score_gate', candidateId: step.candidateId, sectionId: step.sectionId, reason: `SAFETY_${safety.reason}`, metadata: { action: step.action, detail: safety.detail } });
-      continue;
+      trace.push({
+        step: 'candidate_score_gate',
+        candidateId: step.candidateId,
+        sectionId: step.sectionId,
+        reason: `SAFETY_${safety.reason}`,
+        metadata: { action: step.action, detail: safety.detail },
+      });
+      return;
     }
 
     const inv = runInvariantGate({
@@ -625,8 +788,14 @@ export async function runPrecisionOptimizeV4(opts: {
     });
     if (!inv.ok) {
       rejected += 1;
-      trace.push({ step: 'invariant_gate', candidateId: step.candidateId, sectionId: step.sectionId, reason: 'INVARIANT', metadata: { action: step.action } });
-      continue;
+      trace.push({
+        step: 'invariant_gate',
+        candidateId: step.candidateId,
+        sectionId: step.sectionId,
+        reason: 'INVARIANT',
+        metadata: { action: step.action },
+      });
+      return;
     }
 
     const sem = runSemanticPreservationGate({
@@ -636,8 +805,14 @@ export async function runPrecisionOptimizeV4(opts: {
     });
     if (!sem.ok) {
       rejected += 1;
-      trace.push({ step: 'semantic_gate', candidateId: step.candidateId, sectionId: step.sectionId, reason: 'SEMANTIC', metadata: { action: step.action } });
-      continue;
+      trace.push({
+        step: 'semantic_gate',
+        candidateId: step.candidateId,
+        sectionId: step.sectionId,
+        reason: 'SEMANTIC',
+        metadata: { action: step.action },
+      });
+      return;
     }
 
     const partial = scoreHtml(tempHtml);
@@ -650,8 +825,14 @@ export async function runPrecisionOptimizeV4(opts: {
     // Skip AI spend on clear SEO/overall regression vs working (strict early)
     if (gatePolicy.mode === 'strict_non_regression' && hasSeoContentRegression(working.scores, tempSeoContent)) {
       rejected += 1;
-      trace.push({ step: 'candidate_score_gate', candidateId: step.candidateId, sectionId: step.sectionId, reason: 'SEO_REGRESSION', metadata: { action: step.action } });
-      continue;
+      trace.push({
+        step: 'candidate_score_gate',
+        candidateId: step.candidateId,
+        sectionId: step.sectionId,
+        reason: 'SEO_REGRESSION',
+        metadata: { action: step.action },
+      });
+      return;
     }
 
     let aiAvailability: ScoreAvailability = 'unavailable';
@@ -668,7 +849,10 @@ export async function runPrecisionOptimizeV4(opts: {
     const verifiedObjective = verifyExpectedOutcome({
       expectedOutcomeId: step.expectedOutcomeId,
       gapClaim: step.targetGap.claimOrQuestion,
-      afterHtml: tempHtml,
+      bundle: step.bundle,
+      // The edited section, not the whole article: a term already present elsewhere
+      // must not vouch for a section that did not gain it.
+      afterHtml: afterSection,
     });
 
     const cGate = runCandidateScoreGate({
@@ -688,7 +872,7 @@ export async function runPrecisionOptimizeV4(opts: {
         afterScores: tempScores,
         delta: makeScoreDeltaSet(working.scores, tempScores, aiAvailability),
       });
-      continue;
+      return;
     }
 
     const rx = evaluateRxQualityGate({
@@ -698,6 +882,7 @@ export async function runPrecisionOptimizeV4(opts: {
       // article it joins may carry that voice throughout. Replacing steps see the same
       // document they always did, since the fragment is spliced in either way.
       afterHtml: tempHtml,
+      beforeHtml: working.html,
       action: step.action,
       synthesis,
     });
@@ -720,9 +905,9 @@ export async function runPrecisionOptimizeV4(opts: {
         delta: makeScoreDeltaSet(working.scores, tempScores, aiAvailability),
       });
       if (policyBundle?.patternIdsUsed.length) {
-        void recordPatternOutcome({ patternIds: policyBundle.patternIdsUsed, success: false });
+        recordPatternOutcome({ patternIds: policyBundle.patternIdsUsed, success: false }).catch(() => undefined);
       }
-      continue;
+      return;
     }
 
     const next = makeSnapshot(tempHtml, tempScores);
@@ -730,7 +915,7 @@ export async function runPrecisionOptimizeV4(opts: {
     if (flat && !verifiedObjective) {
       // Should have been rejected; belt-and-suspenders
       rejected += 1;
-      continue;
+      return;
     }
     if (flat) stagnation += 1;
     else stagnation = 0;
@@ -753,13 +938,81 @@ export async function runPrecisionOptimizeV4(opts: {
     working = next;
     accepted += 1;
     if (step.gapId) resolvedGapIds.add(step.gapId);
+    for (const g of step.gapIds ?? []) resolvedGapIds.add(g);
     if (policyBundle?.patternIdsUsed.length) {
-      void recordPatternOutcome({ patternIds: policyBundle.patternIdsUsed, success: true });
+      recordPatternOutcome({ patternIds: policyBundle.patternIdsUsed, success: true }).catch(() => undefined);
     }
 
     // Invalidate remaining steps with same gapId
     steps = steps.filter((s, idx) => idx <= i || !s.gapId || s.gapId !== step.gapId);
+  };
+
+  for (let pass = 1; pass <= maxPasses; pass += 1) {
+    if (pass > 1) {
+      if (opts.signal?.aborted || targetsReached() || stagnation >= STAGNATION_WINDOW) break;
+      const again = buildPlan(working.html);
+      steps = again.planned.steps.filter((s) => !(s.gapIds?.length && s.gapIds.every((g) => resolvedGapIds.has(g))));
+      targetingStats.skippedNoTarget += again.planned.targeting.skippedNoTarget;
+      targetingStats.usedFallback += again.planned.targeting.usedFallback;
+      targetingStats.assigned += again.planned.targeting.assigned;
+      trace.push({
+        step: 'edit_plan',
+        metadata: { pass, steps: steps.length, candidates: again.candidates.length, targeting: again.planned.targeting },
+      });
+      if (!steps.length) break;
+    }
+    const acceptedBeforePass = accepted;
+
+    // Bundle edits touch disjoint sections, so their model calls run concurrently; only the
+    // gates stay sequential. Sequential calls made a 6-section run take 150 s.
+    const prefetched: Prefetched = new Map();
+    {
+      const limit = concurrencyLimiter(PARALLEL_EDITS);
+      const passSections = splitSections(working.html);
+      for (const s of steps.filter((x) => x.bundle)) {
+        const target = findStepSection(passSections, s);
+        if (target) {
+          const prompt = buildPrecisionStepPrompt(s, target.html, promptOpts);
+          const p = limit(() => opts.llmEdit(prompt)).then((r) => {
+            spent.tokens += r.tokens;
+            return r;
+          });
+          // Awaited in the loop; the noop catch only keeps an early break from surfacing as an
+          // unhandled rejection.
+          p.catch(() => undefined);
+          prefetched.set(s.id, p);
+        }
+      }
+    }
+
+    for (let i = 0; i < steps.length; i += 1) {
+      if (opts.signal?.aborted) break;
+
+      const step = steps[i];
+      // Early stop: targets reached. The caller's targets, not the constants — express
+      // requests 100 and used to be silently stopped at the default 90/85. Structural
+      // repair is exempt: a missing planned section is missing whatever the score says
+      // (its terms live on in the neighbours), and those steps are ordered first.
+      if (
+        step.action !== 'add_missing_section'
+      && Math.round(working.scores.seo) >= (opts.targetSeo ?? TARGET_SEO)
+      && Math.round(working.scores.ai) >= (opts.targetAi ?? TARGET_AI)
+      ) {
+        trace.push({ step: 'edit_plan', metadata: { stop: 'targets_reached' } });
+        break;
+      }
+      if (stagnation >= STAGNATION_WINDOW) {
+        trace.push({ step: 'edit_plan', metadata: { stop: 'stagnation' } });
+        break;
+      }
+
+      await runStep(step, i, prefetched);
+    }
+
+    // A pass that accepted nothing has nothing left to build on.
+    if (accepted === acceptedBeforePass) break;
   }
+  tokens += spent.tokens;
 
   // ── Opening policy enforcement (WIE Expected → Observed) ────────
   const expectedOpening = policyBundle?.decisions.find((d) => d.id === 'opening')?.value;
@@ -800,7 +1053,7 @@ export async function runPrecisionOptimizeV4(opts: {
         delta: makeScoreDeltaSet(beforeEnfScores, enfSnap.scores, enfScored.aiAvailability),
       });
       if (enf.violated && policyBundle?.patternIdsUsed.length) {
-        void recordPatternOutcome({ patternIds: policyBundle.patternIdsUsed, success: false });
+        recordPatternOutcome({ patternIds: policyBundle.patternIdsUsed, success: false }).catch(() => undefined);
       }
     }
   }
@@ -848,6 +1101,9 @@ export async function runPrecisionOptimizeV4(opts: {
     : [];
 
   const deltas = makeScoreDeltaSet(baseline.scores, finalSnap.scores, finalScored.aiAvailability);
+  let outcome: PrecisionV4Result['outcome'] = 'no_change';
+  if (changed) outcome = 'improved';
+  else if (steps.length === 0) outcome = 'already_optimal';
   trace.push({
     step: 'final_gate',
     beforeScores: baseline.scores,
@@ -867,7 +1123,7 @@ export async function runPrecisionOptimizeV4(opts: {
     deltas,
     sectionEvents,
     trace,
-    outcome: changed ? 'improved' : (steps.length === 0 ? 'already_optimal' : 'no_change'),
+    outcome,
     targeting: targetingStats,
   };
 }
@@ -888,13 +1144,12 @@ export async function applyPrecisionPlan(opts: {
   let rejected = 0;
   let tokens = 0;
 
-  for (const step of opts.steps) {
-    if (opts.signal?.aborted) break;
+  const applyStep = async (step: PrecisionPlanStep): Promise<void> => {
     const sections = splitSections(working);
     const section = sections.find((s) => s.id === step.sectionId);
     if (!section) {
       rejected += 1;
-      continue;
+      return;
     }
 
     const prompt = buildPrecisionStepPrompt(step, section.html);
@@ -905,7 +1160,7 @@ export async function applyPrecisionPlan(opts: {
       afterHtml = result.html || section.html;
     } catch {
       rejected += 1;
-      continue;
+      return;
     }
 
     const gate = runLocalSafetyGate({
@@ -917,12 +1172,17 @@ export async function applyPrecisionPlan(opts: {
     });
     if (!gate.ok) {
       rejected += 1;
-      continue;
+      return;
     }
-    if (afterHtml.trim() === section.html.trim()) continue;
+    if (afterHtml.trim() === section.html.trim()) return;
 
     working = replaceSectionHtml(working, section.html, afterHtml, section.id);
     changed += 1;
+  };
+
+  for (const step of opts.steps) {
+    if (opts.signal?.aborted) break;
+    await applyStep(step);
   }
 
   return { html: working, changed, rejected, tokens };

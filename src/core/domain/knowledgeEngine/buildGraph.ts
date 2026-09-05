@@ -93,8 +93,7 @@ export function voteEntities(
     const hit = docsHitForTerm(term, docs);
     const consensus = Math.min(1, hit / total);
     const importanceScore = Math.round(consensus * 100);
-    const importance: PriorityClass =
-      importanceScore >= 80 ? 'critical'
+    const importance: PriorityClass = importanceScore >= 80 ? 'critical'
         : importanceScore >= 60 ? 'high'
           : importanceScore >= 40 ? 'medium'
             : 'low';

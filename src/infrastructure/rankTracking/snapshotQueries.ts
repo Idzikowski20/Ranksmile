@@ -77,11 +77,20 @@ export async function getKeywordHistory(
   );
 }
 
+type KeywordSummary = {
+  trackingKeywordId: number;
+  device: RankDevice;
+  min: number | null;
+  max: number | null;
+  avg: number | null;
+  points: Array<{ date: string; position: number | null; found: boolean }>;
+};
+
 export async function getHistorySummaryForConfig(
   configId: number,
   keywordIds: number[],
-): Promise<Array<{ trackingKeywordId: number; device: RankDevice; min: number | null; max: number | null; avg: number | null; points: Array<{ date: string; position: number | null; found: boolean }> }>> {
-  const summaries: Array<{ trackingKeywordId: number; device: RankDevice; min: number | null; max: number | null; avg: number | null; points: Array<{ date: string; position: number | null; found: boolean }> }> = [];
+): Promise<KeywordSummary[]> {
+  const summaries: KeywordSummary[] = [];
 
   if (!keywordIds.length) return summaries;
 

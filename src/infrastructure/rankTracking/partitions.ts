@@ -38,7 +38,7 @@ export async function ensureSnapshotPartitionsAhead(): Promise<void> {
       await db.query(`CREATE TABLE IF NOT EXISTS rank_snapshots_parent (
         LIKE rank_snapshots INCLUDING DEFAULTS INCLUDING CONSTRAINTS
       ) PARTITION BY RANGE (checked_at)`);
-      await db.query(`ALTER TABLE rank_snapshots_parent ADD PRIMARY KEY (id, checked_at)`);
+      await db.query('ALTER TABLE rank_snapshots_parent ADD PRIMARY KEY (id, checked_at)');
     } catch {
       return;
     }

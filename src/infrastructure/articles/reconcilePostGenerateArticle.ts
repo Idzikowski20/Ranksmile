@@ -135,7 +135,7 @@ export async function reconcilePostGenerateArticle(opts: {
 
   if (keyword) {
     const competitorRows = await queryRows<{ domain: string; url: string }>(
-      `SELECT domain, url FROM article_competitors WHERE article_id = ?`,
+      'SELECT domain, url FROM article_competitors WHERE article_id = ?',
       [opts.articleId],
     ).catch(() => []);
     const competitorDomains = competitorRows.map((r) => r.domain).filter(Boolean);

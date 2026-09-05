@@ -4,8 +4,8 @@ import { logResolvedSidecarUrl } from '@/src/infrastructure/config/serviceUrls';
 
 function redisRequired(): boolean {
   return (
-    Boolean(process.env.RAILWAY_ENVIRONMENT) ||
-    process.env.NODE_ENV === 'production'
+    Boolean(process.env.RAILWAY_ENVIRONMENT)
+    || process.env.NODE_ENV === 'production'
   );
 }
 
@@ -51,8 +51,7 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
   }
 
   if (isRailway()) {
-    const sidecar =
-      process.env.PYTHON_SIDECAR_URL?.trim() || process.env.SIDECAR_URL?.trim() || '';
+    const sidecar = process.env.PYTHON_SIDECAR_URL?.trim() || process.env.SIDECAR_URL?.trim() || '';
     if (!sidecar) {
       return res.status(503).json({
         ok: false,

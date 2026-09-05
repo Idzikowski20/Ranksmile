@@ -174,11 +174,11 @@ export async function scoreDomainPages(domainId: number): Promise<{ scored: numb
       const contentScore = scorePage(signals, bench, pageKw);
 
       await db.query(
-         `UPDATE page_audits SET score = ? WHERE domain_id = ? AND url = ?`,
+         'UPDATE page_audits SET score = ? WHERE domain_id = ? AND url = ?',
          { replacements: [contentScore, domainId, p.url] },
       );
       await db.query(
-         `UPDATE domain_recommendations SET score = ? WHERE domain_id = ? AND url = ? AND type = 'optimize'`,
+         'UPDATE domain_recommendations SET score = ? WHERE domain_id = ? AND url = ? AND type = \'optimize\'',
          { replacements: [contentScore, domainId, p.url] },
       );
       await db.query(
@@ -191,7 +191,7 @@ export async function scoreDomainPages(domainId: number): Promise<{ scored: numb
 
    // Drop optimize recs that now meet the Ranksmile-style threshold.
    await db.query(
-      `DELETE FROM domain_recommendations WHERE domain_id = ? AND type = 'optimize' AND score >= ?`,
+      'DELETE FROM domain_recommendations WHERE domain_id = ? AND type = \'optimize\' AND score >= ?',
       { replacements: [domainId, OPTIMIZE_THRESHOLD] },
    );
 

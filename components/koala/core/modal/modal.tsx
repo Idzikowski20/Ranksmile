@@ -115,7 +115,7 @@ export function Modal({ title, onClose, children, width = 680, closeOnOverlayCli
         {children}
       </Dialog>
     </Overlay>,
-    document.body
+    document.body,
   );
 }
 

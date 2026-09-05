@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
+import { queryRows } from '@/src/infrastructure/db/query';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { ensureAuditTables } from '@/src/infrastructure/persistence/schema/ensureAuditTables';
-import { queryRows } from '@/src/infrastructure/db/query';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 type CountRow = { status: string, n: number };
 type InFlightRow = { id: number, status: string, progress_done: number | null, progress_total: number | null };

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { getBootstrap } from '@/src/infrastructure/http/getBootstrap';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 /** GET /api/session/bootstrap — thin wrapper around lib/getBootstrap(). */
 async function handler(req: NextApiRequest, res: NextApiResponse) {

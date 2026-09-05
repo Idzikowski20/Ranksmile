@@ -316,7 +316,6 @@ function issueCountForRule(
   return n;
 }
 
-
 function pageHasExternal403(row: AuditRow, ctx: SiteAuditContext | null): boolean {
   if (!ctx) return false;
   return ctx.external403Links.some((item) => item.pageUrl === row.url);

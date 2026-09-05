@@ -25,7 +25,6 @@ const parseIds = (json: string | null): number[] => {
   try { const v = JSON.parse(json); return Array.isArray(v) ? v.map(Number) : []; } catch { return []; }
 };
 
-
 const roleOptions = (options: readonly string[]) => options.map((o) => ({ value: o, label: cap(o) }));
 
 const RoleSelect = ({ value, options, onChange, compact }: {

@@ -26,7 +26,7 @@ export function planActions(opts: {
 }): PlannerResult {
   const featureBoost = new Map<string, number>();
   for (const f of opts.features ?? []) {
-    featureBoost.set(f.id, f.confidence * (f.score.value ?? f.score.score) / 100);
+    featureBoost.set(f.id, (f.confidence * (f.score.value ?? f.score.score)) / 100);
   }
 
   const ranked: PlannerCandidate[] = opts.actions.map((a) => {

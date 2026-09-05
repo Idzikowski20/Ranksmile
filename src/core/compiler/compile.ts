@@ -61,10 +61,10 @@ export function compile(opts: CompileOpts): CompileResult {
   const dirtyBlockIds = opts.dirtyBlockIds ?? [];
 
   if (
-    mode === 'incremental' &&
-    opts.previous &&
-    opts.previous.contentHash === contentHash &&
-    dirtyBlockIds.length === 0
+    mode === 'incremental'
+    && opts.previous
+    && opts.previous.contentHash === contentHash
+    && dirtyBlockIds.length === 0
   ) {
     const dependencyGraph = getDependencyGraph(opts.previous);
     return {
@@ -147,8 +147,7 @@ export function compile(opts: CompileOpts): CompileResult {
   });
 
   const constraintReport = runConstraints(assembled);
-  const model =
-    constraintReport.warningCount > 0 || constraintReport.errorCount > 0
+  const model = constraintReport.warningCount > 0 || constraintReport.errorCount > 0
       ? applyConstraintStrip(assembled, constraintReport)
       : assembled;
 

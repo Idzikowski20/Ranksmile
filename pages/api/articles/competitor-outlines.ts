@@ -4,17 +4,17 @@
 // repeated panel opens don't re-scrape.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
-import verifyUser from '../../../utils/verifyUser';
-import db from '../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, ArticleRow } from '@/src/infrastructure/db/query';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { resolveContentLocale } from '@/src/infrastructure/config/domainLanguage';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
+import db from '../../../database/database';
+import verifyUser from '../../../utils/verifyUser';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);

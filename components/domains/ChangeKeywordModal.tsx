@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { SearchBar } from '../koala/core';
-import { XIcon } from '../koala/core';
+import { SearchBar, XIcon } from '../koala/core';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 
 export type GscKeyword = { keyword: string; position: number; clicks: number; impressions: number };
@@ -155,7 +154,15 @@ function ChangeKeywordModal({ article, allKeywords, onClose, onSave }: {
                         No keywords found for this domain.
                      </div>
                   ) : filtered.map((kw) => (
-                     <KwRow key={kw.keyword} keyword={kw.keyword} position={kw.position} clicks={kw.clicks} impr={kw.impressions} selected={selected === kw.keyword} onSelect={() => setSelected(kw.keyword)} />
+                     <KwRow
+                        key={kw.keyword}
+                        keyword={kw.keyword}
+                        position={kw.position}
+                        clicks={kw.clicks}
+                        impr={kw.impressions}
+                        selected={selected === kw.keyword}
+                        onSelect={() => setSelected(kw.keyword)}
+                     />
                   ))}
                </div>
             </div>

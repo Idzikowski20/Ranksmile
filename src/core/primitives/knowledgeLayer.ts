@@ -50,8 +50,7 @@ export function buildKnowledgeLayer(input: BuildKnowledgeInput): KnowledgeLayerS
   kg.intents.push(node(intentId, 'intent', 'informational', { keyword }));
   kg.edges.push(edge(topicId, intentId, 'has_intent'));
 
-  const pageId =
-    input.articleId != null
+  const pageId = input.articleId != null
       ? `page:${input.articleId}`
       : `page:draft:${keyword.toLowerCase().replace(/\s+/g, '-')}`;
   kg.pages.push(

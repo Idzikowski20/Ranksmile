@@ -2,11 +2,11 @@
 // an EventSource open here; when a comment is added/edited/resolved/deleted the
 // in-process bus pushes an event and the client refetches. No polling.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { onCommentChange } from '@/src/infrastructure/http/commentBus';
 import { assertCommentAccess } from '@/src/infrastructure/identity/commentAccess';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const { id } = req.query;

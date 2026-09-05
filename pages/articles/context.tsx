@@ -2,16 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { saveWizardState } from '@/src/infrastructure/articles/wizardState';
+import { parseRankingSources, buildAiRankingSources } from '@/src/infrastructure/articles/rankingSources';
+import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
 import { Button, CompactSelect, SegmentedControl, Switch, Textarea } from '../../components/koala/core';
 import type { SelectOption } from '../../components/koala/core';
-import { saveWizardState } from '@/src/infrastructure/articles/wizardState';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
 import { useArticle } from '../../services/article';
 import DomainFavicon from '../../components/common/DomainFavicon';
 import SidePanel from '../../components/common/SidePanel';
-import { parseRankingSources, buildAiRankingSources } from '@/src/infrastructure/articles/rankingSources';
-import type { AiVisibilitySummary } from '@/src/core/domain/aiScore/aiSearchScore';
 
 interface Voice { id: string; name: string; description: string; isDefault: boolean; }
 interface Template { id: string; name: string; referenceText: string; isDefault: boolean; }
@@ -67,7 +67,7 @@ const ContextPage: NextPage = () => {
     if (!articleFetched) return;
     const art = article;
     const parsed = parseRankingSources(art?.ranking_sources);
-    let google = parsed.google;
+    const google = parsed.google;
     let ai = parsed.ai;
     if (!ai.length && art?.ai_visibility_summary) {
       ai = buildAiRankingSources(art.ai_visibility_summary as AiVisibilitySummary);

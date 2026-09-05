@@ -1,5 +1,5 @@
-import { topicIdeasToWriteRecs } from './writeRecommendations';
 import type { KeywordResearchResult, TopicCluster, TopicIdea } from '@/src/core/domain/keywords/types';
+import { topicIdeasToWriteRecs } from './writeRecommendations';
 
 function idea(main: string, score: number, recommended: boolean, volume = 100, kd = 30): TopicIdea {
   return { main, volume, kd, position: null, keywords: [], score, recommended, clusterIndex: 0 };

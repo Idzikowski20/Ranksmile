@@ -3,12 +3,12 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import toast from 'react-hot-toast';
+import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import DomainFavicon from '../../../../components/common/DomainFavicon';
 import { HoverTooltip, Button, Modal, SegmentedControl } from '../../../../components/koala/core';
 import { MetricWidget } from '../../../../components/koala/product';
-import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
 import ScanStagePill from '../../../../components/aiVisibility/ScanStagePill';
 import { currentScanStage, isScanBusy } from '../../../../components/aiVisibility/ScanProgressBar';
@@ -34,7 +34,7 @@ const cardTitle: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: '
 
 const sparkNums = (vals: Array<number | null>): number[] => vals.filter((v): v is number => v != null && Number.isFinite(v));
 
-const PanelNavButton = ({ href, children, onNavigate }: { href: string; children: React.ReactNode; onNavigate: (href: string) => void }) => (
+const PanelNavButton = ({ href, children, onNavigate }: { href: string; children: React.ReactNode; onNavigate: (target: string) => void }) => (
    <Button type="button" variant="secondary" size="sm" onClick={() => onNavigate(href)}>{children}</Button>
 );
 
@@ -156,7 +156,12 @@ const AiVisibilityOverview: NextPage = () => {
             const compTopicByName = new Map((compareSnap?.topics || []).map((t) => [t.topic, t.score]));
             const compPromptById = new Map((compareSnap?.prompts || []).map((p) => [p.promptId, p.score]));
             const topicRows = ownTopics.slice(0, 5).map((t) => ({ key: t.topic, label: t.topic, score: t.score, vs: comp ? (compTopicByName.get(t.topic) ?? 0) : null }));
-            const promptRows = ownPrompts.slice(0, 5).map((p) => ({ key: String(p.promptId), label: p.text, score: p.score, vs: comp ? (compPromptById.get(p.promptId) ?? 0) : null }));
+            const promptRows = ownPrompts.slice(0, 5).map((p) => ({
+               key: String(p.promptId),
+               label: p.text,
+               score: p.score,
+               vs: comp ? (compPromptById.get(p.promptId) ?? 0) : null,
+            }));
             const rows = promptMode === 'topics' ? topicRows : promptRows;
 
             const sources = (ov?.snapshot?.sources || []).slice(0, 5);
@@ -183,10 +188,16 @@ const AiVisibilityOverview: NextPage = () => {
             const hasOutsider = !!compareDomain && !comparedInTop5 && outsiderRank > 0;
 
             const barItems = hasOutsider
-               ? [...competitors.slice(0, 4).map((c) => ({ domain: c.domain, overview: c.snapshot.overview })), { domain: compareDomain as string, overview: { visibilityScore: outsiderScore }, rank: outsiderRank, outsider: true }]
+               ? [
+                  ...competitors.slice(0, 4).map((c) => ({ domain: c.domain, overview: c.snapshot.overview })),
+                  { domain: compareDomain as string, overview: { visibilityScore: outsiderScore }, rank: outsiderRank, outsider: true },
+               ]
                : competitors.map((c) => ({ domain: c.domain, overview: c.snapshot.overview }));
             const topRows = hasOutsider
-               ? [...competitors.slice(0, 4).map((c, i) => ({ domain: c.domain, score: c.snapshot.overview.visibilityScore, rank: i + 1 })), { domain: compareDomain as string, score: outsiderScore, rank: outsiderRank, outsider: true }]
+               ? [
+                  ...competitors.slice(0, 4).map((c, i) => ({ domain: c.domain, score: c.snapshot.overview.visibilityScore, rank: i + 1 })),
+                  { domain: compareDomain as string, score: outsiderScore, rank: outsiderRank, outsider: true },
+               ]
                : competitors.map((c, i) => ({ domain: c.domain, score: c.snapshot.overview.visibilityScore, rank: i + 1 }));
 
             let chartBody: React.ReactNode;

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import type { PixabayImage, PixabayResponse } from '../../pages/api/pixabay/search';
 import { getErrorMessage } from '@/src/core/shared/errors';
+import type { PixabayImage, PixabayResponse } from '../../pages/api/pixabay/search';
 import Modal from '../koala/core/modal/modal';
 import Button from '../koala/core/button/button';
 import Input from '../koala/core/input/input';
@@ -12,13 +12,13 @@ interface Props {
 }
 
 /* ── Shared style objects using design tokens ───────────────────────── */
-const ACCENT = 'var(--color-surface-raised)';  // #F84416
-const STRONG = 'var(--color-surface-strong)';    // #09090b
+const ACCENT = 'var(--color-surface-raised)'; // #F84416
+const STRONG = 'var(--color-surface-strong)'; // #09090b
 const FF = 'var(--font-family-primary)';
-const RADIUS_XS = 'var(--radius-xs)';  // 7px
-const RADIUS_SM = 'var(--radius-sm)';  // 10.5px
-const SPACE_5 = 'var(--space-5)';      // 10.5px
-const SPACE_6 = 'var(--space-6)';      // 14px
+const RADIUS_XS = 'var(--radius-xs)'; // 7px
+const RADIUS_SM = 'var(--radius-sm)'; // 10.5px
+const SPACE_5 = 'var(--space-5)'; // 10.5px
+const SPACE_6 = 'var(--space-6)'; // 14px
 
 const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
   const [query, setQuery] = useState(defaultQuery);
@@ -128,7 +128,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
         </div>
 
         <form onSubmit={handleSubmit} style={{
-          display: 'flex', gap: 8, padding: `var(--space-5) 20px`, borderBottom: '1px solid #f4f4f5',
+          display: 'flex', gap: 8, padding: 'var(--space-5) 20px', borderBottom: '1px solid #f4f4f5',
         }}>
           <Input
             ref={inputRef}
@@ -144,7 +144,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
         </form>
 
         <div
-          style={{ flex: 1, overflowY: 'auto', padding: `var(--space-5) 20px`, minHeight: 300 }}
+          style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-5) 20px', minHeight: 300 }}
           className="styled-scrollbar"
         >
           {!error && !isLoading && results.length === 0 && (
@@ -202,7 +202,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
                         borderRadius: RADIUS_XS, cursor: 'pointer',
                         background: isSelected ? '#f8f5ff' : '#f3f4f0',
                         overflow: 'hidden',
-                        transition: `border-color var(--motion-fast), background var(--motion-fast)`,
+                        transition: 'border-color var(--motion-fast), background var(--motion-fast)',
                         outline: 'none',
                       }}
                       onFocus={(e) => {
@@ -233,7 +233,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
                         fontFamily: FF, fontWeight: isSelected ? 500 : 400,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         width: '100%', textAlign: 'center',
-                        transition: `color var(--motion-fast)`,
+                        transition: 'color var(--motion-fast)',
                       }}>
                         {img.tags?.split(',')[0] || '—'}
                       </div>
@@ -292,7 +292,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
 
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          gap: 'var(--space-5)', padding: `var(--space-5) 20px`, borderTop: '1px solid #f4f4f5',
+          gap: 'var(--space-5)', padding: 'var(--space-5) 20px', borderTop: '1px solid #f4f4f5',
         }}>
           <span style={{
             fontSize: 'var(--font-size-xs)', color: 'var(--koala-text-tertiary)', fontFamily: FF, marginRight: 'auto',

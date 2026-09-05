@@ -12,6 +12,12 @@ import { createSnapshotRepository } from '@/src/infrastructure/gsc/snapshotRepos
 import { priorityFromScore } from '@/src/core/domain/recommendations/opportunityScore';
 import { loadWriteRecommendations } from '@/src/infrastructure/recommendations/loadWriteRecommendations';
 
+// ── Integration orchestration (GSC + sidecar kick) ────────────────────────
+
+import GscAccount from '@/database/models/gscAccount';
+import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
+import { searchconsole_v1 } from '@googleapis/searchconsole';
+
 export type StageKey = 'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations';
 export const STAGE_ORDER: StageKey[] = ['gsc', 'keywords', 'topics', 'competitors', 'recommendations'];
 const STALE_MS = 10 * 60 * 1000;
@@ -65,7 +71,7 @@ export async function enqueueDomainSetup(domainId: number): Promise<string> {
    await ensurePipelineTables();
    const jobId = `dsetup_${domainId}`;
    const existing = await selectRows<{ id: string }>(
-      `SELECT id FROM analysis_jobs WHERE id = ?`, [jobId]);
+      'SELECT id FROM analysis_jobs WHERE id = ?', [jobId]);
    if (existing.length) return jobId; // already enqueued (queued/running/done) — reuse
    try {
       // article_id = 0 sentinel: analysis_jobs.article_id is NOT NULL on SQLite (the
@@ -94,7 +100,7 @@ export async function claimJob(jobId: string, token: string): Promise<boolean> {
          AND (status IN ('queued','failed') OR (status='running' AND locked_at < ?))`,
       { replacements: [token, jobId, staleCutoffIso] });
    const back = await selectRows<{ status: string; locked_by: string }>(
-      `SELECT status, locked_by FROM analysis_jobs WHERE id = ?`, [jobId]);
+      'SELECT status, locked_by FROM analysis_jobs WHERE id = ?', [jobId]);
    return back.length > 0 && back[0].status === 'running' && back[0].locked_by === token;
 }
 
@@ -122,18 +128,16 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
       }
       const topicIds: number[] = [];
       for (const t of result.topics || []) {
-         await q(`INSERT INTO domain_topics (domain_id, title, summary, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, t.title, t.summary || '']);
-         const back = await db.query<{ id: number }>(`SELECT id FROM domain_topics WHERE domain_id = ? ORDER BY id DESC LIMIT 1`, { replacements: [domainId], type: QueryTypes.SELECT, transaction: tx });
+         await q('INSERT INTO domain_topics (domain_id, title, summary, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)', [domainId, t.title, t.summary || '']);
+         const back = await db.query<{ id: number }>('SELECT id FROM domain_topics WHERE domain_id = ? ORDER BY id DESC LIMIT 1', { replacements: [domainId], type: QueryTypes.SELECT, transaction: tx });
          topicIds.push(back[0]?.id ?? 0);
       }
-      for (const k of result.keywords || [])
-         await q(`INSERT INTO domain_keywords (domain_id, keyword, source, volume, position, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, k.keyword, k.source || 'suggest', k.volume ?? null, k.position ?? null]);
-      for (const c of result.competitors || [])
-         await q(`INSERT INTO domain_competitors (domain_id, competitor_domain, appearances, avg_position, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, c.competitor_domain, c.appearances ?? 0, c.avg_position ?? null]);
+      for (const k of result.keywords || []) await q('INSERT INTO domain_keywords (domain_id, keyword, source, volume, position, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)', [domainId, k.keyword, k.source || 'suggest', k.volume ?? null, k.position ?? null]);
+      for (const c of result.competitors || []) await q('INSERT INTO domain_competitors (domain_id, competitor_domain, appearances, avg_position, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)', [domainId, c.competitor_domain, c.appearances ?? 0, c.avg_position ?? null]);
 
       // ── page_audits: UPSERT-by-(domain_id,url), keep deep_json across scans ──
       const existingRows = await db.query<{ url: string }>(
-         `SELECT url FROM page_audits WHERE domain_id = ?`,
+         'SELECT url FROM page_audits WHERE domain_id = ?',
          { replacements: [domainId], type: QueryTypes.SELECT, transaction: tx },
       );
       const existingUrls = new Set(existingRows.map((r) => r.url));
@@ -163,9 +167,7 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
       // Empty audits usually mean discovery/fetch failed; do not treat that as "all pages removed".
       if (incomingUrls.size > 0) {
          // delete ONLY rows whose URL no longer exists on the site
-         for (const url of existingUrls)
-            if (!incomingUrls.has(url))
-               await q(`DELETE FROM page_audits WHERE domain_id=? AND url=?`, [domainId, url]);
+         for (const url of existingUrls) if (!incomingUrls.has(url)) await q('DELETE FROM page_audits WHERE domain_id=? AND url=?', [domainId, url]);
       }
 
       type RecCols = {
@@ -174,7 +176,7 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
          keyword: string | null; topicTitle: string | null; optimizationStatus: string | null;
       };
       const insertRec = (c: RecCols) =>
-         q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, search_volume, keyword_difficulty, keyword, topic_title, optimization_status, article_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+         q('INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, search_volume, keyword_difficulty, keyword, topic_title, optimization_status, article_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
             [domainId, c.topicId, c.title, c.rationale, c.priority, c.type, c.url, c.score, c.vol, c.kd, c.keyword, c.topicTitle, c.optimizationStatus, null]);
 
       for (const r of result.recommendations || []) {
@@ -208,32 +210,32 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
    });
 }
 
-// ── Integration orchestration (GSC + sidecar kick) ────────────────────────
-
-import GscAccount from '@/database/models/gscAccount';
-import { buildOAuthClientFromAccount } from '@/src/infrastructure/gsc/gscAccounts';
-import { searchconsole_v1 } from '@googleapis/searchconsole';
-
 async function emit(jobId: string, stage: StageKey, percent: number, message: string) {
    try {
       await fetch(`${nextjsUrl()}/api/articles/job-progress`, {
          method: 'POST',
          signal: AbortSignal.timeout(10_000),
          headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' },
-         body: JSON.stringify({ jobId, currentStage: stage, stageProgress: percent, totalProgress: Math.round((STAGE_ORDER.indexOf(stage) * 100 + percent) / STAGE_ORDER.length), message }),
+         body: JSON.stringify({
+            jobId,
+            currentStage: stage,
+            stageProgress: percent,
+            totalProgress: Math.round((STAGE_ORDER.indexOf(stage) * 100 + percent) / STAGE_ORDER.length),
+            message,
+         }),
       });
    } catch { /* progress is best-effort */ }
 }
 
 async function failJob(jobId: string, stage: StageKey, message: string) {
-   await db.query(`UPDATE analysis_jobs SET status='failed', current_stage=?, error=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`, { replacements: [stage, message, jobId] });
+   await db.query('UPDATE analysis_jobs SET status=\'failed\', current_stage=?, error=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', { replacements: [stage, message, jobId] });
 }
 
 /** Stage 1 (Node): GSC fetch + seed fallback. Returns seed keywords + top page URLs. */
 async function gscStageAndSeeds(jobId: string, domainId: number): Promise<{ seeds: string[]; pages: string[] }> {
    await emit(jobId, 'gsc', 10, 'Getting Search Console and site data');
    // Resolve domain + userId from the domain row.
-   const drows = await selectRows<{ domain: string; userId: string }>(`SELECT domain, "userId" FROM domain WHERE "ID" = ? LIMIT 1`, [domainId]);
+   const drows = await selectRows<{ domain: string; userId: string }>('SELECT domain, "userId" FROM domain WHERE "ID" = ? LIMIT 1', [domainId]);
    const domainName = drows[0]?.domain || '';
    const userId = drows[0]?.userId || '';
    let seeds: string[] = [];
@@ -267,8 +269,8 @@ async function gscStageAndSeeds(jobId: string, domainId: number): Promise<{ seed
    } catch { /* GSC optional */ }
    if (!seeds.length) {
       // Fallback: site_context title/description, then brand_knowledge.
-      const ctx = await selectRows<{ title: string; description: string }>(`SELECT title, description FROM site_context WHERE domain_id = ? LIMIT 1`, [domainId]);
-      const bk = await selectRows<{ brand_knowledge: string }>(`SELECT brand_knowledge FROM domain WHERE "ID" = ? LIMIT 1`, [domainId]);
+      const ctx = await selectRows<{ title: string; description: string }>('SELECT title, description FROM site_context WHERE domain_id = ? LIMIT 1', [domainId]);
+      const bk = await selectRows<{ brand_knowledge: string }>('SELECT brand_knowledge FROM domain WHERE "ID" = ? LIMIT 1', [domainId]);
       const text = [ctx[0]?.title, ctx[0]?.description, (bk[0]?.brand_knowledge || '').slice(0, 400)].filter(Boolean).join(' ');
       seeds = text ? [domainName.split('.')[0], ...text.split(/[^a-zA-Z0-9ąćęłńóśźż]+/).filter((w) => w.length > 4)].slice(0, 8) : [domainName.split('.')[0]];
    }
@@ -280,21 +282,21 @@ async function gscStageAndSeeds(jobId: string, domainId: number): Promise<{ seed
 export async function kickDomainSetup(jobId: string): Promise<void> {
    const token = `nextjs_${process.pid || 'x'}_${randomUUID()}`;
    if (!(await claimJob(jobId, token))) return; // someone else owns it / exhausted
-   const jrows = await selectRows<{ domain_id: number; payload: string }>(`SELECT domain_id, payload FROM analysis_jobs WHERE id = ?`, [jobId]);
+   const jrows = await selectRows<{ domain_id: number; payload: string }>('SELECT domain_id, payload FROM analysis_jobs WHERE id = ?', [jobId]);
    const domainId = Number(jrows[0]?.domain_id);
    if (!domainId) { await failJob(jobId, 'gsc', 'missing domain_id'); return; }
    try {
       const { seeds: seedKeywords, pages: gscPages } = await gscStageAndSeeds(jobId, domainId);
-      const drows = await selectRows<{ domain: string; brand_knowledge: string }>(`SELECT domain, brand_knowledge FROM domain WHERE "ID" = ? LIMIT 1`, [domainId]);
+      const drows = await selectRows<{ domain: string; brand_knowledge: string }>('SELECT domain, brand_knowledge FROM domain WHERE "ID" = ? LIMIT 1', [domainId]);
       const domainName = drows[0]?.domain || '';
       let blogUrls = await gatherBlogUrls(domainId, domainName);
       // No sitemap (or nothing matched) → fall back to the domain's top GSC pages.
       if (!blogUrls.length && gscPages.length) {
          blogUrls = Array.from(new Set(gscPages.map((u) => u.split('#')[0].split('?')[0])));
       }
-      const langRow = await selectRows<{ language: string }>(`SELECT language FROM site_context WHERE domain_id = ? ORDER BY id LIMIT 1`, [domainId]);
+      const langRow = await selectRows<{ language: string }>('SELECT language FROM site_context WHERE domain_id = ? ORDER BY id LIMIT 1', [domainId]);
       const language = langRow[0]?.language || 'pl';
-      const ownerRow = await selectRows<{ userId: string }>(`SELECT "userId" FROM domain WHERE "ID" = ? LIMIT 1`, [domainId]);
+      const ownerRow = await selectRows<{ userId: string }>('SELECT "userId" FROM domain WHERE "ID" = ? LIMIT 1', [domainId]);
       let siteAuditPages = 100;
       try {
          const ownerId = ownerRow[0]?.userId;
@@ -319,7 +321,8 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
 /** For setup-status: latest domain_setup job + derived stages. */
 export async function getSetupStatus(domainId: number) {
    await ensurePipelineTables();
-   const rows = await selectRows<{ status: string; current_stage: string | null; stage_progress: number | null; error: string | null; result: string | Record<string, unknown> | null }>(
+   type JobRow = { status: string; current_stage: string | null; stage_progress: number | null; error: string | null; result: string | Record<string, unknown> | null };
+   const rows = await selectRows<JobRow>(
       `SELECT status, current_stage, stage_progress, error, result FROM analysis_jobs
        WHERE domain_id = ? AND job_type = 'domain_setup' ORDER BY created_at DESC LIMIT 1`, [domainId]);
    if (!rows.length) return { status: 'none' as const, currentStage: null, stagePercent: 0, stages: deriveStages('none', null, 0).stages, error: null, auditCounts: null };

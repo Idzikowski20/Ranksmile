@@ -2,10 +2,6 @@
 // POST /api/automations/:slug  { scheduledDate, title, targetKeyword?, publishMode }
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAutomationTables } from '@/src/infrastructure/persistence/schema/ensureAutomationTables';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
@@ -13,6 +9,10 @@ import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConn
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { mapAutomationEvent, type AutomationEventRow, type AutomationPublishMode } from '@/src/core/shared/types/automations';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

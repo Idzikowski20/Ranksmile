@@ -1,13 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { AiVisConfig, AiVisTopic, AI_VIS_DEFAULT_MODELS, AI_VIS_PROMPT_LIMIT, sanitizeModels, normalizeAiVisPriority, type AiVisPriority } from '@/src/core/domain/aiVisibility/config';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 type ConfigRow = { id: number, brand_name: string, prompt_limit: number, models: string | null, completed_at: string | null, priority: string | null };
 type PromptRow = { id: number, topic: string, text: string, provenance: string | null, selected: number };

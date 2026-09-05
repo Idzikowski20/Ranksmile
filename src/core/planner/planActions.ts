@@ -64,9 +64,8 @@ export function planActions(
 export const plannerConsumer: ContentConsumer<EditPlan> = {
   id: 'planner',
   accept(context: ConsumerContext): ConsumerResult<EditPlan> {
-    const graph =
-      context.actionGraph ??
-      buildActionGraph(context.model, { builtAt: context.model.compiledAt });
+    const graph = context.actionGraph
+      ?? buildActionGraph(context.model, { builtAt: context.model.compiledAt });
     const budget = context.budget ?? { maxActions: 5, maxLlmCalls: 0 };
     const strategy: PlannerStrategy = 'balanced';
     const result = planActions(graph, budget, strategy);

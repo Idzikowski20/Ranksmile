@@ -95,8 +95,7 @@ export function clusterQuestions(
       }
     }
 
-    const usePlaceholder =
-      !titles.length
+    const usePlaceholder = !titles.length
       || bestScore < PLACEHOLDER_THRESHOLD
       || bestShared < 2;
 

@@ -4,21 +4,21 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
+import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
+import { useSortState } from '@/hooks/useSortState';
+import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
+import { useTrafficAlerts } from '@/hooks/useTrafficAlerts';
+import { computePortfolioPruning } from '@/src/core/domain/terms/contentEffort';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
 import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel, ToolRibbon, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
-import { useSortState } from '@/hooks/useSortState';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
-import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
-import { useTrafficAlerts } from '@/hooks/useTrafficAlerts';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { aggregateGscPages, kwScore, toPath } from '../../../utils/gsc';
 import AddPagesModal, { AvailablePage } from '../../../components/domains/AddPagesModal';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
-import { computePortfolioPruning } from '@/src/core/domain/terms/contentEffort';
 
 const StatusBadge = ({ status }: { status: string }) => {
    const variant = status === 'published' ? 'success' : status === 'draft' || status === 'review' || status === 'analyzing' ? 'muted' : status === 'error' ? 'danger' : 'muted';
@@ -303,7 +303,7 @@ const ContentAuditPage: NextPage = () => {
    const toggleSelect = (id: string | number) => {
       setSelected((prev) => {
          const n = new Set(prev);
-         n.has(id) ? n.delete(id) : n.add(id);
+         if (n.has(id)) n.delete(id); else n.add(id);
          return n;
       });
    };

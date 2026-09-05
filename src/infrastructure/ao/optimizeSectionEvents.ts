@@ -48,61 +48,68 @@ export function buildArticleSectionDiffEvents(
 ): SectionEvent[] {
    const before = splitSections(beforeHtml);
    const after = splitSections(afterHtml);
-   const events: SectionEvent[] = [];
-   const n = Math.max(before.length, after.length);
 
-   for (let i = 0; i < n; i++) {
-      const b = before[i];
-      const a = after[i];
-      if (b && a) {
+   // Pair by heading, not by index: one restored section shifts every later index, and
+   // pairing by position then diffed each section against its neighbour and flagged
+   // eight untouched sections as changed. The intro (no heading) pairs with the intro.
+   const key = (s: Section) => s.headingText.replace(/\s+/g, ' ').trim().toLowerCase();
+   const unusedBefore = [...before];
+   const pairOf = new Map<Section, Section | undefined>();
+   for (const a of after) {
+      const i = unusedBefore.findIndex((b) => key(b) === key(a));
+      pairOf.set(a, i >= 0 ? unusedBefore.splice(i, 1)[0] : undefined);
+   }
+   const removedAfterBefore = new Map<Section | null, Section[]>();
+   for (const b of unusedBefore) {
+      // A removed section is reported right after the nearest surviving predecessor.
+      let anchor: Section | null = null;
+      for (let i = b.index - 1; i >= 0; i -= 1) {
+         if (!unusedBefore.includes(before[i])) { anchor = before[i]; break; }
+      }
+      removedAfterBefore.set(anchor, [...(removedAfterBefore.get(anchor) ?? []), b]);
+   }
+
+   const decorate = (base: Omit<SectionEvent, 'focus' | 'mode' | 'reason'>, mode: EditMode | undefined): SectionEvent => {
+      const focus = meta?.focus ?? inferSectionDiffFocus(base);
+      const resolvedMode = meta?.mode ?? mode;
+      return {
+         ...base,
+         focus,
+         ...(resolvedMode ? { mode: resolvedMode } : {}),
+         ...(meta?.reason ? { reason: meta.reason } : {}),
+      };
+   };
+   const removedEvent = (b: Section): SectionEvent => ({
+      sectionId: b.id,
+      index: b.index,
+      headingText: b.headingText,
+      oldHtml: b.html,
+      newHtml: '',
+      changed: true,
+      focus: meta?.focus ?? 'seo-terms',
+      ...(meta?.mode ? { mode: meta.mode } : {}),
+      ...(meta?.reason ? { reason: meta.reason } : {}),
+   });
+
+   const events: SectionEvent[] = [];
+   for (const b of removedAfterBefore.get(null) ?? []) events.push(removedEvent(b));
+   for (const a of after) {
+      const b = pairOf.get(a);
+      if (b) {
          const changed = normalizeHtmlForDiff(b.html) !== normalizeHtmlForDiff(a.html);
          const base = {
-            sectionId: b.id,
-            index: b.index,
-            headingText: b.headingText,
-            oldHtml: b.html,
-            newHtml: a.html,
-            changed,
+            sectionId: b.id, index: b.index, headingText: b.headingText, oldHtml: b.html, newHtml: a.html, changed,
          };
-         if (!changed) {
-            events.push(base);
-            continue;
+         events.push(changed ? decorate(base, undefined) : base);
+         if (changed && !meta?.mode) {
+            const last = events[events.length - 1];
+            last.mode = last.focus === 'ai-coverage' ? 'less' : 'normal';
          }
-         const focus = meta?.focus ?? inferSectionDiffFocus(base);
-         events.push({
-            ...base,
-            focus,
-            ...(meta?.mode ? { mode: meta.mode } : { mode: focus === 'ai-coverage' ? 'less' : 'normal' }),
-            ...(meta?.reason ? { reason: meta.reason } : {}),
-         });
-      } else if (!b && a) {
-         const base = {
-            sectionId: a.id,
-            index: a.index,
-            headingText: a.headingText,
-            oldHtml: '',
-            newHtml: a.html,
-            changed: true as const,
-         };
-         const focus = meta?.focus ?? inferSectionDiffFocus(base);
-         events.push({
-            ...base,
-            focus,
-            ...(meta?.mode ? { mode: meta.mode } : { mode: 'less' }),
-            ...(meta?.reason ? { reason: meta.reason } : {}),
-         });
-      } else if (b && !a) {
-         events.push({
-            sectionId: b.id,
-            index: b.index,
-            headingText: b.headingText,
-            oldHtml: b.html,
-            newHtml: '',
-            changed: true,
-            focus: meta?.focus ?? 'seo-terms',
-            ...(meta?.mode ? { mode: meta.mode } : {}),
-            ...(meta?.reason ? { reason: meta.reason } : {}),
-         });
+         for (const r of removedAfterBefore.get(b) ?? []) events.push(removedEvent(r));
+      } else {
+         events.push(decorate({
+            sectionId: a.id, index: a.index, headingText: a.headingText, oldHtml: '', newHtml: a.html, changed: true,
+         }, 'less'));
       }
    }
    return events;

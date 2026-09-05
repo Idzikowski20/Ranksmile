@@ -39,7 +39,8 @@ const brandEq = (a: string, b: string): boolean => a.trim().toLowerCase() === b.
 const answerHasBrand = (r: ResultRow, b: string): boolean => r.brands.some((x) => brandEq(x.brand, b));
 
 export function aggregateSources(rows: ResultRow[], ownBrand = '') {
-   const byUrl = new Map<string, { url: string, domain: string, timesShown: number, models: Set<string>, mentioned: boolean, brands: Map<string, { brand: string, domain: string, n: number }> }>();
+   type UrlAgg = { url: string, domain: string, timesShown: number, models: Set<string>, mentioned: boolean, brands: Map<string, { brand: string, domain: string, n: number }> };
+   const byUrl = new Map<string, UrlAgg>();
    for (const r of rows) {
       for (const c of r.citations) {
          if (isBlockedCitationDomain(c.domain)) continue;
@@ -83,12 +84,14 @@ export function mentionGap(rows: ResultRow[], brand: string, ownBrand: string): 
 
 export function gapBrandCandidates(rows: ResultRow[], ownBrand: string): string[] {
    const counts = new Map<string, { brand: string, n: number }>();
-   for (const r of rows) for (const b of r.brands) {
+   for (const r of rows) {
+ for (const b of r.brands) {
       if (ownBrand && brandEq(b.brand, ownBrand)) continue;
       const key = b.brand.toLowerCase();
       const e = counts.get(key) ?? { brand: b.brand, n: 0 };
       e.n += 1; counts.set(key, e);
    }
+}
    return Array.from(counts.values()).sort((a, b) => b.n - a.n).map((e) => e.brand);
 }
 
@@ -221,8 +224,7 @@ export type DomainSnapshot = {
 
 function buildScoreVector(overview: ReturnType<typeof computeOverview>): ScoreVectorLike {
   const weights = { mention: 0.3, position: 0.25, diversity: 0.2, citations: 0.15, pages: 0.1 };
-  const positionComponent =
-    overview.avgPosition == null ? 50 : Math.max(0, 100 - (overview.avgPosition - 1) * 12);
+  const positionComponent = overview.avgPosition == null ? 50 : Math.max(0, 100 - (overview.avgPosition - 1) * 12);
   const diversity = Math.min(100, overview.perModel.length * 20);
   const citations = Math.min(100, overview.directCitations * 5);
   const pages = Math.min(100, overview.pages * 10);
@@ -582,10 +584,12 @@ export function domainMentionGap(rows: ResultRow[], competitorDomain: string, ow
 export function domainGapCandidates(rows: ResultRow[], ownDomain: string): string[] {
    const ownN = norm(ownDomain);
    const domains = new Set<string>();
-   for (const r of rows) for (const c of r.citations) {
+   for (const r of rows) {
+ for (const c of r.citations) {
       const d = norm(c.domain);
       if (d && d !== ownN && !d.endsWith(`.${ownN}`) && !isBlockedCitationDomain(d)) domains.add(d);
    }
+}
    return Array.from(domains)
       .map((d) => ({ d, gap: domainMentionGap(rows, d, ownDomain).gap }))
       .sort((a, b) => b.gap - a.gap)
@@ -594,7 +598,11 @@ export function domainGapCandidates(rows: ResultRow[], ownDomain: string): strin
 
 /** Per-URL mention flags for two brands (competitor modal "Mentions" tab): does the
  *  answer citing each source mention brand A (own) / brand B (the competitor). */
-export function sourceMentions(rows: ResultRow[], brandA: string, brandB: string): Array<{ url: string, domain: string, timesShown: number, aMentioned: boolean, bMentioned: boolean }> {
+export function sourceMentions(
+   rows: ResultRow[],
+   brandA: string,
+   brandB: string,
+): Array<{ url: string, domain: string, timesShown: number, aMentioned: boolean, bMentioned: boolean }> {
    const byUrl = new Map<string, { url: string, domain: string, timesShown: number, aMentioned: boolean, bMentioned: boolean }>();
    for (const r of rows) {
       const a = !!brandA && answerHasBrand(r, brandA);

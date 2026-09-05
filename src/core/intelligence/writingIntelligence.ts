@@ -34,12 +34,10 @@ function scoreFromModel(model: CanonicalContentModel): WiDimension[] {
     : presentation.rhetoric.encyclopedicLead
       ? 0.45
       : 0.55;
-  const structureScore =
-    (structure.hasSummary ? 0.35 : 0) +
-    (structure.hasFaq ? 0.25 : 0) +
-    (structure.answersMainQuestionEarly ? 0.4 : 0.15);
-  const style =
-    presentation.style.avgSentenceLen !== undefined
+  const structureScore = (structure.hasSummary ? 0.35 : 0)
+    + (structure.hasFaq ? 0.25 : 0)
+    + (structure.answersMainQuestionEarly ? 0.4 : 0.15);
+  const style = presentation.style.avgSentenceLen !== undefined
       ? clamp01(1 - Math.abs(presentation.style.avgSentenceLen - 18) / 30)
       : 0.5;
 
@@ -139,8 +137,7 @@ export function buildWiScorecard(context: ConsumerContext): WiScorecard {
   const judge = asJudge(peers?.judge);
   if (judge) {
     usedPeerResults.push('judge');
-    const score =
-      judge.verdict === 'improved'
+    const score = judge.verdict === 'improved'
         ? 0.9
         : judge.verdict === 'unchanged'
           ? 0.7
@@ -154,8 +151,7 @@ export function buildWiScorecard(context: ConsumerContext): WiScorecard {
     });
   }
 
-  const overall =
-    dimensions.length === 0
+  const overall = dimensions.length === 0
       ? 0
       : Math.round(
           (dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length) * 1000,
@@ -198,8 +194,7 @@ export const editorialIntelligenceConsumer: ContentConsumer<EditorialScorecard> 
     if (!m.structure.hasSummary) eeatHints.push('add summary for editorial close');
     if (m.compiler.partial) eeatHints.push('compile was partial');
     if (m.compiler.confidence < 0.5) eeatHints.push('low compiler confidence');
-    const publishReady =
-      !m.compiler.partial && eeatHints.length === 0 && m.ast.blocks.length > 0;
+    const publishReady = !m.compiler.partial && eeatHints.length === 0 && m.ast.blocks.length > 0;
     const overall = publishReady ? 0.85 : clamp01(0.4 + m.compiler.confidence * 0.4);
     return {
       consumerId: 'editorial_intelligence',
@@ -231,8 +226,7 @@ export const optimizationIntelligenceConsumer: ContentConsumer<OptimizationScore
     const parts = [coverageDelta, visibilityDelta].filter(
       (n): n is number => typeof n === 'number',
     );
-    const overall =
-      parts.length > 0
+    const overall = parts.length > 0
         ? Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 1000) / 1000
         : clamp01(1 - actionCount * 0.05);
     return {

@@ -512,7 +512,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                               onClick={(e) => e.stopPropagation()}
                               style={{ fontSize: 13, color: 'var(--koala-text-brand)', textDecoration: 'underline', textUnderlineOffset: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                             >
-                              {comp.url.length > 50 ? comp.url.slice(0, 50) + '…' : comp.url}
+                              {comp.url.length > 50 ? `${comp.url.slice(0, 50)}…` : comp.url}
                             </a>
                           </div>
                         </div>

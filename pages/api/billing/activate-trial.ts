@@ -7,8 +7,8 @@ import { assertCanManage } from '@/src/infrastructure/identity/members';
 import { getStripe } from '@/src/infrastructure/billing/stripe';
 import { assertStripeModeOrThrow } from '@/src/infrastructure/billing/stripeMode';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
-import { getCurrentUser } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUser } from '../../../utils/getUser';
 
 const schema = z.object({
   setupIntentId: z.string().min(1),

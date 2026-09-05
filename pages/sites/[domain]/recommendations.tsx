@@ -4,19 +4,19 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
-import AppShell from '../../../components/common/AppShell';
-import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
-import { useFetchDomains } from '../../../services/domains';
-import { useWorkspaces } from '../../../services/workspaces';
 import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProgress';
 import { buildImportKeywordList } from '@/src/infrastructure/keywords/buildImportKeywordList';
+import toast from 'react-hot-toast';
+import { useSortState } from '@/hooks/useSortState';
+import AppShell from '../../../components/common/AppShell';
+import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { useFetchDomains } from '../../../services/domains';
+import { useWorkspaces } from '../../../services/workspaces';
 import { normalizeUrlForMatch, kwScore, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
-import toast from 'react-hot-toast';
 import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
-import { useSortState } from '@/hooks/useSortState';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
 
 function compactNum(n: number): string {
@@ -81,7 +81,6 @@ const PanelIcon = () => (
    </svg>
 );
 
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DomainArticle = {
    id: number | string;
@@ -100,7 +99,6 @@ type DomainArticle = {
 
 type SortKey = 'content_score' | 'position' | 'clicks' | 'impressions';
 
-
 type RecommRow = {
    id: number | string;
    title: string;
@@ -116,7 +114,6 @@ type RecommRow = {
    word_count?: number;
    updatedAt?: string | null;
 };
-
 
 type FilterState = {
    rankDropsOnly: boolean;
@@ -195,7 +192,6 @@ function FiltersPanel({ filters, onChange }: {
       </div>
    );
 }
-
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 const RecommendationsPage: NextPage = () => {
@@ -390,7 +386,6 @@ const RecommendationsPage: NextPage = () => {
       return [...suggested, ...fromGsc].slice(0, 150);
    }, [allGscKeywords, rows, recsData]);
 
-
    const filtered = useMemo(() => {
       let out = optimizeRows;
       if (search.trim()) { const q = search.toLowerCase(); out = out.filter((r) => r.title.toLowerCase().includes(q) || r.keyword.toLowerCase().includes(q) || r.url.toLowerCase().includes(q)); }
@@ -415,7 +410,7 @@ const RecommendationsPage: NextPage = () => {
    const allChecked = filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
    const someChecked = filtered.some((r) => selectedIds.has(r.id));
    const toggleAll = () => { const next = new Set(selectedIds); if (allChecked) filtered.forEach((r) => next.delete(r.id)); else filtered.forEach((r) => next.add(r.id)); setSelectedIds(next); };
-   const toggleRow = (id: string | number) => { const next = new Set(selectedIds); next.has(id) ? next.delete(id) : next.add(id); setSelectedIds(next); };
+   const toggleRow = (id: string | number) => { const next = new Set(selectedIds); if (next.has(id)) next.delete(id); else next.add(id); setSelectedIds(next); };
 
    const [analyzingIds, setAnalyzingIds] = useState<Set<string | number>>(new Set());
    const [creatingKw, setCreatingKw] = useState<string | null>(null);
@@ -505,7 +500,6 @@ const RecommendationsPage: NextPage = () => {
          setOptimizingId(null);
       }
    };
-
 
    const handleCreateArticleForKeyword = async (keyword: string) => {
       if (!activeDomain?.ID || !keyword.trim()) return;
@@ -710,7 +704,6 @@ const RecommendationsPage: NextPage = () => {
                      )}
                   </DataTableContent>
                )}
-
 
                {/* ── Optimize tab ── */}
                {tab === 'optimize' && (

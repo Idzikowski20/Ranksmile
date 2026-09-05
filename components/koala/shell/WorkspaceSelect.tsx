@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { deriveActiveId, resolveActiveDomain } from '@/src/core/domain/navigation/activeWorkspace';
 import { Icon } from '../icons/Icon';
 import MenuListItem from '../core/menuListItem';
 import { MenuList } from '../core/menuList';
 import { ShellPortal } from '../overlay/ShellPortal';
 import { zIndex } from '../tokens/zIndex';
-import { deriveActiveId, resolveActiveDomain } from '@/src/core/domain/navigation/activeWorkspace';
 import { useOrganization } from '../../../services/organization';
 import { useFetchDomains } from '../../../services/domains';
 import {

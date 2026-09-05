@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
+import { AuditFactor } from '@/src/core/domain/audit/types';
 import { Chart } from '../koala/charts';
 import type { ChartPreparedData } from '../koala/charts';
-import { AuditFactor } from '@/src/core/domain/audit/types';
 
 /**
  * Factor comparison — page prepares bars; Chart Distribution renders only.

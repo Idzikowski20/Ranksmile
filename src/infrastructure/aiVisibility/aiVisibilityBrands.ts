@@ -63,7 +63,7 @@ export async function runBrandChunk(scanId: number, ownBrand: string, limit = AI
       await db.query('UPDATE ai_vis_results SET brands = ? WHERE id = ? AND brands IS NULL', { replacements: [JSON.stringify(brands), row.id] }).catch(() => {});
    }
    const left = await queryOne<{ n: number }>(
-      "SELECT COUNT(*) AS n FROM ai_vis_results WHERE scan_id = ? AND brands IS NULL AND error IS NULL AND answer IS NOT NULL",
+      'SELECT COUNT(*) AS n FROM ai_vis_results WHERE scan_id = ? AND brands IS NULL AND error IS NULL AND answer IS NOT NULL',
       [scanId],
    );
    return { done: pending.length, remaining: Number(left?.n ?? 0) };

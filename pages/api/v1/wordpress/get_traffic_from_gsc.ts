@@ -2,10 +2,10 @@
 // domain, aggregated by page (clicks/impressions summed, position impression-weighted).
 // Shape mirrors Ranksmile's: { traffic_data: [{ site, clicks, impressions, position }] }.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
 import { authPluginRequest } from '@/src/infrastructure/wordpress/wpConnection';
-import { readLocalSCData } from '../../../../utils/searchConsole';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../../database/database';
+import { readLocalSCData } from '../../../../utils/searchConsole';
 
 const cleanHost = (raw: string) => (raw || '')
    .replace(/^sc-domain:/i, '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim().toLowerCase();

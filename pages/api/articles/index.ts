@@ -1,20 +1,19 @@
 // GET  /api/articles?domainId=X  — lista artykułów
 // POST /api/articles              — utwórz artykuł (bez AI)
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { QueryTypes } from 'sequelize';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
+import { QueryTypes, Op } from 'sequelize';
 import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import Domain from '../../../database/models/domain';
-import { Op } from 'sequelize';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, type ArticleRow } from '@/src/infrastructure/db/query';
 import type { SqlReplacements } from '@/src/core/shared/types/db';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import Domain from '../../../database/models/domain';
+import { getCurrentUserId } from '../../../utils/getUser';
+import verifyUser from '../../../utils/verifyUser';
+import db from '../../../database/database';
 import { domainIdsCache } from '../../../lib/domainIdsCache';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -146,7 +145,8 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
              ORDER BY sc.created_at DESC`,
             { replacements: [resolvedDomainId] },
          );
-         const merged = (scRows as Array<{ id: number; domain_id: number; title: string | null; publish_url: string | null; language: string | null; created_at: string | null }>).map((sc) => ({
+         type ScRow = { id: number; domain_id: number; title: string | null; publish_url: string | null; language: string | null; created_at: string | null };
+         const merged = (scRows as ScRow[]).map((sc) => ({
             id: `sc_${sc.id}`,
             domain_id: sc.domain_id,
             title: sc.title,

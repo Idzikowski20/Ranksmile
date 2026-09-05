@@ -8,9 +8,8 @@
  * the removed topic_research_runs table, so importing from the wrong module would have
  * queued jobs nothing drains.
  */
-import { isDataForSeoConfigured } from '@/src/infrastructure/dataforseo/dataforseo';
+import { isDataForSeoConfigured, getRankedKeywords } from '@/src/infrastructure/dataforseo/dataforseo';
 import { getKeywordIdeas, getKeywordSuggestions } from '@/src/infrastructure/seo/keywordData';
-import { getRankedKeywords } from '@/src/infrastructure/dataforseo/dataforseo';
 import { langForCountry } from '@/src/core/domain/audit/country';
 import {
    assembleResult,

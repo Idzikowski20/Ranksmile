@@ -61,7 +61,7 @@ export function Tooltip({ title, children, disabled, maxWidth = 225 }: TooltipPr
         <TooltipContent position={pos} maxWidth={maxWidth} style={{ transform: 'translateX(-50%)' }}>
           {title}
         </TooltipContent>,
-        container ?? document.body
+        container ?? document.body,
       )}
     </span>
   );

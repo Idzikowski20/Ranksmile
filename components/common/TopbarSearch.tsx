@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/router';
-import { useWorkspaces } from '../../services/workspaces';
-import { useFetchDomains } from '../../services/domains';
 import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { AI_VISIBILITY_NAV, resolveSiteNav, SEO_NAV, TOOLS_NAV } from '@/src/infrastructure/navigation/index';
+import { useWorkspaces } from '../../services/workspaces';
+import { useFetchDomains } from '../../services/domains';
 import {
   IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings,
   IconFire, IconGlobe, IconBuilding, IconDocs, IconTools,
@@ -175,10 +175,7 @@ const CommandMenu = ({ open, onClose, sections }: {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSel(0); }}
             onKeyDown={(e) => {
-              if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => Math.min(flatItems.length - 1, s + 1)); }
-              else if (e.key === 'ArrowUp') { e.preventDefault(); setSel((s) => Math.max(0, s - 1)); }
-              else if (e.key === 'Enter') { e.preventDefault(); go(flatItems[sel], e.shiftKey); }
-              else if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+              if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => Math.min(flatItems.length - 1, s + 1)); } else if (e.key === 'ArrowUp') { e.preventDefault(); setSel((s) => Math.max(0, s - 1)); } else if (e.key === 'Enter') { e.preventDefault(); go(flatItems[sel], e.shiftKey); } else if (e.key === 'Escape') { e.preventDefault(); onClose(); }
             }}
             placeholder="Type a command or search..."
             autoComplete="off"
@@ -276,8 +273,7 @@ const TopbarSearch = ({ variant = 'default' }: TopbarSearchProps) => {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const btnClass =
-    variant === 'icon'
+  const btnClass = variant === 'icon'
       ? 'koala-sidebar__icon-btn'
       : variant === 'koala'
         ? 'koala-sidebar-search-btn'

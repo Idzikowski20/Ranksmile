@@ -5,8 +5,8 @@ import { formatTaxIdForStripe, stripeTaxIdType } from '@/src/infrastructure/bill
 import { assertCanManage } from '@/src/infrastructure/identity/members';
 import { getStripe } from '@/src/infrastructure/billing/stripe';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 const addressSchema = z.object({
   name: z.string().max(120).optional(),

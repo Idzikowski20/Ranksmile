@@ -96,8 +96,8 @@ export function buildTechnicalMarkdown(t: TechnicalReportInput): string {
     `Tokens (approx): ${t.tokens ?? '—'}`,
     '',
     '### Scores',
-    `| | Before | After | Δ |`,
-    `| --- | --- | --- | --- |`,
+    '| | Before | After | Δ |',
+    '| --- | --- | --- | --- |',
     `| SEO | ${t.scoresBefore.seo} | ${t.scoresAfter.seo} | ${dSeo} |`,
     `| AI | ${t.scoresBefore.ai} | ${t.scoresAfter.ai} | ${dAi} |`,
     `| Content | ${t.scoresBefore.content} | ${t.scoresAfter.content} | ${t.scoresAfter.content - t.scoresBefore.content} |`,
@@ -136,10 +136,10 @@ function formatExplainability(recs: ExplainabilityRecord[]): string {
   for (const r of recs) {
     const conf = Math.round(r.confidence * 100);
     lines.push(
-      `- **${r.decision}** → ${r.source_layer}`
-      + (r.principle_id ? ` · principle \`${r.principle_id}\`` : '')
-      + ` · conf **${conf}%**`
-      + (r.variant ? ` · variant ${r.variant}` : ''),
+      `- **${r.decision}** → ${r.source_layer}${
+       r.principle_id ? ` · principle \`${r.principle_id}\`` : ''
+       } · conf **${conf}%**${
+       r.variant ? ` · variant ${r.variant}` : ''}`,
     );
     if (r.reason) lines.push(`  - ${r.reason}`);
   }
@@ -152,8 +152,7 @@ export function buildEditorialMarkdown(e: EditorialReportInput): string {
     ?? (e.judge.status === 'ok' ? e.judge.result.vs_top5.overall : 'unknown');
   const pipelineOk = e.pipelineOk !== false;
   const publishOk = e.publishGate ? e.publishGate.ready : true;
-  const verdict =
-    pipelineOk && publishOk && wi >= 75 && beats === 'wins'
+  const verdict = pipelineOk && publishOk && wi >= 75 && beats === 'wins'
       ? 'STRONG'
       : !publishOk
         ? 'NOT READY'

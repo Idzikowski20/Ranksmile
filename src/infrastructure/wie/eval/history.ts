@@ -94,7 +94,7 @@ export function buildTrendsMarkdown(
     const first = rows[0];
     const last = rows[rows.length - 1];
     const spark = rows.map((r) => r.writing_intelligence.toFixed(0)).join(' → ');
-    lines.push('', `## WI sparkline`, spark);
+    lines.push('', '## WI sparkline', spark);
     lines.push(
       '',
       `Delta first→last: **${(last.writing_intelligence - first.writing_intelligence).toFixed(1)}**`,

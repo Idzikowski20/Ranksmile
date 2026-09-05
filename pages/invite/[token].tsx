@@ -7,12 +7,11 @@ import { authClient } from '@/src/infrastructure/auth/client';
 // ──────────────────────────────────────────────
 // Shared button base classes (Ranksmile canonical)
 // ──────────────────────────────────────────────
-const btnBase =
-   'gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none';
+const btnBase = 'gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none';
 
 const btnSecondary = `${btnBase} px-lg py-sm rounded-lg text-base bg-gray-10 text-gray-base hover:bg-gray-20 active:bg-gray-40 mb-md`;
-const btnPrimary   = `${btnBase} px-lg py-sm rounded-lg text-base bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100 mt-base mb-4xl`;
-const btnLink      = `${btnBase} text-base rounded-none bg-transparent p-0 text-gray-100 hover:text-gray-120 active:text-gray-160`;
+const btnPrimary = `${btnBase} px-lg py-sm rounded-lg text-base bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100 mt-base mb-4xl`;
+const btnLink = `${btnBase} text-base rounded-none bg-transparent p-0 text-gray-100 hover:text-gray-120 active:text-gray-160`;
 
 // ──────────────────────────────────────────────
 // Wordmark (no logo SVG in public/)

@@ -316,8 +316,7 @@ export async function harvestAiCoverage(opts: HarvestOpts): Promise<HarvestResul
     const origin: HarvestTopic['origin'] = outlineTitles.some((o) => o === t.title)
       ? (llmAddedTopics > 0 ? 'merged' : 'outline')
       : 'llm';
-    const avgConf =
-      t.questions.length > 0
+    const avgConf = t.questions.length > 0
         ? t.questions.reduce((s, q) => s + (q.confidence ?? 0.7), 0) / t.questions.length
         : 0.5;
     return { ...t, origin, score, confidence: avgConf };

@@ -4,13 +4,13 @@
 // pending (prompt × model) pairs and reports progress so the sidecar knows whether
 // to loop again. Resolves ownDomain from the scan so the payload is just { scanId }.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { runScanChunk, AI_VIS_CHUNK_PAIRS } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 import { queryOne } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { isInternalPipelineRequest } from '@/src/infrastructure/aiVisibility/internalPipelineAuth';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../../database/database';
 
 // Cap a caller-supplied chunk size so it can never blow the serverless timeout.
 const AI_VIS_HARD_LIMIT = 60;

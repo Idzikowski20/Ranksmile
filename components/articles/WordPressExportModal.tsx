@@ -201,7 +201,8 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>No WordPress connection</div>
                 <span style={{ fontSize: 13, lineHeight: '19px', color: 'var(--koala-text-secondary)' }}>
-                  This workspace has no WordPress site connected yet. Install the Ranksmile plugin on your site and connect it once — then you can publish articles straight from the editor, as a new post or an update to an existing one.
+                  This workspace has no WordPress site connected yet. Install the Ranksmile plugin on your site and connect it once —
+                  then you can publish articles straight from the editor, as a new post or an update to an existing one.
                 </span>
               </div>
             </div>

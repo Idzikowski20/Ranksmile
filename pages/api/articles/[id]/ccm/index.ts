@@ -1,9 +1,7 @@
 // GET  /api/articles/[id]/ccm — latest CCM snapshot + Surfer-like view
 // POST /api/articles/[id]/ccm — compile article content → persist → view
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../../../utils/verifyUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
-import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '@/src/infrastructure/identity/tenancy';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
@@ -18,6 +16,8 @@ import {
   projectArticleIntelligence,
 } from '@/src/core/intelligence/runtimeApi';
 import { serializeCcm } from '@/src/core/ccm/serialize';
+import { getCurrentUserId } from '../../../../../utils/getUser';
+import verifyUser from '../../../../../utils/verifyUser';
 
 type Body = {
   mode?: 'full' | 'incremental';
@@ -77,8 +77,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (req.method === 'POST') {
-      const body =
-        req.body && typeof req.body === 'object' ? (req.body as Body) : {};
+      const body = req.body && typeof req.body === 'object' ? (req.body as Body) : {};
       const articleIdSql = await getArticleIdSql();
       const article = await queryOne<Pick<ArticleRow, 'content' | 'language'>>(
         `SELECT content, language FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
@@ -86,8 +85,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
-      const source =
-        typeof body.sourceText === 'string' && body.sourceText.trim()
+      const source = typeof body.sourceText === 'string' && body.sourceText.trim()
           ? ({ kind: 'plain' as const, text: body.sourceText })
           : typeof body.sourceHtml === 'string' && body.sourceHtml.trim()
             ? ({ kind: 'html' as const, html: body.sourceHtml })

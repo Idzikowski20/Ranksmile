@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
+import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
+import { topicsNeedLocalization } from '@/src/core/shared/language';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
-import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
-import { topicsNeedLocalization } from '@/src/core/shared/language';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
@@ -23,7 +23,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    const topics = await db.query<{
       id: number; domain_id: number; title: string; summary: string | null; created_at: string;
    }>(
-      `SELECT * FROM domain_topics WHERE domain_id = ? ORDER BY id`,
+      'SELECT * FROM domain_topics WHERE domain_id = ? ORDER BY id',
       { replacements: [domainId], type: QueryTypes.SELECT },
    );
    const titles = topics.map((t) => t.title);

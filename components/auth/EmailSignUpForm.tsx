@@ -1,4 +1,4 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import React, { useState } from 'react';
 import { signInSocial, signUpEmail } from '@/src/infrastructure/auth/fetchAuth';
 import Button from '../koala/primitives/Button';

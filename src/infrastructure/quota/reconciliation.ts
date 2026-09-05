@@ -15,7 +15,7 @@ export interface ReconciliationMismatch {
 
 async function balanceUsed(orgId: number, meter: string, periodKey: string): Promise<number> {
   const rows = await db.query(
-    `SELECT used FROM org_quota_balances WHERE org_id = ? AND meter = ? AND period_key = ?`,
+    'SELECT used FROM org_quota_balances WHERE org_id = ? AND meter = ? AND period_key = ?',
     { replacements: [orgId, meter, periodKey], type: 'SELECT' },
   ) as Array<{ used: number }>;
   return Number(rows[0]?.used ?? 0);

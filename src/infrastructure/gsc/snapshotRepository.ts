@@ -1,5 +1,5 @@
-import type { ISnapshotRepository } from '../../core/domain/gsc/snapshotRepository';
 import { getSnapshot } from '@/src/infrastructure/gsc/gscSnapshots';
+import type { ISnapshotRepository } from '../../core/domain/gsc/snapshotRepository';
 
 /**
  * DB-backed ISnapshotRepository. Delegates to lib/gsc/gscSnapshots (Sequelize)

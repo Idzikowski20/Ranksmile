@@ -2,11 +2,11 @@
 // Proxy do Python sidecar — generuje obraz dla artykułu
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
-import verifyUser from '../../../utils/verifyUser';
 import { resolveOrgId, orgBudgetBlocked } from '@/src/infrastructure/ai/aiBudget';
 import { uploadImageFromUrl } from '@/src/infrastructure/http/uploadToBlob';
 import { sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import verifyUser from '../../../utils/verifyUser';
 
 // Obraz jako base64 może mieć 500KB+ — zwiększ limit odpowiedzi
 export const config = {

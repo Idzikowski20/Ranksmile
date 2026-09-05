@@ -80,7 +80,7 @@ export async function getFreshCorpus(opts: {
 
 export async function getCorpusById(corpusId: string): Promise<CorpusRecord | null> {
   await ensureCorpusTables();
-  const [rows] = await db.query(`SELECT * FROM serp_corpora WHERE corpus_id = ? LIMIT 1`, {
+  const [rows] = await db.query('SELECT * FROM serp_corpora WHERE corpus_id = ? LIMIT 1', {
     replacements: [corpusId],
   });
   const list = rows as Array<Record<string, unknown>>;
@@ -211,7 +211,7 @@ export async function upsertFingerprint(corpusId: string, m: FingerprintMetrics)
 export async function getFingerprint(corpusId: string): Promise<FingerprintMetrics | null> {
   await ensureCorpusTables();
   const [rows] = await db.query(
-    `SELECT * FROM serp_fingerprints WHERE corpus_id = ? ORDER BY id DESC LIMIT 1`,
+    'SELECT * FROM serp_fingerprints WHERE corpus_id = ? ORDER BY id DESC LIMIT 1',
     { replacements: [corpusId] },
   );
   const r = (rows as Array<Record<string, unknown>>)[0];

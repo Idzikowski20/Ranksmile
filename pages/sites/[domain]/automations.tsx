@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
+import type { AutomationEvent, AutomationPublishMode } from '@/src/core/shared/types/automations';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import AutomationsCalendar, { MONTHS_FULL, toDateKey } from '../../../components/automations/AutomationsCalendar';
@@ -11,7 +12,6 @@ import { Alert, Button } from '../../../components/koala/core';
 import { useAppBanner } from '../../../components/koala/shell';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
-import type { AutomationEvent, AutomationPublishMode } from '@/src/core/shared/types/automations';
 
 type ListResponse = {
   wordpressConnected: boolean;

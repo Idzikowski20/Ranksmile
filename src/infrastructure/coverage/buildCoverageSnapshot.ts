@@ -71,9 +71,9 @@ export async function assembleCoverageItems(opts: {
   })
     .filter((item) => !curated.knowledge.some((k) => normalizeTerm(k.label) === normalizeTerm(item.label)))
     .map((item) => {
-    const match = opts.llmQuestions?.find((q) => q.question === item.label);
-    return match?.sources?.length ? { ...item, llmSources: match.sources, source: 'llm' as const } : item;
-  });
+      const match = opts.llmQuestions?.find((q) => q.question === item.label);
+      return match?.sources?.length ? { ...item, llmSources: match.sources, source: 'llm' as const } : item;
+    });
 
   const items = mergeCoverageItems({
     paa: curated.knowledge,
@@ -185,8 +185,10 @@ export async function buildRegradedCoverageSnapshot(opts: {
   html: string;
   answersMainQuestionEarly: boolean;
   baseSnapshot: CoverageSnapshot;
+  /** Verdicts already obtained (the caller judged in parallel); skips the judge call. */
+  judged?: CoverageResult;
 }): Promise<CoverageSnapshot> {
-  const { result } = await judgeCoverageItems(opts.plainText, opts.items);
+  const result = opts.judged ?? (await judgeCoverageItems(opts.plainText, opts.items)).result;
   result.answersMainQuestionEarly = opts.answersMainQuestionEarly;
 
   const verdictById = new Map(result.items.map((v) => [v.id, v]));

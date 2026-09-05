@@ -22,8 +22,8 @@ const LESS_MIN = 6;
 const NORMAL_MIN = 12;
 const SEO_HIGH = SEO_READY;
 const AI_GAP_LEGACY = AI_GAP;
-const INTENT_INTRO_MIN = 50;   // intent bucket score below which intro may expand
-const TERM_WORTH_FLOOR = 1;    // OD-2 [RATIFIED]: a section with >=1 under-target term (when NOT in aiTakeover) is worth a LESS edit
+const INTENT_INTRO_MIN = 50; // intent bucket score below which intro may expand
+const TERM_WORTH_FLOOR = 1; // OD-2 [RATIFIED]: a section with >=1 under-target term (when NOT in aiTakeover) is worth a LESS edit
 
 export interface PlanStep {
   sectionId: string;
@@ -60,9 +60,9 @@ export interface PlanInput {
   mode?: OptimizeMode;
 }
 
-const PROMPT_CONSTANT = 500;   // system-prompt + user-wrapper overhead (~400-600)
+const PROMPT_CONSTANT = 500; // system-prompt + user-wrapper overhead (~400-600)
 const TOKENS_PER_WORD = 1.3;
-const DECAY = [1, 0.7, 0.5, 0.3, 0.2] as const;   // floor 0.1 beyond the array
+const DECAY = [1, 0.7, 0.5, 0.3, 0.2] as const; // floor 0.1 beyond the array
 const decayAt = (i: number): number => (i < DECAY.length ? DECAY[i] : 0.1);
 
 export function plainText(html: string): string {
@@ -140,7 +140,7 @@ export function selectMode({ section, expectedLift, rgs, snapshot }: ModeInput):
 function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {
   const top = rgs[0]?.guideline;
   if (top?.group === 'intent') return 'ai-coverage';
-  if (top?.effort === 'Large') return 'expand';                        // needsExpansion -> Large (effortOf)
+  if (top?.effort === 'Large') return 'expand'; // needsExpansion -> Large (effortOf)
   if (top && (top.group === 'knowledge' || top.group === 'authority')) return 'ai-coverage';
   if (secTerms.length > 0) return 'seo-terms';
   return 'readability';
@@ -256,9 +256,9 @@ RULES:
 
 ${STOP_SLOP_RULES}`;
 
-const NEGATIVE_CONSTRAINTS = `NEGATIVE CONSTRAINTS — Do NOT: rewrite unrelated paragraphs, remove or alter existing links, remove tables/images/lists, duplicate or rename headings, touch other sections, translate the text, or add markdown code fences.`;
+const NEGATIVE_CONSTRAINTS = 'NEGATIVE CONSTRAINTS — Do NOT: rewrite unrelated paragraphs, remove or alter existing links, remove tables/images/lists, duplicate or rename headings, touch other sections, translate the text, or add markdown code fences.';
 
-const OUTPUT_RULE = `OUTPUT: ONLY the section's raw HTML. No markdown code fences, no commentary.`;
+const OUTPUT_RULE = 'OUTPUT: ONLY the section\'s raw HTML. No markdown code fences, no commentary.';
 
 function focusBlock(step: PlanStep): string {
   const bullets = step.guidelines.map((r) => `- ${r.guideline.title}: ${r.guideline.instruction}`).join('\n');
@@ -278,7 +278,7 @@ function focusBlock(step: PlanStep): string {
     case 'expand':
       return `FOCUS — deepen this section; it is currently shallow. Apply:\n${bullets}`;
     case 'readability':
-      return `FOCUS — improve readability only: tighten sentences, de-fluff, right-size paragraphs.`;
+      return 'FOCUS — improve readability only: tighten sentences, de-fluff, right-size paragraphs.';
     default:
       return '';
   }
@@ -327,11 +327,9 @@ export function buildStepPromptForMode(step: PlanStep, context: ArticleContext, 
   return mode === 'less' ? buildLessPrompt(step, context) : buildStepPrompt(step, context);
 }
 
-const LESS_USER_BASE =
-  'Patch this section with the minimal number of local edits. Do not rewrite it, do not add '
+const LESS_USER_BASE = 'Patch this section with the minimal number of local edits. Do not rewrite it, do not add '
   + 'paragraphs, and preserve more than 95% of the wording. Only fix the signals in the instructions.';
-const LESS_INTRO_EXTRA =
-  ' If the intro does not directly answer the main question, add at most one short sentence that does '
+const LESS_INTRO_EXTRA = ' If the intro does not directly answer the main question, add at most one short sentence that does '
   + '— never a new paragraph.';
 
 /** Mode -> user message. LESS carries a patch-only instruction; NORMAL/EXPAND stay undefined so the

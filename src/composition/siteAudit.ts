@@ -1,5 +1,5 @@
 import {
-  computeCrawlDeltas as useCase,
+  computeCrawlDeltas as runUseCase,
   type LiveCrawlOverview,
 } from '../core/application/siteAudit/computeCrawlDeltas';
 import type { CrawlVsPreviousDeltas } from '../core/domain/siteAudit/crawlDeltas';
@@ -10,5 +10,5 @@ export function computeCrawlDeltas(
   domainId: number,
   live: LiveCrawlOverview,
 ): Promise<CrawlVsPreviousDeltas> {
-  return useCase(createPreviousCrawlRepository(), domainId, live);
+  return runUseCase(createPreviousCrawlRepository(), domainId, live);
 }

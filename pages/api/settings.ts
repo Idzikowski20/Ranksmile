@@ -2,12 +2,12 @@ import { writeFile, readFile, rename, stat } from 'fs/promises';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Cryptr from 'cryptr';
 import getConfig from 'next/config';
-import verifyUser from '../../utils/verifyUser';
-import { getCurrentUserId } from '../../utils/getUser';
 import { assertCanManage } from '@/src/infrastructure/identity/members';
-import allScrapers from '../../scrapers/index';
 import { readSettingsBlob, writeSettingsBlob } from '@/src/infrastructure/stores/appSettingsStore';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
+import allScrapers from '../../scrapers/index';
 
 type SettingsGetResponse = {
    settings?: object | null,

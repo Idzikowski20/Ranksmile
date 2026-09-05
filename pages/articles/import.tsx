@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
+import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProgress';
+import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
+import toast from 'react-hot-toast';
 import { useWorkspaces } from '../../services/workspaces';
 import { useFetchDomains } from '../../services/domains';
 import AddPagesModal from '../../components/domains/AddPagesModal';
@@ -10,9 +13,6 @@ import { Icon } from '../../components/koala/icons/Icon';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
 import { Flag } from '../../components/koala';
-import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProgress';
-import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
-import toast from 'react-hot-toast';
 
 const COUNTRIES: Record<string, string> = {
   US: 'United States',

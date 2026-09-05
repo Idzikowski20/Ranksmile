@@ -1,6 +1,7 @@
 import type { NextPage } from 'next';
-import LegalLayout from '../../components/legal/LegalLayout';
+import Link from 'next/link';
 import { LEGAL_COMPANY } from '@/src/core/domain/legal/company';
+import LegalLayout from '../../components/legal/LegalLayout';
 
 const DpaPage: NextPage = () => (
   <LegalLayout
@@ -10,7 +11,7 @@ const DpaPage: NextPage = () => (
     <p>
       This Data Processing Addendum (&quot;DPA&quot;) forms part of the
       {' '}
-      <a href="/legal/terms">Terms of Service</a>
+      <Link href="/legal/terms">Terms of Service</Link>
       {' '}
       (or other master agreement) between
       {' '}
@@ -24,7 +25,7 @@ const DpaPage: NextPage = () => (
       of providing the Service. It does not replace our role as independent controller for account,
       billing, and product operations data described in the
       {' '}
-      <a href="/legal/privacy">Privacy Policy</a>
+      <Link href="/legal/privacy">Privacy Policy</Link>
       .
     </p>
 

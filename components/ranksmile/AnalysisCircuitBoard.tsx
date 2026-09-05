@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import type { DeepAnalysisUiState, StepVisualStatus } from '@/src/core/domain/articles/deepAnalysisProgress';
 import CircuitBoard, {
   type CircuitConnection,
   type CircuitNode,
   type CircuitNodeStatus,
 } from './CircuitBoard';
-import type { DeepAnalysisUiState, StepVisualStatus } from '@/src/core/domain/articles/deepAnalysisProgress';
 
 const iconProps = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true as const };
 
@@ -119,8 +119,7 @@ function deepAnalysisNodes(state?: DeepAnalysisUiState | null): CircuitNode[] {
   const ai = state?.aiSearch ?? [];
   const byKey = (key: string) => google.find((s) => s.key === key)?.status ?? ai.find((s) => s.key === key)?.status;
 
-  const articleStatus: CircuitNodeStatus =
-    state?.error ? 'error'
+  const articleStatus: CircuitNodeStatus = state?.error ? 'error'
       : state?.isComplete ? 'active'
         : google.some((s) => s.status !== 'pending') || ai.some((s) => s.status !== 'pending')
           ? 'active'

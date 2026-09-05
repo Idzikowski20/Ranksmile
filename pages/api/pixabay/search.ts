@@ -1,9 +1,9 @@
 // GET /api/pixabay/search?q=<query>&page=1&per_page=20
 // Server-side proxy to Pixabay API — keeps the API key secret.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import verifyUser from '../../../utils/verifyUser';
 
 export interface PixabayImage {
   id: number;

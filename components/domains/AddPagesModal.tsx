@@ -1,8 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
-import { Checkbox, SearchBar, SortableHeader } from '../koala/core';
-import { XIcon } from '../koala/core';
 import { useSortState } from '@/hooks/useSortState';
+import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
+import { Checkbox, SearchBar, SortableHeader, XIcon } from '../koala/core';
 import EmptyEyes from '../common/EmptyEyes';
 
 const font = 'var(--font-family-primary)';

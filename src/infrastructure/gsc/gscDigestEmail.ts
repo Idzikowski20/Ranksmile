@@ -24,8 +24,7 @@ const ASSETS = {
   cursor: 'cursor-arrow-rays.png',
 } as const;
 
-const EMAIL_FONT_HREF =
-  'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap';
+const EMAIL_FONT_HREF = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap';
 
 function absDelta(now: number, prev: number): { text: string; color: string } {
   const d = now - prev;

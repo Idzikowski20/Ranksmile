@@ -12,6 +12,7 @@ import { getPipelineStage } from '@/src/infrastructure/pipeline/pipelineStage';
 
 export class PipelineQueueDisabledError extends Error {
   readonly queue: string;
+
   readonly stage: string;
 
   constructor(queue: string, stage: string) {
@@ -53,7 +54,7 @@ type MemoryJob = {
 
 const memoryQ: MemoryJob[] = [];
 let memoryRunning = false;
-let memoryIdSeq = 1;
+const memoryIdSeq = 1;
 
 async function runWorkerJob(opts: {
   dbJobId: number;
@@ -176,7 +177,7 @@ async function pumpMemory(): Promise<void> {
   }
 }
 
-let bullmqReady: Promise<boolean> | null = null;
+const bullmqReady: Promise<boolean> | null = null;
 
 // Pool one Queue per name for the process. Opening + closing a Queue per enqueue
 // churned a Redis connection (TCP + AUTH) on every job; reuse keeps it warm. The
@@ -295,8 +296,7 @@ export async function enqueueJob(opts: EnqueueOpts): Promise<EnqueueResult> {
     }
   }
 
-  const estimated =
-    opts.estimatedCost ?? worker.costEstimate(opts.payload);
+  const estimated = opts.estimatedCost ?? worker.costEstimate(opts.payload);
 
   const jobId = await insertPipelineJob({
     job_key: jobKey,

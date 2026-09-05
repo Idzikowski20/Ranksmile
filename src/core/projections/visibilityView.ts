@@ -56,8 +56,7 @@ export function projectVisibility(model: CanonicalContentModel): VisibilityProje
     const factIds = supporting.map((f) => f.id);
     for (const id of factIds) assigned.add(id);
     const complete = factIds.filter((id) => factComplete(model, id)).length;
-    const avgConfidence =
-      supporting.reduce((s, f) => s + f.confidence, 0) / supporting.length;
+    const avgConfidence = supporting.reduce((s, f) => s + f.confidence, 0) / supporting.length;
     clusters.push({
       id: `vis_${intent.id}`,
       label: intent.label,
@@ -85,8 +84,7 @@ export function projectVisibility(model: CanonicalContentModel): VisibilityProje
 
   const atomicFactCount = facts.length;
   const coveredAtomicCount = facts.filter((f) => factComplete(model, f.id)).length;
-  const completeness =
-    atomicFactCount === 0
+  const completeness = atomicFactCount === 0
       ? 1
       : Math.round((coveredAtomicCount / atomicFactCount) * 1000) / 1000;
 

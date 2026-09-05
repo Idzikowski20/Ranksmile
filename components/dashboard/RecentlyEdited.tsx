@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
+import { authClient } from '@/src/infrastructure/auth/client';
 import { Flex, Stack } from '../koala/core/layout';
 import { Text } from '../koala/core/text';
 import { Button, Gauge } from '../koala/core';
 import { WidgetShell } from '../koala/product';
 import Skeleton from './Skeleton';
-import { authClient } from '@/src/infrastructure/auth/client';
 
 export interface RecentlyEditedItem {
   id: string | number;
@@ -51,7 +51,7 @@ function relativeTime(isoStr: string): string {
   return `${days} days ago`;
 }
 
-const Card = ({item, userInitial}: {item: RecentlyEditedItem; userInitial: string}) => {
+const Card = ({ item, userInitial }: {item: RecentlyEditedItem; userInitial: string}) => {
   const [relTime, setRelTime] = useState('');
   useEffect(() => { setRelTime(relativeTime(item.updatedAt)); }, [item.updatedAt]);
 
@@ -73,7 +73,7 @@ const Card = ({item, userInitial}: {item: RecentlyEditedItem; userInitial: strin
     if (!window.confirm(`Delete "${item.title}"? This can't be undone.`)) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/articles/${item.id}`, {method: 'DELETE'});
+      const res = await fetch(`/api/articles/${item.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
       toast.success('Article deleted');
       queryClient.invalidateQueries('dashboardArticles');
@@ -211,7 +211,7 @@ const EmptyState = () => {
   );
 };
 
-const RecentlyEdited = ({items, loading}: Props) => {
+const RecentlyEdited = ({ items, loading }: Props) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 

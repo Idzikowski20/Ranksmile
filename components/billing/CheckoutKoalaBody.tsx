@@ -1,6 +1,15 @@
 import Link from 'next/link';
 import React from 'react';
 import toast from 'react-hot-toast';
+import type { CheckoutFieldErrors } from '@/src/infrastructure/billing/checkoutValidation';
+import type { BillingPeriod, CheckoutPlan } from '@/src/core/domain/billing/plans';
+import type { UpgradePreview } from '@/src/infrastructure/billing/billingUpgrade';
+import {
+  CHECKOUT_PLANS,
+  formatEuro,
+  getPlanMonthlyPrice,
+  getPlanPeriodPrice,
+} from '@/src/core/domain/billing/plans';
 import Button from '../koala/primitives/Button';
 import Input from '../koala/primitives/Input';
 import { Select } from '../koala/core';
@@ -12,15 +21,6 @@ import {
   CheckoutStripePayment,
   type CompanyState,
 } from './CheckoutStripeProvider';
-import type { CheckoutFieldErrors } from '@/src/infrastructure/billing/checkoutValidation';
-import type { BillingPeriod, CheckoutPlan } from '@/src/core/domain/billing/plans';
-import type { UpgradePreview } from '@/src/infrastructure/billing/billingUpgrade';
-import {
-  CHECKOUT_PLANS,
-  formatEuro,
-  getPlanMonthlyPrice,
-  getPlanPeriodPrice,
-} from '@/src/core/domain/billing/plans';
 import { typeface } from '../koala/tokens/typography';
 import { shadow } from '../koala/tokens/effects';
 
@@ -609,6 +609,7 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                     <>
                       <span
                         aria-hidden
+                        className="rs-tax-spinner"
                         style={{
                           width: 14,
                           height: 14,
@@ -621,7 +622,7 @@ export default function CheckoutKoalaBody(props: CheckoutKoalaBodyProps) {
                         }}
                       />
                       <span style={{ color: MUTED, fontSize: 13 }}>Calculating…</span>
-                      <style>{`@keyframes rs-tax-spin{to{transform:rotate(360deg)}}`}</style>
+                      <style>{'@keyframes rs-tax-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.rs-tax-spinner{animation:none}}'}</style>
                     </>
                   ) : taxAmountCents != null
                     ? formatEuroCents(taxAmountCents)

@@ -30,7 +30,7 @@ export async function ensureAutomationTables(): Promise<void> {
   )`).catch((e) => ignoreExisting('automation_events', e));
 
   await db.query(
-    `CREATE INDEX IF NOT EXISTS idx_automation_events_domain_date ON automation_events (domain_id, scheduled_date)`,
+    'CREATE INDEX IF NOT EXISTS idx_automation_events_domain_date ON automation_events (domain_id, scheduled_date)',
   ).catch((e) => ignoreExisting('idx_automation_events_domain_date', e));
 
   checked = true;

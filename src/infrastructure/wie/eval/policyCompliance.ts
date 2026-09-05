@@ -37,12 +37,10 @@ export function detectOpeningStyle(html: string): OpeningStyle {
   const lead = leadSource.slice(0, 320);
   const head = lead.slice(0, 140);
 
-  const defHead =
-    /^(?:\S+\s+){0,8}(to|jest|oznacza)\b/i.test(head)
+  const defHead = /^(?:\S+\s+){0,8}(to|jest|oznacza)\b/i.test(head)
     || /^(?:definicj|słownik)/i.test(head)
     || /\bw znaczeniu\b/i.test(head);
-  const problemHead =
-    /^(?:padł|ofiar|nie wiesz|co robić|wyobraź|czujesz|otrzymałeś|dostałeś|strach)/i.test(head)
+  const problemHead = /^(?:padł|ofiar|nie wiesz|co robić|wyobraź|czujesz|otrzymałeś|dostałeś|strach)/i.test(head)
     || /\b(padłeś ofiarą|nie jesteś sam|co robić|wyobraź sobie|czujesz,?\s+że)\b/i.test(head);
 
   if (problemHead) return 'problem_first';
@@ -119,8 +117,7 @@ export function evaluatePolicyCompliance(opts: {
   const rows: PolicyComplianceRow[] = [];
 
   if (expected.opening) {
-    const ok =
-      expected.opening === 'problem_first'
+    const ok = expected.opening === 'problem_first'
         ? openingObs === 'problem_first'
         : expected.opening === 'definition_first'
           ? openingObs === 'definition_first'
@@ -165,8 +162,7 @@ export function evaluatePolicyCompliance(opts: {
   }
 
   const ctaExpected = expected.cta || 'soft_or_strong';
-  const ctaOk =
-    cta === 'strong'
+  const ctaOk = cta === 'strong'
     || cta === 'soft'
     || (ctaExpected === 'soft' && cta !== 'none');
   rows.push({
@@ -204,8 +200,8 @@ export function formatPolicyComplianceMarkdown(c: PolicyComplianceResult): strin
   }
   lines.push(
     '',
-    `Summary: **${c.passed} passed** · **${c.failed} failed** · ${c.unknown} unknown`
-    + (c.has_violations ? ' · ⚠️ policy violated by output' : ''),
+    `Summary: **${c.passed} passed** · **${c.failed} failed** · ${c.unknown} unknown${
+     c.has_violations ? ' · ⚠️ policy violated by output' : ''}`,
   );
   return lines.join('\n');
 }

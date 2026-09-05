@@ -5,6 +5,7 @@ import type { CoverageItem, CoverageType, BucketScore } from '@/src/core/domain/
 import { FIXED_INTENT_IDS } from '@/src/core/domain/coverage/aiCoverage';
 import { countOccurrences } from '@/src/infrastructure/articles/contentScore';
 import { livePresenceQualityCap } from '@/src/core/domain/optimize/coverageState';
+import { factReadinessScore } from '@/src/core/domain/articles/factReadiness';
 
 // `question` is what coverageEngine emits for PAA rows — must live-check like `paa`
 // or the UI shows Covered (judge) while live score never floors quality → AI gauge stuck at 0.
@@ -25,21 +26,52 @@ export function liveCoverageItems(
     // presence check below could only ever fail on a Polish article and overwrite a
     // graded `covered: true` with false — zeroing the highest-weighted bucket.
     if (FIXED_INTENT_IDS.has(it.id)) return it;
-    if (!PRESENCE_CHECKABLE.has(it.type)) return it;
+    if (!PRESENCE_CHECKABLE.has(it.type)) return knowledgeReadiness(it, plainText);
     const presence = presenceSignal(it, plainText, html);
     if (!presence.covered) {
       if (!it.covered) return it;
+      // A term or structure that is gone is gone. An answer the judge graded in body prose
+      // that the heading check cannot see is still there — dropping it zeroed judge-covered
+      // PAA rows on every edit and pinned the AI gauge.
+      if (it.type === 'entity' || it.type === 'structure' || it.type === 'readability') {
+        return { ...it, covered: false };
+      }
+      // A substantive judge grade (≥3) outlives the heading check; a bare mention does not.
+      if (it.quality >= 3) return it;
       return { ...it, covered: false };
     }
     // Depth-aware floor: short FAQ mention stays partial (≤2); substantive answers can
     // reach adequate/comprehensive so AI gauge is not stuck at ~50 after "all Covered".
-    const floor = presence.depthFloor ?? livePresenceQualityCap(
-      it.importance === 'critical' ? 'exact' : it.importance === 'recommended' ? 'partial' : 'weak',
-    );
+    const floor = presence.depthFloor ?? livePresenceQualityCap(presenceSignalFor(it.importance));
     const nextQuality = Math.max(it.quality, floor);
     if (it.covered && it.quality === nextQuality) return it;
     return { ...it, covered: true, quality: nextQuality };
   });
+}
+
+function presenceSignalFor(importance: CoverageItem['importance']): 'exact' | 'partial' | 'weak' {
+  if (importance === 'critical') return 'exact';
+  if (importance === 'recommended') return 'partial';
+  return 'weak';
+}
+
+/** Readiness ≥ this counts a fact as stated (same bar computeAiSearchScoreV2 uses). */
+const FACT_STATED = 65;
+const FACT_STATED_WELL = 85;
+
+/**
+ * Facts, statistics, definitions, examples… were carried frozen until an LLM regrade, so
+ * a fact Auto-Optimize wove into a paragraph never moved the score — the one thing
+ * Surfer's Auto-Optimize is built on. Token readiness (inflection-tolerant) credits it
+ * live; only ever upgrades, the judge's grade is never lowered.
+ */
+function knowledgeReadiness(it: CoverageItem, plainText: string): CoverageItem {
+  const readiness = factReadinessScore(plainText, it.label);
+  if (readiness < FACT_STATED) return it;
+  const floor = readiness >= FACT_STATED_WELL ? 4 : 3;
+  const quality = Math.max(it.quality, floor);
+  if (it.covered && it.quality === quality) return it;
+  return { ...it, covered: true, quality };
 }
 
 /** Deterministic presence check per type. Local re-implementations of the same rules the content
@@ -180,19 +212,29 @@ export function scoreAttribution(before: readonly BucketScore[], after: readonly
 }
 
 const TYPE_DISPLAY_LABEL: Record<CoverageType, string> = {
-  entity: 'Entities', fact: 'Facts', paa: 'Questions', structure: 'Structure',
-  readability: 'Readability', intent: 'Intent', definition: 'Definitions',
-  comparison: 'Comparisons', example: 'Examples', process: 'Processes',
-  statistic: 'Statistics', expectation: 'Expectations', warning: 'Warnings',
-  term: 'Terms', concept: 'Concepts', question: 'Questions',
+  entity: 'Entities',
+  fact: 'Facts',
+  paa: 'Questions',
+  structure: 'Structure',
+  readability: 'Readability',
+  intent: 'Intent',
+  definition: 'Definitions',
+  comparison: 'Comparisons',
+  example: 'Examples',
+  process: 'Processes',
+  statistic: 'Statistics',
+  expectation: 'Expectations',
+  warning: 'Warnings',
+  term: 'Terms',
+  concept: 'Concepts',
+  question: 'Questions',
 };
 
 /** Uncovered items grouped per TYPE ("Entities 0 · Facts 3 · Questions 2 · Structure 1") —
  *  the "Remaining AI Opportunities" panel. Per-type, NOT per-category (spec: separate rows). */
 export function remainingOpportunities(liveItems: readonly CoverageItem[]): Array<{ label: string; count: number }> {
   const counts = new Map<string, number>();
-  for (const it of liveItems) {
-    if (it.covered) continue;
+  for (const it of liveItems.filter((i) => !i.covered)) {
     const label = TYPE_DISPLAY_LABEL[it.type] ?? it.type;
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }

@@ -15,12 +15,12 @@ export { theme } from './theme';
 export { IconDefaultsProvider } from './IconDefaultsProvider';
 
 // ── Layout primitives (Sentry-style) ────────────────────────────────────────
-export {Container, Flex, Grid, Stack} from './layout';
-export type {ContainerProps, FlexProps, GridProps, StackProps} from './layout';
+export { Container, Flex, Grid, Stack } from './layout';
+export type { ContainerProps, FlexProps, GridProps, StackProps } from './layout';
 
 // ── Typography primitives (Sentry-style) ─────────────────────────────────────
-export {Text, Heading} from './text';
-export type {TextProps, HeadingProps} from './text';
+export { Text, Heading } from './text';
+export type { TextProps, HeadingProps } from './text';
 
 // Backward-compat aliases
 export { Switch as Toggle } from './switch/switch';

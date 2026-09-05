@@ -19,8 +19,7 @@ export const EMAIL_RADIUS_BTN = '12px';
 export const EMAIL_RADIUS_CARD = '16px';
 export const EMAIL_SUPPORT = 'kontakt@ranksmile.pl';
 
-const EMAIL_FONT_HREF =
-  'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap';
+const EMAIL_FONT_HREF = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap';
 
 export function escapeHtml(s: string): string {
   return String(s).replace(/[&<>"']/g, (c) => (

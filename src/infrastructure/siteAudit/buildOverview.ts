@@ -152,7 +152,7 @@ export async function buildSiteAuditOverview(
   );
 
   const job = await queryOne<{ status: string | null; updated_at: string | null }>(
-    `SELECT status, updated_at FROM analysis_jobs WHERE id = ? LIMIT 1`,
+    'SELECT status, updated_at FROM analysis_jobs WHERE id = ? LIMIT 1',
     [`dsetup_${domainId}`],
   );
 

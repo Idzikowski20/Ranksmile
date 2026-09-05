@@ -3,13 +3,13 @@ import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
+import { AuditFactor, AuditResult } from '@/src/core/domain/audit/types';
 import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
 import CompetitorsModal from '../../../../components/competitors/CompetitorsModal';
 import { useAuditRun, useRerunAudit, useRunAudits } from '../../../../services/auditTool';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
-import { AuditFactor, AuditResult } from '@/src/core/domain/audit/types';
 import { Button } from '../../../../components/koala/core';
 
 const AuditFactorChart = dynamic(() => import('../../../../components/audit/AuditFactorChart'), { ssr: false });

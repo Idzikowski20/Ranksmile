@@ -96,7 +96,8 @@ export async function processQueuedForDomain(domainId: number, budgetMs = 45000)
       // One bad audit must not abort the batch — record the failure and move on.
       try {
          const result = await computeAudit(
-            candidate.url, candidate.keyword,
+            candidate.url,
+            candidate.keyword,
             (u, k) => enrichAudit(domainId, u, k, candidate.language || undefined), // real competitor bars + ranges + terms (phase 2)
             (u, k) => findInternalLinkOpportunities(u, k), // topically-relevant internal-link opportunities
          );

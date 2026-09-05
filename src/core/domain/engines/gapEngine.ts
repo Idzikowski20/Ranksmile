@@ -24,8 +24,7 @@ export type GapEngineResult = {
 };
 
 function igFor(item: CoverageItem): number {
-  const imp =
-    item.importance === 'critical' ? 1 : item.importance === 'recommended' ? 0.65 : 0.35;
+  const imp = item.importance === 'critical' ? 1 : item.importance === 'recommended' ? 0.65 : 0.35;
   const conf = item.confidence ?? 0.5;
   const uncoveredBoost = item.covered ? Math.max(0, 1 - item.quality / 5) * 0.4 : 1;
   return Math.min(1, imp * conf * uncoveredBoost);
@@ -63,7 +62,7 @@ export function runGapEngine(opts: {
             kind: covered ? 'shallow' : 'missing',
             detail: covered
               ? `Present but quality=${quality}/5`
-              : `Not found in article text`,
+              : 'Not found in article text',
           },
         ],
       });

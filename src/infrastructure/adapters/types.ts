@@ -3,6 +3,7 @@ export type AdapterErrorCode = 'NOT_IMPLEMENTED' | 'NETWORK' | 'UNAUTHORIZED' | 
 
 export class AdapterError extends Error {
   readonly code: AdapterErrorCode;
+
   readonly details?: unknown;
 
   constructor(code: AdapterErrorCode, message: string, details?: unknown) {

@@ -2,13 +2,13 @@
 // site_context (these rows show up in Recommendations as un-analyzed pages and
 // carry an `sc_<id>` id on the client, so they can't be deleted via /api/articles).
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { queryOne } from '@/src/infrastructure/db/query';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getUserDomainIds } from '../articles/index';
-import { queryOne } from '@/src/infrastructure/db/query';
-import { getErrorMessage } from '@/src/core/shared/errors';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

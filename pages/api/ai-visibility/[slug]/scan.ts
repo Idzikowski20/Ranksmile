@@ -1,8 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 import { queryOne } from '@/src/infrastructure/db/query';
@@ -11,6 +7,10 @@ import { getErrorMessage } from '@/src/core/shared/errors';
 import { manualRefreshCooldownDays, refreshIntervalDays } from '@/src/core/domain/aiVisibility/config';
 import { nextjsUrl } from '@/src/infrastructure/config/serviceUrls';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();

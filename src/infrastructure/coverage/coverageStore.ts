@@ -65,7 +65,7 @@ export function buildSnapshot(
     };
   });
   const early = result.answersMainQuestionEarly;
-  const { overall, buckets } = computeCoverageScores(graded, early);   // graded items + boolean; no CoverageResult
+  const { overall, buckets } = computeCoverageScores(graded, early); // graded items + boolean; no CoverageResult
   return {
     schemaVersion: 1,
     judgeVersion: meta.judgeVersion,

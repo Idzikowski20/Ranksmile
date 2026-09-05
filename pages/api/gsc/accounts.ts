@@ -1,7 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../database/database';
-import verifyUser from '../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../utils/getUser';
 import {
   deleteAccountForUser,
   getAccountsForUser,
@@ -10,6 +7,9 @@ import {
   type GscAccountRecord,
 } from '@/src/infrastructure/gsc/gscAccounts';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../database/database';
+import verifyUser from '../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 type GscAccountsResponse = {
   accounts?: ReturnType<typeof normalizeAccount>[];

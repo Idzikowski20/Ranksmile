@@ -89,8 +89,7 @@ export function wieJudgeHtml(opts: {
     }
   }
 
-  const ok =
-    rx.ok
+  const ok = rx.ok
     && !eeat.reasons.includes('fake_credentials_penalty')
     && (opts.requireEeat === false || eeat.score >= EEAT_SOFT_FLOOR)
     && !reasons.includes('opening_policy_violation');

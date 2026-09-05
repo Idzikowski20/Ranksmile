@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from 'react-query';
+import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
 import { MenuList, MenuListItem } from '../koala/core';
 import { useWorkspaces } from '../../services/workspaces';
-import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
 
 const font = 'var(--font-family-primary)';
 

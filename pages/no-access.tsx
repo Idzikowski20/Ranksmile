@@ -1,5 +1,6 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
+import Link from 'next/link';
 
 const font = 'var(--font-family-primary)';
 
@@ -20,14 +21,15 @@ const NoAccess: NextPage = () => (
       <span style={{ fontSize: 14, color: '#52525C', lineHeight: 1.5, fontFamily: font }}>
         Your account isn&apos;t assigned to a workspace yet. Ask an organization owner or admin to grant you access, then refresh this page.
       </span>
-      <a
-        href="/"
-        style={{ marginTop: 4, padding: '9px 18px', borderRadius: 8, background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: font, transition: 'background 150ms ease' }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-      >
-        Try again
-      </a>
+      <Link href="/" passHref>
+        <a
+          style={{ marginTop: 4, padding: '9px 18px', borderRadius: 8, background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: font, transition: 'background 150ms ease' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+        >
+          Try again
+        </a>
+      </Link>
     </main>
   </div>
 );

@@ -42,14 +42,13 @@ function verifyAction(
     const afterFact = qAfter.node(factId);
     const beforeEv = qBefore.neighbors(factId, 'supportedBy', 'out').length;
     const afterEv = qAfter.neighbors(factId, 'supportedBy', 'out').length;
-    const met =
-      afterEv > beforeEv ||
-      (beforeFact &&
-        isFactNode(beforeFact) &&
-        beforeFact.status === 'weak' &&
-        afterFact &&
-        isFactNode(afterFact) &&
-        afterFact.status === 'covered');
+    const met = afterEv > beforeEv
+      || (beforeFact
+        && isFactNode(beforeFact)
+        && beforeFact.status === 'weak'
+        && afterFact
+        && isFactNode(afterFact)
+        && afterFact.status === 'covered');
     return {
       actionId: action.id,
       op,
@@ -84,11 +83,10 @@ function verifyAction(
   }
   if (op === 'FIX_STRUCTURE') {
     const kind = action.dsl.kind;
-    const met =
-      (kind === 'faq' && after.structure.hasFaq && !before.structure.hasFaq) ||
-      (kind === 'summary' && after.structure.hasSummary && !before.structure.hasSummary) ||
-      kind === 'opening' ||
-      kind === 'heading';
+    const met = (kind === 'faq' && after.structure.hasFaq && !before.structure.hasFaq)
+      || (kind === 'summary' && after.structure.hasSummary && !before.structure.hasSummary)
+      || kind === 'opening'
+      || kind === 'heading';
     return {
       actionId: action.id,
       op,
@@ -116,8 +114,7 @@ function classifyVerdict(
     if (met === 0 && failed > 0) return 'regressed';
     if (met > 0 && failed > 0) return 'mixed';
   }
-  const graphGain =
-    diff.graphDiff.addedNodeIds.length - diff.graphDiff.removedNodeIds.length;
+  const graphGain = diff.graphDiff.addedNodeIds.length - diff.graphDiff.removedNodeIds.length;
   const coverageUp = diff.scoreDiff.coverageOverallDelta > 0;
   const coverageDown = diff.scoreDiff.coverageOverallDelta < 0;
   if (diff.identicalCompile) return 'unchanged';

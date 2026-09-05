@@ -51,7 +51,7 @@ export function bm25Rank(opts: {
 
   return hits
     .filter((h) => h.score > 0)
-    .sort((a, b) => b.score - a.score)
+    .sort((x, y) => y.score - x.score)
     .slice(0, opts.limit ?? 20);
 }
 

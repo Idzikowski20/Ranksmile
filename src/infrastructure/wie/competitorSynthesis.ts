@@ -51,18 +51,15 @@ export function parseCompetitorSynthesis(raw: unknown): CompetitorSynthesis | nu
     return null;
   }
   const openingRaw = o.opening_style;
-  const opening =
-    openingRaw && typeof openingRaw === 'object' && !Array.isArray(openingRaw)
+  const opening = openingRaw && typeof openingRaw === 'object' && !Array.isArray(openingRaw)
       ? (openingRaw as CompetitorSynthesis['opening_style'])
       : {};
   const ctaRaw = o.cta;
-  const cta =
-    ctaRaw && typeof ctaRaw === 'object' && !Array.isArray(ctaRaw)
+  const cta = ctaRaw && typeof ctaRaw === 'object' && !Array.isArray(ctaRaw)
       ? (ctaRaw as CompetitorSynthesis['cta'])
       : {};
   const faqRaw = o.faq;
-  const faq =
-    faqRaw && typeof faqRaw === 'object' && !Array.isArray(faqRaw)
+  const faq = faqRaw && typeof faqRaw === 'object' && !Array.isArray(faqRaw)
       ? (faqRaw as Record<string, unknown>)
       : {};
 
@@ -202,17 +199,15 @@ export async function buildCompetitorSynthesisFromCorpus(opts: {
   const llm = chatLlm();
   if (!llm.apiKey) return fallback;
 
-  const system =
-    'You synthesize competitor SEO articles into a compact JSON brief for a writer. '
+  const system = 'You synthesize competitor SEO articles into a compact JSON brief for a writer. '
     + 'Reply ONLY with JSON. Do not copy long passages. Prefer concrete examples and information gain.';
-  const user =
-    `Keyword: "${opts.keyword}"\n\n`
+  const user = `Keyword: "${opts.keyword}"\n\n`
     + 'Return JSON with keys: critical (string[]), important (string[]), optional (string[]), '
     + 'opening_style {problem_first, definition_first, emotion}, section_patterns (string[]), '
     + 'expert_claims (string[]), storytelling (string[]), examples (string[]), '
     + 'cta {tone, location}, faq (object), information_gain (string[]).\n'
-    + 'critical = must-cover insights (max 5 short bullets). examples = concrete scenarios/names.\n\n'
-    + excerpts.map((t, i) => `=== DOC ${i + 1} ===\n${t}`).join('\n\n');
+    + `critical = must-cover insights (max 5 short bullets). examples = concrete scenarios/names.\n\n${
+     excerpts.map((t, i) => `=== DOC ${i + 1} ===\n${t}`).join('\n\n')}`;
 
   try {
     const res = await fetch(llm.url, {

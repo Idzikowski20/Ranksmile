@@ -22,8 +22,7 @@ const ROLE_RANK: Record<string, number> = {
 };
 
 function blockToSeed(b: TopicBlock): NarrativeSeed {
-  const importance =
-    b.role === 'ACTION' ? 9
+  const importance = b.role === 'ACTION' ? 9
       : b.role === 'FOUNDATION' ? 8
         : b.role === 'MONITORING' ? 7
           : 5;
@@ -67,8 +66,7 @@ export function optimizeNarrative(opts: {
     });
   }
 
-  const actionFirst =
-    opts.intent.articleType === 'step-by-step'
+  const actionFirst = opts.intent.articleType === 'step-by-step'
     || opts.intent.narrativePreference === 'step_by_step';
 
   const sorted = [...opts.topicBlocks].sort((a, b) => {

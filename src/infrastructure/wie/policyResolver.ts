@@ -67,8 +67,7 @@ export function buildPolicyContext(opts: {
   const emotion = opts.readerBrief?.emotion
     || (opts.synthesis?.opening_style?.emotion === 'high' ? 'high' : 'medium');
   const searchIntent = opts.readerBrief?.searchIntent || 'informational';
-  const contentShape =
-    industry === 'SeoSaas' && opts.synthesis?.opening_style?.definition_first
+  const contentShape = industry === 'SeoSaas' && opts.synthesis?.opening_style?.definition_first
       ? 'technical_canonical'
       : undefined;
   return {

@@ -1,12 +1,12 @@
 // GET/PUT /api/domains/blog-paths?slug=... — read/write domain.blog_paths (JSON array)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
+import { normalizeBlogPaths } from '@/src/core/domain/blog/blogPaths';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../utils/verifyDomainOwnership';
-import { normalizeBlogPaths } from '@/src/core/domain/blog/blogPaths';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -21,7 +21,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
    if (req.method === 'GET') {
       const rows = await db.query<{ blog_paths: string | null }>(
-         `SELECT blog_paths FROM domain WHERE "ID" = ?`,
+         'SELECT blog_paths FROM domain WHERE "ID" = ?',
          { replacements: [domainId], type: QueryTypes.SELECT },
       );
       let paths: string[] = [];
@@ -32,7 +32,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method === 'PUT') {
       const input = Array.isArray(req.body?.blogPaths) ? (req.body.blogPaths as string[]) : [];
       const normalized = normalizeBlogPaths(input);
-      await db.query(`UPDATE domain SET blog_paths = ? WHERE "ID" = ?`, {
+      await db.query('UPDATE domain SET blog_paths = ? WHERE "ID" = ?', {
          replacements: [JSON.stringify(normalized), domainId],
       });
       return res.status(200).json({ blogPaths: normalized });

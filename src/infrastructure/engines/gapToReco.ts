@@ -25,8 +25,7 @@ export function runRecommendationEngine(opts: {
   const max = opts.maxActions ?? 12;
   const actions: Action[] = opts.gaps.slice(0, max).map((g, i) => {
     const lift = Math.round(g.informationGain * 12 * 10) / 10;
-    const cost: Action['cost'] =
-      g.importance === 'critical' ? 'medium' : g.type === 'term' ? 'easy' : 'medium';
+    const cost: Action['cost'] = g.importance === 'critical' ? 'medium' : g.type === 'term' ? 'easy' : 'medium';
     return {
       id: `reco-${g.itemId}-${i}`,
       type: actionTypeFor(g),

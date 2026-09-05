@@ -101,7 +101,10 @@ const WpLogo = <svg width={20} height={20} viewBox="0 0 20 20" fill="none"><path
 const IcoExternal = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const IcoManage = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M5 6h7M16 6h3M5 12h3M12 12h7M5 18h9M18 18h1" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" /><circle cx="14" cy="6" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="10" cy="12" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="16" cy="18" r="2" stroke="currentColor" strokeWidth={1.7} /></svg>;
 
-const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, readOnly, onBack, saveState }: Props) => {
+const PublishExportPanel = ({
+  articleId, score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange,
+  keyword, featuredImage, onFeaturedImageChange, readOnly, onBack, saveState,
+}: Props) => {
   const router = useRouter();
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);

@@ -1,15 +1,15 @@
 // GET /api/articles/keyword-suggest?q=...&country=US
 import type { NextApiRequest, NextApiResponse } from 'next';
-import verifyUser from '../../../utils/verifyUser';
-import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../utils/adwords';
 import { getKeywordSuggestions as getDfsKeywordSuggestions } from '@/src/infrastructure/seo/keywordData';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import verifyUser from '../../../utils/verifyUser';
+import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../utils/adwords';
 
 type Suggestion = {
    keyword: string;
    volume?: number;
    competitionIndex?: number; // 0–100, drives the difficulty bars in the UI
-   intent?: string;           // informational | commercial | transactional | navigational
+   intent?: string; // informational | commercial | transactional | navigational
    cpc?: number;
 };
 

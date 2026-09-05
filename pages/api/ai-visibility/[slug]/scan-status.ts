@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
 import { parseDbTimestamp } from '@/src/infrastructure/db/timestamps';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import db from '../../../../database/database';
+import verifyUser from '../../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 
 type ScanRow = {
    id: number, status: string, progress_done: number, progress_total: number, cost_micros: number,

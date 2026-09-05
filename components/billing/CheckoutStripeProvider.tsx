@@ -11,6 +11,7 @@ import {
   type StripeElementsOptions,
 } from '@stripe/stripe-js';
 import React from 'react';
+import Link from 'next/link';
 import type { BillingPeriod } from '@/src/core/domain/billing/plans';
 import {
   hasFieldErrors,
@@ -27,8 +28,7 @@ import type { ThemeSemantic } from '../koala/tokens/themes';
 import { typeface } from '../koala/tokens/typography';
 
 const F = typeface.body;
-const DM_SANS_CSS =
-  'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap';
+const DM_SANS_CSS = 'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap';
 
 type CheckoutMode = 'trial' | 'upfront';
 
@@ -300,7 +300,7 @@ export function CheckoutCompanyFields({
   );
 }
 
-const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridge(_props, ref) {
+const SubmitBridge = React.forwardRef<CheckoutStripeHandle>((_props, ref) => {
     const stripe = useStripe();
     const elements = useElements();
     const {
@@ -418,6 +418,7 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
 
     return null;
 });
+SubmitBridge.displayName = 'SubmitBridge';
 
 type ProviderProps = {
   planSlug: string;
@@ -434,10 +435,10 @@ type ProviderProps = {
 };
 
 export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, ProviderProps>(
-  function CheckoutStripeProvider({
+  ({
     planSlug, billing, mode, company, fieldErrors, onFieldErrors, onAddressChange,
     onSuccess, onError, onSubmittingChange, children,
-  }, ref) {
+  }, ref) => {
     const [intent, setIntent] = React.useState<IntentPayload | null>(null);
     const [loadError, setLoadError] = React.useState<string | null>(null);
     const { semantic } = useKoalaTheme();
@@ -505,9 +506,11 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
         {loadError ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480, marginBottom: 16 }}>
             <p style={{ margin: 0, fontSize: 14, color: 'var(--koala-status-danger)', fontFamily: F }}>{loadError}</p>
-            <a href="/plans" style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500 }}>
-              ← Back to plans
-            </a>
+            <Link href="/plans" passHref>
+              <a style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, fontWeight: 500 }}>
+                ← Back to plans
+              </a>
+            </Link>
           </div>
         ) : null}
         {children}
@@ -537,6 +540,7 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
     );
   },
 );
+CheckoutStripeProvider.displayName = 'CheckoutStripeProvider';
 
 export function addressFromStripeEvent(
   event: StripeAddressElementChangeEvent,

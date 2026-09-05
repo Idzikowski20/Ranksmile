@@ -2,6 +2,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
+import type { RankKeywordStatus } from '@/src/core/shared/types/rankTracking';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { PageHeader } from '../../../components/koala/layout';
@@ -27,7 +28,6 @@ import {
   useRankRunPolling,
   useRemoveRankKeywords,
 } from '../../../services/rankTracking';
-import type { RankKeywordStatus } from '@/src/core/shared/types/rankTracking';
 import { slugToDomain } from '../../../utils/slugToDomain';
 
 const FONT = 'var(--font-family-primary)';

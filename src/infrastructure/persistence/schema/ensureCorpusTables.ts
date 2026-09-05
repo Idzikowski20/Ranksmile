@@ -36,7 +36,7 @@ export async function ensureCorpusTables(): Promise<void> {
 
   await db
     .query(
-      `CREATE INDEX IF NOT EXISTS idx_serp_corpora_ws_kw ON serp_corpora (workspace_id, keyword, language, corpus_version)`,
+      'CREATE INDEX IF NOT EXISTS idx_serp_corpora_ws_kw ON serp_corpora (workspace_id, keyword, language, corpus_version)',
     )
     .catch((e) => ignoreExisting('idx_serp_corpora_ws_kw', e));
 

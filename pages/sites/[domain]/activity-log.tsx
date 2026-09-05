@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'react-query';
+import { authClient } from '@/src/infrastructure/auth/client';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import { Button, CompactSelect, SegmentedControl, ToolRibbon } from '../../../components/koala/core';
@@ -11,7 +12,6 @@ import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { Card, ActivityFeed } from '../../../components/koala/product';
 import type { ActivityFeedGroupData } from '../../../components/koala/product';
 import { EmptyState } from '../../../components/koala/feedback';
-import { authClient } from '@/src/infrastructure/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { usePeople } from '../../../services/people';
 import { slugToDomain } from '../../../utils/slugToDomain';
@@ -43,8 +43,8 @@ type LogEvent = {
    id: string;
    articleId: number | string;
    type: EventType;
-   verb: string;        // "Created" | "Optimized" | "Published"
-   surface: Surface;    // which tool the activity belongs to
+   verb: string; // "Created" | "Optimized" | "Published"
+   surface: Surface; // which tool the activity belongs to
    title: string;
    time: Date;
 };
@@ -485,8 +485,7 @@ const ActivityLogPage: NextPage = () => {
                         name="activity-range"
                         value={mode}
                         onChange={(v) => {
-                           if (v === '7d') { setMode('7d'); setCalOpen(false); }
-                           else openCustom();
+                           if (v === '7d') { setMode('7d'); setCalOpen(false); } else openCustom();
                         }}
                         options={[
                            { value: '7d', label: 'Last 7d' },

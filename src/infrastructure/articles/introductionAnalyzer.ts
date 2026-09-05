@@ -41,11 +41,11 @@ export async function analyzeIntroduction(
 /** Map the intro verdict onto the 5 fixed CoverageItem rows from intentItems(). */
 export function introCoverageItems(verdict: IntroVerdict): CoverageItem[] {
   const map: Record<string, boolean> = {
-    'intent-answer-main':  verdict.intentConfirmed,
+    'intent-answer-main': verdict.intentConfirmed,
     'intent-answer-early': verdict.answerStartsEarly,
     'intent-expectations': verdict.expectationsSet,
-    'intent-who':          verdict.audienceMentioned,
-    'intent-why':          verdict.goalMentioned,
+    'intent-who': verdict.audienceMentioned,
+    'intent-why': verdict.goalMentioned,
   };
   return intentItems().map((it) => {
     const covered = !!map[it.id];
@@ -64,19 +64,18 @@ export const deepseekIntroJudge: IntroductionJudge = {
   version: `${INTRO_PROMPT_VERSION}|${INTRO_MODEL}|${INTRO_TEMPERATURE}`,
   run: async (introText, targetKeyword) => {
     const system = 'You analyze the FIRST ~500 words of an SEO article. Reply ONLY with JSON.';
-    const user =
-      `Target keyword: "${targetKeyword}"\n\n` +
-      'For the intro below, return JSON {' +
-      '"intentConfirmed": bool, "answerStartsEarly": bool, ' +
-      '"audienceMentioned": bool, "goalMentioned": bool, "expectationsSet": bool, ' +
-      '"detectedMainQuestion": string}\n\n' +
-      'Criteria:\n' +
-      '- intentConfirmed: the intro names what this article delivers about the keyword\n' +
-      '- answerStartsEarly: the first paragraph directly answers the main question (not background)\n' +
-      '- audienceMentioned: the intro identifies who the reader is\n' +
-      '- goalMentioned: the intro explains why this matters / what the reader gains\n' +
-      '- expectationsSet: the intro previews the article structure or scope\n\n' +
-      '=== INTRO ===\n' + introText + '\n=== END ===';
+    const user = `Target keyword: "${targetKeyword}"\n\n`
+      + 'For the intro below, return JSON {'
+      + '"intentConfirmed": bool, "answerStartsEarly": bool, '
+      + '"audienceMentioned": bool, "goalMentioned": bool, "expectationsSet": bool, '
+      + '"detectedMainQuestion": string}\n\n'
+      + 'Criteria:\n'
+      + '- intentConfirmed: the intro names what this article delivers about the keyword\n'
+      + '- answerStartsEarly: the first paragraph directly answers the main question (not background)\n'
+      + '- audienceMentioned: the intro identifies who the reader is\n'
+      + '- goalMentioned: the intro explains why this matters / what the reader gains\n'
+      + '- expectationsSet: the intro previews the article structure or scope\n\n'
+      + `=== INTRO ===\n${introText}\n=== END ===`;
     // Through the gateway, like the coverage judge next to it: the direct DeepSeek POST
     // this replaced had no fallback, so a 402 on that account sent every intro to
     // SAFE_DEFAULT and zeroed the intent bucket on articles that read perfectly well.

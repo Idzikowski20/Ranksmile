@@ -4,27 +4,29 @@ import { Icon } from '../../icons';
 type DivProps = React.HTMLAttributes<HTMLDivElement>;
 
 /** Koala UI v11 table shell — Minimal: no outer box, hairline rows only (Figma Tables). */
-export const DataTable = React.forwardRef<HTMLDivElement, DivProps>(function DataTable(
+export const DataTable = React.forwardRef<HTMLDivElement, DivProps>((
   { className = '', children, ...rest },
   ref,
-) {
+) => {
   return (
     <div ref={ref} className={`rs-data-table ${className}`.trim()} {...rest}>
       {children}
     </div>
   );
 });
+DataTable.displayName = 'DataTable';
 
-export const DataTableScroll = React.forwardRef<HTMLDivElement, DivProps>(function DataTableScroll(
+export const DataTableScroll = React.forwardRef<HTMLDivElement, DivProps>((
   { className = '', children, ...rest },
   ref,
-) {
+) => {
   return (
     <div ref={ref} className={`rs-data-table__scroll ${className}`.trim()} {...rest}>
       {children}
     </div>
   );
 });
+DataTableScroll.displayName = 'DataTableScroll';
 
 export function DataTableContent({
   className = '',

@@ -456,14 +456,14 @@ function buildPrompt(input: BriefWriterInput, batch: number[]): { system: string
         ? [`RANKING TITLES — how the pages that rank title themselves:\n<evidence>${competitorTitles.join(' | ')}</evidence>`]
         : []),
       'Write the H1: the keyword (or its natural inflected form) first, then what the reader'
-        + ' gets — the question answered, the outcome, the guide. '
-        + (competitorTitles.length
+        + ` gets — the question answered, the outcome, the guide. ${
+         competitorTitles.length
           ? 'Match the average length and shape of RANKING TITLES (a question, "co zrobić",'
             + ' "krok po kroku", a year — whatever most of them do); never copy one.'
           : 'Shape it like a guide title for this query — a question or "co zrobić" / "krok po'
-            + ' kroku", 50-70 characters.')
-        + (input.brandName ? ` End with a short brand suffix such as "Poradnik ${input.brandName}".` : '')
-        + ' Never describe the company in the title (what we are, where we operate, our licence)'
+            + ' kroku", 50-70 characters.'
+         }${input.brandName ? ` End with a short brand suffix such as "Poradnik ${input.brandName}".` : ''
+         } Never describe the company in the title (what we are, where we operate, our licence)`
         + ' — a title promises what the reader will learn.',
     ] : ['"title": leave it empty — another call writes it.']),
     '',

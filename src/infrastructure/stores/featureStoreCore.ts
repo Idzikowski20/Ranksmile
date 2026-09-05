@@ -1,5 +1,4 @@
-import type { Action, Feature, Observation, ScoreVector, Signal } from '@/src/core/primitives/types';
-import type { ExperimentRef } from '@/src/core/primitives/types';
+import type { Action, Feature, Observation, ScoreVector, Signal, ExperimentRef } from '@/src/core/primitives/types';
 
 export type FeatureStoreScope = {
   domainId?: number;
@@ -44,8 +43,7 @@ export function computeFeatureScoreDelta(
 ): FeatureScoreDelta {
   const after = allFeaturesDesc.find((f) => f.createdAt >= sinceIso) || allFeaturesDesc[0] || null;
   const before = allFeaturesDesc.find((f) => f.createdAt < sinceIso) || null;
-  const scoreDelta =
-    after && before ? (after.score.value ?? after.score.score) - (before.score.value ?? before.score.score) : null;
+  const scoreDelta = after && before ? (after.score.value ?? after.score.score) - (before.score.value ?? before.score.score) : null;
   return { featureId, before, after, scoreDelta };
 }
 

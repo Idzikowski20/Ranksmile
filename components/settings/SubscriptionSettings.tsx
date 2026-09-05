@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useQuery, useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
+import type { SubscriptionDetails } from '@/src/infrastructure/billing/subscriptionDetails';
+import type { UpcomingPaymentDetails } from '@/src/core/shared/money';
+import { formatMoney, formatUpcomingTotal } from '@/src/core/shared/money';
 import { Button } from '../koala/core';
 import { KoalaPanel, KoalaPanelBody } from '../koala/layout';
 import { overlayZ, ShellPortal } from '../koala/overlay/ShellPortal';
 import PricingPlansSettings from './PricingPlansSettings';
 import { resolveSubscriptionBadge, SubscriptionStatusRow } from './SubscriptionStatusBadge';
-import type { SubscriptionDetails } from '@/src/infrastructure/billing/subscriptionDetails';
-import type { UpcomingPaymentDetails } from '@/src/core/shared/money';
-import { formatMoney, formatUpcomingTotal } from '@/src/core/shared/money';
 import { Icon } from '../koala/icons/Icon';
 
 function ShellEscapeOverlay({
@@ -455,8 +455,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
   const step1Valid = step1Selection !== '';
   const step2Valid = step2Selection !== '';
 
-  const stepTitle =
-    step === 1
+  const stepTitle = step === 1
       ? "We're sorry to see you go. How did we fall short?"
       : step === 2
       ? "It wasn't all bad, right? Did we do anything well?"

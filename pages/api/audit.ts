@@ -1,6 +1,9 @@
 // GET /api/audit?domain=<slug>&scFilter=thirtyDays
 // Combines articles from DB with Search Console page-level data for content audit.
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getErrorMessage } from '@/src/core/shared/errors';
+import { queryRows } from '@/src/infrastructure/db/query';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../database/database';
 import { getPagesInsight } from '../../utils/insight';
 import { readLocalSCData, fetchDomainSCData, getSearchConsoleApiInfo, hasValidSCAuth } from '../../utils/searchConsole';
@@ -8,9 +11,6 @@ import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
 import Domain from '../../database/models/domain';
-import { getErrorMessage } from '@/src/core/shared/errors';
-import { queryRows } from '@/src/infrastructure/db/query';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 
 export interface AuditItem {
   id: number;

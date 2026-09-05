@@ -1,6 +1,8 @@
 /**
  * Client-safe billing audit types + helpers (no DB imports).
  */
+// eslint-disable-next-line no-shadow
+// eslint-disable-next-line no-shadow
 export enum BillingSource {
   CHECKOUT = 'CHECKOUT',
   ACTIVATE_TRIAL = 'ACTIVATE_TRIAL',

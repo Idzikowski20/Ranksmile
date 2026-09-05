@@ -69,8 +69,7 @@ export function buildOpeningRewritePrompt(opts: {
  */
 export function heuristicProblemFirstInject(html: string, keyword?: string): string {
   const kw = (keyword || 'tym problemem').trim();
-  const hook =
-    `<p>Czujesz, że ktoś naciska na Ciebie w sprawie „${kw}" i nie wiesz, od czego zacząć? `
+  const hook = `<p>Czujesz, że ktoś naciska na Ciebie w sprawie „${kw}" i nie wiesz, od czego zacząć? `
     + 'Najpierw spokój i plan — poniżej konkretne kroki, zanim przejdziemy do definicji i prawa.</p>';
 
   if (/<p\b[^>]*>[\s\S]*?<\/p>/i.test(html)) {

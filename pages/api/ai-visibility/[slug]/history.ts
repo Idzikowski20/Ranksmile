@@ -1,10 +1,6 @@
 // GET /api/ai-visibility/[slug]/history — completed scans newest-first with their
 // visibility overview (own + optional competitor). One SQL batch for all scans.
 import type { NextApiRequest, NextApiResponse } from 'next';
-import db from '../../../../database/database';
-import verifyUser from '../../../../utils/verifyUser';
-import { getCurrentUserId } from '../../../../utils/getUser';
-import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { queryOne, queryRows } from '@/src/infrastructure/db/query';
@@ -12,6 +8,10 @@ import { loadScanRowsForScans } from '@/src/infrastructure/aiVisibility/aiVisibi
 import { computeBrandOverview, brandOverviewForDomain } from '@/src/core/domain/aiVisibility/metrics';
 import type { BrandTriad } from '@/src/core/domain/aiVisibility/metrics';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import verifyUser from '../../../../utils/verifyUser';
+import db from '../../../../database/database';
 
 const HISTORY_LIMIT = 24;
 

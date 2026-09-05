@@ -38,7 +38,7 @@ const Link = forwardRef<HTMLAnchorElement, LinkProps>(
         </a>
       </NextLink>
     );
-  }
+  },
 );
 Link.displayName = 'Link';
 export default Link;

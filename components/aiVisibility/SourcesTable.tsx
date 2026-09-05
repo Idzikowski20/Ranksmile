@@ -81,7 +81,8 @@ const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, font
 const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)', cursor: 'pointer', background: 'var(--koala-bg-primary, #fff)', transition: 'background 100ms ease' };
 
 /** Source cell: favicon + host(bold)/path(gray) over a horizontal fill bar sized by share. */
-const SourceCell = ({ icon, host, path, fillPct, indent = false, chevronOpen }: { icon: string; host: string; path: string; fillPct: number; indent?: boolean; chevronOpen?: boolean }) => (
+type SourceCellProps = { icon: string; host: string; path: string; fillPct: number; indent?: boolean; chevronOpen?: boolean };
+const SourceCell = ({ icon, host, path, fillPct, indent = false, chevronOpen }: SourceCellProps) => (
    <div style={{ ...bodyCell, flex: 1, minWidth: 0, position: 'relative', gap: 8, paddingLeft: indent ? 44 : 16 }}>
       <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(100, fillPct)}%`, background: 'linear-gradient(to right, rgba(244,244,245,0), #F0F0F2)', pointerEvents: 'none' }} />
       {chevronOpen !== undefined ? <span style={{ zIndex: 1, display: 'inline-flex', color: '#71717B' }}><ChevronRight open={chevronOpen} /></span> : null}

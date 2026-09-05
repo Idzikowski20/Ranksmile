@@ -3,6 +3,10 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
+import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
+import {
+  filterKeywords, paginateKeywords, sortKeywords, type OrganicFilters, type OrganicSortKey,
+} from '@/src/infrastructure/organicResearch/filter';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import OrganicFilterBar from '../../../components/searchIntelligence/organic/OrganicFilterBar';
@@ -14,7 +18,6 @@ import {
   type OrganicCurrency,
   type OrganicDevice,
 } from '../../../components/searchIntelligence/organic/OrganicPageHeader';
-import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
 import OrganicPositionChart from '../../../components/searchIntelligence/organic/OrganicPositionChart';
 import {
   Button,
@@ -24,8 +27,6 @@ import {
 } from '../../../components/koala/core';
 import { PageHeader } from '../../../components/koala/layout';
 import { DataToolbar } from '../../../components/koala/product';
-import type { OrganicFilters } from '@/src/infrastructure/organicResearch/filter';
-import { filterKeywords, paginateKeywords, sortKeywords, type OrganicSortKey } from '@/src/infrastructure/organicResearch/filter';
 import { useFetchDomains } from '../../../services/domains';
 import { organicExportUrl, useOrganicDataset } from '../../../services/organicResearch';
 import { slugToDomain } from '../../../utils/slugToDomain';

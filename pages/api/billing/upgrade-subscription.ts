@@ -13,8 +13,8 @@ import { syncSubscriptionToOrg } from '@/src/infrastructure/billing/stripeBillin
 import { assertStripeModeOrThrow } from '@/src/infrastructure/billing/stripeMode';
 import type { PlanSlug } from '@/src/core/domain/billing/prices';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
-import { getCurrentUser } from '../../../utils/getUser';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getCurrentUser } from '../../../utils/getUser';
 
 const schema = z.object({
   planSlug: z.string().min(1),
