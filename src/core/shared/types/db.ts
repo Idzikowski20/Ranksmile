@@ -7,9 +7,11 @@ export type SqlReplacements = unknown[];
 export type QueryMeta = { affectedRows?: number; changes?: number; rowCount?: number };
 
 export function queryAffected(meta: unknown): number {
+   if (typeof meta === 'number' && Number.isFinite(meta)) return Math.max(0, meta);
    if (meta && typeof meta === 'object') {
       const m = meta as QueryMeta;
-      return m.affectedRows ?? m.changes ?? (typeof m.rowCount === 'number' ? m.rowCount : 0);
+      const n = m.affectedRows ?? m.changes ?? m.rowCount;
+      return typeof n === 'number' && Number.isFinite(n) ? Math.max(0, n) : 0;
    }
    return 0;
 }

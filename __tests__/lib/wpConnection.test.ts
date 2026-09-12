@@ -99,6 +99,14 @@ describe('wpConnection key storage', () => {
     await expect(resolveByApiKey(raw)).resolves.toMatchObject({ api_key: raw });
   });
 
+  it('upgrades a legacy row when Sequelize returns a numeric count', async () => {
+    mockQuery
+      .mockResolvedValueOnce([[], 0] as never)
+      .mockResolvedValueOnce([[{ id: 7, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], 1] as never)
+      .mockResolvedValueOnce([[], 1] as never);
+    await expect(resolveByApiKey(raw)).resolves.toMatchObject({ api_key: raw });
+  });
+
   it('upgrades a legacy row on getConnectionForWorkspace', async () => {
     mockQuery
       .mockResolvedValueOnce([[{ id: 4, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], { rowCount: 1 }] as never)
