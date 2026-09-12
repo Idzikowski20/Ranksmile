@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import type { NextApiRequest } from 'next';
 import db from '@/database/database';
 import { ensureWpTables } from '@/src/infrastructure/persistence/schema/ensureWpTables';
+import { queryAffected } from '@/src/core/shared/types/db';
 import {
    isSealedApiKey,
    sealApiKey,
@@ -32,20 +33,12 @@ function reveal(row: WpConnection | undefined | null): WpConnection | null {
    return { ...row, api_key: raw };
 }
 
-function affectedCount(meta: unknown): number {
-   if (typeof meta === 'number') return meta;
-   if (!meta || typeof meta !== 'object') return 0;
-   const rec = meta as { rowCount?: unknown; affectedRows?: unknown };
-   const n = rec.rowCount ?? rec.affectedRows;
-   return typeof n === 'number' ? n : 0;
-}
-
 async function upgradeLegacyRow(id: number, raw: string): Promise<boolean> {
    try {
       const [, meta] = await db.query('UPDATE wp_connections SET api_key = ? WHERE id = ?', {
          replacements: [sealApiKey(raw), id],
       });
-      return affectedCount(meta) > 0;
+      return queryAffected(meta) > 0;
    } catch {
       return false;
    }
