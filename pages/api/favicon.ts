@@ -2,6 +2,8 @@
 // Generuje SVG placeholder z pierwszą literą domeny + próbuje pobrać prawdziwe favicon
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ssrfSafeFetch } from '@/src/infrastructure/http/ssrfGuard';
+import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import verifyUser from '../../utils/verifyUser';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6'];
 
@@ -20,7 +22,12 @@ function svgPlaceholder(domain: string): string {
 </svg>`;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+   if (req.method !== 'GET') return res.status(405).end();
+
+   const authorized = await verifyUser(req, res);
+   if (authorized !== 'authorized') return res.status(401).end();
+
    const { domain } = req.query;
    if (!domain || typeof domain !== 'string') return res.status(400).end();
 
@@ -44,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const ct = (upstream.headers.get('content-type') || '').split(';')[0].trim();
          if (ct && (ct.startsWith('image/') || ct === 'application/octet-stream') && buf.length > 100) {
             res.setHeader('Content-Type', ct === 'image/x-icon' ? 'image/png' : ct);
-            res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+            res.setHeader('Cache-Control', 'private, max-age=86400, stale-while-revalidate=604800');
             return res.status(200).send(buf);
          }
       } catch { /* próbuj kolejne źródło */ }
@@ -52,6 +59,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    // Fallback — SVG z literą domeny (zawsze działa)
    res.setHeader('Content-Type', 'image/svg+xml');
-   res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+   res.setHeader('Cache-Control', 'private, max-age=86400, stale-while-revalidate=604800');
    return res.status(200).send(svgPlaceholder(domain));
 }
+
+export default withOrgPaymentAccess(handler);

@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { assertPublicUrl } from '@/src/infrastructure/http/ssrfGuard';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { isInternalPipelineRequest } from '@/src/infrastructure/aiVisibility/internalPipelineAuth';
 import { renderPage } from '../../utils/spaScraper';
 import verifyUser from '../../utils/verifyUser';
 
@@ -16,13 +17,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // Internal endpoint (sidecar SPA fallback). In production the shared token is the only
   // trusted signal; reverse proxies commonly make external requests look like loopback peers.
-  const internalToken = process.env.INTERNAL_PIPELINE_TOKEN;
-  const headerToken = req.headers['x-internal-token'];
   const remote = req.socket?.remoteAddress || '';
   const isLoopbackPeer = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
-  const hasInternalToken = typeof headerToken === 'string' && !!internalToken && headerToken === internalToken;
-  const allowLocalDevLoopback = process.env.NODE_ENV !== 'production' && !internalToken && isLoopbackPeer;
-  const isInternal = hasInternalToken || allowLocalDevLoopback;
+  const allowLocalDevLoopback = process.env.NODE_ENV !== 'production'
+    && !process.env.INTERNAL_PIPELINE_TOKEN
+    && isLoopbackPeer;
+  const isInternal = isInternalPipelineRequest(req) || allowLocalDevLoopback;
   if (!isInternal) {
     const authorized = await verifyUser(req, res);
     if (authorized !== 'authorized') return res.status(401).json({ error: authorized });

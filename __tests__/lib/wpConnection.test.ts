@@ -1,0 +1,58 @@
+import db from '@/database/database';
+import { createConnection, resolveByApiKey } from '@/src/infrastructure/wordpress/wpConnection';
+import { isSealedApiKey, sealApiKey } from '@/src/infrastructure/wordpress/wpApiKeySeal';
+
+jest.mock('@/database/database', () => ({
+  __esModule: true,
+  default: { query: jest.fn() },
+}));
+jest.mock('@/src/infrastructure/persistence/schema/ensureWpTables', () => ({
+  ensureWpTables: jest.fn().mockResolvedValue(undefined),
+}));
+
+const mockQuery = db.query as jest.MockedFunction<typeof db.query>;
+
+describe('wpConnection key storage', () => {
+  const raw = 'b'.repeat(64);
+
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  it('inserts a sealed key, not the raw secret', async () => {
+    mockQuery.mockResolvedValue([[], undefined] as never);
+    await createConnection({
+      workspaceId: 1,
+      userId: 'u1',
+      siteUrl: 'https://example.com',
+      apiKey: raw,
+      orgName: 'Org',
+    });
+    const insert = mockQuery.mock.calls.find((c) => String(c[0]).includes('INSERT INTO wp_connections'));
+    expect(insert).toBeTruthy();
+    const stored = (insert?.[1] as { replacements: unknown[] }).replacements[3];
+    expect(typeof stored).toBe('string');
+    expect(isSealedApiKey(stored as string)).toBe(true);
+    expect(stored).not.toBe(raw);
+  });
+
+  it('resolves a sealed row and upgrades a legacy plaintext row', async () => {
+    const sealed = sealApiKey(raw);
+    mockQuery
+      .mockResolvedValueOnce([[{ id: 1, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: sealed, org_name: null }], undefined] as never);
+    const hit = await resolveByApiKey(raw);
+    expect(hit?.api_key).toBe(raw);
+
+    mockQuery.mockReset();
+    mockQuery
+      .mockResolvedValueOnce([[], undefined] as never) // sealed miss
+      .mockResolvedValueOnce([[{ id: 2, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], undefined] as never)
+      .mockResolvedValueOnce([[], undefined] as never); // upgrade write
+    const legacy = await resolveByApiKey(raw);
+    expect(legacy?.api_key).toBe(raw);
+    const upgrade = mockQuery.mock.calls.find((c) => String(c[0]).includes('UPDATE wp_connections'));
+    expect(upgrade).toBeTruthy();
+    const rewritten = (upgrade?.[1] as { replacements: unknown[] }).replacements[0];
+    expect(isSealedApiKey(rewritten as string)).toBe(true);
+  });
+});

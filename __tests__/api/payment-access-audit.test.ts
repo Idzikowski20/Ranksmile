@@ -16,7 +16,6 @@ function isSkipped(posixRel: string): boolean {
     'pages/api/login.ts',
     'pages/api/logout.ts',
     'pages/api/koala-example-api.ts',
-    'pages/api/favicon.ts',
     'pages/api/confirm-account.ts',
     'pages/api/gsc/callback.ts',
     // The plan-expired block is what a lapsed org sees, so the counts behind it are
