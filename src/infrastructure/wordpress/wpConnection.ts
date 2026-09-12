@@ -32,6 +32,17 @@ function reveal(row: WpConnection | undefined | null): WpConnection | null {
    return { ...row, api_key: raw };
 }
 
+async function upgradeLegacyRow(id: number, raw: string): Promise<boolean> {
+   try {
+      await db.query('UPDATE wp_connections SET api_key = ? WHERE id = ?', {
+         replacements: [sealApiKey(raw), id],
+      });
+      return true;
+   } catch {
+      return false;
+   }
+}
+
 export type WpConnectionRow = {
    id: number;
    site_url: string;
@@ -89,16 +100,15 @@ export async function resolveByApiKey(apiKey: string | undefined | null): Promis
    if (sealed) return sealed;
 
    // Legacy plaintext row — accept once, then rewrite as sealed so the next lookup
-   // never compares the raw secret in SQL.
+   // never compares the raw secret in SQL. A failed rewrite must not authorize:
+   // otherwise every later request repeats the plaintext lookup.
    const [plainRows] = await db.query(
       'SELECT id, workspace_id, user_id, site_url, api_key, org_name FROM wp_connections WHERE api_key = ? LIMIT 1',
       { replacements: [apiKey] },
    );
    const plain = (plainRows as WpConnection[])[0];
    if (!plain || isSealedApiKey(plain.api_key)) return null;
-   await db.query('UPDATE wp_connections SET api_key = ? WHERE id = ?', {
-      replacements: [sealApiKey(apiKey), plain.id],
-   }).catch(() => undefined);
+   if (!(await upgradeLegacyRow(plain.id, apiKey))) return null;
    return { ...plain, api_key: apiKey };
 }
 
@@ -115,5 +125,12 @@ export async function getConnectionForWorkspace(workspaceId: number): Promise<Wp
       'SELECT id, workspace_id, user_id, site_url, api_key, org_name FROM wp_connections WHERE workspace_id = ? ORDER BY id DESC LIMIT 1',
       { replacements: [workspaceId] },
    );
-   return reveal((rows as WpConnection[])[0]);
+   const row = (rows as WpConnection[])[0];
+   if (!row) return null;
+   const raw = unsealApiKey(row.api_key);
+   if (!raw) return null;
+   if (!isSealedApiKey(row.api_key) && !(await upgradeLegacyRow(row.id, raw))) {
+      return null;
+   }
+   return { ...row, api_key: raw };
 }

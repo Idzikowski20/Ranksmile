@@ -5,16 +5,22 @@ const PREFIX = 'v2';
 /**
  * WordPress plugin keys must remain recoverable (we send them back to the site
  * on publish/disconnect). Hash-only storage would break that, so we store
- * sha256(lookup) + AES-256-GCM(ciphertext). A leaked DB backup without env
- * secrets is not enough to impersonate a plugin.
+ * sha256(lookup) + AES-256-GCM(ciphertext).
+ *
+ * Fail closed: a dedicated WP_API_KEY_SECRET is required. No source-visible
+ * fallback and no reuse of AUTH0/DATABASE_URL (those rotate independently and
+ * would orphan every sealed row).
  */
+export function wpApiKeySecret(): string {
+   const material = (process.env.WP_API_KEY_SECRET || '').trim();
+   if (!material) {
+      throw new Error('WP_API_KEY_SECRET is required to seal WordPress plugin keys');
+   }
+   return material;
+}
+
 function kek(): Buffer {
-   const material = process.env.WP_API_KEY_SECRET
-      || process.env.AUTH0_SECRET
-      || process.env.BETTER_AUTH_SECRET
-      || process.env.DATABASE_URL
-      || 'ranksmile-dev-wp-key';
-   return createHash('sha256').update(`wp-api-key:${material}`).digest();
+   return createHash('sha256').update(`wp-api-key:${wpApiKeySecret()}`).digest();
 }
 
 export function hashApiKey(raw: string): string {

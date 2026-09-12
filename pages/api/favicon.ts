@@ -2,7 +2,6 @@
 // Generuje SVG placeholder z pierwszą literą domeny + próbuje pobrać prawdziwe favicon
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ssrfSafeFetch } from '@/src/infrastructure/http/ssrfGuard';
-import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import verifyUser from '../../utils/verifyUser';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6'];
@@ -22,7 +21,7 @@ function svgPlaceholder(domain: string): string {
 </svg>`;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'GET') return res.status(405).end();
 
    const authorized = await verifyUser(req, res);
@@ -62,5 +61,3 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    res.setHeader('Cache-Control', 'private, max-age=86400, stale-while-revalidate=604800');
    return res.status(200).send(svgPlaceholder(domain));
 }
-
-export default withOrgPaymentAccess(handler);

@@ -1,9 +1,5 @@
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('Not authorized') }));
 jest.mock('@/src/infrastructure/http/ssrfGuard', () => ({ ssrfSafeFetch: jest.fn() }));
-jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({
-  withOrgPaymentAccess: (h: unknown) => h,
-  withOrgAccessPolicy: (h: unknown) => h,
-}));
 
 import handler from '../../pages/api/favicon';
 import verifyUser from '../../utils/verifyUser';
@@ -21,10 +17,28 @@ const makeRes = () => {
   return res;
 };
 
+beforeEach(() => {
+  jest.clearAllMocks();
+  (verifyUser as jest.Mock).mockResolvedValue('Not authorized');
+});
+
 it('rejects an unauthenticated favicon request before fetching', async () => {
   const res = makeRes();
   await handler({ method: 'GET', query: { domain: 'example.com' }, headers: {} } as never, res as never);
   expect(verifyUser).toHaveBeenCalled();
   expect(ssrfSafeFetch).not.toHaveBeenCalled();
   expect(res.status).toHaveBeenCalledWith(401);
+});
+
+it('fetches after a session is authorized', async () => {
+  (verifyUser as jest.Mock).mockResolvedValueOnce('authorized');
+  (ssrfSafeFetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    headers: { get: () => 'image/png' },
+    arrayBuffer: async () => new Uint8Array(120).buffer,
+  });
+  const res = makeRes();
+  await handler({ method: 'GET', query: { domain: 'example.com' }, headers: {} } as never, res as never);
+  expect(ssrfSafeFetch).toHaveBeenCalled();
+  expect(res.status).toHaveBeenCalledWith(200);
 });

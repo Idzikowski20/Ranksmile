@@ -1,6 +1,6 @@
 import { writeFile } from 'fs/promises';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getCallerRole } from '@/src/infrastructure/identity/members';
+import { assertCanManage } from '@/src/infrastructure/identity/members';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
@@ -17,9 +17,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    }
    const userId = await getCurrentUserId(req, res);
    if (!userId) return res.status(401).json({ error: 'Not authorized' });
-   const role = await getCallerRole(String(userId)).catch(() => null);
-   if (role !== 'owner' && role !== 'admin') {
-      return res.status(403).json({ error: 'Admin only.' });
+   try {
+      await assertCanManage(userId);
+   } catch {
+      return res.status(403).json({ error: 'FORBIDDEN' });
    }
    if (req.method === 'PUT') {
       return clearFailedQueue(req, res);

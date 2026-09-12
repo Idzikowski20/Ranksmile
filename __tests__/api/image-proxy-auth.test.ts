@@ -23,6 +23,11 @@ const makeRes = () => {
   return res;
 };
 
+beforeEach(() => {
+  jest.clearAllMocks();
+  (verifyUser as jest.Mock).mockResolvedValue('Not authorized');
+});
+
 it('rejects an unauthenticated image-proxy request before fetching', async () => {
   const res = makeRes();
   await handler({ method: 'GET', query: { url: 'https://example.com/a.png' }, headers: {} } as never, res as never);
