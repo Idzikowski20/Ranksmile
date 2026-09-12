@@ -32,12 +32,20 @@ function reveal(row: WpConnection | undefined | null): WpConnection | null {
    return { ...row, api_key: raw };
 }
 
+function affectedCount(meta: unknown): number {
+   if (typeof meta === 'number') return meta;
+   if (!meta || typeof meta !== 'object') return 0;
+   const rec = meta as { rowCount?: unknown; affectedRows?: unknown };
+   const n = rec.rowCount ?? rec.affectedRows;
+   return typeof n === 'number' ? n : 0;
+}
+
 async function upgradeLegacyRow(id: number, raw: string): Promise<boolean> {
    try {
-      await db.query('UPDATE wp_connections SET api_key = ? WHERE id = ?', {
+      const [, meta] = await db.query('UPDATE wp_connections SET api_key = ? WHERE id = ?', {
          replacements: [sealApiKey(raw), id],
       });
-      return true;
+      return affectedCount(meta) > 0;
    } catch {
       return false;
    }
@@ -55,10 +63,11 @@ export type WpConnectionRow = {
 export async function createConnection(p: { workspaceId: number; userId: string; siteUrl: string; apiKey: string; orgName: string | null; email?: string | null }): Promise<void> {
    await ensureWpTables();
    const site = stripSlash(p.siteUrl);
+   const sealed = sealApiKey(p.apiKey);
    await db.query('DELETE FROM wp_connections WHERE workspace_id = ? AND site_url = ?', { replacements: [p.workspaceId, site] }).catch(() => {});
    await db.query(
       'INSERT INTO wp_connections (workspace_id, user_id, site_url, api_key, org_name, integrated_by_email) VALUES (?, ?, ?, ?, ?, ?)',
-      { replacements: [p.workspaceId, p.userId, site, sealApiKey(p.apiKey), p.orgName, p.email || null] },
+      { replacements: [p.workspaceId, p.userId, site, sealed, p.orgName, p.email || null] },
    );
 }
 

@@ -3,6 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ssrfSafeFetch } from '@/src/infrastructure/http/ssrfGuard';
 import verifyUser from '../../utils/verifyUser';
+import { wasAuthUnavailable } from '../../utils/getUser';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6'];
 
@@ -25,7 +26,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (req.method !== 'GET') return res.status(405).end();
 
    const authorized = await verifyUser(req, res);
-   if (authorized !== 'authorized') return res.status(401).end();
+   if (authorized !== 'authorized') {
+      // Session-only: no payment gate. Still keep the shared 503 when auth is down
+      // so the browser does not treat an outage as a dead session.
+      if (wasAuthUnavailable(req)) return res.status(503).end();
+      return res.status(401).end();
+   }
 
    const { domain } = req.query;
    if (!domain || typeof domain !== 'string') return res.status(400).end();

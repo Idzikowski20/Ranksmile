@@ -27,7 +27,7 @@ describe('wpConnection key storage', () => {
   });
 
   it('inserts a sealed key, not the raw secret', async () => {
-    mockQuery.mockResolvedValue([[], undefined] as never);
+    mockQuery.mockResolvedValue([[], { rowCount: 1 }] as never);
     await createConnection({
       workspaceId: 1,
       userId: 'u1',
@@ -43,18 +43,30 @@ describe('wpConnection key storage', () => {
     expect(stored).not.toBe(raw);
   });
 
+  it('does not delete an existing row when sealing fails', async () => {
+    delete process.env.WP_API_KEY_SECRET;
+    await expect(createConnection({
+      workspaceId: 1,
+      userId: 'u1',
+      siteUrl: 'https://example.com',
+      apiKey: raw,
+      orgName: 'Org',
+    })).rejects.toThrow(/WP_API_KEY_SECRET/);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
   it('resolves a sealed row and upgrades a legacy plaintext row', async () => {
     const sealed = sealApiKey(raw);
     mockQuery
-      .mockResolvedValueOnce([[{ id: 1, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: sealed, org_name: null }], undefined] as never);
+      .mockResolvedValueOnce([[{ id: 1, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: sealed, org_name: null }], { rowCount: 1 }] as never);
     const hit = await resolveByApiKey(raw);
     expect(hit?.api_key).toBe(raw);
 
     mockQuery.mockReset();
     mockQuery
-      .mockResolvedValueOnce([[], undefined] as never) // sealed miss
-      .mockResolvedValueOnce([[{ id: 2, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], undefined] as never)
-      .mockResolvedValueOnce([[], undefined] as never); // upgrade write
+      .mockResolvedValueOnce([[], { rowCount: 0 }] as never) // sealed miss
+      .mockResolvedValueOnce([[{ id: 2, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], { rowCount: 1 }] as never)
+      .mockResolvedValueOnce([[], { rowCount: 1 }] as never); // upgrade write
     const legacy = await resolveByApiKey(raw);
     expect(legacy?.api_key).toBe(raw);
     const upgrade = mockQuery.mock.calls.find((c) => String(c[0]).includes('UPDATE wp_connections'));
@@ -65,16 +77,24 @@ describe('wpConnection key storage', () => {
 
   it('rejects a legacy row when the rewrite fails', async () => {
     mockQuery
-      .mockResolvedValueOnce([[], undefined] as never)
-      .mockResolvedValueOnce([[{ id: 3, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], undefined] as never)
+      .mockResolvedValueOnce([[], { rowCount: 0 }] as never)
+      .mockResolvedValueOnce([[{ id: 3, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], { rowCount: 1 }] as never)
       .mockRejectedValueOnce(new Error('write failed'));
+    await expect(resolveByApiKey(raw)).resolves.toBeNull();
+  });
+
+  it('rejects a legacy row when the rewrite matches zero rows', async () => {
+    mockQuery
+      .mockResolvedValueOnce([[], { rowCount: 0 }] as never)
+      .mockResolvedValueOnce([[{ id: 5, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], { rowCount: 1 }] as never)
+      .mockResolvedValueOnce([[], { rowCount: 0 }] as never);
     await expect(resolveByApiKey(raw)).resolves.toBeNull();
   });
 
   it('upgrades a legacy row on getConnectionForWorkspace', async () => {
     mockQuery
-      .mockResolvedValueOnce([[{ id: 4, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], undefined] as never)
-      .mockResolvedValueOnce([[], undefined] as never);
+      .mockResolvedValueOnce([[{ id: 4, workspace_id: 1, user_id: 'u1', site_url: 'https://example.com', api_key: raw, org_name: null }], { rowCount: 1 }] as never)
+      .mockResolvedValueOnce([[], { rowCount: 1 }] as never);
     const conn = await getConnectionForWorkspace(1);
     expect(conn?.api_key).toBe(raw);
     const upgrade = mockQuery.mock.calls.find((c) => String(c[0]).includes('UPDATE wp_connections'));

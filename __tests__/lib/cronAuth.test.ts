@@ -39,6 +39,8 @@ describe('cronAuth', () => {
   });
 
   it('accepts x-cron-secret even when Authorization is wrong', () => {
+    delete process.env.CRON_SECRET_CURRENT;
+    delete process.env.CRON_SECRET_PREVIOUS;
     process.env.CRON_SECRET = 'sec-a';
     expect(assertCronSecret({
       headers: { authorization: 'Bearer junk', 'x-cron-secret': 'sec-a' },
