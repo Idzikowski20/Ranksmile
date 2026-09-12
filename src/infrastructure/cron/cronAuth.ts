@@ -1,4 +1,5 @@
 import type { NextApiRequest } from 'next';
+import { timingSafeEqualText } from '@/src/infrastructure/crypto/timingSafeEqualText';
 
 /** Bearer secrets accepted for platform cron/system endpoints (fail-closed). */
 export function cronSecrets(): string[] {
@@ -10,21 +11,35 @@ export function cronSecrets(): string[] {
   return out;
 }
 
+function headerCandidate(req: NextApiRequest): string {
+  const hdr = req.headers['x-cron-secret'];
+  return typeof hdr === 'string' ? hdr.trim() : Array.isArray(hdr) ? (hdr[0] || '').trim() : '';
+}
+
+function bearerCandidate(req: NextApiRequest): string {
+  const auth = req.headers.authorization;
+  if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
+    return auth.slice('Bearer '.length).trim();
+  }
+  return '';
+}
+
 export function assertCronSecret(req: NextApiRequest): boolean {
   const secrets = cronSecrets();
   if (secrets.length === 0) return false;
 
-  const auth = req.headers.authorization;
-  if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
-    const token = auth.slice('Bearer '.length).trim();
-    if (token && token !== 'undefined' && secrets.includes(token)) return true;
+  // Bearer and x-cron-secret are independent alternatives. A junk Authorization
+  // must not hide a valid x-cron-secret (and vice versa).
+  const candidates = [bearerCandidate(req), headerCandidate(req)]
+    .filter((value, i, all) => value && value !== 'undefined' && all.indexOf(value) === i);
+
+  let ok = false;
+  for (const value of candidates) {
+    for (const secret of secrets) {
+      if (timingSafeEqualText(value, secret)) ok = true;
+    }
   }
-
-  const hdr = req.headers['x-cron-secret'];
-  const raw = typeof hdr === 'string' ? hdr.trim() : Array.isArray(hdr) ? (hdr[0] || '').trim() : '';
-  if (raw && secrets.includes(raw)) return true;
-
-  return false;
+  return ok;
 }
 
 /** Header value for outbound cron→app calls (prefers CURRENT). */

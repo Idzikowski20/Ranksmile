@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId, wasAuthUnavailable } from './getUser';
 import { logLegacyApiKeyUse } from '@/src/infrastructure/config/legacyApiKeyLog';
+import { timingSafeEqualText } from '@/src/infrastructure/crypto/timingSafeEqualText';
 
 const ALLOWED_APIKEY_ROUTES = [
   'GET:/api/keyword',
@@ -28,6 +29,13 @@ function routeKey(req: NextApiRequest): string | null {
   return `${req.method}:${req.url.replace(/\?(.*)/, '')}`;
 }
 
+function bearerToken(req: NextApiRequest): string | null {
+  const auth = req.headers.authorization;
+  if (typeof auth !== 'string' || !auth.startsWith('Bearer ')) return null;
+  const token = auth.slice('Bearer '.length);
+  return token || null;
+}
+
 /**
  * Verifies Neon Auth session, or (deprecated) install-wide APIKEY on a whitelist.
  * Basic USER/PASSWORD auth removed — multi-tenant SaaS only.
@@ -39,11 +47,8 @@ const verifyUser = async (req: NextApiRequest, res: NextApiResponse): Promise<st
   })();
 
   const apiKey = process.env.APIKEY?.trim();
-  const verifiedAPI = Boolean(
-    apiKey
-    && req.headers.authorization
-    && req.headers.authorization.substring('Bearer '.length) === apiKey,
-  );
+  const token = bearerToken(req);
+  const verifiedAPI = Boolean(apiKey && token && timingSafeEqualText(token, apiKey));
 
   if (verifiedAPI && accessingAllowedRoute) {
     void logLegacyApiKeyUse({
@@ -54,9 +59,7 @@ const verifyUser = async (req: NextApiRequest, res: NextApiResponse): Promise<st
   }
   if (verifiedAPI && !accessingAllowedRoute) return 'This Route cannot be accessed with API.';
   // Don't treat CRON_SECRET Bearer as "Invalid API Key" — leave to route handlers.
-  if (req.headers.authorization?.startsWith('Bearer ') && apiKey && !verifiedAPI) {
-    const token = req.headers.authorization.substring('Bearer '.length);
-    if (token === apiKey) return 'Invalid API Key Provided.';
+  if (token && apiKey && !verifiedAPI) {
     // Other bearers (cron secrets, etc.): fall through to session check
   }
 

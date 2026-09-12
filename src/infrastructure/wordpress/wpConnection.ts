@@ -2,6 +2,13 @@ import crypto from 'crypto';
 import type { NextApiRequest } from 'next';
 import db from '@/database/database';
 import { ensureWpTables } from '@/src/infrastructure/persistence/schema/ensureWpTables';
+import { queryAffected } from '@/src/core/shared/types/db';
+import {
+   isSealedApiKey,
+   sealApiKey,
+   sealedLookupPrefix,
+   unsealApiKey,
+} from '@/src/infrastructure/wordpress/wpApiKeySeal';
 
 export type WpConnection = {
    id: number;
@@ -19,6 +26,24 @@ export function mintApiKey(): string {
 
 const stripSlash = (u: string) => u.replace(/\/+$/, '');
 
+function reveal(row: WpConnection | undefined | null): WpConnection | null {
+   if (!row) return null;
+   const raw = unsealApiKey(row.api_key);
+   if (!raw) return null;
+   return { ...row, api_key: raw };
+}
+
+async function upgradeLegacyRow(id: number, raw: string): Promise<boolean> {
+   try {
+      const [, meta] = await db.query('UPDATE wp_connections SET api_key = ? WHERE id = ?', {
+         replacements: [sealApiKey(raw), id],
+      });
+      return queryAffected(meta) > 0;
+   } catch {
+      return false;
+   }
+}
+
 export type WpConnectionRow = {
    id: number;
    site_url: string;
@@ -31,10 +56,11 @@ export type WpConnectionRow = {
 export async function createConnection(p: { workspaceId: number; userId: string; siteUrl: string; apiKey: string; orgName: string | null; email?: string | null }): Promise<void> {
    await ensureWpTables();
    const site = stripSlash(p.siteUrl);
+   const sealed = sealApiKey(p.apiKey);
    await db.query('DELETE FROM wp_connections WHERE workspace_id = ? AND site_url = ?', { replacements: [p.workspaceId, site] }).catch(() => {});
    await db.query(
       'INSERT INTO wp_connections (workspace_id, user_id, site_url, api_key, org_name, integrated_by_email) VALUES (?, ?, ?, ?, ?, ?)',
-      { replacements: [p.workspaceId, p.userId, site, p.apiKey, p.orgName, p.email || null] },
+      { replacements: [p.workspaceId, p.userId, site, sealed, p.orgName, p.email || null] },
    );
 }
 
@@ -57,19 +83,35 @@ export async function deleteConnection(id: number, workspaceId: number): Promise
    );
    const row = (rows as { site_url: string; api_key: string }[])[0];
    if (!row) return null;
+   const raw = unsealApiKey(row.api_key);
    await db.query('DELETE FROM wp_connections WHERE id = ? AND workspace_id = ?', { replacements: [id, workspaceId] });
-   return row;
+   if (!raw) return { site_url: row.site_url, api_key: '' };
+   return { site_url: row.site_url, api_key: raw };
 }
 
 /** Resolve the connection (→ workspace + site) from the plugin's `api-key` header. */
 export async function resolveByApiKey(apiKey: string | undefined | null): Promise<WpConnection | null> {
    if (!apiKey) return null;
    await ensureWpTables();
-   const [rows] = await db.query(
+   const prefix = sealedLookupPrefix(apiKey);
+   const [sealedRows] = await db.query(
+      'SELECT id, workspace_id, user_id, site_url, api_key, org_name FROM wp_connections WHERE api_key LIKE ? LIMIT 1',
+      { replacements: [`${prefix}%`] },
+   );
+   const sealed = reveal((sealedRows as WpConnection[])[0]);
+   if (sealed) return sealed;
+
+   // Legacy plaintext row — accept once, then rewrite as sealed so the next lookup
+   // never compares the raw secret in SQL. A failed rewrite must not authorize:
+   // otherwise every later request repeats the plaintext lookup.
+   const [plainRows] = await db.query(
       'SELECT id, workspace_id, user_id, site_url, api_key, org_name FROM wp_connections WHERE api_key = ? LIMIT 1',
       { replacements: [apiKey] },
    );
-   return (rows as WpConnection[])[0] || null;
+   const plain = (plainRows as WpConnection[])[0];
+   if (!plain || isSealedApiKey(plain.api_key)) return null;
+   if (!(await upgradeLegacyRow(plain.id, apiKey))) return null;
+   return { ...plain, api_key: apiKey };
 }
 
 /** Auth gate for `/api/v1/wordpress/*` — the plugin sends the shared secret as `api-key`. */
@@ -85,5 +127,12 @@ export async function getConnectionForWorkspace(workspaceId: number): Promise<Wp
       'SELECT id, workspace_id, user_id, site_url, api_key, org_name FROM wp_connections WHERE workspace_id = ? ORDER BY id DESC LIMIT 1',
       { replacements: [workspaceId] },
    );
-   return (rows as WpConnection[])[0] || null;
+   const row = (rows as WpConnection[])[0];
+   if (!row) return null;
+   const raw = unsealApiKey(row.api_key);
+   if (!raw) return null;
+   if (!isSealedApiKey(row.api_key) && !(await upgradeLegacyRow(row.id, raw))) {
+      return null;
+   }
+   return { ...row, api_key: raw };
 }

@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { ssrfSafeFetch } from '@/src/infrastructure/http/ssrfGuard';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import verifyUser from '../../utils/verifyUser';
 
 // SVG intentionally excluded: served same-origin it is a script-execution vector on direct navigation.
 const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
@@ -12,6 +13,9 @@ const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'GET') return res.status(405).end();
+
+   const authorized = await verifyUser(req, res);
+   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
 
    const { url } = req.query;
    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'url param required' });
@@ -50,8 +54,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
 
       res.setHeader('Content-Type', contentType || 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'private, max-age=86400, stale-while-revalidate=604800');
       res.status(200).send(Buffer.from(buffer));
    } catch (err) {
       console.error('[image-proxy] error:', getErrorMessage(err));

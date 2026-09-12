@@ -37,4 +37,13 @@ describe('cronAuth', () => {
     expect(assertCronSecret({ headers: { authorization: 'Bearer new-sec' } } as never)).toBe(true);
     expect(assertCronSecret({ headers: { authorization: 'Bearer old-sec' } } as never)).toBe(true);
   });
+
+  it('accepts x-cron-secret even when Authorization is wrong', () => {
+    delete process.env.CRON_SECRET_CURRENT;
+    delete process.env.CRON_SECRET_PREVIOUS;
+    process.env.CRON_SECRET = 'sec-a';
+    expect(assertCronSecret({
+      headers: { authorization: 'Bearer junk', 'x-cron-secret': 'sec-a' },
+    } as never)).toBe(true);
+  });
 });

@@ -6,12 +6,8 @@
  * much of the token was guessed right. One helper, one timing-safe comparison, so a fix
  * here covers every route instead of four of five.
  */
-import { createHash, timingSafeEqual } from 'crypto';
 import type { NextApiRequest } from 'next';
-
-/** Digest first so the comparison is always over equal-length buffers (timingSafeEqual
- *  throws on a length mismatch, which would itself leak the token's length). */
-const digest = (v: string): Buffer => createHash('sha256').update(v).digest();
+import { timingSafeEqualText } from '@/src/infrastructure/crypto/timingSafeEqualText';
 
 export function isInternalPipelineRequest(req: NextApiRequest): boolean {
    const expected = process.env.INTERNAL_PIPELINE_TOKEN;
@@ -19,7 +15,7 @@ export function isInternalPipelineRequest(req: NextApiRequest): boolean {
    const header = req.headers['x-internal-token'];
    // A repeated header arrives as an array — only a single string is a valid credential.
    if (typeof header !== 'string' || !header) return false;
-   return timingSafeEqual(digest(header), digest(expected));
+   return timingSafeEqualText(header, expected);
 }
 
 export default isInternalPipelineRequest;
