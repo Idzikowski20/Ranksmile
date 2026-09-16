@@ -1,0 +1,19 @@
+__tests__/lib/siteAudit/getLatestSiteSpeed.test.ts
+  s_c7c90ce5d12296::t_5be8436c71662c 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "35522961782e91dc3ed7dd1448bc1630c4b8e9cf",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
