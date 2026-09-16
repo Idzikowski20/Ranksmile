@@ -10,6 +10,9 @@ export type SetupStatus = {
    stages: Record<'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations', StageState>;
    error: string | null;
    auditCounts: { audited: number; skipped: number; total: number } | null;
+   /** Site Speed Score (PageSpeed Insights) runs as part of the campaign. 'off' when the
+    *  API key is not configured, so the step is hidden. Optional for older payloads. */
+   siteSpeed?: 'off' | 'running' | 'done';
 };
 
 // Domains are addressed by slug across the app (the `pages/api/domains/[slug]` +

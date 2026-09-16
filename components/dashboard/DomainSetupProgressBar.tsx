@@ -20,7 +20,7 @@ const STAGE_LABELS: Record<StageKey, string> = {
  * own progress figure — nothing is inferred from time or position.
  */
 export function setupSteps(setup: SetupStatus): ProgressStep[] {
-   return STAGE_ORDER.map((key) => {
+   const steps: ProgressStep[] = STAGE_ORDER.map((key) => {
       const state = setup.stages[key];
       const running = state === 'running';
       return {
@@ -29,6 +29,12 @@ export function setupSteps(setup: SetupStatus): ProgressStep[] {
          detail: running && setup.stagePercent > 0 && setup.stagePercent < 100 ? `${Math.round(setup.stagePercent)}%` : undefined,
       };
    });
+   // Site Speed Score runs with the campaign (PageSpeed Insights). Hidden when PSI is not
+   // configured ('off'/absent), so the pill only grows the step where it can be measured.
+   if (setup.siteSpeed && setup.siteSpeed !== 'off') {
+      steps.push({ label: 'Measuring site speed', state: setup.siteSpeed === 'done' ? 'done' : 'active' });
+   }
+   return steps;
 }
 
 /** True while the pill has something to show: the job is queued, running, or stopped. */

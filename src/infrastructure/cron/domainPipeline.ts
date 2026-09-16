@@ -341,11 +341,14 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
 /** For setup-status: latest domain_setup job + derived stages. */
 export async function getSetupStatus(domainId: number) {
    await ensurePipelineTables();
-   type JobRow = { status: string; current_stage: string | null; stage_progress: number | null; error: string | null; result: string | Record<string, unknown> | null };
+   type JobRow = {
+      status: string; current_stage: string | null; stage_progress: number | null;
+      error: string | null; result: string | Record<string, unknown> | null; created_at: string | null;
+   };
    const rows = await selectRows<JobRow>(
-      `SELECT status, current_stage, stage_progress, error, result FROM analysis_jobs
+      `SELECT status, current_stage, stage_progress, error, result, created_at FROM analysis_jobs
        WHERE domain_id = ? AND job_type = 'domain_setup' ORDER BY created_at DESC LIMIT 1`, [domainId]);
-   if (!rows.length) return { status: 'none' as const, currentStage: null, stagePercent: 0, stages: deriveStages('none', null, 0).stages, error: null, auditCounts: null };
+   if (!rows.length) return { status: 'none' as const, currentStage: null, stagePercent: 0, stages: deriveStages('none', null, 0).stages, error: null, auditCounts: null, siteSpeed: 'off' as const };
    const j = rows[0];
    const d = deriveStages(j.status, j.current_stage, j.stage_progress ?? 0);
    // audit_counts is carried inside the job's stored result JSON (no extra column needed).
@@ -356,5 +359,20 @@ export async function getSetupStatus(domainId: number) {
       const ac = parsed && (parsed as Record<string, unknown>).audit_counts;
       if (ac && typeof ac === 'object') auditCounts = ac as { audited: number; skipped: number; total: number };
    } catch { auditCounts = null; }
-   return { status: j.status, currentStage: j.current_stage, stagePercent: d.stagePercent, stages: d.stages, error: j.error, auditCounts };
+
+   // Site Speed step for the campaign pill. Hidden ('off') when PSI is not configured.
+   // 'done' once a measurement newer than this job exists, or after the job stops (the
+   // step ran with the campaign, whatever the outcome); 'running' while the job is active.
+   let siteSpeed: 'off' | 'running' | 'done' = 'off';
+   if (isPageSpeedConfigured()) {
+      const active = ['queued', 'running', 'finalizing'].includes(j.status);
+      const speedRows = await selectRows<{ measured_at: string | null }>(
+         'SELECT measured_at FROM site_speed_measurements WHERE domain_id = ? ORDER BY id DESC LIMIT 1', [domainId],
+      ).catch(() => [] as { measured_at: string | null }[]);
+      const measuredAt = speedRows[0]?.measured_at ? new Date(speedRows[0].measured_at).getTime() : 0;
+      const jobStart = j.created_at ? new Date(j.created_at).getTime() : 0;
+      const fresh = measuredAt > 0 && measuredAt >= jobStart;
+      siteSpeed = fresh || !active ? 'done' : 'running';
+   }
+   return { status: j.status, currentStage: j.current_stage, stagePercent: d.stagePercent, stages: d.stages, error: j.error, auditCounts, siteSpeed };
 }

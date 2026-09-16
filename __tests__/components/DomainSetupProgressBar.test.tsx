@@ -22,6 +22,17 @@ it('maps the job row onto the five stages, with the running stage\'s own percent
   expect(setupSteps(status({ stagePercent: 100 }))[2].detail).toBeUndefined();
 });
 
+it('adds a Site Speed step to the campaign only when PageSpeed is configured', () => {
+  // Hidden when the key is absent ('off' or the field missing on an older payload).
+  expect(setupSteps(status({ siteSpeed: 'off' })).map((s) => s.label)).not.toContain('Measuring site speed');
+  expect(setupSteps(status()).map((s) => s.label)).not.toContain('Measuring site speed');
+  // Shown as the sixth step, active while measuring and done once finished.
+  const running = setupSteps(status({ siteSpeed: 'running' }));
+  expect(running).toHaveLength(6);
+  expect(running[5]).toMatchObject({ label: 'Measuring site speed', state: 'active' });
+  expect(setupSteps(status({ siteSpeed: 'done' }))[5].state).toBe('done');
+});
+
 it('leaves once the job is done', () => {
   const { rerender } = render(<DomainSetupProgressBar setup={status()} onRetry={() => undefined} />);
   expect(screen.getByRole('status')).toHaveTextContent('Clustering and modeling topics · 40%');
