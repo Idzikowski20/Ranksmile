@@ -27,15 +27,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
 
   const [existing] = await db.query(
-    'SELECT id FROM automation_events WHERE id = ? AND domain_id = ? LIMIT 1',
+    'SELECT id, article_id, status FROM automation_events WHERE id = ? AND domain_id = ? LIMIT 1',
     { replacements: [id, ownership.ID] },
   );
-  if (!(existing as Array<{ id: number }>)[0]) {
+  const event = (existing as Array<{ id: number; article_id: number | null; status: string }>)[0];
+  if (!event) {
     return res.status(404).json({ error: 'Event not found' });
   }
 
-  await db.query('DELETE FROM automation_events WHERE id = ? AND domain_id = ?', {
-    replacements: [id, ownership.ID],
+  // Remove the draft the scheduler created along with the event, so cancelling a scheduled
+  // piece never leaves an orphaned article. A `published` event's article is live on
+  // WordPress and stays; a scheduled event has no article yet.
+  await db.transaction(async (tx) => {
+    await db.query('DELETE FROM automation_events WHERE id = ? AND domain_id = ?', {
+      replacements: [id, ownership.ID],
+      transaction: tx,
+    });
+    if (event.article_id != null && event.status !== 'published') {
+      const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
+      const articleIdSql = await getArticleIdSql();
+      await db.query(
+        `DELETE FROM articles WHERE ${articleIdSql} = ? AND domain_id = ? AND status <> 'published'`,
+        { replacements: [event.article_id, ownership.ID], transaction: tx },
+      );
+    }
   });
 
   return res.status(200).json({ deleted: true });

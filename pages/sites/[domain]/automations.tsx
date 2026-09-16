@@ -4,9 +4,10 @@ import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import type { AutomationEvent, AutomationPublishMode } from '@/src/core/shared/types/automations';
+import { weekRange, toDateKey } from '@/src/core/domain/automations/board';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import AutomationsCalendar, { MONTHS_FULL, toDateKey } from '../../../components/automations/AutomationsCalendar';
+import AutomationsBoard from '../../../components/automations/AutomationsBoard';
 import AddEventDialog from '../../../components/automations/AddEventDialog';
 import { Alert, Button } from '../../../components/koala/core';
 import { useAppBanner } from '../../../components/koala/shell';
@@ -19,13 +20,10 @@ type ListResponse = {
   events: AutomationEvent[];
 };
 
-function monthRange(monthDate: Date): { from: string; to: string } {
-  const y = monthDate.getFullYear();
-  const m = monthDate.getMonth();
-  const from = toDateKey(new Date(y, m, 1));
-  const to = toDateKey(new Date(y, m + 1, 0));
-  return { from, to };
-}
+const MONTHS_FULL = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
 function fmtDateLabel(d: Date): string {
   return `${MONTHS_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
@@ -39,12 +37,9 @@ const AutomationsPage: NextPage = () => {
   const domains = domainsData?.domains || [];
   const queryClient = useQueryClient();
 
-  const [monthDate, setMonthDate] = useState(() => {
-    const n = new Date();
-    return new Date(n.getFullYear(), n.getMonth(), 1);
-  });
+  const [weekAnchor, setWeekAnchor] = useState(() => new Date());
   const today = useMemo(() => new Date(), []);
-  const { from, to } = useMemo(() => monthRange(monthDate), [monthDate]);
+  const { from, to } = useMemo(() => weekRange(weekAnchor), [weekAnchor]);
 
   const [dialogDate, setDialogDate] = useState<Date | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -100,13 +95,24 @@ const AutomationsPage: NextPage = () => {
     },
   );
 
+  const deleteMut = useMutation(
+    async (eventId: number) => {
+      const res = await fetch(`/api/automations/${encodeURIComponent(slug)}/${eventId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error || 'Failed to remove event');
+      }
+    },
+    { onSuccess: () => { void queryClient.invalidateQueries(['automations', slug]); } },
+  );
+
   const wordpressConnected = listQ.data?.wordpressConnected ?? true;
   const events = listQ.data?.events ?? [];
 
   useAppBanner(!listQ.isLoading && !wordpressConnected
     ? {
-      variant: 'error',
-      message: 'This workspace is not connected to WordPress yet. Connect it in Settings before adding events.',
+      variant: 'warning',
+      message: 'WordPress is not connected. You can still schedule draft events — connect it to publish live.',
       action: { label: 'Open WordPress settings', href: '/settings/wordpress' },
     }
     : null);
@@ -122,7 +128,7 @@ const AutomationsPage: NextPage = () => {
         section="automations"
         contentMaxWidth={1120}
         heading="Automations"
-        subtitle="Schedule article creation and WordPress publish intent on the calendar."
+        subtitle="Plan the week on the content calendar — each scheduled event writes the article on its day and, for live events, publishes to WordPress."
         actions={(
           <Button
             type="button"
@@ -142,22 +148,22 @@ const AutomationsPage: NextPage = () => {
           </div>
         ) : null}
 
-        <AutomationsCalendar
-          monthDate={monthDate}
+        <AutomationsBoard
+          weekAnchor={weekAnchor}
           today={today}
           events={events}
-          onPrevMonth={() => setMonthDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-          onNextMonth={() => setMonthDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-          onToday={() => {
-            const n = new Date();
-            setMonthDate(new Date(n.getFullYear(), n.getMonth(), 1));
-          }}
-          onDayClick={(d) => {
+          onPrevWeek={() => setWeekAnchor((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7))}
+          onNextWeek={() => setWeekAnchor((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7))}
+          onToday={() => setWeekAnchor(new Date())}
+          onDayAdd={(d) => {
             setSubmitError(null);
             setDialogDate(d);
           }}
           onEventClick={(ev) => {
             if (ev.articleId) void router.push(`/articles/${ev.articleId}`);
+          }}
+          onEventDelete={(ev) => {
+            if (window.confirm(`Remove "${ev.title}" from the calendar?`)) deleteMut.mutate(ev.id);
           }}
         />
 

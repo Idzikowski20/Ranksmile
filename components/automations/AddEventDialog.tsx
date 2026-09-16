@@ -51,93 +51,88 @@ export default function AddEventDialog({
 
   if (!open) return null;
 
-  const canSubmit = wordpressConnected && title.trim().length > 0 && !submitting;
+  // Draft events schedule without WordPress; only a live publish needs a connection.
+  const liveBlocked = publishMode === 'live' && !wordpressConnected;
+  const canSubmit = title.trim().length > 0 && keyword.trim().length > 0 && !submitting && !liveBlocked;
 
   return (
-    <Modal title="Add New Automation Event" onClose={onClose} width={520}>
+    <Modal title="Schedule content" onClose={onClose} width={520}>
       <ModalBody>
-        {!wordpressConnected ? (
-          <Alert variant="error" title="WordPress not connected">
-            Connect WordPress in Settings before scheduling publish events.{' '}
-            <Link href="/settings/wordpress" style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline' }}>
-              Open WordPress settings
-            </Link>
-          </Alert>
-        ) : (
-          <Form
-            id="add-automation-event"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!canSubmit) return;
-              onSubmit({
-                title: title.trim(),
-                targetKeyword: keyword.trim(),
-                publishMode,
-              });
-            }}
+        <Form
+          id="add-automation-event"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!canSubmit) return;
+            onSubmit({
+              title: title.trim(),
+              targetKeyword: keyword.trim(),
+              publishMode,
+            });
+          }}
+        >
+          <FormSection
+            title="Basic setup"
+            description={`Schedule for ${dateLabel}. The article is written on that day; a live event also publishes to WordPress.`}
           >
-            <FormSection
-              title="Basic setup"
-              description={`Schedule for ${dateLabel}. Creates a draft article you can edit before publish.`}
-            >
-              <FormField label="Article title" required>
-                <Input
+            <FormField label="Article title" required>
+              <Input
+                size="md"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. How to improve local SEO"
+                autoFocus
+              />
+            </FormField>
+            <FormField label="Main keyword" required>
+              <Input
+                size="md"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="e.g. local seo tips"
+              />
+              <FieldHint>Primary keyword for the scheduled article.</FieldHint>
+            </FormField>
+            <FormField label="Publication option" required>
+              <div style={{ width: '100%' }}>
+                <Select
+                  options={PUBLISH_OPTIONS}
+                  value={publishMode}
+                  onChange={(v) => setPublishMode(v === 'live' ? 'live' : 'draft')}
                   size="md"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. How to improve local SEO"
-                  autoFocus
+                  width="100%"
                 />
-              </FormField>
-              <FormField label="Main keyword" required>
-                <Input
-                  size="md"
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="e.g. local seo tips"
-                />
-                <FieldHint>Primary keyword for the scheduled article.</FieldHint>
-              </FormField>
-              <FormField label="Publication option" required>
-                <div style={{ width: '100%' }}>
-                  <Select
-                    options={PUBLISH_OPTIONS}
-                    value={publishMode}
-                    onChange={(v) => setPublishMode(v === 'live' ? 'live' : 'draft')}
-                    size="md"
-                    width="100%"
-                  />
-                </div>
-                <FieldHint>
-                  {publishMode === 'live'
-                    ? 'Intended to publish live to WordPress on the scheduled day.'
-                    : 'Keep as draft in WordPress when published.'}
-                </FieldHint>
-              </FormField>
-            </FormSection>
-            {error ? <Alert variant="error" title="Could not create event">{error}</Alert> : null}
-          </Form>
-        )}
+              </div>
+              <FieldHint>
+                {publishMode === 'live'
+                  ? 'Publishes live to WordPress on the scheduled day.'
+                  : 'Creates a draft you can review before publishing.'}
+              </FieldHint>
+            </FormField>
+          </FormSection>
+          {liveBlocked ? (
+            <Alert variant="error" title="WordPress not connected">
+              Connect WordPress to publish live, or keep this event as a draft.{' '}
+              <Link href="/settings/wordpress" style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline' }}>
+                Open WordPress settings
+              </Link>
+            </Alert>
+          ) : null}
+          {error ? <Alert variant="error" title="Could not create event">{error}</Alert> : null}
+        </Form>
       </ModalBody>
       <ModalFooter>
         <Button type="button" variant="secondary" size="md" onClick={onClose} disabled={submitting}>
           Cancel
         </Button>
-        {wordpressConnected ? (
-          <Button
-            type="submit"
-            form="add-automation-event"
-            variant="primary"
-            size="md"
-            disabled={!canSubmit || !keyword.trim()}
-          >
-            {submitting ? 'Creating…' : 'Create event'}
-          </Button>
-        ) : (
-          <Button type="button" variant="primary" size="md" onClick={() => { window.location.href = '/settings/wordpress'; }}>
-            Connect WordPress
-          </Button>
-        )}
+        <Button
+          type="submit"
+          form="add-automation-event"
+          variant="primary"
+          size="md"
+          disabled={!canSubmit}
+        >
+          {submitting ? 'Scheduling…' : 'Schedule event'}
+        </Button>
       </ModalFooter>
     </Modal>
   );

@@ -1,6 +1,13 @@
 export type AutomationPublishMode = 'draft' | 'live';
 
-export type AutomationEventStatus = 'scheduled' | 'created' | 'failed';
+/**
+ * Event lifecycle: scheduled (deferred, nothing created yet) → generating (draft made,
+ * content being written) → created (draft ready) → published (live on WordPress).
+ * `failed` is terminal for any step that errored.
+ */
+export type AutomationEventStatus = 'scheduled' | 'generating' | 'created' | 'published' | 'failed';
+
+const AUTOMATION_STATUSES: AutomationEventStatus[] = ['scheduled', 'generating', 'created', 'published', 'failed'];
 
 export type AutomationEvent = {
   id: number;
@@ -30,7 +37,9 @@ export type AutomationEventRow = {
 
 export function mapAutomationEvent(row: AutomationEventRow): AutomationEvent {
   const publishMode: AutomationPublishMode = row.publish_mode === 'live' ? 'live' : 'draft';
-  const status: AutomationEventStatus = row.status === 'created' || row.status === 'failed' ? row.status : 'scheduled';
+  const status: AutomationEventStatus = (AUTOMATION_STATUSES as string[]).includes(row.status)
+    ? (row.status as AutomationEventStatus)
+    : 'scheduled';
   return {
     id: row.id,
     domainId: row.domain_id,

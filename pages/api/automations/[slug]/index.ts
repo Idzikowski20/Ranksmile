@@ -3,8 +3,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import { ensureAutomationTables } from '@/src/infrastructure/persistence/schema/ensureAutomationTables';
-import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
-import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { getErrorMessage } from '@/src/core/shared/errors';
@@ -90,109 +88,41 @@ async function createEvent(
   if (!title) return res.status(400).json({ error: 'title is required' });
   if (!publishMode) return res.status(400).json({ error: 'publishMode must be draft or live' });
 
-  const conn = await getConnectionForWorkspace(workspaceId);
-  if (!conn) {
-    return res.status(400).json({
-      error: 'wordpress_not_connected',
-      message: 'Connect WordPress in Settings before scheduling automation events.',
-    });
+  // WordPress is only needed to publish. A draft-intent event can be scheduled without it;
+  // a live one must have somewhere to publish to on the scheduled day.
+  if (publishMode === 'live') {
+    const conn = await getConnectionForWorkspace(workspaceId);
+    if (!conn) {
+      return res.status(400).json({
+        error: 'wordpress_not_connected',
+        message: 'Connect WordPress in Settings before scheduling a live publish.',
+      });
+    }
   }
 
   try {
-    await ensureArticlesTables();
-    const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
-    const orgId = await getOrgIdForDomain(domainId);
-    if (!orgId) return res.status(400).json({ error: 'Domain has no organization' });
-    await ensureOrgQuotaBalances(orgId);
-
-    const articleIdSql = await getArticleIdSql();
-    let articleId: number | undefined;
+    // The event is only scheduled here — no article, no quota yet. The automations cron
+    // creates the draft, generates content, and publishes on the scheduled day (billing a
+    // document then), so nothing runs at create time.
     let eventId: number | undefined;
-
-    await db.transaction(async (tx) => {
-      const idem = `auto-doc:${orgId}:${domainId}:${scheduledDate}:${title}:${Date.now()}`;
-      await adjustActiveUsage(
-        {
-          orgId,
-          meter: 'documents',
-          delta: 1,
-          idempotencyKey: idem,
-          ref: { type: 'article', id: 'pending' },
-          userId,
-        },
-        { transaction: tx },
+    if (process.env.DATABASE_URL) {
+      const erows = await db.query<{ id: number }>(
+        `INSERT INTO automation_events
+           (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         RETURNING id`,
+        { replacements: [domainId, workspaceId, scheduledDate, title, targetKeyword || '', publishMode, userId], type: QueryTypes.SELECT },
       );
-
-      if (process.env.DATABASE_URL) {
-        const rows = await db.query<{ id: number }>(
-          `INSERT INTO articles (domain_id, title, target_keyword, status, created_at, updated_at)
-           VALUES (?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-           RETURNING ${articleIdSql} AS id`,
-          {
-            replacements: [domainId, title, targetKeyword || ''],
-            type: QueryTypes.SELECT,
-            transaction: tx,
-          },
-        );
-        articleId = rows[0]?.id;
-      } else {
-        const [newArticleId] = await db.query(
-          `INSERT INTO articles (domain_id, title, target_keyword, status, created_at, updated_at)
-           VALUES (?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          {
-            replacements: [domainId, title, targetKeyword || ''],
-            type: QueryTypes.INSERT,
-            transaction: tx,
-          },
-        );
-        articleId = newArticleId as unknown as number;
-      }
-
-      if (process.env.DATABASE_URL) {
-        const erows = await db.query<{ id: number }>(
-          `INSERT INTO automation_events
-             (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'created', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-           RETURNING id`,
-          {
-            replacements: [
-              domainId,
-              workspaceId,
-              scheduledDate,
-              title,
-              targetKeyword || '',
-              publishMode,
-              articleId ?? null,
-              userId,
-            ],
-            type: QueryTypes.SELECT,
-            transaction: tx,
-          },
-        );
-        eventId = erows[0]?.id;
-      } else {
-        const [newEventId] = await db.query(
-          `INSERT INTO automation_events
-             (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'created', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          {
-            replacements: [
-              domainId,
-              workspaceId,
-              scheduledDate,
-              title,
-              targetKeyword || '',
-              publishMode,
-              articleId ?? null,
-              userId,
-            ],
-            type: QueryTypes.INSERT,
-            transaction: tx,
-          },
-        );
-        eventId = newEventId as unknown as number;
-      }
-    });
+      eventId = erows[0]?.id;
+    } else {
+      const [newEventId] = await db.query(
+        `INSERT INTO automation_events
+           (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        { replacements: [domainId, workspaceId, scheduledDate, title, targetKeyword || '', publishMode, userId], type: QueryTypes.INSERT },
+      );
+      eventId = newEventId as unknown as number;
+    }
 
     const [rows] = await db.query(
       `SELECT id, domain_id, workspace_id, scheduled_date, title, target_keyword,
@@ -203,10 +133,8 @@ async function createEvent(
     const row = (rows as AutomationEventRow[])[0];
     if (!row) return res.status(500).json({ error: 'Event created but not found' });
 
-    return res.status(200).json({ event: mapAutomationEvent(row), articleId: articleId ?? null });
+    return res.status(200).json({ event: mapAutomationEvent(row), articleId: null });
   } catch (error) {
-    const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
-    if (isPlanLimitError(error)) return res.status(402).json(planLimitBody(error));
     return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
   }
 }
