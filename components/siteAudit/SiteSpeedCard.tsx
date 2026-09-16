@@ -1,7 +1,6 @@
 import React from 'react';
 import type { SiteSpeedSummary } from '@/src/infrastructure/siteAudit/types';
 import { formatMetric, speedMarkerPercent, speedVerdict } from '@/src/core/domain/siteAudit/siteSpeed';
-import { Button } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 
 const DOC_HREF = 'https://developer.chrome.com/docs/lighthouse/performance/performance-scoring';
@@ -9,9 +8,6 @@ const DOC_HREF = 'https://developer.chrome.com/docs/lighthouse/performance/perfo
 type Props = {
   speed: SiteSpeedSummary | null;
   enabled: boolean;
-  measuring?: boolean;
-  error?: string | null;
-  onMeasure?: () => void;
 };
 
 const METRICS: Array<{ key: keyof SiteSpeedSummary; label: string; kind: 'ms' | 'cls' }> = [
@@ -23,10 +19,10 @@ const METRICS: Array<{ key: keyof SiteSpeedSummary; label: string; kind: 'ms' | 
 
 /**
  * Site Speed Score — the Lighthouse performance score for the homepage as a bar from
- * Poor to Great with the four field metrics under it. Measured on demand (PageSpeed
- * Insights, ~40 s), stored, shown until the next run.
+ * Poor to Great with the four field metrics under it. Measured by PageSpeed Insights as
+ * part of a site audit run and shown until the next run.
  */
-export default function SiteSpeedCard({ speed, enabled, measuring, error, onMeasure }: Props) {
+export default function SiteSpeedCard({ speed, enabled }: Props) {
   const pct = speed ? speedMarkerPercent(speed.score) : 0;
 
   return (
@@ -46,7 +42,7 @@ export default function SiteSpeedCard({ speed, enabled, measuring, error, onMeas
         <div className="speed-card__verdict">
           <strong>{speed ? speedVerdict(speed.score) : 'Not measured yet'}</strong>
           <span>
-            {speed ? 'To increase your score, go to ' : 'Run Lighthouse on your homepage. Learn more in '}
+            {speed ? 'To increase your score, go to ' : 'Runs with your next site audit. Learn more in '}
             <a href={DOC_HREF} target="_blank" rel="noreferrer">Documentation</a>
           </span>
         </div>
@@ -79,15 +75,13 @@ export default function SiteSpeedCard({ speed, enabled, measuring, error, onMeas
       </dl>
 
       <div className="speed-card__actions">
-        {enabled ? (
-          <Button type="button" variant="secondary" size="sm" onClick={onMeasure} disabled={!!measuring}>
-            {measuring ? 'Measuring… about 40 s' : (speed ? 'Measure again' : 'Measure now')}
-          </Button>
-        ) : (
+        {!enabled ? (
           <span className="speed-card__note">Set PAGESPEED_API_KEY to enable measurements.</span>
+        ) : speed ? (
+          <span className="speed-card__note">Measured {new Date(speed.measuredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+        ) : (
+          <span className="speed-card__note">Runs with your next site audit.</span>
         )}
-        {speed ? <span className="speed-card__note">Measured {new Date(speed.measuredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span> : null}
-        {error ? <span className="speed-card__error" role="alert">{error}</span> : null}
       </div>
     </div>
   );

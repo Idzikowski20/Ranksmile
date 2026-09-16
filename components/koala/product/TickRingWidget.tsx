@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { tickRingTicks, type TickRingSegment } from '@/src/core/domain/siteAudit/tickRing';
 import { Icon } from '../icons/Icon';
 
@@ -40,6 +40,8 @@ export function TickRingWidget({
 }: TickRingWidgetProps) {
   const ring = useMemo(() => tickRingTicks(segments, ticks), [segments, ticks]);
   const hasData = segments.some((s) => s.value > 0);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const dim = (id: string | null | undefined) => (hovered && id !== hovered ? 0.18 : 1);
 
   return (
     <div className={`tick-ring${className ? ` ${className}` : ''}`}>
@@ -76,6 +78,8 @@ export function TickRingWidget({
                   stroke={t.color ?? 'var(--koala-border-primary)'}
                   strokeWidth={4}
                   strokeLinecap="round"
+                  opacity={dim(t.segmentId)}
+                  style={{ transition: 'opacity 120ms ease' }}
                 />
               );
             })}
@@ -87,9 +91,14 @@ export function TickRingWidget({
         </div>
 
         {hasData ? (
-          <ul className="tick-ring__legend">
+          <ul className="tick-ring__legend" onMouseLeave={() => setHovered(null)}>
             {segments.map((s) => (
-              <li key={s.id} className="tick-ring__row">
+              <li
+                key={s.id}
+                className="tick-ring__row"
+                style={{ opacity: dim(s.id), transition: 'opacity 120ms ease' }}
+                onMouseEnter={() => setHovered(s.id)}
+              >
                 <span className="tick-ring__dot" style={{ background: s.color }} aria-hidden="true" />
                 <span className="tick-ring__label">{s.label}</span>
                 <span className="tick-ring__count">{formatValue ? formatValue(s) : s.value.toLocaleString('en-US')}</span>

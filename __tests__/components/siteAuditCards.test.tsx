@@ -25,6 +25,16 @@ describe('TickRingWidget', () => {
     expect(screen.getByText(/To learn about site health/)).toBeInTheDocument();
   });
 
+  it('dims the other legend rows while one is hovered', () => {
+    render(<TickRingWidget title="Site Health" value="80" segments={segments} />);
+    const hovered = screen.getByText('Healthy').closest('li') as HTMLElement;
+    const other = screen.getByText('Have issues').closest('li') as HTMLElement;
+    expect(other.style.opacity).toBe('1');
+    fireEvent.mouseEnter(hovered);
+    expect(hovered.style.opacity).toBe('1');
+    expect(Number(other.style.opacity)).toBeLessThan(1);
+  });
+
   it('shows the empty label instead of a legend when nothing has a value', () => {
     render(<TickRingWidget title="Site Health" value="0" segments={[{ id: 'a', label: 'A', value: 0, color: '#1' }]} emptyLabel="No crawled pages yet." />);
     expect(screen.getByText('No crawled pages yet.')).toBeInTheDocument();
@@ -45,22 +55,15 @@ describe('SiteSpeedCard', () => {
     expect(screen.getByText('Animation Load').nextSibling?.textContent).toBe('2.54s');
   });
 
-  it('offers to measure when nothing has been measured, and runs it on click', () => {
-    const onMeasure = jest.fn();
-    render(<SiteSpeedCard speed={null} enabled onMeasure={onMeasure} />);
+  it('says it runs with the next audit when nothing has been measured, with no button', () => {
+    render(<SiteSpeedCard speed={null} enabled />);
     expect(screen.getByText('Not measured yet')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Measure now' }));
-    expect(onMeasure).toHaveBeenCalled();
+    expect(screen.getByText('Runs with your next site audit.')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('explains what is missing when the API key is not configured', () => {
     render(<SiteSpeedCard speed={null} enabled={false} />);
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.getByText(/PAGESPEED_API_KEY/)).toBeInTheDocument();
-  });
-
-  it('disables the button and says how long while measuring', () => {
-    render(<SiteSpeedCard speed={speed} enabled measuring />);
-    expect(screen.getByRole('button', { name: /Measuring/ })).toBeDisabled();
   });
 });

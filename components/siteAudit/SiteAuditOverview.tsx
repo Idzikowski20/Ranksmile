@@ -10,7 +10,6 @@ import { Button } from '../koala/core';
 import { TickRingWidget } from '../koala/product/TickRingWidget';
 import { Icon } from '../koala/icons/Icon';
 import { brandMain, green, orange, purple, red, yellow } from '../koala/tokens/colors';
-import { useMeasureSiteSpeed } from '../../services/siteAudit';
 import { dashedLinkStyle } from './InfoPopper';
 import SiteAuditScoreGauge from './SiteAuditScoreGauge';
 import SiteSpeedCard from './SiteSpeedCard';
@@ -210,7 +209,6 @@ export default function SiteAuditOverview({ data, slug, onViewAllIssues }: Props
   const siteSegments = useMemo(() => siteHealthSegments(dist), [dist]);
   const aiSegments = useMemo(() => aiSearchSegments(data.aiSearchHealth), [data.aiSearchHealth]);
   const siteDelta = formatHealthDelta(data.siteHealthDelta);
-  const measure = useMeasureSiteSpeed(slug);
 
   const openPopper = useCallback((kind: OverviewPopperKind) => (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -223,32 +221,27 @@ export default function SiteAuditOverview({ data, slug, onViewAllIssues }: Props
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT }}>
-      <div className="audit-overview-grid">
-        <section className="audit-card">
-          <TickRingWidget
-            title="Site Health"
-            icon="File"
-            docHref={SITE_HEALTH_DOC}
-            value={String(Math.round(data.siteHealth))}
-            caption="Score"
-            segments={siteSegments}
-            emptyLabel="No crawled pages yet."
-            footer={<DeltaChip label={siteDelta.label} positive={siteDelta.positive} />}
-          />
-        </section>
+      <section className="overview-pair">
+        <div className="koala-audit-overview-split">
+          <div className="overview-pair__col overview-pair__col--divided">
+            <TickRingWidget
+              title="Site Health"
+              icon="File"
+              docHref={SITE_HEALTH_DOC}
+              value={String(Math.round(data.siteHealth))}
+              caption="Score"
+              segments={siteSegments}
+              emptyLabel="No crawled pages yet."
+              footer={<DeltaChip label={siteDelta.label} positive={siteDelta.positive} />}
+            />
+          </div>
+          <div className="overview-pair__col">
+            <SiteSpeedCard speed={data.siteSpeed} enabled={data.siteSpeedEnabled} />
+          </div>
+        </div>
+      </section>
 
-        <section className="audit-card">
-          <SiteSpeedCard
-            speed={data.siteSpeed}
-            enabled={data.siteSpeedEnabled}
-            measuring={measure.isLoading}
-            error={measure.error instanceof Error ? measure.error.message : null}
-            onMeasure={() => measure.mutate()}
-          />
-        </section>
-      </div>
-
-      <section className="audit-card" style={{ overflow: 'hidden' }}>
+      <section className="overview-pair">
         <div className="koala-audit-overview-split">
           <div style={{ flex: '1.1 1 260px', minWidth: 0, borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column' }}>
             <TickRingWidget
@@ -328,8 +321,9 @@ export default function SiteAuditOverview({ data, slug, onViewAllIssues }: Props
         <OverviewInfoPopper kind={popper.kind} anchorRect={popper.rect} onClose={closePopper} />
       )}
 
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <section style={{ ...CARD, flex: '1 1 280px', padding: '20px 24px 24px' }}>
+      <section className="overview-pair">
+       <div className="koala-audit-overview-split">
+        <div style={{ flex: '1 1 280px', minWidth: 0, borderRight: `1px solid ${BORDER}`, padding: '20px 24px 24px' }}>
           <WidgetTitle
             onInfoClick={openPopper('info-errors')}
             infoOpen={isInfoOpen('info-errors')}
@@ -348,14 +342,13 @@ export default function SiteAuditOverview({ data, slug, onViewAllIssues }: Props
             <div style={{ fontSize: 36, fontWeight: 700, color: '#EFA00D', marginBottom: 8, lineHeight: 1 }}>{data.trends.warnings}</div>
             <IssueTrendArea value={data.trends.warnings} color="#EFA00D" />
           </div>
-        </section>
+        </div>
 
-        <section
+        <div
           style={{
-            ...CARD,
             flex: '2 1 400px',
+            minWidth: 0,
             padding: 0,
-            overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
           }}
@@ -454,8 +447,9 @@ export default function SiteAuditOverview({ data, slug, onViewAllIssues }: Props
               View all issues →
             </button>
           </div>
-        </section>
-      </div>
+        </div>
+       </div>
+      </section>
 
       <section style={{ ...CARD, padding: '8px 0 16px' }}>
         <h2 style={{ margin: '0 0 8px', padding: '8px 20px', fontSize: 14, fontWeight: 600, color: TEXT }}>Thematic Reports</h2>

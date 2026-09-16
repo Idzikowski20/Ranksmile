@@ -9824,13 +9824,18 @@ a.dash-step:hover { background: var(--koala-bg-secondary); }
 .dash-tile[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
 
 /* ── Site Audit overview: tick-ring widgets and the Site Speed card ── */
-.audit-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-@media (max-width: 899px) { .audit-overview-grid { grid-template-columns: 1fr; } }
-.audit-card {
+.overview-pair {
   border-radius: 16px;
   background: var(--koala-bg-primary);
   border: 1px solid var(--koala-border-primary);
+  overflow: hidden;
   min-width: 0;
+}
+.overview-pair .koala-audit-overview-split { min-height: 0; }
+.overview-pair__col { flex: 1 1 50%; min-width: 0; display: flex; flex-direction: column; }
+.overview-pair__col--divided { border-right: 1px solid var(--koala-border-primary); }
+@media (max-width: 767px) {
+  .overview-pair__col--divided { border-right: none; border-bottom: 1px solid var(--koala-border-primary); }
 }
 .tick-ring { display: flex; flex-direction: column; padding: 16px 20px 18px; font-family: var(--font-family-primary); height: 100%; box-sizing: border-box; }
 .tick-ring__head { display: flex; align-items: center; gap: 8px; }

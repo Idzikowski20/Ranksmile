@@ -6,7 +6,7 @@ import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceErr
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
-import { isReviewOutlineHtml } from '@/src/infrastructure/contentPlanner/reviewOutline';
+import { isReviewOutlineHtmlBounded } from '@/src/infrastructure/contentPlanner/reviewOutline';
 import { articlePreviewHtml } from '@/src/core/domain/articles/articleCard';
 import { safeJsonParse } from '@/src/core/shared/safeJson';
 import { getErrorMessage } from '@/src/core/shared/errors';
@@ -156,7 +156,9 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
             ai_score: num(sd.ai_score),
             preview_html: articlePreviewHtml(content, PREVIEW_MAX_CHARS),
             has_content: hasText,
-            is_outline: hasText && isReviewOutlineHtml(content),
+            // content is LEFT(…, CONTENT_PREVIEW_CHARS); at the cap it may be truncated
+            // mid-block, so classify against the last complete block, not the raw cut.
+            is_outline: hasText && isReviewOutlineHtmlBounded(content, content.length >= CONTENT_PREVIEW_CHARS),
          };
       });
 

@@ -101,6 +101,32 @@ export function isReviewOutlineHtml(html: string): boolean {
   return sections > 0;
 }
 
+/**
+ * Clip an outline body back to its last complete section. Sections end on their
+ * instruction block (`</ul>` or the empty `</p>`), so a trailing heading whose list was
+ * truncated is dropped — otherwise the last heading has no body and the doc fails the
+ * heading→body pairing.
+ */
+function clipToLastOutlineBlock(html: string): string {
+  const lower = html.toLowerCase();
+  let cut = -1;
+  for (const close of ['</ul>', '</p>']) {
+    const idx = lower.lastIndexOf(close);
+    if (idx >= 0) cut = Math.max(cut, idx + close.length);
+  }
+  return cut >= 0 ? html.slice(0, cut) : html;
+}
+
+/**
+ * isReviewOutlineHtml for a body that may have been truncated for a list query. A cut
+ * inside the final heading/list pair leaves a dangling partial block that reads as an
+ * article, so a long outline would report "being edited" instead of "waiting review".
+ * When `truncated`, classify only up to the last complete block.
+ */
+export function isReviewOutlineHtmlBounded(html: string, truncated: boolean): boolean {
+  return isReviewOutlineHtml(truncated ? clipToLastOutlineBlock(html || '') : html);
+}
+
 function nodeText(node: JSONContent): string {
   if (typeof node.text === 'string') return node.text;
   return (node.content || []).map(nodeText).join(' ').replace(/\s+/g, ' ').trim();

@@ -26,6 +26,9 @@ const STALE_MS = 15 * 60 * 1000;
 /** A dialect-agnostic "table not provisioned yet" — dev SQLite, a fresh DB. */
 function isMissingTable(err: unknown): boolean {
   const m = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  // A missing *column* also says "does not exist" — that is a schema/query bug, not an
+  // absent table, so it must fail closed (busy) rather than read as "never ran, free".
+  if (m.includes('column')) return false;
   return m.includes('no such table') || m.includes('does not exist') || m.includes("doesn't exist") || m.includes('undefined table');
 }
 
@@ -56,9 +59,12 @@ export async function isAiVisScanRunning(domainId: number): Promise<boolean> {
   const cutoff = new Date(Date.now() - STALE_MS).toISOString();
   try {
     const r = await rows<{ id: number }>(
+      // ai_vis_scans has no updated_at; started_at is null while queued, so fall back to
+      // created_at for the stale-window check.
       `SELECT s.id FROM ai_vis_scans s
          JOIN ai_vis_configs c ON c.id = s.config_id
-        WHERE c.domain_id = ? AND s.status IN ('queued','running') AND s.updated_at >= ?
+        WHERE c.domain_id = ? AND s.status IN ('queued','running')
+          AND COALESCE(s.started_at, s.created_at) >= ?
         LIMIT 1`,
       [domainId, cutoff],
     );
