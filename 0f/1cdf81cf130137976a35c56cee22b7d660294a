@@ -1,0 +1,37 @@
+__tests__/lib/brandKnowledgeSeeds.test.ts
+  s_c7c90ce5d12296::t_ca1529b3ca381b 1-65
+python-sidecar/tests/test_brand_knowledge_endpoint.py
+  s_c7c90ce5d12296::t_d2da6b398121d7 1-76
+src/infrastructure/cron/domainPipeline.ts
+  s_c7c90ce5d12296::t_883161e5c25f67 13
+  s_c7c90ce5d12296::t_92f4be8df694bd 273-283
+python-sidecar/tests/test_domain_competitors_stage.py
+  s_c7c90ce5d12296::t_3d469daacca97b 1-42
+python-sidecar/pipeline/stages/domain/competitors.py
+  s_c7c90ce5d12296::t_8bf90bbf29a736 5
+  s_c7c90ce5d12296::t_158bd45573bc20 16-18,29
+  s_c7c90ce5d12296::t_0f954603ec28bf 19,23
+  s_c7c90ce5d12296::t_ddafe1ec8a6679 52-53,61-62
+src/core/domain/setup/brandKnowledgeSeeds.ts
+  s_c7c90ce5d12296::t_81d7c16e139eae 1-70
+python-sidecar/main.py
+  s_c7c90ce5d12296::t_3190bdfaa0c4fc 430-444
+python-sidecar/analyzers/serp_analyzer.py
+  s_c7c90ce5d12296::t_370eb080dcad4a 609-622
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0f1cdf81cf130137976a35c56cee22b7d660294a",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
