@@ -1,0 +1,55 @@
+pages/api/articles/[id]/generate.ts
+  s_c7c90ce5d12296::t_e693d98e6f456e 6,224
+pages/articles/import.tsx
+  s_c7c90ce5d12296::t_53538a8dee9709 10-11,58,212-215
+pages/api/ai-visibility/[slug]/scan.ts
+  s_c7c90ce5d12296::t_e693d98e6f456e 2,28
+components/common/AppShell.tsx
+  s_c7c90ce5d12296::t_048e8904a41aed 81-82
+  s_c7c90ce5d12296::t_3c62ae93c190b7 8
+services/domainPipeline.ts
+  s_c7c90ce5d12296::t_840914f575aee5 34-48
+pages/api/articles/deep-analysis.ts
+  s_c7c90ce5d12296::t_e693d98e6f456e 6,276-277
+components/aiVisibility/AiVisPageShell.tsx
+  s_c7c90ce5d12296::t_53538a8dee9709 15-16,65-66,110,119
+pages/api/domains/[slug]/run-setup.ts
+  s_c7c90ce5d12296::t_e693d98e6f456e 4,21
+components/dashboard/DomainBusyNotice.tsx
+  s_c7c90ce5d12296::t_b2f9e9f5dd6881 1-24
+__tests__/lib/domainLock.test.ts
+  s_c7c90ce5d12296::t_84b3caca14cbd3 5
+  s_c7c90ce5d12296::t_9e3a97e0d6f45f 1-4,6-76
+pages/api/articles/generate-outline.ts
+  s_c7c90ce5d12296::t_e693d98e6f456e 4,93
+src/infrastructure/cron/domainLock.ts
+  s_c7c90ce5d12296::t_93ef47e824d18c 1-18,22-75
+  s_c7c90ce5d12296::t_6f31bbeb9e2c27 19
+  s_c7c90ce5d12296::t_2398ada22a0634 20-21
+pages/api/articles/import.ts
+  s_c7c90ce5d12296::t_b4ecf3569a0dcd 113
+  s_c7c90ce5d12296::t_e693d98e6f456e 4
+pages/articles/new.tsx
+  s_c7c90ce5d12296::t_0e918d44d9b775 4
+  s_c7c90ce5d12296::t_53538a8dee9709 6-7,173-176
+  s_c7c90ce5d12296::t_fe51a4e2229e3d 58
+components/dashboard/DomainSetupWatcher.tsx
+  s_c7c90ce5d12296::t_74d3c98082e1bd 19
+  s_c7c90ce5d12296::t_492dc332bdc2b7 1-18,20-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "137a46f5ad190eb2902ebb73e4baab310906b322",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
