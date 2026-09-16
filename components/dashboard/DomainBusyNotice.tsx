@@ -17,7 +17,9 @@ export default function DomainBusyNotice({ dashboardHref }: { dashboardHref: str
         You can follow the progress in the pill at the bottom of the page.
       </p>
       <Link href={dashboardHref} passHref>
-        <Button type="button" variant="secondary" size="sm">Back to dashboard</Button>
+        <a className="domain-busy__link">
+          <Button type="button" variant="secondary" size="sm">Back to dashboard</Button>
+        </a>
       </Link>
     </div>
   );

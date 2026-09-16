@@ -14,11 +14,14 @@ export type DashboardArticleSort = (typeof DASHBOARD_ARTICLE_SORTS)[number]['val
 
 const ts = (s: string | null | undefined) => new Date(s || 0).getTime();
 
+/** Id breaks ties so cards keep a stable order between fetches when titles or timestamps match. */
+const byId = (a: ArticleCardData, b: ArticleCardData) => String(a.id).localeCompare(String(b.id));
+
 export function sortDashboardArticles<T extends ArticleCardData>(articles: T[], sort: DashboardArticleSort): T[] {
   const out = [...articles];
-  if (sort === 'title') return out.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-  if (sort === 'created') return out.sort((a, b) => ts(b.created_at) - ts(a.created_at));
-  return out.sort((a, b) => ts(b.updated_at || b.created_at) - ts(a.updated_at || a.created_at));
+  if (sort === 'title') return out.sort((a, b) => (a.title || '').localeCompare(b.title || '') || byId(a, b));
+  if (sort === 'created') return out.sort((a, b) => ts(b.created_at) - ts(a.created_at) || byId(a, b));
+  return out.sort((a, b) => ts(b.updated_at || b.created_at) - ts(a.updated_at || a.created_at) || byId(a, b));
 }
 
 type Props = {

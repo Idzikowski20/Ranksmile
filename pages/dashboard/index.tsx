@@ -167,7 +167,7 @@ const DashboardPage: NextPage = () => {
             <DashboardArticles
               articles={articles}
               loading={articlesLoading}
-              hrefFor={(a) => `/articles/${a.id}`}
+              hrefFor={(a) => workspaceHref(activeWsId, `/articles/${a.id}`)}
               allHref={articlesHref}
               author={author}
             />

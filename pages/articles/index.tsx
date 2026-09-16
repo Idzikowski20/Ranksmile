@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { CSSTransition } from 'react-transition-group';
 import { useQuery, useQueryClient } from 'react-query';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
+import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { buildArticleWorkspaceLinks } from '@/src/core/domain/articles/articleWorkspaceLinks';
 import { authClient } from '@/src/infrastructure/auth/client';
 import DashboardLayout from '../../components/common/DashboardLayout';
@@ -195,7 +195,7 @@ const ArticlesPage: NextPage = () => {
             <div style={{ paddingTop: 20 }}>
               <ArticleCardGrid
                 articles={articles.length === 0 ? articles : articlesChunk.visibleItems}
-                hrefFor={(a) => `/articles/${a.id}`}
+                hrefFor={(a) => workspaceHref(activeWsId, `/articles/${a.id}`)}
                 author={author}
                 isLoading={isLoading}
                 emptyState={(

@@ -250,6 +250,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(403).json({ error: 'Access denied.' });
       }
     }
+    // The existing article's domain, so the busy guard below covers editor and batch
+    // re-analyses too — not only the new-content branches that resolve a domain here.
+    const owningRows = await db.query<{ domain_id: number | null }>(
+      'SELECT domain_id FROM articles WHERE id = ? LIMIT 1',
+      { replacements: [Number(existingArticleId)], type: QueryTypes.SELECT },
+    );
+    if (owningRows[0]?.domain_id) resolvedDomainId = Number(owningRows[0].domain_id);
   } else if (reqDomainId) {
       if (isCron) {
         resolvedDomainId = Number(reqDomainId);

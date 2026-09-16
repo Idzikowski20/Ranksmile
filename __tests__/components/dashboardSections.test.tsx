@@ -5,7 +5,11 @@ import DashboardArticles, { sortDashboardArticles } from '../../components/dashb
 import GetStartedPanel from '../../components/dashboard/GetStartedPanel';
 import type { ArticleCardData } from '../../components/articles/ArticleCard';
 
-const checklist = { steps: [] as Array<{ key: string; label: string; done: boolean; href?: string }>, loading: false };
+const checklist = {
+  steps: [] as Array<{ key: string; label: string; done: boolean; href?: string }>,
+  beyondSteps: [] as Array<{ key: string; label: string; done: boolean; href?: string }>,
+  loading: false,
+};
 jest.mock('@/hooks/useOnboardingChecklist', () => ({ useOnboardingChecklist: () => checklist }));
 const push = jest.fn();
 jest.mock('next/router', () => ({ useRouter: () => ({ push, asPath: '/' }) }));

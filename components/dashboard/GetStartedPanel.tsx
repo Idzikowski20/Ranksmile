@@ -16,7 +16,12 @@ type Props = { createHref: string };
  */
 export default function GetStartedPanel({ createHref }: Props) {
   const router = useRouter();
-  const { steps, loading } = useOnboardingChecklist();
+  const { steps: coreSteps, beyondSteps, loading } = useOnboardingChecklist();
+  // Once the core checklist is done, show the first uncompleted follow-up (WordPress /
+  // API) so the panel keeps offering a next step instead of a wall of ticks.
+  const allCoreDone = coreSteps.length > 0 && coreSteps.every((s) => s.done);
+  const nextBeyond = beyondSteps.find((s) => !s.done);
+  const steps = allCoreDone && nextBeyond ? [...coreSteps, nextBeyond] : coreSteps;
   const [hidden, setHidden] = useState(true);
   useEffect(() => { setHidden(isBannerDismissed(HIDE_KEY)); }, []);
   if (hidden || loading) return null;
@@ -58,7 +63,7 @@ export default function GetStartedPanel({ createHref }: Props) {
             panel offset into it and cropped at the right and bottom edges. */}
         <div className="dash-promo__art">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="dash-promo__shot" src="/content-editor/content-score-panel-full.png" alt="" />
+          <img className="dash-promo__shot" src="/content-editor/content-score-panel-full.png" alt="Ranksmile SEO Content Editor with the Content Score panel" />
         </div>
         <div>
           <h3 className="dash-promo__title">Write a complete article in minutes, from one keyword</h3>

@@ -42,7 +42,7 @@ const OPTIONS: Array<{ key: keyof ArticleStartLinks; title: string; description:
 export default function ArticleEmptyStart({ links }: { links: ArticleStartLinks }) {
   return (
     <div className="article-empty-start">
-      <p className="article-empty-start__title">How do you want to start?</p>
+      <h2 className="article-empty-start__title">How do you want to start?</h2>
       <div className="article-empty-start__grid">
         {OPTIONS.map((o) => (
           <Link href={links[o.key]} key={o.key}>

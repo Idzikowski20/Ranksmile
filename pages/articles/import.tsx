@@ -154,6 +154,14 @@ const ImportPage: NextPage = () => {
   const canProceed = url.trim().length > 0 && !isSubmitting;
   const countryName = COUNTRIES[country] || COUNTRIES.US;
 
+  if (busy) {
+    return (
+      <WizardShell title="Import Content">
+        <DomainBusyNotice dashboardHref={workspaceHref(wsId, '/dashboard')} />
+      </WizardShell>
+    );
+  }
+
   if (source !== 'url') {
     return (
       <WizardShell title="Import Content">
@@ -205,14 +213,6 @@ const ImportPage: NextPage = () => {
             onAdd={(paths) => { importPages(paths).catch(() => undefined); }}
           />
         ) : null}
-      </WizardShell>
-    );
-  }
-
-  if (busy) {
-    return (
-      <WizardShell title="Import Content">
-        <DomainBusyNotice dashboardHref={workspaceHref(wsId, '/dashboard')} />
       </WizardShell>
     );
   }

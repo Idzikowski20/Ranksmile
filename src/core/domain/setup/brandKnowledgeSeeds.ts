@@ -8,11 +8,38 @@
  * headers ("Business", "Industry") and half-sentences ("specjalizująca").
  */
 
-/** The heading, as the template writes it and as models translate it. */
-const TOPICS_HEADING = /^\s*(topics? to cover|tematy do (?:poruszenia|omówienia|pokrycia)|tematy)\s*:?\s*$/i;
+/** The "Topics to cover" heading, as the template writes it and as models translate it
+ *  into the page's language (PL/DE/FR/ES/IT/NL/PT). */
+const TOPICS_HEADING = new RegExp(
+  '^\\s*('
+  + 'topics? to cover|'
+  + 'tematy(?: do (?:poruszenia|omówienia|pokrycia))?|' // pl
+  + 'themen(?: die behandelt werden(?: sollen)?)?|' // de
+  + 'sujets à (?:couvrir|traiter)|' // fr
+  + 'temas a (?:cubrir|tratar)|' // es
+  + 'argomenti da (?:trattare|coprire)|' // it
+  + 'te behandelen onderwerpen|' // nl
+  + 'tópicos a (?:cobrir|abordar)' // pt
+  + ')\\s*:?\\s*$',
+  'i',
+);
 
-/** A line that opens the next section: a short, prose-free label. */
-const SECTION_HEADING = /^\s*[A-ZŻŹĆĄŚĘŁÓŃ][^.!?]{0,60}\s*:?\s*$/;
+/**
+ * The next section starts here. A section label is one of the template's known headings
+ * (or its translation) on its own line — never merely a capitalised phrase, which would
+ * mistake the first topic ("Tworzenie stron internetowych") for a heading and drop every
+ * seed. Matched loosely: the label as a prefix, no comma (topics are comma-separated).
+ */
+const NEXT_SECTION = new RegExp(
+  '^\\s*('
+  + 'business type|industry|products?/?\\s*services?|product/service|customer profile|competitors?|example cases?|'
+  + 'typ (?:biznesu|działalności)|branża|produkty|usługi|profil klienta|konkurenci|przykład\\w*|' // pl
+  + 'geschäftstyp|branche|produkte|dienstleistungen|kundenprofil|wettbewerber|beispielfälle|' // de
+  + "type d'entreprise|secteur|produits|services|profil client|concurrents|exemples|" // fr
+  + 'tipo de (?:negocio|empresa)|industria|sector|productos|servicios|perfil del cliente|competidores|ejemplos' // es
+  + ')\\b',
+  'i',
+);
 
 /** What a model writes instead of leaving the section out. */
 const NO_DATA = /^(brak|nie |no |n\/a|none)\b/i;
@@ -45,7 +72,7 @@ function topicsSection(brandKnowledge: string): string[] {
       if (body.length) break;
       continue;
     }
-    if (SECTION_HEADING.test(text) && !text.includes(',')) break;
+    if (NEXT_SECTION.test(text) && !text.includes(',')) break;
     body.push(stripBullet(text));
   }
   return body;

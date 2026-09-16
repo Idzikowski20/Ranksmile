@@ -40,6 +40,16 @@ describe('seedsFromBrandKnowledge', () => {
     expect(seedsFromBrandKnowledge(pl)).toEqual(['wynajem mieszkania', 'umowa najmu']);
   });
 
+  it('keeps capitalized topics on their own lines instead of reading the first as a heading', () => {
+    const perLine = 'Topics to cover\nTworzenie stron internetowych\nPozycjonowanie lokalne\nAudyt SEO\n\nCompetitors\nagencje';
+    expect(seedsFromBrandKnowledge(perLine)).toEqual(['tworzenie stron internetowych', 'pozycjonowanie lokalne', 'audyt seo']);
+  });
+
+  it('reads a German draft that translated the heading', () => {
+    const de = 'Themen\nWebseiten erstellen, SEO für Firmen\n\nBeispielfälle\nnichts';
+    expect(seedsFromBrandKnowledge(de)).toEqual(['webseiten erstellen', 'seo für firmen']);
+  });
+
   it('accepts a bulleted list as readily as a comma-separated one', () => {
     const bullets = 'Topics to cover\n- audyt seo\n- pozycjonowanie lokalne\n\nCompetitors\nagencje';
     expect(seedsFromBrandKnowledge(bullets)).toEqual(['audyt seo', 'pozycjonowanie lokalne']);

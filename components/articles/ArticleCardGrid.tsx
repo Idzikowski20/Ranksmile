@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { TableLoadMore } from '../koala/core';
 import ArticleCard, { type ArticleCardAuthor, type ArticleCardData } from './ArticleCard';
 
@@ -36,6 +36,14 @@ export default function ArticleCardGrid({
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Drop ids that no longer exist (deleted individually, or gone from a refetch) so the
+  // bulk bar never counts or submits a stale row.
+  const liveIds = useMemo(() => new Set(articles.map((a) => a.id)), [articles]);
+  const selected = useMemo(() => {
+    const kept = Array.from(selectedIds).filter((id) => liveIds.has(id));
+    return kept.length === selectedIds.size ? selectedIds : new Set(kept);
+  }, [selectedIds, liveIds]);
+
   const toggleSelect = (id: number | string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -48,8 +56,12 @@ export default function ArticleCardGrid({
     if (isDeleting || !onDeleteMultiple) return;
     setIsDeleting(true);
     try {
-      await onDeleteMultiple(Array.from(selectedIds));
+      await onDeleteMultiple(Array.from(selected));
+      // Clear only on success — a rejected delete keeps the selection so the failed rows
+      // can be retried in bulk. A callback that swallows its error must reject to signal it.
       clearSelection();
+    } catch {
+      /* keep the selection for a retry */
     } finally {
       setIsDeleting(false);
     }
@@ -67,7 +79,7 @@ export default function ArticleCardGrid({
             article={a}
             href={hrefFor(a)}
             author={author}
-            selected={selectedIds.has(a.id)}
+            selected={selected.has(a.id)}
             onDelete={onDelete}
             onSelect={onDeleteMultiple ? toggleSelect : undefined}
           />
@@ -78,14 +90,14 @@ export default function ArticleCardGrid({
         <TableLoadMore hasMore={hasMore} isLoading={Boolean(isLoadingMore)} onLoadMore={onLoadMore} />
       ) : null}
 
-      {selectedIds.size > 0 ? (
+      {selected.size > 0 ? (
         <div className="article-bulk-bar" role="status">
           <button type="button" className="article-bulk-bar__close" aria-label="Deselect all" onClick={clearSelection}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
               <path fill="currentColor" fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
             </svg>
           </button>
-          <span className="article-bulk-bar__count">{selectedIds.size} selected</span>
+          <span className="article-bulk-bar__count">{selected.size} selected</span>
           <button type="button" className="article-bulk-bar__trash" onClick={handleBulkDelete} disabled={isDeleting}>
             {isDeleting ? 'Deleting…' : 'Put in trash'}
           </button>

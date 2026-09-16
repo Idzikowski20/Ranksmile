@@ -110,7 +110,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    } catch (e) {
       return res.status(400).json({ error: getErrorMessage(e) || 'Invalid or blocked URL' });
    }
-   if (await rejectIfDomainBusy(res, domainId)) return undefined;
+   // extractOnly just parses HTML into blocks for the editor; it creates no article and
+   // touches no domain tables, so the one-analysis-per-domain lock does not apply to it.
+   if (!extractOnly && await rejectIfDomainBusy(res, domainId).catch(() => false)) return undefined;
 
    try {
       // Try plain HTTP first — cheaper, and paywalled sites (e.g. Piano/Onet) often include

@@ -117,6 +117,14 @@ const NewContentPage: NextPage = () => {
     leadingItems: <Flag code={LANG_TO_COUNTRY[l.value]} size={18} />,
   }));
 
+  if (busy) {
+    return (
+      <WizardShell title="New Content">
+        <DomainBusyNotice dashboardHref={workspaceHref(activeWsId, '/dashboard')} />
+      </WizardShell>
+    );
+  }
+
   if (step === 'mode') {
     return (
       <WizardShell
@@ -166,14 +174,6 @@ const NewContentPage: NextPage = () => {
             </div>
           </section>
         </div>
-      </WizardShell>
-    );
-  }
-
-  if (busy) {
-    return (
-      <WizardShell title="New Content">
-        <DomainBusyNotice dashboardHref={workspaceHref(activeWsId, '/dashboard')} />
       </WizardShell>
     );
   }

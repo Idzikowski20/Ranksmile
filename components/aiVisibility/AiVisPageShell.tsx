@@ -2,6 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAiVisibilityGuard } from '@/hooks/useAiVisibilityGuard';
+import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import AppShell from '../common/AppShell';
 import DomainSubLayout from '../domains/DomainSubLayout';
 import AiVisibilityToolbar from './AiVisibilityToolbar';
@@ -12,6 +13,7 @@ import { Button, ToolRibbon } from '../koala/core';
 import type { PromptOption } from './types';
 import { useAiVisScanStatus } from '../../services/aiVisibility';
 import { useFetchDomains } from '../../services/domains';
+import { useWorkspaces } from '../../services/workspaces';
 import { useDomainBusy } from '../../services/domainPipeline';
 import DomainBusyNotice from '../dashboard/DomainBusyNotice';
 import { slugToDomain } from '../../utils/slugToDomain';
@@ -60,6 +62,8 @@ const AiVisPageShell = ({
   const domain = slug ? slugToDomain(slug) : '';
   const { data: domainsData } = useFetchDomains(router, true);
   const domains = domainsData?.domains || [];
+  const { data: wsData } = useWorkspaces();
+  const dashboardHref = workspaceHref(deriveActiveId(true, router.asPath, wsData?.activeId), '/dashboard');
 
   const { ready } = useAiVisibilityGuard(slug);
   // The setup pipeline rewrites the domain tables this page reads; wait it out.
@@ -107,7 +111,7 @@ const AiVisPageShell = ({
           </ToolRibbon>
         )}
       >
-        {busy ? <DomainBusyNotice dashboardHref="/dashboard" /> : ready ? children({ crunching: !!crunching }) : (
+        {busy ? <DomainBusyNotice dashboardHref={dashboardHref} /> : ready ? children({ crunching: !!crunching }) : (
           loadingFallback ?? (
             <div style={{ borderRadius: 12, padding: 24, background: '#fff' }}>
               <SkeletonBars />

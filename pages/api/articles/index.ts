@@ -59,6 +59,8 @@ export async function getUserDomainIds(
 
 /** Enough of the body for a card thumbnail: the title and the opening paragraphs. */
 const PREVIEW_MAX_CHARS = 3000;
+/** Body chars pulled per row: the 3000-char preview plus headroom for outline detection. */
+const CONTENT_PREVIEW_CHARS = 6000;
 
 async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: string | null) {
    const { domainId, domain: domainSlug, limit: limitRaw, offset: offsetRaw, sort, q } = req.query;
@@ -116,10 +118,16 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
       );
       const total = Number((countRows as Array<{ total: number | string }>)[0]?.total ?? 0);
 
+      // Only the opening of the body — enough for the card thumbnail and the outline
+      // flag — instead of every article's full content TEXT (megabytes across a page of
+      // rows, all discarded after the preview). Bounded in SQL, dialect-aware.
+      const contentPreviewSql = process.env.DATABASE_URL
+         ? `LEFT(content, ${CONTENT_PREVIEW_CHARS})`
+         : `substr(content, 1, ${CONTENT_PREVIEW_CHARS})`;
       const [articles] = await db.query(
          `SELECT ${articleIdSql} AS id, domain_id, title, slug, status, target_keyword, meta_title, word_count,
                  published_at, publish_target, publish_url, meta_url, created_at, updated_at, content_score, score_data,
-                 content, featured_image
+                 ${contentPreviewSql} AS content, featured_image
           FROM articles ${where}
           ORDER BY ${orderBy}
           LIMIT ? OFFSET ?`,
@@ -138,14 +146,17 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
          // badge from whether that body is a planned outline; the full content never
          // leaves the server (a list of 100 articles would be ~2 MB otherwise).
          const content = typeof a.content === 'string' ? a.content : '';
+         // Plain text, not raw markup: an empty TipTap doc saves as `<p></p>`, which has
+         // length but no content — that must read as "waiting review", not "being edited".
+         const hasText = content.replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ').trim().length > 0;
          const { score_data: _drop, content: _body, ...rest } = a;
          return {
             ...rest,
             seo_score: num(sd.seo_score),
             ai_score: num(sd.ai_score),
             preview_html: articlePreviewHtml(content, PREVIEW_MAX_CHARS),
-            has_content: content.trim().length > 0,
-            is_outline: content.trim().length > 0 && isReviewOutlineHtml(content),
+            has_content: hasText,
+            is_outline: hasText && isReviewOutlineHtml(content),
          };
       });
 
@@ -212,9 +223,10 @@ async function createArticle(req: NextApiRequest, res: NextApiResponse, userId: 
    if (!allowedIds.includes(parseInt(domain_id, 10))) {
       return res.status(403).json({ error: 'Access denied.' });
    }
-   if (await rejectIfDomainBusy(res, parseInt(domain_id, 10))) return undefined;
 
    try {
+      // Inside the try so a lock-query failure returns the route's JSON 500, not Next's default.
+      if (await rejectIfDomainBusy(res, parseInt(domain_id, 10))) return undefined;
       const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
       const orgId = await getOrgIdForDomain(parseInt(domain_id, 10));
       if (!orgId) return res.status(400).json({ error: 'Domain has no organization' });
