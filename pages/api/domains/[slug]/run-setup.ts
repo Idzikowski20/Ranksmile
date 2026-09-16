@@ -1,5 +1,6 @@
+import { randomUUID } from 'crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { enqueueDomainSetup, kickDomainSetup } from '@/src/infrastructure/cron/domainPipeline';
+import { enqueueDomainSetup, kickDomainSetup, restoreDomainSetupJob } from '@/src/infrastructure/cron/domainPipeline';
 import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
@@ -20,14 +21,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    try {
       // A rerun resets a finished/crashed job back to queued so the crawl actually runs
       // again; a fresh in-flight run stays as it is (runnable false) and we just report it.
-      const { jobId, runnable } = await enqueueDomainSetup(domainId, { reset: true });
+      const { jobId, runnable, priorStatus } = await enqueueDomainSetup(domainId, { reset: true });
       if (!runnable) return res.status(202).json({ jobId, alreadyRunning: true });
 
       const { reserveSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
       const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
       try {
-         await reserveSiteAuditRun(domainId, jobId, userId);
+         // Per-run key: each rerun makes its own reservation and re-checks the plan limit.
+         await reserveSiteAuditRun(domainId, jobId, randomUUID(), userId);
       } catch (e) {
+         // Reservation happened after the reset, so on a plan-limit reject we must undo the
+         // reset — otherwise the job is left queued and reads as a phantom running analysis.
+         await restoreDomainSetupJob(domainId, priorStatus).catch(() => {});
          if (isPlanLimitError(e)) return res.status(402).json(planLimitBody(e));
          throw e;
       }

@@ -1,13 +1,14 @@
+import { deriveStages, enqueueDomainSetup, claimJob, materializeDomainSetup, restoreDomainSetupJob } from '@/src/infrastructure/cron/domainPipeline';
+import db from '../../database/database';
+
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), transaction: jest.fn() } }));
 jest.mock('@/src/infrastructure/persistence/schema/ensurePipelineTables', () => ({ ensurePipelineTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('sequelize', () => ({ QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT', UPDATE: 'UPDATE' } }));
 jest.mock('../../database/models/gscAccount', () => ({ __esModule: true, default: { findAll: jest.fn().mockResolvedValue([]) } }));
 jest.mock('@/src/infrastructure/gsc/gscAccounts', () => ({ buildOAuthClientFromAccount: jest.fn() }));
 jest.mock('@googleapis/searchconsole', () => ({ searchconsole_v1: { Searchconsole: jest.fn() } }));
-import db from '../../database/database';
-import { deriveStages, enqueueDomainSetup, claimJob, materializeDomainSetup } from '@/src/infrastructure/cron/domainPipeline';
 const mockQuery = db.query as jest.Mock;
-const sel = (r: unknown[]) => r;            // SELECT returns rows directly
+const sel = (r: unknown[]) => r; // SELECT returns rows directly
 beforeEach(() => { mockQuery.mockReset(); });
 
 describe('deriveStages', () => {
@@ -44,20 +45,20 @@ describe('enqueueDomainSetup', () => {
     expect(String(mockQuery.mock.calls[1][0])).toContain('INSERT INTO analysis_jobs');
   });
   it('swallows a PK-collision INSERT (concurrent enqueue) and still returns the id', async () => {
-    mockQuery.mockResolvedValueOnce(sel([]));               // lookup → none
+    mockQuery.mockResolvedValueOnce(sel([])); // lookup → none
     mockQuery.mockRejectedValueOnce(new Error('UNIQUE constraint failed: analysis_jobs.id')); // INSERT loses race
     const { jobId: id } = await enqueueDomainSetup(99);
     expect(id).toBe('dsetup_99');
   });
   it('re-throws a genuine (non-collision) INSERT error instead of masking it', async () => {
-    mockQuery.mockResolvedValueOnce(sel([]));               // lookup → none
+    mockQuery.mockResolvedValueOnce(sel([])); // lookup → none
     mockQuery.mockRejectedValueOnce(new Error('permission denied for table analysis_jobs'));
     await expect(enqueueDomainSetup(99)).rejects.toThrow('permission denied');
   });
 
   it('resets a finished job back to queued on rerun and reports it runnable', async () => {
     mockQuery.mockResolvedValueOnce(sel([{ status: 'done' }])); // lookup → done
-    mockQuery.mockResolvedValueOnce([[], {}]);                  // UPDATE reset
+    mockQuery.mockResolvedValueOnce([[], {}]); // UPDATE reset
     mockQuery.mockResolvedValueOnce(sel([{ status: 'queued' }])); // re-read → queued
     const { jobId, runnable } = await enqueueDomainSetup(99, { reset: true });
     expect(jobId).toBe('dsetup_99');
@@ -67,16 +68,50 @@ describe('enqueueDomainSetup', () => {
 
   it('leaves a fresh in-flight run alone on rerun and reports it not runnable', async () => {
     mockQuery.mockResolvedValueOnce(sel([{ status: 'running' }])); // lookup → running
-    mockQuery.mockResolvedValueOnce([[], {}]);                     // UPDATE matches nothing (fresh)
+    mockQuery.mockResolvedValueOnce([[], {}]); // UPDATE matches nothing (fresh)
     mockQuery.mockResolvedValueOnce(sel([{ status: 'running' }])); // still running
     const { runnable } = await enqueueDomainSetup(99, { reset: true });
     expect(runnable).toBe(false);
+  });
+
+  it('resets a job stuck finalizing (crashed mid-materialization) so rerun is not blocked forever', async () => {
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'finalizing' }])); // lookup → finalizing
+    mockQuery.mockResolvedValueOnce([[], {}]); // UPDATE reset (stale match)
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'queued' }])); // re-read → queued
+    const { runnable } = await enqueueDomainSetup(99, { reset: true });
+    expect(runnable).toBe(true);
+    expect(String(mockQuery.mock.calls[1][0])).toContain("'finalizing'");
+  });
+
+  it('reports the prior status so a rejected rerun can be rolled back', async () => {
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'done' }]));
+    mockQuery.mockResolvedValueOnce([[], {}]);
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'queued' }]));
+    const { priorStatus } = await enqueueDomainSetup(99, { reset: true });
+    expect(priorStatus).toBe('done');
+  });
+});
+
+describe('restoreDomainSetupJob', () => {
+  it('restores the prior terminal status, but only while the row is still the reset queued one', async () => {
+    mockQuery.mockResolvedValue([[], {}]);
+    await restoreDomainSetupJob(99, 'done');
+    const sql = String(mockQuery.mock.calls[0][0]);
+    expect(sql).toContain('UPDATE analysis_jobs SET status = ?');
+    expect(sql).toContain("status = 'queued'");
+    expect(mockQuery.mock.calls[0][1].replacements).toEqual(['done', 'dsetup_99']);
+  });
+
+  it('drops the row when the reset was a first-ever insert (no prior status)', async () => {
+    mockQuery.mockResolvedValue([[], {}]);
+    await restoreDomainSetupJob(99, null);
+    expect(String(mockQuery.mock.calls[0][0])).toContain('DELETE FROM analysis_jobs');
   });
 });
 
 describe('claimJob', () => {
   it('aborts when SELECT-back shows another locker', async () => {
-    mockQuery.mockResolvedValueOnce([[], {}]);                              // UPDATE claim
+    mockQuery.mockResolvedValueOnce([[], {}]); // UPDATE claim
     mockQuery.mockResolvedValueOnce(sel([{ status: 'running', locked_by: 'other' }])); // SELECT-back
     expect(await claimJob('job_x', 'me')).toBe(false);
   });
@@ -90,7 +125,7 @@ describe('claimJob', () => {
 describe('materializeDomainSetup', () => {
   it('deletes existing rows before inserting, inside a transaction', async () => {
     const tx = {};
-    (db.transaction as jest.Mock).mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb(tx));
+    (db.transaction as jest.Mock).mockImplementation(async (cb: (t: unknown) => Promise<void>) => cb(tx));
     mockQuery.mockResolvedValue([[], {}]);
     await materializeDomainSetup(99, { keywords: [{ keyword: 'k', source: 'gsc' }], topics: [], competitors: [], recommendations: [] });
     const sqls = mockQuery.mock.calls.map((c: unknown[]) => String((c as unknown[])[0]));
@@ -103,7 +138,7 @@ describe('materializeDomainSetup', () => {
 
   it('keeps existing page audits when a rerun returns no audited URLs', async () => {
     const tx = {};
-    (db.transaction as jest.Mock).mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb(tx));
+    (db.transaction as jest.Mock).mockImplementation(async (cb: (t: unknown) => Promise<void>) => cb(tx));
     mockQuery.mockImplementation(async (sql: string) => {
       if (sql.includes('SELECT url FROM page_audits')) {
         return [{ url: 'https://example.com/old-post' }];

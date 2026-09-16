@@ -72,11 +72,12 @@ async function selectRows<T extends object>(sql: string, repl: unknown[]): Promi
 export async function enqueueDomainSetup(
    domainId: number,
    opts: { reset?: boolean } = {},
-): Promise<{ jobId: string; runnable: boolean }> {
+): Promise<{ jobId: string; runnable: boolean; priorStatus: string | null }> {
    await ensurePipelineTables();
    const jobId = `dsetup_${domainId}`;
    const existing = await selectRows<{ status: string }>(
       'SELECT status FROM analysis_jobs WHERE id = ?', [jobId]);
+   const priorStatus = existing[0]?.status ?? null;
    if (!existing.length) {
       try {
          // article_id = 0 sentinel: analysis_jobs.article_id is NOT NULL on SQLite (the
@@ -92,12 +93,14 @@ export async function enqueueDomainSetup(
          const m = e instanceof Error ? e.message : String(e);
          if (!/unique|duplicate|primary key/i.test(m)) throw e;
       }
-      return { jobId, runnable: true };
+      return { jobId, runnable: true, priorStatus };
    }
 
    // A manual rerun re-runs the campaign: reset the deterministic row back to queued so the
    // worker can claim it again. Only a finished ('done'/'failed') or crashed (stale) job is
-   // reset — a fresh in-flight run is left alone so a rerun click never disrupts it.
+   // reset — a fresh in-flight run is left alone so a rerun click never disrupts it. A job
+   // stuck 'finalizing' (crashed mid-materialization) is stale-resettable too, else every
+   // rerun would report alreadyRunning forever.
    if (opts.reset) {
       const isPg = !!process.env.DATABASE_URL;
       const cutoff = new Date(Date.now() - STALE_MS);
@@ -109,14 +112,32 @@ export async function enqueueDomainSetup(
                  current_stage=NULL, stage_progress=0, result=NULL,
                  created_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
            WHERE id=? AND job_type='domain_setup'
-             AND (status IN ('done','failed') OR (status IN ('queued','running') AND ${staleExpr}))`,
+             AND (status IN ('done','failed') OR (status IN ('queued','running','finalizing') AND ${staleExpr}))`,
          { replacements: [jobId, cutoffParam] });
       const after = await selectRows<{ status: string }>('SELECT status FROM analysis_jobs WHERE id = ?', [jobId]);
       // 'queued' is runnable (kick claims it); a fresh 'running' job is already in flight.
-      return { jobId, runnable: after[0]?.status === 'queued' };
+      return { jobId, runnable: after[0]?.status === 'queued', priorStatus };
    }
 
-   return { jobId, runnable: existing[0].status === 'queued' };
+   return { jobId, runnable: existing[0].status === 'queued', priorStatus };
+}
+
+/**
+ * Undo a rerun reset when the run cannot start (e.g. quota reservation rejected). Restores
+ * the prior terminal status so a failed rerun does not leave a phantom 'queued' job that
+ * the setup pill shows as running and domain locks treat as busy. Only touches the row
+ * while it is still the untouched 'queued' we just reset (the worker has not claimed it).
+ */
+export async function restoreDomainSetupJob(domainId: number, priorStatus: string | null): Promise<void> {
+   const jobId = `dsetup_${domainId}`;
+   if (priorStatus === null) {
+      // The reset was actually a first-ever insert — no prior state to keep; drop the row.
+      await db.query("DELETE FROM analysis_jobs WHERE id = ? AND status = 'queued'", { replacements: [jobId] });
+      return;
+   }
+   await db.query(
+      "UPDATE analysis_jobs SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'queued'",
+      { replacements: [priorStatus, jobId] });
 }
 
 /** Atomic claim: conditional UPDATE + dialect-safe SELECT-back. true only if we own it. */
