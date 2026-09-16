@@ -24,6 +24,21 @@ export type StageKey = 'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommen
 export const STAGE_ORDER: StageKey[] = ['gsc', 'keywords', 'topics', 'competitors', 'recommendations'];
 const STALE_MS = 10 * 60 * 1000;
 
+/**
+ * A stored timestamp → epoch ms. Postgres returns a Date; SQLite returns an offset-less
+ * 'YYYY-MM-DD HH:MM:SS' (written by CURRENT_TIMESTAMP, which is UTC) that `new Date(...)`
+ * would misread as local time, skewing time-window comparisons on a non-UTC host. Tag it
+ * as UTC first. Returns 0 for a missing/unparseable value.
+ */
+function dbTimeMs(v: string | Date | null | undefined): number {
+   if (!v) return 0;
+   if (v instanceof Date) return v.getTime();
+   const s = v.trim();
+   const iso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : `${s.replace(' ', 'T')}Z`;
+   const t = new Date(iso).getTime();
+   return Number.isNaN(t) ? 0 : t;
+}
+
 export interface PageAuditResult {
    url: string; path?: string; title?: string; score?: number; word_count?: number;
    signals?: unknown; content_hash?: string; fetch_status?: string; duration_ms?: number;
@@ -386,7 +401,7 @@ export async function getSetupStatus(domainId: number) {
    type JobRow = {
       status: string; current_stage: string | null; stage_progress: number | null;
       error: string | null; result: string | Record<string, unknown> | null;
-      created_at: string | null; updated_at: string | null;
+      created_at: string | Date | null; updated_at: string | Date | null;
    };
    const rows = await selectRows<JobRow>(
       `SELECT status, current_stage, stage_progress, error, result, created_at, updated_at FROM analysis_jobs
@@ -410,11 +425,11 @@ export async function getSetupStatus(domainId: number) {
    let siteSpeed: 'off' | 'running' | 'done' = 'off';
    if (isPageSpeedConfigured()) {
       const active = ['queued', 'running', 'finalizing'].includes(j.status);
-      const speedRows = await selectRows<{ measured_at: string | null }>(
+      const speedRows = await selectRows<{ measured_at: string | Date | null }>(
          'SELECT measured_at FROM site_speed_measurements WHERE domain_id = ? ORDER BY id DESC LIMIT 1', [domainId],
-      ).catch(() => [] as { measured_at: string | null }[]);
-      const measuredAt = speedRows[0]?.measured_at ? new Date(speedRows[0].measured_at).getTime() : 0;
-      const jobStart = j.created_at ? new Date(j.created_at).getTime() : 0;
+      ).catch(() => [] as { measured_at: string | Date | null }[]);
+      const measuredAt = dbTimeMs(speedRows[0]?.measured_at);
+      const jobStart = dbTimeMs(j.created_at);
       const fresh = measuredAt > 0 && measuredAt >= jobStart;
       if (fresh) {
          siteSpeed = 'done';
@@ -423,7 +438,7 @@ export async function getSetupStatus(domainId: number) {
       } else {
          // Job finished without a fresh score yet — wait out a grace window for the
          // post-crawl measurement, then give up so a failed measurement never hangs.
-         const updatedAt = j.updated_at ? new Date(j.updated_at).getTime() : 0;
+         const updatedAt = dbTimeMs(j.updated_at);
          const GRACE_MS = 3 * 60 * 1000;
          siteSpeed = updatedAt > 0 && Date.now() - updatedAt < GRACE_MS ? 'running' : 'done';
       }

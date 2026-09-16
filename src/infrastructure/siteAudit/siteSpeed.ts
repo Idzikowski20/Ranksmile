@@ -120,6 +120,13 @@ export async function measureDomainSiteSpeed(domainId: number): Promise<void> {
   );
   const host = rows[0]?.domain?.trim();
   if (!host) return;
-  const url = /^https?:\/\//i.test(host) ? host : `https://${host}`;
-  await measureSiteSpeed(domainId, url);
+  // Site Speed is the homepage score. A domain stored with a path (added from a deep URL)
+  // must not send that path to PSI, or it measures another page — reduce to protocol+host.
+  let origin: string;
+  try {
+    origin = new URL(/^https?:\/\//i.test(host) ? host : `https://${host}`).origin;
+  } catch {
+    return;
+  }
+  await measureSiteSpeed(domainId, origin);
 }

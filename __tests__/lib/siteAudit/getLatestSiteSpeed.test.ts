@@ -84,4 +84,40 @@ describe('measureDomainSiteSpeed', () => {
     expect(calledUrl).toContain('url=https%3A%2F%2Fidztech.pl');
     expect(mockQuery.mock.calls.some((c) => String(c[0]).includes('INSERT INTO site_speed_measurements'))).toBe(true);
   });
+
+  const okPsi = () => ({
+    ok: true,
+    json: async () => ({ lighthouseResult: { categories: { performance: { score: 0.5 } }, audits: {} } }),
+  });
+  const withDomain = (domain: string) => mockQuery.mockImplementation((sql: string) =>
+    Promise.resolve(String(sql).includes('SELECT domain FROM domain') ? [{ domain }] : []));
+
+  it('keeps the stored scheme and measures only the homepage (drops any path)', async () => {
+    process.env.PAGESPEED_API_KEY = 'k';
+    global.fetch = jest.fn().mockResolvedValue(okPsi());
+    withDomain('http://idztech.pl/blog/post'); // deep URL, http scheme
+    await measureDomainSiteSpeed(3);
+    const calledUrl = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(calledUrl).toContain('url=http%3A%2F%2Fidztech.pl'); // scheme kept, path gone
+    expect(calledUrl).not.toContain('blog');
+  });
+
+  it('does not persist a PSI score outside 0–1', async () => {
+    process.env.PAGESPEED_API_KEY = 'k';
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ lighthouseResult: { categories: { performance: { score: 1.5 } }, audits: {} } }),
+    });
+    withDomain('idztech.pl');
+    await expect(measureDomainSiteSpeed(3)).rejects.toThrow();
+    expect(mockQuery.mock.calls.some((c) => String(c[0]).includes('INSERT INTO site_speed_measurements'))).toBe(false);
+  });
+
+  it('does not persist and surfaces the error when PSI answers non-ok', async () => {
+    process.env.PAGESPEED_API_KEY = 'k';
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({ error: { message: 'quota' } }) });
+    withDomain('idztech.pl');
+    await expect(measureDomainSiteSpeed(3)).rejects.toThrow('quota');
+    expect(mockQuery.mock.calls.some((c) => String(c[0]).includes('INSERT INTO site_speed_measurements'))).toBe(false);
+  });
 });
