@@ -1,0 +1,51 @@
+pages/api/articles/index.ts
+  s_c7c90ce5d12296::t_7f2c02a921e648 159-161
+  s_c7c90ce5d12296::t_3cc188342244da 9
+components/siteAudit/SiteSpeedCard.tsx
+  s_c7c90ce5d12296::t_ea508c471eff6d 22-23,25,45,78,80-83
+styles/globals.css
+  s_c7c90ce5d12296::t_ea15d6b074e4d9 9827,9831,9834-9838
+services/siteAudit.ts
+  s_c7c90ce5d12296::t_5769c5113c6d12 1
+components/koala/product/TickRingWidget.tsx
+  s_c7c90ce5d12296::t_855349fae4e29b 94,96-101
+  s_c7c90ce5d12296::t_28905186e78fc8 43
+  s_c7c90ce5d12296::t_d94b937f979317 44
+  s_c7c90ce5d12296::t_3479b1de2387ac 1
+  s_c7c90ce5d12296::t_5f48a4b0d721fd 81-82
+__tests__/lib/contentPlanner/reviewOutline.test.ts
+  s_c7c90ce5d12296::t_832a833dcf1d96 48-51,53-72
+  s_c7c90ce5d12296::t_056b674eb9209d 3-4
+  s_c7c90ce5d12296::t_8ad16cf4b3fe39 52
+__tests__/components/siteAuditCards.test.tsx
+  s_c7c90ce5d12296::t_3fa3e24d37f81d 28-37
+  s_c7c90ce5d12296::t_f603c36932374b 58-59,61-62
+components/siteAudit/SiteAuditOverview.tsx
+  s_c7c90ce5d12296::t_dc749246715044 224-242
+  s_c7c90ce5d12296::t_4c5b56f06e5ab0 345,347,350
+  s_c7c90ce5d12296::t_8e0f5eff5fec62 324-326
+  s_c7c90ce5d12296::t_5f76451af2676a 450-452
+  s_c7c90ce5d12296::t_0f61b99b349992 244
+src/infrastructure/cron/domainLock.ts
+  s_c7c90ce5d12296::t_903d02c14ade0a 29-31
+  s_c7c90ce5d12296::t_fec1cd78597401 62-63,66-67
+src/infrastructure/contentPlanner/reviewOutline.ts
+  s_c7c90ce5d12296::t_53d22d17945847 110-112,114-129
+  s_c7c90ce5d12296::t_c0452eac61a43f 104-109,113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "59dfeeb25044aefbe2386cc6f44c6a011dffd59d",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
