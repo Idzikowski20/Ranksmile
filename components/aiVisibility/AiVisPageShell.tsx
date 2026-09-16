@@ -12,6 +12,8 @@ import { Button, ToolRibbon } from '../koala/core';
 import type { PromptOption } from './types';
 import { useAiVisScanStatus } from '../../services/aiVisibility';
 import { useFetchDomains } from '../../services/domains';
+import { useDomainBusy } from '../../services/domainPipeline';
+import DomainBusyNotice from '../dashboard/DomainBusyNotice';
 import { slugToDomain } from '../../utils/slugToDomain';
 
 /**
@@ -60,6 +62,8 @@ const AiVisPageShell = ({
   const domains = domainsData?.domains || [];
 
   const { ready } = useAiVisibilityGuard(slug);
+  // The setup pipeline rewrites the domain tables this page reads; wait it out.
+  const busy = useDomainBusy(slug);
   const { data: scan } = useAiVisScanStatus(ready ? slug : undefined);
   // Sources/brands/profiles are drained after the scan row says `completed`, so the bar
   // must outlive that flip — isScanBusy covers every outstanding phase.
@@ -103,7 +107,7 @@ const AiVisPageShell = ({
           </ToolRibbon>
         )}
       >
-        {ready ? children({ crunching: !!crunching }) : (
+        {busy ? <DomainBusyNotice dashboardHref="/dashboard" /> : ready ? children({ crunching: !!crunching }) : (
           loadingFallback ?? (
             <div style={{ borderRadius: 12, padding: 24, background: '#fff' }}>
               <SkeletonBars />
@@ -112,7 +116,7 @@ const AiVisPageShell = ({
         )}
       </DomainSubLayout>
 
-      <ScanProgressBar visible={!!crunching} scan={scan} />
+      <ScanProgressBar visible={!busy && !!crunching} scan={scan} />
     </AppShell>
   );
 };

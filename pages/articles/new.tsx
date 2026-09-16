@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
-import { deriveActiveId, resolveActiveDomain } from '@/src/core/domain/navigation/activeWorkspace';
+import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { useFetchDomains } from '../../services/domains';
+import { useDomainBusy } from '../../services/domainPipeline';
+import DomainBusyNotice from '../../components/dashboard/DomainBusyNotice';
 import { useWorkspaces } from '../../services/workspaces';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
@@ -53,6 +55,7 @@ const NewContentPage: NextPage = () => {
    */
   const selectedDomain = resolveActiveDomain(domains, activeWsId, activeWorkspace?.domain) ?? null;
   const domainId = selectedDomain?.ID ?? 0;
+  const busy = useDomainBusy(selectedDomain?.slug);
   const selectedDomainStr = selectedDomain?.domain || '';
 
   useEffect(() => {
@@ -163,6 +166,14 @@ const NewContentPage: NextPage = () => {
             </div>
           </section>
         </div>
+      </WizardShell>
+    );
+  }
+
+  if (busy) {
+    return (
+      <WizardShell title="New Content">
+        <DomainBusyNotice dashboardHref={workspaceHref(activeWsId, '/dashboard')} />
       </WizardShell>
     );
   }

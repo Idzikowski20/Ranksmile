@@ -31,6 +31,21 @@ export function useSetupStatus(slug: string | null | undefined) {
    );
 }
 
+/** The setup pipeline holds the domain: queued, running, or materialising its result. */
+export function isSetupBusy(setup?: SetupStatus): boolean {
+   return !!setup && ['queued', 'running', 'finalizing'].includes(setup.status);
+}
+
+/**
+ * Whether content creation and AI Visibility are paused for this domain. Same poll as
+ * the progress pill, so the moment the pill goes the pages unlock. Undefined slug or a
+ * status not yet loaded reads as free — the server answers 409 either way.
+ */
+export function useDomainBusy(slug: string | null | undefined): boolean {
+   const { data } = useSetupStatus(slug);
+   return isSetupBusy(data);
+}
+
 export function useRunSetup() {
    const qc = useQueryClient();
    return useMutation(

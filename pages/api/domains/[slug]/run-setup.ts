@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import { enqueueDomainSetup, kickDomainSetup } from '@/src/infrastructure/cron/domainPipeline';
+import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import db from '../../../../database/database';
@@ -17,6 +18,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
    const domainId = (ownership as { ID: number }).ID;
+   if (await rejectIfDomainBusy(res, domainId, 'ai_visibility_scan')) return undefined;
    try {
       const jobId = await enqueueDomainSetup(domainId);
       const statusRows = await db.query<{ status: string }>(

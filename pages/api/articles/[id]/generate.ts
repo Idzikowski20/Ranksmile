@@ -3,6 +3,7 @@
 // reusing its target keyword + analysis. Planner First: Article Execution Plan
 // must pass Plan Validator before the Python Write Engine is kicked off.
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { QueryTypes } from 'sequelize';
 import axios from 'axios';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
@@ -220,6 +221,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!article) return rejectClaim(404, { error: 'Article not found' });
     const keyword = article.target_keyword;
     if (!keyword) return rejectClaim(400, { error: 'Article has no target keyword' });
+    if (await rejectIfDomainBusy(res, article.domain_id)) return undefined;
     const locale = await resolveContentLocale({ domainId: article.domain_id, articleId: articleIdNum, bodyLanguage: language });
     const lang = article.language || locale.languageCode;
 

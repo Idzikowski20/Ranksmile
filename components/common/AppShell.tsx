@@ -5,6 +5,7 @@ import { registerMotionPlugins } from '@/components/motion/gsap';
 import { useRouteTransition } from '@/components/motion/useRouteTransition';
 import { AppBanner, KoalaHeader, KoalaSidebar, useAppBanner } from '../koala/shell';
 import MobileSidebar from './MobileSidebar';
+import DomainSetupWatcher from '../dashboard/DomainSetupWatcher';
 
 type AppShellProps = {
   domains?: DomainType[];
@@ -77,6 +78,8 @@ const AppShell = ({
         onClose={() => setMobileNavOpen(false)}
         domains={domains}
       />
+      {/* The domain-analysis pill follows the user across every page of the shell. */}
+      <DomainSetupWatcher domains={domains} />
     </div>
   );
 };

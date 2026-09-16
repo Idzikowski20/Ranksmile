@@ -1,6 +1,7 @@
 // POST /api/articles/generate-outline
 // Generates a ready-to-use brief from competitor structures + brand + AI gaps.
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '@/src/infrastructure/ai/aiBudget';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
@@ -89,6 +90,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       `SELECT competitor_outlines_cache, domain_id, ai_info_to_cover FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
       [articleId],
     );
+    if (row?.domain_id && await rejectIfDomainBusy(res, row.domain_id)) return undefined;
     if (!compList.length && row?.competitor_outlines_cache) {
       const cached = safeJsonParse<CachedOutlines>(row.competitor_outlines_cache, {});
       compList = cached.competitors || [];
