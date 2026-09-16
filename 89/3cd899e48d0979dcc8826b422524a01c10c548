@@ -1,0 +1,25 @@
+src/infrastructure/cron/domainPipeline.ts
+  s_c7c90ce5d12296::t_25d272675f0bc8 404
+  s_c7c90ce5d12296::t_34b658fb028191 428,430-432,441
+  s_c7c90ce5d12296::t_82853c3b607cd3 27-41
+src/infrastructure/siteAudit/siteSpeed.ts
+  s_c7c90ce5d12296::t_32316d386f7730 123-131
+__tests__/lib/siteAudit/getLatestSiteSpeed.test.ts
+  s_c7c90ce5d12296::t_aac109926b9b65 87-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "893cd899e48d0979dcc8826b422524a01c10c548",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
