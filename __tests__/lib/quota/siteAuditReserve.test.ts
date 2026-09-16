@@ -2,6 +2,7 @@ import {
   reserveSiteAuditRun,
   closeSiteAuditRun,
   releaseSiteAuditRun,
+  releaseSiteAuditReservationById,
   siteAuditIdempotencyKey,
 } from '@/src/infrastructure/quota/siteAudit';
 import {
@@ -69,4 +70,9 @@ it('is a no-op on close when there is no active reservation', async () => {
   mocked.findActiveReservationByRef.mockResolvedValue(undefined);
   await closeSiteAuditRun(3, 'dsetup_3');
   expect(mocked.closePerRunReservation).not.toHaveBeenCalled();
+});
+
+it('releases a specific reservation by id (loser of a rerun race)', async () => {
+  await releaseSiteAuditReservationById(42);
+  expect(mocked.releaseReservation).toHaveBeenCalledWith(42);
 });

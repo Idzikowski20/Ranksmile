@@ -1,4 +1,4 @@
-import { deriveStages, enqueueDomainSetup, claimJob, materializeDomainSetup, restoreDomainSetupJob } from '@/src/infrastructure/cron/domainPipeline';
+import { deriveStages, enqueueDomainSetup, claimJob, materializeDomainSetup, resetDomainSetupRun, domainSetupActiveFresh } from '@/src/infrastructure/cron/domainPipeline';
 import db from '../../database/database';
 
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), transaction: jest.fn() } }));
@@ -56,56 +56,58 @@ describe('enqueueDomainSetup', () => {
     await expect(enqueueDomainSetup(99)).rejects.toThrow('permission denied');
   });
 
-  it('resets a finished job back to queued on rerun and reports it runnable', async () => {
-    mockQuery.mockResolvedValueOnce(sel([{ status: 'done' }])); // lookup → done
-    mockQuery.mockResolvedValueOnce([[], {}]); // UPDATE reset
-    mockQuery.mockResolvedValueOnce(sel([{ status: 'queued' }])); // re-read → queued
-    const { jobId, runnable } = await enqueueDomainSetup(99, { reset: true });
-    expect(jobId).toBe('dsetup_99');
-    expect(runnable).toBe(true);
-    expect(String(mockQuery.mock.calls[1][0])).toContain('UPDATE analysis_jobs');
-  });
-
-  it('leaves a fresh in-flight run alone on rerun and reports it not runnable', async () => {
-    mockQuery.mockResolvedValueOnce(sel([{ status: 'running' }])); // lookup → running
-    mockQuery.mockResolvedValueOnce([[], {}]); // UPDATE matches nothing (fresh)
-    mockQuery.mockResolvedValueOnce(sel([{ status: 'running' }])); // still running
-    const { runnable } = await enqueueDomainSetup(99, { reset: true });
-    expect(runnable).toBe(false);
-  });
-
-  it('resets a job stuck finalizing (crashed mid-materialization) so rerun is not blocked forever', async () => {
-    mockQuery.mockResolvedValueOnce(sel([{ status: 'finalizing' }])); // lookup → finalizing
-    mockQuery.mockResolvedValueOnce([[], {}]); // UPDATE reset (stale match)
-    mockQuery.mockResolvedValueOnce(sel([{ status: 'queued' }])); // re-read → queued
-    const { runnable } = await enqueueDomainSetup(99, { reset: true });
-    expect(runnable).toBe(true);
-    expect(String(mockQuery.mock.calls[1][0])).toContain("'finalizing'");
-  });
-
-  it('reports the prior status so a rejected rerun can be rolled back', async () => {
-    mockQuery.mockResolvedValueOnce(sel([{ status: 'done' }]));
-    mockQuery.mockResolvedValueOnce([[], {}]);
+  it('reports an existing queued job as runnable and never inserts', async () => {
     mockQuery.mockResolvedValueOnce(sel([{ status: 'queued' }]));
-    const { priorStatus } = await enqueueDomainSetup(99, { reset: true });
-    expect(priorStatus).toBe('done');
+    const { runnable } = await enqueueDomainSetup(99);
+    expect(runnable).toBe(true);
+    expect(mockQuery.mock.calls.every((c: unknown[]) => !String((c as unknown[])[0]).includes('INSERT INTO analysis_jobs'))).toBe(true);
   });
 });
 
-describe('restoreDomainSetupJob', () => {
-  it('restores the prior terminal status, but only while the row is still the reset queued one', async () => {
-    mockQuery.mockResolvedValue([[], {}]);
-    await restoreDomainSetupJob(99, 'done');
-    const sql = String(mockQuery.mock.calls[0][0]);
-    expect(sql).toContain('UPDATE analysis_jobs SET status = ?');
-    expect(sql).toContain("status = 'queued'");
-    expect(mockQuery.mock.calls[0][1].replacements).toEqual(['done', 'dsetup_99']);
+describe('domainSetupActiveFresh', () => {
+  it('is true for a recent running job', async () => {
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'running', updated_at: new Date().toISOString() }]));
+    expect((await domainSetupActiveFresh(99)).activeFresh).toBe(true);
+  });
+  it('is false for a terminal job', async () => {
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'done', updated_at: new Date().toISOString() }]));
+    expect((await domainSetupActiveFresh(99)).activeFresh).toBe(false);
+  });
+  it('is false for a stale (crashed) running job', async () => {
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'running', updated_at: new Date(Date.now() - 60 * 60 * 1000).toISOString() }]));
+    expect((await domainSetupActiveFresh(99)).activeFresh).toBe(false);
+  });
+});
+
+describe('resetDomainSetupRun', () => {
+  it('wins when its own token sticks on the reset row', async () => {
+    mockQuery.mockResolvedValueOnce([[], {}]); // UPDATE reset stamped with runKey
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'queued', locked_by: 'tok-1' }])); // re-read → ours
+    expect(await resetDomainSetupRun(99, 'tok-1')).toBe(true);
+    const upd = String(mockQuery.mock.calls[0][0]);
+    expect(upd).toContain('UPDATE analysis_jobs');
+    expect(upd).toContain("'finalizing'"); // stale finalizing is resettable
   });
 
-  it('drops the row when the reset was a first-ever insert (no prior status)', async () => {
-    mockQuery.mockResolvedValue([[], {}]);
-    await restoreDomainSetupJob(99, null);
-    expect(String(mockQuery.mock.calls[0][0])).toContain('DELETE FROM analysis_jobs');
+  it('loses when a concurrent rerun stamped its token first', async () => {
+    mockQuery.mockResolvedValueOnce([[], {}]);
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'queued', locked_by: 'other-tok' }])); // someone else won
+    expect(await resetDomainSetupRun(99, 'tok-1')).toBe(false);
+  });
+
+  it('inserts and wins when no job row exists yet', async () => {
+    mockQuery.mockResolvedValueOnce([[], {}]); // UPDATE matches nothing
+    mockQuery.mockResolvedValueOnce(sel([])); // re-read → absent
+    mockQuery.mockResolvedValueOnce([[], {}]); // INSERT ok
+    expect(await resetDomainSetupRun(99, 'tok-1')).toBe(true);
+    expect(String(mockQuery.mock.calls[2][0])).toContain('INSERT INTO analysis_jobs');
+  });
+
+  it('loses when a concurrent insert wins the PK race', async () => {
+    mockQuery.mockResolvedValueOnce([[], {}]);
+    mockQuery.mockResolvedValueOnce(sel([])); // absent
+    mockQuery.mockRejectedValueOnce(new Error('UNIQUE constraint failed: analysis_jobs.id'));
+    expect(await resetDomainSetupRun(99, 'tok-1')).toBe(false);
   });
 });
 

@@ -69,3 +69,11 @@ export async function releaseSiteAuditRun(domainId: number, jobId: string): Prom
     await releaseReservation(existing.id);
   }
 }
+
+/**
+ * Release one reservation by id — used to clean up the reservation of a rerun that lost the
+ * atomic job reset race, so two overlapping reruns never leave a reservation dangling.
+ */
+export async function releaseSiteAuditReservationById(reservationId: number): Promise<void> {
+  await releaseReservation(reservationId);
+}
