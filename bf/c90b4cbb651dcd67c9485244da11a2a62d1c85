@@ -1,0 +1,30 @@
+src/infrastructure/siteAudit/siteSpeed.ts
+  s_c7c90ce5d12296::t_f463f41e8fdff3 108-125
+__tests__/lib/siteAudit/getLatestSiteSpeed.test.ts
+  s_c7c90ce5d12296::t_0d7fe743568455 50-87
+  s_c7c90ce5d12296::t_f2b5fe7f0ab47a 3
+  s_c7c90ce5d12296::t_f8ec7a84dc8cb8 2
+src/infrastructure/cron/domainPipeline.ts
+  s_c7c90ce5d12296::t_0faa2f3f0f9aa1 367-368,371
+  s_c7c90ce5d12296::t_d8e3adcb8f1620 386-388,398-408
+  s_c7c90ce5d12296::t_6edc85238851d5 348-352
+  s_c7c90ce5d12296::t_e8a677269b1f30 10
+pages/api/articles/job-progress.ts
+  s_c7c90ce5d12296::t_ca1cc053683334 215-220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "bfc90b4cbb651dcd67c9485244da11a2a62d1c85",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
