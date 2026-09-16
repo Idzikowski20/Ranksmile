@@ -1,0 +1,30 @@
+__tests__/lib/quota/siteAuditReserve.test.ts
+  s_c7c90ce5d12296::t_256dee5cc0fe03 74-78
+  s_c7c90ce5d12296::t_b501c19ec92d42 5
+src/infrastructure/cron/domainPipeline.ts
+  s_c7c90ce5d12296::t_3d1d0cb45101f5 89,94-98,100-107,109-110,112-121,125-130,132-133,135-138,140-165
+pages/api/domains/[slug]/run-setup.ts
+  s_c7c90ce5d12296::t_95f9b4574e3c9b 3
+  s_c7c90ce5d12296::t_6d4bd37f599b82 22-24,26,28-32,34,39-45
+src/infrastructure/quota/siteAudit.ts
+  s_c7c90ce5d12296::t_33793e9fa0e4bf 72-79
+__tests__/lib/domainPipeline.test.ts
+  s_c7c90ce5d12296::t_717c8c9bf080cf 59-61,63,65,67-78,80,82-89,92,94-95,98-103,106-110
+  s_c7c90ce5d12296::t_21cb0c46f28d45 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6b6ee0e5189f5ff2e4d2b475f57986b54c8b49e5",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
