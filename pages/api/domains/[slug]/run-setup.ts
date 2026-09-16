@@ -1,9 +1,9 @@
+import { randomUUID } from 'crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { QueryTypes } from 'sequelize';
-import { enqueueDomainSetup, kickDomainSetup } from '@/src/infrastructure/cron/domainPipeline';
+import { domainSetupActiveFresh, resetDomainSetupRun, kickDomainSetup } from '@/src/infrastructure/cron/domainPipeline';
+import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
-import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
@@ -17,25 +17,40 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
    const domainId = (ownership as { ID: number }).ID;
+   if (await rejectIfDomainBusy(res, domainId, 'ai_visibility_scan')) return undefined;
    try {
-      const jobId = await enqueueDomainSetup(domainId);
-      const statusRows = await db.query<{ status: string }>(
-         'SELECT status FROM analysis_jobs WHERE id = ? LIMIT 1',
-         { replacements: [jobId], type: QueryTypes.SELECT },
-      );
-      if (statusRows[0]?.status === 'done') {
-         void import('@/src/infrastructure/cron/scoreDomainPages')
-            .then((m) => m.scoreDomainPages(domainId))
-            .catch((err) => { console.warn('[run-setup] rescore failed:', err); });
-         return res.status(202).json({ jobId, rescoring: true });
-      }
-      const { reserveSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
+      // Don't disturb a fresh in-flight run — just report it.
+      const { jobId, activeFresh } = await domainSetupActiveFresh(domainId);
+      if (activeFresh) return res.status(202).json({ jobId, alreadyRunning: true });
+
+      const { reserveSiteAuditRun, releaseSiteAuditReservationById } = await import('@/src/infrastructure/quota/siteAudit');
       const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
+
+      // Reserve BEFORE touching the job: a plan-limit reject leaves the completed job (and
+      // its result/metadata) untouched — no phantom-queued row, nothing to roll back.
+      const runKey = randomUUID();
+      let reservationId: number;
       try {
-         await reserveSiteAuditRun(domainId, jobId, userId);
+         ({ reservationId } = await reserveSiteAuditRun(domainId, jobId, runKey, userId));
       } catch (e) {
          if (isPlanLimitError(e)) return res.status(402).json(planLimitBody(e));
          throw e;
+      }
+
+      // Atomic reset stamped with runKey. Concurrent reruns race here; only the winner runs,
+      // and a loser releases its own (now redundant) reservation so nothing dangles. If the
+      // reset itself errors, release the reservation too so a failed run never leaks quota
+      // until expiry — any row it may have queued is left for staleness/the next rerun.
+      let won: boolean;
+      try {
+         won = await resetDomainSetupRun(domainId, runKey);
+      } catch (e) {
+         await releaseSiteAuditReservationById(reservationId).catch(() => {});
+         throw e;
+      }
+      if (!won) {
+         await releaseSiteAuditReservationById(reservationId).catch(() => {});
+         return res.status(202).json({ jobId, alreadyRunning: true });
       }
       void kickDomainSetup(jobId);
       return res.status(202).json({ jobId });

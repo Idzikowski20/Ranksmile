@@ -7,9 +7,11 @@ import { getSiteAuditPageLimit, resolvePlanSlug } from '@/src/infrastructure/bil
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { isPageSpeedConfigured } from '@/src/infrastructure/siteAudit/siteSpeed';
 import { getOptimizeRecommendations } from '@/src/core/application/recommendations/getOptimizeRecommendations';
 import { createSnapshotRepository } from '@/src/infrastructure/gsc/snapshotRepository';
 import { priorityFromScore } from '@/src/core/domain/recommendations/opportunityScore';
+import { seedsFromBrandKnowledge } from '@/src/core/domain/setup/brandKnowledgeSeeds';
 import { loadWriteRecommendations } from '@/src/infrastructure/recommendations/loadWriteRecommendations';
 
 // ── Integration orchestration (GSC + sidecar kick) ────────────────────────
@@ -21,6 +23,21 @@ import { searchconsole_v1 } from '@googleapis/searchconsole';
 export type StageKey = 'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations';
 export const STAGE_ORDER: StageKey[] = ['gsc', 'keywords', 'topics', 'competitors', 'recommendations'];
 const STALE_MS = 10 * 60 * 1000;
+
+/**
+ * A stored timestamp → epoch ms. Postgres returns a Date; SQLite returns an offset-less
+ * 'YYYY-MM-DD HH:MM:SS' (written by CURRENT_TIMESTAMP, which is UTC) that `new Date(...)`
+ * would misread as local time, skewing time-window comparisons on a non-UTC host. Tag it
+ * as UTC first. Returns 0 for a missing/unparseable value.
+ */
+function dbTimeMs(v: string | Date | null | undefined): number {
+   if (!v) return 0;
+   if (v instanceof Date) return v.getTime();
+   const s = v.trim();
+   const iso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : `${s.replace(' ', 'T')}Z`;
+   const t = new Date(iso).getTime();
+   return Number.isNaN(t) ? 0 : t;
+}
 
 export interface PageAuditResult {
    url: string; path?: string; title?: string; score?: number; word_count?: number;
@@ -67,12 +84,14 @@ async function selectRows<T extends object>(sql: string, repl: unknown[]): Promi
  * replace this row — out of scope here.) This is the analogue of the foundation's
  * UNIQUE-serialized provisioning: never two jobs for the same domain.
  */
-export async function enqueueDomainSetup(domainId: number): Promise<string> {
+export async function enqueueDomainSetup(
+   domainId: number,
+): Promise<{ jobId: string; runnable: boolean }> {
    await ensurePipelineTables();
    const jobId = `dsetup_${domainId}`;
-   const existing = await selectRows<{ id: string }>(
-      'SELECT id FROM analysis_jobs WHERE id = ?', [jobId]);
-   if (existing.length) return jobId; // already enqueued (queued/running/done) — reuse
+   const existing = await selectRows<{ status: string }>(
+      'SELECT status FROM analysis_jobs WHERE id = ?', [jobId]);
+   if (existing.length) return { jobId, runnable: existing[0].status === 'queued' };
    try {
       // article_id = 0 sentinel: analysis_jobs.article_id is NOT NULL on SQLite (the
       // dev fallback) and can't be dropped there; domain jobs are keyed by domain_id +
@@ -87,7 +106,63 @@ export async function enqueueDomainSetup(domainId: number): Promise<string> {
       const m = e instanceof Error ? e.message : String(e);
       if (!/unique|duplicate|primary key/i.test(m)) throw e;
    }
-   return jobId;
+   return { jobId, runnable: true };
+}
+
+/** Fresh (non-stale) queued/running/finalizing job exists — a rerun must not disturb it. */
+export async function domainSetupActiveFresh(domainId: number): Promise<{ jobId: string; activeFresh: boolean }> {
+   await ensurePipelineTables();
+   const jobId = `dsetup_${domainId}`;
+   const rows = await selectRows<{ status: string; updated_at: string | Date | null }>(
+      "SELECT status, updated_at FROM analysis_jobs WHERE id = ? AND job_type = 'domain_setup'", [jobId]);
+   const r = rows[0];
+   const active = !!r && ['queued', 'running', 'finalizing'].includes(r.status);
+   const fresh = active && Date.now() - dbTimeMs(r.updated_at) < STALE_MS;
+   return { jobId, activeFresh: fresh };
+}
+
+/**
+ * Make a rerun runnable: flip a finished/crashed job back to queued (or insert one), stamped
+ * with `runKey` in locked_by so the winner is identifiable. Returns true only for the caller
+ * that actually flipped/inserted the row — concurrent reruns race here and only one wins, so
+ * the losers can release their now-redundant reservation. A fresh in-flight run is left alone
+ * (returns false). Must be called AFTER quota is reserved: on a reserve failure the job is
+ * never touched, so there is no phantom-queued row to roll back and no lost result/metadata.
+ */
+export async function resetDomainSetupRun(domainId: number, runKey: string): Promise<boolean> {
+   await ensurePipelineTables();
+   const jobId = `dsetup_${domainId}`;
+   const isPg = !!process.env.DATABASE_URL;
+   const cutoff = new Date(Date.now() - STALE_MS);
+   const cutoffParam = isPg ? cutoff.toISOString() : cutoff.toISOString().slice(0, 19).replace('T', ' ');
+   const staleExpr = isPg ? 'updated_at < ?' : 'datetime(updated_at) < datetime(?)';
+   await db.query(
+      `UPDATE analysis_jobs
+          SET status='queued', attempts=0, locked_at=NULL, locked_by=?, error=NULL,
+              current_stage=NULL, stage_progress=0, result=NULL,
+              created_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND job_type='domain_setup'
+          AND (status IN ('done','failed') OR (status IN ('queued','running','finalizing') AND ${staleExpr}))`,
+      { replacements: [runKey, jobId, cutoffParam] });
+   const after = await selectRows<{ status: string; locked_by: string | null }>(
+      'SELECT status, locked_by FROM analysis_jobs WHERE id = ?', [jobId]);
+   if (after.length) {
+      // We won iff our token stuck (a concurrent rerun that flipped it first stamps its own).
+      return after[0].status === 'queued' && after[0].locked_by === runKey;
+   }
+   // No row existed — first-ever run for this domain. Insert stamped with our token; a
+   // concurrent insert collides and we lose that race.
+   try {
+      await db.query(
+         `INSERT INTO analysis_jobs (id, article_id, domain_id, job_type, status, locked_by, created_at, updated_at)
+          VALUES (?, 0, ?, 'domain_setup', 'queued', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+         { replacements: [jobId, domainId, runKey] });
+      return true;
+   } catch (e) {
+      const m = e instanceof Error ? e.message : String(e);
+      if (/unique|duplicate|primary key/i.test(m)) return false; // lost the insert race
+      throw e;
+   }
 }
 
 /** Atomic claim: conditional UPDATE + dialect-safe SELECT-back. true only if we own it. */
@@ -268,11 +343,18 @@ async function gscStageAndSeeds(jobId: string, domainId: number): Promise<{ seed
       }
    } catch { /* GSC optional */ }
    if (!seeds.length) {
-      // Fallback: site_context title/description, then brand_knowledge.
-      const ctx = await selectRows<{ title: string; description: string }>('SELECT title, description FROM site_context WHERE domain_id = ? LIMIT 1', [domainId]);
       const bk = await selectRows<{ brand_knowledge: string }>('SELECT brand_knowledge FROM domain WHERE "ID" = ? LIMIT 1', [domainId]);
-      const text = [ctx[0]?.title, ctx[0]?.description, (bk[0]?.brand_knowledge || '').slice(0, 400)].filter(Boolean).join(' ');
-      seeds = text ? [domainName.split('.')[0], ...text.split(/[^a-zA-Z0-9ąćęłńóśźż]+/).filter((w) => w.length > 4)].slice(0, 8) : [domainName.split('.')[0]];
+      const brandKnowledge = bk[0]?.brand_knowledge || '';
+      // The Brand Knowledge draft names the topics this site should rank for; they are
+      // already phrases, so they go to Suggest and the SERP as-is.
+      seeds = seedsFromBrandKnowledge(brandKnowledge);
+      if (!seeds.length) {
+         // Last resort: whatever prose we have, split into words. Coarse — a site with no
+         // GSC, no Brand Knowledge and no scraped context has nothing better to offer.
+         const ctx = await selectRows<{ title: string; description: string }>('SELECT title, description FROM site_context WHERE domain_id = ? LIMIT 1', [domainId]);
+         const text = [ctx[0]?.title, ctx[0]?.description, brandKnowledge.slice(0, 400)].filter(Boolean).join(' ');
+         seeds = text ? [domainName.split('.')[0], ...text.split(/[^a-zA-Z0-9ąćęłńóśźż]+/).filter((w) => w.length > 4)].slice(0, 8) : [domainName.split('.')[0]];
+      }
    }
    await emit(jobId, 'gsc', 100, 'Search Console and site data ready');
    return { seeds: Array.from(new Set(seeds)).slice(0, 30), pages: Array.from(new Set(pages)) };
@@ -309,6 +391,11 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
             if (existing) siteAuditPages = Number(existing.quantity);
          }
       } catch { /* default 100 */ }
+      // Site Speed Score (PageSpeed Insights) is NOT measured here. This runner is a
+      // fire-and-forget task launched off run-setup, and its continuation after the long
+      // sidecar fetch is not guaranteed to survive the HTTP response — the crawl finishes
+      // because the sidecar owns it and calls back job-progress, so the measurement is
+      // triggered there instead (measureDomainSiteSpeed), where the callback request runs.
       const body = { jobId, nextjsUrl: nextjsUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, language, limits: { keywords: 20, competitorsPerKeyword: 10, site_audit_pages: siteAuditPages } } };
       const resp = await fetch(`${sidecarUrl()}/pipeline/domain-setup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' }, body: JSON.stringify(body) });
       if (!resp.ok) await failJob(jobId, 'keywords', `sidecar ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
@@ -321,11 +408,15 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
 /** For setup-status: latest domain_setup job + derived stages. */
 export async function getSetupStatus(domainId: number) {
    await ensurePipelineTables();
-   type JobRow = { status: string; current_stage: string | null; stage_progress: number | null; error: string | null; result: string | Record<string, unknown> | null };
+   type JobRow = {
+      status: string; current_stage: string | null; stage_progress: number | null;
+      error: string | null; result: string | Record<string, unknown> | null;
+      created_at: string | Date | null; updated_at: string | Date | null;
+   };
    const rows = await selectRows<JobRow>(
-      `SELECT status, current_stage, stage_progress, error, result FROM analysis_jobs
+      `SELECT status, current_stage, stage_progress, error, result, created_at, updated_at FROM analysis_jobs
        WHERE domain_id = ? AND job_type = 'domain_setup' ORDER BY created_at DESC LIMIT 1`, [domainId]);
-   if (!rows.length) return { status: 'none' as const, currentStage: null, stagePercent: 0, stages: deriveStages('none', null, 0).stages, error: null, auditCounts: null };
+   if (!rows.length) return { status: 'none' as const, currentStage: null, stagePercent: 0, stages: deriveStages('none', null, 0).stages, error: null, auditCounts: null, siteSpeed: 'off' as const };
    const j = rows[0];
    const d = deriveStages(j.status, j.current_stage, j.stage_progress ?? 0);
    // audit_counts is carried inside the job's stored result JSON (no extra column needed).
@@ -336,5 +427,31 @@ export async function getSetupStatus(domainId: number) {
       const ac = parsed && (parsed as Record<string, unknown>).audit_counts;
       if (ac && typeof ac === 'object') auditCounts = ac as { audited: number; skipped: number; total: number };
    } catch { auditCounts = null; }
-   return { status: j.status, currentStage: j.current_stage, stagePercent: d.stagePercent, stages: d.stages, error: j.error, auditCounts };
+
+   // Site Speed step for the campaign pill. Hidden ('off') when PSI is not configured.
+   // The measurement is triggered from the job-progress 'done' callback and lands ~30 s
+   // after the crawl, so 'running' persists through a short grace window after the job
+   // stops — that keeps the audit page polling until the score arrives, then 'done'.
+   let siteSpeed: 'off' | 'running' | 'done' = 'off';
+   if (isPageSpeedConfigured()) {
+      const active = ['queued', 'running', 'finalizing'].includes(j.status);
+      const speedRows = await selectRows<{ measured_at: string | Date | null }>(
+         'SELECT measured_at FROM site_speed_measurements WHERE domain_id = ? ORDER BY id DESC LIMIT 1', [domainId],
+      ).catch(() => [] as { measured_at: string | Date | null }[]);
+      const measuredAt = dbTimeMs(speedRows[0]?.measured_at);
+      const jobStart = dbTimeMs(j.created_at);
+      const fresh = measuredAt > 0 && measuredAt >= jobStart;
+      if (fresh) {
+         siteSpeed = 'done';
+      } else if (active) {
+         siteSpeed = 'running';
+      } else {
+         // Job finished without a fresh score yet — wait out a grace window for the
+         // post-crawl measurement, then give up so a failed measurement never hangs.
+         const updatedAt = dbTimeMs(j.updated_at);
+         const GRACE_MS = 3 * 60 * 1000;
+         siteSpeed = updatedAt > 0 && Date.now() - updatedAt < GRACE_MS ? 'running' : 'done';
+      }
+   }
+   return { status: j.status, currentStage: j.current_stage, stagePercent: d.stagePercent, stages: d.stages, error: j.error, auditCounts, siteSpeed };
 }

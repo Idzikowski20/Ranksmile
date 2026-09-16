@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { ensureAiVisibilityTables } from '@/src/infrastructure/persistence/schema/ensureAiVisibilityTables';
 import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '@/src/infrastructure/aiVisibility/aiVisibilityScan';
 import { queryOne } from '@/src/infrastructure/db/query';
@@ -23,6 +24,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
    const domain = ownership as unknown as { ID: number, domain: string };
+
+   if (await rejectIfDomainBusy(res, domain.ID, 'domain_setup')) return undefined;
 
    const cfg = await queryOne<{ id: number, priority: string | null }>('SELECT id, priority FROM ai_vis_configs WHERE domain_id = ? LIMIT 1', [domain.ID]);
    if (!cfg) return res.status(400).json({ error: 'Complete the AI Visibility setup first' });

@@ -1,18 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { authClient } from '@/src/infrastructure/auth/client';
 import { Stack } from '../koala/core/layout';
 import { Text, Heading } from '../koala/core/text';
 import Skeleton from './Skeleton';
 
-const timeGreeting = (hour: number | null): string => {
-  if (hour === null) return 'Welcome back';
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
-};
-
 interface Props {
+  /** First name when we have one; the greeting works without it. */
+  name: string;
   clicksTotal: number;
   deltaPct: number;
   hasData: boolean;
@@ -20,16 +14,9 @@ interface Props {
   clicksHref: string;
 }
 
-const DashboardGreeting = ({ clicksTotal, deltaPct, hasData, loading, clicksHref }: Props) => {
-  const [hour, setHour] = useState<number | null>(null);
-  useEffect(() => { setHour(new Date().getHours()); }, []);
-
-  const session = authClient.useSession?.();
-  const email = session?.data?.user?.email?.trim() || '';
+const DashboardGreeting = ({ name, clicksTotal, deltaPct, hasData, loading, clicksHref }: Props) => {
   const up = deltaPct >= 0;
-  const greeting = email
-    ? `${timeGreeting(hour)}! ${email} 🖐️`
-    : `${timeGreeting(hour)}!`;
+  const greeting = name ? `Hi ${name}, welcome back 👋` : 'Welcome back 👋';
 
   return (
     <Stack gap="2xl">

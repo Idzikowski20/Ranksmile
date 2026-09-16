@@ -79,6 +79,19 @@ const SiteAuditPage: NextPage = () => {
     }
   }, [setupStatus, slug, queryClient, setupQ.data?.error]);
 
+  // Site Speed can persist after the crawl is already 'done', so its own transition
+  // refreshes the overview — otherwise the completed campaign shows no speed score until
+  // the 60 s stale time lapses.
+  const siteSpeed = setupQ.data?.siteSpeed;
+  const prevSpeedRef = React.useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevSpeedRef.current;
+    prevSpeedRef.current = siteSpeed;
+    if (slug && prev === 'running' && siteSpeed === 'done') {
+      void queryClient.invalidateQueries(['site-audit', slug]);
+    }
+  }, [siteSpeed, slug, queryClient]);
+
   const auditQ = useSiteAuditOverview(slug);
   const data = auditQ.data;
   const issueDetailQ = useSiteAuditIssueDetail(slug, selectedIssueId ?? undefined);
@@ -113,8 +126,8 @@ const SiteAuditPage: NextPage = () => {
   const rerunCampaign = async () => {
     if (!slug || auditing || runSetup.isLoading) return;
     try {
-      await runSetup.mutateAsync(slug);
-      toast.success('Site audit crawl queued');
+      const r = await runSetup.mutateAsync(slug);
+      toast.success(r?.alreadyRunning ? 'Audit already running' : 'Site audit queued');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Rerun failed');
     }
@@ -124,7 +137,7 @@ const SiteAuditPage: NextPage = () => {
     ? (setupStatus === 'queued' ? 'Queued…' : `Auditing… ${setupQ.data?.stagePercent ?? 0}%`)
     : runSetup.isLoading
       ? 'Queuing…'
-      : 'Rerun campaign';
+      : 'Rerun audit';
 
   const filters = (
     <div className="koala-page-filters" style={{ marginBottom: 16 }}>
@@ -268,6 +281,7 @@ const SiteAuditPage: NextPage = () => {
         {data && data.hasData && tab === 'overview' && (
           <SiteAuditOverview
             data={data}
+            slug={slug}
             onViewAllIssues={() => {
               setTab('issues');
               setSelectedIssueId(null);

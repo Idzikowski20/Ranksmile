@@ -13,6 +13,7 @@ import {
 import type { PageBucket, SiteAuditOverviewPayload, ThematicReport } from '@/src/infrastructure/siteAudit/types';
 import type { SiteAuditLimitInfo } from '@/src/infrastructure/siteAudit/pageLimit';
 import { computeCrawlDeltas } from '@/src/composition/siteAudit';
+import { getLatestSiteSpeed, isPageSpeedConfigured } from '@/src/infrastructure/siteAudit/siteSpeed';
 
 const BENCHMARK_HEALTH = 92;
 
@@ -227,6 +228,8 @@ export async function buildSiteAuditOverview(
     thematicReports: buildThematic(domain, rows),
     hasData: rows.length > 0,
     setupJobStatus: job?.status ?? null,
+    siteSpeed: await getLatestSiteSpeed(domainId).catch(() => null),
+    siteSpeedEnabled: isPageSpeedConfigured(),
     planSlug: limitInfo.planSlug,
     planName: limitInfo.planName,
     canUpgradeCrawlLimit: limitInfo.canUpgradeForMore,

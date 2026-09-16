@@ -7,60 +7,33 @@ import { useQuery, useQueryClient } from 'react-query';
 import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { useStaggerReveal } from '@/components/motion/useStaggerReveal';
 import fetchJson from '@/src/infrastructure/http/fetchJson';
-import { isActionableRecommendation } from '@/src/core/domain/recommendations/actionable';
+import { authClient } from '@/src/infrastructure/auth/client';
 import DashboardLayout from '../../components/common/DashboardLayout';
-import { KoalaPage, DashboardLayout as KoalaDashboardLayout } from '../../components/koala/layout';
-import { FeedbackPopover, Card, AnalyticsMetricItem } from '../../components/koala/product';
+import { KoalaPage } from '../../components/koala/layout';
+import { FeedbackPopover } from '../../components/koala/product';
 import { Button } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
-import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSection';
+import { useProfile } from '../../services/profile';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
 import DashboardGreeting from '../../components/dashboard/DashboardGreeting';
 import PageTour from '../../components/onboarding/PageTour';
-import GetStartedCard from '../../components/dashboard/GetStartedCard';
-import QuickStartSection from '../../components/dashboard/QuickStartSection';
-import BrandPerformance from '../../components/dashboard/BrandPerformance';
-import AiVisibilityPerformance from '../../components/dashboard/AiVisibilityPerformance';
-import RecommendationsSection, { RecommendationItem } from '../../components/dashboard/RecommendationsSection';
-import RecentlyEdited, { RecentlyEditedItem } from '../../components/dashboard/RecentlyEdited';
-import LearnSection from '../../components/dashboard/LearnSection';
-import DomainSetupProgressBar, { isSetupShown } from '../../components/dashboard/DomainSetupProgressBar';
-import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
-import { useAiVisHistory } from '../../services/aiVisibility';
+import GetStartedPanel from '../../components/dashboard/GetStartedPanel';
+import ActionTiles from '../../components/dashboard/ActionTiles';
+import DashboardArticles from '../../components/dashboard/DashboardArticles';
+import type { ArticleCardData } from '../../components/articles/ArticleCard';
+import { useSetupStatus, useRunSetup, isSetupBusy } from '../../services/domainPipeline';
 
-const formatShortDate = (dateStr: string): string => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
-
-interface DashboardArticle {
-  id: number | string;
-  title: string;
-  content_score: number;
-  target_keyword?: string | null;
-  updated_at?: string | null;
-  created_at?: string | null;
-  source?: string;
-}
-interface DomainRec {
-  id: number;
-  title: string;
-  priority: string | null;
-  type: string | null;
-  url: string | null;
-  score: number | null;
-  word_count: number | null;
-}
+type DashboardArticle = ArticleCardData & { source?: string };
 
 const DashboardPage: NextPage = () => {
   const router = useRouter();
   const { data: domainsData } = useFetchDomains(router);
   const queryClient = useQueryClient();
   const { data: wsData } = useWorkspaces();
+  const { data: profile } = useProfile();
+  const session = authClient.useSession?.();
   // SSR-safe active workspace id so links carry the /workspace/<id> prefix the rest of
   // the app uses (parsed from the URL after mount; falls back to the workspaces activeId).
   const [mounted, setMounted] = useState(false);
@@ -76,6 +49,10 @@ const DashboardPage: NextPage = () => {
   const primaryDomainName = primaryDomain?.domain ?? null;
   const activeDomainSlug: string | null = primaryDomain?.slug ?? null;
 
+  const userName = mounted ? (profile?.name || session?.data?.user?.name || '') : '';
+  const firstName = userName.trim().split(/\s+/)[0] || '';
+  const author = userName ? { name: userName, avatarUrl: profile?.avatarUrl } : undefined;
+
   const { data: sitesData, isLoading: sitesLoading } = useQuery(
     ['dashboardSites', activeWsId, primaryDomainName],
     () => fetchJson('/api/sites', { domainStats: {} as Record<string, unknown> }),
@@ -88,7 +65,7 @@ const DashboardPage: NextPage = () => {
     { enabled: !!primaryDomainId, retry: false },
   );
 
-  // ── Clicks: GSC daily clicks for the active workspace's domain only ──
+  // ── Clicks: GSC daily clicks for the active workspace's domain, last 30 vs previous 30 ──
   const clickSeries = useMemo(() => {
     if (!primaryDomainName) return [];
     const stats = sitesData?.domainStats || {};
@@ -96,66 +73,27 @@ const DashboardPage: NextPage = () => {
     const chart = (stats[primaryDomainName] as StatEntry | undefined)?.chart || [];
     return chart.map((p) => ({ date: p.date, clicks: p.clicks || 0 }));
   }, [sitesData, primaryDomainName]);
-
-  // Period-over-period like Ranksmile: the last 30 days vs the previous 30 days —
-  // NOT the two halves of one window. The chart + total reflect the last 30 days.
   const recent30 = clickSeries.slice(-30);
   const prev30 = clickSeries.slice(-60, -30);
-  const points = recent30.map((p) => p.clicks);
-  const clicksTotal = points.reduce((a, b) => a + b, 0);
+  const clicksTotal = recent30.reduce((a, b) => a + b.clicks, 0);
   const prevSum = prev30.reduce((a, b) => a + b.clicks, 0);
-  const currSum = clicksTotal;
-  const deltaPct = prevSum > 0 ? Math.round(((currSum - prevSum) / prevSum) * 100) : (currSum > 0 ? 100 : 0);
+  const deltaPct = prevSum > 0 ? Math.round(((clicksTotal - prevSum) / prevSum) * 100) : (clicksTotal > 0 ? 100 : 0);
   const hasData = recent30.length > 0;
 
-  const clicksHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/dashboard');
-  const aiVisHref = workspaceHref(
-    activeWsId,
-    primaryDomain ? `/sites/${primaryDomain.slug}/ai-visibility/overview` : '/dashboard',
-  );
-  const recommendationsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/dashboard');
-  const settingsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/dashboard');
+  const site = (path: string) => workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}${path}` : '/dashboard');
+  const clicksHref = site('');
   const createHref = workspaceHref(activeWsId, '/articles/new');
-  const optimizeHref = workspaceHref(activeWsId, '/articles');
-
-  const { data: aiHistory, isLoading: aiHistoryLoading } = useAiVisHistory(activeDomainSlug ?? undefined);
-  const aiScans = useMemo(
-    () => [...(aiHistory?.scans ?? [])].reverse(),
-    [aiHistory],
-  );
-  const aiPoints = aiScans.map((s) => s.series.you?.visibilityScore ?? 0);
-  const aiScore = aiPoints[aiPoints.length - 1] ?? 0;
-  const aiPrev = aiPoints.length >= 2 ? aiPoints[aiPoints.length - 2]! : 0;
-  const aiDeltaPct = aiPrev > 0
-    ? Math.round(((aiScore - aiPrev) / aiPrev) * 100)
-    : (aiScore > 0 && aiPoints.length >= 2 ? 100 : 0);
-  const aiStartLabel = formatShortDate(aiScans[0]?.finishedAt || '');
-  const aiEndLabel = formatShortDate(aiScans[aiScans.length - 1]?.finishedAt || '');
-
-  // Domain-level recommendations produced by the setup pipeline (the scan output).
-  const { data: domainRecsData, isLoading: domainRecsLoading } = useQuery(
-    ['domainRecs', activeDomainSlug],
-    () => fetchJson(`/api/domains/${activeDomainSlug}/recommendations`, { recommendations: [] as DomainRec[] }),
-    { enabled: !!activeDomainSlug, retry: false },
-  );
-
-  // Whether the domain has a blog path configured — drives the empty-state message.
-  const { data: blogPathsData, isLoading: blogPathsLoading } = useQuery(
-    ['blogPaths', activeDomainSlug],
-    () => fetchJson(`/api/domains/blog-paths?slug=${activeDomainSlug}`, { blogPaths: [] as string[] }),
-    { enabled: !!activeDomainSlug, retry: false },
-  );
-  const hasBlogPath = (blogPathsData?.blogPaths?.length ?? 0) > 0;
+  const articlesHref = workspaceHref(activeWsId, '/articles');
 
   // ── Pipeline polling ──
-  const { data: setup, isLoading: setupLoading } = useSetupStatus(activeDomainSlug);
+  const { data: setup } = useSetupStatus(activeDomainSlug);
+  const busy = isSetupBusy(setup);
   const runSetup = useRunSetup();
 
   // Fallback kick: if no job exists yet for this domain, trigger one — but ONCE per
   // domain. The ref latch + isLoading guard stop a refetch (window focus, the done
   // invalidation, an enqueue race) from re-reading 'none' and spamming run-setup.
   const kickedRef = useRef<string | null>(null);
-  // Stagger-reveal the dashboard cards (direct children of the column) on scroll into view.
   const revealRef = useStaggerReveal<HTMLDivElement>(':scope > *');
   useEffect(() => {
     if (setup && setup.status === 'none' && activeDomainSlug
@@ -166,81 +104,21 @@ const DashboardPage: NextPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup?.status, activeDomainSlug]);
 
-  // An empty recommendation list means something different while the scan is unfinished.
-  const setupAnalysisState = setup && isSetupShown(setup)
-    ? (setup.status === 'failed' ? 'failed' as const : 'running' as const)
-    : undefined;
-
   // On transition to done, refresh the dashboard data queries
   useEffect(() => {
     if (setup?.status === 'done') {
       queryClient.invalidateQueries(['dashboardArticles', activeWsId, primaryDomainId]);
       queryClient.invalidateQueries(['dashboardSites', activeWsId, primaryDomainName]);
-      queryClient.invalidateQueries(['domainRecs', activeDomainSlug]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup?.status]);
 
-  // Until the pipeline's state is KNOWN, don't flash the empty "set blog path" prompt.
-  // Pending = the status query is still loading, or a job is about to be kicked ('none').
-  const pipelinePending = !!activeDomainSlug && (setupLoading || setup?.status === 'none');
-  // The Recommendations card stays in its skeleton until everything that feeds it has
-  // settled: articles, the domain recs/blog-path queries, and the pipeline status. This
-  // also covers the brief refetch right after the pipeline flips to 'done'.
-  const recommendationsLoading = articlesLoading
-    || pipelinePending
-    || (!!activeDomainSlug && (domainRecsLoading || blogPathsLoading));
-
-  // ── Recommendations: the domain pipeline's scan output (pages requiring optimization).
-  //    Falls back to analyzed articles with a content score when the scan produced none. ──
-  const recommendations: RecommendationItem[] = useMemo(() => {
-    const domainRecs = domainRecsData?.recommendations ?? [];
-    // optimize recs carry a snapshot score (+ word count) → score-gauge row;
-    // create recs carry a priority → priority-pill row. Drop optimize recs with a
-    // 0 (or missing) score — an unscored page is noise, not a useful recommendation.
-    const mapped: RecommendationItem[] = domainRecs
-      .filter(isActionableRecommendation)
-      .map((r) => (
-        r.type === 'optimize' || r.score != null
-          ? { id: r.id, title: r.title, type: 'optimize', score: r.score ?? 0, wordCount: r.word_count ?? undefined, href: recommendationsHref }
-          : { id: r.id, title: r.title, type: 'create', priority: r.priority || 'low', href: recommendationsHref }
-      ));
-    // Most urgent first: optimize rows (lowest content score = highest priority) ahead of
-    // create rows. `urgency` is the content score for optimize, +∞ for create (sorted last).
-    const urgency = (it: RecommendationItem) => ('priority' in it ? Number.POSITIVE_INFINITY : it.score);
-    if (mapped.length > 0) return mapped.sort((a, b) => urgency(a) - urgency(b));
-    return (articlesData?.articles ?? [])
-      .filter((a) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0)
-      .sort((a, b) => (a.content_score || 0) - (b.content_score || 0))
-      .map((a) => ({ id: a.id, title: a.title, score: a.content_score || 0, href: recommendationsHref }));
-  }, [domainRecsData, articlesData, recommendationsHref]);
-
-  const recentlyEdited: RecentlyEditedItem[] = useMemo(() => {
-    // Only real articles — exclude site_context rows AND skeleton drafts whose title is
-    // still the raw page URL (configure seeds those before analysis fills a real title).
-    const arts = (articlesData?.articles ?? []).filter(
-      (a) => a.source !== 'site_context' && a.title && !/^https?:\/\//i.test(a.title),
-    );
-    return arts
-      .slice()
-      .sort((a, b) => {
-        const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
-        const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
-        return bTime - aTime;
-      })
-      .slice(0, 3)
-      .map((a) => ({
-        id: a.id,
-        title: a.title,
-        keywords: a.target_keyword || '',
-        score: a.content_score || 0,
-        updatedAt: a.updated_at || a.created_at || '',
-        href: `/articles/${a.id}`,
-      }));
-  }, [articlesData]);
-
-  const startLabel = formatShortDate(recent30[0]?.date || '');
-  const endLabel = formatShortDate(recent30[recent30.length - 1]?.date || '');
+  // Only real articles — exclude site_context rows AND skeleton drafts whose title is
+  // still the raw page URL (configure seeds those before analysis fills a real title).
+  const articles = useMemo(
+    () => (articlesData?.articles ?? []).filter((a) => a.source !== 'site_context' && a.title && !/^https?:\/\//i.test(a.title)),
+    [articlesData],
+  );
 
   return (
     <DashboardLayout
@@ -256,137 +134,45 @@ const DashboardPage: NextPage = () => {
         </Head>
 
         <PageTour />
-        <KoalaPage maxWidth="100%">
-          <div ref={revealRef}>
-            <KoalaDashboardLayout
-              slots={[
-                {
-                  key: 'overview',
-                  span: 12,
-                  content: (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }} data-testid="dashboard-widget-row">
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                        <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
-                        <FeedbackPopover context="dashboard">
-                          {({ open, anchorRef }) => (
-                            <span ref={anchorRef as React.RefObject<HTMLSpanElement>}>
-                              <Button type="button" variant="secondary" size="sm" onClick={open}>
-                                Leave feedback
-                              </Button>
-                            </span>
-                          )}
-                        </FeedbackPopover>
-                      </div>
-                      <Card elevated style={{ padding: 24 }}>
-                        <div
-                          className="performance-metrics-grid"
-                          style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 24, width: '100%', minWidth: 0 }}
-                        >
-                          <AnalyticsMetricItem
-                            icon="CursorClick"
-                            label="Clicks"
-                            value={String(clicksTotal)}
-                            delta={sitesLoading ? null : `${deltaPct >= 0 ? '+' : ''}${deltaPct}%`}
-                            deltaPositive={deltaPct >= 0}
-                            period="Last 30 days"
-                            loading={sitesLoading}
-                          />
-                          <AnalyticsMetricItem
-                            icon="Article"
-                            label="Articles"
-                            value={String(recentlyEdited.length)}
-                            period="Last 30 days"
-                            loading={articlesLoading}
-                          />
-                          <AnalyticsMetricItem
-                            icon="Lightbulb"
-                            label="Recommendations"
-                            value={String(recommendations.length)}
-                            period="Last 30 days"
-                            loading={recommendationsLoading}
-                            last
-                          />
-                        </div>
-                      </Card>
-                      <GetStartedCard />
-                      <QuickStartSection
-                        createHref={createHref}
-                        optimizeHref={optimizeHref}
-                        recommendationsHref={recommendationsHref}
-                        recommendationsCount={recommendationsLoading ? 0 : recommendations.length}
-                      />
-                    </div>
-                  ),
-                },
-                {
-                  key: 'traffic',
-                  span: 6,
-                  content: (
-                    <BrandPerformance
-                      total={clicksTotal}
-                      deltaPct={deltaPct}
-                      points={points}
-                      startLabel={startLabel}
-                      endLabel={endLabel}
-                      clicksHref={clicksHref}
-                      loading={sitesLoading}
-                    />
-                  ),
-                },
-                {
-                  key: 'ai',
-                  span: 6,
-                  content: (
-                    <AiVisibilityPerformance
-                      score={aiScore}
-                      deltaPct={aiDeltaPct}
-                      points={aiPoints}
-                      startLabel={aiStartLabel}
-                      endLabel={aiEndLabel}
-                      href={aiVisHref}
-                      loading={aiHistoryLoading}
-                    />
-                  ),
-                },
-                {
-                  key: 'seo',
-                  span: 12,
-                  content: (
-                    <RecommendationsSection
-                      items={recommendations.slice(0, 3)}
-                      total={recommendations.length}
-                      faviconDomain={primaryDomain?.domain || ''}
-                      viewHref={recommendationsHref}
-                      loading={recommendationsLoading}
-                      coverage={setup?.auditCounts}
-                      hasBlogPath={hasBlogPath}
-                      settingsHref={settingsHref}
-                      analysis={setupAnalysisState}
-                    />
-                  ),
-                },
-                {
-                  key: 'keywords',
-                  span: 12,
-                  content: <RecentlyEdited items={recentlyEdited} loading={articlesLoading} />,
-                },
-                {
-                  key: 'tasks',
-                  span: 12,
-                  content: (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-                      <TrafficAlertsSection />
-                      <LearnSection />
-                    </div>
-                  ),
-                },
-              ]}
+        <KoalaPage maxWidth={1120}>
+          <div ref={revealRef} style={{ display: 'flex', flexDirection: 'column', gap: 32 }} data-testid="dashboard-widget-row">
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <DashboardGreeting
+                name={firstName}
+                clicksTotal={clicksTotal}
+                deltaPct={deltaPct}
+                hasData={hasData}
+                loading={sitesLoading}
+                clicksHref={clicksHref}
+              />
+              <FeedbackPopover context="dashboard">
+                {({ open, anchorRef }) => (
+                  <span ref={anchorRef as React.RefObject<HTMLSpanElement>}>
+                    <Button type="button" variant="secondary" size="sm" onClick={open}>
+                      Leave feedback
+                    </Button>
+                  </span>
+                )}
+              </FeedbackPopover>
+            </div>
+
+            <GetStartedPanel createHref={createHref} />
+
+            <ActionTiles tiles={[
+              { key: 'create', title: 'Create content', description: 'Write an article that ranks', href: createHref, icon: 'NotePencil', disabled: busy },
+              { key: 'keywords', title: 'Track keywords', description: 'Watch your Google rankings', href: site('/keyword-tracking'), icon: 'ChartLineUp' },
+              { key: 'ai', title: 'Track AI visibility', description: 'See where AI answers mention you', href: site('/ai-visibility/overview'), icon: 'Sparkle', disabled: busy },
+            ]} />
+
+            <DashboardArticles
+              articles={articles}
+              loading={articlesLoading}
+              hrefFor={(a) => workspaceHref(activeWsId, `/articles/${a.id}`)}
+              allHref={articlesHref}
+              author={author}
             />
           </div>
         </KoalaPage>
-
-        {/* The analysis runs in the sidecar; the pill only polls it (useSetupStatus above). */}
-        <DomainSetupProgressBar setup={setup} onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }} />
 
         {showAddDomain && (
           <AddDomain domains={domains} closeModal={() => setShowAddDomain(false)} />

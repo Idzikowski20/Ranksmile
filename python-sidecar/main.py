@@ -427,12 +427,21 @@ async def brand_knowledge_endpoint(body: dict):
     site = await analyze_site(url)
     meta = site.get("meta", {}) or {}
     content = site.get("content", {}) or {}
-    return await generate_brand_knowledge(
-        url,
-        meta.get("title", "") or site.get("title", ""),
-        meta.get("description", ""),
-        content.get("text", ""),
-    )
+    title = meta.get("title", "") or site.get("title", "")
+    description = meta.get("description", "")
+    # analyze_site stores the scraped body under `text_sample`. Reading a `text` key that
+    # nothing writes drafted every brand from the title and meta description alone, and a
+    # fetch failure (which analyze_site swallows into an empty context) drafted it from
+    # nothing at all — the wizard then stored a blank Brand Knowledge and the domain
+    # pipeline, which seeds its keywords from that text, fell back to the bare brand name.
+    page_text = content.get("text_sample", "") or site.get("text_sample", "")
+    if not (page_text.strip() or title.strip() or description.strip()):
+        raise HTTPException(status_code=422, detail="Could not read the website — it returned no readable content.")
+
+    draft = await generate_brand_knowledge(url, title, description, page_text)
+    if not (draft.get("brand_knowledge") or "").strip():
+        raise HTTPException(status_code=502, detail="Drafting Brand Knowledge failed — the AI service returned nothing.")
+    return draft
 
 
 @app.post("/plagiarism")

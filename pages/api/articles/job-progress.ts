@@ -212,6 +212,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           void import('@/src/infrastructure/siteAudit/crawlSnapshot')
             .then((m) => m.saveCrawlSnapshot(Number(domainId)))
             .catch((err) => { console.warn('[job-progress] crawl snapshot failed (non-fatal):', err); });
+          // Site Speed Score (PageSpeed Insights, ~30 s) runs as the campaign finishes.
+          // Fire-and-forget so the sidecar's 'done' callback (15 s httpx timeout) is not
+          // blocked; the overview polls until the score lands.
+          void import('@/src/infrastructure/siteAudit/siteSpeed')
+            .then((m) => m.measureDomainSiteSpeed(Number(domainId)))
+            .catch((err) => { console.warn('[job-progress] site speed measure failed (non-fatal):', err); });
           // Fire-and-forget: pre-scan the shared Organic Competitors store for the
           // domain's top keywords so they're ready in the audit/editor modal.
           void import('@/src/infrastructure/competitors/competitorPrescan')

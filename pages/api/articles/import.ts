@@ -1,6 +1,7 @@
 // POST /api/articles/import
 // Scrapes a URL (with Puppeteer fallback for SPAs), extracts content, builds NLP ScoreData
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { QueryTypes } from 'sequelize';
 import * as cheerio from 'cheerio';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
@@ -104,12 +105,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!fallback) return res.status(403).json({ error: 'No accessible domain to create the article under.' });
       domainId = fallback;
    }
-
    try {
       await assertPublicUrl(url);
    } catch (e) {
       return res.status(400).json({ error: getErrorMessage(e) || 'Invalid or blocked URL' });
    }
+   // extractOnly just parses HTML into blocks for the editor; it creates no article and
+   // touches no domain tables, so the one-analysis-per-domain lock does not apply to it.
+   if (!extractOnly && await rejectIfDomainBusy(res, domainId).catch(() => false)) return undefined;
 
    try {
       // Try plain HTTP first — cheaper, and paywalled sites (e.g. Piano/Onet) often include

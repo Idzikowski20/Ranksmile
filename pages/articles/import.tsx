@@ -7,6 +7,8 @@ import { deriveActiveId, resolveActiveDomain, workspaceHref } from '@/src/core/d
 import toast from 'react-hot-toast';
 import { useWorkspaces } from '../../services/workspaces';
 import { useFetchDomains } from '../../services/domains';
+import { useDomainBusy } from '../../services/domainPipeline';
+import DomainBusyNotice from '../../components/dashboard/DomainBusyNotice';
 import AddPagesModal from '../../components/domains/AddPagesModal';
 import { aggregateGscPages } from '../../utils/gsc';
 import { Icon } from '../../components/koala/icons/Icon';
@@ -53,6 +55,7 @@ const ImportPage: NextPage = () => {
   const { data: domainsData } = useFetchDomains(router, false);
   const domains: DomainType[] = domainsData?.domains || [];
   const activeDomain = resolveActiveDomain(domains, wsId, null) || domains[0] || null;
+  const busy = useDomainBusy(activeDomain?.slug);
 
   const { data: scData, isLoading: gscLoading } = useQuery(
     ['sc-data', activeDomain?.slug],
@@ -150,6 +153,14 @@ const ImportPage: NextPage = () => {
 
   const canProceed = url.trim().length > 0 && !isSubmitting;
   const countryName = COUNTRIES[country] || COUNTRIES.US;
+
+  if (busy) {
+    return (
+      <WizardShell title="Import Content">
+        <DomainBusyNotice dashboardHref={workspaceHref(wsId, '/dashboard')} />
+      </WizardShell>
+    );
+  }
 
   if (source !== 'url') {
     return (

@@ -6,35 +6,24 @@ import toast from 'react-hot-toast';
 import { CSSTransition } from 'react-transition-group';
 import { useQuery, useQueryClient } from 'react-query';
 import { getErrorMessage } from '@/src/core/shared/errors';
-import { deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
+import { deriveActiveId, workspaceHref } from '@/src/core/domain/navigation/activeWorkspace';
 import { buildArticleWorkspaceLinks } from '@/src/core/domain/articles/articleWorkspaceLinks';
+import { authClient } from '@/src/infrastructure/auth/client';
 import DashboardLayout from '../../components/common/DashboardLayout';
-import ArticleList from '../../components/articles/ArticleList';
+import ArticleCardGrid from '../../components/articles/ArticleCardGrid';
+import ArticleEmptyStart from '../../components/articles/ArticleEmptyStart';
+import type { ArticleCardData } from '../../components/articles/ArticleCard';
 import AddDomain from '../../components/domains/AddDomain';
 import Settings from '../../components/settings/Settings';
 import { KoalaPage, KoalaPageHeader, KoalaPageFilters, KoalaPanel } from '../../components/koala/layout';
 import { Button, CompactSelect, SearchBar, useTableLoadMore } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
-import { useFetchSettings } from '../../services/settings';
+import { useProfile } from '../../services/profile';
 import { useWorkspaces } from '../../services/workspaces';
 
-type ArticleRow = {
-  id: number | string;
-  title: string;
-  status: string;
-  score_data?: string;
-  content_score?: number;
-  seo_score?: number | null;
-  ai_score?: number | null;
-  target_keyword: string;
-  word_count: number | null;
-  publish_target: string | null;
-  publish_url: string | null;
-  created_at: string;
-  updated_at: string;
-};
+type ArticleRow = ArticleCardData & { target_keyword: string | null };
 
-function filterAndSortArticles(articles: ArticleRow[], searchQuery: string, sortBy: string): ArticleRow[] {
+export function filterAndSortArticles(articles: ArticleRow[], searchQuery: string, sortBy: string): ArticleRow[] {
   const q = searchQuery.trim().toLowerCase();
   const filtered = q
     ? articles.filter((a) => {
@@ -73,25 +62,22 @@ const ArticlesPage: NextPage = () => {
   const queryClient = useQueryClient();
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
-  const [selectedDomainId, setSelectedDomainId] = useState<number | undefined>(undefined);
+  const [selectedDomainId] = useState<number | undefined>(undefined);
   const [sortBy, setSortBy] = useState('ContentUpdatedAt');
   const [searchQuery, setSearchQuery] = useState('');
   const [mounted, setMounted] = useState(false);
 
   const { data: domainsData } = useFetchDomains(router);
-  const { data: appSettingsData } = useFetchSettings();
   const { data: wsData } = useWorkspaces();
-  const appSettings: SettingsType = appSettingsData?.settings || {};
+  const { data: profile } = useProfile();
+  const session = authClient.useSession?.();
   const domains: DomainType[] = domainsData?.domains || [];
   const activeWsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
   const activeDomain = domains.find((domain) => domain.ID === selectedDomainId) || domains[0] || null;
   const activeSlug = activeDomain?.slug || '';
   const articleLinks = buildArticleWorkspaceLinks(activeWsId, activeSlug);
-  const startLinks = {
-    recommendations: articleLinks.recommendations,
-    keyword: articleLinks.keyword,
-    contentAudit: articleLinks.contentAudit,
-  };
+  const userName = mounted ? (profile?.name || session?.data?.user?.name || '') : '';
+  const author = userName ? { name: userName, avatarUrl: profile?.avatarUrl } : undefined;
 
   React.useEffect(() => {
     setMounted(true);
@@ -130,13 +116,13 @@ const ArticlesPage: NextPage = () => {
     }
   };
 
-  const articles: ArticleRow[] = articlesData?.articles || [];
+  const articles: ArticleRow[] = useMemo(() => articlesData?.articles || [], [articlesData]);
   const filteredArticles = useMemo(
     () => filterAndSortArticles(articles, searchQuery, sortBy),
     [articles, searchQuery, sortBy],
   );
   const articlesChunk = useTableLoadMore(filteredArticles, {
-    pageSize: 20,
+    pageSize: 21,
     resetKey: `articles-${selectedDomainId ?? 'all'}-${sortBy}-${searchQuery}-${filteredArticles.length}`,
   });
 
@@ -190,7 +176,7 @@ const ArticlesPage: NextPage = () => {
   return (
     <DashboardLayout domains={domains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
       <Head><title>Articles — Ranksmile</title></Head>
-      <KoalaPage maxWidth={880} className="articles-page">
+      <KoalaPage maxWidth={1080} className="articles-page">
         <KoalaPageHeader title="Articles" actions={headerActions} borderless />
 
         <KoalaPageFilters trailing={<SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search" width={300} />}>
@@ -200,37 +186,32 @@ const ArticlesPage: NextPage = () => {
             onChange={(opt) => setSortBy(opt.value)}
             options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
           />
-          {['Status', 'Author'].map((label) => (
-            <Button key={label} type="button" variant="secondary" size="sm">{label}</Button>
-          ))}
         </KoalaPageFilters>
 
         <KoalaPanel noPadding className="koala-panel--cards">
           {!isLoading && articles.length > 0 && filteredArticles.length === 0 ? (
-            <p
-              style={{
-                margin: 0,
-                padding: '48px 24px',
-                textAlign: 'center',
-                fontSize: 14,
-                lineHeight: '20px',
-                color: 'var(--koala-text-secondary)',
-                fontFamily: 'var(--font-family-primary)',
-              }}
-            >
-              No articles match your search.
-            </p>
+            <p className="articles-page__no-match">No articles match your search.</p>
           ) : (
-            <ArticleList
-              articles={articles.length === 0 ? articles : articlesChunk.visibleItems}
-              onDelete={handleDelete}
-              onDeleteMultiple={handleDeleteMultiple}
-              isLoading={isLoading}
-              hasMore={articlesChunk.hasMore}
-              onLoadMore={articlesChunk.loadMore}
-              isLoadingMore={articlesChunk.isLoading}
-              startLinks={startLinks}
-            />
+            <div style={{ paddingTop: 20 }}>
+              <ArticleCardGrid
+                articles={articles.length === 0 ? articles : articlesChunk.visibleItems}
+                hrefFor={(a) => workspaceHref(activeWsId, `/articles/${a.id}`)}
+                author={author}
+                isLoading={isLoading}
+                emptyState={(
+                  <ArticleEmptyStart links={{
+                    recommendations: articleLinks.recommendations,
+                    keyword: articleLinks.keyword,
+                    contentAudit: articleLinks.contentAudit,
+                  }} />
+                )}
+                onDelete={handleDelete}
+                onDeleteMultiple={handleDeleteMultiple}
+                hasMore={articlesChunk.hasMore}
+                onLoadMore={articlesChunk.loadMore}
+                isLoadingMore={articlesChunk.isLoading}
+              />
+            </div>
           )}
         </KoalaPanel>
       </KoalaPage>

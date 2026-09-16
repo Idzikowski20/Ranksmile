@@ -22,6 +22,29 @@ it('maps the job row onto the five stages, with the running stage\'s own percent
   expect(setupSteps(status({ stagePercent: 100 }))[2].detail).toBeUndefined();
 });
 
+it('adds a Site Speed step to the campaign only when PageSpeed is configured', () => {
+  // Hidden when the key is absent ('off' or the field missing on an older payload).
+  expect(setupSteps(status({ siteSpeed: 'off' })).map((s) => s.label)).not.toContain('Measuring site speed');
+  expect(setupSteps(status()).map((s) => s.label)).not.toContain('Measuring site speed');
+  // Shown as the sixth step, active while measuring and done once finished.
+  const running = setupSteps(status({ siteSpeed: 'running' }));
+  expect(running).toHaveLength(6);
+  expect(running[5]).toMatchObject({ label: 'Measuring site speed', state: 'active' });
+  expect(setupSteps(status({ siteSpeed: 'done' }))[5].state).toBe('done');
+});
+
+it('keeps the Site Speed step idle while the job is only queued, so the first stage still reads as waiting', () => {
+  const queued = status({
+    status: 'queued',
+    stagePercent: 0,
+    stages: { gsc: 'pending', keywords: 'pending', topics: 'pending', competitors: 'pending', recommendations: 'pending' },
+    siteSpeed: 'running',
+  });
+  expect(setupSteps(queued)[5].state).toBe('idle');
+  render(<DomainSetupProgressBar onRetry={() => undefined} setup={queued} />);
+  expect(screen.getByRole('status')).toHaveTextContent('Getting Search Console and site data · queued');
+});
+
 it('leaves once the job is done', () => {
   const { rerender } = render(<DomainSetupProgressBar setup={status()} onRetry={() => undefined} />);
   expect(screen.getByRole('status')).toHaveTextContent('Clustering and modeling topics · 40%');

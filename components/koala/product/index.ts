@@ -40,7 +40,5 @@ export { PricingCard } from './PricingCard';
 export type { PricingCardProps, PricingCardAction } from './PricingCard';
 export { ComparePricingTable } from './ComparePricingTable';
 export type { ComparePricingTableProps } from './ComparePricingTable';
-export { RadialComparisonWidget, RADIAL_SEGMENT_COLORS } from './RadialComparisonWidget';
-export type { RadialComparisonWidgetProps, RadialSegment } from './RadialComparisonWidget';
 export { PricingFaqSection } from './PricingFaqSection';
 export type { FaqItem, FaqCategory } from './PricingFaqSection';

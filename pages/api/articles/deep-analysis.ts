@@ -3,6 +3,7 @@
 // POSTs to Python sidecar /pipeline/deep-analysis, awaits result,
 // writes result back to job row, streams SSE to frontend.
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { QueryTypes } from 'sequelize';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
@@ -249,6 +250,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(403).json({ error: 'Access denied.' });
       }
     }
+    // The existing article's domain, so the busy guard below covers editor and batch
+    // re-analyses too — not only the new-content branches that resolve a domain here.
+    const owningRows = await db.query<{ domain_id: number | null }>(
+      'SELECT domain_id FROM articles WHERE id = ? LIMIT 1',
+      { replacements: [Number(existingArticleId)], type: QueryTypes.SELECT },
+    );
+    if (owningRows[0]?.domain_id) resolvedDomainId = Number(owningRows[0].domain_id);
   } else if (reqDomainId) {
       if (isCron) {
         resolvedDomainId = Number(reqDomainId);
@@ -271,6 +279,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!fallback) return res.status(403).json({ error: 'No accessible domain to create the article under.' });
       resolvedDomainId = fallback;
     }
+
+  // Before the SSE stream opens: a domain still being set up or scanned answers 409 as JSON.
+  if (resolvedDomainId && await rejectIfDomainBusy(res, resolvedDomainId)) return undefined;
 
   const locale = await resolveContentLocale({
     domainId: resolvedDomainId,

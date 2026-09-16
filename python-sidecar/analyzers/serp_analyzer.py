@@ -606,6 +606,20 @@ def _attach_competitor_scores(outlines: list[dict]) -> list[dict]:
     return outlines
 
 
+async def fetch_serp_competitors(keyword: str, language: str = "pl", num: int = 20) -> list[dict]:
+    """Ranked SERP rows (url/domain/title/snippet) — the cheap half of analyze_serp.
+
+    Callers that only need to know WHICH domains rank stop here: no page scrape, no term
+    extraction, no fact harvest. Those cost ~75 s a keyword and are what analyze_serp adds.
+    """
+    serper_key = os.getenv("SERPER_API_KEY", "")
+    if not serper_key:
+        print("[serp_analyzer] No SERPER_API_KEY - no competitors")
+        return []
+    results, _ = await _fetch_serp_results(keyword, language, num, serper_key)
+    return _competitors_from_results(_filter_reference_results(results))
+
+
 async def extract_competitor_outlines(keyword: str, language: str = "pl", num: int = 10) -> list[dict]:
     serper_key = os.getenv("SERPER_API_KEY", "")
     if not serper_key:
