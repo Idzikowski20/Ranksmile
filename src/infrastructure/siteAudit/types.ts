@@ -254,6 +254,16 @@ export type CompareCrawlsReport = {
   hasData: boolean;
 };
 
+export type SiteSpeedSummary = {
+  score: number;
+  lcpMs: number | null;
+  tbtMs: number | null;
+  cls: number | null;
+  speedIndexMs: number | null;
+  url: string;
+  measuredAt: string;
+};
+
 export type SiteAuditOverviewPayload = {
   domain: string;
   slug: string;
@@ -285,6 +295,10 @@ export type SiteAuditOverviewPayload = {
   thematicReports: ThematicReport[];
   hasData: boolean;
   setupJobStatus: string | null;
+  /** Last PageSpeed Insights run for the homepage; null until measured. */
+  siteSpeed: SiteSpeedSummary | null;
+  /** False when PAGESPEED_API_KEY is missing — the card offers no Measure button then. */
+  siteSpeedEnabled: boolean;
   planSlug: string;
   planName: string;
   canUpgradeCrawlLimit: boolean;

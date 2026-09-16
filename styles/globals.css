@@ -9822,3 +9822,68 @@ a.dash-step:hover { background: var(--koala-bg-secondary); }
 .domain-busy__link { text-decoration: none; display: inline-flex; }
 .domain-busy__text { margin: 0 0 12px; font-size: 14px; line-height: 20px; color: var(--koala-text-secondary); }
 .dash-tile[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+/* ── Site Audit overview: tick-ring widgets and the Site Speed card ── */
+.audit-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 899px) { .audit-overview-grid { grid-template-columns: 1fr; } }
+.audit-card {
+  border-radius: 16px;
+  background: var(--koala-bg-primary);
+  border: 1px solid var(--koala-border-primary);
+  min-width: 0;
+}
+.tick-ring { display: flex; flex-direction: column; padding: 16px 20px 18px; font-family: var(--font-family-primary); height: 100%; box-sizing: border-box; }
+.tick-ring__head { display: flex; align-items: center; gap: 8px; }
+.tick-ring__icon { display: inline-flex; color: var(--koala-text-secondary); }
+.tick-ring__title { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; color: var(--koala-text-primary); }
+.tick-ring__more { margin-left: auto; display: inline-flex; padding: 4px; border-radius: 8px; color: var(--koala-text-secondary); }
+.tick-ring__more:hover { background: var(--koala-bg-secondary); color: var(--koala-text-primary); }
+.tick-ring__sub { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--koala-text-secondary); }
+.tick-ring__sub a { color: var(--koala-text-brand); font-weight: 600; text-decoration: none; }
+.tick-ring__body { display: flex; align-items: center; gap: 24px; margin-top: 18px; flex: 1; min-width: 0; }
+.tick-ring__chart { position: relative; width: 150px; height: 150px; flex-shrink: 0; }
+.tick-ring__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.tick-ring__value { font-size: 30px; line-height: 34px; font-weight: 700; color: var(--koala-text-primary); font-variant-numeric: tabular-nums; }
+.tick-ring__caption { font-size: 13px; line-height: 18px; color: var(--koala-text-secondary); }
+.tick-ring__legend { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 0; }
+.tick-ring__row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--koala-border-primary); font-size: 14px; line-height: 20px; }
+.tick-ring__row:last-child { border-bottom: none; }
+.tick-ring__dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.tick-ring__label { flex: 1; color: var(--koala-text-primary); }
+.tick-ring__count { font-weight: 600; color: var(--koala-text-primary); font-variant-numeric: tabular-nums; }
+.tick-ring__empty { margin: 0; font-size: 14px; color: var(--koala-text-secondary); }
+.tick-ring__footer { margin-top: 14px; }
+.tick-ring__delta {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px;
+  font-size: 12px; line-height: 18px; font-weight: 500;
+  border: 1px solid var(--koala-border-primary); color: var(--koala-text-secondary); background: var(--koala-bg-secondary);
+}
+.tick-ring__delta--up { color: var(--koala-status-success); background: var(--koala-status-success-bg); border-color: transparent; }
+.tick-ring__delta--down { color: var(--koala-status-danger); background: var(--koala-status-danger-bg); border-color: transparent; }
+
+.speed-card { display: flex; flex-direction: column; padding: 16px 20px 18px; font-family: var(--font-family-primary); height: 100%; box-sizing: border-box; }
+.speed-card__top { display: flex; align-items: flex-start; gap: 16px; margin-top: 14px; }
+.speed-card__score { font-size: 30px; line-height: 34px; font-weight: 700; color: var(--koala-text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.speed-card__score small { font-size: 16px; font-weight: 500; color: var(--koala-text-secondary); margin-left: 2px; }
+.speed-card__score--none { color: var(--koala-text-tertiary); }
+.speed-card__verdict { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 18px; color: var(--koala-text-secondary); }
+.speed-card__verdict strong { font-size: 16px; line-height: 22px; font-weight: 600; color: var(--koala-text-primary); }
+.speed-card__verdict a { color: var(--koala-text-brand); font-weight: 600; text-decoration: none; }
+.speed-card__bar { margin-top: 22px; }
+.speed-card__track { position: relative; height: 10px; border-radius: 999px; background: var(--koala-bg-secondary); }
+.speed-card__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--koala-text-brand), color-mix(in srgb, var(--koala-text-brand) 45%, var(--koala-bg-primary))); }
+.speed-card__mark { position: absolute; top: 50%; width: 6px; height: 6px; border-radius: 50%; background: var(--koala-bg-primary); border: 1px solid var(--koala-border-secondary); transform: translate(-50%, -50%); }
+.speed-card__handle {
+  position: absolute; top: 50%; width: 24px; height: 24px; border-radius: 50%; transform: translate(-50%, -50%);
+  display: grid; place-items: center; background: var(--koala-bg-primary); color: var(--koala-text-tertiary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+.speed-card__scale { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; line-height: 16px; color: var(--koala-text-secondary); }
+.speed-card__metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 18px 0 0; }
+.speed-card__metric { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 12px 12px 0; border-top: 1px solid var(--koala-border-primary); }
+.speed-card__metric:nth-child(even) { padding-left: 12px; border-left: 1px solid var(--koala-border-primary); }
+.speed-card__metric dt { margin: 0; font-size: 13px; color: var(--koala-text-secondary); }
+.speed-card__metric dd { margin: 0; font-size: 20px; line-height: 24px; font-weight: 600; color: var(--koala-text-primary); font-variant-numeric: tabular-nums; }
+.speed-card__actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: auto; padding-top: 14px; }
+.speed-card__note { font-size: 12px; color: var(--koala-text-tertiary); }
+.speed-card__error { font-size: 12px; color: var(--koala-status-danger); }

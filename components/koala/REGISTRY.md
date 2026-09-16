@@ -41,7 +41,6 @@ If it exists → reuse. If not → import once and append a row.
 | Sparkline (appearances) | `6988:208171` | `charts/Sparkline.tsx` | gallery-widget | ranksmile-frontend | Stable |
 | Chart presets | Viz layer | `charts/presets.ts` (internal) | — | ranksmile-frontend | Stable |
 | ChartWidget / MetricWidget | Dashboard | `product/widgets.tsx` | dashboard-chart | ranksmile-frontend | Stable |
-| RadialComparisonWidget | `9963:582207` | `product/RadialComparisonWidget.tsx` | — | ranksmile-frontend | Draft |
 | DataTable (+ Head/Cell) | `6944:212812` / `6955:31325` | `core/dataTable/dataTable.tsx` | — | ranksmile-frontend | Stable |
 | DataToolbar (filter/sort/selection) | `9421:371318` | `product/DataToolbar.tsx` | — | ranksmile-frontend | Stable |
 | TablePattern | Product | `product/TablePattern.tsx` | — | ranksmile-frontend | Stable |

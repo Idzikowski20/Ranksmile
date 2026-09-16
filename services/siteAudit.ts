@@ -1,10 +1,25 @@
-import { useQuery } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
 import type {
   CompareCrawlsReport,
   CrawledPagesReport,
   SiteAuditIssueDetailPayload,
   SiteAuditOverviewPayload,
+  SiteSpeedSummary,
 } from '@/src/infrastructure/siteAudit/types';
+
+/** Runs PageSpeed Insights for the domain's homepage (~30–60 s) and refreshes the overview. */
+export function useMeasureSiteSpeed(slug: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation(
+    async () => {
+      const res = await fetch(`/api/domains/${encodeURIComponent(slug as string)}/site-audit/speed`, { method: 'POST' });
+      const body = (await res.json().catch(() => ({}))) as SiteSpeedSummary | { error?: string };
+      if (!res.ok) throw new Error((body as { error?: string }).error ?? `Speed measurement failed (${res.status})`);
+      return body as SiteSpeedSummary;
+    },
+    { onSuccess: () => qc.invalidateQueries(['site-audit', slug]) },
+  );
+}
 
 async function fetchSiteAudit(slug: string): Promise<SiteAuditOverviewPayload> {
   const res = await fetch(`/api/domains/${encodeURIComponent(slug)}/site-audit`);

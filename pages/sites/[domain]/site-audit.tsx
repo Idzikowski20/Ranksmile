@@ -268,6 +268,7 @@ const SiteAuditPage: NextPage = () => {
         {data && data.hasData && tab === 'overview' && (
           <SiteAuditOverview
             data={data}
+            slug={slug}
             onViewAllIssues={() => {
               setTab('issues');
               setSelectedIssueId(null);

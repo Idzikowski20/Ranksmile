@@ -5,15 +5,21 @@ import type {
   SiteAuditOverviewPayload,
   ThematicReport,
 } from '@/src/infrastructure/siteAudit/types';
+import type { TickRingSegment } from '@/src/core/domain/siteAudit/tickRing';
 import { Button } from '../koala/core';
-import { RadialComparisonWidget, RADIAL_SEGMENT_COLORS } from '../koala/product';
-import type { RadialSegment } from '../koala/product';
-import { brandMain, green } from '../koala/tokens/colors';
+import { TickRingWidget } from '../koala/product/TickRingWidget';
+import { Icon } from '../koala/icons/Icon';
+import { brandMain, green, orange, purple, red, yellow } from '../koala/tokens/colors';
+import { useMeasureSiteSpeed } from '../../services/siteAudit';
 import { dashedLinkStyle } from './InfoPopper';
 import SiteAuditScoreGauge from './SiteAuditScoreGauge';
+import SiteSpeedCard from './SiteSpeedCard';
 import IssueTrendArea from './IssueTrendArea';
 import OverviewInfoPopper, { type OverviewPopperKind } from './overviewPoppers';
 import { BotRow, PRIMARY_BOTS } from './aiSearchBots';
+
+const SITE_HEALTH_DOC = 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide';
+const AI_SEARCH_DOC = 'https://developers.google.com/search/docs/appearance/ai-features';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -54,35 +60,39 @@ function InfoIcon() {
   );
 }
 
-function siteHealthRadialSegments(distribution: Record<PageBucket, number>): RadialSegment[] {
+/** Bucket colours read as their meaning: healthy green, issues orange, redirects yellow,
+ *  broken red, blocked purple. */
+const BUCKET_COLORS: Record<PageBucket, string> = {
+  healthy: green[500],
+  haveIssues: orange[400],
+  redirects: yellow[500],
+  broken: red[500],
+  blocked: purple[500],
+};
+
+function siteHealthSegments(distribution: Record<PageBucket, number>): TickRingSegment[] {
   const order: PageBucket[] = ['healthy', 'haveIssues', 'redirects', 'broken', 'blocked'];
-  return order.map((key, i) => ({
-    id: key,
-    label: BUCKET_LABELS[key],
-    value: distribution[key],
-    color: RADIAL_SEGMENT_COLORS[i % RADIAL_SEGMENT_COLORS.length],
-  }));
+  return order.map((key) => ({ id: key, label: BUCKET_LABELS[key], value: distribution[key], color: BUCKET_COLORS[key] }));
 }
 
-function aiSearchRadialSegments(score: number): RadialSegment[] {
+function aiSearchSegments(score: number): TickRingSegment[] {
   const optimized = Math.max(0, Math.min(100, Math.round(score)));
-  const gap = Math.max(0, 100 - optimized);
   return [
-    {
-      id: 'optimized',
-      label: 'Optimized',
-      value: Math.max(optimized, 0.01),
-      color: green[500],
-      displayValue: `${optimized}%`,
-    },
-    {
-      id: 'gap',
-      label: 'Needs work',
-      value: Math.max(gap, 0.01),
-      color: brandMain,
-      displayValue: `${gap}%`,
-    },
+    { id: 'optimized', label: 'Optimized', value: optimized, color: green[500] },
+    { id: 'gap', label: 'Needs work', value: 100 - optimized, color: brandMain },
   ];
+}
+
+/** Delta chip next to the score ("No change vs last crawl", "+4% vs last crawl"). */
+function DeltaChip({ label, positive }: { label: string | null; positive: boolean | null }) {
+  if (!label) return null;
+  const tone = positive === null ? 'neutral' : (positive ? 'up' : 'down');
+  return (
+    <span className={`tick-ring__delta tick-ring__delta--${tone}`}>
+      <Icon name={positive === false ? 'TrendDown' : 'TrendUp'} size={12} />
+      {label}
+    </span>
+  );
 }
 
 function formatHealthDelta(delta: number | null): { label: string | null; positive: boolean | null } {
@@ -189,18 +199,18 @@ function ThematicCard({
 
 type Props = {
   data: SiteAuditOverviewPayload;
+  /** Domain slug — the Site Speed measurement posts to its API. */
+  slug?: string;
   onViewAllIssues?: () => void;
 };
 
-export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
+export default function SiteAuditOverview({ data, slug, onViewAllIssues }: Props) {
   const dist = data.crawledPages.distribution;
   const [popper, setPopper] = useState<{ kind: OverviewPopperKind; rect: DOMRect } | null>(null);
-  const siteRadialSegments = useMemo(() => siteHealthRadialSegments(dist), [dist]);
-  const aiRadialSegments = useMemo(
-    () => aiSearchRadialSegments(data.aiSearchHealth),
-    [data.aiSearchHealth],
-  );
+  const siteSegments = useMemo(() => siteHealthSegments(dist), [dist]);
+  const aiSegments = useMemo(() => aiSearchSegments(data.aiSearchHealth), [data.aiSearchHealth]);
   const siteDelta = formatHealthDelta(data.siteHealthDelta);
+  const measure = useMeasureSiteSpeed(slug);
 
   const openPopper = useCallback((kind: OverviewPopperKind) => (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -213,86 +223,106 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT }}>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <section style={{ ...CARD, flex: '1 1 420px', minWidth: 0, overflow: 'hidden' }}>
-          <RadialComparisonWidget
+      <div className="audit-overview-grid">
+        <section className="audit-card">
+          <TickRingWidget
             title="Site Health"
+            icon="File"
+            docHref={SITE_HEALTH_DOC}
             value={String(Math.round(data.siteHealth))}
-            deltaLabel={siteDelta.label}
-            deltaPositive={siteDelta.positive}
-            segments={siteRadialSegments}
+            caption="Score"
+            segments={siteSegments}
             emptyLabel="No crawled pages yet."
-            framed={false}
+            footer={<DeltaChip label={siteDelta.label} positive={siteDelta.positive} />}
           />
         </section>
 
-        <section style={{ ...CARD, flex: '1 1 520px', minWidth: 0, overflow: 'hidden' }}>
-          <div className="koala-audit-overview-split">
-            <div style={{ flex: '1.1 1 260px', minWidth: 0, borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column' }}>
-              <RadialComparisonWidget
-                title="AI Search Health"
-                value={String(Math.round(data.aiSearchHealth))}
-                deltaLabel={data.aiSearchIssues > 0 ? `${data.aiSearchIssues} ${data.aiSearchIssues === 1 ? 'issue' : 'issues'}` : 'No AI issues'}
-                deltaPositive={data.aiSearchIssues === 0}
-                segments={aiRadialSegments}
-                framed={false}
-                badge={(
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#fff', background: '#EFA00D', borderRadius: 4, padding: '2px 6px' }}>beta</span>
-                )}
-              />
-              <div style={{ padding: '0 16px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, fontSize: 13 }}>
-                <button
-                  type="button"
-                  aria-expanded={popper?.kind === 'how-it-works'}
-                  onClick={openPopper('how-it-works')}
-                  style={dashedLinkStyle}
-                >
-                  How it works
-                </button>
-                <button
-                  type="button"
-                  aria-expanded={isInfoOpen('info-ai-search-health')}
-                  onClick={openPopper('info-ai-search-health')}
-                  style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--koala-text-brand)', cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 500 }}
-                >
-                  More info
-                </button>
-              </div>
-            </div>
-            <div style={{ flex: '1 1 220px', padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', minWidth: 200 }}>
-              <WidgetTitle
-                onInfoClick={openPopper('info-blocked-ai-search')}
-                infoOpen={isInfoOpen('info-blocked-ai-search')}
-              >
-                Blocked from AI Search
-              </WidgetTitle>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
-                {PRIMARY_BOTS.map((bot) => (
-                  <BotRow key={bot.id} bot={bot} />
-                ))}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginTop: 16, fontSize: 13, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  aria-expanded={popper?.kind === 'show-more'}
-                  onClick={openPopper('show-more')}
-                  style={dashedLinkStyle}
-                >
-                  Show more
-                </button>
-                <button
-                  type="button"
-                  aria-expanded={popper?.kind === 'unblock'}
-                  onClick={openPopper('unblock')}
-                  style={dashedLinkStyle}
-                >
-                  How to unblock pages
-                </button>
-              </div>
-            </div>
-          </div>
+        <section className="audit-card">
+          <SiteSpeedCard
+            speed={data.siteSpeed}
+            enabled={data.siteSpeedEnabled}
+            measuring={measure.isLoading}
+            error={measure.error instanceof Error ? measure.error.message : null}
+            onMeasure={() => measure.mutate()}
+          />
         </section>
       </div>
+
+      <section className="audit-card" style={{ overflow: 'hidden' }}>
+        <div className="koala-audit-overview-split">
+          <div style={{ flex: '1.1 1 260px', minWidth: 0, borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column' }}>
+            <TickRingWidget
+              title="AI Search Health"
+              icon="Sparkle"
+              docHref={AI_SEARCH_DOC}
+              value={String(Math.round(data.aiSearchHealth))}
+              caption="Score"
+              segments={aiSegments}
+              formatValue={(s) => `${s.value}%`}
+              badge={(
+                <span style={{ fontSize: 10, fontWeight: 600, color: '#fff', background: '#EFA00D', borderRadius: 4, padding: '2px 6px' }}>beta</span>
+              )}
+              footer={(
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  <DeltaChip
+                    label={data.aiSearchIssues > 0 ? `${data.aiSearchIssues} ${data.aiSearchIssues === 1 ? 'issue' : 'issues'}` : 'No AI issues'}
+                    positive={data.aiSearchIssues === 0}
+                  />
+                  <span style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+                    <button
+                      type="button"
+                      aria-expanded={popper?.kind === 'how-it-works'}
+                      onClick={openPopper('how-it-works')}
+                      style={dashedLinkStyle}
+                    >
+                      How it works
+                    </button>
+                    <button
+                      type="button"
+                      aria-expanded={isInfoOpen('info-ai-search-health')}
+                      onClick={openPopper('info-ai-search-health')}
+                      style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--koala-text-brand)', cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 500 }}
+                    >
+                      More info
+                    </button>
+                  </span>
+                </div>
+              )}
+            />
+          </div>
+          <div style={{ flex: '1 1 220px', padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', minWidth: 200 }}>
+            <WidgetTitle
+              onInfoClick={openPopper('info-blocked-ai-search')}
+              infoOpen={isInfoOpen('info-blocked-ai-search')}
+            >
+              Blocked from AI Search
+            </WidgetTitle>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 0 }}>
+              {PRIMARY_BOTS.map((bot) => (
+                <BotRow key={bot.id} bot={bot} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginTop: 16, fontSize: 13, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                aria-expanded={popper?.kind === 'show-more'}
+                onClick={openPopper('show-more')}
+                style={dashedLinkStyle}
+              >
+                Show more
+              </button>
+              <button
+                type="button"
+                aria-expanded={popper?.kind === 'unblock'}
+                onClick={openPopper('unblock')}
+                style={dashedLinkStyle}
+              >
+                How to unblock pages
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {popper && (
         <OverviewInfoPopper kind={popper.kind} anchorRect={popper.rect} onClose={closePopper} />
