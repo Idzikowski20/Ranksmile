@@ -7,6 +7,8 @@ import { getSiteAuditPageLimit, resolvePlanSlug } from '@/src/infrastructure/bil
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
+import { isPageSpeedConfigured, measureSiteSpeed } from '@/src/infrastructure/siteAudit/siteSpeed';
+import { getErrorMessage } from '@/src/core/shared/errors';
 import { getOptimizeRecommendations } from '@/src/core/application/recommendations/getOptimizeRecommendations';
 import { createSnapshotRepository } from '@/src/infrastructure/gsc/snapshotRepository';
 import { priorityFromScore } from '@/src/core/domain/recommendations/opportunityScore';
@@ -317,10 +319,20 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
             if (existing) siteAuditPages = Number(existing.quantity);
          }
       } catch { /* default 100 */ }
+      // Site Speed Score (PageSpeed Insights) is part of the campaign, not an on-demand
+      // button. Run it alongside the sidecar crawl so it adds no wall-clock; best-effort,
+      // so a PSI hiccup never fails the analysis. Awaited before returning so the node
+      // runner does not drop it mid-flight.
+      const speedHost = domainName ? (/^https?:\/\//i.test(domainName) ? domainName : `https://${domainName}`) : '';
+      const speedRun = speedHost && isPageSpeedConfigured()
+         ? measureSiteSpeed(domainId, speedHost).catch((err) => { console.warn('[site-speed] campaign measure failed:', getErrorMessage(err)); })
+         : Promise.resolve();
+
       const body = { jobId, nextjsUrl: nextjsUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, language, limits: { keywords: 20, competitorsPerKeyword: 10, site_audit_pages: siteAuditPages } } };
       const resp = await fetch(`${sidecarUrl()}/pipeline/domain-setup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' }, body: JSON.stringify(body) });
       if (!resp.ok) await failJob(jobId, 'keywords', `sidecar ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
       // On success the sidecar will POST status='done' + result to job-progress, which materializes.
+      await speedRun;
    } catch (e) {
       await failJob(jobId, 'gsc', (e instanceof Error ? e.message : String(e)) || 'pipeline error');
    }
