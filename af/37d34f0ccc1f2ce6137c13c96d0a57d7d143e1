@@ -1,0 +1,92 @@
+components/dashboard/ActionTiles.tsx
+  s_c7c90ce5d12296::t_20781ac2fb55ba 5,7-18,22-24,26,28
+  s_c7c90ce5d12296::t_264f7960e88ed4 1-4,6,19-21,25,27,29-31
+src/core/domain/articles/articleCard.ts
+  s_c7c90ce5d12296::t_b01fb043d4140b 1-62
+__tests__/components/ArticleCardGrid.test.tsx
+  s_c7c90ce5d12296::t_bdb7b9407aa769 1-47
+components/articles/ArticleCard.tsx
+  s_c7c90ce5d12296::t_cb1927deabda1f 140,142-158
+  s_c7c90ce5d12296::t_f2d3f8dbee6633 126,129-138,141,159-160
+  s_c7c90ce5d12296::t_6a47386a5c0f53 101-103
+  s_c7c90ce5d12296::t_9119fbeeadb27e 38-42
+  s_c7c90ce5d12296::t_8ac3c95e8b2a75 1-37,43-100,104-125,127-128,139,161-175
+components/articles/ArticleEmptyStart.tsx
+  s_c7c90ce5d12296::t_6c26d4e57c8825 1-59
+pages/dashboard/index.tsx
+  s_c7c90ce5d12296::t_188a3da9abac40 137
+  s_c7c90ce5d12296::t_a96bca8b86ffa7 90
+  s_c7c90ce5d12296::t_d749aa64612020 10,12-13,17,22-25,28,35-36,52-55,68,78,80,83-84,86,89,116-121,138-161,163,165-172
+  s_c7c90ce5d12296::t_a236fc98557a63 26
+  s_c7c90ce5d12296::t_898ae88ab3d747 162,164
+styles/globals.css
+  s_c7c90ce5d12296::t_592a6a2967c526 9582-9583,9602,9688,9692,9726,9756-9757,9759,9768-9769,9774,9777,9783-9797
+  s_c7c90ce5d12296::t_a671f671dd054d 9736-9737,9743
+  s_c7c90ce5d12296::t_b6ccf164c1a36c 9667-9668
+  s_c7c90ce5d12296::t_093608934a29a9 9475,9481
+  s_c7c90ce5d12296::t_4671cdab109de0 9595
+  s_c7c90ce5d12296::t_e81c1ff94561a0 9458-9474,9476-9480,9482-9489,9491-9492,9494,9496,9501,9503-9507,9510-9513,9515,9517,9519-9523,9556-9557,9560,9562-9580,9584-9594,9596-9601,9603-9604,9606-9666,9669-9687,9689-9691,9695,9698-9701,9707-9708,9710,9713-9715,9717,9719,9721-9722,9727,9729,9732,9734,9747-9755,9758,9760-9767,9770-9773,9775-9776,9778-9782,9798-9799
+  s_c7c90ce5d12296::t_07d8567318dbcb 9693-9694,9696-9697,9702-9706,9709,9711-9712,9716,9718,9720,9723-9724
+  s_c7c90ce5d12296::t_92d5e0a137d54e 9725
+  s_c7c90ce5d12296::t_bc38d5687827c5 9493,9495
+  s_c7c90ce5d12296::t_9e3f56c218976d 9800-9819
+  s_c7c90ce5d12296::t_ffdb7ad1d15afc 9605
+  s_c7c90ce5d12296::t_1b4b427bb9241a 9508-9509,9514,9516,9518,9524-9525,9527-9529,9532-9533,9535,9558-9559,9561
+  s_c7c90ce5d12296::t_7e9e045c117356 9728,9730,9733,9735,9738-9739,9744-9746
+  s_c7c90ce5d12296::t_ba06c345cf0b3b 9581
+  s_c7c90ce5d12296::t_480f0365993554 9740-9742
+  s_c7c90ce5d12296::t_fc14442cc66a88 9490,9499-9500,9502
+  s_c7c90ce5d12296::t_281b865736d8ed 9497-9498
+  s_c7c90ce5d12296::t_85c97b8eeb0b3c 9526,9530-9531,9534,9536-9555
+  s_c7c90ce5d12296::t_a70e6add76a38f 9731
+components/dashboard/DashboardArticles.tsx
+  s_c7c90ce5d12296::t_2d37217f191dc0 4
+  s_c7c90ce5d12296::t_c598a31d3140c3 49-54
+  s_c7c90ce5d12296::t_147b4abd66f2bc 1-3,5-48,55-61
+components/dashboard/DashboardGreeting.tsx
+  s_c7c90ce5d12296::t_e2ac90e99b36db 1,8-9,17,19
+components/articles/ArticleCardGrid.tsx
+  s_c7c90ce5d12296::t_1ab558b299a6dd 1-96
+__tests__/api/articles-card-preview.test.ts
+  s_c7c90ce5d12296::t_28fa265d6a3f24 2-82
+  s_c7c90ce5d12296::t_05487c0711fd24 1
+__tests__/components/dashboardSections.test.tsx
+  s_c7c90ce5d12296::t_75960abbb07487 10-11
+  s_c7c90ce5d12296::t_affc1847329a20 24,29
+  s_c7c90ce5d12296::t_4421579be3bb60 35-36
+  s_c7c90ce5d12296::t_b5b3c781fa7218 1-9,12-23,25-28,30-34,37-83
+__tests__/lib/articleCard.test.ts
+  s_c7c90ce5d12296::t_b198445c97723c 1-64
+components/dashboard/GetStartedPanel.tsx
+  s_c7c90ce5d12296::t_dcb7a928f90bdb 1-2,4-17,19-38,40-56,63-67,69-73
+  s_c7c90ce5d12296::t_1acc986251f48d 3
+  s_c7c90ce5d12296::t_bfd778e4432d4e 61
+  s_c7c90ce5d12296::t_0cac97cb522bd5 18
+  s_c7c90ce5d12296::t_411a43d68f8afb 39
+  s_c7c90ce5d12296::t_24927acf2c9c61 57-60,62
+  s_c7c90ce5d12296::t_af3895d46ce385 68
+pages/articles/index.tsx
+  s_c7c90ce5d12296::t_f68cd2cd8ec709 119
+  s_c7c90ce5d12296::t_8dbfad56493d22 11,13-15,21,24,26,65,72-73,79-80,125,179,193,195-214
+pages/api/articles/index.ts
+  s_c7c90ce5d12296::t_e693d98e6f456e 8,215
+  s_c7c90ce5d12296::t_05c12011bcaf99 9-10,60-62,121-122,137-149,185-188
+__tests__/components/ArticleCard.test.tsx
+  s_c7c90ce5d12296::t_2af179487e61bf 1-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "af37d34f0ccc1f2ce6137c13c96d0a57d7d143e1",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
