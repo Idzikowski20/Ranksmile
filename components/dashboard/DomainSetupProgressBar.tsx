@@ -31,8 +31,12 @@ export function setupSteps(setup: SetupStatus): ProgressStep[] {
    });
    // Site Speed Score runs with the campaign (PageSpeed Insights). Hidden when PSI is not
    // configured ('off'/absent), so the pill only grows the step where it can be measured.
+   // While the job is still queued the measurement has not started (it runs after the
+   // sidecar claims the job), so the step stays idle — otherwise it would read as active
+   // and rob the first stage of its 'queued' marker.
    if (setup.siteSpeed && setup.siteSpeed !== 'off') {
-      steps.push({ label: 'Measuring site speed', state: setup.siteSpeed === 'done' ? 'done' : 'active' });
+      const state = setup.siteSpeed === 'done' ? 'done' : setup.status === 'queued' ? 'idle' : 'active';
+      steps.push({ label: 'Measuring site speed', state });
    }
    return steps;
 }

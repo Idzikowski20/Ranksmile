@@ -33,6 +33,18 @@ it('adds a Site Speed step to the campaign only when PageSpeed is configured', (
   expect(setupSteps(status({ siteSpeed: 'done' }))[5].state).toBe('done');
 });
 
+it('keeps the Site Speed step idle while the job is only queued, so the first stage still reads as waiting', () => {
+  const queued = status({
+    status: 'queued',
+    stagePercent: 0,
+    stages: { gsc: 'pending', keywords: 'pending', topics: 'pending', competitors: 'pending', recommendations: 'pending' },
+    siteSpeed: 'running',
+  });
+  expect(setupSteps(queued)[5].state).toBe('idle');
+  render(<DomainSetupProgressBar onRetry={() => undefined} setup={queued} />);
+  expect(screen.getByRole('status')).toHaveTextContent('Getting Search Console and site data · queued');
+});
+
 it('leaves once the job is done', () => {
   const { rerender } = render(<DomainSetupProgressBar setup={status()} onRetry={() => undefined} />);
   expect(screen.getByRole('status')).toHaveTextContent('Clustering and modeling topics · 40%');
