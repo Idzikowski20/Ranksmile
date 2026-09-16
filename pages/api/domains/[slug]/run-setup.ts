@@ -38,8 +38,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
 
       // Atomic reset stamped with runKey. Concurrent reruns race here; only the winner runs,
-      // and a loser releases its own (now redundant) reservation so nothing dangles.
-      const won = await resetDomainSetupRun(domainId, runKey);
+      // and a loser releases its own (now redundant) reservation so nothing dangles. If the
+      // reset itself errors, release the reservation too so a failed run never leaks quota
+      // until expiry — any row it may have queued is left for staleness/the next rerun.
+      let won: boolean;
+      try {
+         won = await resetDomainSetupRun(domainId, runKey);
+      } catch (e) {
+         await releaseSiteAuditReservationById(reservationId).catch(() => {});
+         throw e;
+      }
       if (!won) {
          await releaseSiteAuditReservationById(reservationId).catch(() => {});
          return res.status(202).json({ jobId, alreadyRunning: true });
