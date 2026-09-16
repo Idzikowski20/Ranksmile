@@ -10,6 +10,7 @@ import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
 import { getOptimizeRecommendations } from '@/src/core/application/recommendations/getOptimizeRecommendations';
 import { createSnapshotRepository } from '@/src/infrastructure/gsc/snapshotRepository';
 import { priorityFromScore } from '@/src/core/domain/recommendations/opportunityScore';
+import { seedsFromBrandKnowledge } from '@/src/core/domain/setup/brandKnowledgeSeeds';
 import { loadWriteRecommendations } from '@/src/infrastructure/recommendations/loadWriteRecommendations';
 
 // ── Integration orchestration (GSC + sidecar kick) ────────────────────────
@@ -268,11 +269,18 @@ async function gscStageAndSeeds(jobId: string, domainId: number): Promise<{ seed
       }
    } catch { /* GSC optional */ }
    if (!seeds.length) {
-      // Fallback: site_context title/description, then brand_knowledge.
-      const ctx = await selectRows<{ title: string; description: string }>('SELECT title, description FROM site_context WHERE domain_id = ? LIMIT 1', [domainId]);
       const bk = await selectRows<{ brand_knowledge: string }>('SELECT brand_knowledge FROM domain WHERE "ID" = ? LIMIT 1', [domainId]);
-      const text = [ctx[0]?.title, ctx[0]?.description, (bk[0]?.brand_knowledge || '').slice(0, 400)].filter(Boolean).join(' ');
-      seeds = text ? [domainName.split('.')[0], ...text.split(/[^a-zA-Z0-9ąćęłńóśźż]+/).filter((w) => w.length > 4)].slice(0, 8) : [domainName.split('.')[0]];
+      const brandKnowledge = bk[0]?.brand_knowledge || '';
+      // The Brand Knowledge draft names the topics this site should rank for; they are
+      // already phrases, so they go to Suggest and the SERP as-is.
+      seeds = seedsFromBrandKnowledge(brandKnowledge);
+      if (!seeds.length) {
+         // Last resort: whatever prose we have, split into words. Coarse — a site with no
+         // GSC, no Brand Knowledge and no scraped context has nothing better to offer.
+         const ctx = await selectRows<{ title: string; description: string }>('SELECT title, description FROM site_context WHERE domain_id = ? LIMIT 1', [domainId]);
+         const text = [ctx[0]?.title, ctx[0]?.description, brandKnowledge.slice(0, 400)].filter(Boolean).join(' ');
+         seeds = text ? [domainName.split('.')[0], ...text.split(/[^a-zA-Z0-9ąćęłńóśźż]+/).filter((w) => w.length > 4)].slice(0, 8) : [domainName.split('.')[0]];
+      }
    }
    await emit(jobId, 'gsc', 100, 'Search Console and site data ready');
    return { seeds: Array.from(new Set(seeds)).slice(0, 30), pages: Array.from(new Set(pages)) };

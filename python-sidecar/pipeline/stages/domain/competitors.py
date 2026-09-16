@@ -2,7 +2,7 @@
 import asyncio
 from urllib.parse import urlparse
 
-from analyzers.serp_analyzer import analyze_serp
+from analyzers.serp_analyzer import fetch_serp_competitors
 from pipeline.contracts import AnalysisStage, StageContext
 
 
@@ -13,18 +13,20 @@ def _domain_from_url(url: str) -> str:
         return ""
 
 
-async def _serp_with_retry(keyword: str, language: str = "pl", max_attempts: int = 3) -> dict:
-    """Call analyze_serp with up to max_attempts retries on failure."""
+async def _serp_with_retry(keyword: str, language: str = "pl", max_attempts: int = 3) -> list[dict]:
+    """SERP result rows only, with retries. This stage ranks domains by how often they
+    appear — it never needs the page bodies, terms or facts the full analyze_serp builds
+    (~75 s a keyword; eight keywords sequentially blew the 600 s stage timeout)."""
     last_exc: Exception | None = None
     for attempt in range(max_attempts):
         try:
-            return await analyze_serp(keyword, language=language)
+            return await fetch_serp_competitors(keyword, language)
         except Exception as exc:
             last_exc = exc
             if attempt < max_attempts - 1:
                 await asyncio.sleep(0.5 * (attempt + 1))
     print(f"[competitors] SERP failed for {keyword!r} after {max_attempts} attempts: {last_exc}")
-    return {}
+    return []
 
 
 class CompetitorsStage(AnalysisStage):
@@ -47,8 +49,8 @@ class CompetitorsStage(AnalysisStage):
             pct = int(i / total * 100) if total else 100
             await ctx.emit_progress(self, pct, f"Analyzing SERP for keyword {i + 1}/{total}: {keyword}")
 
-            serp_data = await _serp_with_retry(keyword, language)
-            for competitor in serp_data.get("competitors", []):
+            rows = await _serp_with_retry(keyword, language)
+            for position, competitor in enumerate(rows, start=1):
                 url: str = competitor.get("url", "")
                 domain = competitor.get("domain", "") or _domain_from_url(url)
                 if not domain:
@@ -56,10 +58,8 @@ class CompetitorsStage(AnalysisStage):
                 if domain not in domain_stats:
                     domain_stats[domain] = {"appearances": 0, "position_sum": 0.0}
                 domain_stats[domain]["appearances"] += 1
-                # serp position is 1-based; use index in competitors list as proxy
-                domain_stats[domain]["position_sum"] += float(
-                    serp_data.get("competitors", []).index(competitor) + 1
-                )
+                # SERP position is 1-based; the row's place in the result list is the proxy.
+                domain_stats[domain]["position_sum"] += float(position)
 
         # Build ranked list: top by appearances, keep top `max_kw` (~10)
         ranked = sorted(
