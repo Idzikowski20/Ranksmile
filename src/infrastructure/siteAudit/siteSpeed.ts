@@ -105,3 +105,21 @@ export async function measureSiteSpeed(domainId: number, url: string): Promise<S
   );
   return { ...metrics, url, measuredAt: new Date().toISOString() };
 }
+
+/**
+ * Measure the Site Speed Score for a domain's homepage, resolving the host from the
+ * `domain` table. Best-effort and self-contained: safe to call fire-and-forget from the
+ * job-progress 'done' callback when a campaign finishes. No-op when PSI is not configured
+ * or the domain has no host.
+ */
+export async function measureDomainSiteSpeed(domainId: number): Promise<void> {
+  if (!isPageSpeedConfigured()) return;
+  const rows = await db.query<{ domain: string | null }>(
+    'SELECT domain FROM domain WHERE "ID" = ? LIMIT 1',
+    { replacements: [domainId], type: QueryTypes.SELECT },
+  );
+  const host = rows[0]?.domain?.trim();
+  if (!host) return;
+  const url = /^https?:\/\//i.test(host) ? host : `https://${host}`;
+  await measureSiteSpeed(domainId, url);
+}

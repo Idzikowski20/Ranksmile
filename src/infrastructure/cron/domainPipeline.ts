@@ -7,8 +7,7 @@ import { getSiteAuditPageLimit, resolvePlanSlug } from '@/src/infrastructure/bil
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { nextjsUrl, sidecarUrl } from '@/src/infrastructure/config/serviceUrls';
-import { isPageSpeedConfigured, measureSiteSpeed } from '@/src/infrastructure/siteAudit/siteSpeed';
-import { getErrorMessage } from '@/src/core/shared/errors';
+import { isPageSpeedConfigured } from '@/src/infrastructure/siteAudit/siteSpeed';
 import { getOptimizeRecommendations } from '@/src/core/application/recommendations/getOptimizeRecommendations';
 import { createSnapshotRepository } from '@/src/infrastructure/gsc/snapshotRepository';
 import { priorityFromScore } from '@/src/core/domain/recommendations/opportunityScore';
@@ -346,20 +345,15 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
             if (existing) siteAuditPages = Number(existing.quantity);
          }
       } catch { /* default 100 */ }
-      // Site Speed Score (PageSpeed Insights) is part of the campaign, not an on-demand
-      // button. Run it alongside the sidecar crawl so it adds no wall-clock; best-effort,
-      // so a PSI hiccup never fails the analysis. Awaited before returning so the node
-      // runner does not drop it mid-flight.
-      const speedHost = domainName ? (/^https?:\/\//i.test(domainName) ? domainName : `https://${domainName}`) : '';
-      const speedRun = speedHost && isPageSpeedConfigured()
-         ? measureSiteSpeed(domainId, speedHost).catch((err) => { console.warn('[site-speed] campaign measure failed:', getErrorMessage(err)); })
-         : Promise.resolve();
-
+      // Site Speed Score (PageSpeed Insights) is NOT measured here. This runner is a
+      // fire-and-forget task launched off run-setup, and its continuation after the long
+      // sidecar fetch is not guaranteed to survive the HTTP response — the crawl finishes
+      // because the sidecar owns it and calls back job-progress, so the measurement is
+      // triggered there instead (measureDomainSiteSpeed), where the callback request runs.
       const body = { jobId, nextjsUrl: nextjsUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, language, limits: { keywords: 20, competitorsPerKeyword: 10, site_audit_pages: siteAuditPages } } };
       const resp = await fetch(`${sidecarUrl()}/pipeline/domain-setup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' }, body: JSON.stringify(body) });
       if (!resp.ok) await failJob(jobId, 'keywords', `sidecar ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
       // On success the sidecar will POST status='done' + result to job-progress, which materializes.
-      await speedRun;
    } catch (e) {
       await failJob(jobId, 'gsc', (e instanceof Error ? e.message : String(e)) || 'pipeline error');
    }
@@ -370,10 +364,11 @@ export async function getSetupStatus(domainId: number) {
    await ensurePipelineTables();
    type JobRow = {
       status: string; current_stage: string | null; stage_progress: number | null;
-      error: string | null; result: string | Record<string, unknown> | null; created_at: string | null;
+      error: string | null; result: string | Record<string, unknown> | null;
+      created_at: string | null; updated_at: string | null;
    };
    const rows = await selectRows<JobRow>(
-      `SELECT status, current_stage, stage_progress, error, result, created_at FROM analysis_jobs
+      `SELECT status, current_stage, stage_progress, error, result, created_at, updated_at FROM analysis_jobs
        WHERE domain_id = ? AND job_type = 'domain_setup' ORDER BY created_at DESC LIMIT 1`, [domainId]);
    if (!rows.length) return { status: 'none' as const, currentStage: null, stagePercent: 0, stages: deriveStages('none', null, 0).stages, error: null, auditCounts: null, siteSpeed: 'off' as const };
    const j = rows[0];
@@ -388,8 +383,9 @@ export async function getSetupStatus(domainId: number) {
    } catch { auditCounts = null; }
 
    // Site Speed step for the campaign pill. Hidden ('off') when PSI is not configured.
-   // 'done' once a measurement newer than this job exists, or after the job stops (the
-   // step ran with the campaign, whatever the outcome); 'running' while the job is active.
+   // The measurement is triggered from the job-progress 'done' callback and lands ~30 s
+   // after the crawl, so 'running' persists through a short grace window after the job
+   // stops — that keeps the audit page polling until the score arrives, then 'done'.
    let siteSpeed: 'off' | 'running' | 'done' = 'off';
    if (isPageSpeedConfigured()) {
       const active = ['queued', 'running', 'finalizing'].includes(j.status);
@@ -399,7 +395,17 @@ export async function getSetupStatus(domainId: number) {
       const measuredAt = speedRows[0]?.measured_at ? new Date(speedRows[0].measured_at).getTime() : 0;
       const jobStart = j.created_at ? new Date(j.created_at).getTime() : 0;
       const fresh = measuredAt > 0 && measuredAt >= jobStart;
-      siteSpeed = fresh || !active ? 'done' : 'running';
+      if (fresh) {
+         siteSpeed = 'done';
+      } else if (active) {
+         siteSpeed = 'running';
+      } else {
+         // Job finished without a fresh score yet — wait out a grace window for the
+         // post-crawl measurement, then give up so a failed measurement never hangs.
+         const updatedAt = j.updated_at ? new Date(j.updated_at).getTime() : 0;
+         const GRACE_MS = 3 * 60 * 1000;
+         siteSpeed = updatedAt > 0 && Date.now() - updatedAt < GRACE_MS ? 'running' : 'done';
+      }
    }
    return { status: j.status, currentStage: j.current_stage, stagePercent: d.stagePercent, stages: d.stages, error: j.error, auditCounts, siteSpeed };
 }
