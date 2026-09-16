@@ -79,6 +79,19 @@ const SiteAuditPage: NextPage = () => {
     }
   }, [setupStatus, slug, queryClient, setupQ.data?.error]);
 
+  // Site Speed can persist after the crawl is already 'done', so its own transition
+  // refreshes the overview — otherwise the completed campaign shows no speed score until
+  // the 60 s stale time lapses.
+  const siteSpeed = setupQ.data?.siteSpeed;
+  const prevSpeedRef = React.useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevSpeedRef.current;
+    prevSpeedRef.current = siteSpeed;
+    if (slug && prev === 'running' && siteSpeed === 'done') {
+      void queryClient.invalidateQueries(['site-audit', slug]);
+    }
+  }, [siteSpeed, slug, queryClient]);
+
   const auditQ = useSiteAuditOverview(slug);
   const data = auditQ.data;
   const issueDetailQ = useSiteAuditIssueDetail(slug, selectedIssueId ?? undefined);

@@ -88,7 +88,7 @@ function DeltaChip({ label, positive }: { label: string | null; positive: boolea
   const tone = positive === null ? 'neutral' : (positive ? 'up' : 'down');
   return (
     <span className={`tick-ring__delta tick-ring__delta--${tone}`}>
-      <Icon name={positive === false ? 'TrendDown' : 'TrendUp'} size={12} />
+      <Icon name={positive === null ? 'Minus' : positive === false ? 'TrendDown' : 'TrendUp'} size={12} />
       {label}
     </span>
   );

@@ -32,10 +32,22 @@ export async function ensureSiteSpeedTable(): Promise<void> {
     speed_index_ms INTEGER,
     measured_at TIMESTAMP DEFAULT ${pg ? 'NOW()' : 'CURRENT_TIMESTAMP'}
   )`);
-  try {
-    await db.query('CREATE INDEX IF NOT EXISTS idx_site_speed_domain ON site_speed_measurements(domain_id, measured_at DESC)');
-  } catch { /* exists */ }
+  // Idempotent (IF NOT EXISTS), so no catch: a transient failure must propagate and leave
+  // `ensured` false, otherwise the index would be memoized as ready without existing.
+  await db.query('CREATE INDEX IF NOT EXISTS idx_site_speed_domain ON site_speed_measurements(domain_id, measured_at DESC)');
   ensured = true;
+}
+
+/**
+ * A stored timestamp → ISO UTC. Postgres returns a Date; SQLite returns an offset-less
+ * 'YYYY-MM-DD HH:MM:SS' written by CURRENT_TIMESTAMP, which is UTC — but `new Date(...)`
+ * would read it as local time. Tag it as UTC before converting.
+ */
+function toUtcIso(v: string | Date): string {
+  if (v instanceof Date) return v.toISOString();
+  const s = v.trim();
+  const iso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : `${s.replace(' ', 'T')}Z`;
+  return new Date(iso).toISOString();
 }
 
 type Row = {
@@ -58,7 +70,7 @@ export async function getLatestSiteSpeed(domainId: number): Promise<SiteSpeedRec
     tbtMs: r.tbt_ms ?? null,
     cls: r.cls ?? null,
     speedIndexMs: r.speed_index_ms ?? null,
-    measuredAt: new Date(r.measured_at).toISOString(),
+    measuredAt: toUtcIso(r.measured_at),
   };
 }
 

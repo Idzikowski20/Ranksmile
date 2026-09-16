@@ -28,6 +28,9 @@ export function useSetupStatus(slug: string | null | undefined) {
          enabled: !!slug,
          refetchInterval: (data) => {
             if (data?.status === 'running' || data?.status === 'finalizing') return 2000;
+            // Site Speed runs alongside the crawl and can land after the job is done; keep
+            // polling so the audit page learns when its score is ready.
+            if (data?.siteSpeed === 'running') return 2000;
             return data?.status === 'queued' ? 5000 : false;
          },
       },

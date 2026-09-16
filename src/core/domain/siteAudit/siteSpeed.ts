@@ -30,7 +30,9 @@ function num(v: unknown): number | null {
 export function parsePageSpeedResult(raw: unknown): SiteSpeedMetrics | null {
   const lh = (raw as PsiPayload | null)?.lighthouseResult;
   const score01 = num(lh?.categories?.performance?.score);
-  if (score01 === null) return null;
+  // Lighthouse scores are 0–1. Reject anything outside that so a malformed payload never
+  // persists a score like 110 or -10 that the card would render outside "/100".
+  if (score01 === null || score01 < 0 || score01 > 1) return null;
   const audit = (id: string) => num(lh?.audits?.[id]?.numericValue);
   const ms = (v: number | null) => (v === null ? null : Math.round(v));
   return {

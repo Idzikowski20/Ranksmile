@@ -34,6 +34,13 @@ describe('parsePageSpeedResult', () => {
     expect(parsePageSpeedResult({ error: { message: 'quota' } })).toBeNull();
   });
 
+  it('rejects a score outside the 0–1 Lighthouse range', () => {
+    expect(parsePageSpeedResult(psi({ categories: { performance: { score: 1.1 } } }))).toBeNull();
+    expect(parsePageSpeedResult(psi({ categories: { performance: { score: -0.1 } } }))).toBeNull();
+    expect(parsePageSpeedResult(psi({ categories: { performance: { score: 0 } } }))?.score).toBe(0);
+    expect(parsePageSpeedResult(psi({ categories: { performance: { score: 1 } } }))?.score).toBe(100);
+  });
+
   it('tolerates a missing audit, reporting it as null rather than 0', () => {
     const out = parsePageSpeedResult(psi({ audits: { 'largest-contentful-paint': { numericValue: 1200 } } }));
     expect(out).toEqual({ score: 87, lcpMs: 1200, tbtMs: null, cls: null, speedIndexMs: null });

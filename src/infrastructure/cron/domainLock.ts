@@ -37,12 +37,27 @@ async function rows<T extends object>(sql: string, replacements: unknown[]): Pro
   return (Array.isArray(r) ? r : []) as unknown as T[];
 }
 
+const isPg = !!process.env.DATABASE_URL;
+
+/**
+ * Stale-window cutoff, matched to how the dialect stores timestamps. Postgres columns are
+ * timestamptz, so ISO compares correctly. SQLite's CURRENT_TIMESTAMP writes offset-less
+ * 'YYYY-MM-DD HH:MM:SS' (UTC), and comparing that against ISO 'YYYY-MM-DDTHH:MM:SSZ' fails
+ * lexically (space < 'T'), reading fresh rows as stale — so pass the SQLite shape and wrap
+ * both sides in datetime().
+ */
+function staleCutoff(): string {
+  const d = new Date(Date.now() - STALE_MS);
+  return isPg ? d.toISOString() : d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 /** The domain-setup job is still working on this domain (and has not gone stale). */
 export async function isDomainSetupRunning(domainId: number): Promise<boolean> {
-  const cutoff = new Date(Date.now() - STALE_MS).toISOString();
+  const cutoff = staleCutoff();
   try {
     const r = await rows<{ status: string }>(
-      'SELECT status FROM analysis_jobs WHERE id = ? AND updated_at >= ? LIMIT 1',
+      `SELECT status FROM analysis_jobs
+        WHERE id = ? AND ${isPg ? 'updated_at >= ?' : 'datetime(updated_at) >= datetime(?)'} LIMIT 1`,
       [`dsetup_${domainId}`, cutoff],
     );
     return !!r[0] && SETUP_ACTIVE.includes(r[0].status);
@@ -56,7 +71,7 @@ export async function isDomainSetupRunning(domainId: number): Promise<boolean> {
 
 /** An AI Visibility scan is queued or running (and not stale) for this domain. */
 export async function isAiVisScanRunning(domainId: number): Promise<boolean> {
-  const cutoff = new Date(Date.now() - STALE_MS).toISOString();
+  const cutoff = staleCutoff();
   try {
     const r = await rows<{ id: number }>(
       // ai_vis_scans has no updated_at; started_at is null while queued, so fall back to
@@ -64,7 +79,9 @@ export async function isAiVisScanRunning(domainId: number): Promise<boolean> {
       `SELECT s.id FROM ai_vis_scans s
          JOIN ai_vis_configs c ON c.id = s.config_id
         WHERE c.domain_id = ? AND s.status IN ('queued','running')
-          AND COALESCE(s.started_at, s.created_at) >= ?
+          AND ${isPg
+            ? 'COALESCE(s.started_at, s.created_at) >= ?'
+            : 'datetime(COALESCE(s.started_at, s.created_at)) >= datetime(?)'}
         LIMIT 1`,
       [domainId, cutoff],
     );
