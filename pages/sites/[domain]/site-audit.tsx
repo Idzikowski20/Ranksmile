@@ -126,8 +126,8 @@ const SiteAuditPage: NextPage = () => {
   const rerunCampaign = async () => {
     if (!slug || auditing || runSetup.isLoading) return;
     try {
-      await runSetup.mutateAsync(slug);
-      toast.success('Site audit crawl queued');
+      const r = await runSetup.mutateAsync(slug);
+      toast.success(r?.alreadyRunning ? 'Audit already running' : 'Site audit queued');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Rerun failed');
     }
@@ -137,7 +137,7 @@ const SiteAuditPage: NextPage = () => {
     ? (setupStatus === 'queued' ? 'Queued…' : `Auditing… ${setupQ.data?.stagePercent ?? 0}%`)
     : runSetup.isLoading
       ? 'Queuing…'
-      : 'Rerun campaign';
+      : 'Rerun audit';
 
   const filters = (
     <div className="koala-page-filters" style={{ marginBottom: 16 }}>

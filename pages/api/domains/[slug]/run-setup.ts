@@ -1,10 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { QueryTypes } from 'sequelize';
 import { enqueueDomainSetup, kickDomainSetup } from '@/src/infrastructure/cron/domainPipeline';
 import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
-import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
@@ -20,17 +18,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    const domainId = (ownership as { ID: number }).ID;
    if (await rejectIfDomainBusy(res, domainId, 'ai_visibility_scan')) return undefined;
    try {
-      const jobId = await enqueueDomainSetup(domainId);
-      const statusRows = await db.query<{ status: string }>(
-         'SELECT status FROM analysis_jobs WHERE id = ? LIMIT 1',
-         { replacements: [jobId], type: QueryTypes.SELECT },
-      );
-      if (statusRows[0]?.status === 'done') {
-         void import('@/src/infrastructure/cron/scoreDomainPages')
-            .then((m) => m.scoreDomainPages(domainId))
-            .catch((err) => { console.warn('[run-setup] rescore failed:', err); });
-         return res.status(202).json({ jobId, rescoring: true });
-      }
+      // A rerun resets a finished/crashed job back to queued so the crawl actually runs
+      // again; a fresh in-flight run stays as it is (runnable false) and we just report it.
+      const { jobId, runnable } = await enqueueDomainSetup(domainId, { reset: true });
+      if (!runnable) return res.status(202).json({ jobId, alreadyRunning: true });
+
       const { reserveSiteAuditRun } = await import('@/src/infrastructure/quota/siteAudit');
       const { isPlanLimitError, planLimitBody } = await import('@/src/infrastructure/quota/index');
       try {

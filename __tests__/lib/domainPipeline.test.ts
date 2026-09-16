@@ -32,27 +32,45 @@ describe('deriveStages', () => {
 describe('enqueueDomainSetup', () => {
   it('reuses the deterministic job id and skips INSERT when the job already exists', async () => {
     mockQuery.mockResolvedValueOnce(sel([{ id: 'dsetup_99' }])); // lookup by id → found
-    const id = await enqueueDomainSetup(99);
+    const { jobId: id } = await enqueueDomainSetup(99);
     expect(id).toBe('dsetup_99');
     expect(mockQuery.mock.calls.every((c: unknown[]) => !String((c as unknown[])[0]).includes('INSERT INTO analysis_jobs'))).toBe(true);
   });
   it('inserts a queued job under the deterministic id when none exists', async () => {
     mockQuery.mockResolvedValueOnce(sel([])); // lookup → none
     mockQuery.mockResolvedValueOnce([[], {}]); // INSERT
-    const id = await enqueueDomainSetup(99);
+    const { jobId: id } = await enqueueDomainSetup(99);
     expect(id).toBe('dsetup_99');
     expect(String(mockQuery.mock.calls[1][0])).toContain('INSERT INTO analysis_jobs');
   });
   it('swallows a PK-collision INSERT (concurrent enqueue) and still returns the id', async () => {
     mockQuery.mockResolvedValueOnce(sel([]));               // lookup → none
     mockQuery.mockRejectedValueOnce(new Error('UNIQUE constraint failed: analysis_jobs.id')); // INSERT loses race
-    const id = await enqueueDomainSetup(99);
+    const { jobId: id } = await enqueueDomainSetup(99);
     expect(id).toBe('dsetup_99');
   });
   it('re-throws a genuine (non-collision) INSERT error instead of masking it', async () => {
     mockQuery.mockResolvedValueOnce(sel([]));               // lookup → none
     mockQuery.mockRejectedValueOnce(new Error('permission denied for table analysis_jobs'));
     await expect(enqueueDomainSetup(99)).rejects.toThrow('permission denied');
+  });
+
+  it('resets a finished job back to queued on rerun and reports it runnable', async () => {
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'done' }])); // lookup → done
+    mockQuery.mockResolvedValueOnce([[], {}]);                  // UPDATE reset
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'queued' }])); // re-read → queued
+    const { jobId, runnable } = await enqueueDomainSetup(99, { reset: true });
+    expect(jobId).toBe('dsetup_99');
+    expect(runnable).toBe(true);
+    expect(String(mockQuery.mock.calls[1][0])).toContain('UPDATE analysis_jobs');
+  });
+
+  it('leaves a fresh in-flight run alone on rerun and reports it not runnable', async () => {
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'running' }])); // lookup → running
+    mockQuery.mockResolvedValueOnce([[], {}]);                     // UPDATE matches nothing (fresh)
+    mockQuery.mockResolvedValueOnce(sel([{ status: 'running' }])); // still running
+    const { runnable } = await enqueueDomainSetup(99, { reset: true });
+    expect(runnable).toBe(false);
   });
 });
 

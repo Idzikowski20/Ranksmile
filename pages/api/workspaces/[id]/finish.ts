@@ -30,7 +30,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const domainId = drows[0]?.id;
       if (domainId) {
          const { enqueueDomainSetup, kickDomainSetup } = await import('@/src/infrastructure/cron/domainPipeline');
-         const jobId = await enqueueDomainSetup(Number(domainId));
+         const { jobId } = await enqueueDomainSetup(Number(domainId));
          void kickDomainSetup(jobId);
          // Warm Performance cache — domain.search_console is set during configure when GSC site was picked.
          try {

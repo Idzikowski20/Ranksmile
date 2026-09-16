@@ -57,7 +57,7 @@ export function useRunSetup() {
    return useMutation(
       async (slug: string) => {
          const r = await fetch(`/api/domains/${slug}/run-setup`, { method: 'POST' });
-         const body = await r.json().catch(() => ({})) as { error?: string; jobId?: string };
+         const body = await r.json().catch(() => ({})) as { error?: string; jobId?: string; alreadyRunning?: boolean };
          if (!r.ok) throw new Error(body.error ?? `Run setup failed (${r.status})`);
          return body;
       },

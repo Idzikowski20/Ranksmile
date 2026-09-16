@@ -70,27 +70,54 @@ async function selectRows<T extends object>(sql: string, repl: unknown[]): Promi
  * replace this row — out of scope here.) This is the analogue of the foundation's
  * UNIQUE-serialized provisioning: never two jobs for the same domain.
  */
-export async function enqueueDomainSetup(domainId: number): Promise<string> {
+export async function enqueueDomainSetup(
+   domainId: number,
+   opts: { reset?: boolean } = {},
+): Promise<{ jobId: string; runnable: boolean }> {
    await ensurePipelineTables();
    const jobId = `dsetup_${domainId}`;
-   const existing = await selectRows<{ id: string }>(
-      'SELECT id FROM analysis_jobs WHERE id = ?', [jobId]);
-   if (existing.length) return jobId; // already enqueued (queued/running/done) — reuse
-   try {
-      // article_id = 0 sentinel: analysis_jobs.article_id is NOT NULL on SQLite (the
-      // dev fallback) and can't be dropped there; domain jobs are keyed by domain_id +
-      // job_type, never by article_id, so a 0 sentinel is harmless on both dialects.
-      await db.query(
-         `INSERT INTO analysis_jobs (id, article_id, domain_id, job_type, status, created_at, updated_at)
-          VALUES (?, 0, ?, 'domain_setup', 'queued', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-         { replacements: [jobId, domainId] });
-   } catch (e) {
-      // A PK/unique collision means a concurrent enqueue already inserted the winner — fine.
-      // Anything else (permission, connection, schema) is a real failure — surface it, don't mask.
-      const m = e instanceof Error ? e.message : String(e);
-      if (!/unique|duplicate|primary key/i.test(m)) throw e;
+   const existing = await selectRows<{ status: string }>(
+      'SELECT status FROM analysis_jobs WHERE id = ?', [jobId]);
+   if (!existing.length) {
+      try {
+         // article_id = 0 sentinel: analysis_jobs.article_id is NOT NULL on SQLite (the
+         // dev fallback) and can't be dropped there; domain jobs are keyed by domain_id +
+         // job_type, never by article_id, so a 0 sentinel is harmless on both dialects.
+         await db.query(
+            `INSERT INTO analysis_jobs (id, article_id, domain_id, job_type, status, created_at, updated_at)
+             VALUES (?, 0, ?, 'domain_setup', 'queued', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            { replacements: [jobId, domainId] });
+      } catch (e) {
+         // A PK/unique collision means a concurrent enqueue already inserted the winner — fine.
+         // Anything else (permission, connection, schema) is a real failure — surface it, don't mask.
+         const m = e instanceof Error ? e.message : String(e);
+         if (!/unique|duplicate|primary key/i.test(m)) throw e;
+      }
+      return { jobId, runnable: true };
    }
-   return jobId;
+
+   // A manual rerun re-runs the campaign: reset the deterministic row back to queued so the
+   // worker can claim it again. Only a finished ('done'/'failed') or crashed (stale) job is
+   // reset — a fresh in-flight run is left alone so a rerun click never disrupts it.
+   if (opts.reset) {
+      const isPg = !!process.env.DATABASE_URL;
+      const cutoff = new Date(Date.now() - STALE_MS);
+      const cutoffParam = isPg ? cutoff.toISOString() : cutoff.toISOString().slice(0, 19).replace('T', ' ');
+      const staleExpr = isPg ? 'updated_at < ?' : 'datetime(updated_at) < datetime(?)';
+      await db.query(
+         `UPDATE analysis_jobs
+             SET status='queued', attempts=0, locked_at=NULL, locked_by=NULL, error=NULL,
+                 current_stage=NULL, stage_progress=0, result=NULL,
+                 created_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+           WHERE id=? AND job_type='domain_setup'
+             AND (status IN ('done','failed') OR (status IN ('queued','running') AND ${staleExpr}))`,
+         { replacements: [jobId, cutoffParam] });
+      const after = await selectRows<{ status: string }>('SELECT status FROM analysis_jobs WHERE id = ?', [jobId]);
+      // 'queued' is runnable (kick claims it); a fresh 'running' job is already in flight.
+      return { jobId, runnable: after[0]?.status === 'queued' };
+   }
+
+   return { jobId, runnable: existing[0].status === 'queued' };
 }
 
 /** Atomic claim: conditional UPDATE + dialect-safe SELECT-back. true only if we own it. */
