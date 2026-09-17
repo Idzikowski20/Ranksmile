@@ -14,6 +14,11 @@ jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   }),
 }));
 
+const mockFresh = jest.fn();
+jest.mock('@/src/infrastructure/billing/stripeBillingReconcile', () => ({
+  getOrgBillingStateFresh: (orgId: number) => mockFresh(orgId),
+}));
+
 type BalRow = { used: number; reserved: number };
 type ResRow = {
   id: number;
@@ -209,6 +214,9 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  // Default: the fresh read returns whatever the stored read would.
+  mockFresh.mockReset();
+  mockFresh.mockImplementation((orgId: number) => (getOrgBillingState as jest.Mock)(orgId));
   store.bal.clear();
   store.reservations.clear();
   store.events.length = 0;
@@ -354,5 +362,24 @@ describe('quotaService without billing access', () => {
       orgId: 2, meter: 'documents', delta: -1, idempotencyKey: 'd-refund', ref: { type: 'article', id: '1' },
     });
     expect(store.bal.get(bk(2, 'documents', '_'))?.used).toBe(2);
+  });
+});
+
+describe('quotaService billing freshness', () => {
+  it('re-checks billing with Stripe outside a transaction, so a lapsed period with a lost webhook is refused', async () => {
+    mockFresh.mockResolvedValueOnce({ planSlug: 'growth', subscriptionStatus: 'canceled', currentPeriodEnd: null, cancelAtPeriodEnd: false });
+    await expect(reserveQuota({
+      orgId: 3, meter: 'keywordResearch', quantity: 1, idempotencyKey: 'kw:stale',
+      periodKey: '2026-07', ref: { type: 'keyword_research', id: '1' },
+    })).rejects.toBeInstanceOf(PlanLimitError);
+    expect(mockFresh).toHaveBeenCalledWith(3);
+  });
+
+  it('uses the stored row inside a transaction (a Stripe re-sync there could deadlock on quota rows)', async () => {
+    store.bal.set(bk(3, 'documents', '_'), { used: 0, reserved: 0 });
+    await adjustActiveUsage({
+      orgId: 3, meter: 'documents', delta: 1, idempotencyKey: 'd-tx', ref: { type: 'article', id: '1' },
+    }, { transaction: {} as never });
+    expect(mockFresh).not.toHaveBeenCalled();
   });
 });

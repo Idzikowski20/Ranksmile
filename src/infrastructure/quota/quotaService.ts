@@ -4,6 +4,7 @@ import { ensurePlanQuotaTables } from '@/src/infrastructure/persistence/schema/e
 import { hasActiveBillingEntitlement } from '@/src/infrastructure/billing/billingEntitlement';
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 import { isPaymentFailedLocked } from '@/src/infrastructure/billing/paymentFailedLock';
+import { getOrgBillingStateFresh } from '@/src/infrastructure/billing/stripeBillingReconcile';
 import {
   ACTIVE_PERIOD_KEY,
   DEFAULT_PLAN_SLUG,
@@ -41,12 +42,16 @@ async function exec(sql: string, replacements: unknown[], opt: TxOpt = {}): Prom
 }
 
 /**
- * Plain read, not getOrgBillingStateFresh: this runs inside callers' transactions, and a
- * Stripe re-sync writes quota balances — the gate in front (API wrapper / cron check) has
- * already refreshed the row.
+ * Outside a transaction the row is re-checked with Stripe when stale, so a caller that
+ * skipped the billing gate can't spend on a lapsed period. Inside one it is a plain read:
+ * a Stripe re-sync writes quota balances and could wait on the caller's own locks — those
+ * callers all sit behind the API gate, which already refreshed the row.
  */
-async function resolvePlan(orgId: number): Promise<{ planSlug: ReturnType<typeof resolvePlanSlug>; entitled: boolean }> {
-  const billing = await getOrgBillingState(orgId);
+async function resolvePlan(
+  orgId: number,
+  opt: TxOpt,
+): Promise<{ planSlug: ReturnType<typeof resolvePlanSlug>; entitled: boolean }> {
+  const billing = opt.transaction ? await getOrgBillingState(orgId) : await getOrgBillingStateFresh(orgId);
   const entitled = hasActiveBillingEntitlement(billing) && !isPaymentFailedLocked(billing);
   // Ignore stale plan_slug from incomplete checkout / canceled subs.
   return { planSlug: entitled ? resolvePlanSlug(billing?.planSlug) : DEFAULT_PLAN_SLUG, entitled };
@@ -179,7 +184,7 @@ export async function adjustActiveUsage(
   }
 
   const periodKey = ACTIVE_PERIOD_KEY;
-  const { planSlug, entitled } = await resolvePlan(params.orgId);
+  const { planSlug, entitled } = await resolvePlan(params.orgId, opt);
   const limit = getPlanMeterLimit(planSlug, params.meter);
   const qty = Math.abs(params.delta);
   // No plan, no new usage — decreases (refunds, deletes) still go through.
@@ -363,7 +368,7 @@ export async function reserveQuota(
   if (existing) return existing;
 
   const periodKey = params.periodKey ?? periodKeyForMeter(params.meter);
-  const { planSlug, entitled } = await resolvePlan(params.orgId);
+  const { planSlug, entitled } = await resolvePlan(params.orgId, opt);
   if (!entitled) throwLimit(planSlug, params.meter, 0, 0, params.quantity, 0);
   const limit = getPlanMeterLimit(planSlug, params.meter);
 
