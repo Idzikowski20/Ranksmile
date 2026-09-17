@@ -1,0 +1,55 @@
+pages/sites/[domain]/automations.tsx
+  s_c7c90ce5d12296::t_d2acd5eefdaa89 6
+  s_c7c90ce5d12296::t_a2435229e5ec52 89-90,93-99
+__tests__/components/AutomationsBoard.test.tsx
+  s_c7c90ce5d12296::t_3726d094843203 69-75,78-81
+pages/dev/automations-calendar.tsx
+  s_c7c90ce5d12296::t_fff6a5c5e4de98 50-53
+src/infrastructure/cron/automationsScheduler.ts
+  s_c7c90ce5d12296::t_45c315af5ffa8e 69,73
+  s_c7c90ce5d12296::t_78f7b1c27e24ca 151-155
+  s_c7c90ce5d12296::t_79263677f0e222 5-11,13-14,19-20,28-32,43-47,50-68,79,81-85,88-91,94,100-102,108,112-115,117-129,133-134,144,150,156-157,161-164,178,182,187,195,209-210,214-216,218,221-222
+  s_c7c90ce5d12296::t_7352ef8849cb62 70-72
+src/infrastructure/cron/autopilot.ts
+  s_c7c90ce5d12296::t_2da781f48af16e 80-81,84
+  s_c7c90ce5d12296::t_d2a7e920376e61 88
+  s_c7c90ce5d12296::t_00fafe2b6b8d1c 12
+styles/globals.css
+  s_c7c90ce5d12296::t_b4bfb5e5fb593e 9965,9969-9979
+  s_c7c90ce5d12296::t_8be93247fe7efb 10023
+  s_c7c90ce5d12296::t_b884253f60a6d1 9997-10003
+  s_c7c90ce5d12296::t_66a2eb91d12e07 10031-10037
+src/core/domain/automations/board.ts
+  s_c7c90ce5d12296::t_bd96bd449f8fc1 87
+pages/api/cron/automations.ts
+  s_c7c90ce5d12296::t_fbb2bbfcaaa21e 14-18,26-28
+__tests__/lib/automations/scheduler.test.ts
+  s_c7c90ce5d12296::t_5c25be9987e9d4 3-4,13-15,27-32,37-39,42-53,57-60,62-67,72-98,100,106-107,109-110,113-119,124-125,127,131-132,134-143
+pages/api/automations/[slug]/[id].ts
+  s_c7c90ce5d12296::t_0905fcccb59415 3,6-7,31,33-36,38,40-52,54,57-78,83-89
+__tests__/lib/automations/board.test.ts
+  s_c7c90ce5d12296::t_bd96bd449f8fc1 56
+components/automations/AutomationsBoard.tsx
+  s_c7c90ce5d12296::t_2308f36766f7a6 10,12-16
+  s_c7c90ce5d12296::t_bd96bd449f8fc1 23
+  s_c7c90ce5d12296::t_0ee9f1b3e544c0 89-90,94,101-104
+  s_c7c90ce5d12296::t_3019d0984cf2fd 212-224
+src/core/shared/types/automations.ts
+  s_c7c90ce5d12296::t_bd96bd449f8fc1 5-6,9,11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1660f7fac3ec79b03361518f0ff69e541abfeadf",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
