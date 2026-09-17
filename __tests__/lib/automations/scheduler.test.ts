@@ -28,6 +28,7 @@ jest.mock('@/src/infrastructure/quota/index', () => ({
 const mockForDomain = jest.fn();
 jest.mock('@/src/infrastructure/billing/orgAccess', () => ({
   createBillingAccessCheck: () => ({ forDomain: mockForDomain, forOrg: jest.fn() }),
+  collectAllowed: jest.requireActual('@/src/infrastructure/billing/orgAccess').collectAllowed,
 }));
 
 const mockQuery = db.query as jest.Mock;
@@ -248,4 +249,24 @@ it('leaves due and generating events of an org without billing access untouched'
   expect(createAutopilotDraft).not.toHaveBeenCalled();
   expect(sqls().some((s) => s.includes('SET status'))).toBe(false);
   expect(res).toEqual(expect.objectContaining({ started: [], created: [], published: [], skipped: 1, waiting: 1 }));
+});
+
+it('pages past a full batch of unpaid events so a paid org is not starved', async () => {
+  const unpaid = Array.from({ length: 2 }, (_, i) => ({ ...due, id: 100 + i, domain_id: 50 }));
+  const paid = { ...due, id: 7, domain_id: 9 };
+  mockForDomain.mockImplementation(async (domainId: number) => domainId === 9);
+  route({});
+  mockQuery.mockImplementation((sql: string, opts?: { replacements?: unknown[] }) => {
+    const s = String(sql).trim();
+    const r = opts?.replacements ?? [];
+    if (s.includes('FROM usage_events')) return Promise.resolve([{ one: 1 }]);
+    if (s.startsWith('SELECT') && s.includes("status = 'scheduled'")) {
+      return Promise.resolve(r[2] === 0 ? unpaid : [paid]);
+    }
+    if (s.includes('FROM automation_events e')) return Promise.resolve([]);
+    return Promise.resolve([[], 1]);
+  });
+  const res = await runAutomationsSweep({ ...args, limit: 2 });
+  expect(res.started).toEqual([7]);
+  expect(res.skipped).toBe(2);
 });

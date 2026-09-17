@@ -7,6 +7,7 @@ jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: 
 const mockForDomain = jest.fn();
 jest.mock('@/src/infrastructure/billing/orgAccess', () => ({
   createBillingAccessCheck: () => ({ forDomain: mockForDomain, forOrg: jest.fn() }),
+  collectAllowed: jest.requireActual('@/src/infrastructure/billing/orgAccess').collectAllowed,
 }));
 
 function candidate(overrides: Partial<Parameters<typeof decideAutopilotAction>[0]> = {}) {
@@ -63,6 +64,17 @@ describe('runAutopilotSweep billing', () => {
     mockForDomain.mockResolvedValue(true);
     const res = await runAutopilotSweep({ baseUrl: 'http://x', cronSecret: 's' });
     expect(res.generated).toEqual([5]);
+  });
+
+  it('pages past a full batch of unpaid candidates so a paid org is not starved', async () => {
+    const row = (id: number, domain: number) => ({ article_id: id, status: 'done', stale: 0, domain_id: domain, target_keyword: 'seo', attempts: 1 });
+    (queryRows as jest.Mock).mockImplementation(async (_sql: string, params: unknown[]) => (
+      params[1] === 0 ? [row(1, 50), row(2, 50)] : [row(3, 9)]
+    ));
+    mockForDomain.mockImplementation(async (domainId: number) => domainId === 9);
+    const res = await runAutopilotSweep({ baseUrl: 'http://x', cronSecret: 's', limit: 2 });
+    expect(res.generated).toEqual([3]);
+    expect(res.skipped).toBe(2);
   });
 
   it('skips an org without billing access', async () => {

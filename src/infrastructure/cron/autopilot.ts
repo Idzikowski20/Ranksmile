@@ -11,7 +11,7 @@ import { sleep } from '@/src/core/shared/sleep';
 import db from '@/database/database';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
-import { createBillingAccessCheck } from '@/src/infrastructure/billing/orgAccess';
+import { collectAllowed, createBillingAccessCheck } from '@/src/infrastructure/billing/orgAccess';
 
 /** Analysis is considered stuck after this long without a job-row update. */
 const STALE_ANALYSIS_MINUTES = 15;
@@ -192,7 +192,7 @@ const GENERATE_ACTIVE_STATUSES = "'queued', 'running', 'finalizing'";
  * SQL, before LIMIT — filtering them out in application code after the fetch let a
  * `limit`-sized page of already-done rows starve genuinely actionable ones behind them.
  */
-async function loadCandidates(limit: number): Promise<CandidateRow[]> {
+async function loadCandidates(offset: number, limit: number): Promise<CandidateRow[]> {
    const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
    const articleIdSql = await getArticleIdSql();
    const stalePredicate = isPg
@@ -218,9 +218,9 @@ async function loadCandidates(limit: number): Promise<CandidateRow[]> {
                 SELECT 1 FROM analysis_jobs g
                  WHERE g.article_id = j.article_id AND g.job_type = 'article_generate'
                    AND g.status IN (${GENERATE_ACTIVE_STATUSES}))
-        ORDER BY j.created_at ASC
-        LIMIT ?`,
-      [limit],
+        ORDER BY j.created_at ASC, j.article_id ASC
+        LIMIT ? OFFSET ?`,
+      [limit, offset],
    );
 }
 
@@ -259,16 +259,16 @@ export async function runAutopilotSweep(
 ): Promise<AutopilotSweepResult> {
    const limit = args.limit ?? 10;
    const result: AutopilotSweepResult = { generated: [], retried: [], skipped: 0 };
-   const rows = await loadCandidates(limit);
    // Cron runs without a session, so the API billing gate never saw these orgs.
    const billing = createBillingAccessCheck();
+   const { rows, denied } = await collectAllowed(
+      loadCandidates,
+      (row) => billing.forDomain(row.domain_id),
+      limit,
+   );
+   result.skipped += denied;
 
    for (const row of rows) {
-      // eslint-disable-next-line no-await-in-loop
-      if (!(await billing.forDomain(row.domain_id))) {
-         result.skipped += 1;
-         continue;
-      }
       const action = decideAutopilotAction({
          articleId: row.article_id,
          jobStatus: row.status,

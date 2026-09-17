@@ -47,7 +47,10 @@ function setup(org: OrgRow, subs: Stripe.Subscription[], memberUserIds: string[]
   mockList.mockImplementation(async ({ status }: { status: string }) => ({ data: status === 'active' ? subs : [] }));
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  (getOrgIdByStripeCustomerId as jest.Mock).mockResolvedValue(null);
+});
 
 it('never moves an org onto another customer\'s subscription that shares its metadata org_id', async () => {
   setup(
@@ -103,4 +106,15 @@ it('without a stored customer, recovers only when the subscribing user is a memb
   );
   await reconcileStripeBilling();
   expect(mockSync).toHaveBeenCalledWith(2, expect.objectContaining({ id: 'sub_b' }), undefined, expect.anything());
+});
+
+it('prefers the org that owns the Stripe customer over a stale metadata org_id', async () => {
+  (getOrgIdByStripeCustomerId as jest.Mock).mockResolvedValue(5);
+  setup(
+    { stripe_subscription_id: null, stripe_customer_id: 'cus_mine', subscription_status: null },
+    [sub('sub_new', 'cus_mine', { org_id: '2' })],
+  );
+  await reconcileStripeBilling();
+  expect(mockSync).toHaveBeenCalledWith(5, expect.objectContaining({ id: 'sub_new' }), undefined, expect.anything());
+  expect(mockSync).not.toHaveBeenCalledWith(2, expect.anything(), undefined, expect.anything());
 });

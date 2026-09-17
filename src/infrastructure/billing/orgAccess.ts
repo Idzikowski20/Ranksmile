@@ -58,3 +58,32 @@ export function createBillingAccessCheck() {
 
   return { forOrg, forDomain };
 }
+
+/**
+ * Pages a cron candidate query until `limit` rows pass `keep`. A LIMIT applied before the
+ * billing filter lets unpaid orgs' rows — which never change status — fill every batch
+ * and starve paid ones. `denied` counts rows `keep` rejected.
+ */
+// ponytail: OFFSET paging capped at maxPages; move the org filter into SQL if unpaid rows
+// ever outnumber limit × maxPages.
+export async function collectAllowed<T>(
+  fetchPage: (offset: number, pageSize: number) => Promise<T[]>,
+  keep: (row: T) => Promise<boolean>,
+  limit: number,
+  maxPages = 10,
+): Promise<{ rows: T[]; denied: number }> {
+  const rows: T[] = [];
+  let denied = 0;
+  for (let page = 0; page < maxPages && rows.length < limit; page += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const batch = await fetchPage(page * limit, limit);
+    for (const row of batch) {
+      if (rows.length >= limit) break;
+      // eslint-disable-next-line no-await-in-loop
+      if (await keep(row)) rows.push(row);
+      else denied += 1;
+    }
+    if (batch.length < limit) break;
+  }
+  return { rows, denied };
+}

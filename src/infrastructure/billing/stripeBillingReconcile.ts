@@ -18,6 +18,7 @@ const STALE_PERIOD_GRACE_MS = 60 * 60_000;
 const STALE_REFRESH_THROTTLE_MS = 5 * 60_000;
 // ponytail: per-process throttle, move to Redis if many app instances hammer Stripe.
 const lastStaleRefreshAt = new Map<number, number>();
+const staleRefreshInFlight = new Map<number, Promise<OrgBillingState | null>>();
 
 /**
  * The row still grants access but its paid window is over — the renewal (or failure)
@@ -52,17 +53,33 @@ export async function getOrgBillingStateFresh(orgId: number): Promise<OrgBilling
   if (!billing?.stripeSubscriptionId || !isEntitlementProjectionStale(billing, now) || !isStripeConfigured()) {
     return billing;
   }
+  // Concurrent callers share one refresh: returning the stale row meanwhile would still
+  // project it as entitled.
+  const inFlight = staleRefreshInFlight.get(orgId);
+  if (inFlight) return inFlight;
   if (now - (lastStaleRefreshAt.get(orgId) ?? 0) < STALE_REFRESH_THROTTLE_MS) return billing;
-  lastStaleRefreshAt.set(orgId, now);
 
+  const refresh = refreshStaleOrgBilling(orgId, billing, billing.stripeSubscriptionId).finally(() => {
+    staleRefreshInFlight.delete(orgId);
+    lastStaleRefreshAt.set(orgId, Date.now());
+  });
+  staleRefreshInFlight.set(orgId, refresh);
+  return refresh;
+}
+
+async function refreshStaleOrgBilling(
+  orgId: number,
+  billing: OrgBillingState,
+  subscriptionId: string,
+): Promise<OrgBillingState | null> {
   const audit = {
     source: BillingSource.RECONCILE,
     reason: 'reconcile.stale_on_access',
     correlationId: newBillingCorrelationId(),
-    stripeSubscriptionId: billing.stripeSubscriptionId,
+    stripeSubscriptionId: subscriptionId,
   };
   try {
-    const sub = await getStripe().subscriptions.retrieve(billing.stripeSubscriptionId);
+    const sub = await getStripe().subscriptions.retrieve(subscriptionId);
     await syncSubscriptionToOrg(orgId, sub, undefined, audit);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -196,7 +213,10 @@ export async function reconcileStripeBilling(opts?: {
 
     for (const sub of candidates) {
       const subCustomer = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id || '';
-      const orgId = orgIdFromMetadata(sub.metadata) ?? (await getOrgIdByStripeCustomerId(subCustomer));
+      // The customer mapping is exact; metadata.org_id is only a fallback for an org whose
+      // customer id was never stored.
+      const orgId = (subCustomer ? await getOrgIdByStripeCustomerId(subCustomer) : null)
+        ?? orgIdFromMetadata(sub.metadata);
       if (!orgId) continue;
 
       const org = await queryOne<{

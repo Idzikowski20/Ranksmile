@@ -85,6 +85,23 @@ describe('getOrgBillingStateFresh', () => {
     expect(mockRetrieve).toHaveBeenCalledTimes(1);
   });
 
+  it('makes a concurrent caller wait for the in-flight refresh instead of returning the stale row', async () => {
+    const stale = state({ orgId: 8, currentPeriodEnd: '2026-09-15T17:01:12.000Z' });
+    const fresh = state({ orgId: 8, subscriptionStatus: 'canceled' });
+    mockGet.mockResolvedValueOnce(stale).mockResolvedValueOnce(stale).mockResolvedValue(fresh);
+    let finish: (sub: Stripe.Subscription) => void = () => undefined;
+    mockRetrieve.mockReturnValue(new Promise<Stripe.Subscription>((resolve) => { finish = resolve; }));
+
+    const first = getOrgBillingStateFresh(8);
+    const second = getOrgBillingStateFresh(8);
+    for (let i = 0; i < 5; i += 1) await Promise.resolve();
+    finish({ id: 'sub_1', status: 'canceled' } as Stripe.Subscription);
+
+    await expect(first).resolves.toBe(fresh);
+    await expect(second).resolves.toBe(fresh);
+    expect(mockRetrieve).toHaveBeenCalledTimes(1);
+  });
+
   it('marks the org canceled when Stripe no longer has the subscription', async () => {
     mockGet.mockResolvedValue(state({ orgId: 4, currentPeriodEnd: '2026-09-15T17:01:12.000Z' }));
     mockRetrieve.mockRejectedValue(new Error('No such subscription: sub_1'));
