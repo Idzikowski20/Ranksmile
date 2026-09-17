@@ -2,12 +2,13 @@ export type AutomationPublishMode = 'draft' | 'live';
 
 /**
  * Event lifecycle: scheduled (deferred, nothing created yet) → generating (draft made,
- * content being written) → created (draft ready) → published (live on WordPress).
+ * content being written) → created (draft ready), or for a live event → publishing
+ * (WordPress post under way) → published.
  * `failed` is terminal for any step that errored.
  */
-export type AutomationEventStatus = 'scheduled' | 'generating' | 'created' | 'published' | 'failed';
+export type AutomationEventStatus = 'scheduled' | 'generating' | 'created' | 'publishing' | 'published' | 'failed';
 
-const AUTOMATION_STATUSES: AutomationEventStatus[] = ['scheduled', 'generating', 'created', 'published', 'failed'];
+const AUTOMATION_STATUSES: AutomationEventStatus[] = ['scheduled', 'generating', 'created', 'publishing', 'published', 'failed'];
 
 export type AutomationEvent = {
   id: number;

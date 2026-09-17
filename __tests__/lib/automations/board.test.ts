@@ -53,6 +53,7 @@ describe('statusBadge', () => {
     expect(statusBadge('scheduled')).toEqual({ label: 'Scheduled', initial: 'S', color: 'blue' });
     expect(statusBadge('generating')).toEqual({ label: 'Generating', initial: 'G', color: 'orange' });
     expect(statusBadge('created')).toEqual({ label: 'Draft ready', initial: 'D', color: 'green' });
+    expect(statusBadge('publishing')).toEqual({ label: 'Publishing', initial: 'P', color: 'orange' });
     expect(statusBadge('published')).toEqual({ label: 'Published', initial: 'P', color: 'purple' });
     expect(statusBadge('failed')).toEqual({ label: 'Failed', initial: 'F', color: 'red' });
   });

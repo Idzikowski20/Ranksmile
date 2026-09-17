@@ -9,6 +9,7 @@
 import { sleep } from '@/src/core/shared/sleep';
 import db from '@/database/database';
 import { queryRows } from '@/src/infrastructure/db/query';
+import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
 
 /** Analysis is considered stuck after this long without a job-row update. */
 const STALE_ANALYSIS_MINUTES = 15;
@@ -76,13 +77,15 @@ export async function createAutopilotDraft(domainId: number, keyword: string): P
 }
 
 /** Roll back a seed whose analysis never started — the row is an empty skeleton. */
-export async function discardAutopilotDraft(articleId: number): Promise<void> {
+/** True when the draft was actually removed (it was still an empty, analyzing draft). */
+export async function discardAutopilotDraft(articleId: number): Promise<boolean> {
    const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
    const articleIdSql = await getArticleIdSql();
-   await db.query(
+   const out = await db.query(
       `DELETE FROM articles WHERE ${articleIdSql} = ? AND status = 'analyzing' AND (content IS NULL OR content = '')`,
       { replacements: [articleId] },
    );
+   return affectedRows(out) > 0;
 }
 
 type TriggerArgs = { baseUrl: string; cronSecret: string };

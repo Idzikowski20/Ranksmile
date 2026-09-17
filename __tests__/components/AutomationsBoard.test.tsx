@@ -66,9 +66,19 @@ it('filters by status, shows a clearable chip, and restores on clear', () => {
   expect(screen.getByText('3 Result')).toBeInTheDocument();
 });
 
+it('schedules more on a day that already has cards', () => {
+  const props = setup();
+  const monday = screen.getByRole('region', { name: 'Monday, 16 Dec 2024' });
+  fireEvent.click(within(monday).getByRole('button', { name: 'Add article on Monday, 16 Dec 2024' }));
+  expect(props.onDayAdd).toHaveBeenCalledWith(new Date(2024, 11, 16));
+});
+
 it('opens the article for a card that has one and removes via the hover action', () => {
   const props = setup();
-  fireEvent.click(screen.getByText('Figma basics'));
+  // Open and remove are sibling buttons — the card itself is not interactive.
+  expect(screen.getByRole('button', { name: 'Remove Local SEO' }).closest('[role="button"]')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Boolean types' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Figma basics' }));
   expect(props.onEventClick).toHaveBeenCalledWith(events[0]);
   fireEvent.click(screen.getByRole('button', { name: 'Remove Local SEO' }));
   expect(props.onEventDelete).toHaveBeenCalledWith(events[1]);

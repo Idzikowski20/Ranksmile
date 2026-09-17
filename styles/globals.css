@@ -9962,10 +9962,21 @@ a.dash-step:hover { background: var(--koala-bg-secondary); }
 }
 .cal-col__count {
   flex-shrink: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
-  background: var(--koala-text-tertiary); color: var(--koala-bg-primary);
+  background: var(--koala-text-secondary); color: var(--koala-bg-primary);
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 600; line-height: 1;
 }
+.cal-col__actions { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.cal-col__add {
+  width: 22px; height: 22px; padding: 0; display: grid; place-items: center;
+  border: none; border-radius: 6px; background: transparent; color: var(--koala-text-secondary);
+  cursor: var(--koala-cursor-pointing); opacity: 0; transition: opacity 120ms ease;
+}
+.cal-col:hover .cal-col__add,
+.cal-col__add:focus-visible { opacity: 1; }
+.cal-col__add:hover { background: var(--koala-bg-primary); color: var(--koala-text-primary); }
+.cal-col__add:focus-visible { outline: 2px solid var(--koala-text-brand); outline-offset: 1px; }
+@media (hover: none) { .cal-col__add { opacity: 1; } }
 .cal-col__cards { display: flex; flex-direction: column; gap: 6px; }
 .cal-col__empty {
   width: 100%; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
@@ -9983,7 +9994,13 @@ a.dash-step:hover { background: var(--koala-bg-secondary); }
 }
 .cal-card--link { cursor: var(--koala-cursor-pointing); }
 .cal-card--link:hover { border-color: var(--koala-border-secondary); }
-.cal-card:focus-visible { outline: 2px solid var(--koala-text-brand); outline-offset: 1px; }
+.cal-card:focus-within:has(.cal-card__open:focus-visible) { outline: 2px solid var(--koala-text-brand); outline-offset: 1px; }
+.cal-card__open {
+  padding: 0; border: none; background: none; font: inherit; color: inherit; text-align: left;
+  cursor: var(--koala-cursor-pointing); outline: none;
+}
+/* Stretch the open button over the card; the delete button sits above it. */
+.cal-card__open::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
 .cal-card__tag { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 24px; }
 .cal-card__avatar {
   flex-shrink: 0; width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center;
@@ -10003,7 +10020,7 @@ a.dash-step:hover { background: var(--koala-bg-secondary); }
   font-size: 12px; line-height: 16px; color: var(--koala-text-secondary);
 }
 .cal-card__delete {
-  position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; padding: 0;
+  position: absolute; z-index: 1; top: 8px; right: 8px; width: 24px; height: 24px; padding: 0;
   display: grid; place-items: center; border: none; border-radius: 6px; background: transparent;
   color: var(--koala-text-tertiary); cursor: var(--koala-cursor-pointing); opacity: 0; transition: opacity 120ms ease;
 }
@@ -10011,3 +10028,10 @@ a.dash-step:hover { background: var(--koala-bg-secondary); }
 .cal-card:focus-within .cal-card__delete { opacity: 1; }
 .cal-card__delete:hover { background: var(--koala-status-danger-bg); color: var(--koala-status-danger); }
 @media (hover: none) { .cal-card__delete { opacity: 1; } }
+
+/* Dev stub page (pages/dev/automations-calendar.tsx). */
+.cal-dev { min-height: 100vh; background: var(--koala-bg-primary); padding: 32px 40px; }
+.cal-dev__inner { max-width: 1120px; margin: 0 auto; font-family: var(--font-family-primary); }
+.cal-dev__title { margin: 0; font-size: 28px; font-weight: 700; color: var(--koala-text-primary); }
+.cal-dev__lead { margin: 6px 0 24px; font-size: 14px; color: var(--koala-text-secondary); }
+@media (max-width: 560px) { .cal-dev { padding: 24px 16px; } }

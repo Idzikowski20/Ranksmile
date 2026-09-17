@@ -7,18 +7,20 @@ import {
 import { Icon } from '../koala/icons/Icon';
 import { blue, green, orange, purple, red } from '../koala/tokens/colors';
 
+// 700 shades keep the white initial at ≥4.5:1 (WCAG AA).
 const AVATAR_BG: Record<BadgeColor, string> = {
-  blue: blue[500],
-  orange: orange[500],
-  green: green[500],
-  purple: purple[500],
-  red: red[500],
+  blue: blue[700],
+  orange: orange[700],
+  green: green[700],
+  purple: purple[700],
+  red: red[700],
 };
 
 const STATUS_OPTIONS: Array<{ value: AutomationEventStatus; label: string }> = [
   { value: 'scheduled', label: 'Scheduled' },
   { value: 'generating', label: 'Generating' },
   { value: 'created', label: 'Draft ready' },
+  { value: 'publishing', label: 'Publishing' },
   { value: 'published', label: 'Published' },
   { value: 'failed', label: 'Failed' },
 ];
@@ -84,22 +86,22 @@ function FilterChip({ label, value, onClear }: { label: string; value: string; o
 function EventCard({ ev, onClick, onDelete }: { ev: AutomationEvent; onClick?: () => void; onDelete?: () => void }) {
   const badge = statusBadge(ev.status);
   const clickable = !!onClick && ev.articleId != null;
+  // The keyword until the article is written, then the title the LLM gave it.
+  const title = ev.articleTitle || ev.title;
   return (
     <article
       className={`cal-card${clickable ? ' cal-card--link' : ''}`}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
-      title={ev.targetKeyword ? `${ev.articleTitle || ev.title} · ${ev.targetKeyword}` : (ev.articleTitle || ev.title)}
-      onClick={clickable ? onClick : undefined}
-      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
+      title={ev.targetKeyword ? `${title} · ${ev.targetKeyword}` : title}
     >
       <div className="cal-card__tag">
         <span className="cal-card__avatar" style={{ background: AVATAR_BG[badge.color] }} aria-hidden="true">{badge.initial}</span>
         <span className="cal-card__tag-label">{badge.label}</span>
       </div>
       <div className="cal-card__rule" />
-      {/* The keyword until the article is written, then the title the LLM gave it. */}
-      <h3 className="cal-card__title">{ev.articleTitle || ev.title}</h3>
+      <h3 className="cal-card__title">
+        {/* Its hit area is stretched over the card (CSS), so the whole card still opens the article. */}
+        {clickable ? <button type="button" className="cal-card__open" onClick={onClick}>{title}</button> : title}
+      </h3>
       <div className="cal-card__meta">
         <Icon name="Clock" size={14} weight="regular" />
         <span>{publishLabel(ev.publishMode)}</span>
@@ -207,7 +209,19 @@ export default function AutomationsBoard({
             <section key={key} className="cal-col" aria-label={columnDateLabel(day)}>
               <header className="cal-col__head">
                 <span className="cal-col__date">{columnDateLabel(day)}</span>
-                <span className="cal-col__count">{dayEvents.length}</span>
+                <span className="cal-col__actions">
+                  {dayEvents.length > 0 ? (
+                    <button
+                      type="button"
+                      className="cal-col__add"
+                      aria-label={`Add article on ${columnDateLabel(day)}`}
+                      onClick={() => onDayAdd(day)}
+                    >
+                      <Icon name="Plus" size={14} weight="bold" />
+                    </button>
+                  ) : null}
+                  <span className="cal-col__count">{dayEvents.length}</span>
+                </span>
               </header>
               {dayEvents.length === 0 ? (
                 <button type="button" className="cal-col__empty" onClick={() => onDayAdd(day)}>

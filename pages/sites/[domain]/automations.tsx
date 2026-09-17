@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
+import toast from 'react-hot-toast';
 import type { AutomationEvent, AutomationPublishMode } from '@/src/core/shared/types/automations';
 import {
   WINDOW_DAYS, startOfDay, shiftDays, windowRange, toDateKey,
@@ -85,11 +86,17 @@ const AutomationsPage: NextPage = () => {
     async (eventId: number) => {
       const res = await fetch(`/api/automations/${encodeURIComponent(slug)}/${eventId}`, { method: 'DELETE' });
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error || 'Failed to remove event');
+        const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+        throw new Error(body.message || body.error || 'Failed to remove event');
       }
     },
-    { onSuccess: () => { void queryClient.invalidateQueries(['automations', slug]); } },
+    {
+      onSuccess: () => { void queryClient.invalidateQueries(['automations', slug]); },
+      // The card stays on the calendar, so say why instead of failing silently.
+      onError: (err: unknown) => {
+        toast.error(err instanceof Error ? err.message : 'Could not remove the event.');
+      },
+    },
   );
 
   const wordpressConnected = listQ.data?.wordpressConnected ?? true;

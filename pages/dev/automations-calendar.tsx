@@ -47,10 +47,10 @@ const AutomationsCalendarStub: NextPage = () => {
         <title>Automations calendar — Ranksmile dev</title>
         <meta name="robots" content="noindex" />
       </Head>
-      <main style={{ minHeight: '100vh', background: 'var(--koala-bg-primary)', padding: '32px 40px' }}>
-        <div style={{ maxWidth: 1120, margin: '0 auto', fontFamily: 'var(--font-family-primary)' }}>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: 'var(--koala-text-primary)' }}>Automations</h1>
-          <p style={{ margin: '6px 0 24px', fontSize: 14, color: 'var(--koala-text-secondary)' }}>
+      <main className="cal-dev">
+        <div className="cal-dev__inner">
+          <h1 className="cal-dev__title">Automations</h1>
+          <p className="cal-dev__lead">
             Plan the coming days — each scheduled keyword is written into an article on its day and, for live events, published to WordPress.
           </p>
           <AutomationsBoard

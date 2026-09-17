@@ -84,6 +84,7 @@ export type StatusBadge = { label: string; initial: string; color: BadgeColor };
 export function statusBadge(status: AutomationEventStatus): StatusBadge {
   switch (status) {
     case 'failed': return { label: 'Failed', initial: 'F', color: 'red' };
+    case 'publishing': return { label: 'Publishing', initial: 'P', color: 'orange' };
     case 'published': return { label: 'Published', initial: 'P', color: 'purple' };
     case 'generating': return { label: 'Generating', initial: 'G', color: 'orange' };
     case 'created': return { label: 'Draft ready', initial: 'D', color: 'green' };
