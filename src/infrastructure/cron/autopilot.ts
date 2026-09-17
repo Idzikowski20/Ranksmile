@@ -6,9 +6,11 @@
  * and a later sweep picks up whatever finished. A killed or failed analysis is retried
  * by the same sweep, so an interrupted request costs a tick, not the article.
  */
+import type { Transaction } from 'sequelize';
 import { sleep } from '@/src/core/shared/sleep';
 import db from '@/database/database';
 import { queryRows } from '@/src/infrastructure/db/query';
+import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
 
 /** Analysis is considered stuck after this long without a job-row update. */
 const STALE_ANALYSIS_MINUTES = 15;
@@ -44,7 +46,7 @@ export function decideAutopilotAction(candidate: AutopilotCandidate): AutopilotA
 }
 
 /** Draft row in the shape deep-analysis + /articles/[id]/generate expect (keyword mode). */
-export async function createAutopilotDraft(domainId: number, keyword: string): Promise<number> {
+export async function createAutopilotDraft(domainId: number, keyword: string, transaction?: Transaction): Promise<number> {
    // Sequelize is imported lazily: a top-level `sequelize` import in lib/* breaks every
    // Jest suite that touches this module (uuid ESM is not transformed).
    const { QueryTypes } = await import('sequelize');
@@ -61,7 +63,7 @@ export async function createAutopilotDraft(domainId: number, keyword: string): P
          `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, language, status, created_at, updated_at)
           VALUES (?, ?, ?, ?, '', ?, ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           RETURNING ${articleIdSql} AS id`,
-         { replacements: values, type: QueryTypes.SELECT },
+         { replacements: values, type: QueryTypes.SELECT, transaction },
       );
       const id = rows[0]?.id;
       if (!id) throw new Error('autopilot draft insert returned no id');
@@ -70,19 +72,23 @@ export async function createAutopilotDraft(domainId: number, keyword: string): P
    const [newId] = await db.query(
       `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, language, status, created_at, updated_at)
        VALUES (?, ?, ?, ?, '', ?, ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      { replacements: values, type: QueryTypes.INSERT },
+      { replacements: values, type: QueryTypes.INSERT, transaction },
    );
    return newId as unknown as number;
 }
 
-/** Roll back a seed whose analysis never started — the row is an empty skeleton. */
-export async function discardAutopilotDraft(articleId: number): Promise<void> {
+/**
+ * Roll back a seed whose analysis never started — the row is an empty skeleton. True when
+ * the draft was actually removed (it was still an empty, analyzing draft).
+ */
+export async function discardAutopilotDraft(articleId: number): Promise<boolean> {
    const { getArticleIdSql } = await import('@/src/infrastructure/articles/articleSql');
    const articleIdSql = await getArticleIdSql();
-   await db.query(
+   const out = await db.query(
       `DELETE FROM articles WHERE ${articleIdSql} = ? AND status = 'analyzing' AND (content IS NULL OR content = '')`,
       { replacements: [articleId] },
    );
+   return affectedRows(out) > 0;
 }
 
 type TriggerArgs = { baseUrl: string; cronSecret: string };

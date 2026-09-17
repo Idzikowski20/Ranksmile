@@ -20,6 +20,20 @@ export async function fetchArticle(id: string | number): Promise<ArticleRecord |
    return d.article || null;
 }
 
+/** Every title/keyword a domain already covers (all articles and crawled pages), for content ideas. */
+export async function fetchCoveredTopics(slug: string): Promise<string[]> {
+   const res = await fetch(`/api/articles?domain=${encodeURIComponent(slug)}&covered=1`);
+   if (!res.ok) throw new Error('Failed to load covered topics');
+   const d = (await res.json()) as { covered?: string[] };
+   return d.covered || [];
+}
+
+/**
+ * Query key for fetchCoveredTopics. Under ['articles', slug], so invalidating a domain's
+ * articles refreshes it too.
+ */
+export const coveredTopicsKey = (slug: string) => ['articles', slug, 'covered'];
+
 /** A single article record. Disabled until `id` is known. */
 export function useArticle(id: string | number | undefined) {
    return useQuery(

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { SearchIntent } from '@/src/infrastructure/organicResearch/types';
 import { KeywordIntentBadge } from '../koala/product/helpers/KeywordIntentBadge';
+import { FLOATING_MENU_Z, useAnchoredPosition } from '../koala/core/useAnchoredPosition';
 
 interface Suggestion {
    keyword: string;
@@ -23,6 +25,8 @@ interface Props {
    onRemove: (kw: string) => void;
    country?: string;
    placeholder?: string;
+   /** Prefix each chip with its position — used where every keyword becomes its own article. */
+   numbered?: boolean;
 }
 
 function formatVolume(v: number): string {
@@ -42,7 +46,7 @@ const skeletonPulse: React.CSSProperties = {
    animation: 'skeletonPulse 1.5s ease-in-out infinite',
 };
 
-const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeholder }: Props) => {
+const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeholder, numbered = false }: Props) => {
    const [inputValue, setInputValue] = useState('');
    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
    const [hasVolumeData, setHasVolumeData] = useState(false);
@@ -51,8 +55,12 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
    const [focusedIndex, setFocusedIndex] = useState(-1);
    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
    const containerRef = useRef<HTMLDivElement>(null);
+   const fieldRef = useRef<HTMLDivElement>(null);
+   const listRef = useRef<HTMLDivElement>(null);
    const inputRef = useRef<HTMLInputElement>(null);
    const reqSeqRef = useRef(0);
+   // The list is portalled, so it isn't clipped when this input sits in a modal body.
+   const listPos = useAnchoredPosition(fieldRef, isOpen, 320);
 
    const fetchSuggestions = useCallback(async (q: string) => {
       const seq = ++reqSeqRef.current;
@@ -97,9 +105,9 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
 
    useEffect(() => {
       const handler = (e: MouseEvent) => {
-         if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-            setIsOpen(false);
-         }
+         const t = e.target as Node;
+         if (containerRef.current?.contains(t) || listRef.current?.contains(t)) return;
+         setIsOpen(false);
       };
       document.addEventListener('mousedown', handler);
       return () => document.removeEventListener('mousedown', handler);
@@ -162,6 +170,7 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
    return (
       <div ref={containerRef} style={{ position: 'relative' }}>
          <div
+            ref={fieldRef}
             style={{
                minHeight: 40,
                border: '1px solid var(--koala-border-primary, #dbded4)',
@@ -177,9 +186,10 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
             }}
             onClick={() => inputRef.current?.focus()}
          >
-            {keywords.map((kw) => (
+            {keywords.map((kw, i) => (
                <span
                   key={kw}
+                  data-keyword-chip=""
                   style={{
                      display: 'inline-flex',
                      alignItems: 'center',
@@ -193,9 +203,23 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                      fontFamily: 'var(--font-family-primary)',
                   }}
                >
+                  {numbered ? (
+                     <span
+                        aria-label={`Article ${i + 1}`}
+                        style={{
+                           minWidth: 16, height: 16, padding: '0 4px', borderRadius: 999,
+                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                           background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)',
+                           fontSize: 10, fontWeight: 600, lineHeight: 1,
+                        }}
+                     >
+                        {i + 1}
+                     </span>
+                  ) : null}
                   {kw}
                   <button
                      type="button"
+                     aria-label={`Remove ${kw}`}
                      onClick={(e) => { e.stopPropagation(); onRemove(kw); }}
                      style={{
                         background: 'none', border: 'none', cursor: 'pointer',
@@ -251,22 +275,20 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
             )}
          </div>
 
-         {isOpen && (
+         {isOpen && listPos && createPortal(
             <div
+               ref={listRef}
                role="listbox"
                aria-busy={isLoading}
                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  marginTop: 4,
+                  position: 'fixed',
+                  ...listPos,
                   background: 'var(--koala-bg-primary, #fff)',
                   border: '1px solid var(--koala-border-primary, #E4E4E7)',
                   borderRadius: 8,
                   boxShadow: '0px 4px 16px rgba(0,0,0,0.08)',
-                  zIndex: 50,
-                  maxHeight: 450,
+                  zIndex: FLOATING_MENU_Z,
+                  maxHeight: 320,
                   overflowY: 'auto',
                }}
             >
@@ -419,7 +441,8 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                      </span>
                   </div>
                )}
-            </div>
+            </div>,
+            document.body,
          )}
       </div>
    );

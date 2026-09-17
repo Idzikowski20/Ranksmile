@@ -152,6 +152,9 @@ const runAppCronJobs = () => {
    // Autopilot follow-up: daily seeds topic + deep-analysis, this tick writes the
    // article once the analysis lands (and restarts stalled/failed analyses).
    scheduleHttpJob('0 */10 * * * *', 'autopilot', '/api/cron/autopilot');
+   // Content-calendar automations: start due scheduled events (create draft + kick the
+   // article pipeline) and finalize generating ones (publish live, else mark draft ready).
+   scheduleHttpJob('0 */10 * * * *', 'automations', '/api/cron/automations');
    scheduleHttpJob('0 0 9 * * *', 'rank-tracking', '/api/cron/rank-tracking');
    scheduleHttpJob('0 0 3 1 * *', 'rank-snapshots-retention', '/api/cron/rank-snapshots-retention');
    scheduleHttpJob('*/5 * * * *', 'plan-reservations', '/api/cron/plan-reservations');

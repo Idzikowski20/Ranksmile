@@ -1,6 +1,10 @@
-jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 /** @jest-environment node */
 import type { NextApiRequest, NextApiResponse } from 'next';
+
+import db from '../../database/database';
+import handler from '../../pages/api/articles/index';
+
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 
 jest.mock('../../database/database', () => ({
   __esModule: true,
@@ -16,6 +20,7 @@ jest.mock('../../utils/getUser', () => ({
   getCurrentUserId: jest.fn().mockResolvedValue('user-1'),
 }));
 
+jest.mock('@/src/infrastructure/persistence/schema/ensureAutomationTables', () => ({ ensureAutomationTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({
   ensureArticlesTables: jest.fn().mockResolvedValue(undefined),
 }));
@@ -37,9 +42,6 @@ jest.mock('../../database/models/domain', () => ({
 jest.mock('@/src/infrastructure/articles/articleSql', () => ({
   getArticleIdSql: jest.fn().mockResolvedValue('id'),
 }));
-
-import db from '../../database/database';
-import handler from '../../pages/api/articles/index';
 
 function mockReq(query: Record<string, string> = {}): NextApiRequest {
   return { method: 'GET', query } as NextApiRequest;
@@ -73,5 +75,42 @@ describe('GET /api/articles pagination', () => {
       limit: 10,
       offset: 0,
     });
+  });
+
+  it('builds the list and count queries to exclude articles an automation is still writing', async () => {
+    await handler(mockReq({ domainId: '1' }), mockRes());
+    const [countSql, listSql] = (db.query as jest.Mock).mock.calls.map((c) => String(c[0]));
+    for (const sql of [countSql, listSql]) {
+      expect(sql).toContain('FROM automation_events ae');
+      expect(sql).toContain("ae.status = 'generating'");
+    }
+  });
+});
+
+describe('GET /api/articles?covered=1', () => {
+  beforeEach(() => {
+    (db.query as jest.Mock).mockReset();
+    (db.query as jest.Mock)
+      .mockResolvedValueOnce([[
+        { title: 'Audyt SEO', target_keyword: 'audyt seo' },
+        { title: 'Draft', target_keyword: null },
+      ], undefined])
+      .mockResolvedValueOnce([[{ title: 'https://x.pl/o-nas' }], undefined]);
+  });
+
+  it('returns every covered title and keyword of the domain in one light query', async () => {
+    const res = mockRes();
+    await handler(mockReq({ domainId: '1', covered: '1' }), res);
+    expect(res._status).toBe(200);
+    expect(res._json).toEqual({ covered: ['Audyt SEO', 'audyt seo', 'Draft', 'https://x.pl/o-nas'] });
+    const [articlesSql] = (db.query as jest.Mock).mock.calls.map((c) => String(c[0]));
+    expect(articlesSql).toMatch(/SELECT title, target_keyword FROM articles WHERE domain_id = \?/);
+    expect(articlesSql).not.toMatch(/LIMIT/);
+  });
+
+  it('needs a domain', async () => {
+    const res = mockRes();
+    await handler(mockReq({ covered: '1' }), res);
+    expect(res._status).toBe(400);
   });
 });

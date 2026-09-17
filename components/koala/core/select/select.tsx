@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import styled from '@emotion/styled';
+import { FLOATING_MENU_Z, useAnchoredPosition } from '../useAnchoredPosition';
 import { semantic } from '../../tokens/semantic';
 import { typeface } from '../../tokens/typography';
 
@@ -70,8 +72,13 @@ const Label = styled.span`
   display: block;
 `;
 
+/**
+ * Portalled to <body> and fixed against the trigger, so an `overflow` ancestor (a modal
+ * body, a scroll panel) can't clip it or grow a scrollbar around it. Above the modal
+ * overlay (10000).
+ */
 const Menu = styled.div`
-  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 200;
+  position: fixed; z-index: ${FLOATING_MENU_Z};
   background: ${semantic.card.bg};
   border: 1px solid ${semantic.card.border};
   border-radius: 16px;
@@ -128,6 +135,11 @@ export function Select({
   const [search, setSearch] = useState('');
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Rough menu height (options ~36px, list capped at 220px, plus padding/search) so a short
+  // list opens downward whenever it fits. An empty list still shows one "No results" row.
+  const menuHeight = Math.min(Math.max(options.length, 1) * 36, 220) + 16 + (searchable ? 44 : 0);
+  const pos = useAnchoredPosition(triggerRef, open && !disabled, menuHeight);
 
   const selected = options.find((o) => o.value === value);
   const filtered = searchable && search
@@ -135,14 +147,20 @@ export function Select({
     : options;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
+    const close = () => { setOpen(false); setSearch(''); };
     const onMouse = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) { setOpen(false); setSearch(''); }
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      close();
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); setSearch(''); } };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     document.addEventListener('mousedown', onMouse);
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onMouse); document.removeEventListener('keydown', onKey); };
+    return () => {
+      document.removeEventListener('mousedown', onMouse);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [open]);
 
   return (
@@ -169,8 +187,8 @@ export function Select({
           </svg>
         </ChevronWrap>
       </div>
-      {open && !disabled && (
-        <Menu>
+      {open && !disabled && pos && createPortal(
+        <Menu ref={menuRef} data-koala-select-menu="" style={pos}>
           {searchable && (
             <SearchWrap>
               <SearchInp autoFocus placeholder="Search..." value={search}
@@ -190,7 +208,8 @@ export function Select({
               </Opt>
             ))}
           </List>
-        </Menu>
+        </Menu>,
+        document.body,
       )}
     </Wrapper>
   );

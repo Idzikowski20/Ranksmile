@@ -19,6 +19,7 @@ import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPay
 import { isReviewOutlineHtml } from '@/src/infrastructure/contentPlanner/reviewOutline';
 import { isWrittenArticleHtml } from '@/src/infrastructure/articles/outlineReviewState';
 import { parseSnapshot } from '@/src/infrastructure/coverage/coverageStore';
+import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import verifyUser from '../../../../utils/verifyUser';
 import db from '../../../../database/database';
@@ -358,8 +359,9 @@ async function deleteArticle(id: string, res: NextApiResponse, userId: string | 
     const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
     const orgId = await getOrgIdForDomain(article.domain_id);
     await db.transaction(async (tx) => {
-      await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id], transaction: tx });
-      if (orgId) {
+      const removed = affectedRows(await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id], transaction: tx }));
+      // Refund only the delete that removed the row — a concurrent delete must not refund twice.
+      if (orgId && removed > 0) {
         await ensureOrgQuotaBalances(orgId, { transaction: tx });
         await adjustActiveUsage(
           {
