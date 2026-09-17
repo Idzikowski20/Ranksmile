@@ -9,6 +9,7 @@ import { queryRows, type ArticleRow } from '@/src/infrastructure/db/query';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { withCronWatchdog } from '@/src/infrastructure/cron/cronWatchdog';
+import { createBillingAccessCheck } from '@/src/infrastructure/billing/orgAccess';
 import { cronSecrets } from '@/src/infrastructure/cron/cronAuth';
 import { createAutopilotDraft, discardAutopilotDraft, triggerAutopilotAnalysis } from '@/src/infrastructure/cron/autopilot';
 import { nextjsUrl } from '@/src/infrastructure/config/serviceUrls';
@@ -19,12 +20,15 @@ import db from '../../../database/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
+   // Cron runs without a session, so the API billing gate never saw these orgs.
+   const billing = createBillingAccessCheck();
 
    // Refresh Search Console data for every domain so the dashboard/performance stay current.
    try {
       const scDomains = (await Domain.findAll()).map((el) => el.get({ plain: true }));
       for (const dom of scDomains) {
          try {
+            if (!(await billing.forDomain(dom.ID))) continue;
             const scApi = await getSearchConsoleApiInfo(dom);
             if (hasValidSCAuth(scApi)) await fetchDomainSCData(dom, scApi);
          } catch (e) {
@@ -70,6 +74,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          const [orgRows] = await db.query('SELECT id, name, last_gsc_digest_sent_at FROM organizations');
          for (const org of orgRows as Array<{ id: number; name: string; last_gsc_digest_sent_at: string | null }>) {
             try {
+               if (!(await billing.forOrg(org.id))) continue;
                const sentAt = org.last_gsc_digest_sent_at ? new Date(org.last_gsc_digest_sent_at).getTime() : 0;
                if (Date.now() - sentAt < 7 * 24 * 3600 * 1000) continue;
 
@@ -118,6 +123,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const cronHeader = secrets[0] || '';
 
       for (const domain of domains) {
+         if (!(await billing.forDomain(domain.ID))) continue;
          let topics: string[] = [];
          try {
             topics = JSON.parse(domain.topics || '[]');

@@ -15,7 +15,7 @@ function summary(over: Partial<PlanSummaryData>): PlanSummaryData {
   return {
     planSlug: 'growth', planName: 'Growth', billingPeriod: 'monthly',
     subscriptionStatus: 'active', trialEndsAt: null,
-    currentPeriodEnd: '2026-09-15T17:01:12.000Z', cancelAtPeriodEnd: false,
+    currentPeriodEnd: '2099-09-15T17:01:12.000Z', cancelAtPeriodEnd: false,
     metrics: [{ key: 'documents', label: 'Documents', limit: 30, used: 3, pct: 10 }],
     overallPct: 10,
     ...over,
@@ -38,7 +38,7 @@ describe('SidebarPlanItem — active paid widget', () => {
   it('names the plan and shows the renewal date, with no upgrade CTA on a paid plan', async () => {
     renderWidget(summary({ planSlug: 'growth', planName: 'Growth' }));
     await waitFor(() => expect(screen.getByText('Growth plan')).toBeInTheDocument());
-    expect(screen.getByText('Renews Sep 15, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Renews Sep 15, 2099')).toBeInTheDocument();
     // Upgrade now is a trial-only nudge — a paying subscriber sees no CTA, any tier.
     expect(screen.queryByText('Upgrade now')).not.toBeInTheDocument();
     expect(screen.getByText('See limits')).toBeInTheDocument();
@@ -46,7 +46,7 @@ describe('SidebarPlanItem — active paid widget', () => {
 
   it('says Ends when the subscription is set to cancel', async () => {
     renderWidget(summary({ cancelAtPeriodEnd: true }));
-    await waitFor(() => expect(screen.getByText('Ends Sep 15, 2026')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Ends Sep 15, 2099')).toBeInTheDocument());
   });
 
   it('has no CTA on Agency either, just the date and See limits', async () => {
@@ -54,7 +54,7 @@ describe('SidebarPlanItem — active paid widget', () => {
     await waitFor(() => expect(screen.getByText('Agency plan')).toBeInTheDocument());
     expect(screen.queryByText('Upgrade now')).not.toBeInTheDocument();
     expect(screen.queryByText('Manage')).not.toBeInTheDocument();
-    expect(screen.getByText('Renews Sep 15, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Renews Sep 15, 2099')).toBeInTheDocument();
     expect(screen.getByText('See limits')).toBeInTheDocument();
   });
 

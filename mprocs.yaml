@@ -14,6 +14,9 @@ procs:
   python-sidecar:
     cwd: "python-sidecar"
     cmd: ["cmd", "/C", "dev.cmd"]
+  # Scheduled /api/cron/* jobs (billing reconcile, automations, autopilot, …) → app on :3000
+  cron:
+    cmd: ["cmd", "/C", "npm run cron"]
   # BullMQ consumers — waits for redis pane; reclaim queued DB rows on start
   pipeline-workers:
     cmd: ["cmd", "/C", "set PIPELINE_STAGE=5&& set PIPELINE_INLINE_WORKERS=0&& set REDIS_URL=redis://127.0.0.1:6379&& npx tsx scripts/pipeline-workers.ts"]

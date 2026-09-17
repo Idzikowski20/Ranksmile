@@ -21,6 +21,7 @@ import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
 import { publishToWordPress } from '@/src/infrastructure/wordpress/wordpressPublish';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { collectAllowed, createBillingAccessCheck } from '@/src/infrastructure/billing/orgAccess';
 import { dateKeyIn, finalizeAction, isDue, type GenerationState } from '@/src/core/domain/automations/schedule';
 import { getErrorMessage } from '@/src/core/shared/errors';
 
@@ -224,18 +225,26 @@ export async function runAutomationsSweep(args: TriggerArgs & { limit?: number }
   const now = new Date();
   // No zone is ahead of UTC by a full day, so UTC tomorrow bounds every candidate; each row is
   // then due by the calendar day in its own zone.
-  // ponytail: LIMIT applies before the zone filter, so >limit not-yet-due rows can delay others
-  // by a few hours; filter in SQL per zone if that ever matters.
   const horizon = dateKeyIn(new Date(now.getTime() + 24 * 3600 * 1000), 'UTC');
-  const candidates = await rows<DueRow>(
-    `SELECT id, domain_id, workspace_id, title, target_keyword, publish_mode, scheduled_date, time_zone
-       FROM automation_events
-      WHERE status = 'scheduled' AND scheduled_date <= ?
-      ORDER BY scheduled_date ASC, id ASC LIMIT ?`,
-    [horizon, limit],
+  // Cron runs without a session, so the API billing gate never saw these orgs.
+  const billing = createBillingAccessCheck();
+  const due = await collectAllowed(
+    (offset, pageSize) => rows<DueRow>(
+      `SELECT id, domain_id, workspace_id, title, target_keyword, publish_mode, scheduled_date, time_zone
+         FROM automation_events
+        WHERE status = 'scheduled' AND scheduled_date <= ?
+        ORDER BY scheduled_date ASC, id ASC LIMIT ? OFFSET ?`,
+      [horizon, pageSize, offset],
+    ),
+    async (row) => {
+      if (!isDue(row.scheduled_date, dateKeyIn(now, row.time_zone))) return false;
+      if (await billing.forDomain(row.domain_id)) return true;
+      result.skipped += 1;
+      return false;
+    },
+    limit,
   );
-  const due = candidates.filter((row) => isDue(row.scheduled_date, dateKeyIn(now, row.time_zone)));
-  for (const row of due) {
+  for (const row of due.rows) {
     // eslint-disable-next-line no-await-in-loop
     const outcome = await startEvent(row, args);
     if (outcome === 'started') result.started.push(row.id);
@@ -247,21 +256,27 @@ export async function runAutomationsSweep(args: TriggerArgs & { limit?: number }
   const older = (col: string) => (isPg
     ? `${col} < NOW() - INTERVAL '${STALE_MINUTES} minutes'`
     : `datetime(${col}) < datetime('now', '-${STALE_MINUTES} minutes')`);
-  const generating = await rows<GenRow>(
-    `SELECT e.id, e.domain_id, e.workspace_id, e.publish_mode, e.article_id,
-            a.content AS content, a.title AS article_title, a.meta_title AS meta_title,
-            j.status AS analysis_status,
-            CASE WHEN (j.id IS NOT NULL AND ${older('j.updated_at')})
-                   OR (j.id IS NULL AND ${older('e.updated_at')}) THEN 1 ELSE 0 END AS stale
-       FROM automation_events e
-       LEFT JOIN articles a ON a.${articleIdSql} = e.article_id
-       LEFT JOIN analysis_jobs j ON j.article_id = e.article_id AND j.job_type = 'deep_analysis'
-            AND j.created_at = (SELECT MAX(l.created_at) FROM analysis_jobs l WHERE l.article_id = e.article_id AND l.job_type = 'deep_analysis')
-      WHERE e.status = 'generating'
-      ORDER BY e.id ASC LIMIT ?`,
-    [limit],
+  const generating = await collectAllowed(
+    (offset, pageSize) => rows<GenRow>(
+      `SELECT e.id, e.domain_id, e.workspace_id, e.publish_mode, e.article_id,
+              a.content AS content, a.title AS article_title, a.meta_title AS meta_title,
+              j.status AS analysis_status,
+              CASE WHEN (j.id IS NOT NULL AND ${older('j.updated_at')})
+                     OR (j.id IS NULL AND ${older('e.updated_at')}) THEN 1 ELSE 0 END AS stale
+         FROM automation_events e
+         LEFT JOIN articles a ON a.${articleIdSql} = e.article_id
+         LEFT JOIN analysis_jobs j ON j.article_id = e.article_id AND j.job_type = 'deep_analysis'
+              AND j.created_at = (SELECT MAX(l.created_at) FROM analysis_jobs l WHERE l.article_id = e.article_id AND l.job_type = 'deep_analysis')
+        WHERE e.status = 'generating'
+        ORDER BY e.id ASC LIMIT ? OFFSET ?`,
+      [pageSize, offset],
+    ),
+    (row) => billing.forDomain(row.domain_id),
+    limit,
   );
-  for (const row of generating) {
+  // Parked, not failed: finishing resumes once the org pays again.
+  result.waiting += generating.denied;
+  for (const row of generating.rows) {
     // eslint-disable-next-line no-await-in-loop
     const outcome = await finalizeEvent(row);
     if (outcome === 'created') result.created.push(row.id);

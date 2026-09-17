@@ -8,6 +8,7 @@ import {
 import type { EnqueueNotifyResult } from '@/src/infrastructure/notifications/emailTypes';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { assertCronSecret } from '@/src/infrastructure/cron/cronAuth';
+import { createBillingAccessCheck } from '@/src/infrastructure/billing/orgAccess';
 import { getAppSettings } from './settings';
 import { getCurrentUserId } from '../../utils/getUser';
 import verifyUser from '../../utils/verifyUser';
@@ -42,7 +43,13 @@ const notify = async (req: NextApiRequest, res: NextApiResponse<NotifyResponse>)
       ({ orgId } = await ensureUserTenancy(userId));
     }
 
-    const candidates = await loadDomainCandidates(reqDomain, orgId);
+    let candidates = await loadDomainCandidates(reqDomain, orgId);
+    if (orgId == null) {
+      // Cron runs without a session, so the API billing gate never saw these orgs.
+      const billing = createBillingAccessCheck();
+      const allowed = await Promise.all(candidates.map((c) => billing.forOrg(c.orgId)));
+      candidates = candidates.filter((_, i) => allowed[i]);
+    }
     const result = await enqueueKeywordPositionEmails({
       domains: candidates,
       defaultToEmail,

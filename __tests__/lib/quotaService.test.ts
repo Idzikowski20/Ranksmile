@@ -14,6 +14,11 @@ jest.mock('@/src/infrastructure/billing/orgBilling', () => ({
   }),
 }));
 
+const mockFresh = jest.fn();
+jest.mock('@/src/infrastructure/billing/stripeBillingReconcile', () => ({
+  getOrgBillingStateFresh: (orgId: number) => mockFresh(orgId),
+}));
+
 type BalRow = { used: number; reserved: number };
 type ResRow = {
   id: number;
@@ -202,12 +207,16 @@ import {
   reserveQuota,
 } from '@/src/infrastructure/quota/quotaService';
 import { PlanLimitError } from '@/src/infrastructure/quota/errors';
+import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
 
 beforeAll(() => {
   if (!process.env.DATABASE_URL) process.env.DATABASE_URL = 'postgres://test';
 });
 
 beforeEach(() => {
+  // Default: the fresh read returns whatever the stored read would.
+  mockFresh.mockReset();
+  mockFresh.mockImplementation((orgId: number) => (getOrgBillingState as jest.Mock)(orgId));
   store.bal.clear();
   store.reservations.clear();
   store.events.length = 0;
@@ -316,5 +325,61 @@ describe('quotaService concurrency + idempotency', () => {
     await commitReservation(res.id);
     const types = store.events.filter((e) => e.idempotency_key === 'kw:shared').map((e) => e.event_type);
     expect(types).toEqual(expect.arrayContaining(['reserve', 'commit']));
+  });
+});
+
+describe('quotaService without billing access', () => {
+  const unpaid = (over: Record<string, unknown>) => (getOrgBillingState as jest.Mock).mockResolvedValueOnce({
+    planSlug: 'growth', subscriptionStatus: 'active', currentPeriodEnd: null, cancelAtPeriodEnd: false, ...over,
+  });
+
+  it.each([
+    ['canceled', { subscriptionStatus: 'canceled' }],
+    ['no billing row', null],
+    ['payment-failed lock', { subscriptionStatus: 'past_due', paymentFailedLockedAt: '2026-09-01T00:00:00Z' }],
+  ])('refuses new usage for a %s org instead of granting default-plan limits', async (_label, over) => {
+    if (over === null) (getOrgBillingState as jest.Mock).mockResolvedValueOnce(null);
+    else unpaid(over);
+    await expect(adjustActiveUsage({
+      orgId: 2, meter: 'documents', delta: 1, idempotencyKey: `d-${_label}`, ref: { type: 'article', id: '1' },
+    })).rejects.toBeInstanceOf(PlanLimitError);
+    expect(store.bal.get(bk(2, 'documents', '_'))?.used ?? 0).toBe(0);
+  });
+
+  it('refuses a reservation for an unentitled org', async () => {
+    unpaid({ subscriptionStatus: 'canceled' });
+    await expect(reserveQuota({
+      orgId: 2, meter: 'keywordResearch', quantity: 1, idempotencyKey: 'kw:unpaid',
+      periodKey: '2026-07', ref: { type: 'keyword_research', id: '1' },
+    })).rejects.toBeInstanceOf(PlanLimitError);
+    expect(store.reservations.size).toBe(0);
+  });
+
+  it('still releases usage (refund / delete) for an unentitled org', async () => {
+    store.bal.set(bk(2, 'documents', '_'), { used: 3, reserved: 0 });
+    unpaid({ subscriptionStatus: 'canceled' });
+    await adjustActiveUsage({
+      orgId: 2, meter: 'documents', delta: -1, idempotencyKey: 'd-refund', ref: { type: 'article', id: '1' },
+    });
+    expect(store.bal.get(bk(2, 'documents', '_'))?.used).toBe(2);
+  });
+});
+
+describe('quotaService billing freshness', () => {
+  it('re-checks billing with Stripe outside a transaction, so a lapsed period with a lost webhook is refused', async () => {
+    mockFresh.mockResolvedValueOnce({ planSlug: 'growth', subscriptionStatus: 'canceled', currentPeriodEnd: null, cancelAtPeriodEnd: false });
+    await expect(reserveQuota({
+      orgId: 3, meter: 'keywordResearch', quantity: 1, idempotencyKey: 'kw:stale',
+      periodKey: '2026-07', ref: { type: 'keyword_research', id: '1' },
+    })).rejects.toBeInstanceOf(PlanLimitError);
+    expect(mockFresh).toHaveBeenCalledWith(3);
+  });
+
+  it('uses the stored row inside a transaction (a Stripe re-sync there could deadlock on quota rows)', async () => {
+    store.bal.set(bk(3, 'documents', '_'), { used: 0, reserved: 0 });
+    await adjustActiveUsage({
+      orgId: 3, meter: 'documents', delta: 1, idempotencyKey: 'd-tx', ref: { type: 'article', id: '1' },
+    }, { transaction: {} as never });
+    expect(mockFresh).not.toHaveBeenCalled();
   });
 });

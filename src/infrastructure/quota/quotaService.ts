@@ -3,6 +3,8 @@ import db from '@/database/database';
 import { ensurePlanQuotaTables } from '@/src/infrastructure/persistence/schema/ensurePlanQuotaTables';
 import { hasActiveBillingEntitlement } from '@/src/infrastructure/billing/billingEntitlement';
 import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { isPaymentFailedLocked } from '@/src/infrastructure/billing/paymentFailedLock';
+import { getOrgBillingStateFresh } from '@/src/infrastructure/billing/stripeBillingReconcile';
 import {
   ACTIVE_PERIOD_KEY,
   DEFAULT_PLAN_SLUG,
@@ -39,11 +41,20 @@ async function exec(sql: string, replacements: unknown[], opt: TxOpt = {}): Prom
   await db.query(sql, { replacements, transaction: opt.transaction });
 }
 
-async function resolvePlan(orgId: number): Promise<string> {
-  const billing = await getOrgBillingState(orgId);
+/**
+ * Outside a transaction the row is re-checked with Stripe when stale, so a caller that
+ * skipped the billing gate can't spend on a lapsed period. Inside one it is a plain read:
+ * a Stripe re-sync writes quota balances and could wait on the caller's own locks — those
+ * callers all sit behind the API gate, which already refreshed the row.
+ */
+async function resolvePlan(
+  orgId: number,
+  opt: TxOpt,
+): Promise<{ planSlug: ReturnType<typeof resolvePlanSlug>; entitled: boolean }> {
+  const billing = opt.transaction ? await getOrgBillingState(orgId) : await getOrgBillingStateFresh(orgId);
+  const entitled = hasActiveBillingEntitlement(billing) && !isPaymentFailedLocked(billing);
   // Ignore stale plan_slug from incomplete checkout / canceled subs.
-  if (!hasActiveBillingEntitlement(billing)) return DEFAULT_PLAN_SLUG;
-  return resolvePlanSlug(billing?.planSlug);
+  return { planSlug: entitled ? resolvePlanSlug(billing?.planSlug) : DEFAULT_PLAN_SLUG, entitled };
 }
 
 function throwLimit(
@@ -173,10 +184,11 @@ export async function adjustActiveUsage(
   }
 
   const periodKey = ACTIVE_PERIOD_KEY;
-  const plan = await resolvePlan(params.orgId);
-  const planSlug = resolvePlanSlug(plan);
+  const { planSlug, entitled } = await resolvePlan(params.orgId, opt);
   const limit = getPlanMeterLimit(planSlug, params.meter);
   const qty = Math.abs(params.delta);
+  // No plan, no new usage — decreases (refunds, deletes) still go through.
+  if (params.delta > 0 && !entitled) throwLimit(planSlug, params.meter, 0, 0, qty, 0);
   const eventType: UsageEventType = params.delta > 0 ? 'adjustment_increase' : 'adjustment_decrease';
 
   await ensureBalanceRow(params.orgId, params.meter, periodKey, opt);
@@ -356,8 +368,8 @@ export async function reserveQuota(
   if (existing) return existing;
 
   const periodKey = params.periodKey ?? periodKeyForMeter(params.meter);
-  const plan = await resolvePlan(params.orgId);
-  const planSlug = resolvePlanSlug(plan);
+  const { planSlug, entitled } = await resolvePlan(params.orgId, opt);
+  if (!entitled) throwLimit(planSlug, params.meter, 0, 0, params.quantity, 0);
   const limit = getPlanMeterLimit(planSlug, params.meter);
 
   if (kind === 'per_run_cap') {

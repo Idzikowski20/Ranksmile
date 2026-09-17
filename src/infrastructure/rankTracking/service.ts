@@ -1,4 +1,5 @@
 import { isRankTrackingRunnerEnabled } from '@/src/infrastructure/config/featureFlags';
+import { createBillingAccessCheck } from '@/src/infrastructure/billing/orgAccess';
 import type { ComparePeriod, RankRunTrigger, ScheduleInterval } from '@/src/core/shared/types/rankTracking';
 import { ensureDefaultConfigForDomain } from '@/src/infrastructure/rankTracking/defaultConfig';
 import { estimateRankCheckCostUsd } from '@/src/infrastructure/rankTracking/cost';
@@ -68,8 +69,12 @@ export async function triggerManualCheck(domainId: number, configId: number) {
 export async function enqueueScheduledChecks(): Promise<number> {
   if (!isRankTrackingRunnerEnabled()) return 0;
   const due = await getDueConfigs();
+  // Cron runs without a session, so the API billing gate never saw these orgs.
+  const billing = createBillingAccessCheck();
   let enqueued = 0;
   for (const config of due) {
+    // Not advanced: the check runs as soon as the org pays again.
+    if (!(await billing.forDomain(config.domain_id))) continue;
     const active = await getActiveRun(config.id);
     if (active) continue;
     const keywords = await listKeywords(config.id);
