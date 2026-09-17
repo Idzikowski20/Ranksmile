@@ -86,3 +86,31 @@ describe('GET /api/articles pagination', () => {
     }
   });
 });
+
+describe('GET /api/articles?covered=1', () => {
+  beforeEach(() => {
+    (db.query as jest.Mock).mockReset();
+    (db.query as jest.Mock)
+      .mockResolvedValueOnce([[
+        { title: 'Audyt SEO', target_keyword: 'audyt seo' },
+        { title: 'Draft', target_keyword: null },
+      ], undefined])
+      .mockResolvedValueOnce([[{ title: 'https://x.pl/o-nas' }], undefined]);
+  });
+
+  it('returns every covered title and keyword of the domain in one light query', async () => {
+    const res = mockRes();
+    await handler(mockReq({ domainId: '1', covered: '1' }), res);
+    expect(res._status).toBe(200);
+    expect(res._json).toEqual({ covered: ['Audyt SEO', 'audyt seo', 'Draft', 'https://x.pl/o-nas'] });
+    const [articlesSql] = (db.query as jest.Mock).mock.calls.map((c) => String(c[0]));
+    expect(articlesSql).toMatch(/SELECT title, target_keyword FROM articles WHERE domain_id = \?/);
+    expect(articlesSql).not.toMatch(/LIMIT/);
+  });
+
+  it('needs a domain', async () => {
+    const res = mockRes();
+    await handler(mockReq({ covered: '1' }), res);
+    expect(res._status).toBe(400);
+  });
+});

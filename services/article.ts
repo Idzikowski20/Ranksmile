@@ -20,23 +20,19 @@ export async function fetchArticle(id: string | number): Promise<ArticleRecord |
    return d.article || null;
 }
 
-export type DomainArticleRow = { title?: string | null; target_keyword?: string | null; [k: string]: unknown };
-
-/** Every article of a domain (the list API caps a page at 100), e.g. to know which topics are covered. */
-export async function fetchAllDomainArticles<T extends object = DomainArticleRow>(slug: string): Promise<{ articles: T[] }> {
-   const articles: T[] = [];
-   // ponytail: hard stop at 50 pages (5000 articles) so a bad `hasMore` can't loop forever.
-   for (let page = 0; page < 50; page += 1) {
-      // eslint-disable-next-line no-await-in-loop
-      const res = await fetch(`/api/articles?domain=${encodeURIComponent(slug)}&limit=100&offset=${articles.length}`);
-      // eslint-disable-next-line no-await-in-loop
-      const d = (await res.json().catch(() => ({}))) as { articles?: T[]; hasMore?: boolean };
-      const batch = d.articles || [];
-      articles.push(...batch);
-      if (!d.hasMore || batch.length === 0) break;
-   }
-   return { articles };
+/** Every title/keyword a domain already covers (all articles and crawled pages), for content ideas. */
+export async function fetchCoveredTopics(slug: string): Promise<string[]> {
+   const res = await fetch(`/api/articles?domain=${encodeURIComponent(slug)}&covered=1`);
+   if (!res.ok) throw new Error('Failed to load covered topics');
+   const d = (await res.json()) as { covered?: string[] };
+   return d.covered || [];
 }
+
+/**
+ * Query key for fetchCoveredTopics. Under ['articles', slug], so invalidating a domain's
+ * articles refreshes it too.
+ */
+export const coveredTopicsKey = (slug: string) => ['articles', slug, 'covered'];
 
 /** A single article record. Disabled until `id` is known. */
 export function useArticle(id: string | number | undefined) {

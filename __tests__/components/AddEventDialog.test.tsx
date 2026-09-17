@@ -20,7 +20,7 @@ const GSC = {
     ],
   },
 };
-const ARTICLES = { articles: [{ title: 'Covered keyword guide', target_keyword: 'covered keyword' }] };
+const COVERED = { covered: ['Covered keyword guide', 'covered keyword'] };
 
 function mockApi(recs: unknown = RECS) {
   global.fetch = jest.fn().mockImplementation((url: string) => {
@@ -28,7 +28,7 @@ function mockApi(recs: unknown = RECS) {
     let body: unknown = { suggestions: [], hasVolumeData: false };
     if (u.includes('/recommendations')) body = recs;
     else if (u.includes('/api/gsc/search-data')) body = GSC;
-    else if (u.startsWith('/api/articles?')) body = ARTICLES;
+    else if (u.startsWith('/api/articles?') && u.includes('covered=1')) body = COVERED;
     return Promise.resolve({ ok: true, json: async () => body });
   }) as unknown as typeof fetch;
 }

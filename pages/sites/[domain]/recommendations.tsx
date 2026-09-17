@@ -15,7 +15,7 @@ import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
-import { fetchAllDomainArticles } from '../../../services/article';
+import { coveredTopicsKey, fetchCoveredTopics } from '../../../services/article';
 import { normalizeUrlForMatch, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
@@ -221,9 +221,14 @@ const RecommendationsPage: NextPage = () => {
 
    const { data: articlesData, isLoading: articlesLoading } = useQuery(
       ['articles', slug],
-      () => fetchAllDomainArticles<DomainArticle>(slug),
+      async () => {
+         const r = await fetch(`/api/articles?domain=${encodeURIComponent(slug)}`);
+         return r.json();
+      },
       { enabled: !!slug },
    );
+   // The table shows one page; content ideas must skip everything the domain covers.
+   const { data: coveredTopics } = useQuery(coveredTopicsKey(slug), () => fetchCoveredTopics(slug), { enabled: !!slug });
    const { data: scData, isLoading: scLoading } = useQuery(
       ['sc-data', slug],
       async () => { const r = await fetch(`/api/gsc/search-data?domain=${slug}`); return r.json(); },
@@ -359,8 +364,8 @@ const RecommendationsPage: NextPage = () => {
    const gapRows = useMemo(() => buildContentIdeas({
       recs: recsData?.recommendations,
       gscKeywords: allGscKeywords,
-      covered: rows.flatMap((r) => [r.keyword, r.title]),
-   }), [allGscKeywords, rows, recsData]);
+      covered: [...rows.flatMap((r) => [r.keyword, r.title]), ...(coveredTopics || [])],
+   }), [allGscKeywords, rows, recsData, coveredTopics]);
 
    const filtered = useMemo(() => {
       let out = optimizeRows;

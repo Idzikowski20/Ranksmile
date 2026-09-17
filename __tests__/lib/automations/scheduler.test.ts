@@ -42,6 +42,9 @@ beforeEach(() => {
   (discardAutopilotDraft as jest.Mock).mockResolvedValue(true);
 });
 
+// Tests that silence console.error must not leave it silenced for the rest.
+afterEach(() => (console.error as unknown as Partial<jest.SpyInstance>).mockRestore?.());
+
 /**
  * Route db.query by SQL. Writes report one affected row, except status transitions listed
  * in `lost` (as "from>to") — those another sweep already took.

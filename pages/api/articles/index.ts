@@ -107,6 +107,25 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
          replacements.push(...allowedIds);
       }
 
+      // `covered=1`: every title/keyword the domain already has (articles and crawled pages),
+      // no pagination — what content-idea suggestions must skip.
+      if (req.query.covered === '1') {
+         if (!resolvedDomainId) return res.status(400).json({ error: 'domain is required' });
+         const [articleRows] = await db.query(
+            'SELECT title, target_keyword FROM articles WHERE domain_id = ?',
+            { replacements: [resolvedDomainId] },
+         );
+         const [pageRows] = await db.query(
+            "SELECT COALESCE(NULLIF(title, ''), url) AS title FROM site_context WHERE domain_id = ?",
+            { replacements: [resolvedDomainId] },
+         );
+         type CoveredRow = { title?: string | null; target_keyword?: string | null };
+         const covered = [...(articleRows as CoveredRow[]), ...(pageRows as CoveredRow[])]
+            .flatMap((r) => [r.title, r.target_keyword])
+            .filter((v): v is string => typeof v === 'string' && v.trim() !== '');
+         return res.status(200).json({ covered });
+      }
+
       // Automations write articles in the background; keep them out of the list until done.
       await ensureAutomationTables();
       where += ` AND NOT EXISTS (SELECT 1 FROM automation_events ae

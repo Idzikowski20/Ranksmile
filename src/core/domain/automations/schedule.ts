@@ -17,8 +17,12 @@ export function normalizeTimeZone(raw: unknown): string | null {
 
 /** YYYY-MM-DD of `now` in `timeZone` — the day the user picked on their calendar. UTC if unknown. */
 export function dateKeyIn(now: Date, timeZone: string | null | undefined): string {
-  // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat('en-CA', { timeZone: normalizeTimeZone(timeZone) ?? 'UTC' }).format(now);
+  // Built from parts, not a locale's default pattern (which varies with the ICU data).
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: normalizeTimeZone(timeZone) ?? 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 /** A scheduled event is due once its day has arrived (YYYY-MM-DD compares lexically). */

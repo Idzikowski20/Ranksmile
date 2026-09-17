@@ -12,7 +12,7 @@ import { Button, Input, Select, Alert, Chip } from '../koala/core';
 import { Form, FormField, FormSection, FieldHint } from '../koala/forms';
 import { Icon } from '../koala/icons/Icon';
 import KeywordSuggestInput from '../articles/KeywordSuggestInput';
-import { fetchAllDomainArticles } from '../../services/article';
+import { coveredTopicsKey, fetchCoveredTopics } from '../../services/article';
 
 export type AddEventDialogProps = {
   open: boolean;
@@ -72,7 +72,7 @@ export default function AddEventDialog({
   }, [open, initialDate]);
 
   // The same three sources (and cache keys) the Recommendations page builds Content ideas
-  // from: scan-suggested topics, Search Console keywords, and the articles that cover them.
+  // from: scan-suggested topics, Search Console keywords, and the topics the domain already covers.
   const enabled = open && !!slug;
   const recsQ = useQuery(['domainRecs', slug], async () => {
     const r = await fetch(`/api/domains/${slug}/recommendations`);
@@ -82,17 +82,17 @@ export default function AddEventDialog({
     const r = await fetch(`/api/gsc/search-data?domain=${slug}`);
     return r.json() as Promise<{ data?: { thirtyDays?: GscKeywordRow[] } }>;
   }, { enabled, staleTime: 5 * 60 * 1000 });
-  const articlesQ = useQuery(['articles', slug], () => fetchAllDomainArticles(slug), { enabled });
+  const coveredQ = useQuery(coveredTopicsKey(slug), () => fetchCoveredTopics(slug), { enabled, staleTime: 60_000 });
   const allIdeas = useMemo(() => buildContentIdeas({
     recs: recsQ.data?.recommendations,
     gscKeywords: dedupeGscKeywords(scQ.data?.data?.thirtyDays || []),
-    covered: (articlesQ.data?.articles || []).flatMap((a) => [a.target_keyword, a.title]),
-  }), [recsQ.data, scQ.data, articlesQ.data]);
+    covered: coveredQ.data || [],
+  }), [recsQ.data, scQ.data, coveredQ.data]);
   const ideas = useMemo(() => {
     const taken = new Set(keywords.map((k) => k.toLowerCase()));
     return allIdeas.filter((i) => !taken.has(i.keyword.toLowerCase())).slice(0, 8);
   }, [allIdeas, keywords]);
-  const ideasLoading = recsQ.isLoading || scQ.isLoading || articlesQ.isLoading;
+  const ideasLoading = recsQ.isLoading || scQ.isLoading || coveredQ.isLoading;
 
   if (!open) return null;
 
