@@ -15,25 +15,16 @@ import ArticleEmptyStart from '../../components/articles/ArticleEmptyStart';
 import type { ArticleCardData } from '../../components/articles/ArticleCard';
 import AddDomain from '../../components/domains/AddDomain';
 import Settings from '../../components/settings/Settings';
-import { KoalaPage, KoalaPageHeader, KoalaPageFilters, KoalaPanel } from '../../components/koala/layout';
-import { Button, CompactSelect, SearchBar, useTableLoadMore } from '../../components/koala/core';
+import { KoalaPage } from '../../components/koala/layout';
+import { CompactSelect, useTableLoadMore } from '../../components/koala/core';
+import { Icon } from '../../components/koala/icons/Icon';
+import ActionTiles from '../../components/dashboard/ActionTiles';
 import { useFetchDomains } from '../../services/domains';
 import { useProfile } from '../../services/profile';
 import { useWorkspaces } from '../../services/workspaces';
 
-type ArticleRow = ArticleCardData & { target_keyword: string | null };
-
-export function filterAndSortArticles(articles: ArticleRow[], searchQuery: string, sortBy: string): ArticleRow[] {
-  const q = searchQuery.trim().toLowerCase();
-  const filtered = q
-    ? articles.filter((a) => {
-        const title = (a.title || '').toLowerCase();
-        const kw = (a.target_keyword || '').toLowerCase();
-        return title.includes(q) || kw.includes(q);
-      })
-    : articles;
-
-  return [...filtered].sort((a, b) => {
+export function sortArticles(articles: ArticleCardData[], sortBy: string): ArticleCardData[] {
+  return [...articles].sort((a, b) => {
     if (sortBy === 'Title') return (a.title || '').localeCompare(b.title || '');
     if (sortBy === 'CreatedAt') {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -64,7 +55,6 @@ const ArticlesPage: NextPage = () => {
   const [showAddDomain, setShowAddDomain] = useState(false);
   const [selectedDomainId] = useState<number | undefined>(undefined);
   const [sortBy, setSortBy] = useState('ContentUpdatedAt');
-  const [searchQuery, setSearchQuery] = useState('');
   const [mounted, setMounted] = useState(false);
 
   const { data: domainsData } = useFetchDomains(router);
@@ -116,104 +106,63 @@ const ArticlesPage: NextPage = () => {
     }
   };
 
-  const articles: ArticleRow[] = useMemo(() => articlesData?.articles || [], [articlesData]);
-  const filteredArticles = useMemo(
-    () => filterAndSortArticles(articles, searchQuery, sortBy),
-    [articles, searchQuery, sortBy],
-  );
-  const articlesChunk = useTableLoadMore(filteredArticles, {
+  const articles: ArticleCardData[] = useMemo(() => articlesData?.articles || [], [articlesData]);
+  const sortedArticles = useMemo(() => sortArticles(articles, sortBy), [articles, sortBy]);
+  const articlesChunk = useTableLoadMore(sortedArticles, {
     pageSize: 21,
-    resetKey: `articles-${selectedDomainId ?? 'all'}-${sortBy}-${searchQuery}-${filteredArticles.length}`,
+    resetKey: `articles-${selectedDomainId ?? 'all'}-${sortBy}-${sortedArticles.length}`,
   });
 
-  const headerActions = (
-    <div className="articles-page-actions">
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        onClick={() => router.push(articleLinks.import)}
-        icon={(
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-        )}
-      >
-        <span className="articles-page-actions-label">Import content</span>
-      </Button>
-      <div className="articles-page-actions-new">
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          onClick={() => router.push(articleLinks.keyword)}
-          icon={(
-            <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
-              <path fill="currentColor" d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
-            </svg>
-          )}
-          style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0, flex: 1 }}
-        >
-          New Content
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          aria-label="New content options"
-          onClick={() => router.push(articleLinks.keyword)}
-          icon={(
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" />
-            </svg>
-          )}
-          style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, minWidth: 36, paddingLeft: 6, paddingRight: 6 }}
-        />
-      </div>
-    </div>
-  );
+  const sortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label;
 
   return (
     <DashboardLayout domains={domains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
       <Head><title>Articles — Ranksmile</title></Head>
-      <KoalaPage maxWidth={1080} className="articles-page">
-        <KoalaPageHeader title="Articles" actions={headerActions} borderless />
+      <KoalaPage maxWidth={1120} className="articles-page">
+        <div className="articles-page__stack">
+          <ActionTiles tiles={[
+            { key: 'new', title: 'New content', description: 'Write an article that ranks', href: articleLinks.keyword, icon: 'NotePencil' },
+            { key: 'import', title: 'Import content', description: 'Bring in an article you already have', href: articleLinks.import, icon: 'DownloadSimple' },
+          ]} />
 
-        <KoalaPageFilters trailing={<SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search" width={300} />}>
-          <CompactSelect
-            size="sm"
-            value={sortBy}
-            onChange={(opt) => setSortBy(opt.value)}
-            options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-          />
-        </KoalaPageFilters>
-
-        <KoalaPanel noPadding className="koala-panel--cards">
-          {!isLoading && articles.length > 0 && filteredArticles.length === 0 ? (
-            <p className="articles-page__no-match">No articles match your search.</p>
-          ) : (
-            <div style={{ paddingTop: 20 }}>
-              <ArticleCardGrid
-                articles={articles.length === 0 ? articles : articlesChunk.visibleItems}
-                hrefFor={(a) => workspaceHref(activeWsId, `/articles/${a.id}`)}
-                author={author}
-                isLoading={isLoading}
-                emptyState={(
-                  <ArticleEmptyStart links={{
-                    recommendations: articleLinks.recommendations,
-                    keyword: articleLinks.keyword,
-                    contentAudit: articleLinks.contentAudit,
-                  }} />
+          <section aria-label="Articles">
+            <div className="dash-articles__head">
+              <h1 className="dash-articles__title">Articles</h1>
+              <span className="dash-articles__divider" aria-hidden="true" />
+              <CompactSelect
+                size="sm"
+                value={sortBy}
+                onChange={(opt) => setSortBy(opt.value)}
+                options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                trigger={(props, isOpen) => (
+                  <button type="button" {...props} className="dash-articles__sort" aria-expanded={isOpen}>
+                    {sortLabel}
+                    <Icon name="CaretDown" size={14} />
+                  </button>
                 )}
-                onDelete={handleDelete}
-                onDeleteMultiple={handleDeleteMultiple}
-                hasMore={articlesChunk.hasMore}
-                onLoadMore={articlesChunk.loadMore}
-                isLoadingMore={articlesChunk.isLoading}
               />
             </div>
-          )}
-        </KoalaPanel>
+
+            <ArticleCardGrid
+              articles={articles.length === 0 ? articles : articlesChunk.visibleItems}
+              hrefFor={(a) => workspaceHref(activeWsId, `/articles/${a.id}`)}
+              author={author}
+              isLoading={isLoading}
+              emptyState={(
+                <ArticleEmptyStart links={{
+                  recommendations: articleLinks.recommendations,
+                  keyword: articleLinks.keyword,
+                  contentAudit: articleLinks.contentAudit,
+                }} />
+              )}
+              onDelete={handleDelete}
+              onDeleteMultiple={handleDeleteMultiple}
+              hasMore={articlesChunk.hasMore}
+              onLoadMore={articlesChunk.loadMore}
+              isLoadingMore={articlesChunk.isLoading}
+            />
+          </section>
+        </div>
       </KoalaPage>
 
       {showAddDomain && (

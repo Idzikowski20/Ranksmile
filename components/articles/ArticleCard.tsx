@@ -166,7 +166,7 @@ export default function ArticleCard({ article, href, author, selected, onDelete,
         {author?.name ? (
           <span className="article-card__author">
             <Avatar src={author.avatarUrl || undefined} name={author.name} size={20} />
-            <span>{author.name}</span>
+            <span className="article-card__author-name">{author.name}</span>
           </span>
         ) : null}
       </div>

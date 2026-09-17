@@ -3578,22 +3578,8 @@ html.editor-route .app-content {
   }
 }
 
-.articles-page-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-.articles-page-actions-new {
-  display: flex;
-  align-items: stretch;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-@media (max-width: 479px) {
-  .articles-page-actions-label { display: none; }
-}
+/* Articles page reuses the dashboard's tiles and "Articles | sort" head. */
+.articles-page__stack { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
 .koala-page--settings {
   flex: 1;
   width: 100%;
@@ -9599,7 +9585,12 @@ html.koala-shell[data-theme="cream"] .app-content {
   line-height: 16px;
   color: var(--koala-text-tertiary);
 }
-.article-card__author { display: inline-flex; align-items: center; gap: 6px; color: var(--koala-text-secondary); font-weight: 500; }
+/* One line at every card width: the date keeps its size, a long name truncates. */
+.article-card__meta > span { white-space: nowrap; }
+.article-card__meta > span:first-child { flex: none; }
+.article-card__author { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--koala-text-secondary); font-weight: 500; }
+.article-card__author > * { flex: none; }
+.article-card__author-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .article-card__author::before { content: '·'; margin-right: 4px; color: var(--koala-text-tertiary); }
 .article-card--skeleton { animation: skeletonPulse 1.5s ease-in-out infinite; }
 .article-card--skeleton .article-card__thumb { background: var(--koala-bg-secondary); }
