@@ -46,9 +46,11 @@ beforeEach(() => {
  * Route db.query by SQL. Writes report one affected row, except status transitions listed
  * in `lost` (as "from>to") — those another sweep already took.
  */
-function route(h: { due?: unknown[]; generating?: unknown[]; lost?: string[] }) {
+function route(h: { due?: unknown[]; generating?: unknown[]; lost?: string[]; charged?: boolean }) {
   mockQuery.mockImplementation((sql: string, opts?: { replacements?: unknown[] }) => {
     const s = String(sql).trim();
+    // The +1 charge is on record unless `charged: false`.
+    if (s.includes('FROM usage_events')) return Promise.resolve(h.charged === false ? [] : [{ one: 1 }]);
     if (s.startsWith('SELECT') && s.includes("status = 'scheduled'")) return Promise.resolve(h.due ?? []);
     if (s.includes('FROM automation_events e')) return Promise.resolve(h.generating ?? []);
     const r = opts?.replacements ?? [];
@@ -106,6 +108,17 @@ it('fails the event and drops + refunds the draft when analysis is not accepted'
   expect(res.failed).toEqual([1]);
   expect(discardAutopilotDraft).toHaveBeenCalledWith(555);
   expect(adjustActiveUsage).toHaveBeenCalledWith(expect.objectContaining({ delta: -1, idempotencyKey: 'doc-delete:555' }));
+});
+
+it('drops the draft without a refund when the quota rejects the charge', async () => {
+  (adjustActiveUsage as jest.Mock).mockRejectedValueOnce(new Error('Document limit reached'));
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  route({ due: [due], charged: false });
+  const res = await runAutomationsSweep(args);
+  expect(res.failed).toEqual([1]);
+  expect(discardAutopilotDraft).toHaveBeenCalledWith(555);
+  expect(adjustActiveUsage).toHaveBeenCalledTimes(1); // the rejected +1 only, no -1
+  expect(triggerAutopilotAnalysis).not.toHaveBeenCalled();
 });
 
 it('does not refund a draft the pipeline already picked up', async () => {
@@ -177,6 +190,14 @@ it('fails a stale event with no content and drops its draft', async () => {
   expect(res.failed).toEqual([2]);
   expect(discardAutopilotDraft).toHaveBeenCalledWith(555);
   expect(sqls().some((s) => s.includes('SET article_id = NULL'))).toBe(true);
+});
+
+it('drops a stale draft without a refund when its charge was never recorded', async () => {
+  route({ generating: [gen({ analysis_status: null, stale: 1 })], charged: false });
+  const res = await runAutomationsSweep(args);
+  expect(res.failed).toEqual([2]);
+  expect(discardAutopilotDraft).toHaveBeenCalledWith(555);
+  expect(adjustActiveUsage).not.toHaveBeenCalled();
 });
 
 it('counts an event with no analysis job as stale by its own age', async () => {

@@ -3,7 +3,7 @@
  *
  * A tick does two things:
  *   START    each due `scheduled` event: claim it (→ generating), create a keyword-mode
- *            draft, bill a document, link it, and kick deep-analysis. The app's article
+ *            draft, link it, bill a document, and kick deep-analysis. The app's article
  *            pipeline (deep-analysis → autopilot sweep → generate) writes the draft and the
  *            LLM picks its title — automations piggyback on that engine.
  *   FINALIZE each `generating` event once its article has content: a `live` event is
@@ -46,11 +46,21 @@ async function transition(eventId: number, from: string, status: string, clearAr
   return affectedRows(out) > 0;
 }
 
-/** Give back the document a scheduler-created draft was billed for (same key as a manual delete). */
-async function refundDocument(domainId: number, articleId: number): Promise<void> {
+const chargeKey = (orgId: number, eventId: number) => `auto-doc:${orgId}:${eventId}`;
+
+/**
+ * Give back the document a scheduler-created draft was billed for (same key as a manual
+ * delete). Only when the charge was recorded — it may have been rejected, or never reached.
+ */
+async function refundDocument(domainId: number, articleId: number, eventId: number): Promise<void> {
   const { getOrgIdForDomain, adjustActiveUsage } = await import('@/src/infrastructure/quota/index');
   const orgId = await getOrgIdForDomain(domainId);
   if (!orgId) return;
+  const charged = await rows<{ one: number }>(
+    'SELECT 1 AS one FROM usage_events WHERE idempotency_key = ? LIMIT 1',
+    [chargeKey(orgId, eventId)],
+  );
+  if (charged.length === 0) return;
   await adjustActiveUsage({
     orgId,
     meter: 'documents',
@@ -62,10 +72,10 @@ async function refundDocument(domainId: number, articleId: number): Promise<void
 }
 
 /** Remove a draft the pipeline never wrote into, and refund it. Best-effort. */
-async function dropDraft(domainId: number, articleId: number): Promise<boolean> {
+async function dropDraft(domainId: number, articleId: number, eventId: number): Promise<boolean> {
   // Refund only a draft that is really gone — one the pipeline picked up still counts.
   const removed = await discardAutopilotDraft(articleId).catch(() => false);
-  if (removed) await refundDocument(domainId, articleId).catch(() => {});
+  if (removed) await refundDocument(domainId, articleId, eventId).catch(() => {});
   return removed;
 }
 
@@ -84,7 +94,7 @@ export type AutomationsSweepResult = {
   started: number[]; created: number[]; published: number[]; failed: number[]; waiting: number; skipped: number;
 };
 
-/** Start a due `scheduled` event: claim → draft → bill → link → analysis. */
+/** Start a due `scheduled` event: claim → draft → link → bill → analysis. */
 async function startEvent(row: DueRow, args: TriggerArgs): Promise<'started' | 'failed' | 'skipped'> {
   // Claim first: only the sweep whose UPDATE moved the row goes on to draft and bill.
   if (!(await transition(row.id, 'scheduled', 'generating'))) return 'skipped';
@@ -99,38 +109,43 @@ async function startEvent(row: DueRow, args: TriggerArgs): Promise<'started' | '
     // Same path as a user's new article, minus the interactive steps: the draft carries only
     // the keyword; generate writes the brief and the LLM picks the title.
     articleId = await createAutopilotDraft(row.domain_id, keyword);
-    await adjustActiveUsage({
-      orgId,
-      meter: 'documents',
-      delta: 1,
-      idempotencyKey: `auto-doc:${orgId}:${row.id}`,
-      ref: { type: 'article', id: String(articleId) },
-      userId: null,
-    });
 
-    // Link only while the event still exists and is ours — it may have been removed meanwhile.
+    // Link right away, so a crash after this point leaves a draft the stale check can drop.
+    // Only while the event still exists and is ours — it may have been removed meanwhile.
+    // ponytail: a crash between the insert above and this update still orphans the empty
+    // draft (unbilled); a shared transaction would need createAutopilotDraft to take one.
     const linked = affectedRows(await db.query(
       `UPDATE automation_events SET article_id = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND status = 'generating' AND article_id IS NULL`,
       { replacements: [articleId, row.id] },
     )) > 0;
     if (!linked) {
-      await dropDraft(row.domain_id, articleId);
+      await dropDraft(row.domain_id, articleId, row.id);
       return 'skipped';
     }
+
+    await adjustActiveUsage({
+      orgId,
+      meter: 'documents',
+      delta: 1,
+      idempotencyKey: chargeKey(orgId, row.id),
+      ref: { type: 'article', id: String(articleId) },
+      userId: null,
+    });
 
     const accepted = await triggerAutopilotAnalysis(args, { articleId, domainId: row.domain_id, keyword });
     if (!accepted) {
       // No analysis job means nothing will ever write this draft — fail now, don't wait forever.
       await transition(row.id, 'generating', 'failed', true);
-      await dropDraft(row.domain_id, articleId);
+      await dropDraft(row.domain_id, articleId, row.id);
       return 'failed';
     }
     return 'started';
   } catch (err) {
     console.error('[automations] start failed:', row.id, getErrorMessage(err));
     await transition(row.id, 'generating', 'failed', true).catch(() => false);
-    if (articleId != null) await dropDraft(row.domain_id, articleId);
+    // A rejected charge (e.g. quota full) recorded nothing, so dropDraft refunds nothing.
+    if (articleId != null) await dropDraft(row.domain_id, articleId, row.id);
     return 'failed';
   }
 }
@@ -148,7 +163,7 @@ async function finalizeEvent(row: GenRow): Promise<'created' | 'published' | 'fa
   if (action === 'wait') return 'waiting';
   if (action === 'fail') {
     if (!(await transition(row.id, 'generating', 'failed'))) return 'waiting';
-    if (row.article_id != null && !hasContent && (await dropDraft(row.domain_id, row.article_id))) {
+    if (row.article_id != null && !hasContent && (await dropDraft(row.domain_id, row.article_id, row.id))) {
       // The draft is gone — don't leave the event pointing at it.
       await db.query('UPDATE automation_events SET article_id = NULL WHERE id = ?', { replacements: [row.id] });
     }
