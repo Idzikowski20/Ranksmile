@@ -68,8 +68,8 @@ async function resolveOrgId(req: NextApiRequest, res: NextApiResponse): Promise<
 }
 
 async function loadAccessSnapshot(orgId: number, userId: string | null): Promise<AccessSnapshot> {
-  const { getOrgBillingState } = await import('@/src/infrastructure/billing/orgBilling');
-  const billing = await getOrgBillingState(orgId);
+  const { getOrgBillingStateFresh } = await import('@/src/infrastructure/billing/stripeBillingReconcile');
+  const billing = await getOrgBillingStateFresh(orgId);
   const billingState = projectBillingState({
     subscriptionStatus: billing?.subscriptionStatus ?? null,
     paymentFailedLocked: isPaymentFailedLocked(billing),

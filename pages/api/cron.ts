@@ -5,6 +5,7 @@ import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { assertCronSecret } from '@/src/infrastructure/cron/cronAuth';
+import { createBillingAccessCheck } from '@/src/infrastructure/billing/orgAccess';
 import db from '../../database/database';
 import Keyword from '../../database/models/keyword';
 import Domain from '../../database/models/domain';
@@ -55,7 +56,7 @@ const cronRefreshkeywords = async (
          return res.status(400).json({ started: false, error: 'Scraper has not been set up yet.' });
       }
 
-      let domainFilter: string[] | null = null;
+      let domainFilter: string[];
       if (orgId != null) {
          const owned = await queryRows<{ domain: string }>(
             `SELECT d.domain FROM domain d
@@ -64,17 +65,26 @@ const cronRefreshkeywords = async (
             [orgId],
          );
          domainFilter = owned.map((r) => r.domain).filter(Boolean);
-         if (domainFilter.length === 0) {
-            return res.status(200).json({ started: true });
-         }
+      } else {
+         // Cron runs without a session, so the API billing gate never saw these orgs.
+         const billing = createBillingAccessCheck();
+         const all = await queryRows<{ domain: string; org_id: number | null }>(
+            `SELECT d.domain, w.org_id FROM domain d
+               LEFT JOIN workspaces w ON w.id = d.workspace_id`,
+         );
+         const allowed = await Promise.all(all.map((r) => billing.forOrg(r.org_id)));
+         domainFilter = all.filter((_, i) => allowed[i]).map((r) => r.domain).filter(Boolean);
+      }
+      if (domainFilter.length === 0) {
+         return res.status(200).json({ started: true });
       }
 
-      const keywordWhere = domainFilter ? { domain: { [Op.in]: domainFilter } } : {};
+      const keywordWhere = { domain: { [Op.in]: domainFilter } };
       await Keyword.update({ updating: true }, { where: keywordWhere });
       const keywordQueries: Keyword[] = await Keyword.findAll({ where: keywordWhere });
       const allDomains: Domain[] = await Domain.findAll({
          attributes: ['domain', 'scrape_strategy', 'scrape_pagination_limit', 'scrape_smart_full_fallback', 'subdomain_matching'],
-         ...(domainFilter ? { where: { domain: { [Op.in]: domainFilter } } } : {}),
+         where: { domain: { [Op.in]: domainFilter } },
       });
       const domainList: DomainType[] = allDomains.map((d) => d.get({ plain: true }));
 

@@ -25,6 +25,11 @@ jest.mock('@/src/infrastructure/quota/index', () => ({
   adjustActiveUsage: jest.fn().mockResolvedValue(undefined),
 }));
 
+const mockForDomain = jest.fn();
+jest.mock('@/src/infrastructure/billing/orgAccess', () => ({
+  createBillingAccessCheck: () => ({ forDomain: mockForDomain, forOrg: jest.fn() }),
+}));
+
 const mockQuery = db.query as jest.Mock;
 const args = { baseUrl: 'http://localhost:3000', cronSecret: 's' };
 const due = {
@@ -39,6 +44,7 @@ const live = { site_url: 'https://x.pl', api_key: 'user:pass' };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockForDomain.mockResolvedValue(true);
   (getConnectionForWorkspace as jest.Mock).mockResolvedValue(null);
   (createAutopilotDraft as jest.Mock).mockResolvedValue(555);
   (triggerAutopilotAnalysis as jest.Mock).mockResolvedValue(true);
@@ -232,4 +238,14 @@ it('counts an event with no analysis job as stale by its own age', async () => {
   await runAutomationsSweep(args);
   const sql = sqls().find((s) => s.includes('FROM automation_events e')) ?? '';
   expect(sql).toMatch(/j\.id IS NULL AND .*e\.updated_at/);
+});
+
+it('leaves due and generating events of an org without billing access untouched', async () => {
+  mockForDomain.mockResolvedValue(false);
+  route({ due: [due], generating: [gen({ content: '<p>done</p>' })] });
+  const res = await runAutomationsSweep(args);
+  expect(mockForDomain).toHaveBeenCalledWith(9);
+  expect(createAutopilotDraft).not.toHaveBeenCalled();
+  expect(sqls().some((s) => s.includes('SET status'))).toBe(false);
+  expect(res).toEqual(expect.objectContaining({ started: [], created: [], published: [], skipped: 1, waiting: 1 }));
 });

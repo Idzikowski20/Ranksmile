@@ -19,6 +19,13 @@ jest.mock('../../pages/api/settings', () => ({
   }),
 }));
 
+const mockAssertCron = jest.fn(() => false);
+jest.mock('@/src/infrastructure/cron/cronAuth', () => ({ assertCronSecret: () => mockAssertCron() }));
+const mockForOrg = jest.fn();
+jest.mock('@/src/infrastructure/billing/orgAccess', () => ({
+  createBillingAccessCheck: () => ({ forOrg: mockForOrg, forDomain: jest.fn() }),
+}));
+
 const mockEnqueue = jest.fn();
 jest.mock('@/src/infrastructure/notifications/emailQueue', () => ({
   enqueueKeywordPositionEmails: (...args: unknown[]) => mockEnqueue(...args),
@@ -96,6 +103,15 @@ describe('POST /api/notify', () => {
     const sql = String((db.query as jest.Mock).mock.calls[0][0]);
     expect(sql).toMatch(/w\.org_id\s*=\s*\?/);
     expect((db.query as jest.Mock).mock.calls[0][1]).toEqual({ replacements: [9] });
+  });
+
+  it('cron run only mails domains of orgs with billing access', async () => {
+    mockAssertCron.mockReturnValueOnce(true);
+    mockForOrg.mockResolvedValue(false);
+    const res = makeRes();
+    await notifyHandler({ method: 'POST', query: {}, cookies: {}, headers: {} } as never, res);
+    expect(mockForOrg).toHaveBeenCalledWith(9);
+    expect(mockEnqueue).toHaveBeenCalledWith(expect.objectContaining({ domains: [] }));
   });
 
   it('returns 401 without auth', async () => {

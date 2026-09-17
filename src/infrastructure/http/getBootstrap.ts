@@ -8,7 +8,7 @@ import {
   findSetupWorkspaceId,
   type Workspace,
 } from '@/src/infrastructure/identity/workspaces';
-import { getOrgBillingState } from '@/src/infrastructure/billing/orgBilling';
+import { getOrgBillingStateFresh } from '@/src/infrastructure/billing/stripeBillingReconcile';
 import { grantedAccessAtSomePoint } from '@/src/infrastructure/billing/billingEverSubscribed';
 import { ensureUserTenancy } from '@/src/infrastructure/identity/tenancy';
 import { isPaymentFailedLocked } from '@/src/infrastructure/billing/paymentFailedLock';
@@ -78,7 +78,7 @@ export async function getBootstrap(
     listWorkspaces(userId),
     getCallerRole(userId),
     findSetupWorkspaceId(userId),
-    getOrgBillingState(orgId),
+    getOrgBillingStateFresh(orgId),
   ]);
 
   const canCreateSetup = role === 'owner' || role === 'admin';

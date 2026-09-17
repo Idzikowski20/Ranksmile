@@ -21,6 +21,7 @@ import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
 import { publishToWordPress } from '@/src/infrastructure/wordpress/wordpressPublish';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { createBillingAccessCheck } from '@/src/infrastructure/billing/orgAccess';
 import { dateKeyIn, finalizeAction, isDue, type GenerationState } from '@/src/core/domain/automations/schedule';
 import { getErrorMessage } from '@/src/core/shared/errors';
 
@@ -235,7 +236,14 @@ export async function runAutomationsSweep(args: TriggerArgs & { limit?: number }
     [horizon, limit],
   );
   const due = candidates.filter((row) => isDue(row.scheduled_date, dateKeyIn(now, row.time_zone)));
+  // Cron runs without a session, so the API billing gate never saw these orgs.
+  const billing = createBillingAccessCheck();
   for (const row of due) {
+    // eslint-disable-next-line no-await-in-loop
+    if (!(await billing.forDomain(row.domain_id))) {
+      result.skipped += 1;
+      continue;
+    }
     // eslint-disable-next-line no-await-in-loop
     const outcome = await startEvent(row, args);
     if (outcome === 'started') result.started.push(row.id);
@@ -262,6 +270,12 @@ export async function runAutomationsSweep(args: TriggerArgs & { limit?: number }
     [limit],
   );
   for (const row of generating) {
+    // Parked, not failed: finishing resumes once the org pays again.
+    // eslint-disable-next-line no-await-in-loop
+    if (!(await billing.forDomain(row.domain_id))) {
+      result.waiting += 1;
+      continue;
+    }
     // eslint-disable-next-line no-await-in-loop
     const outcome = await finalizeEvent(row);
     if (outcome === 'created') result.created.push(row.id);

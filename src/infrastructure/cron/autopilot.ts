@@ -11,6 +11,7 @@ import { sleep } from '@/src/core/shared/sleep';
 import db from '@/database/database';
 import { queryRows } from '@/src/infrastructure/db/query';
 import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
+import { createBillingAccessCheck } from '@/src/infrastructure/billing/orgAccess';
 
 /** Analysis is considered stuck after this long without a job-row update. */
 const STALE_ANALYSIS_MINUTES = 15;
@@ -259,8 +260,15 @@ export async function runAutopilotSweep(
    const limit = args.limit ?? 10;
    const result: AutopilotSweepResult = { generated: [], retried: [], skipped: 0 };
    const rows = await loadCandidates(limit);
+   // Cron runs without a session, so the API billing gate never saw these orgs.
+   const billing = createBillingAccessCheck();
 
    for (const row of rows) {
+      // eslint-disable-next-line no-await-in-loop
+      if (!(await billing.forDomain(row.domain_id))) {
+         result.skipped += 1;
+         continue;
+      }
       const action = decideAutopilotAction({
          articleId: row.article_id,
          jobStatus: row.status,
