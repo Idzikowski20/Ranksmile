@@ -27,6 +27,22 @@ export function workspaceHref(wsId: number | null | undefined, path: string): st
 }
 
 /**
+ * Where to send a `/workspace/<id>/...` URL the user cannot access (a stale bookmark, a
+ * deleted workspace), or null when the URL is fine. Left alone, the URL keeps writing its id
+ * into the `active_workspace` cookie and every workspace-scoped API answers 403.
+ */
+export function foreignWorkspaceFallback(
+   path: string,
+   ws: { workspaceIds: number[]; setupWorkspaceId: number | null; activeId: number | null },
+): string | null {
+   const id = parseWorkspaceId(path);
+   if (id == null || ws.workspaceIds.includes(id) || id === ws.setupWorkspaceId) return null;
+   if (!ws.activeId) return '/';
+   const rest = path.replace(/^\/workspace\/[^/?]+\/?/, '');
+   return workspaceHref(ws.activeId, rest && !rest.startsWith('?') ? rest : `dashboard${rest}`);
+}
+
+/**
  * Resolves the active workspace's domain out of a full (possibly cross-workspace)
  * domains list. Matches on `workspace_id` first — the reliable, unambiguous link
  * between a domain row and its workspace — then falls back to the workspace's own
