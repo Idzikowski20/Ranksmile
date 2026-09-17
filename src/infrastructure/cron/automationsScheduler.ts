@@ -2,8 +2,8 @@
  * Automations scheduler — the cron that makes scheduled content-calendar events real.
  *
  * A tick does two things:
- *   START    each due `scheduled` event: claim it (→ generating), create a keyword-mode
- *            draft, link it, bill a document, and kick deep-analysis. The app's article
+ *   START    each due `scheduled` event: claim it (→ generating), create and link a
+ *            keyword-mode draft (one transaction), bill a document, and kick deep-analysis. The app's article
  *            pipeline (deep-analysis → autopilot sweep → generate) writes the draft and the
  *            LLM picks its title — automations piggyback on that engine.
  *   FINALIZE each `generating` event once its article has content: a `live` event is
@@ -79,6 +79,9 @@ async function dropDraft(domainId: number, articleId: number, eventId: number): 
   return removed;
 }
 
+/** The event was removed (or taken) before its draft could be linked. */
+class EventGone extends Error {}
+
 type DueRow = {
   id: number; domain_id: number; workspace_id: number; title: string; target_keyword: string; publish_mode: string;
   scheduled_date: string; time_zone: string | null;
@@ -108,20 +111,22 @@ async function startEvent(row: DueRow, args: TriggerArgs): Promise<'started' | '
     await ensureOrgQuotaBalances(orgId);
     // Same path as a user's new article, minus the interactive steps: the draft carries only
     // the keyword; generate writes the brief and the LLM picks the title.
-    articleId = await createAutopilotDraft(row.domain_id, keyword);
-
-    // Link right away, so a crash after this point leaves a draft the stale check can drop.
-    // Only while the event still exists and is ours — it may have been removed meanwhile.
-    // ponytail: a crash between the insert above and this update still orphans the empty
-    // draft (unbilled); a shared transaction would need createAutopilotDraft to take one.
-    const linked = affectedRows(await db.query(
-      `UPDATE automation_events SET article_id = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND status = 'generating' AND article_id IS NULL`,
-      { replacements: [articleId, row.id] },
-    )) > 0;
-    if (!linked) {
-      await dropDraft(row.domain_id, articleId, row.id);
-      return 'skipped';
+    // Created and linked in one transaction: a crash in between leaves neither, and a link
+    // that finds the event gone (removed meanwhile) rolls the draft back.
+    try {
+      articleId = await db.transaction(async (transaction) => {
+        const id = await createAutopilotDraft(row.domain_id, keyword, transaction);
+        const linked = affectedRows(await db.query(
+          `UPDATE automation_events SET article_id = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND status = 'generating' AND article_id IS NULL`,
+          { replacements: [id, row.id], transaction },
+        )) > 0;
+        if (!linked) throw new EventGone();
+        return id;
+      });
+    } catch (err) {
+      if (err instanceof EventGone) return 'skipped';
+      throw err;
     }
 
     await adjustActiveUsage({

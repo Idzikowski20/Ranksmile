@@ -6,7 +6,10 @@ import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConn
 import { publishToWordPress } from '@/src/infrastructure/wordpress/wordpressPublish';
 
 jest.mock('sequelize', () => ({ QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT', UPDATE: 'UPDATE' } }));
-jest.mock('@/database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
+jest.mock('@/database/database', () => ({
+  __esModule: true,
+  default: { query: jest.fn(), transaction: jest.fn((fn: (tx: unknown) => unknown) => fn('tx')) },
+}));
 jest.mock('@/src/infrastructure/persistence/schema/ensureAutomationTables', () => ({ ensureAutomationTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/src/infrastructure/articles/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('"ID"') }));
 jest.mock('@/src/infrastructure/cron/autopilot', () => ({
@@ -94,6 +97,27 @@ it("starts an event on the day it is in the scheduler's time zone, not the UTC d
   } finally {
     jest.useRealTimers();
   }
+});
+
+it('creates and links the draft in one transaction, rolling back when the event is gone', async () => {
+  route({ due: [due] });
+  await runAutomationsSweep(args);
+  expect(createAutopilotDraft).toHaveBeenCalledWith(9, 'seo', 'tx');
+  const link = mockQuery.mock.calls.find((c) => String(c[0]).includes('SET article_id = ?'));
+  expect((link?.[1] as { transaction?: unknown }).transaction).toBe('tx');
+
+  jest.clearAllMocks();
+  (createAutopilotDraft as jest.Mock).mockResolvedValue(555);
+  route({ due: [due] });
+  const base = mockQuery.getMockImplementation() as (sql: string, o?: unknown) => Promise<unknown>;
+  mockQuery.mockImplementation((sql: string, o?: unknown) => (String(sql).includes('SET article_id = ?')
+    ? Promise.resolve([[], 0])
+    : base(sql, o)));
+  const res = await runAutomationsSweep(args);
+  expect(res).toEqual(expect.objectContaining({ started: [], skipped: 1 }));
+  expect(db.transaction).toHaveBeenCalled(); // the throw inside it is what rolls the insert back
+  expect(adjustActiveUsage).not.toHaveBeenCalled();
+  expect(discardAutopilotDraft).not.toHaveBeenCalled();
 });
 
 it('skips an event another sweep already claimed: no draft, no bill', async () => {
