@@ -5,6 +5,22 @@
  */
 import type { AutomationPublishMode } from '@/src/core/shared/types/automations';
 
+/** A valid IANA time zone name (as the browser reports it), else null. */
+export function normalizeTimeZone(raw: unknown): string | null {
+  if (typeof raw !== 'string' || !raw || raw.length > 64) return null;
+  try {
+    return new Intl.DateTimeFormat('en-US', { timeZone: raw }).resolvedOptions().timeZone;
+  } catch {
+    return null;
+  }
+}
+
+/** YYYY-MM-DD of `now` in `timeZone` — the day the user picked on their calendar. UTC if unknown. */
+export function dateKeyIn(now: Date, timeZone: string | null | undefined): string {
+  // en-CA formats as YYYY-MM-DD.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: normalizeTimeZone(timeZone) ?? 'UTC' }).format(now);
+}
+
 /** A scheduled event is due once its day has arrived (YYYY-MM-DD compares lexically). */
 export function isDue(scheduledDate: string, todayKey: string): boolean {
   return scheduledDate.slice(0, 10) <= todayKey;

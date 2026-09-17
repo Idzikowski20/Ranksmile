@@ -14,9 +14,17 @@ export function dedupeGscKeywords(rows: GscKeywordRow[]): GscKeywordStat[] {
       keyword: row.keyword, position: row.position ?? 0, clicks: row.clicks ?? 0, impressions: row.impressions ?? 0,
     };
     const existing = seen.get(key);
-    if (!existing || kwScore(candidate) > kwScore(existing)) seen.set(key, candidate);
+    if (!existing || byScore(candidate, existing) < 0) seen.set(key, candidate);
   }
-  return Array.from(seen.values()).sort((a, b) => kwScore(b) - kwScore(a));
+  return Array.from(seen.values()).sort(byScore);
+}
+
+/** Best score first; ties by keyword so the result never depends on row order. */
+function byScore(a: GscKeywordStat, b: GscKeywordStat): number {
+  const d = kwScore(b) - kwScore(a);
+  if (d !== 0) return d;
+  if (a.keyword === b.keyword) return 0;
+  return a.keyword < b.keyword ? -1 : 1;
 }
 
 /**

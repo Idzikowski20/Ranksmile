@@ -13,6 +13,17 @@ describe('dedupeGscKeywords', () => {
       ['koszt audytu seo', 42],
     ]);
   });
+
+  it('is independent of row order when scores tie', () => {
+    const rows = [
+      { keyword: 'b topic', impressions: 50, position: 10, clicks: 0 },
+      { keyword: 'a topic', impressions: 50, position: 10, clicks: 0 },
+      { keyword: 'A Topic', impressions: 50, position: 10, clicks: 0 },
+    ];
+    const forward = dedupeGscKeywords(rows);
+    expect(dedupeGscKeywords([...rows].reverse())).toEqual(forward);
+    expect(forward.map((k) => k.keyword)).toEqual(['A Topic', 'b topic']);
+  });
 });
 
 describe('buildContentIdeas', () => {

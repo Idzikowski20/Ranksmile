@@ -59,7 +59,7 @@ const AutomationsCalendarStub: NextPage = () => {
             onPrevDays={() => setStart((d) => shiftDays(d, -WINDOW_DAYS))}
             onNextDays={() => setStart((d) => shiftDays(d, WINDOW_DAYS))}
             onToday={() => setStart(new Date(2024, 11, 16))}
-            onAdd={() => setDialogDate('2024-12-18')}
+            onAdd={() => setDialogDate(toDateKey(start))}
             onDayAdd={(d) => setDialogDate(toDateKey(d))}
             onEventClick={() => {}}
             onEventDelete={(e) => setEvents((list) => list.filter((x) => x.id !== e.id))}
@@ -71,7 +71,14 @@ const AutomationsCalendarStub: NextPage = () => {
             country="PL"
             initialDate={dialogDate ?? ''}
             wordpressConnected
-            onSubmit={() => setDialogDate(null)}
+            onSubmit={({ scheduledDate, keywords, publishMode }) => {
+              // One scheduled card per keyword, like the API.
+              setEvents((list) => [
+                ...list,
+                ...keywords.map((kw) => ({ ...ev(scheduledDate, kw, 'scheduled', publishMode), targetKeyword: kw })),
+              ]);
+              setDialogDate(null);
+            }}
           />
         </div>
       </main>

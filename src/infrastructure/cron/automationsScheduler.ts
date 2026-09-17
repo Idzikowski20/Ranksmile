@@ -21,7 +21,7 @@ import { affectedRows } from '@/src/infrastructure/cron/queueRunner';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
 import { publishToWordPress } from '@/src/infrastructure/wordpress/wordpressPublish';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
-import { finalizeAction, type GenerationState } from '@/src/core/domain/automations/schedule';
+import { dateKeyIn, finalizeAction, isDue, type GenerationState } from '@/src/core/domain/automations/schedule';
 import { getErrorMessage } from '@/src/core/shared/errors';
 
 const isPg = !!process.env.DATABASE_URL;
@@ -30,10 +30,6 @@ const isPg = !!process.env.DATABASE_URL;
  * no job ever appeared (the start crashed or the analysis request was never accepted).
  */
 const STALE_MINUTES = 45;
-
-function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 async function rows<T extends object>(sql: string, repl: unknown[]): Promise<T[]> {
   const r = await db.query<T>(sql, { replacements: repl, type: QueryTypes.SELECT });
@@ -73,7 +69,10 @@ async function dropDraft(domainId: number, articleId: number): Promise<boolean> 
   return removed;
 }
 
-type DueRow = { id: number; domain_id: number; workspace_id: number; title: string; target_keyword: string; publish_mode: string };
+type DueRow = {
+  id: number; domain_id: number; workspace_id: number; title: string; target_keyword: string; publish_mode: string;
+  scheduled_date: string; time_zone: string | null;
+};
 
 type GenRow = {
   id: number; domain_id: number; workspace_id: number; publish_mode: string; article_id: number | null;
@@ -157,11 +156,13 @@ async function finalizeEvent(row: GenRow): Promise<'created' | 'published' | 'fa
   }
 
   if (action === 'publish' && row.article_id != null) {
+    // Live intent survives a missing connection: the event waits until WordPress is reconnected.
     const conn = await getConnectionForWorkspace(row.workspace_id);
-    if (!conn) return (await transition(row.id, 'generating', 'created')) ? 'created' : 'waiting';
+    if (!conn) return 'waiting';
     // Claim the publish: only one sweep creates the WordPress post. A crash after the post but
     // before the updates below leaves the event in `publishing`, which is never re-published.
     if (!(await transition(row.id, 'generating', 'publishing'))) return 'waiting';
+    let link: string;
     try {
       const result = await publishToWordPress({
         wpUrl: conn.site_url,
@@ -170,18 +171,25 @@ async function finalizeEvent(row: GenRow): Promise<'created' | 'published' | 'fa
         content: row.content || '',
         status: 'publish',
       });
-      const articleIdSql = await getArticleIdSql();
-      await db.query(
-        `UPDATE articles SET status = 'published', publish_target = 'wordpress', publish_url = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-        { replacements: [result.link, row.article_id] },
-      );
-      await transition(row.id, 'publishing', 'published');
-      return 'published';
+      link = result.link;
     } catch (err) {
       console.error('[automations] publish failed:', row.id, getErrorMessage(err));
       await transition(row.id, 'publishing', 'failed');
       return 'failed';
     }
+    // The post is live now; a bookkeeping error must not record it as a failure (a retry
+    // would duplicate it). The event stays `publishing` and the error is logged.
+    try {
+      const articleIdSql = await getArticleIdSql();
+      await db.query(
+        `UPDATE articles SET status = 'published', publish_target = 'wordpress', publish_url = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+        { replacements: [link, row.article_id] },
+      );
+      await transition(row.id, 'publishing', 'published');
+    } catch (err) {
+      console.error('[automations] published but not recorded:', row.id, link, getErrorMessage(err));
+    }
+    return 'published';
   }
 
   return (await transition(row.id, 'generating', 'created')) ? 'created' : 'waiting';
@@ -193,15 +201,20 @@ export async function runAutomationsSweep(args: TriggerArgs & { limit?: number }
   await ensureAutomationTables();
   const limit = args.limit ?? 20;
   const result: AutomationsSweepResult = { started: [], created: [], published: [], failed: [], waiting: 0, skipped: 0 };
-  const today = todayKey();
-
-  const due = await rows<DueRow>(
-    `SELECT id, domain_id, workspace_id, title, target_keyword, publish_mode
+  const now = new Date();
+  // No zone is ahead of UTC by a full day, so UTC tomorrow bounds every candidate; each row is
+  // then due by the calendar day in its own zone.
+  // ponytail: LIMIT applies before the zone filter, so >limit not-yet-due rows can delay others
+  // by a few hours; filter in SQL per zone if that ever matters.
+  const horizon = dateKeyIn(new Date(now.getTime() + 24 * 3600 * 1000), 'UTC');
+  const candidates = await rows<DueRow>(
+    `SELECT id, domain_id, workspace_id, title, target_keyword, publish_mode, scheduled_date, time_zone
        FROM automation_events
       WHERE status = 'scheduled' AND scheduled_date <= ?
       ORDER BY scheduled_date ASC, id ASC LIMIT ?`,
-    [today, limit],
+    [horizon, limit],
   );
+  const due = candidates.filter((row) => isDue(row.scheduled_date, dateKeyIn(now, row.time_zone)));
   for (const row of due) {
     // eslint-disable-next-line no-await-in-loop
     const outcome = await startEvent(row, args);

@@ -137,8 +137,8 @@ export function Select({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   // Rough menu height (options ~36px, list capped at 220px, plus padding/search) so a short
-  // list opens downward whenever it fits.
-  const menuHeight = Math.min(options.length * 36, 220) + 16 + (searchable ? 44 : 0);
+  // list opens downward whenever it fits. An empty list still shows one "No results" row.
+  const menuHeight = Math.min(Math.max(options.length, 1) * 36, 220) + 16 + (searchable ? 44 : 0);
   const pos = useAnchoredPosition(triggerRef, open && !disabled, menuHeight);
 
   const selected = options.find((o) => o.value === value);

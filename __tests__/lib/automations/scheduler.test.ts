@@ -24,7 +24,10 @@ jest.mock('@/src/infrastructure/quota/index', () => ({
 
 const mockQuery = db.query as jest.Mock;
 const args = { baseUrl: 'http://localhost:3000', cronSecret: 's' };
-const due = { id: 1, domain_id: 9, workspace_id: 3, title: 'Post A', target_keyword: 'seo', publish_mode: 'draft' };
+const due = {
+  id: 1, domain_id: 9, workspace_id: 3, title: 'Post A', target_keyword: 'seo', publish_mode: 'draft',
+  scheduled_date: '2024-12-16', time_zone: null,
+};
 const gen = (over: Record<string, unknown>) => ({
   id: 2, domain_id: 9, workspace_id: 3, publish_mode: 'draft', article_id: 555,
   content: '', article_title: 'Post', meta_title: null, analysis_status: 'running', stale: 0, ...over,
@@ -67,6 +70,25 @@ it('claims a due event before drafting, bills it, links it and kicks analysis', 
   expect(sqls().some((s) => s.includes('SET article_id = ?'))).toBe(true);
   expect(triggerAutopilotAnalysis).toHaveBeenCalledWith(args, expect.objectContaining({ articleId: 555, domainId: 9, keyword: 'seo' }));
   expect(res.started).toEqual([1]);
+});
+
+it("starts an event on the day it is in the scheduler's time zone, not the UTC day", async () => {
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] }).setSystemTime(new Date('2026-09-17T12:00:00Z'));
+  try {
+    route({
+      due: [
+        { ...due, id: 1, scheduled_date: '2026-09-18', time_zone: 'Pacific/Kiritimati' }, // already the 18th there
+        { ...due, id: 2, scheduled_date: '2026-09-18', time_zone: 'Europe/Warsaw' }, // still the 17th
+        { ...due, id: 3, scheduled_date: '2026-09-17', time_zone: null }, // UTC today
+      ],
+    });
+    const res = await runAutomationsSweep(args);
+    expect(res.started).toEqual([1, 3]);
+    const select = mockQuery.mock.calls.find((c) => String(c[0]).includes("status = 'scheduled'"));
+    expect((select?.[1] as { replacements: unknown[] }).replacements[0]).toBe('2026-09-18');
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 it('skips an event another sweep already claimed: no draft, no bill', async () => {
@@ -112,6 +134,27 @@ it('does not publish when another sweep holds the publishing claim', async () =>
   const res = await runAutomationsSweep(args);
   expect(publishToWordPress).not.toHaveBeenCalled();
   expect(res.waiting).toBe(1);
+});
+
+it('keeps a live event waiting (not draft-ready) while WordPress is disconnected', async () => {
+  route({ generating: [gen({ publish_mode: 'live', content: '<p>Body</p>', analysis_status: 'done' })] });
+  const res = await runAutomationsSweep(args);
+  expect(res).toEqual(expect.objectContaining({ created: [], waiting: 1 }));
+});
+
+it('does not record a live post as failed when only the local update fails', async () => {
+  (getConnectionForWorkspace as jest.Mock).mockResolvedValue(live);
+  (publishToWordPress as jest.Mock).mockResolvedValue({ id: 1, link: 'https://x.pl/post', status: 'publish' });
+  route({ generating: [gen({ publish_mode: 'live', content: '<p>Body</p>', analysis_status: 'done' })] });
+  const base = mockQuery.getMockImplementation() as (sql: string, o?: unknown) => Promise<unknown>;
+  mockQuery.mockImplementation((sql: string, o?: unknown) => (String(sql).includes('UPDATE articles')
+    ? Promise.reject(new Error('db down'))
+    : base(sql, o)));
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  const res = await runAutomationsSweep(args);
+  expect(res).toEqual(expect.objectContaining({ published: [2], failed: [] }));
+  const toFailed = mockQuery.mock.calls.some((c) => (c[1] as { replacements?: unknown[] } | undefined)?.replacements?.[0] === 'failed');
+  expect(toFailed).toBe(false);
 });
 
 it('leaves a generating event waiting while its article has no content yet', async () => {

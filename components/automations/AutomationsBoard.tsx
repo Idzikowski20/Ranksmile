@@ -121,9 +121,9 @@ function EventCard({ ev, onClick, onDelete }: { ev: AutomationEvent; onClick?: (
 }
 
 /**
- * Weekly content calendar (Koala "Content Calendar", Figma 8115:180083 / 10300:96762):
- * toolbar with week pager, search and filters, a result line with active-filter chips,
- * and one column per day of scheduled article events.
+ * Content calendar (Koala "Content Calendar", Figma 8115:180083 / 10300:96762): toolbar
+ * with a pager over WINDOW_DAYS (4) days starting today, search and filters, a result line
+ * with active-filter chips, and one column per day of scheduled article events.
  */
 export default function AutomationsBoard({
   windowStart, events, onPrevDays, onNextDays, onToday, onAdd, onDayAdd, onEventClick, onEventDelete,

@@ -104,13 +104,13 @@ export type BoardFilters = {
   mode?: AutomationPublishMode;
 };
 
-/** Events matching the toolbar: search over title + keyword, status, publish mode. */
+/** Events matching the toolbar: search over title, article title + keyword, status, publish mode. */
 export function filterEvents(events: AutomationEvent[], filters: BoardFilters): AutomationEvent[] {
   const q = (filters.query || '').trim().toLowerCase();
   return events.filter((e) => {
     if (filters.status && e.status !== filters.status) return false;
     if (filters.mode && e.publishMode !== filters.mode) return false;
-    if (q && !`${e.title} ${e.targetKeyword}`.toLowerCase().includes(q)) return false;
+    if (q && !`${e.title} ${e.articleTitle ?? ''} ${e.targetKeyword}`.toLowerCase().includes(q)) return false;
     return true;
   });
 }

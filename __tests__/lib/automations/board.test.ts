@@ -81,6 +81,8 @@ describe('filterEvents', () => {
     expect(ids(filterEvents(events, { query: 'FIGMA' }))).toEqual([1, 3]);
     expect(ids(filterEvents(events, { query: 'tips' }))).toEqual([2]);
     expect(ids(filterEvents(events, { query: '   ' }))).toEqual([1, 2, 3]);
+    const titled = [ev(4, '2024-12-16', { title: 'kw', articleTitle: 'The LLM headline' })];
+    expect(ids(filterEvents(titled, { query: 'headline' }))).toEqual([4]);
   });
   it('filters by status and by publish mode, combined', () => {
     expect(ids(filterEvents(events, { status: 'failed' }))).toEqual([3]);

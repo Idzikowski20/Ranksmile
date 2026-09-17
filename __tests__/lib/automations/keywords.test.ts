@@ -17,6 +17,8 @@ describe('normalizeKeywords', () => {
 
   it('caps each keyword at 200 characters and the list at the per-schedule maximum', () => {
     expect(normalizeKeywords(['x'.repeat(250)])[0]).toHaveLength(200);
+    // Counted in code points, so an emoji at the boundary is never split in half.
+    expect(normalizeKeywords([`${'x'.repeat(199)}😀tail`])[0]).toBe(`${'x'.repeat(199)}😀`);
     const many = Array.from({ length: MAX_KEYWORDS_PER_SCHEDULE + 5 }, (_, i) => `kw ${i}`);
     expect(normalizeKeywords(many)).toHaveLength(MAX_KEYWORDS_PER_SCHEDULE);
   });

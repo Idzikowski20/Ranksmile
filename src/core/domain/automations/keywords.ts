@@ -13,7 +13,8 @@ export function normalizeKeywords(raw: unknown): string[] {
   const out: string[] = [];
   for (const item of raw) {
     if (typeof item !== 'string') continue;
-    const kw = item.replace(/\s+/g, ' ').trim().slice(0, MAX_KEYWORD_LENGTH);
+    // Cut by code points so a surrogate pair at the boundary stays whole.
+    const kw = Array.from(item.replace(/\s+/g, ' ').trim()).slice(0, MAX_KEYWORD_LENGTH).join('').trim();
     const key = kw.toLowerCase();
     if (!kw || seen.has(key)) continue;
     seen.add(key);

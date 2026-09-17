@@ -12,6 +12,7 @@ import { Button, Input, Select, Alert, Chip } from '../koala/core';
 import { Form, FormField, FormSection, FieldHint } from '../koala/forms';
 import { Icon } from '../koala/icons/Icon';
 import KeywordSuggestInput from '../articles/KeywordSuggestInput';
+import { fetchAllDomainArticles } from '../../services/article';
 
 export type AddEventDialogProps = {
   open: boolean;
@@ -81,10 +82,7 @@ export default function AddEventDialog({
     const r = await fetch(`/api/gsc/search-data?domain=${slug}`);
     return r.json() as Promise<{ data?: { thirtyDays?: GscKeywordRow[] } }>;
   }, { enabled, staleTime: 5 * 60 * 1000 });
-  const articlesQ = useQuery(['articles', slug], async () => {
-    const r = await fetch(`/api/articles?domain=${encodeURIComponent(slug)}`);
-    return r.json() as Promise<{ articles?: Array<{ title?: string | null; target_keyword?: string | null }> }>;
-  }, { enabled });
+  const articlesQ = useQuery(['articles', slug], () => fetchAllDomainArticles(slug), { enabled });
   const allIdeas = useMemo(() => buildContentIdeas({
     recs: recsQ.data?.recommendations,
     gscKeywords: dedupeGscKeywords(scQ.data?.data?.thirtyDays || []),

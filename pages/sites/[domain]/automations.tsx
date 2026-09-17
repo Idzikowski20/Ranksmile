@@ -64,7 +64,8 @@ const AutomationsPage: NextPage = () => {
       const res = await fetch(`/api/automations/${encodeURIComponent(slug)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        // The picked day is a day on this browser's calendar; the cron runs it on that day there.
+        body: JSON.stringify({ ...payload, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
       });
       const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
       if (!res.ok) throw new Error(body.message || body.error || 'Failed to schedule event');

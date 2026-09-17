@@ -15,6 +15,7 @@ import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
+import { fetchAllDomainArticles } from '../../../services/article';
 import { normalizeUrlForMatch, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
@@ -220,10 +221,7 @@ const RecommendationsPage: NextPage = () => {
 
    const { data: articlesData, isLoading: articlesLoading } = useQuery(
       ['articles', slug],
-      async () => {
-         const r = await fetch(`/api/articles?domain=${encodeURIComponent(slug)}`);
-         return r.json();
-      },
+      () => fetchAllDomainArticles<DomainArticle>(slug),
       { enabled: !!slug },
    );
    const { data: scData, isLoading: scLoading } = useQuery(

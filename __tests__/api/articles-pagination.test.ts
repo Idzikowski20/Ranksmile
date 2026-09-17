@@ -77,7 +77,7 @@ describe('GET /api/articles pagination', () => {
     });
   });
 
-  it('hides articles an automation is still writing in the background', async () => {
+  it('builds the list and count queries to exclude articles an automation is still writing', async () => {
     await handler(mockReq({ domainId: '1' }), mockRes());
     const [countSql, listSql] = (db.query as jest.Mock).mock.calls.map((c) => String(c[0]));
     for (const sql of [countSql, listSql]) {

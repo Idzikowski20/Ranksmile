@@ -1,16 +1,18 @@
 // GET  /api/automations/:slug?from=YYYY-MM-DD&to=YYYY-MM-DD
-// POST /api/automations/:slug  { scheduledDate, keywords: string[], publishMode }
+// POST /api/automations/:slug  { scheduledDate, keywords: string[], publishMode, timeZone? }
 //      One keyword = one scheduled article. The title is chosen later by the LLM when the
 //      automations cron writes the article.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import { ensureAutomationTables } from '@/src/infrastructure/persistence/schema/ensureAutomationTables';
+import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
 import { getErrorMessage } from '@/src/core/shared/errors';
 import { normalizeKeywords } from '@/src/core/domain/automations/keywords';
+import { normalizeTimeZone } from '@/src/core/domain/automations/schedule';
 import { mapAutomationEvent, type AutomationEventRow, type AutomationPublishMode } from '@/src/core/shared/types/automations';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { getCurrentUserId } from '../../../../utils/getUser';
@@ -25,6 +27,7 @@ function parsePublishMode(raw: unknown): AutomationPublishMode | null {
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
+  await ensureArticlesTables(); // the list joins articles
   await ensureAutomationTables();
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
@@ -92,6 +95,7 @@ async function createEvents(
   const scheduledDate = typeof body.scheduledDate === 'string' ? body.scheduledDate : '';
   const keywords = normalizeKeywords(body.keywords);
   const publishMode = parsePublishMode(body.publishMode);
+  const timeZone = normalizeTimeZone(body.timeZone);
 
   if (!DATE_RE.test(scheduledDate)) return res.status(400).json({ error: 'scheduledDate must be YYYY-MM-DD' });
   if (keywords.length === 0) return res.status(400).json({ error: 'At least one keyword is required' });
@@ -114,13 +118,13 @@ async function createEvents(
     const ids: number[] = [];
     await db.transaction(async (tx) => {
       for (const keyword of keywords) {
-        const replacements = [domainId, workspaceId, scheduledDate, keyword, keyword, publishMode, userId];
+        const replacements = [domainId, workspaceId, scheduledDate, timeZone, keyword, keyword, publishMode, userId];
         if (isPg) {
           // eslint-disable-next-line no-await-in-loop
           const r = await db.query<{ id: number }>(
             `INSERT INTO automation_events
-               (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+               (domain_id, workspace_id, scheduled_date, time_zone, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
              RETURNING id`,
             { replacements, type: QueryTypes.SELECT, transaction: tx },
           );
@@ -129,8 +133,8 @@ async function createEvents(
           // eslint-disable-next-line no-await-in-loop
           const [newId] = await db.query(
             `INSERT INTO automation_events
-               (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+               (domain_id, workspace_id, scheduled_date, time_zone, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
             { replacements, type: QueryTypes.INSERT, transaction: tx },
           );
           ids.push(newId as unknown as number);
