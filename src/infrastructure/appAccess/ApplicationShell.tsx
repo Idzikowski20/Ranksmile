@@ -132,16 +132,27 @@ export function ApplicationShell({ children }: Props) {
   // A workspace URL the user can't access. Confirm against a fresh bootstrap first (a
   // just-created workspace may be missing from the cached one), then do a full load into an
   // accessible workspace — that also drops the 403 responses already cached for the old id.
+  const [foreignCheck, setForeignCheck] = React.useState(0);
   React.useEffect(() => {
     if (!foreignTarget) return undefined;
     let cancelled = false;
-    void refetch().then(({ data }) => {
-      if (cancelled || !data) return;
-      const target = workspaceFallbackFor(asPath, data);
+    let retry: number | undefined;
+    void refetch().then((result) => {
+      if (cancelled) return;
+      // A failed refetch still hands back the cached data — that is not a confirmation.
+      // Stay on the loader and try again rather than redirect on a stale list.
+      if (result.isError || !result.data) {
+        retry = window.setTimeout(() => setForeignCheck((n) => n + 1), 1500);
+        return;
+      }
+      const target = workspaceFallbackFor(asPath, result.data);
       if (target) window.location.replace(target);
     });
-    return () => { cancelled = true; };
-  }, [foreignTarget, asPath, refetch]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(retry);
+    };
+  }, [foreignTarget, asPath, refetch, foreignCheck]);
 
   // STATE_CHANGED timeline
   React.useEffect(() => {
