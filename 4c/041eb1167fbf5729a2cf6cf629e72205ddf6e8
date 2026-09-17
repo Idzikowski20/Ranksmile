@@ -1,0 +1,39 @@
+__tests__/components/AutomationsBoard.test.tsx
+  s_c7c90ce5d12296::t_d56f6adfc8bd2a 1,3,5-43,48-86
+  s_c7c90ce5d12296::t_f0ef4405a7a2ba 44-47
+  s_c7c90ce5d12296::t_b71eecb7ae2219 4
+  s_c7c90ce5d12296::t_ca9e1cc81599c9 2
+__tests__/lib/automations/board.test.ts
+  s_c7c90ce5d12296::t_609e20aff03717 2-3,28-29,31-38,52-57,67-87
+styles/globals.css
+  s_c7c90ce5d12296::t_601f0b31b6415f 9896-9898,9900-9901,9903-9912,9914-9926,9928-9932,9934-9941,9944,9946,9948,9950,9952-9955,9957,9959,9962-9965,9967-9970,9973,9975-9989,9991,9995-9997,9999-10002,10004-10007
+  s_c7c90ce5d12296::t_d4940803210246 9899,9902,9913,9927,9933,9947,9951,9958,9961,9966,9971,9974,9990,9992
+pages/sites/[domain]/automations.tsx
+  s_c7c90ce5d12296::t_d40a7be1a90128 12,23-28,41-42,59,65-66,76,103-107,119,134-136,141,147,152,156,158
+src/core/domain/automations/board.ts
+  s_c7c90ce5d12296::t_b4b648979356d7 2-3,7,14-15,23,43-46,51-63,78-79,81,84-87,89,97-112
+components/automations/AddEventDialog.tsx
+  s_c7c90ce5d12296::t_e91c56950f879f 37,43,50,54,60-61
+  s_c7c90ce5d12296::t_f3a4d8d484f67c 72,81,83-85
+  s_c7c90ce5d12296::t_e26fd078124929 11-12,17,24
+pages/dev/automations-calendar.tsx
+  s_c7c90ce5d12296::t_6e7d2e92a19e09 1-74
+components/automations/AutomationsBoard.tsx
+  s_c7c90ce5d12296::t_7e0a03288423a7 1-2,4-5,8,10-15,18-30,36-38,44-67,70-80,86-87,90,94-96,98-101,104-114,119-121,124,126-131,133-141,144-195,199-200,204-207,209-216,223-225
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4c041eb1167fbf5729a2cf6cf629e72205ddf6e8",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
