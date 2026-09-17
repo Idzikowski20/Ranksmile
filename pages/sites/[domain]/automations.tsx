@@ -4,7 +4,9 @@ import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import type { AutomationEvent, AutomationPublishMode } from '@/src/core/shared/types/automations';
-import { weekRange, toDateKey } from '@/src/core/domain/automations/board';
+import {
+  WINDOW_DAYS, startOfDay, shiftDays, windowRange, toDateKey,
+} from '@/src/core/domain/automations/board';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import AutomationsBoard from '../../../components/automations/AutomationsBoard';
@@ -17,13 +19,13 @@ import { slugToDomain } from '../../../utils/slugToDomain';
 type ListResponse = {
   wordpressConnected: boolean;
   siteUrl: string | null;
+  country: string;
   events: AutomationEvent[];
 };
 
 type CreatePayload = {
   scheduledDate: string;
-  title: string;
-  targetKeyword: string;
+  keywords: string[];
   publishMode: AutomationPublishMode;
 };
 
@@ -35,8 +37,9 @@ const AutomationsPage: NextPage = () => {
   const domains = domainsData?.domains || [];
   const queryClient = useQueryClient();
 
-  const [weekAnchor, setWeekAnchor] = useState(() => new Date());
-  const { from, to } = useMemo(() => weekRange(weekAnchor), [weekAnchor]);
+  // Today and the next days; the arrows page by the window size.
+  const [windowStart, setWindowStart] = useState(() => startOfDay(new Date()));
+  const { from, to } = useMemo(() => windowRange(windowStart), [windowStart]);
 
   /** YYYY-MM-DD the add dialog opens on; null while closed. */
   const [dialogDate, setDialogDate] = useState<string | null>(null);
@@ -116,7 +119,7 @@ const AutomationsPage: NextPage = () => {
         section="automations"
         contentMaxWidth={1120}
         heading="Automations"
-        subtitle="Plan the week — each scheduled event writes its article on the day and, for live events, publishes it to WordPress."
+        subtitle="Plan the coming days — each scheduled keyword is written into an article on its day and, for live events, published to WordPress."
       >
         {listQ.isError ? (
           <div style={{ marginBottom: 16 }}>
@@ -127,11 +130,11 @@ const AutomationsPage: NextPage = () => {
         ) : null}
 
         <AutomationsBoard
-          weekAnchor={weekAnchor}
+          windowStart={windowStart}
           events={events}
-          onPrevWeek={() => setWeekAnchor((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7))}
-          onNextWeek={() => setWeekAnchor((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7))}
-          onThisWeek={() => setWeekAnchor(new Date())}
+          onPrevDays={() => setWindowStart((d) => shiftDays(d, -WINDOW_DAYS))}
+          onNextDays={() => setWindowStart((d) => shiftDays(d, WINDOW_DAYS))}
+          onToday={() => setWindowStart(startOfDay(new Date()))}
           onAdd={() => openDialog(new Date())}
           onDayAdd={openDialog}
           onEventClick={(ev) => {
@@ -150,6 +153,8 @@ const AutomationsPage: NextPage = () => {
             setSubmitError(null);
           }}
           initialDate={dialogDate ?? ''}
+          slug={slug}
+          country={listQ.data?.country}
           wordpressConnected={wordpressConnected}
           submitting={createMut.isLoading}
           error={submitError}

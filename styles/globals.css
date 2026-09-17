@@ -9943,12 +9943,18 @@ a.dash-step:hover { background: var(--koala-bg-secondary); }
 }
 .cal-chip__clear:hover { background: var(--koala-border-primary); color: var(--koala-text-primary); }
 
+/* Exactly the visible days (WINDOW_DAYS = 4) — no hidden overflow to scroll into. */
 .cal-board {
-  display: flex; gap: 16px; align-items: flex-start; margin-top: 24px;
-  overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;
+  align-items: stretch; margin-top: 24px;
 }
-.cal-board::-webkit-scrollbar { display: none; }
-.cal-col { flex: 0 0 256px; background: var(--koala-bg-secondary); border-radius: 10px; padding: 0 6px 6px; }
+@media (max-width: 900px) { .cal-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .cal-board { grid-template-columns: minmax(0, 1fr); } }
+/* Every day column is as tall as the tallest one in the row. */
+.cal-col {
+  min-width: 0; display: flex; flex-direction: column;
+  background: var(--koala-bg-secondary); border-radius: 10px; padding: 0 6px 6px;
+}
 .cal-col__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 8px 10px; }
 .cal-col__date {
   font-size: 14px; line-height: 20px; color: var(--koala-text-secondary);
@@ -9962,7 +9968,7 @@ a.dash-step:hover { background: var(--koala-bg-secondary); }
 }
 .cal-col__cards { display: flex; flex-direction: column; gap: 6px; }
 .cal-col__empty {
-  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 100%; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   padding: 44px 16px 44px; border: none; border-radius: 8px; background: transparent;
   text-align: center; font-family: inherit; cursor: var(--koala-cursor-pointing);
 }

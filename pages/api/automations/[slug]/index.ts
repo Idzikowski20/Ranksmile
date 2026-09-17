@@ -1,11 +1,16 @@
 // GET  /api/automations/:slug?from=YYYY-MM-DD&to=YYYY-MM-DD
-// POST /api/automations/:slug  { scheduledDate, title, targetKeyword?, publishMode }
+// POST /api/automations/:slug  { scheduledDate, keywords: string[], publishMode }
+//      One keyword = one scheduled article. The title is chosen later by the LLM when the
+//      automations cron writes the article.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import { ensureAutomationTables } from '@/src/infrastructure/persistence/schema/ensureAutomationTables';
 import { getConnectionForWorkspace } from '@/src/infrastructure/wordpress/wpConnection';
 import { withOrgPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
+import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
+import { getDomainLocale } from '@/src/infrastructure/config/domainLanguage';
 import { getErrorMessage } from '@/src/core/shared/errors';
+import { normalizeKeywords } from '@/src/core/domain/automations/keywords';
 import { mapAutomationEvent, type AutomationEventRow, type AutomationPublishMode } from '@/src/core/shared/types/automations';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { getCurrentUserId } from '../../../../utils/getUser';
@@ -37,7 +42,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!workspaceId) return res.status(400).json({ error: 'Domain has no workspace' });
 
   if (req.method === 'GET') return listEvents(req, res, domainId, workspaceId);
-  if (req.method === 'POST') return createEvent(req, res, domainId, workspaceId, userId);
+  if (req.method === 'POST') return createEvents(req, res, domainId, workspaceId, userId);
   res.setHeader('Allow', 'GET, POST');
   return res.status(405).json({ error: 'Method not allowed' });
 }
@@ -55,23 +60,28 @@ async function listEvents(
   }
 
   const conn = await getConnectionForWorkspace(workspaceId);
-  const [rows] = await db.query(
-    `SELECT id, domain_id, workspace_id, scheduled_date, title, target_keyword,
-            publish_mode, article_id, status, created_at
-     FROM automation_events
-     WHERE domain_id = ? AND scheduled_date >= ? AND scheduled_date <= ?
-     ORDER BY scheduled_date ASC, id ASC`,
-    { replacements: [domainId, from, to] },
+  const articleIdSql = await getArticleIdSql();
+  // The generated article's title (LLM H1) replaces the keyword on the card once written.
+  const rows = await db.query<AutomationEventRow>(
+    `SELECT e.id, e.domain_id, e.workspace_id, e.scheduled_date, e.title, e.target_keyword,
+            e.publish_mode, e.article_id, e.status, e.created_at, a.title AS article_title
+     FROM automation_events e
+     LEFT JOIN articles a ON a.${articleIdSql} = e.article_id
+     WHERE e.domain_id = ? AND e.scheduled_date >= ? AND e.scheduled_date <= ?
+     ORDER BY e.scheduled_date ASC, e.id ASC`,
+    { replacements: [domainId, from, to], type: QueryTypes.SELECT },
   );
+  const { countryCode } = await getDomainLocale(domainId).catch(() => ({ countryCode: '' }));
 
   return res.status(200).json({
     wordpressConnected: !!conn,
     siteUrl: conn?.site_url || null,
-    events: (rows as AutomationEventRow[]).map(mapAutomationEvent),
+    country: (countryCode || 'US').toUpperCase(),
+    events: (Array.isArray(rows) ? rows : []).map(mapAutomationEvent),
   });
 }
 
-async function createEvent(
+async function createEvents(
   req: NextApiRequest,
   res: NextApiResponse,
   domainId: number,
@@ -80,60 +90,63 @@ async function createEvent(
 ) {
   const body = (req.body || {}) as Record<string, unknown>;
   const scheduledDate = typeof body.scheduledDate === 'string' ? body.scheduledDate : '';
-  const title = typeof body.title === 'string' ? body.title.trim() : '';
-  const targetKeyword = typeof body.targetKeyword === 'string' ? body.targetKeyword.trim() : '';
+  const keywords = normalizeKeywords(body.keywords);
   const publishMode = parsePublishMode(body.publishMode);
 
   if (!DATE_RE.test(scheduledDate)) return res.status(400).json({ error: 'scheduledDate must be YYYY-MM-DD' });
-  if (!title) return res.status(400).json({ error: 'title is required' });
+  if (keywords.length === 0) return res.status(400).json({ error: 'At least one keyword is required' });
   if (!publishMode) return res.status(400).json({ error: 'publishMode must be draft or live' });
 
-  // WordPress is only needed to publish. A draft-intent event can be scheduled without it;
-  // a live one must have somewhere to publish to on the scheduled day.
-  if (publishMode === 'live') {
-    const conn = await getConnectionForWorkspace(workspaceId);
-    if (!conn) {
-      return res.status(400).json({
-        error: 'wordpress_not_connected',
-        message: 'Connect WordPress in Settings before scheduling a live publish.',
-      });
-    }
+  // WordPress is only needed to publish. Draft-intent events schedule without it; a live
+  // one must have somewhere to publish to on the scheduled day.
+  if (publishMode === 'live' && !(await getConnectionForWorkspace(workspaceId))) {
+    return res.status(400).json({
+      error: 'wordpress_not_connected',
+      message: 'Connect WordPress in Settings before scheduling a live publish.',
+    });
   }
 
   try {
-    // The event is only scheduled here — no article, no quota yet. The automations cron
-    // creates the draft, generates content, and publishes on the scheduled day (billing a
-    // document then), so nothing runs at create time.
-    let eventId: number | undefined;
-    if (process.env.DATABASE_URL) {
-      const erows = await db.query<{ id: number }>(
-        `INSERT INTO automation_events
-           (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-         RETURNING id`,
-        { replacements: [domainId, workspaceId, scheduledDate, title, targetKeyword || '', publishMode, userId], type: QueryTypes.SELECT },
-      );
-      eventId = erows[0]?.id;
-    } else {
-      const [newEventId] = await db.query(
-        `INSERT INTO automation_events
-           (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        { replacements: [domainId, workspaceId, scheduledDate, title, targetKeyword || '', publishMode, userId], type: QueryTypes.INSERT },
-      );
-      eventId = newEventId as unknown as number;
-    }
+    // Only scheduled here — no article, no quota. The automations cron creates each draft,
+    // lets the LLM title and write it, and publishes on the day (billing a document then).
+    // The keyword doubles as the event title until the article exists.
+    const isPg = !!process.env.DATABASE_URL;
+    const ids: number[] = [];
+    await db.transaction(async (tx) => {
+      for (const keyword of keywords) {
+        const replacements = [domainId, workspaceId, scheduledDate, keyword, keyword, publishMode, userId];
+        if (isPg) {
+          // eslint-disable-next-line no-await-in-loop
+          const r = await db.query<{ id: number }>(
+            `INSERT INTO automation_events
+               (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+             RETURNING id`,
+            { replacements, type: QueryTypes.SELECT, transaction: tx },
+          );
+          if (r[0]?.id != null) ids.push(r[0].id);
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          const [newId] = await db.query(
+            `INSERT INTO automation_events
+               (domain_id, workspace_id, scheduled_date, title, target_keyword, publish_mode, article_id, status, created_by, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, NULL, 'scheduled', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            { replacements, type: QueryTypes.INSERT, transaction: tx },
+          );
+          ids.push(newId as unknown as number);
+        }
+      }
+    });
+    if (ids.length === 0) return res.status(500).json({ error: 'Events created but not found' });
 
-    const [rows] = await db.query(
+    const rows = await db.query<AutomationEventRow>(
       `SELECT id, domain_id, workspace_id, scheduled_date, title, target_keyword,
               publish_mode, article_id, status, created_at
-       FROM automation_events WHERE id = ? LIMIT 1`,
-      { replacements: [eventId] },
+       FROM automation_events WHERE id IN (${ids.map(() => '?').join(', ')})
+       ORDER BY id ASC`,
+      { replacements: ids, type: QueryTypes.SELECT },
     );
-    const row = (rows as AutomationEventRow[])[0];
-    if (!row) return res.status(500).json({ error: 'Event created but not found' });
-
-    return res.status(200).json({ event: mapAutomationEvent(row), articleId: null });
+    return res.status(200).json({ events: (Array.isArray(rows) ? rows : []).map(mapAutomationEvent) });
   } catch (error) {
     return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
   }

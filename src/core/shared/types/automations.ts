@@ -18,6 +18,8 @@ export type AutomationEvent = {
   targetKeyword: string;
   publishMode: AutomationPublishMode;
   articleId: number | null;
+  /** The generated article's title (chosen by the LLM) once it exists; the event title is the keyword. */
+  articleTitle?: string | null;
   status: AutomationEventStatus;
   createdAt: string | null;
 };
@@ -31,6 +33,7 @@ export type AutomationEventRow = {
   target_keyword: string;
   publish_mode: string;
   article_id: number | null;
+  article_title?: string | null;
   status: string;
   created_at: string | null;
 };
@@ -49,6 +52,7 @@ export function mapAutomationEvent(row: AutomationEventRow): AutomationEvent {
     targetKeyword: row.target_keyword || '',
     publishMode,
     articleId: row.article_id,
+    articleTitle: row.article_title?.trim() || null,
     status,
     createdAt: row.created_at,
   };

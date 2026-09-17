@@ -70,12 +70,10 @@ async function startEvent(row: DueRow, args: TriggerArgs): Promise<'started' | '
       userId: null,
     });
 
+    // Same path as a user's new article, minus the interactive steps: the draft carries only
+    // the keyword; generate writes the brief and the LLM picks the title (job-progress stores
+    // the article's H1 as its title).
     const articleId = await createAutopilotDraft(row.domain_id, keyword);
-    const articleIdSql = await getArticleIdSql();
-    await db.query(
-      `UPDATE articles SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-      { replacements: [row.title, articleId] },
-    );
     // Claim the event before the (fire-and-forget) analysis so a second worker cannot double-start it.
     await db.query(
       'UPDATE automation_events SET status = \'generating\', article_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = \'scheduled\'',

@@ -1,5 +1,5 @@
 import {
-  weekStart, weekDays, weekRange, weekRangeLabel, columnDateLabel, toDateKey,
+  WINDOW_DAYS, startOfDay, shiftDays, windowDays, windowRange, windowRangeLabel, columnDateLabel, toDateKey,
   groupEventsByDay, statusBadge, publishLabel, filterEvents,
 } from '@/src/core/domain/automations/board';
 import type { AutomationEvent } from '@/src/core/shared/types/automations';
@@ -9,28 +9,28 @@ const ev = (id: number, date: string, over: Partial<AutomationEvent> = {}): Auto
   publishMode: 'draft', articleId: null, status: 'scheduled', createdAt: null, ...over,
 });
 
-describe('week helpers', () => {
-  it('starts the week on Monday regardless of the day passed', () => {
-    // 2024-12-18 is a Wednesday → week starts Mon 2024-12-16.
-    expect(toDateKey(weekStart(new Date(2024, 11, 18)))).toBe('2024-12-16');
-    expect(toDateKey(weekStart(new Date(2024, 11, 16)))).toBe('2024-12-16'); // Monday itself
-    expect(toDateKey(weekStart(new Date(2024, 11, 22)))).toBe('2024-12-16'); // Sunday
+describe('day window', () => {
+  it('shows four days', () => {
+    expect(WINDOW_DAYS).toBe(4);
   });
 
-  it('lists 7 Monday-first days and an inclusive range', () => {
-    const days = weekDays(new Date(2024, 11, 18));
-    expect(days.map(toDateKey)).toEqual([
-      '2024-12-16', '2024-12-17', '2024-12-18', '2024-12-19', '2024-12-20', '2024-12-21', '2024-12-22',
-    ]);
-    expect(weekRange(new Date(2024, 11, 18))).toEqual({ from: '2024-12-16', to: '2024-12-22' });
+  it('starts at the given day (midnight) and runs forward, no earlier days', () => {
+    const days = windowDays(new Date(2026, 8, 17, 15, 30));
+    expect(days.map(toDateKey)).toEqual(['2026-09-17', '2026-09-18', '2026-09-19', '2026-09-20']);
+    expect(days[0].getHours()).toBe(0);
+    expect(windowRange(new Date(2026, 8, 17))).toEqual({ from: '2026-09-17', to: '2026-09-20' });
   });
 
-  it('labels the week like the calendar header: "16 - 22 December 2024"', () => {
-    expect(weekRangeLabel(new Date(2024, 11, 18))).toBe('16 - 22 December 2024');
-    // Week of 2024-12-30 (Mon) → 2025-01-05 (Sun) crosses month + year.
-    expect(weekRangeLabel(new Date(2024, 11, 31))).toBe('30 Dec 2024 - 5 Jan 2025');
-    // Crosses a month only.
-    expect(weekRangeLabel(new Date(2024, 8, 30))).toBe('30 Sep - 6 Oct 2024');
+  it('shifts by whole days across month ends, keeping midnight', () => {
+    expect(toDateKey(shiftDays(new Date(2026, 8, 29), 4))).toBe('2026-10-03');
+    expect(toDateKey(shiftDays(new Date(2026, 9, 1), -4))).toBe('2026-09-27');
+    expect(startOfDay(new Date(2026, 8, 17, 23, 59)).getHours()).toBe(0);
+  });
+
+  it('labels the window like the calendar header', () => {
+    expect(windowRangeLabel(new Date(2026, 8, 17))).toBe('17 - 20 September 2026');
+    expect(windowRangeLabel(new Date(2026, 8, 29))).toBe('29 Sep - 2 Oct 2026');
+    expect(windowRangeLabel(new Date(2026, 11, 30))).toBe('30 Dec 2026 - 2 Jan 2027');
   });
 
   it('labels a column as "Monday, 16 Dec 2024"', () => {

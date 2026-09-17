@@ -10,11 +10,12 @@ import { writeAnalyzeSession } from '@/src/core/domain/articles/deepAnalysisProg
 import { buildImportKeywordList } from '@/src/infrastructure/keywords/buildImportKeywordList';
 import toast from 'react-hot-toast';
 import { useSortState } from '@/hooks/useSortState';
+import { buildContentIdeas, dedupeGscKeywords } from '@/src/core/domain/recommendations/contentIdeas';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
-import { normalizeUrlForMatch, kwScore, buildGscUrlKeywordMap } from '../../../utils/gsc';
+import { normalizeUrlForMatch, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
@@ -244,20 +245,10 @@ const RecommendationsPage: NextPage = () => {
    const loading = domainsLoading || articlesLoading || scLoading;
 
    // All GSC keywords for the domain — used in the "Change main keyword" modal
-   const allGscKeywords = useMemo<GscKeyword[]>(() => {
-      const raw: SearchAnalyticsItem[] = scData?.data?.thirtyDays || [];
-      const seen = new Map<string, GscKeyword>();
-      raw.forEach((kw) => {
-         if (!kw.keyword) return;
-         const k = kw.keyword.toLowerCase();
-         const ex = seen.get(k);
-         const candidate = { keyword: kw.keyword, position: kw.position ?? 0, clicks: kw.clicks ?? 0, impressions: kw.impressions ?? 0 };
-         if (!ex || kwScore(candidate) > kwScore(ex)) {
-            seen.set(k, candidate);
-         }
-      });
-      return Array.from(seen.values()).sort((a, b) => kwScore(b) - kwScore(a));
-   }, [scData]);
+   const allGscKeywords = useMemo<GscKeyword[]>(
+      () => dedupeGscKeywords((scData?.data?.thirtyDays || []) as SearchAnalyticsItem[]),
+      [scData],
+   );
 
    // URL → best keyword map for site_context entries (no target_keyword — match by page URL)
    const urlKeywordMap = useMemo(() => {
@@ -364,27 +355,14 @@ const RecommendationsPage: NextPage = () => {
    // counted by the sidebar badge, so it promised work the page could not show — the
    // measured case was 5 create rows behind a badge of 5 against an empty Optimize list.
    // They lead here because creating an article is what they ask for.
-   const gapRows = useMemo(() => {
-      // Titles as well as keywords. An article that never got a target keyword and has no
-      // GSC match carries an empty `keyword`, so it fell out of this set entirely and a
-      // create recommendation for the very topic it already covers still offered
-      // "+ Create" — a second draft against the same document quota.
-      const coveredKws = new Set(
-        rows.flatMap((r) => [r.keyword, r.title])
-          .map((v) => (v || '').trim().toLowerCase())
-          .filter(Boolean),
-      );
-      const suggested = (recsData?.recommendations || [])
-         .filter((r) => r.type === 'create' && !!r.title?.trim())
-         .filter((r) => !coveredKws.has(r.title.toLowerCase()))
-         // No GSC history by definition — these are topics nobody has ranked for yet.
-         .map((r) => ({ keyword: r.title, impressions: 0, position: 0, clicks: 0 }));
-      const seen = new Set(suggested.map((s) => s.keyword.toLowerCase()));
-      const fromGsc = allGscKeywords
-         .filter((kw) => kw.impressions > 20 && !coveredKws.has(kw.keyword.toLowerCase()))
-         .filter((kw) => !seen.has(kw.keyword.toLowerCase()));
-      return [...suggested, ...fromGsc].slice(0, 150);
-   }, [allGscKeywords, rows, recsData]);
+   // Shared with the Automations scheduling dialog so both list the same ideas. Covered by
+   // title as well as keyword: an article with no target keyword and no GSC match still
+   // covers its topic, and offering "+ Create" for it again would spend a second document.
+   const gapRows = useMemo(() => buildContentIdeas({
+      recs: recsData?.recommendations,
+      gscKeywords: allGscKeywords,
+      covered: rows.flatMap((r) => [r.keyword, r.title]),
+   }), [allGscKeywords, rows, recsData]);
 
    const filtered = useMemo(() => {
       let out = optimizeRows;

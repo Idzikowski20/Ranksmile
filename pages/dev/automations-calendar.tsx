@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import Head from 'next/head';
 import type { GetServerSideProps, NextPage } from 'next';
 import type { AutomationEvent, AutomationEventStatus, AutomationPublishMode } from '@/src/core/shared/types/automations';
+import {
+  shiftDays, toDateKey, windowRange, WINDOW_DAYS,
+} from '@/src/core/domain/automations/board';
 import AutomationsBoard from '../../components/automations/AutomationsBoard';
+import AddEventDialog from '../../components/automations/AddEventDialog';
 
 let seq = 0;
 const ev = (date: string, title: string, status: AutomationEventStatus, mode: AutomationPublishMode = 'draft'): AutomationEvent => {
@@ -33,8 +37,10 @@ const FIXTURE: AutomationEvent[] = [
 
 /** Dev-only stub for the Automations content calendar (no auth). */
 const AutomationsCalendarStub: NextPage = () => {
-  const [anchor, setAnchor] = useState(() => new Date(2024, 11, 18));
+  const [start, setStart] = useState(() => new Date(2024, 11, 16));
   const [events, setEvents] = useState(FIXTURE);
+  const [dialogDate, setDialogDate] = useState<string | null>(null);
+  const { from, to } = windowRange(start);
   return (
     <>
       <Head>
@@ -45,18 +51,27 @@ const AutomationsCalendarStub: NextPage = () => {
         <div style={{ maxWidth: 1120, margin: '0 auto', fontFamily: 'var(--font-family-primary)' }}>
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: 'var(--koala-text-primary)' }}>Automations</h1>
           <p style={{ margin: '6px 0 24px', fontSize: 14, color: 'var(--koala-text-secondary)' }}>
-            Plan the week — each scheduled event writes its article on the day and, for live events, publishes it to WordPress.
+            Plan the coming days — each scheduled keyword is written into an article on its day and, for live events, published to WordPress.
           </p>
           <AutomationsBoard
-            weekAnchor={anchor}
-            events={events}
-            onPrevWeek={() => setAnchor((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7))}
-            onNextWeek={() => setAnchor((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7))}
-            onThisWeek={() => setAnchor(new Date(2024, 11, 18))}
-            onAdd={() => {}}
-            onDayAdd={() => {}}
+            windowStart={start}
+            events={events.filter((e) => e.scheduledDate >= from && e.scheduledDate <= to)}
+            onPrevDays={() => setStart((d) => shiftDays(d, -WINDOW_DAYS))}
+            onNextDays={() => setStart((d) => shiftDays(d, WINDOW_DAYS))}
+            onToday={() => setStart(new Date(2024, 11, 16))}
+            onAdd={() => setDialogDate('2024-12-18')}
+            onDayAdd={(d) => setDialogDate(toDateKey(d))}
             onEventClick={() => {}}
             onEventDelete={(e) => setEvents((list) => list.filter((x) => x.id !== e.id))}
+          />
+          <AddEventDialog
+            open={dialogDate !== null}
+            onClose={() => setDialogDate(null)}
+            slug="dev-stub"
+            country="PL"
+            initialDate={dialogDate ?? ''}
+            wordpressConnected
+            onSubmit={() => setDialogDate(null)}
           />
         </div>
       </main>

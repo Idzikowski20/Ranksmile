@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import type { AutomationEvent, AutomationEventStatus, AutomationPublishMode } from '@/src/core/shared/types/automations';
 import {
-  weekDays, groupEventsByDay, weekRangeLabel, columnDateLabel, toDateKey, statusBadge, publishLabel,
+  windowDays, groupEventsByDay, windowRangeLabel, columnDateLabel, toDateKey, statusBadge, publishLabel,
   filterEvents, type BadgeColor,
 } from '@/src/core/domain/automations/board';
 import { Icon } from '../koala/icons/Icon';
@@ -29,12 +29,14 @@ const MODE_OPTIONS: Array<{ value: AutomationPublishMode; label: string }> = [
 ];
 
 export type AutomationsBoardProps = {
-  weekAnchor: Date;
+  /** First visible day (today by default); the board shows WINDOW_DAYS days from here. */
+  windowStart: Date;
+  /** Events for the visible days only — the result count reads them as-is. */
   events: AutomationEvent[];
-  onPrevWeek: () => void;
-  onNextWeek: () => void;
-  /** The range pill jumps back to the current week. */
-  onThisWeek: () => void;
+  onPrevDays: () => void;
+  onNextDays: () => void;
+  /** The range pill jumps back to today. */
+  onToday: () => void;
   onAdd: () => void;
   onDayAdd: (date: Date) => void;
   onEventClick?: (event: AutomationEvent) => void;
@@ -87,7 +89,7 @@ function EventCard({ ev, onClick, onDelete }: { ev: AutomationEvent; onClick?: (
       className={`cal-card${clickable ? ' cal-card--link' : ''}`}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
-      title={ev.targetKeyword ? `${ev.title} · ${ev.targetKeyword}` : ev.title}
+      title={ev.targetKeyword ? `${ev.articleTitle || ev.title} · ${ev.targetKeyword}` : (ev.articleTitle || ev.title)}
       onClick={clickable ? onClick : undefined}
       onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
     >
@@ -96,7 +98,8 @@ function EventCard({ ev, onClick, onDelete }: { ev: AutomationEvent; onClick?: (
         <span className="cal-card__tag-label">{badge.label}</span>
       </div>
       <div className="cal-card__rule" />
-      <h3 className="cal-card__title">{ev.title}</h3>
+      {/* The keyword until the article is written, then the title the LLM gave it. */}
+      <h3 className="cal-card__title">{ev.articleTitle || ev.title}</h3>
       <div className="cal-card__meta">
         <Icon name="Clock" size={14} weight="regular" />
         <span>{publishLabel(ev.publishMode)}</span>
@@ -121,7 +124,7 @@ function EventCard({ ev, onClick, onDelete }: { ev: AutomationEvent; onClick?: (
  * and one column per day of scheduled article events.
  */
 export default function AutomationsBoard({
-  weekAnchor, events, onPrevWeek, onNextWeek, onThisWeek, onAdd, onDayAdd, onEventClick, onEventDelete,
+  windowStart, events, onPrevDays, onNextDays, onToday, onAdd, onDayAdd, onEventClick, onEventDelete,
 }: AutomationsBoardProps) {
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -129,7 +132,7 @@ export default function AutomationsBoard({
   const [mode, setMode] = useState<AutomationPublishMode | ''>('');
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const days = useMemo(() => weekDays(weekAnchor), [weekAnchor]);
+  const days = useMemo(() => windowDays(windowStart), [windowStart]);
   const visible = useMemo(
     () => filterEvents(events, { query, status: status || undefined, mode: mode || undefined }),
     [events, query, status, mode],
@@ -144,13 +147,13 @@ export default function AutomationsBoard({
     <div className="cal">
       <div className="cal-toolbar">
         <div className="cal-toolbar__group">
-          <button type="button" className="cal-btn cal-btn--icon" aria-label="Previous week" onClick={onPrevWeek}>
+          <button type="button" className="cal-btn cal-btn--icon" aria-label="Previous days" onClick={onPrevDays}>
             <Icon name="CaretLeft" size={16} weight="bold" />
           </button>
-          <button type="button" className="cal-btn" onClick={onThisWeek} title="Go to this week">
-            {weekRangeLabel(weekAnchor)}
+          <button type="button" className="cal-btn" onClick={onToday} title="Go to today">
+            {windowRangeLabel(windowStart)}
           </button>
-          <button type="button" className="cal-btn cal-btn--icon" aria-label="Next week" onClick={onNextWeek}>
+          <button type="button" className="cal-btn cal-btn--icon" aria-label="Next days" onClick={onNextDays}>
             <Icon name="CaretRight" size={16} weight="bold" />
           </button>
         </div>

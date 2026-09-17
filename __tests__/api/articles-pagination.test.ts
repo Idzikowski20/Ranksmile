@@ -1,6 +1,10 @@
-jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 /** @jest-environment node */
 import type { NextApiRequest, NextApiResponse } from 'next';
+
+import db from '../../database/database';
+import handler from '../../pages/api/articles/index';
+
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({ withOrgPaymentAccess: (h: unknown) => h, withOrgAccessPolicy: (h: unknown) => h }));
 
 jest.mock('../../database/database', () => ({
   __esModule: true,
@@ -16,6 +20,7 @@ jest.mock('../../utils/getUser', () => ({
   getCurrentUserId: jest.fn().mockResolvedValue('user-1'),
 }));
 
+jest.mock('@/src/infrastructure/persistence/schema/ensureAutomationTables', () => ({ ensureAutomationTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/src/infrastructure/persistence/schema/ensureArticlesTables', () => ({
   ensureArticlesTables: jest.fn().mockResolvedValue(undefined),
 }));
@@ -37,9 +42,6 @@ jest.mock('../../database/models/domain', () => ({
 jest.mock('@/src/infrastructure/articles/articleSql', () => ({
   getArticleIdSql: jest.fn().mockResolvedValue('id'),
 }));
-
-import db from '../../database/database';
-import handler from '../../pages/api/articles/index';
 
 function mockReq(query: Record<string, string> = {}): NextApiRequest {
   return { method: 'GET', query } as NextApiRequest;
@@ -73,5 +75,14 @@ describe('GET /api/articles pagination', () => {
       limit: 10,
       offset: 0,
     });
+  });
+
+  it('hides articles an automation is still writing in the background', async () => {
+    await handler(mockReq({ domainId: '1' }), mockRes());
+    const [countSql, listSql] = (db.query as jest.Mock).mock.calls.map((c) => String(c[0]));
+    for (const sql of [countSql, listSql]) {
+      expect(sql).toContain('FROM automation_events ae');
+      expect(sql).toContain("ae.status = 'generating'");
+    }
   });
 });

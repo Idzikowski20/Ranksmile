@@ -4,6 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes, Op } from 'sequelize';
 import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '@/src/infrastructure/identity/tenancy';
 import { ensureArticlesTables } from '@/src/infrastructure/persistence/schema/ensureArticlesTables';
+import { ensureAutomationTables } from '@/src/infrastructure/persistence/schema/ensureAutomationTables';
 import { getArticleIdSql } from '@/src/infrastructure/articles/articleSql';
 import { rejectIfDomainBusy } from '@/src/infrastructure/cron/domainLock';
 import { isReviewOutlineHtmlBounded } from '@/src/infrastructure/contentPlanner/reviewOutline';
@@ -104,6 +105,11 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
          where = `WHERE domain_id IN (${allowedIds.map(() => '?').join(',')})`;
          replacements.push(...allowedIds);
       }
+
+      // Automations write articles in the background; keep them out of the list until done.
+      await ensureAutomationTables();
+      where += ` AND NOT EXISTS (SELECT 1 FROM automation_events ae
+                   WHERE ae.article_id = articles.${articleIdSql} AND ae.status = 'generating')`;
 
       if (search) {
          where += ' AND (LOWER(title) LIKE ? OR LOWER(target_keyword) LIKE ?)';

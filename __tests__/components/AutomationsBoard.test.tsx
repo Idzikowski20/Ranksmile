@@ -16,11 +16,11 @@ const events = [
 
 const setup = (over: Partial<React.ComponentProps<typeof AutomationsBoard>> = {}) => {
   const props = {
-    weekAnchor: new Date(2024, 11, 18),
+    windowStart: new Date(2024, 11, 16),
     events,
-    onPrevWeek: jest.fn(),
-    onNextWeek: jest.fn(),
-    onThisWeek: jest.fn(),
+    onPrevDays: jest.fn(),
+    onNextDays: jest.fn(),
+    onToday: jest.fn(),
     onAdd: jest.fn(),
     onDayAdd: jest.fn(),
     onEventClick: jest.fn(),
@@ -31,11 +31,13 @@ const setup = (over: Partial<React.ComponentProps<typeof AutomationsBoard>> = {}
   return props;
 };
 
-it('renders the week pager, seven dated columns with counts, and the result line', () => {
+it('renders four day columns from the window start, with counts and the result line', () => {
   setup();
-  expect(screen.getByRole('button', { name: '16 - 22 December 2024' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '16 - 19 December 2024' })).toBeInTheDocument();
   expect(screen.getByRole('region', { name: 'Monday, 16 Dec 2024' })).toHaveTextContent('2');
-  expect(screen.getAllByRole('region')).toHaveLength(7);
+  expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual([
+    'Monday, 16 Dec 2024', 'Tuesday, 17 Dec 2024', 'Wednesday, 18 Dec 2024', 'Thursday, 19 Dec 2024',
+  ]);
   expect(screen.getByText('3 Result')).toBeInTheDocument();
 });
 
@@ -75,12 +77,12 @@ it('opens the article for a card that has one and removes via the hover action',
 
 it('routes the pager and Add event buttons', () => {
   const props = setup();
-  fireEvent.click(screen.getByRole('button', { name: 'Previous week' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Next week' }));
-  fireEvent.click(screen.getByRole('button', { name: '16 - 22 December 2024' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Previous days' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next days' }));
+  fireEvent.click(screen.getByRole('button', { name: '16 - 19 December 2024' }));
   fireEvent.click(screen.getByRole('button', { name: 'Add event' }));
-  expect(props.onPrevWeek).toHaveBeenCalled();
-  expect(props.onNextWeek).toHaveBeenCalled();
-  expect(props.onThisWeek).toHaveBeenCalled();
+  expect(props.onPrevDays).toHaveBeenCalled();
+  expect(props.onNextDays).toHaveBeenCalled();
+  expect(props.onToday).toHaveBeenCalled();
   expect(props.onAdd).toHaveBeenCalled();
 });

@@ -1,6 +1,6 @@
 /**
- * Pure helpers for the weekly Automations kanban board: the Monday–Sunday window, labels,
- * day grouping, filtering, and the status badge each card shows. No I/O, no React.
+ * Pure helpers for the Automations content calendar: the visible window of days (today
+ * onward), labels, day grouping, filtering, and each card's status badge. No I/O, no React.
  */
 import type { AutomationEvent, AutomationEventStatus, AutomationPublishMode } from '@/src/core/shared/types/automations';
 
@@ -20,34 +20,36 @@ export function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Monday of the week containing `date` (weeks start on Monday, matching the calendar). */
-export function weekStart(date: Date): Date {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const dow = (d.getDay() + 6) % 7; // 0 = Monday
-  d.setDate(d.getDate() - dow);
-  return d;
+/** How many day columns the board shows at once; the arrows page by this many days. */
+export const WINDOW_DAYS = 4;
+
+export function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-/** The seven Date objects of the week containing `date`, Monday first. */
-export function weekDays(date: Date): Date[] {
-  const start = weekStart(date);
-  return Array.from({ length: 7 }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+export function shiftDays(date: Date, days: number): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
-/** Inclusive [from, to] YYYY-MM-DD keys for the week, for the list query. */
-export function weekRange(date: Date): { from: string; to: string } {
-  const days = weekDays(date);
-  return { from: toDateKey(days[0]), to: toDateKey(days[6]) };
+/** The visible days: `start` (usually today) and the ones after it. */
+export function windowDays(start: Date, count = WINDOW_DAYS): Date[] {
+  return Array.from({ length: count }, (_, i) => shiftDays(start, i));
+}
+
+/** Inclusive [from, to] YYYY-MM-DD keys for the visible days, for the list query. */
+export function windowRange(start: Date): { from: string; to: string } {
+  const days = windowDays(start);
+  return { from: toDateKey(days[0]), to: toDateKey(days[days.length - 1]) };
 }
 
 /**
- * "16 - 22 December 2024"; across a month "30 Sep - 6 Oct 2024"; across a year
- * "30 Dec 2024 - 5 Jan 2025".
+ * "17 - 20 September 2026"; across a month "29 Sep - 2 Oct 2026"; across a year
+ * "30 Dec 2026 - 2 Jan 2027".
  */
-export function weekRangeLabel(date: Date): string {
-  const days = weekDays(date);
+export function windowRangeLabel(start: Date): string {
+  const days = windowDays(start);
   const a = days[0];
-  const b = days[6];
+  const b = days[days.length - 1];
   if (a.getFullYear() !== b.getFullYear()) {
     return `${a.getDate()} ${short(a.getMonth())} ${a.getFullYear()} - ${b.getDate()} ${short(b.getMonth())} ${b.getFullYear()}`;
   }
