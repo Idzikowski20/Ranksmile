@@ -1,0 +1,42 @@
+src/infrastructure/cron/autopilot.ts
+  s_7986f9548be700::t_bce81cb8c47f31 221-223
+  s_7986f9548be700::t_1245c8550d2e36 14
+  s_7986f9548be700::t_4626e80d1a77bf 264-269
+  s_7986f9548be700::t_a7766bb6584b18 195
+__tests__/lib/stripeReconcileOrphans.test.ts
+  s_7986f9548be700::t_f3f01b6f12fbb4 110-120
+  s_7986f9548be700::t_1db79ac2537ac9 50-53
+src/infrastructure/cron/automationsScheduler.ts
+  s_7986f9548be700::t_17e03d7ae681db 231-241,243-247
+  s_7986f9548be700::t_fda903ea555858 24
+  s_7986f9548be700::t_6de5e4aabbe753 259-275,277-279
+__tests__/lib/autopilot.test.ts
+  s_7986f9548be700::t_dc4634ee2ee866 10
+  s_7986f9548be700::t_685c9a02135d83 69-79
+src/infrastructure/billing/stripeBillingReconcile.ts
+  s_7986f9548be700::t_1db79ac2537ac9 21,56-59,62-74,79,82,216-219
+__tests__/lib/automations/scheduler.test.ts
+  s_7986f9548be700::t_685c9a02135d83 253-272
+  s_7986f9548be700::t_dc4634ee2ee866 31
+src/infrastructure/billing/orgAccess.ts
+  s_7986f9548be700::t_120b607fe90e02 61-89
+__tests__/lib/staleBillingRefresh.test.ts
+  s_7986f9548be700::t_f3f01b6f12fbb4 88-96,98-104
+  s_7986f9548be700::t_ebcd41c7894f25 97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "709717bd1b4a05d8cfa3ee182c8df4a7b288c752",
+  "prompts": {},
+  "sessions": {
+    "s_7986f9548be700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ec2fce3a-e831-4560-a393-0c21efaf7c36",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
