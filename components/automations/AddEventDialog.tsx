@@ -8,17 +8,20 @@ import { Form, FormField, FormSection, FieldHint } from '../koala/forms';
 export type AddEventDialogProps = {
   open: boolean;
   onClose: () => void;
-  dateLabel: string;
-  scheduledDate: string;
+  /** YYYY-MM-DD the dialog opens on (the clicked day, or today from the toolbar). */
+  initialDate: string;
   wordpressConnected: boolean;
   submitting?: boolean;
   error?: string | null;
   onSubmit: (payload: {
+    scheduledDate: string;
     title: string;
     targetKeyword: string;
     publishMode: AutomationPublishMode;
   }) => void;
 };
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const PUBLISH_OPTIONS = [
   { value: 'draft', label: 'Draft' },
@@ -31,29 +34,31 @@ const PUBLISH_OPTIONS = [
 export default function AddEventDialog({
   open,
   onClose,
-  dateLabel,
-  scheduledDate,
+  initialDate,
   wordpressConnected,
   submitting = false,
   error = null,
   onSubmit,
 }: AddEventDialogProps) {
+  const [date, setDate] = useState(initialDate);
   const [title, setTitle] = useState('');
   const [keyword, setKeyword] = useState('');
   const [publishMode, setPublishMode] = useState<AutomationPublishMode>('draft');
 
   useEffect(() => {
     if (!open) return;
+    setDate(initialDate);
     setTitle('');
     setKeyword('');
     setPublishMode('draft');
-  }, [open, scheduledDate]);
+  }, [open, initialDate]);
 
   if (!open) return null;
 
   // Draft events schedule without WordPress; only a live publish needs a connection.
   const liveBlocked = publishMode === 'live' && !wordpressConnected;
-  const canSubmit = title.trim().length > 0 && keyword.trim().length > 0 && !submitting && !liveBlocked;
+  const canSubmit = DATE_RE.test(date) && title.trim().length > 0 && keyword.trim().length > 0
+    && !submitting && !liveBlocked;
 
   return (
     <Modal title="Schedule content" onClose={onClose} width={520}>
@@ -64,6 +69,7 @@ export default function AddEventDialog({
             e.preventDefault();
             if (!canSubmit) return;
             onSubmit({
+              scheduledDate: date,
               title: title.trim(),
               targetKeyword: keyword.trim(),
               publishMode,
@@ -72,8 +78,11 @@ export default function AddEventDialog({
         >
           <FormSection
             title="Basic setup"
-            description={`Schedule for ${dateLabel}. The article is written on that day; a live event also publishes to WordPress.`}
+            description="The article is written on the chosen day; a live event also publishes to WordPress."
           >
+            <FormField label="Publish date" required>
+              <Input size="md" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </FormField>
             <FormField label="Article title" required>
               <Input
                 size="md"

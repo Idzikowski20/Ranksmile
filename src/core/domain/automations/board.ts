@@ -1,15 +1,17 @@
 /**
- * Pure helpers for the weekly Automations kanban board: the Monday–Sunday window, day
- * grouping, range labels, and the status badge each card shows. No I/O, no React.
+ * Pure helpers for the weekly Automations kanban board: the Monday–Sunday window, labels,
+ * day grouping, filtering, and the status badge each card shows. No I/O, no React.
  */
 import type { AutomationEvent, AutomationEventStatus, AutomationPublishMode } from '@/src/core/shared/types/automations';
 
-const MONTHS_SHORT = [
+const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
 export const WEEKDAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const short = (month: number) => MONTHS[month].slice(0, 3);
 
 export function toDateKey(d: Date): string {
   const y = d.getFullYear();
@@ -18,7 +20,7 @@ export function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Monday of the week containing `date` (weeks start on Monday, matching the reference). */
+/** Monday of the week containing `date` (weeks start on Monday, matching the calendar). */
 export function weekStart(date: Date): Date {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const dow = (d.getDay() + 6) % 7; // 0 = Monday
@@ -38,15 +40,27 @@ export function weekRange(date: Date): { from: string; to: string } {
   return { from: toDateKey(days[0]), to: toDateKey(days[6]) };
 }
 
-/** "16 – 22 December 2024", or "28 Dec 2024 – 3 Jan 2025" across a month/year boundary. */
+/**
+ * "16 - 22 December 2024"; across a month "30 Sep - 6 Oct 2024"; across a year
+ * "30 Dec 2024 - 5 Jan 2025".
+ */
 export function weekRangeLabel(date: Date): string {
   const days = weekDays(date);
   const a = days[0];
   const b = days[6];
-  const sameMonth = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
-  if (sameMonth) return `${a.getDate()} – ${b.getDate()} ${MONTHS_SHORT[a.getMonth()]} ${a.getFullYear()}`;
-  const aY = a.getFullYear() === b.getFullYear() ? '' : ` ${a.getFullYear()}`;
-  return `${a.getDate()} ${MONTHS_SHORT[a.getMonth()].slice(0, 3)}${aY} – ${b.getDate()} ${MONTHS_SHORT[b.getMonth()].slice(0, 3)} ${b.getFullYear()}`;
+  if (a.getFullYear() !== b.getFullYear()) {
+    return `${a.getDate()} ${short(a.getMonth())} ${a.getFullYear()} - ${b.getDate()} ${short(b.getMonth())} ${b.getFullYear()}`;
+  }
+  if (a.getMonth() !== b.getMonth()) {
+    return `${a.getDate()} ${short(a.getMonth())} - ${b.getDate()} ${short(b.getMonth())} ${b.getFullYear()}`;
+  }
+  return `${a.getDate()} - ${b.getDate()} ${MONTHS[a.getMonth()]} ${a.getFullYear()}`;
+}
+
+/** Column header: "Monday, 16 Dec 2024". */
+export function columnDateLabel(date: Date): string {
+  const weekday = WEEKDAY_LABELS[(date.getDay() + 6) % 7];
+  return `${weekday}, ${date.getDate()} ${short(date.getMonth())} ${date.getFullYear()}`;
 }
 
 /** Events keyed by their scheduled day (YYYY-MM-DD). */
@@ -61,22 +75,39 @@ export function groupEventsByDay(events: AutomationEvent[]): Map<string, Automat
   return map;
 }
 
-export type BadgeTone = 'neutral' | 'warning' | 'success' | 'brand' | 'danger';
-export type StatusBadge = { label: string; tone: BadgeTone };
+export type BadgeColor = 'blue' | 'orange' | 'green' | 'purple' | 'red';
+export type StatusBadge = { label: string; initial: string; color: BadgeColor };
 
-/** The card's status badge — the coloured chip that stands in for the reference's project tag. */
+/** The card's tag — a coloured letter avatar plus label, in the slot the calendar gives a project. */
 export function statusBadge(status: AutomationEventStatus): StatusBadge {
   switch (status) {
-    case 'failed': return { label: 'Failed', tone: 'danger' };
-    case 'published': return { label: 'Published', tone: 'brand' };
-    case 'generating': return { label: 'Generating', tone: 'warning' };
-    case 'created': return { label: 'Draft ready', tone: 'success' };
+    case 'failed': return { label: 'Failed', initial: 'F', color: 'red' };
+    case 'published': return { label: 'Published', initial: 'P', color: 'purple' };
+    case 'generating': return { label: 'Generating', initial: 'G', color: 'orange' };
+    case 'created': return { label: 'Draft ready', initial: 'D', color: 'green' };
     case 'scheduled':
-    default: return { label: 'Scheduled', tone: 'neutral' };
+    default: return { label: 'Scheduled', initial: 'S', color: 'blue' };
   }
 }
 
 /** Small label for the publish intent shown under the title. */
 export function publishLabel(mode: AutomationPublishMode): string {
   return mode === 'live' ? 'Publish live' : 'Keep as draft';
+}
+
+export type BoardFilters = {
+  query?: string;
+  status?: AutomationEventStatus;
+  mode?: AutomationPublishMode;
+};
+
+/** Events matching the toolbar: search over title + keyword, status, publish mode. */
+export function filterEvents(events: AutomationEvent[], filters: BoardFilters): AutomationEvent[] {
+  const q = (filters.query || '').trim().toLowerCase();
+  return events.filter((e) => {
+    if (filters.status && e.status !== filters.status) return false;
+    if (filters.mode && e.publishMode !== filters.mode) return false;
+    if (q && !`${e.title} ${e.targetKeyword}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
 }

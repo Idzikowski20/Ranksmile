@@ -9893,84 +9893,115 @@ a.dash-step:hover { background: var(--koala-bg-secondary); }
 .speed-card__note { font-size: 12px; color: var(--koala-text-tertiary); }
 .speed-card__error { font-size: 12px; color: var(--koala-status-danger); }
 
-/* ── Automations weekly kanban board ─────────────────────────────────────── */
-.automations-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.automations-toolbar__nav { display: flex; align-items: center; gap: 8px; }
-.automations-toolbar__label { font-size: 15px; font-weight: 600; color: var(--koala-text-primary); min-width: 168px; text-align: center; }
-.automations-toolbar__count { font-size: 13px; color: var(--koala-text-secondary); }
-.automations-navbtn {
-  width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--koala-border-primary);
-  background: var(--koala-bg-primary); color: var(--koala-text-primary); display: grid; place-items: center;
+/* ── Automations: weekly content calendar (Koala Content Calendar) ─────────── */
+.cal { font-family: var(--font-family-primary); }
+.cal-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cal-toolbar__group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cal-toolbar__divider { width: 1px; height: 24px; margin: 0 4px; background: var(--koala-border-primary); }
+.cal-btn {
+  height: 36px; padding: 0 14px; border-radius: 8px;
+  border: 1px solid var(--koala-border-primary); background: var(--koala-bg-primary);
+  color: var(--koala-text-primary); font-family: inherit; font-size: 14px; font-weight: 600; line-height: 20px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); cursor: var(--koala-cursor-pointing);
+}
+.cal-btn:hover { background: var(--koala-bg-secondary); }
+.cal-btn:focus-visible { outline: 2px solid var(--koala-text-brand); outline-offset: 2px; }
+.cal-btn--icon { width: 36px; padding: 0; }
+.cal-btn--ghost { border-color: transparent; background: transparent; box-shadow: none; }
+.cal-search {
+  height: 36px; width: 220px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid var(--koala-border-primary); background: var(--koala-bg-primary);
+  color: var(--koala-text-primary); font-family: inherit; font-size: 14px;
+}
+.cal-search:focus { outline: 2px solid var(--koala-text-brand); outline-offset: 1px; }
+.cal-select { position: relative; display: inline-flex; }
+.cal-select__control { appearance: none; -webkit-appearance: none; padding-right: 36px; }
+.cal-select__caret {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; color: var(--koala-text-primary);
+}
+
+.cal-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 20px; min-height: 24px;
+}
+.cal-summary__count { margin: 0; font-size: 14px; line-height: 20px; color: var(--koala-text-secondary); }
+.cal-summary__count strong { color: var(--koala-text-primary); font-weight: 600; }
+.cal-summary__chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.cal-chip {
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 6px 0 10px;
+  border-radius: 999px; border: 1px solid var(--koala-border-primary); background: var(--koala-bg-secondary);
+  font-size: 12px; line-height: 16px;
+}
+.cal-chip__label { color: var(--koala-text-secondary); }
+.cal-chip__value { color: var(--koala-text-primary); font-weight: 600; }
+.cal-chip__clear {
+  display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 2px; padding: 0;
+  border: none; border-radius: 50%; background: transparent; color: var(--koala-text-tertiary);
   cursor: var(--koala-cursor-pointing);
 }
-.automations-navbtn:hover { background: var(--koala-bg-secondary); }
-.automations-today {
-  height: 34px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--koala-border-primary);
-  background: var(--koala-bg-primary); color: var(--koala-text-primary); font-family: var(--font-family-primary);
-  font-size: 14px; font-weight: 500; cursor: var(--koala-cursor-pointing);
-}
-.automations-today:hover { background: var(--koala-bg-secondary); }
+.cal-chip__clear:hover { background: var(--koala-border-primary); color: var(--koala-text-primary); }
 
-.automations-board {
-  display: grid; grid-template-columns: repeat(7, minmax(180px, 1fr)); gap: 12px;
-  overflow-x: auto; padding-bottom: 4px; align-items: start;
+.cal-board {
+  display: flex; gap: 16px; align-items: flex-start; margin-top: 24px;
+  overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;
 }
-.automations-col {
-  background: var(--koala-bg-secondary); border: 1px solid var(--koala-border-primary);
-  border-radius: 14px; min-width: 0; display: flex; flex-direction: column;
+.cal-board::-webkit-scrollbar { display: none; }
+.cal-col { flex: 0 0 256px; background: var(--koala-bg-secondary); border-radius: 10px; padding: 0 6px 6px; }
+.cal-col__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 8px 10px; }
+.cal-col__date {
+  font-size: 14px; line-height: 20px; color: var(--koala-text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.automations-col--today { border-color: var(--koala-text-brand); }
-.automations-col__head {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 12px 12px 8px;
-}
-.automations-col__day { display: flex; flex-direction: column; min-width: 0; }
-.automations-col__dow { font-size: 13px; font-weight: 600; color: var(--koala-text-primary); }
-.automations-col__date { font-size: 12px; color: var(--koala-text-secondary); }
-.automations-col--today .automations-col__dow { color: var(--koala-text-brand); }
-.automations-col__count {
-  flex-shrink: 0; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px;
-  background: var(--koala-bg-primary); border: 1px solid var(--koala-border-primary);
+.cal-col__count {
+  flex-shrink: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  background: var(--koala-text-tertiary); color: var(--koala-bg-primary);
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 600; color: var(--koala-text-secondary);
+  font-size: 11px; font-weight: 600; line-height: 1;
 }
-.automations-col__body { display: flex; flex-direction: column; gap: 8px; padding: 4px 10px 12px; }
-.automations-col__empty { margin: 8px 2px; font-size: 12px; line-height: 16px; color: var(--koala-text-tertiary); }
+.cal-col__cards { display: flex; flex-direction: column; gap: 6px; }
+.cal-col__empty {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 44px 16px 44px; border: none; border-radius: 8px; background: transparent;
+  text-align: center; font-family: inherit; cursor: var(--koala-cursor-pointing);
+}
+.cal-col__empty:focus-visible { outline: 2px solid var(--koala-text-brand); outline-offset: -2px; }
+.cal-col__empty-title { font-size: 14px; font-weight: 600; line-height: 20px; color: var(--koala-text-primary); }
+.cal-col__empty-text { max-width: 220px; font-size: 12px; line-height: 18px; color: var(--koala-text-secondary); }
 
-.automations-card {
-  background: var(--koala-bg-primary); border: 1px solid var(--koala-border-primary);
-  border-radius: 12px; padding: 10px 11px; display: flex; flex-direction: column; gap: 8px;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+.cal-card {
+  position: relative; padding: 14px 12px 12px; border-radius: 8px;
+  border: 1px solid var(--koala-border-primary); background: var(--koala-bg-primary);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
 }
-.automations-card[role="button"]:hover { border-color: var(--koala-border-secondary); box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06); }
-.automations-card__top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.automations-badge {
-  display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 6px;
-  font-size: 11px; font-weight: 600; line-height: 16px; max-width: 100%;
+.cal-card--link { cursor: var(--koala-cursor-pointing); }
+.cal-card--link:hover { border-color: var(--koala-border-secondary); }
+.cal-card:focus-visible { outline: 2px solid var(--koala-text-brand); outline-offset: 1px; }
+.cal-card__tag { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 24px; }
+.cal-card__avatar {
+  flex-shrink: 0; width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center;
+  font-size: 11px; font-weight: 600; line-height: 1; color: var(--koala-bg-primary);
 }
-.automations-badge__dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.automations-card__del {
-  border: none; background: transparent; padding: 2px; border-radius: 6px; color: var(--koala-text-tertiary);
-  display: inline-flex; cursor: var(--koala-cursor-pointing); flex-shrink: 0;
+.cal-card__tag-label {
+  font-size: 12px; font-weight: 500; line-height: 16px; color: var(--koala-text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.automations-card__del:hover { background: var(--koala-status-danger-bg); color: var(--koala-status-danger); }
-.automations-card__title {
-  margin: 0; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--koala-text-primary);
+.cal-card__rule { height: 1px; margin: 14px 0 16px; background: var(--koala-border-primary); }
+.cal-card__title {
+  margin: 0; font-size: 14px; line-height: 22px; font-weight: 500; color: var(--koala-text-primary);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.automations-card__meta {
-  display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--koala-text-secondary);
-  min-width: 0;
+.cal-card__meta {
+  display: flex; align-items: center; gap: 4px; margin-top: 8px;
+  font-size: 12px; line-height: 16px; color: var(--koala-text-secondary);
 }
-.automations-card__kw { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.automations-col__add {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  border: 1px dashed var(--koala-border-secondary); background: transparent; border-radius: 10px;
-  padding: 8px; font-family: var(--font-family-primary); font-size: 13px; font-weight: 500;
-  color: var(--koala-text-secondary); cursor: var(--koala-cursor-pointing);
+.cal-card__delete {
+  position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; padding: 0;
+  display: grid; place-items: center; border: none; border-radius: 6px; background: transparent;
+  color: var(--koala-text-tertiary); cursor: var(--koala-cursor-pointing); opacity: 0; transition: opacity 120ms ease;
 }
-.automations-col__add:hover { background: var(--koala-bg-primary); color: var(--koala-text-primary); }
-
-@media (max-width: 900px) {
-  .automations-board { grid-auto-flow: column; grid-auto-columns: 82%; grid-template-columns: none; }
-}
+.cal-card:hover .cal-card__delete,
+.cal-card:focus-within .cal-card__delete { opacity: 1; }
+.cal-card__delete:hover { background: var(--koala-status-danger-bg); color: var(--koala-status-danger); }
+@media (hover: none) { .cal-card__delete { opacity: 1; } }

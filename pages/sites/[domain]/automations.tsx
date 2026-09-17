@@ -9,7 +9,7 @@ import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import AutomationsBoard from '../../../components/automations/AutomationsBoard';
 import AddEventDialog from '../../../components/automations/AddEventDialog';
-import { Alert, Button } from '../../../components/koala/core';
+import { Alert } from '../../../components/koala/core';
 import { useAppBanner } from '../../../components/koala/shell';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
@@ -20,14 +20,12 @@ type ListResponse = {
   events: AutomationEvent[];
 };
 
-const MONTHS_FULL = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function fmtDateLabel(d: Date): string {
-  return `${MONTHS_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-}
+type CreatePayload = {
+  scheduledDate: string;
+  title: string;
+  targetKeyword: string;
+  publishMode: AutomationPublishMode;
+};
 
 const AutomationsPage: NextPage = () => {
   const router = useRouter();
@@ -38,10 +36,10 @@ const AutomationsPage: NextPage = () => {
   const queryClient = useQueryClient();
 
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
-  const today = useMemo(() => new Date(), []);
   const { from, to } = useMemo(() => weekRange(weekAnchor), [weekAnchor]);
 
-  const [dialogDate, setDialogDate] = useState<Date | null>(null);
+  /** YYYY-MM-DD the add dialog opens on; null while closed. */
+  const [dialogDate, setDialogDate] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const listQ = useQuery(
@@ -58,29 +56,14 @@ const AutomationsPage: NextPage = () => {
   );
 
   const createMut = useMutation(
-    async (payload: {
-      scheduledDate: string;
-      title: string;
-      targetKeyword: string;
-      publishMode: AutomationPublishMode;
-    }) => {
+    async (payload: CreatePayload) => {
       const res = await fetch(`/api/automations/${encodeURIComponent(slug)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const body = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        message?: string;
-        event?: AutomationEvent;
-        articleId?: number | null;
-      };
-      if (!res.ok) {
-        if (body.error === 'wordpress_not_connected') {
-          throw new Error(body.message || 'Connect WordPress in Settings first.');
-        }
-        throw new Error(body.message || body.error || 'Failed to create event');
-      }
+      const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      if (!res.ok) throw new Error(body.message || body.error || 'Failed to schedule event');
       return body;
     },
     {
@@ -90,7 +73,7 @@ const AutomationsPage: NextPage = () => {
         void queryClient.invalidateQueries(['automations', slug]);
       },
       onError: (err: unknown) => {
-        setSubmitError(err instanceof Error ? err.message : 'Failed to create event');
+        setSubmitError(err instanceof Error ? err.message : 'Failed to schedule event');
       },
     },
   );
@@ -117,6 +100,11 @@ const AutomationsPage: NextPage = () => {
     }
     : null);
 
+  const openDialog = (date: Date) => {
+    setSubmitError(null);
+    setDialogDate(toDateKey(date));
+  };
+
   return (
     <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
       <Head>
@@ -128,17 +116,7 @@ const AutomationsPage: NextPage = () => {
         section="automations"
         contentMaxWidth={1120}
         heading="Automations"
-        subtitle="Plan the week on the content calendar — each scheduled event writes the article on its day and, for live events, publishes to WordPress."
-        actions={(
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            onClick={() => setDialogDate(new Date())}
-          >
-            Add event
-          </Button>
-        )}
+        subtitle="Plan the week — each scheduled event writes its article on the day and, for live events, publishes it to WordPress."
       >
         {listQ.isError ? (
           <div style={{ marginBottom: 16 }}>
@@ -150,43 +128,34 @@ const AutomationsPage: NextPage = () => {
 
         <AutomationsBoard
           weekAnchor={weekAnchor}
-          today={today}
           events={events}
           onPrevWeek={() => setWeekAnchor((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7))}
           onNextWeek={() => setWeekAnchor((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7))}
-          onToday={() => setWeekAnchor(new Date())}
-          onDayAdd={(d) => {
-            setSubmitError(null);
-            setDialogDate(d);
-          }}
+          onThisWeek={() => setWeekAnchor(new Date())}
+          onAdd={() => openDialog(new Date())}
+          onDayAdd={openDialog}
           onEventClick={(ev) => {
             if (ev.articleId) void router.push(`/articles/${ev.articleId}`);
           }}
           onEventDelete={(ev) => {
+            // eslint-disable-next-line no-alert
             if (window.confirm(`Remove "${ev.title}" from the calendar?`)) deleteMut.mutate(ev.id);
           }}
         />
 
         <AddEventDialog
-          open={!!dialogDate}
+          open={dialogDate !== null}
           onClose={() => {
             setDialogDate(null);
             setSubmitError(null);
           }}
-          dateLabel={dialogDate ? fmtDateLabel(dialogDate) : ''}
-          scheduledDate={dialogDate ? toDateKey(dialogDate) : ''}
+          initialDate={dialogDate ?? ''}
           wordpressConnected={wordpressConnected}
           submitting={createMut.isLoading}
           error={submitError}
-          onSubmit={({ title, targetKeyword, publishMode }) => {
-            if (!dialogDate) return;
+          onSubmit={(payload) => {
             setSubmitError(null);
-            createMut.mutate({
-              scheduledDate: toDateKey(dialogDate),
-              title,
-              targetKeyword,
-              publishMode,
-            });
+            createMut.mutate(payload);
           }}
         />
       </DomainSubLayout>
