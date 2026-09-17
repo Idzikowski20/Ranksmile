@@ -1,0 +1,69 @@
+__tests__/lib/automations/keywords.test.ts
+  s_c7c90ce5d12296::t_80e7b062ff05b7 20-21
+pages/sites/[domain]/recommendations.tsx
+  s_c7c90ce5d12296::t_a94201b197aefe 18,224
+__tests__/api/articles-pagination.test.ts
+  s_c7c90ce5d12296::t_d10cd888303aad 80
+components/koala/core/select/select.tsx
+  s_c7c90ce5d12296::t_fb292a307d03bd 140-141
+components/automations/AutomationsBoard.tsx
+  s_c7c90ce5d12296::t_ee30db7a3392d2 124-126
+pages/sites/[domain]/automations.tsx
+  s_c7c90ce5d12296::t_419f04e9a553b6 67-68
+src/infrastructure/persistence/schema/ensureAutomationTables.ts
+  s_c7c90ce5d12296::t_87c2282a9b75b1 8-9,11,31,37-41
+  s_c7c90ce5d12296::t_d092aa1b6d8cd8 32-33
+pages/dev/automations-calendar.tsx
+  s_c7c90ce5d12296::t_60078422de234c 74-81
+  s_c7c90ce5d12296::t_a9964d2c528172 62
+src/core/domain/automations/schedule.ts
+  s_c7c90ce5d12296::t_70f0641accace4 8-23
+__tests__/lib/automations/schedule.test.ts
+  s_c7c90ce5d12296::t_01d11d9bf9f7b7 1-23
+__tests__/lib/automations/ensureAutomationTables.test.ts
+  s_c7c90ce5d12296::t_f6c3edfac9b389 3-4
+  s_c7c90ce5d12296::t_e045c5ee3b609b 1-2,5-15,17-21
+  s_c7c90ce5d12296::t_f490f4aee389ce 16
+__tests__/lib/recommendations/contentIdeas.test.ts
+  s_c7c90ce5d12296::t_8b6f5804113b2d 16-26
+services/article.ts
+  s_c7c90ce5d12296::t_a94201b197aefe 23-40
+src/infrastructure/cron/automationsScheduler.ts
+  s_c7c90ce5d12296::t_f16e1952f4c62a 24,72-75,159,161,165,174-182,186,190,192,204-211,215,217
+__tests__/lib/automations/scheduler.test.ts
+  s_c7c90ce5d12296::t_88847135ae404a 139-159
+  s_c7c90ce5d12296::t_b3d4eca0cc70e9 27-30
+  s_c7c90ce5d12296::t_5b4158706732d1 75-93
+src/core/domain/automations/board.ts
+  s_c7c90ce5d12296::t_a2a7c8f18972d1 113
+  s_c7c90ce5d12296::t_5ca97bf79a5bcd 107
+__tests__/lib/fetchAllDomainArticles.test.ts
+  s_c7c90ce5d12296::t_d4b5e77400b321 1-17
+src/core/domain/recommendations/contentIdeas.ts
+  s_c7c90ce5d12296::t_f6b88f4f0deae1 17,19-27
+src/core/domain/automations/keywords.ts
+  s_c7c90ce5d12296::t_00a1cf21ab3dbe 16-17
+components/automations/AddEventDialog.tsx
+  s_c7c90ce5d12296::t_4ee8e06dc1de93 85
+  s_c7c90ce5d12296::t_fb56d78daab2eb 15
+pages/api/automations/[slug]/index.ts
+  s_c7c90ce5d12296::t_191f3e2948c990 2,8,15,30,98,121,126-127,136-137
+__tests__/lib/automations/board.test.ts
+  s_c7c90ce5d12296::t_0f8146348e7d63 84-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "df2f8081753e295ab3b42211d55478433f77a596",
+  "prompts": {},
+  "sessions": {
+    "s_c7c90ce5d12296": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21769307-1eda-4d7f-b773-fe103e66957f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
