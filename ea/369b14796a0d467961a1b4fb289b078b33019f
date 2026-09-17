@@ -1,0 +1,21 @@
+__tests__/lib/quotaService.test.ts
+  s_7986f9548be700::t_9f284b7612d383 17-21,217-219,367-383
+src/infrastructure/quota/quotaService.ts
+  s_7986f9548be700::t_8405d31496a348 7,45-48,50-54,187,371
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ea369b14796a0d467961a1b4fb289b078b33019f",
+  "prompts": {},
+  "sessions": {
+    "s_7986f9548be700": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ec2fce3a-e831-4560-a393-0c21efaf7c36",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
