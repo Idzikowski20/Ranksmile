@@ -5,6 +5,8 @@ export type Workspace = { id: number; name: string; domain?: string | null };
 export function useWorkspaces() {
    return useQuery<{ workspaces: Workspace[]; activeId: number | null }>('workspaces', async () => {
       const res = await fetch('/api/workspaces');
+      // A failed call is an error, not "no workspaces" — caching it as an empty list hid a 403.
+      if (!res.ok) throw new Error(`Workspaces request failed (${res.status})`);
       const d = await res.json().catch(() => ({}));
       return { workspaces: d.workspaces || [], activeId: d.activeId ?? null };
    }, { staleTime: 300_000, cacheTime: 600_000, refetchOnWindowFocus: false });

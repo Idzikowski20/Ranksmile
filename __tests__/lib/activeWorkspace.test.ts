@@ -1,4 +1,6 @@
-import { parseWorkspaceId, workspaceHref, deriveActiveId } from '@/src/core/domain/navigation/activeWorkspace';
+import {
+  parseWorkspaceId, workspaceHref, deriveActiveId, foreignWorkspaceFallback,
+} from '@/src/core/domain/navigation/activeWorkspace';
 
 describe('deriveActiveId (SSR-safe)', () => {
   it('ignores the URL until mounted, so server + first client render match', () => {
@@ -35,5 +37,33 @@ describe('workspaceHref', () => {
   it('returns the bare path when wsId is falsy', () => {
     expect(workspaceHref(0, '/dashboard')).toBe('/dashboard');
     expect(workspaceHref(null as any, '/dashboard')).toBe('/dashboard');
+  });
+});
+
+describe('foreignWorkspaceFallback', () => {
+  const ws = { workspaceIds: [2, 3], setupWorkspaceId: null, activeId: 2 };
+
+  it('leaves an accessible workspace URL alone', () => {
+    expect(foreignWorkspaceFallback('/workspace/3/articles', ws)).toBeNull();
+    expect(foreignWorkspaceFallback('/workspace/3-idztech/articles?x=1', ws)).toBeNull();
+  });
+
+  it('leaves URLs without a workspace alone', () => {
+    expect(foreignWorkspaceFallback('/plans', ws)).toBeNull();
+    expect(foreignWorkspaceFallback('/', ws)).toBeNull();
+  });
+
+  it('allows the in-progress setup workspace, which is not in the ready list', () => {
+    expect(foreignWorkspaceFallback('/workspace/9/setup', { ...ws, setupWorkspaceId: 9 })).toBeNull();
+  });
+
+  it('moves an inaccessible workspace URL to the same page of the active workspace', () => {
+    expect(foreignWorkspaceFallback('/workspace/7/articles', ws)).toBe('/workspace/2/articles');
+    expect(foreignWorkspaceFallback('/workspace/7-old/automations?view=week', ws)).toBe('/workspace/2/automations?view=week');
+    expect(foreignWorkspaceFallback('/workspace/7', ws)).toBe('/workspace/2/dashboard');
+  });
+
+  it('sends the user home when no workspace is accessible', () => {
+    expect(foreignWorkspaceFallback('/workspace/7/articles', { workspaceIds: [], setupWorkspaceId: null, activeId: null })).toBe('/');
   });
 });
