@@ -1,4 +1,5 @@
 import { diffBlocks, wordDiffSegments, type DiffSeg } from '@/src/infrastructure/ao/wordDiff';
+import { escapeHtml } from '../../core/shared/html';
 
 export type { DiffSeg };
 export { wordDiffSegments };
@@ -41,8 +42,4 @@ export function renderStructuredDiffHtml(oldHtml: string, newHtml: string): stri
       }
       return `<${b.tag}>${renderDiffHtml(segs)}</${b.tag}>`;
    }).join('');
-}
-
-function escapeHtml(s: string): string {
-   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

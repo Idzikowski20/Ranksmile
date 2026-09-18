@@ -1,15 +1,10 @@
 import type { JSONContent } from '@tiptap/core';
 import { parseApprovedOutline, type ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
+import { escapeHtml } from '../../core/shared/html';
 
 /** Shared by collectApprovedOutline — instruction lists must not repeat a line. */
 function unique(items: string[]): string[] {
   return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[char] || char);
 }
 
 export function reviewOutlineToHtml(outline: ApprovedOutlineHeading[]): string {

@@ -6,7 +6,6 @@ import type { Editor, JSONContent } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { PendingAction } from '@/src/infrastructure/ai/types';
 import type { ArticleEditorHandle } from '@/src/core/shared/types/editor';
-import { Icon as KoalaIcon } from '../koala/icons/Icon';
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import ImageExt from '@tiptap/extension-image';
@@ -42,6 +41,7 @@ import {
 } from '@/src/infrastructure/contentPlanner/reviewOutline';
 import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
 import type { ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
+import { Icon as KoalaIcon } from '../koala/icons/Icon';
 import { EC } from './editorChrome';
 import RanksmileImageNode from './RanksmileImageNode';
 import ContentOptimizer from './contentOptimizerNode';

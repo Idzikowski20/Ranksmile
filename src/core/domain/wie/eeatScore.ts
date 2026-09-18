@@ -1,3 +1,4 @@
+import { stripTags } from '../../shared/html';
 /**
  * WIE EEAT score — Experience / Expertise / Authoritativeness / Trustworthiness.
  * Heuristic 0–100 composite (not a second LLM). Shared by Judge, RX, Quality Judge.
@@ -19,15 +20,6 @@ const TRUST_RE = /nie gwarant|ryzyko|może się różnić|skonsultuj|disclaimer|
 const FAKE_CRED_RE = /certyfikowany ekspert SEO z 20-letnim|najlepszy na świecie|gwarantujemy pozycję #1|100% skuteczności/i;
 const EXAMPLE_RE = /\b(np\.|na przykład|for example|Messenger|WhatsApp|Bitcoin|case study)\b/i;
 const YOU_RE = /\b(Ty|Tobie|Twój|Cię|you|your)\b/i;
-
-function stripTags(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 function clamp(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));

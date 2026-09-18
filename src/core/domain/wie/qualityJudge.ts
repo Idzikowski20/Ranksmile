@@ -1,4 +1,5 @@
 import { scoreEeat } from '@/src/core/domain/wie/eeatScore';
+import { stripTags } from '../../shared/html';
 
 /**
  * WIE Quality Judge — score curated/SERP articles before Pattern Discovery.
@@ -21,15 +22,6 @@ export type QualityJudgeResult = {
 };
 
 const DEFAULT_THRESHOLD = 85;
-
-function stripTags(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 function paragraphCv(html: string): number {
   const ps = html.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) || [];

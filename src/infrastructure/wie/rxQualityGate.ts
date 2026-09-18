@@ -4,6 +4,7 @@
  */
 import type { CompetitorSynthesis } from '@/src/infrastructure/wie/competitorSynthesis';
 import { scoreEeat, EEAT_SOFT_FLOOR } from '@/src/core/domain/wie/eeatScore';
+import { stripTags } from '../../core/shared/html';
 
 export type RxGateResult =
   | { ok: true }
@@ -12,10 +13,6 @@ export type RxGateResult =
 const EDITOR_PLACEHOLDER_RE = /\[Editor:|TODO:\s*add\s+authoritative|dodaj\s+2-3\s+autorytatywne/i;
 const EXPERT_MARKER_RE = /w praktyce|najczęściej|z doświadczenia|w większości|in practice|typically|from our|nasze biuro|nasz zespół/i;
 const DEFINITION_HEAVY_RE = /definicja|słownik|oznacza to|is defined as|to zmuszanie|to przestępstwo polegające/i;
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
 function paragraphLengths(html: string): number[] {
   const ps = html.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) || [];

@@ -3,6 +3,7 @@
  */
 import type { ExplainabilityRecord } from '@/src/infrastructure/wie/explainability';
 import { detectOpeningStyle } from '@/src/infrastructure/wie/eval/policyCompliance';
+import { stripTags } from '../../../core/shared/html';
 
 export type BlockerSeverity = 'critical' | 'high' | 'medium' | 'low';
 
@@ -30,10 +31,6 @@ const LAST_UPDATED_RE = /Last\s*Updated|Ostatnia\s+aktualizacja/i;
 const WIKI_LEAD_RE = /^(?:<h1[^>]*>[^<]*<\/h1>\s*)?(?:<p[^>]*>)?\s*[A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż][^.!?]{0,80}\s+(?:to|jest|oznacza)\b/i;
 const ACTION_STEPS_RE = /(?:^|\n)\s*(?:1[.)]|krok\s*1|co\s+robić|nie\s+płać|zgłoś|zachowaj\s+dowody)/im;
 const WHAT_TO_DO_RE = /co\s+(?:zrobić|robić)|jak\s+się\s+zachować|plan\s+działań/i;
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
 function longParagraphCount(html: string, wordThreshold = 280): number {
   const paras = html.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) || [];

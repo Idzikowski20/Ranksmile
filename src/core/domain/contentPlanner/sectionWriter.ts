@@ -2,6 +2,7 @@
  * Section Memory, Humanizer hints, Assembler, prompt blocks for Writer.
  */
 import type { AdaptiveOutline, ReaderModel, SectionBrief, TargetKnowledgeGraph } from '@/src/core/domain/contentPlanner/types';
+import { escapeHtml } from '../../shared/html';
 
 export type SectionMemory = {
   previousHeading: string | null;
@@ -83,10 +84,6 @@ export function assembleArticle(opts: {
     || `<p>Chcesz ${escapeHtml(opts.h1)}, ale nie wiesz od czego zacząć? Poniżej znajdziesz praktyczny plan działania — bez pustych obietnic.</p>`;
   const body = opts.sectionHtmls.map(humanizeSectionHtml).filter(Boolean).join('\n');
   return `<h1>${escapeHtml(opts.h1)}</h1>\n${intro}\n${body}`;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /** Offline stub writer for tests / dry-run — emits block-shaped HTML from brief. */

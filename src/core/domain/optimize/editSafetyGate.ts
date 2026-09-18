@@ -1,6 +1,7 @@
 import type { EditBudget } from '@/src/core/domain/optimize/editBudget';
 import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
 import { textHitsForbidden } from '@/src/core/domain/optimize/intentProfile';
+import { stripTags } from '../../shared/html';
 
 export type RejectReason =
   | 'WORD_BUDGET'
@@ -23,15 +24,6 @@ export type SafetyGateResult =
       afterWords: number;
       detail?: string;
     };
-
-function stripTags(html: string): string {
-  return (html || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 export function countWords(html: string): number {
   const t = stripTags(html);

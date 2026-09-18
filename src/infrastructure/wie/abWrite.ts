@@ -6,6 +6,7 @@ import type { CompetitorSynthesis } from '@/src/infrastructure/wie/competitorSyn
 import { evaluateRxQualityGate } from '@/src/infrastructure/wie/rxQualityGate';
 import { scoreEeat } from '@/src/core/domain/wie/eeatScore';
 import type { AoScores } from '@/src/core/domain/optimize/aoScoreDelta';
+import { stripTags } from '../../core/shared/html';
 
 export type AbVariantLabel = 'A' | 'B';
 
@@ -23,10 +24,6 @@ const EXPERT_RE = /w praktyce|najczęściej|z doświadczenia|w większości|in p
 const EXAMPLE_RE = /\b(np\.|na przykład|for example|Messenger|WhatsApp|Bitcoin|e-mail|email)\b/i;
 const YOU_RE = /\b(Ty|Tobie|Twój|you|your)\b/i;
 const DEF_RE = /definicja|słownik|oznacza to|is defined as/i;
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
 function paragraphCv(html: string): number {
   const ps = html.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) || [];
