@@ -1,4 +1,5 @@
 import db from '@/database/database';
+import { ignoreExistingSchema } from '@/src/core/shared/ignoreExistingSchema';
 
 let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;
@@ -6,10 +7,7 @@ const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMEN
 const JSON_T = isPostgres ? 'JSONB' : 'TEXT';
 const NOW = 'CURRENT_TIMESTAMP';
 
-function ignoreExisting(label: string, e: unknown): void {
-  const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-  if (!/exist|duplicate|already/i.test(m)) console.warn(`[feature-store] ${label} failed:`, m);
-}
+const ignoreExisting = (label: string, e: unknown): void => ignoreExistingSchema('feature-store', label, e);
 
 /** Append-only Observation + Feature version tables (Q2). Never UPDATE feature rows. */
 export async function ensureFeatureStoreTables(): Promise<void> {

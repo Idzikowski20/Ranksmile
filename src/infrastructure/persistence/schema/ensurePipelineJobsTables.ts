@@ -1,4 +1,5 @@
 import db from '@/database/database';
+import { ignoreExistingSchema } from '@/src/core/shared/ignoreExistingSchema';
 
 let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;
@@ -6,10 +7,7 @@ const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMEN
 const JSON_T = isPostgres ? 'JSONB' : 'TEXT';
 const NOW = 'CURRENT_TIMESTAMP';
 
-function ignoreExisting(label: string, e: unknown): void {
-  const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-  if (!/exist|duplicate|already/i.test(m)) console.warn(`[pipeline-jobs] ${label} failed:`, m);
-}
+const ignoreExisting = (label: string, e: unknown): void => ignoreExistingSchema('pipeline-jobs', label, e);
 
 /** Durable job registry for BullMQ / in-memory queue (v7 Platform Foundation). */
 export async function ensurePipelineJobsTables(): Promise<void> {

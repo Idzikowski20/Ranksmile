@@ -1,4 +1,5 @@
 import db from '@/database/database';
+import { ignoreExistingSchema } from '@/src/core/shared/ignoreExistingSchema';
 
 let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;
@@ -6,10 +7,7 @@ const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMEN
 const BIG = isPostgres ? 'BIGINT' : 'INTEGER';
 const NOW = 'CURRENT_TIMESTAMP';
 
-function ignoreExisting(label: string, e: unknown): void {
-  const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-  if (!/exist|duplicate|already/i.test(m)) console.warn(`[plan-quota] ${label} failed:`, m);
-}
+const ignoreExisting = (label: string, e: unknown): void => ignoreExistingSchema('plan-quota', label, e);
 
 /** org_quota_balances + quota_reservations + usage_events */
 export async function ensurePlanQuotaTables(): Promise<void> {

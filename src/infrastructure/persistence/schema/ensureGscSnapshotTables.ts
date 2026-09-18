@@ -1,14 +1,12 @@
 import db from '@/database/database';
+import { ignoreExistingSchema } from '@/src/core/shared/ignoreExistingSchema';
 
 let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;
 const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
 const NOW = 'CURRENT_TIMESTAMP';
 
-function ignoreExisting(label: string, e: unknown): void {
-   const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-   if (!/exist|duplicate|already/i.test(m)) console.warn(`[gsc-snap] ${label} failed:`, m);
-}
+const ignoreExisting = (label: string, e: unknown): void => ignoreExistingSchema('gsc-snap', label, e);
 
 /** Weekly per-page GSC snapshots (for week-over-week drop detection) + org email throttle. Idempotent. */
 export async function ensureGscSnapshotTables(): Promise<void> {
