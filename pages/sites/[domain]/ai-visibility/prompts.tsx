@@ -7,13 +7,13 @@ import PromptTopicsTable, { TopicRow } from '../../../../components/aiVisibility
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { HoverTooltip, Button } from '../../../../components/koala/core';
 import { useAiVisPromptTopics, useAiVisData } from '../../../../services/aiVisibility';
+import { InfoIcon } from '../../../../components/common/inlineIcons';
 
 const FONT = 'var(--font-family-primary)';
 
 type PromptRowRaw = { id: number; topic: string; text: string; perModel: Array<{ model: string }> };
 type PromptsData = { pending?: boolean; prompts?: PromptRowRaw[] };
 
-const InfoIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const PlusIcon = () => (<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13 5a1 1 0 1 0-2 0v6H5a1 1 0 1 0 0 2h6v6a1 1 0 1 0 2 0v-6h6a1 1 0 1 0 0-2h-6z" /></svg>);
 
 const CARD_3D: React.CSSProperties = { border: '1px solid #dbded4', borderRadius: 12, background: '#fff' };

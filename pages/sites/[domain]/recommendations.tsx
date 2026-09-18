@@ -20,6 +20,7 @@ import { normalizeUrlForMatch, buildGscUrlKeywordMap } from '../../../utils/gsc'
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
+import { PanelIcon } from '../../../components/common/inlineIcons';
 
 function compactNum(n: number): string {
    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -76,12 +77,6 @@ const ExternalLinkIcon = () => (
 );
 
 // ── Panel split icon ──────────────────────────────────────────────────────────
-const PanelIcon = () => (
-   <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
-      <path d="M13 17H16.75C17.9926 17 19 15.9926 19 14.75V5.25C19 4.00736 17.9926 3 16.75 3H13V17Z" fill="currentColor" />
-      <path d="M11 3.5V16.5H3.25C2.2835 16.5 1.5 15.7165 1.5 14.75V5.25C1.5 4.2835 2.2835 3.5 3.25 3.5H11Z" stroke="currentColor" />
-   </svg>
-);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DomainArticle = {

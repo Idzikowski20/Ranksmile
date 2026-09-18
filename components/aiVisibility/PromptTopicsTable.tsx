@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '../koala/core';
 import DomainFavicon from '../common/DomainFavicon';
+import { SortArrow } from '../common/inlineIcons';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -10,9 +11,6 @@ type SortKey = 'avgPosition' | 'mentionRate' | 'visibility';
 
 const Chevron = ({ open }: { open: boolean }) => (
    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, color: '#71717B', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-);
-const SortArrow = ({ dir }: { dir: 'asc' | 'desc' | null }) => (
-   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ opacity: dir ? 1 : 0.45, transform: dir === 'asc' ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M12 5v14m0 0l-5-5m5 5l5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 );
 
 const BrandStack = ({ brands }: { brands: string[] }) => {

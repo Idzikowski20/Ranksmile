@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuditCardDTO } from '@/src/core/domain/audit/types';
 import { Gauge, MenuList, MenuListItem } from '../koala/core';
+import { DotsIcon } from '../common/inlineIcons';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -20,12 +21,6 @@ const timeAgo = (dateStr: string): string => {
    if (hrs < 24) return `${hrs} hour${hrs !== 1 ? 's' : ''} ago`;
    return `${days} day${days !== 1 ? 's' : ''} ago`;
 };
-
-const DotsIcon = () => (
-   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-   </svg>
-);
 
 /** One audit row — 1:1 with the content-editor article card: score gauge, keyword title +
  *  URL subtitle, status check, avatar, triple-dot menu, Unassigned/Tag chips, and a
