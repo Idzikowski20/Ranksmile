@@ -2,6 +2,7 @@
  * Heuristic AO vs Top-N competitor benchmark (Opening / Narrative / Examples / EEAT / CTA).
  */
 import { scoreEeat } from '@/src/core/domain/wie/eeatScore';
+import { stripTags } from '../../shared/html';
 
 export type BenchmarkFeature = 'opening' | 'narrative' | 'examples' | 'eeat' | 'cta';
 
@@ -31,10 +32,6 @@ const EXPERT_RE = /w praktyce|najczęściej|z doświadczenia|in practice|typical
 const PROBLEM_RE = /^(padł|ofiar|strach|nie wiesz|how to|what to do|jeśli|padłeś)/i;
 const CTA_RE = /skontaktuj|umów|zadzwoń|napisz|skontaktuj się|contact us|book|call us|zgłoś się/i;
 const YOU_RE = /\b(Ty|Tobie|Twój|you|your)\b/i;
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
 function textOf(doc: CompetitorDoc): string {
   if (doc.plain) return doc.plain;

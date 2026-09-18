@@ -1,48 +1,5 @@
 import React from 'react';
-import {
-  Loading01Icon,
-  Menu01Icon,
-  Cancel01Icon,
-  Download01Icon,
-  Delete01Icon,
-  Edit01Icon,
-  Tick01Icon,
-  Alert01Icon,
-  QuestionIcon,
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  ArrowDown01Icon,
-  ArrowUp01Icon,
-  Search01Icon,
-  Settings01Icon,
-  Logout01Icon,
-  RefreshIcon,
-  MoreHorizontalIcon,
-  StarIcon,
-  Link01Icon,
-  Link02Icon,
-  Clock01Icon,
-  Sorting01Icon,
-  ComputerIcon,
-  SmartPhone01Icon,
-  TagsIcon,
-  FilterIcon,
-  BulbIcon,
-  Analytics01Icon,
-  GoogleIcon,
-  AdvertisimentIcon,
-  Cursor01Icon,
-  EyeIcon,
-  ViewOffIcon,
-  Target01Icon,
-  HelpCircleIcon,
-  Calendar01Icon,
-  Mail01Icon,
-  City01Icon,
-  GlobeIcon,
-  LockIcon,
-  BotIcon,
-} from 'hugeicons-react';
+import { Icon as KoalaIcon } from '../koala/icons/Icon';
 
 type IconProps = {
   type: string;
@@ -78,11 +35,6 @@ const LogoIcon = ({ size, color }: { size: number; color: string }) => (
   </svg>
 );
 
-const hugeiconsProps = (size: number, color: string) => ({
-  size,
-  color,
-});
-
 /* Custom Dashboard icon */
 const DashboardIcon = ({ size, color }: { size: number; color: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -97,118 +49,77 @@ const ResearchIcon = ({ size, color }: { size: number; color: string }) => (
   </svg>
 );
 
+const CUSTOM = {
+  logo: LogoIcon,
+  research: ResearchIcon,
+  domains: DashboardIcon,
+} as const;
+
+/** Legacy `type` string -> Koala Icon_Bold (Phosphor) name. */
+const PHOSPHOR: Record<string, string> = {
+  loading: 'CircleNotch',
+  menu: 'List',
+  hamburger: 'List',
+  keywords: 'List',
+  close: 'X',
+  download: 'DownloadSimple',
+  trash: 'Trash',
+  edit: 'PencilSimple',
+  check: 'Check',
+  error: 'Warning',
+  question: 'QuestionMark',
+  'caret-left': 'ArrowLeft',
+  'caret-right': 'ArrowRight',
+  'caret-down': 'ArrowDown',
+  'caret-up': 'ArrowUp',
+  search: 'MagnifyingGlass',
+  settings: 'Gear',
+  'settings-alt': 'Gear',
+  logout: 'SignOut',
+  reload: 'ArrowsClockwise',
+  dots: 'DotsThree',
+  star: 'Star',
+  'star-filled': 'Star',
+  link: 'Link',
+  'link-alt': 'LinkSimple',
+  integration: 'LinkSimple',
+  clock: 'Clock',
+  sort: 'ArrowsDownUp',
+  desktop: 'Desktop',
+  mobile: 'DeviceMobile',
+  tags: 'Tag',
+  filter: 'Funnel',
+  idea: 'Lightbulb',
+  tracking: 'ChartLine',
+  google: 'GoogleLogo',
+  adwords: 'Megaphone',
+  cursor: 'Cursor',
+  eye: 'Eye',
+  'eye-closed': 'EyeSlash',
+  target: 'Target',
+  help: 'Question',
+  date: 'Calendar',
+  email: 'Envelope',
+  scraper: 'Robot',
+  city: 'Buildings',
+  lock: 'Lock',
+  image: 'Image',
+};
+
 const Icon = ({ type, color = 'currentColor', size = 16, title = '', classes = '' }: IconProps) => {
-  const props = hugeiconsProps(size, color);
-
-  const renderIcon = () => {
-    switch (type) {
-      case 'logo':
-        return <LogoIcon size={size} color={color} />;
-      case 'loading':
-        return <Loading01Icon {...props} />;
-      case 'menu':
-        return <Menu01Icon {...props} />;
-      case 'close':
-        return <Cancel01Icon {...props} />;
-      case 'download':
-        return <Download01Icon {...props} />;
-      case 'trash':
-        return <Delete01Icon {...props} />;
-      case 'edit':
-        return <Edit01Icon {...props} />;
-      case 'check':
-        return <Tick01Icon {...props} />;
-      case 'error':
-        return <Alert01Icon {...props} />;
-      case 'question':
-        return <QuestionIcon {...props} />;
-      case 'caret-left':
-        return <ArrowLeft01Icon {...props} />;
-      case 'caret-right':
-        return <ArrowRight01Icon {...props} />;
-      case 'caret-down':
-        return <ArrowDown01Icon {...props} />;
-      case 'caret-up':
-        return <ArrowUp01Icon {...props} />;
-      case 'search':
-        return <Search01Icon {...props} />;
-      case 'settings':
-      case 'settings-alt':
-        return <Settings01Icon {...props} />;
-      case 'logout':
-        return <Logout01Icon {...props} />;
-      case 'reload':
-        return <RefreshIcon {...props} />;
-      case 'dots':
-        return <MoreHorizontalIcon {...props} />;
-      case 'hamburger':
-        return <Menu01Icon {...props} />;
-      case 'star':
-        return <StarIcon {...props} />;
-      case 'star-filled':
-        return <StarIcon {...props} color={color} />;
-      case 'link':
-        return <Link01Icon {...props} />;
-      case 'link-alt':
-        return <Link02Icon {...props} />;
-      case 'clock':
-        return <Clock01Icon {...props} />;
-      case 'sort':
-        return <Sorting01Icon {...props} />;
-      case 'desktop':
-        return <ComputerIcon {...props} />;
-      case 'mobile':
-        return <SmartPhone01Icon {...props} />;
-      case 'tags':
-        return <TagsIcon {...props} />;
-      case 'filter':
-        return <FilterIcon {...props} />;
-      case 'idea':
-        return <BulbIcon {...props} />;
-      case 'tracking':
-        return <Analytics01Icon {...props} />;
-      case 'google':
-        return <GoogleIcon {...props} />;
-      case 'adwords':
-        return <AdvertisimentIcon {...props} />;
-      case 'keywords':
-        return <Menu01Icon {...props} />;
-      case 'integration':
-        return <Link02Icon {...props} />;
-      case 'cursor':
-        return <Cursor01Icon {...props} />;
-      case 'eye':
-        return <EyeIcon {...props} />;
-      case 'eye-closed':
-        return <ViewOffIcon {...props} />;
-      case 'target':
-        return <Target01Icon {...props} />;
-      case 'help':
-        return <HelpCircleIcon {...props} />;
-      case 'date':
-        return <Calendar01Icon {...props} />;
-      case 'email':
-        return <Mail01Icon {...props} />;
-      case 'scraper':
-        return <BotIcon {...props} />;
-      case 'city':
-        return <City01Icon {...props} />;
-      case 'research':
-        return <ResearchIcon size={size} color={color} />;
-      case 'domains':
-        return <DashboardIcon size={size} color={color} />;
-      case 'lock':
-        return <LockIcon {...props} />;
-      case 'image':
-        return <QuestionIcon {...props} />;
-      default:
-        return <QuestionIcon {...props} />;
-    }
-  };
-
+  const Custom = CUSTOM[type as keyof typeof CUSTOM];
   return (
     <span className={`icon inline-block relative ${classes}`} title={title}>
-      {renderIcon()}
+      {Custom
+        ? <Custom size={size} color={color} />
+        : (
+          <KoalaIcon
+            name={PHOSPHOR[type] ?? 'Question'}
+            size={size}
+            color={color}
+            weight={type === 'star-filled' ? 'fill' : 'bold'}
+          />
+        )}
     </span>
   );
 };

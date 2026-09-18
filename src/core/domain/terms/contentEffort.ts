@@ -3,6 +3,7 @@
  * Used by Content Score slots, Pre-Publish checklist, and domain portfolio insights.
  */
 import { countOccurrences, tokenize, wordMatch } from '@/src/core/domain/terms/termMatch';
+import { stripTags } from '../../shared/html';
 
 export type EffortSignalKey =
    | 'original_data'
@@ -35,10 +36,6 @@ const DATA_HINT_RE = /\b(\d{1,3}(?:[.,]\d+)?%|\d{2,}\s*(?:users?|klient|osób|re
 const STOCK_ALT_RE = /^(image|photo|picture|img|zdjęcie|obraz|foto|screenshot|untitled|dsc_?\d+|img_?\d+)$/i;
 
 const FIRST_HTML_BUDGET = 5500;
-
-function stripTags(html: string): string {
-   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
 function plainWords(text: string): string[] {
    return text.split(/\s+/).filter(Boolean);

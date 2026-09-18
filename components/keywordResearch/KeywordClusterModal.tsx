@@ -3,6 +3,7 @@ import { fmtNum, kwIntentToSearchIntent, type KwCluster } from '@/src/infrastruc
 import { Button, Checkbox } from '../koala/core';
 import { KeywordIntentBadge } from '../koala/product/helpers/KeywordIntentBadge';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
+import { CloseIcon } from '../common/inlineIcons';
 
 const FONT = 'var(--font-family-primary)';
 const TEXT = 'var(--koala-text-primary)';
@@ -12,7 +13,6 @@ const BORDER = 'var(--koala-border-primary)';
 
 const ArrowLeft = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19.5 12h-15m0 0l6.75 6.75M4.5 12l6.75-6.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const ArrowRight = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
-const CloseIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 
 const StatBlock = ({ label, value, first }: { label: string; value: React.ReactNode; first?: boolean }) => (
    <div style={{ flex: 1, padding: '0 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderLeft: first ? 'none' : `1px solid ${BORDER}` }}>

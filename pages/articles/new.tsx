@@ -10,7 +10,7 @@ import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
 import { Button, CompactSelect } from '../../components/koala/core';
 import type { SelectOption } from '../../components/koala/core';
-import { Flag } from '../../components/koala';
+import { Flag } from '../../components/koala/icons/Flag';
 import { Icon } from '../../components/koala/icons/Icon';
 
 const LANGUAGES = [

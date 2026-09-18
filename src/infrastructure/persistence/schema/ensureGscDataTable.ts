@@ -1,11 +1,9 @@
 import db from '@/database/database';
+import { ignoreExistingSchema } from '@/src/core/shared/ignoreExistingSchema';
 
 let checked = false;
 
-function ignoreExisting(label: string, e: unknown): void {
-   const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-   if (!/exist|duplicate|already/i.test(m)) console.warn(`[gsc-data] ${label} failed:`, m);
-}
+const ignoreExisting = (label: string, e: unknown): void => ignoreExistingSchema('gsc-data', label, e);
 
 /**
  * Per-domain Google Search Console data blob. Replaces the local file

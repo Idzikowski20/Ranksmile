@@ -1,19 +1,12 @@
 import db from '@/database/database';
+import { ignoreExistingSchema } from '@/src/core/shared/ignoreExistingSchema';
 
 let ready: Promise<void> | null = null;
 const isPostgres = !!process.env.DATABASE_URL;
 const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
 const NOW = 'CURRENT_TIMESTAMP';
 
-/**
- * Swallow the "already exists / duplicate" errors that idempotent ALTER/CREATE
- * statements throw on re-run, but LOG anything else (permission denied, offline,
- * syntax) loudly — a blanket `catch {}` would mask a real failure as success.
- */
-function ignoreExisting(label: string, e: unknown): void {
-   const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-   if (!/exist|duplicate|already/i.test(m)) console.warn(`[tenancy] ${label} failed:`, m);
-}
+const ignoreExisting = (label: string, e: unknown): void => ignoreExistingSchema('tenancy', label, e);
 
 /**
  * Creates the org/workspace/member tables and the domain.workspace_id column.

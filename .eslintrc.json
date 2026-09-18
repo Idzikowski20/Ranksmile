@@ -101,7 +101,7 @@
                   "**/pages/**",
                   "pages/**"
                 ],
-                "message": "Koala components must not import from pages/ \u2014 keep UI layer free of route modules."
+                "message": "Koala components must not import from pages/ — keep UI layer free of route modules."
               },
               {
                 "group": [
@@ -111,21 +111,21 @@
                   "**/stripe/*",
                   "@stripe/*"
                 ],
-                "message": "Koala components must not import Stripe \u2014 billing belongs in pages/api and lib."
+                "message": "Koala components must not import Stripe — billing belongs in pages/api and lib."
               },
               {
                 "group": [
                   "bullmq",
                   "bullmq/*"
                 ],
-                "message": "Koala components must not import BullMQ \u2014 queue workers belong in scripts/lib."
+                "message": "Koala components must not import BullMQ — queue workers belong in scripts/lib."
               },
               {
                 "group": [
                   "ioredis",
                   "ioredis/*"
                 ],
-                "message": "Koala components must not import ioredis \u2014 Redis clients belong in lib/scripts."
+                "message": "Koala components must not import ioredis — Redis clients belong in lib/scripts."
               },
               {
                 "group": [
@@ -134,7 +134,7 @@
                   "**/dataforseoLlm",
                   "**/dataforseoBudget"
                 ],
-                "message": "Koala components must not import DataForSEO \u2014 SEO providers belong in lib/providers."
+                "message": "Koala components must not import DataForSEO — SEO providers belong in lib/providers."
               }
             ]
           }
@@ -230,7 +230,7 @@
                   "jsdom",
                   "jsdom/*"
                 ],
-                "message": "CIA ADR-001: projections/planner/intelligence must not parse HTML \u2014 use CCM + GraphQuery."
+                "message": "CIA ADR-001: projections/planner/intelligence must not parse HTML — use CCM + GraphQuery."
               },
               {
                 "group": [
@@ -265,6 +265,175 @@
                   "**/wie/**"
                 ],
                 "message": "CIA: compiler must not depend on AO/WIE consumers."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/core/domain/**/*.{ts,tsx}"
+      ],
+      "excludedFiles": [
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "stripe",
+                  "stripe/*",
+                  "@stripe/*",
+                  "sequelize",
+                  "sequelize/*",
+                  "sequelize-typescript",
+                  "next",
+                  "next/*",
+                  "ioredis",
+                  "bullmq",
+                  "bullmq/*",
+                  "redis",
+                  "axios",
+                  "node-fetch",
+                  "pg",
+                  "puppeteer*",
+                  "**/infrastructure/**",
+                  "infrastructure/**",
+                  "@/src/infrastructure/**",
+                  "@/infrastructure/**",
+                  "**/composition/**",
+                  "composition/**",
+                  "@/src/composition/**",
+                  "@/composition/**",
+                  "**/pages/**",
+                  "pages/**",
+                  "@/src/pages/**",
+                  "@/pages/**",
+                  "**/lib/**",
+                  "lib/**",
+                  "@/lib/**",
+                  "**/application/**",
+                  "@/src/core/application/**"
+                ],
+                "message": "Clean architecture: src/core must not depend on outer layers, lib/* or vendors. Dependencies point inwards (infrastructure -> application -> domain -> shared). domain may import only src/core/domain and src/core/shared."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/core/application/**/*.{ts,tsx}"
+      ],
+      "excludedFiles": [
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "stripe",
+                  "stripe/*",
+                  "@stripe/*",
+                  "sequelize",
+                  "sequelize/*",
+                  "sequelize-typescript",
+                  "next",
+                  "next/*",
+                  "ioredis",
+                  "bullmq",
+                  "bullmq/*",
+                  "redis",
+                  "axios",
+                  "node-fetch",
+                  "pg",
+                  "puppeteer*",
+                  "**/infrastructure/**",
+                  "infrastructure/**",
+                  "@/src/infrastructure/**",
+                  "@/infrastructure/**",
+                  "**/composition/**",
+                  "composition/**",
+                  "@/src/composition/**",
+                  "@/composition/**",
+                  "**/pages/**",
+                  "pages/**",
+                  "@/src/pages/**",
+                  "@/pages/**",
+                  "**/lib/**",
+                  "lib/**",
+                  "@/lib/**"
+                ],
+                "message": "Clean architecture: src/core must not depend on outer layers, lib/* or vendors. Dependencies point inwards (infrastructure -> application -> domain -> shared). application may import only src/core/application, domain and shared."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/core/shared/**/*.{ts,tsx}"
+      ],
+      "excludedFiles": [
+        "src/core/shared/types/**",
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "stripe",
+                  "stripe/*",
+                  "@stripe/*",
+                  "sequelize",
+                  "sequelize/*",
+                  "sequelize-typescript",
+                  "next",
+                  "next/*",
+                  "ioredis",
+                  "bullmq",
+                  "bullmq/*",
+                  "redis",
+                  "axios",
+                  "node-fetch",
+                  "pg",
+                  "puppeteer*",
+                  "**/infrastructure/**",
+                  "infrastructure/**",
+                  "@/src/infrastructure/**",
+                  "@/infrastructure/**",
+                  "**/composition/**",
+                  "composition/**",
+                  "@/src/composition/**",
+                  "@/composition/**",
+                  "**/pages/**",
+                  "pages/**",
+                  "@/src/pages/**",
+                  "@/pages/**",
+                  "**/lib/**",
+                  "lib/**",
+                  "@/lib/**",
+                  "**/application/**",
+                  "@/src/core/application/**",
+                  "**/domain/**",
+                  "@/src/core/domain/**"
+                ],
+                "message": "Clean architecture: src/core must not depend on outer layers, lib/* or vendors. Dependencies point inwards (infrastructure -> application -> domain -> shared). shared is the innermost leaf and may import only src/core/shared."
               }
             ]
           }

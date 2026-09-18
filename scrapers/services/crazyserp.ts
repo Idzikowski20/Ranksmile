@@ -32,7 +32,7 @@ const crazyserp:ScraperSettings = {
    },
    scrapeURL: (keyword, settings, countryData) => {
       const country = keyword.country || 'US';
-      const lang = countryData[country]?.[2] || 'en';
+      const lang = countryData[country]?.[1] || 'en';
       const countryName = countries[country]?.[0] || country;
       const location = keyword.city ? `${keyword.city},${countryName}` : countryName;
       const googleDomain = googleDomains[country] || 'www.google.com';

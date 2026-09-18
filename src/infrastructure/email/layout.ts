@@ -2,6 +2,8 @@
 
 import { PRODUCTION_APP_URL, isLocalServiceUrl } from '@/src/infrastructure/config/serviceUrls';
 
+import { escapeHtml } from '../../core/shared/html';
+
 /** DM Sans + system fallbacks (web font loaded in wrapEmail for clients that allow it). */
 export const EMAIL_FONT = "'DM Sans',Helvetica,Arial,sans-serif";
 
@@ -21,11 +23,7 @@ export const EMAIL_SUPPORT = 'kontakt@ranksmile.pl';
 
 const EMAIL_FONT_HREF = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap';
 
-export function escapeHtml(s: string): string {
-  return String(s).replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
-  ));
-}
+export { escapeHtml };
 
 /** One content block (tr/td). First block: no top padding; later: padding-top 32px. */
 export function emailRow(innerHtml: string, opts?: { first?: boolean }): string {

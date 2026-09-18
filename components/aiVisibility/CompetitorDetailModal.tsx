@@ -5,6 +5,7 @@ import { SourceStatusBadge } from '../koala/product/helpers/SourceStatusBadge';
 import DomainFavicon from '../common/DomainFavicon';
 import { useAiVisCompetitorDetail } from '../../services/aiVisibility';
 import { AiVisSlidePortal, aiVisOverlayZ } from './AiVisSlidePortal';
+import { CloseIcon } from '../common/inlineIcons';
 
 const FONT = 'var(--font-family-primary)';
 const brandName = (d: string) => { const base = d.replace(/^www\./, '').split('.')[0]; return base.charAt(0).toUpperCase() + base.slice(1); };
@@ -12,7 +13,6 @@ const brandName = (d: string) => { const base = d.replace(/^www\./, '').split('.
 const InfoIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--koala-text-secondary)', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const ArrowUp = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const ArrowDown = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
-const CloseIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const SortArrow = ({ asc }: { asc: boolean }) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ transform: asc ? 'rotate(180deg)' : 'none' }}><path d="M12 5v14m0 0l-5-5m5 5l5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 
 const StatCard = ({ label, value, hint }: { label: string; value: React.ReactNode; hint: string }) => (

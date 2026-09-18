@@ -3,6 +3,7 @@
  * Lead = semantic role, not first-paragraph-only.
  */
 import type { ArticleIntentProfile } from '@/src/core/domain/optimize/intentProfile';
+import { stripTags } from '../../shared/html';
 
 export type CriticalUnitType =
   | 'definition'
@@ -41,10 +42,6 @@ const DEF_PATTERN = /\b(to\s+(zaburzenie|praktyka|stan|zjawisko)|oznacza|jest\s+
 const COMMERCIAL_H2 = /detektyw|tester\s+wierno|kontakt|usług|uslug|agencj/i;
 
 type Para = { sectionId: string; text: string; isLead: boolean; underDefH2: boolean };
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
 function topicTokens(topic: string): string[] {
   return topic

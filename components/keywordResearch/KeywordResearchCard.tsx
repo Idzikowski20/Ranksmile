@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AUDIT_COUNTRIES } from '@/src/core/domain/audit/country';
 import type { KeywordResearchCardDTO } from '@/src/core/domain/keywords/types';
 import CountryFlag from '../audit/CountryFlag';
+import { DotsIcon } from '../common/inlineIcons';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -22,12 +23,6 @@ const fmtVol = (v: number | null): string => {
    if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
    return v.toLocaleString();
 };
-
-const DotsIcon = () => (
-   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-   </svg>
-);
 
 const KeywordResearchCard = ({ item, onOpen, onDelete }: { item: KeywordResearchCardDTO; onOpen: (id: number) => void; onDelete?: (id: number) => void }) => {
    const busy = item.status === 'running' || item.status === 'queued';

@@ -3,6 +3,7 @@
  * Catches Writer/prompt gaps when Explainability says problem_first but lead is definition_first.
  */
 import type { ExplainabilityRecord } from '@/src/infrastructure/wie/explainability';
+import { stripTags } from '../../../core/shared/html';
 
 export type ComplianceStatus = 'passed' | 'failed' | 'unknown';
 
@@ -21,10 +22,6 @@ export type PolicyComplianceResult = {
   /** True when any policy decision was violated by output */
   has_violations: boolean;
 };
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
 export type OpeningStyle = 'problem_first' | 'definition_first' | 'mixed' | 'unknown';
 

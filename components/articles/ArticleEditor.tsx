@@ -6,7 +6,6 @@ import type { Editor, JSONContent } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { PendingAction } from '@/src/infrastructure/ai/types';
 import type { ArticleEditorHandle } from '@/src/core/shared/types/editor';
-import { ArrowUp01Icon, ArrowDown01Icon } from 'hugeicons-react';
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import ImageExt from '@tiptap/extension-image';
@@ -42,6 +41,7 @@ import {
 } from '@/src/infrastructure/contentPlanner/reviewOutline';
 import type { ContentPlannerBundle } from '@/src/core/domain/contentPlanner/types';
 import type { ApprovedOutlineHeading } from '@/src/infrastructure/contentPlanner/applyApprovedOutline';
+import { Icon as KoalaIcon } from '../koala/icons/Icon';
 import { EC } from './editorChrome';
 import RanksmileImageNode from './RanksmileImageNode';
 import ContentOptimizer from './contentOptimizerNode';
@@ -868,7 +868,7 @@ const FeaturedImageBlock = ({
           onClick={() => setCollapsed((v) => !v)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--koala-text-tertiary)', background: 'var(--koala-bg-primary)', border: '1px solid var(--koala-border-primary)', borderRadius: 20, padding: '3px 12px', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}
         >
-          Featured Image {collapsed ? <ArrowDown01Icon size={12} /> : <ArrowUp01Icon size={12} />}
+          Featured Image {collapsed ? <KoalaIcon name="ArrowDown" size={12} /> : <KoalaIcon name="ArrowUp" size={12} />}
         </button>
       </div>
     </div>
@@ -931,7 +931,7 @@ const TitleDescriptionBlock = ({
           onClick={() => setExpanded((v) => !v)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--koala-text-tertiary)', background: 'var(--koala-bg-primary)', border: '1px solid var(--koala-border-primary)', borderRadius: 20, padding: '3px 12px', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}
         >
-          Title and Description {expanded ? <ArrowUp01Icon size={12} /> : <ArrowDown01Icon size={12} />}
+          Title and Description {expanded ? <KoalaIcon name="ArrowUp" size={12} /> : <KoalaIcon name="ArrowDown" size={12} />}
         </button>
       </div>
     </div>

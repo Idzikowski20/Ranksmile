@@ -34,6 +34,7 @@ import type { ScoreData } from '@/src/infrastructure/articles/contentScore';
 import { evaluatePublishGate, scoreRootIntentCoverage } from '@/src/infrastructure/wie/eval/publishGate';
 import { reconcileBeatsTop5 } from '@/src/core/domain/wie/verdictAlign';
 import { evaluatePolicyCompliance } from '@/src/infrastructure/wie/eval/policyCompliance';
+import { stripTags } from '../../../core/shared/html';
 
 export type WieEvalOptions = {
   keyword?: string;
@@ -100,10 +101,6 @@ function livePipelineScores(opts: {
     }
   }
   return { seo: content, ai: 0, content };
-}
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 async function parseSseArticleId(res: Response): Promise<{ articleId: number; errors: string[] }> {

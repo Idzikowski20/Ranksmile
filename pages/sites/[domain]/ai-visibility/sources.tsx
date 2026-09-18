@@ -9,6 +9,7 @@ import MentionGapCards from '../../../../components/aiVisibility/MentionGapCards
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { HoverTooltip, Toggle, SearchBar, Button } from '../../../../components/koala/core';
 import { useAiVisSources, useAiVisData } from '../../../../services/aiVisibility';
+import { InfoIcon } from '../../../../components/common/inlineIcons';
 
 const SourceDetailModal = dynamic(
   () => import('../../../../components/aiVisibility/SourceDetailModal'),
@@ -30,8 +31,6 @@ type SourcesData = {
 type PromptRow = { id: number; topic: string; text: string; perModel: Array<{ model: string }> };
 type PromptsData = { pending?: boolean; prompts?: PromptRow[] };
 type ModalState = { list: SourceRow[]; index: number; navigable: boolean };
-
-const InfoIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 
 const fmtK = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : String(n));
 

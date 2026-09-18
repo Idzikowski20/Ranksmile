@@ -1,13 +1,9 @@
 import db from '@/database/database';
+import { ignoreExistingSchema } from '@/src/core/shared/ignoreExistingSchema';
 
 let ready: Promise<void> | null = null;
 
-function ignoreExisting(label: string, e: unknown): void {
-  const message = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-  if (!/exist|duplicate|already/i.test(message)) {
-    console.warn(`[billing] ${label} failed:`, message);
-  }
-}
+const ignoreExisting = (label: string, e: unknown): void => ignoreExistingSchema('billing', label, e);
 
 export function ensureBillingTables(): Promise<void> {
   if (!ready) {

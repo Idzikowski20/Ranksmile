@@ -14,7 +14,7 @@ import { aggregateGscPages } from '../../utils/gsc';
 import { Icon } from '../../components/koala/icons/Icon';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
-import { Flag } from '../../components/koala';
+import { Flag } from '../../components/koala/icons/Flag';
 
 const COUNTRIES: Record<string, string> = {
   US: 'United States',

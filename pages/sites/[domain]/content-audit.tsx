@@ -19,6 +19,7 @@ import { slugToDomain } from '../../../utils/slugToDomain';
 import { aggregateGscPages, kwScore, toPath } from '../../../utils/gsc';
 import AddPagesModal, { AvailablePage } from '../../../components/domains/AddPagesModal';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
+import { PanelIcon } from '../../../components/common/inlineIcons';
 
 const StatusBadge = ({ status }: { status: string }) => {
    const variant = status === 'published' ? 'success' : status === 'draft' || status === 'review' || status === 'analyzing' ? 'muted' : status === 'error' ? 'danger' : 'muted';
@@ -77,13 +78,6 @@ const PencilIcon = () => (
 const ExternalLinkIcon = () => (
    <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" style={{ flexShrink: 0 }}>
       <g fillRule="evenodd" clipRule="evenodd"><path d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5z" /><path d="M6.194 12.753a.75.75 0 0 0 1.06.053L16.5 4.44v2.81a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.553l-9.056 8.194a.75.75 0 0 0-.053 1.06" /></g>
-   </svg>
-);
-
-const PanelIcon = () => (
-   <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
-      <path d="M13 17H16.75C17.9926 17 19 15.9926 19 14.75V5.25C19 4.00736 17.9926 3 16.75 3H13V17Z" fill="currentColor" />
-      <path d="M11 3.5V16.5H3.25C2.2835 16.5 1.5 15.7165 1.5 14.75V5.25C1.5 4.2835 2.2835 3.5 3.25 3.5H11Z" stroke="currentColor" />
    </svg>
 );
 

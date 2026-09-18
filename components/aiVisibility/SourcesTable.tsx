@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { HoverTooltip, Button } from '../koala/core';
 import { SourceStatusBadge } from '../koala/product/helpers/SourceStatusBadge';
 import DomainFavicon from '../common/DomainFavicon';
+import { OpenDetailsIcon } from '../common/inlineIcons';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -45,9 +46,6 @@ const ChevronRight = ({ open }: { open: boolean }) => (
 );
 const SortArrow = ({ asc }: { asc: boolean }) => (
    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ transform: asc ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M12 5v14m0 0l-5-5m5 5l5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-);
-const OpenDetailsIcon = () => (
-   <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13 17H16.75C17.99 17 19 15.99 19 14.75V5.25C19 4.01 17.99 3 16.75 3H13V17Z" fill="currentColor" /><path d="M11 3.5V16.5H3.25C2.28 16.5 1.5 15.72 1.5 14.75V5.25C1.5 4.28 2.28 3.5 3.25 3.5H11Z" stroke="currentColor" /></svg>
 );
 
 /** Dotted-underline column header that reveals a definition on hover. */

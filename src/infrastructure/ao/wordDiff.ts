@@ -1,4 +1,5 @@
 import { diffWordsWithSpace, diffChars } from 'diff';
+import { escapeHtml } from '../../core/shared/html';
 
 export type DiffSeg = { type: 'equal' | 'added' | 'removed'; text: string };
 
@@ -64,10 +65,6 @@ export function renderDiffHtml(segs: DiffSeg[]): string {
       if (s.type === 'removed') return `<span data-diff-type="removed" style="color:#9f9fa9;text-decoration:line-through">${t}</span>`;
       return `<span data-diff-type="added" style="background:rgba(26,178,94,0.18);border-radius:2px">${t}</span>`;
    }).join('');
-}
-
-function escapeHtml(s: string): string {
-   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // Word-level diff between two article HTML versions, used by the "Compare versions" modal.

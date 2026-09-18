@@ -1,5 +1,6 @@
 import db from '@/database/database';
 import { ensureSnapshotPartitionsAhead } from '@/src/infrastructure/rankTracking/partitions';
+import { ignoreExistingSchema } from '@/src/core/shared/ignoreExistingSchema';
 
 let checked = false;
 const isPostgres = !!process.env.DATABASE_URL;
@@ -8,10 +9,7 @@ const JSON_T = isPostgres ? 'JSONB' : 'TEXT';
 const BOOL = isPostgres ? 'BOOLEAN' : 'INTEGER';
 const NOW = 'CURRENT_TIMESTAMP';
 
-function ignoreExisting(label: string, e: unknown): void {
-  const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
-  if (!/exist|duplicate|already/i.test(m)) console.warn(`[rank-tracking] ${label} failed:`, m);
-}
+const ignoreExisting = (label: string, e: unknown): void => ignoreExistingSchema('rank-tracking', label, e);
 
 async function addColumn(table: string, column: string, ddl: string): Promise<void> {
   try {
