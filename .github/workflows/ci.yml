@@ -20,8 +20,13 @@ jobs:
           node-version: '22'
           cache: npm
 
+      # redis-memory-server's postinstall compiles Redis from source and fails on
+      # the Linux runner. It is only used by scripts/dev-redis.ts (a local dev
+      # helper), never by the tests or the build, so skip the download.
       - name: Install
         run: npm ci
+        env:
+          REDISMS_DISABLE_POSTINSTALL: '1'
 
       - name: Typecheck
         run: npm run typecheck
