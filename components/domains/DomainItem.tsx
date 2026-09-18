@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
-import dayjs from 'dayjs';
 import Link from 'next/link';
 import Icon from '../common/Icon';
 import ClientTimeAgo from '../common/ClientTimeAgo';
+import { formatDateTime } from '../../lib/formatDate';
 
 type DomainItemProps = {
    domain: DomainType,
@@ -45,7 +45,7 @@ const DomainItem = ({ domain, selected, isConsoleIntegrated = false, thumb, upda
                  <h3 className='font-semibold text-base mb-2 max-w-[200px] text-ellipsis overflow-hidden' title={domain.domain}>{domain.domain}</h3>
                  {keywordsUpdated && (
                   <span className=' text-gray-600 text-xs'>
-                     Updated <ClientTimeAgo title={dayjs(keywordsUpdated).format('DD-MMM-YYYY, hh:mm:ss A')} date={keywordsUpdated} />
+                     Updated <ClientTimeAgo title={formatDateTime(keywordsUpdated)} date={keywordsUpdated} />
                   </span>
                  )}
                </div>

@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import { formatLongDate } from '../lib/formatDate';
 import { readFile } from 'fs/promises';
 import getConfig from 'next/config';
 import path from 'path';
@@ -90,7 +90,7 @@ const getBestKeywordPosition = (history: KeywordHistory) => {
  */
 const generateEmail = async (domainName:string, keywords:KeywordType[], settings: SettingsType) : Promise<string> => {
    const emailTemplate = await readFile(path.join(__dirname, '..', '..', '..', '..', 'email', 'email.html'), { encoding: 'utf-8' });
-   const currentDate = dayjs(new Date()).format('MMMM D, YYYY');
+   const currentDate = formatLongDate(new Date());
    const keywordsCount = keywords.length;
    let improved = 0; let declined = 0;
 

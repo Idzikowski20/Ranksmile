@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import TimeAgo from 'react-timeago';
+import { timeAgo } from '../../lib/formatDate';
 
 type ClientTimeAgoProps = {
   date: string;
@@ -17,7 +17,7 @@ const ClientTimeAgo = ({ date, title, className, fallback = '' }: ClientTimeAgoP
 
   return (
     <span className={className} suppressHydrationWarning>
-      {mounted ? <TimeAgo title={title} date={date} /> : fallback}
+      {mounted ? <span title={title}>{timeAgo(date)}</span> : fallback}
     </span>
   );
 };
