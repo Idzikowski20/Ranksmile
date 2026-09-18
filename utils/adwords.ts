@@ -162,7 +162,7 @@ export const getAdwordsKeywordIdeas = async (credentials:AdwordsCredentials, adw
       try {
          // API: https://developers.google.com/google-ads/api/rest/reference/rest/v23/customers/generateKeywordIdeas
          const customerID = account_id.replaceAll('-', '');
-         const geoTargetConstants = countries[country][3]; // '2840';
+         const geoTargetConstants = countries[country][2]; // '2840';
          const reqPayload: Record<string, any> = {
             geoTargetConstants: `geoTargetConstants/${geoTargetConstants}`,
             language: `languageConstants/${language}`,
@@ -296,7 +296,7 @@ export const getKeywordsVolume = async (keywords: KeywordType[]): Promise<{error
             try {
                // API: https://developers.google.com/google-ads/api/rest/reference/rest/v23/customers/generateKeywordHistoricalMetrics
                const customerID = account_id.replaceAll('-', '');
-               const geoTargetConstants = countries[country][3]; // '2840';
+               const geoTargetConstants = countries[country][2]; // '2840';
                const reqKeywords = keywordRequests[country].map((kw) => kw.keyword);
                const reqPayload: Record<string, any> = {
                   keywords: [...new Set(reqKeywords)],
