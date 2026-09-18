@@ -1,0 +1,25 @@
+components/common/Icon.tsx
+  s_46a15791053a6f::t_fb0e3ef563347b 70
+components/koala/product/widgets.tsx
+  s_46a15791053a6f::t_796730f2319845 274
+__tests__/components/Icon.test.tsx
+  s_46a15791053a6f::t_b415f7a1ab7421 42
+.github/workflows/ci.yml
+  s_46a15791053a6f::t_61806f25cadc3f 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b68e375ab13e3c9e23b2e1e2ba0db2e060cc1ce6",
+  "prompts": {},
+  "sessions": {
+    "s_46a15791053a6f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cca2a74-4a9b-4821-aae5-4dc7ec5b218c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
