@@ -1,0 +1,55 @@
+pages/sites/[domain]/keyword-research.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 16
+components/aiVisibility/SourcesTable.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 5
+components/aiVisibility/CompetitorDetailModal.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 8
+components/aiVisibility/FanoutTable.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 5
+pages/sites/[domain]/ai-visibility/sources.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 12
+components/keywordResearch/KeywordClusterModal.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 6
+components/aiVisibility/PromptTopicsTable.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 4
+pages/sites/[domain]/content-audit.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 22
+components/aiVisibility/TopicAccordion.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 7
+components/aiVisibility/PromptRow.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 5
+pages/sites/[domain]/ai-visibility/prompts.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 10
+components/keywordResearch/KeywordResearchCard.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 5
+components/audit/AuditCard.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 4
+components/aiVisibility/SourceDetailModal.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 11
+components/aiVisibility/AiVisDetailModal.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 9
+components/aiVisibility/CompetitorsTable.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 4
+components/common/inlineIcons.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 1-45
+pages/sites/[domain]/recommendations.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 23
+pages/sites/[domain]/audit-tool.tsx
+  s_46a15791053a6f::t_79d522fb7e8e25 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f90d745549ad97a465089fe754a926eae6bd8e87",
+  "prompts": {},
+  "sessions": {
+    "s_46a15791053a6f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cca2a74-4a9b-4821-aae5-4dc7ec5b218c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
