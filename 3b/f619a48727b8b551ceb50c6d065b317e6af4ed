@@ -1,0 +1,34 @@
+components/common/Icon.tsx
+  s_46a15791053a6f::t_adbc6429c9b6ca 2,52-56,58-107,109-110,113-122
+components/domains/DomainItem.tsx
+  s_46a15791053a6f::t_b62f6fb579fab5 5,48
+components/settings/Changelog.tsx
+  s_46a15791053a6f::t_b62f6fb579fab5 6,70
+utils/generateEmail.ts
+  s_46a15791053a6f::t_b62f6fb579fab5 1,93
+lib/formatDate.ts
+  s_46a15791053a6f::t_97232fc71754b4 1-2,4-37
+  s_46a15791053a6f::t_f93c0e5146a6e8 3
+components/articles/ArticleEditor.tsx
+  s_46a15791053a6f::t_e62347eb80aaf8 9,871,934
+components/common/ClientTimeAgo.tsx
+  s_46a15791053a6f::t_b62f6fb579fab5 2,20
+__tests__/lib/formatDate.test.ts
+  s_46a15791053a6f::t_d4241ad1f945d0 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3bf619a48727b8b551ceb50c6d065b317e6af4ed",
+  "prompts": {},
+  "sessions": {
+    "s_46a15791053a6f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cca2a74-4a9b-4821-aae5-4dc7ec5b218c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
