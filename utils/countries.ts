@@ -4,10 +4,17 @@
  * The name is a wire value: the SERP providers in scrapers/services take it verbatim,
  * and it does NOT always match Intl.DisplayNames (e.g. 'Czech Republic', 'Turkey').
  */
+/**
+ * Country code -> [display/SERP name, hl language code, Google Ads geo target constant].
+ *
+ * The name is a wire value: the SERP providers in scrapers/services take it verbatim,
+ * and it does NOT always match Intl.DisplayNames (e.g. 'Czech Republic', 'Turkey').
+ */
 const countries: countryData = {
    AD: ['Andorra', 'ca', 2020],
    AE: ['United Arab Emirates', 'ar', 2784],
    AF: ['Afghanistan', 'ps', 2004],
+   AG: ['Antigua and Barbuda', 'en', 2028],
    AI: ['Anguilla', 'en', 0],
    AL: ['Albania', 'sq', 2008],
    AM: ['Armenia', 'hy', 2051],
@@ -81,6 +88,7 @@ const countries: countryData = {
    FR: ['France', 'fr', 2250],
    GA: ['Gabon', 'fr', 2266],
    GB: ['United Kingdom', 'en', 2826],
+   GD: ['Grenada', 'en', 2308],
    GE: ['Georgia', 'ka', 2268],
    GF: ['French Guiana', 'fr', 0],
    GG: ['Guernsey', 'en', 2831],
@@ -217,6 +225,7 @@ const countries: countryData = {
    SY: ['Syria', 'ar', 0],
    SZ: ['Swaziland', 'en', 2748],
    TC: ['Turks and Caicos Islands', 'en', 0],
+   TD: ['Chad', 'fr', 2148],
    TF: ['French Southern Territories', 'fr', 2260],
    TG: ['Togo', 'fr', 2768],
    TH: ['Thailand', 'th', 2764],
@@ -225,6 +234,7 @@ const countries: countryData = {
    TL: ['East Timor', 'pt', 2626],
    TM: ['Turkmenistan', 'tk', 2795],
    TN: ['Tunisia', 'ar', 2788],
+   TO: ['Tonga', 'en', 2776],
    TR: ['Turkey', 'tr', 2792],
    TT: ['Trinidad and Tobago', 'en', 2780],
    TV: ['Tuvalu', 'en', 2798],
@@ -246,6 +256,7 @@ const countries: countryData = {
    WF: ['Wallis and Futuna', 'fr', 2876],
    WS: ['Samoa', 'sm', 2882],
    XK: ['Kosovo', 'sq', 0],
+   YE: ['Yemen', 'ar', 2887],
    YT: ['Mayotte', 'fr', 0],
    ZA: ['South Africa', 'af', 2710],
    ZM: ['Zambia', 'en', 2894],

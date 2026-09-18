@@ -8,16 +8,28 @@ type ClientTimeAgoProps = {
   fallback?: React.ReactNode;
 };
 
+/** Refresh cadence: every 30s under an hour old, then every 5 minutes. */
+function refreshMs(date: string): number {
+  const age = Math.abs(Date.now() - new Date(date).getTime());
+  return age < 3600_000 ? 30_000 : 300_000;
+}
+
 const ClientTimeAgo = ({ date, title, className, fallback = '' }: ClientTimeAgoProps) => {
-  const [mounted, setMounted] = useState(false);
+  const [text, setText] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      setText(timeAgo(date));
+      timer = setTimeout(tick, refreshMs(date));
+    };
+    tick();
+    return () => clearTimeout(timer);
+  }, [date]);
 
   return (
     <span className={className} suppressHydrationWarning>
-      {mounted ? <span title={title}>{timeAgo(date)}</span> : fallback}
+      {text === null ? fallback : <span title={title}>{text}</span>}
     </span>
   );
 };
