@@ -67,7 +67,7 @@ const PHOSPHOR: Record<string, string> = {
   edit: 'PencilSimple',
   check: 'Check',
   error: 'Warning',
-  question: 'Question',
+  question: 'QuestionMark',
   'caret-left': 'ArrowLeft',
   'caret-right': 'ArrowRight',
   'caret-down': 'ArrowDown',

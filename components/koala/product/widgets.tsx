@@ -271,7 +271,7 @@ export function ListWidget({ title, items, action, actions, footer, state, class
       className={className}
       emptyDescription="No items yet."
     >
-      <ListRoot>
+      <ListRoot data-testid="dashboard-list">
         {items.map((item, i) => (
           // eslint-disable-next-line react/no-array-index-key
           <ListItem key={i}>{item}</ListItem>

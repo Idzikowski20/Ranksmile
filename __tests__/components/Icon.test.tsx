@@ -39,7 +39,7 @@ describe('common/Icon', () => {
   it('every mapped Phosphor name is a real export', () => {
     // Guards against a name that exists as a dist file but is not exported.
     const names = ['CircleNotch', 'List', 'X', 'DownloadSimple', 'Trash', 'PencilSimple',
-      'Check', 'Warning', 'Question', 'ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp',
+      'Check', 'Warning', 'Question', 'QuestionMark', 'ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp',
       'MagnifyingGlass', 'Gear', 'SignOut', 'ArrowsClockwise', 'DotsThree', 'Star', 'Link',
       'LinkSimple', 'Clock', 'ArrowsDownUp', 'Desktop', 'DeviceMobile', 'Tag', 'Funnel',
       'Lightbulb', 'ChartLine', 'GoogleLogo', 'Megaphone', 'Cursor', 'Eye', 'EyeSlash',
