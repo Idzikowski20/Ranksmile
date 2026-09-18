@@ -1,0 +1,21 @@
+pages/articles/import.tsx
+  s_46a15791053a6f::t_2a4a1264fa5486 17
+pages/articles/new.tsx
+  s_46a15791053a6f::t_2a4a1264fa5486 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "aa823cf6ce7d34641b7b78ba05c89f20080a279d",
+  "prompts": {},
+  "sessions": {
+    "s_46a15791053a6f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cca2a74-4a9b-4821-aae5-4dc7ec5b218c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
