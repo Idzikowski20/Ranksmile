@@ -1,0 +1,45 @@
+src/infrastructure/persistence/schema/ensureTenancyTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,9
+src/infrastructure/persistence/schema/ensureBillingTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,6
+src/infrastructure/persistence/schema/ensureGscSnapshotTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,9
+src/infrastructure/persistence/schema/ensureGscDataTable.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,6
+src/infrastructure/persistence/schema/ensureKeywordResearchTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,10
+src/infrastructure/persistence/schema/ensureAuditTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,10
+src/infrastructure/persistence/schema/ensureFeatureStoreTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,10
+src/infrastructure/persistence/schema/ensureCorpusTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,10
+src/infrastructure/persistence/schema/ensurePipelineJobsTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,10
+src/infrastructure/persistence/schema/ensurePipelineTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 3,11
+src/infrastructure/persistence/schema/ensurePlanQuotaTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,10
+src/infrastructure/persistence/schema/ensureRankTrackingTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 3,12
+src/infrastructure/persistence/schema/ensureCompetitorsTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,9
+src/infrastructure/persistence/schema/ensureGrowthMetaTables.ts
+  s_46a15791053a6f::t_88b96bf0fad59d 2,10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3ac10a2ff041d2175bb007c373e5677451170f21",
+  "prompts": {},
+  "sessions": {
+    "s_46a15791053a6f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cca2a74-4a9b-4821-aae5-4dc7ec5b218c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
