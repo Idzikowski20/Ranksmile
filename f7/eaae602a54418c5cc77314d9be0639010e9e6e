@@ -1,0 +1,55 @@
+src/infrastructure/email/layout.ts
+  s_46a15791053a6f::t_9d6137e697bffb 24-26
+src/core/domain/optimize/criticalContentMap.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 6
+src/core/domain/wie/eeatScore.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 1
+src/infrastructure/wie/abWrite.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 9
+src/infrastructure/wie/eval/publishGate.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 6
+src/infrastructure/ao/wordDiff.ts
+  s_46a15791053a6f::t_6c05022ae24686 2
+src/core/domain/optimize/editSafetyGate.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 4
+__tests__/lib/stripTags.test.ts
+  s_46a15791053a6f::t_8da47d42c92b0b 2-14,26-27
+  s_46a15791053a6f::t_738b5767d4e87b 1,15-25
+src/infrastructure/wie/rxQualityGate.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 7
+src/infrastructure/contentPlanner/reviewOutline.ts
+  s_46a15791053a6f::t_6c05022ae24686 3
+src/core/domain/wie/qualityJudge.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 2
+src/infrastructure/wie/eval/runEvalSuite.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 37
+src/infrastructure/ao/optimizeWordDiff.ts
+  s_46a15791053a6f::t_6c05022ae24686 2
+src/core/domain/wie/evalCompetitorBenchmark.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 5
+src/core/domain/terms/contentEffort.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 6
+src/infrastructure/wie/eval/policyCompliance.ts
+  s_46a15791053a6f::t_ff2e89b4a38b8d 6
+src/core/domain/contentPlanner/sectionWriter.ts
+  s_46a15791053a6f::t_6c05022ae24686 5
+src/core/shared/html.ts
+  s_46a15791053a6f::t_c756b10797d04d 1-14
+  s_46a15791053a6f::t_ea45f4647f17d9 15-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f7eaae602a54418c5cc77314d9be0639010e9e6e",
+  "prompts": {},
+  "sessions": {
+    "s_46a15791053a6f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cca2a74-4a9b-4821-aae5-4dc7ec5b218c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
