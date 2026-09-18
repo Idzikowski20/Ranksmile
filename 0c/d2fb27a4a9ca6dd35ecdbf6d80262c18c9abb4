@@ -1,0 +1,28 @@
+.eslintrc.json
+  s_46a15791053a6f::t_b2f024a283553f 104,114,121,128,137,233,273-436
+utils/countries.ts
+  s_46a15791053a6f::t_ad2a6ab361a630 17,91,228,237,259
+__tests__/components/ClientTimeAgo.test.tsx
+  s_46a15791053a6f::t_dabff88e324ecf 1-30
+__tests__/lib/countries.test.ts
+  s_46a15791053a6f::t_117c71f2fc4863 1-22,25-34
+  s_46a15791053a6f::t_49d1443e434bba 23-24
+components/common/ClientTimeAgo.tsx
+  s_46a15791053a6f::t_2a676eccd5a7a5 11-16,18,21-28,32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0cd2fb27a4a9ca6dd35ecdbf6d80262c18c9abb4",
+  "prompts": {},
+  "sessions": {
+    "s_46a15791053a6f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cca2a74-4a9b-4821-aae5-4dc7ec5b218c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
