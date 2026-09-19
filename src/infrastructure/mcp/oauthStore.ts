@@ -75,6 +75,12 @@ export async function ensureMcpOauthTables(): Promise<void> {
    ]) {
       try { await db.query(alter); } catch { /* exists */ }
    }
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS mcp_oauth_revoked_grants (
+         grant_id   TEXT PRIMARY KEY,
+         revoked_at ${INT} NOT NULL
+      )
+   `);
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_mcp_tokens_user ON mcp_oauth_tokens(user_id)'); } catch { /* exists */ }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_mcp_tokens_grant ON mcp_oauth_tokens(grant_id)'); } catch { /* exists */ }
    checked = true;
@@ -89,6 +95,32 @@ const rand = (bytes = 32): string => crypto.randomBytes(bytes).toString('base64u
  * because the caller has to prove the row it then reads is the one it won.
  */
 const newClaim = (): string => rand(12);
+
+/**
+ * Kill a grant, and record that it is dead.
+ *
+ * Deleting the rows is not enough on its own: a concurrent exchange can mint a new
+ * pair after the delete has run, and those rows would survive. The tombstone is what
+ * makes revocation independent of that ordering — verifyAccessToken refuses anything
+ * belonging to a revoked grant, whenever it was written.
+ */
+async function killGrant(grantId: string): Promise<void> {
+   await db.query(
+      `INSERT INTO mcp_oauth_revoked_grants (grant_id, revoked_at) VALUES (?, ?)
+       ON CONFLICT (grant_id) DO NOTHING`,
+      { replacements: [grantId, Date.now()] },
+   );
+   await db.query('DELETE FROM mcp_oauth_tokens WHERE grant_id = ?', { replacements: [grantId] });
+}
+
+async function isGrantRevoked(grantId: string | null): Promise<boolean> {
+   if (!grantId) return false;
+   const row = await queryOne<{ grant_id: string }>(
+      'SELECT grant_id FROM mcp_oauth_revoked_grants WHERE grant_id = ? LIMIT 1',
+      [grantId],
+   );
+   return !!row;
+}
 const sha256 = (s: string): string => crypto.createHash('sha256').update(s).digest('base64url');
 
 /** RFC 7636 S256: BASE64URL(SHA256(verifier)) must equal the stored challenge. */
@@ -233,12 +265,7 @@ export async function redeemRefreshToken(p: { refreshToken: string; clientId: st
    // whole grant dies, so a stolen copy cannot outlive the legitimate client's next
    // refresh. Deleting on rotation would have made this unreachable.
    if (row.consumed_by !== null) {
-      if (row.grant_id) {
-         await db.query(
-            'DELETE FROM mcp_oauth_tokens WHERE grant_id = ?',
-            { replacements: [row.grant_id] },
-         );
-      }
+      if (row.grant_id) await killGrant(row.grant_id);
       return null;
    }
 
@@ -262,7 +289,13 @@ export async function redeemRefreshToken(p: { refreshToken: string; clientId: st
          WHERE token_hash = ? AND kind = 'refresh' AND consumed_by = ? LIMIT 1`,
       [hash, claim],
    );
-   if (!won) return null;
+   // Losing the claim means this same refresh token was presented twice concurrently,
+   // which is reuse whichever request got there first. Revoke, so a thief racing the
+   // legitimate client cannot keep the pair it just minted.
+   if (!won) {
+      if (row.grant_id) await killGrant(row.grant_id);
+      return null;
+   }
 
    const grantId = row.grant_id || rand(12);
 
@@ -281,13 +314,19 @@ export type TokenClaims = { userId: string; clientId: string; scope: string; res
 export async function verifyAccessToken(token: string): Promise<TokenClaims | null> {
    if (!token) return null;
    await ensureMcpOauthTables();
-   const row = await queryOne<{ user_id: string; client_id: string; scope: string | null; resource: string | null; expires_at: number }>(
-      `SELECT user_id, client_id, scope, resource, expires_at
+   const row = await queryOne<{
+      user_id: string; client_id: string; scope: string | null; resource: string | null;
+      grant_id: string | null; expires_at: number;
+   }>(
+      `SELECT user_id, client_id, scope, resource, grant_id, expires_at
          FROM mcp_oauth_tokens WHERE token_hash = ? AND kind = 'access' LIMIT 1`,
       [sha256(token)],
    );
    if (!row) return null;
    if (Number(row.expires_at) < Date.now()) return null;
+   // A grant killed by refresh-token reuse stays dead even for tokens minted after the
+   // delete ran, which is the whole point of recording the revocation.
+   if (await isGrantRevoked(row.grant_id)) return null;
    return { userId: row.user_id, clientId: row.client_id, scope: row.scope || MCP_SCOPE, resource: row.resource };
 }
 

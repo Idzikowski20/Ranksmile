@@ -7,6 +7,9 @@ jest.mock('@/src/infrastructure/mcp/oauthStore', () => ({
   ...jest.requireActual('@/src/infrastructure/mcp/oauthStore'),
   verifyAccessToken: jest.fn(),
 }));
+jest.mock('@/src/infrastructure/billing/requireOrgPaymentAccess', () => ({
+  checkUserPaymentAccess: jest.fn().mockResolvedValue({ allowed: true }),
+}));
 jest.mock('@/src/infrastructure/mcp/tools', () => {
   const actual = jest.requireActual('@/src/infrastructure/mcp/tools');
   const stub = (name: string, handler: () => Promise<unknown>) => ({
@@ -27,6 +30,7 @@ jest.mock('@/src/infrastructure/mcp/tools', () => {
 
 import { handleRpc, LATEST_PROTOCOL_VERSION } from '@/src/infrastructure/mcp/rpc';
 import { verifyPkce, verifyAccessToken } from '@/src/infrastructure/mcp/oauthStore';
+import { checkUserPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { isAllowedRedirectUri } from '../../pages/api/mcp/oauth/register';
 import mcpHandler from '../../pages/api/mcp/index';
 import prmHandler from '../../pages/api/mcp/oauth/protected-resource';
@@ -147,7 +151,11 @@ describe('JSON-RPC dispatch', () => {
 
 describe('/mcp transport', () => {
   const mockVerify = verifyAccessToken as jest.Mock;
-  beforeEach(() => mockVerify.mockReset());
+  const mockAccess = checkUserPaymentAccess as jest.Mock;
+  beforeEach(() => {
+    mockVerify.mockReset();
+    mockAccess.mockReset().mockResolvedValue({ allowed: true });
+  });
 
   const call = async (over: Record<string, unknown>) => {
     const res = makeRes();
@@ -254,6 +262,20 @@ describe('/mcp transport', () => {
     expect(body[0].error?.code).toBe(-32600);
     expect(body[0].id).toBeNull();
     expect(body[1].error).toBeUndefined();
+  });
+
+  it('refuses a caller whose organization is payment-blocked', async () => {
+    // Bearer requests carry no session, so the endpoint takes the access decision on
+    // the token's user rather than through withOrgPaymentAccess.
+    mockVerify.mockResolvedValue({ userId: 'u', clientId: 'c', scope: 'mcp:tools', resource: null });
+    mockAccess.mockResolvedValue({ allowed: false, status: 402, body: { code: 'BILLING_REQUIRED' } });
+    const res = await call({
+      method: 'POST',
+      headers: { ...REQ_HOST, authorization: 'Bearer t' },
+      body: { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+    });
+    expect(res.statusCode).toBe(402);
+    expect(mockAccess).toHaveBeenCalledWith('u', 'POST:/api/mcp');
   });
 
   it('refuses a token that does not carry the tools scope', async () => {

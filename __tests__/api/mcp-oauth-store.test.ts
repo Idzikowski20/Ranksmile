@@ -20,6 +20,7 @@ type Row = Record<string, unknown> & { consumed_by: string | null };
 const queries: { sql: string; replacements: unknown[] }[] = [];
 let codeRow: Row | undefined;
 let refreshRow: Row | undefined;
+const revokedGrants = new Set<string>();
 
 const isSelect = (sql: string) => /^\s*SELECT/i.test(sql);
 const isClaimUpdate = (sql: string) => /^\s*UPDATE/i.test(sql) && sql.includes('consumed_by = ?');
@@ -48,6 +49,13 @@ jest.mock('../../database/database', () => ({
       query: jest.fn((sql: string, opts?: { replacements?: unknown[] }) => {
          const replacements = opts?.replacements ?? [];
          queries.push({ sql, replacements });
+         if (sql.includes('mcp_oauth_revoked_grants')) {
+            if (/^\s*INSERT/i.test(sql)) revokedGrants.add(String(replacements[0]));
+            if (/^\s*SELECT/i.test(sql)) {
+               return Promise.resolve([revokedGrants.has(String(replacements[0])) ? [{ grant_id: replacements[0] }] : [], []]);
+            }
+            return Promise.resolve([[], []]);
+         }
          if (sql.includes('mcp_oauth_codes')) return Promise.resolve([serve(codeRow, sql, replacements), []]);
          if (sql.includes('mcp_oauth_tokens')) return Promise.resolve([serve(refreshRow, sql, replacements), []]);
          return Promise.resolve([[], []]);
@@ -68,6 +76,7 @@ beforeEach(() => {
    queries.length = 0;
    codeRow = undefined;
    refreshRow = undefined;
+   revokedGrants.clear();
 });
 
 describe('authorization code redemption', () => {
@@ -174,6 +183,20 @@ describe('refresh token rotation', () => {
       expect(ran(/UPDATE mcp_oauth_tokens SET consumed_by/)).toBe(false);
       expect(ran(/DELETE FROM mcp_oauth_tokens WHERE grant_id/)).toBe(false);
       expect(refreshRow.consumed_by).toBeNull();
+   });
+
+   it('revokes when it loses the claim, because that is two uses of one token', async () => {
+      // Both requests read consumed_by = NULL; one wins the UPDATE and mints. The loser
+      // must not shrug: the same refresh token was presented twice, so the grant dies,
+      // and it dies as a recorded fact rather than only as a delete, which is what makes
+      // the winner's freshly minted pair worthless too.
+      refreshRow = stored(null);
+      const winner = { ...stored('the-other-request') };
+      const pending = redeem();
+      await Promise.resolve();
+      refreshRow.consumed_by = winner.consumed_by;
+      expect(await pending).toBeNull();
+      expect(revokedGrants.has('grant-9')).toBe(true);
    });
 
    it('does not consume an expired token', async () => {

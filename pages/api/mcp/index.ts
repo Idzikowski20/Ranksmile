@@ -21,6 +21,7 @@ import {
    type JsonRpcResponse,
 } from '@/src/infrastructure/mcp/rpc';
 import { MCP_SCOPE, verifyAccessToken } from '@/src/infrastructure/mcp/oauthStore';
+import { checkUserPaymentAccess } from '@/src/infrastructure/billing/requireOrgPaymentAccess';
 import { bearerChallenge, mcpUrls } from '@/src/infrastructure/mcp/urls';
 
 export const config = { api: { bodyParser: { sizeLimit: '1mb' }, responseLimit: '10mb' } };
@@ -83,6 +84,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
       return res.status(403).json({ error: 'insufficient_scope', error_description: `Scope ${MCP_SCOPE} is required` });
    }
+
+   // The tools serve the same workspace and article data the session routes do, so a
+   // payment-blocked org must not reach them through an agent either. The session
+   // wrapper cannot run here — there is no cookie to resolve an org from — so the same
+   // decision is taken on the token's user.
+   const access = await checkUserPaymentAccess(claims.userId, `${req.method ?? 'POST'}:/api/mcp`);
+   if (!access.allowed) return res.status(access.status).json(access.body);
 
    if (req.method === 'GET') {
       // Spec: a server that does not offer an SSE stream on GET MUST answer 405.
