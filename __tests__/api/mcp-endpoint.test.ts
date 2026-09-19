@@ -278,6 +278,21 @@ describe('/mcp transport', () => {
     expect(mockAccess).toHaveBeenCalledWith('u', 'POST:/api/mcp');
   });
 
+  it('keeps the transport verbs working for a payment-blocked organization', async () => {
+    // GET and DELETE carry no workspace or article data; answering them 402 would break
+    // a client that is only probing for a stream or closing its session.
+    mockVerify.mockResolvedValue({ userId: 'u', clientId: 'c', scope: 'mcp:tools', resource: null });
+    mockAccess.mockResolvedValue({ allowed: false, status: 402, body: { code: 'BILLING_REQUIRED' } });
+
+    const get = await call({ method: 'GET', headers: { ...REQ_HOST, authorization: 'Bearer t' } });
+    expect(get.statusCode).toBe(405);
+
+    const del = await call({ method: 'DELETE', headers: { ...REQ_HOST, authorization: 'Bearer t' } });
+    expect(del.statusCode).toBe(204);
+
+    expect(mockAccess).not.toHaveBeenCalled();
+  });
+
   it('refuses a token that does not carry the tools scope', async () => {
     mockVerify.mockResolvedValue({ userId: 'u', clientId: 'c', scope: 'openid', resource: null });
     const res = await call({
