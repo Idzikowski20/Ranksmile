@@ -52,6 +52,7 @@ async function run(): Promise<void> {
     ['planQuota', async () => (await import('@/src/infrastructure/persistence/schema/ensurePlanQuotaTables')).ensurePlanQuotaTables()],
     ['aiTokenUsage', async () => (await import('@/src/infrastructure/ai/aiTokenUsage')).ensureAiTokenUsageTable()],
     ['wp', async () => (await import('@/src/infrastructure/persistence/schema/ensureWpTables')).ensureWpTables()],
+    ['mcpOauth', async () => (await import('@/src/infrastructure/mcp/oauthStore')).ensureMcpOauthTables()],
   ];
 
   for (const [name, step] of steps) {

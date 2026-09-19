@@ -231,3 +231,33 @@ export function withOrgPaymentAccess(handler: NextApiHandler): NextApiHandler {
 
 /** @deprecated Alias — same as withOrgPaymentAccess (AccessPolicy). */
 export const withOrgAccessPolicy = withOrgPaymentAccess;
+
+export type UserAccessVerdict =
+   | { allowed: true }
+   | { allowed: false; status: 402 | 503; body: unknown };
+
+/**
+ * The same access decision as withOrgPaymentAccess, keyed on a user id instead of a
+ * session. For callers that authenticate some other way — the MCP endpoint holds an
+ * OAuth bearer token and never sees a cookie — and so cannot go through the wrapper.
+ */
+export async function checkUserPaymentAccess(userId: string, routeKey: string): Promise<UserAccessVerdict> {
+   let orgId: number;
+   try {
+      const { ensureUserTenancy } = await import('@/src/infrastructure/identity/tenancy');
+      orgId = (await ensureUserTenancy(userId)).orgId;
+   } catch {
+      return { allowed: false, status: 503, body: UNAVAILABLE_BODY };
+   }
+
+   try {
+      const access = await loadAccessSnapshot(orgId, userId);
+      if (!allowsApi(access.appState, routeKey)) {
+         return { allowed: false, status: 402, body: denialBody(access) };
+      }
+   } catch {
+      return { allowed: false, status: 503, body: UNAVAILABLE_BODY };
+   }
+
+   return { allowed: true };
+}

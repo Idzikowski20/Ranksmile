@@ -27,6 +27,15 @@ function isSkipped(posixRel: string): boolean {
   if (exact.has(posixRel)) return true;
   if (posixRel.startsWith('pages/api/auth/')) return true;
   if (posixRel.startsWith('pages/api/invitations/')) return true;
+  // MCP. The OAuth endpoints are authorization plumbing and must answer whatever the
+  // org's billing state is, or a lapsed org could never revoke an agent's access.
+  // connections.ts is the settings screen that does the revoking, so it follows.
+  //
+  // index.ts serves data and is gated, but not by this wrapper: it is bearer
+  // authenticated and has no session for getCurrentUserId to read, so it calls
+  // checkUserPaymentAccess on the token's user instead. See mcp-endpoint.test.ts,
+  // "refuses a caller whose organization is payment-blocked".
+  if (posixRel.startsWith('pages/api/mcp/')) return true;
   return false;
 }
 
