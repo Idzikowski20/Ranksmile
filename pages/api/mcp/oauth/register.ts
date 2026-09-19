@@ -24,6 +24,7 @@ export function isAllowedRedirectUri(raw: unknown): boolean {
    try { url = new URL(raw); } catch { return false; }
    if (url.protocol === 'https:') return true;
    if (url.protocol === 'http:') return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
+   // eslint-disable-next-line no-script-url -- this is the allowlist that rejects them
    if (url.protocol === 'javascript:' || url.protocol === 'data:' || url.protocol === 'file:' || url.protocol === 'vbscript:') return false;
    // A custom app scheme: require a scheme longer than one character (no drive letters)
    // and some opaque body, so `foo:` alone cannot be registered.

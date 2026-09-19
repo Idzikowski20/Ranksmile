@@ -217,4 +217,53 @@ describe('/mcp transport', () => {
     expect(res.statusCode).toBe(202);
     expect(res.json).not.toHaveBeenCalled();
   });
+
+  it('rejects an empty batch as an invalid request, not as an empty notification set', async () => {
+    mockVerify.mockResolvedValue({ userId: 'u', clientId: 'c', scope: 'mcp:tools', resource: null });
+    const res = await call({
+      method: 'POST',
+      headers: { ...REQ_HOST, authorization: 'Bearer t' },
+      body: [],
+    });
+    expect(res.statusCode).toBe(400);
+    expect((res.body as { error: { code: number } }).error.code).toBe(-32600);
+  });
+
+  it('rejects a message missing jsonrpc before it can reach a tool', async () => {
+    mockVerify.mockResolvedValue({ userId: 'u', clientId: 'c', scope: 'mcp:tools', resource: null });
+    const res = await call({
+      method: 'POST',
+      headers: { ...REQ_HOST, authorization: 'Bearer t' },
+      body: { id: 1, method: 'tools/call', params: { name: 'ok__tool' } },
+    });
+    expect(res.statusCode).toBe(400);
+    const body = res.body as { id: number; error: { code: number } };
+    expect(body.error.code).toBe(-32600);
+    expect(body.id).toBe(1);
+  });
+
+  it('answers a primitive batch element with -32600 rather than method-not-found', async () => {
+    mockVerify.mockResolvedValue({ userId: 'u', clientId: 'c', scope: 'mcp:tools', resource: null });
+    const res = await call({
+      method: 'POST',
+      headers: { ...REQ_HOST, authorization: 'Bearer t' },
+      body: ['nonsense', { jsonrpc: '2.0', id: 2, method: 'ping' }],
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { id: unknown; error?: { code: number } }[];
+    expect(body[0].error?.code).toBe(-32600);
+    expect(body[0].id).toBeNull();
+    expect(body[1].error).toBeUndefined();
+  });
+
+  it('refuses a token that does not carry the tools scope', async () => {
+    mockVerify.mockResolvedValue({ userId: 'u', clientId: 'c', scope: 'openid', resource: null });
+    const res = await call({
+      method: 'POST',
+      headers: { ...REQ_HOST, authorization: 'Bearer t' },
+      body: { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.headers['WWW-Authenticate']).toContain('insufficient_scope');
+  });
 });

@@ -8,9 +8,9 @@
  * to manage the grants that issued it.
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getCurrentUserId } from '../../../utils/getUser';
 import { listUserGrants, revokeGrant } from '@/src/infrastructure/mcp/oauthStore';
 import { getErrorMessage } from '@/src/core/shared/errors';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);

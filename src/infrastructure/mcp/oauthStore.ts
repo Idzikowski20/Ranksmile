@@ -68,6 +68,10 @@ export async function ensureMcpOauthTables(): Promise<void> {
       'ALTER TABLE mcp_oauth_tokens ADD COLUMN kind TEXT NOT NULL DEFAULT \'access\'',
       'ALTER TABLE mcp_oauth_tokens ADD COLUMN resource TEXT',
       'ALTER TABLE mcp_oauth_tokens ADD COLUMN grant_id TEXT',
+      // The claim column behind exactly-once redemption. Nullable so the
+      // compare-and-swap has something to swap from.
+      'ALTER TABLE mcp_oauth_codes ADD COLUMN consumed_by TEXT',
+      'ALTER TABLE mcp_oauth_tokens ADD COLUMN consumed_by TEXT',
    ]) {
       try { await db.query(alter); } catch { /* exists */ }
    }
@@ -77,6 +81,14 @@ export async function ensureMcpOauthTables(): Promise<void> {
 }
 
 const rand = (bytes = 32): string => crypto.randomBytes(bytes).toString('base64url');
+
+/**
+ * Claim a single-use credential. The UPDATE is the whole concurrency control:
+ * only one caller can move `consumed_by` off NULL, so only one can go on to mint
+ * tokens. Returns the claim token to compare the row against, never a boolean,
+ * because the caller has to prove the row it then reads is the one it won.
+ */
+const newClaim = (): string => rand(12);
 const sha256 = (s: string): string => crypto.createHash('sha256').update(s).digest('base64url');
 
 /** RFC 7636 S256: BASE64URL(SHA256(verifier)) must equal the stored challenge. */
@@ -160,11 +172,19 @@ export async function redeemCode(p: {
    code: string; clientId: string; redirectUri: string; codeVerifier: string; resource?: string;
 }): Promise<IssuedTokens | null> {
    await ensureMcpOauthTables();
+   // Claim first, read second. A concurrent exchange that loses the UPDATE reads back
+   // a row whose `consumed_by` is not its own and gives up, so a code can only ever
+   // mint one token pair.
+   const claim = newClaim();
+   await db.query(
+      'UPDATE mcp_oauth_codes SET consumed_by = ? WHERE code = ? AND consumed_by IS NULL',
+      { replacements: [claim, p.code] },
+   );
    const row = await queryOne<{
       client_id: string; user_id: string; redirect_uri: string; code_challenge: string;
-      scope: string | null; resource: string | null; expires_at: number;
+      scope: string | null; resource: string | null; expires_at: number; consumed_by: string | null;
    }>(
-      `SELECT client_id, user_id, redirect_uri, code_challenge, scope, resource, expires_at
+      `SELECT client_id, user_id, redirect_uri, code_challenge, scope, resource, expires_at, consumed_by
          FROM mcp_oauth_codes WHERE code = ? LIMIT 1`,
       [p.code],
    );
@@ -172,6 +192,7 @@ export async function redeemCode(p: {
    // verifier cannot be retried against the same code.
    await db.query('DELETE FROM mcp_oauth_codes WHERE code = ?', { replacements: [p.code] });
    if (!row) return null;
+   if (row.consumed_by !== claim) return null;
    if (Number(row.expires_at) < Date.now()) return null;
    if (row.client_id !== p.clientId) return null;
    if (row.redirect_uri !== p.redirectUri) return null;
@@ -193,23 +214,40 @@ export async function redeemCode(p: {
 export async function redeemRefreshToken(p: { refreshToken: string; clientId: string }): Promise<IssuedTokens | null> {
    await ensureMcpOauthTables();
    const hash = sha256(p.refreshToken);
+   const claim = newClaim();
+   await db.query(
+      `UPDATE mcp_oauth_tokens SET consumed_by = ?
+         WHERE token_hash = ? AND kind = 'refresh' AND consumed_by IS NULL`,
+      { replacements: [claim, hash] },
+   );
    const row = await queryOne<{
       client_id: string; user_id: string; scope: string | null; resource: string | null;
-      grant_id: string | null; expires_at: number;
+      grant_id: string | null; expires_at: number; consumed_by: string | null;
    }>(
-      `SELECT client_id, user_id, scope, resource, grant_id, expires_at
+      `SELECT client_id, user_id, scope, resource, grant_id, expires_at, consumed_by
          FROM mcp_oauth_tokens WHERE token_hash = ? AND kind = 'refresh' LIMIT 1`,
       [hash],
    );
    if (!row) return null;
-   await db.query('DELETE FROM mcp_oauth_tokens WHERE token_hash = ?', { replacements: [hash] });
+
+   // Reuse detection. The consumed row is kept rather than deleted precisely so this
+   // branch is reachable: a replayed refresh token still resolves to its grant, and the
+   // whole grant dies, so a stolen copy cannot outlive the legitimate client's next
+   // refresh. Deleting on rotation would have made this unreachable.
+   if (row.consumed_by !== claim) {
+      if (row.grant_id) {
+         await db.query(
+            'DELETE FROM mcp_oauth_tokens WHERE grant_id = ?',
+            { replacements: [row.grant_id] },
+         );
+      }
+      return null;
+   }
+
    if (Number(row.expires_at) < Date.now()) return null;
    if (row.client_id !== p.clientId) return null;
 
-   // Rotation with reuse detection: the whole grant dies if the old refresh token is
-   // replayed, so a stolen copy cannot outlive the legitimate client's next refresh.
    const grantId = row.grant_id || rand(12);
-   await db.query('DELETE FROM mcp_oauth_tokens WHERE grant_id = ? AND kind = \'access\'', { replacements: [grantId] });
 
    return mintPair({
       clientId: row.client_id,

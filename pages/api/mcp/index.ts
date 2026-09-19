@@ -13,12 +13,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import {
    handleRpc,
+   invalidRequest,
+   isJsonRpcMessage,
    isSupportedProtocolVersion,
+   messageId,
    SUPPORTED_PROTOCOL_VERSIONS,
-   type JsonRpcRequest,
    type JsonRpcResponse,
 } from '@/src/infrastructure/mcp/rpc';
-import { verifyAccessToken } from '@/src/infrastructure/mcp/oauthStore';
+import { MCP_SCOPE, verifyAccessToken } from '@/src/infrastructure/mcp/oauthStore';
 import { bearerChallenge, mcpUrls } from '@/src/infrastructure/mcp/urls';
 
 export const config = { api: { bodyParser: { sizeLimit: '1mb' }, responseLimit: '10mb' } };
@@ -72,6 +74,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'invalid_token', error_description: 'Token audience does not match this resource' });
    }
 
+   // The token has to carry the scope the tools live behind. Without this the scope in
+   // the token response is decoration: anything the client asked for would work.
+   if (!(claims.scope || '').split(/\s+/).filter(Boolean).includes(MCP_SCOPE)) {
+      res.setHeader(
+         'WWW-Authenticate',
+         `Bearer error="insufficient_scope", scope="${MCP_SCOPE}", resource_metadata="${urls.protectedResourceMetadata}"`,
+      );
+      return res.status(403).json({ error: 'insufficient_scope', error_description: `Scope ${MCP_SCOPE} is required` });
+   }
+
    if (req.method === 'GET') {
       // Spec: a server that does not offer an SSE stream on GET MUST answer 405.
       // ponytail: no server-initiated messages exist yet; add the stream when sampling,
@@ -109,9 +121,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       if (Array.isArray(body)) {
+         // An empty array is not a batch of notifications, it is an invalid request.
+         if (!body.length) return res.status(400).json(invalidRequest());
+
          const out: JsonRpcResponse[] = [];
-         for (const msg of body as JsonRpcRequest[]) {
-            const r = await handleRpc(claims.userId, msg ?? {});
+         for (const msg of body) {
+            if (!isJsonRpcMessage(msg)) {
+               out.push(invalidRequest(messageId(msg)));
+               continue;
+            }
+            const r = await handleRpc(claims.userId, msg);
             if (r) out.push(r);
          }
          // A batch of nothing but notifications owes no response body.
@@ -119,7 +138,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          return res.status(200).json(out);
       }
 
-      const response = await handleRpc(claims.userId, (body as JsonRpcRequest) ?? {});
+      if (!isJsonRpcMessage(body)) return res.status(400).json(invalidRequest(messageId(body)));
+
+      const response = await handleRpc(claims.userId, body);
       if (!response) return res.status(202).end();
       return res.status(200).json(response);
    } catch (err) {

@@ -6,10 +6,10 @@
  *   POST { …authorize params }    → mint an authorization code and return where to send it
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getCurrentUserId } from '../../../../utils/getUser';
 import { getClient, issueCode, MCP_SCOPE } from '@/src/infrastructure/mcp/oauthStore';
 import { mcpUrls } from '@/src/infrastructure/mcp/urls';
 import { getErrorMessage } from '@/src/core/shared/errors';
+import { getCurrentUserId } from '../../../../utils/getUser';
 
 const first = (v: string | string[] | undefined): string => (Array.isArray(v) ? v[0] ?? '' : v ?? '');
 
@@ -55,7 +55,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const codeChallenge = String(body?.code_challenge ?? '');
          const method = String(body?.code_challenge_method ?? '');
          const state = typeof body?.state === 'string' ? body.state : '';
-         const scope = typeof body?.scope === 'string' && body.scope.trim() ? body.scope : MCP_SCOPE;
+         // Discovery advertises exactly one scope, so exactly one is grantable. Echoing
+         // back whatever was asked for would tell the client it holds something it does not.
+         const requestedScope = typeof body?.scope === 'string' ? body.scope.trim() : '';
+         const granted = requestedScope
+            ? requestedScope.split(/\s+/).filter((s) => s === MCP_SCOPE)
+            : [MCP_SCOPE];
+         if (!granted.length) {
+            return res.status(400).json({
+               error: 'invalid_scope',
+               error_description: `The only supported scope is ${MCP_SCOPE}`,
+            });
+         }
+         const scope = granted.join(' ');
          const requestedResource = typeof body?.resource === 'string' ? body.resource : '';
 
          const client = await getClient(clientId);

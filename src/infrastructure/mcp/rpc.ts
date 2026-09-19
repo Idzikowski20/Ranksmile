@@ -37,6 +37,37 @@ export type JsonRpcResponse = {
 const ok = (id: JsonRpcId, result: unknown): JsonRpcResponse => ({ jsonrpc: '2.0', id, result });
 const fail = (id: JsonRpcId, code: number, message: string): JsonRpcResponse => ({ jsonrpc: '2.0', id, error: { code, message } });
 
+const isValidId = (v: unknown): v is JsonRpcId => v === null || typeof v === 'string' || typeof v === 'number';
+
+/**
+ * The id to answer a malformed message with. JSON-RPC wants the request's id echoed
+ * even in an error, but only when it is a usable one — anything else answers null.
+ */
+export function messageId(msg: unknown): JsonRpcId {
+   if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return null;
+   const id = (msg as Record<string, unknown>).id;
+   return isValidId(id) ? id : null;
+}
+
+/**
+ * A well-formed JSON-RPC 2.0 request or notification. Checked before dispatch so a
+ * message without `jsonrpc: "2.0"` cannot reach a tool, and a primitive batch element
+ * answers -32600 rather than -32601.
+ */
+export function isJsonRpcMessage(msg: unknown): msg is JsonRpcRequest {
+   if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return false;
+   const m = msg as Record<string, unknown>;
+   if (m.jsonrpc !== '2.0') return false;
+   if (typeof m.method !== 'string' || !m.method) return false;
+   if ('id' in m && !isValidId(m.id)) return false;
+   if ('params' in m && m.params !== undefined) {
+      if (typeof m.params !== 'object' || m.params === null || Array.isArray(m.params)) return false;
+   }
+   return true;
+}
+
+export const invalidRequest = (id: JsonRpcId = null): JsonRpcResponse => fail(id, -32600, 'Invalid Request');
+
 /** A tool result: MCP wants human-readable content, agents want the JSON. Send both. */
 function toolContent(value: unknown, isError = false): Record<string, unknown> {
    return {
