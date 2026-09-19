@@ -27,6 +27,16 @@ function isSkipped(posixRel: string): boolean {
   if (exact.has(posixRel)) return true;
   if (posixRel.startsWith('pages/api/auth/')) return true;
   if (posixRel.startsWith('pages/api/invitations/')) return true;
+  // MCP. The OAuth endpoints are authorization plumbing and must answer whatever the
+  // org's billing state is, or a lapsed org could never revoke an agent's access.
+  // connections.ts is the settings screen that does the revoking, so it follows.
+  //
+  // index.ts is the tools endpoint, and it is exempt for a different reason: it is
+  // bearer-authenticated and carries no session, so withOrgPaymentAccess — which reads
+  // the org from getCurrentUserId — would deny every call. That leaves a real gap: a
+  // lapsed org's agent can still read through MCP. Closing it needs a payment check
+  // keyed on the token's user rather than on a session.
+  if (posixRel.startsWith('pages/api/mcp/')) return true;
   return false;
 }
 

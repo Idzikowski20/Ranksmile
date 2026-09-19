@@ -180,19 +180,23 @@ export async function redeemCode(p: {
       'UPDATE mcp_oauth_codes SET consumed_by = ? WHERE code = ? AND consumed_by IS NULL',
       { replacements: [claim, p.code] },
    );
+   // Scoped to our own claim: a request that lost the race reads nothing and, below,
+   // deletes nothing, so it cannot burn the winner's row on its way out.
    const row = await queryOne<{
       client_id: string; user_id: string; redirect_uri: string; code_challenge: string;
-      scope: string | null; resource: string | null; expires_at: number; consumed_by: string | null;
+      scope: string | null; resource: string | null; expires_at: number;
    }>(
-      `SELECT client_id, user_id, redirect_uri, code_challenge, scope, resource, expires_at, consumed_by
-         FROM mcp_oauth_codes WHERE code = ? LIMIT 1`,
-      [p.code],
+      `SELECT client_id, user_id, redirect_uri, code_challenge, scope, resource, expires_at
+         FROM mcp_oauth_codes WHERE code = ? AND consumed_by = ? LIMIT 1`,
+      [p.code, claim],
    );
-   // One-time use: the row goes regardless of whether the rest validates, so a wrong
-   // verifier cannot be retried against the same code.
-   await db.query('DELETE FROM mcp_oauth_codes WHERE code = ?', { replacements: [p.code] });
    if (!row) return null;
-   if (row.consumed_by !== claim) return null;
+   // One-time use: our row goes regardless of whether the rest validates, so a wrong
+   // verifier cannot be retried against the same code.
+   await db.query(
+      'DELETE FROM mcp_oauth_codes WHERE code = ? AND consumed_by = ?',
+      { replacements: [p.code, claim] },
+   );
    if (Number(row.expires_at) < Date.now()) return null;
    if (row.client_id !== p.clientId) return null;
    if (row.redirect_uri !== p.redirectUri) return null;
@@ -214,12 +218,6 @@ export async function redeemCode(p: {
 export async function redeemRefreshToken(p: { refreshToken: string; clientId: string }): Promise<IssuedTokens | null> {
    await ensureMcpOauthTables();
    const hash = sha256(p.refreshToken);
-   const claim = newClaim();
-   await db.query(
-      `UPDATE mcp_oauth_tokens SET consumed_by = ?
-         WHERE token_hash = ? AND kind = 'refresh' AND consumed_by IS NULL`,
-      { replacements: [claim, hash] },
-   );
    const row = await queryOne<{
       client_id: string; user_id: string; scope: string | null; resource: string | null;
       grant_id: string | null; expires_at: number; consumed_by: string | null;
@@ -234,7 +232,7 @@ export async function redeemRefreshToken(p: { refreshToken: string; clientId: st
    // branch is reachable: a replayed refresh token still resolves to its grant, and the
    // whole grant dies, so a stolen copy cannot outlive the legitimate client's next
    // refresh. Deleting on rotation would have made this unreachable.
-   if (row.consumed_by !== claim) {
+   if (row.consumed_by !== null) {
       if (row.grant_id) {
          await db.query(
             'DELETE FROM mcp_oauth_tokens WHERE grant_id = ?',
@@ -244,8 +242,27 @@ export async function redeemRefreshToken(p: { refreshToken: string; clientId: st
       return null;
    }
 
+   // Validate before claiming. The token endpoint is a public client: the client_id
+   // arrives in the request body and is not proof of anything. Consuming the token
+   // first would let anyone holding it burn the grant by presenting a wrong id, and
+   // the legitimate client's next refresh would then be read as reuse.
    if (Number(row.expires_at) < Date.now()) return null;
    if (row.client_id !== p.clientId) return null;
+
+   const claim = newClaim();
+   await db.query(
+      `UPDATE mcp_oauth_tokens SET consumed_by = ?
+         WHERE token_hash = ? AND kind = 'refresh' AND consumed_by IS NULL`,
+      { replacements: [claim, hash] },
+   );
+   // Only the winner of that UPDATE may mint. A concurrent exchange that lost reads
+   // nothing here and leaves the grant alone.
+   const won = await queryOne<{ consumed_by: string | null }>(
+      `SELECT consumed_by FROM mcp_oauth_tokens
+         WHERE token_hash = ? AND kind = 'refresh' AND consumed_by = ? LIMIT 1`,
+      [hash, claim],
+   );
+   if (!won) return null;
 
    const grantId = row.grant_id || rand(12);
 
