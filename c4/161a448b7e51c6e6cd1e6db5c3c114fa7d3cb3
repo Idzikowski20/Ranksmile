@@ -1,0 +1,84 @@
+src/infrastructure/config/isPublicPath.ts
+  s_8a599cee1c9d24::t_fe63135f597ce1 9-11
+src/infrastructure/mcp/tools.ts
+  s_8a599cee1c9d24::t_039d797ff80cd3 121-146
+  s_8a599cee1c9d24::t_c6d8224c867c40 346-372
+  s_8a599cee1c9d24::t_7ae6b063465c11 76,79-93
+  s_8a599cee1c9d24::t_24291b93ebac0f 337
+  s_8a599cee1c9d24::t_062013895c277a 250-301
+  s_8a599cee1c9d24::t_2ec186a487f7ae 403
+  s_8a599cee1c9d24::t_ba761bb49bf675 244
+  s_8a599cee1c9d24::t_fa04e8c3284fb7 180
+  s_8a599cee1c9d24::t_552b1a2c20325f 1-22,34-35,37-38,42-43,47-75,77-78,94-108,110-120,147-179,181-192,216-243,245-249,302-336,338-345,373-402,404-411,432-462
+  s_8a599cee1c9d24::t_f5206a980ceaf4 412-431
+  s_8a599cee1c9d24::t_0546cc0611052e 193-215
+  s_8a599cee1c9d24::t_5031365e001579 23-33,36,39-41,44-46
+  s_8a599cee1c9d24::t_2bc1b43e8630dc 109
+pages/api/mcp/oauth/consent.ts
+  s_8a599cee1c9d24::t_38c8655841d9ee 2-3,10-11,16-27,32-33,41-46,50-51,58-59,66-73,75-77,81-82
+  s_8a599cee1c9d24::t_6018b59fde0012 1,4-9,12-15,28-31,34-40,47-49,52-57,60-65,74,78-80,83-92
+next.config.js
+  s_8a599cee1c9d24::t_a69ac96e1e456b 69-77,117-129
+  s_8a599cee1c9d24::t_fe63135f597ce1 68,130-133
+src/infrastructure/mcp/urls.ts
+  s_8a599cee1c9d24::t_e1426117d2ff43 1-32
+pages/api/mcp/oauth/authorization-server.ts
+  s_8a599cee1c9d24::t_6ab5988038f3e4 1-3,5-7,10-14,16,22,25,27,35-36
+  s_8a599cee1c9d24::t_c4cc486ca09eac 4,8-9,15,17-21,23-24,26,28-34
+pages/api/mcp/oauth/register.ts
+  s_8a599cee1c9d24::t_0690bfd7617177 1-73
+src/infrastructure/mcp/cors.ts
+  s_8a599cee1c9d24::t_b0c9e31dd860a1 1-13
+pages/api/mcp/oauth/revoke.ts
+  s_8a599cee1c9d24::t_0cb3e091d75475 1-33
+pages/api/mcp/index.ts
+  s_8a599cee1c9d24::t_f45d28898db3c5 1-133
+pages/api/mcp/connections.ts
+  s_8a599cee1c9d24::t_b61c21e0ce1eea 1-35
+__tests__/api/mcp-endpoint.test.ts
+  s_8a599cee1c9d24::t_38fc16fcacd15b 8,12-25,29,32-43,45-51,54-55,67,77-100,105,109,117,119-121,124-125,137,148-150,152,154-175,177,180-198,200-205,208-218
+  s_8a599cee1c9d24::t_e0893dcdc1a679 1-7,9-11,26-28,30-31,44,52-53,56-66,68-76,101-104,106-108,110-116,118,122-123,126-136,138-147,151,153,176,178-179,199,206-207,219-220
+components/settings/McpApiSettings.tsx
+  s_8a599cee1c9d24::t_89a9da18564087 118-171,173,176
+  s_8a599cee1c9d24::t_c43416fc993027 11
+  s_8a599cee1c9d24::t_a2a51296aed44c 10,12-13
+  s_8a599cee1c9d24::t_82fb40dc04fe5f 215
+  s_8a599cee1c9d24::t_99320eab454ea0 227-228,231-232
+src/infrastructure/mcp/oauthStore.ts
+  s_8a599cee1c9d24::t_ea7b602abf23de 1,3,10-16,18,22-23,26-33,35-46,49-52,62-63,74,76-89,91,93-95,98,100-103,106-110,112-114,116-119,128-131,157-159,162-163,173-177,181-182,203,221,224,227-228,232-235,251-269
+  s_8a599cee1c9d24::t_100d27dff852df 2,4-9,17,19-21,24-25,34,47-48,53-61,64-73,75,90,92,96-97,99,104-105,111,115,120-127,132-156,160-161,164-172,178-180,183-202,204-220,222-223,225-226,229-231,236-250
+src/infrastructure/mcp/rpc.ts
+  s_8a599cee1c9d24::t_f45d28898db3c5 1-121
+pages/api/mcp/oauth/protected-resource.ts
+  s_8a599cee1c9d24::t_28aa89a226daca 2-4,8-9,15,17-19,21
+  s_8a599cee1c9d24::t_d73db85c2d63b7 1,5-7,10-14,16,20,22-23
+pages/oauth/authorize.tsx
+  s_8a599cee1c9d24::t_bcebdc6be9b83d 1-18,22-24,32-134,136-145,148-150,152-155,157-158,160-165,167-168,170-171,173-179,181-194,196-203,206,213-216,218-219,221-231
+  s_8a599cee1c9d24::t_bfd81f75c9159d 207-210,212
+  s_8a599cee1c9d24::t_edf9c095e230b1 19-21,25-31,135,146-147,151,156,159,166,169,172,180,195,204-205,211,217,220
+lib/schemaBootstrap.ts
+  s_8a599cee1c9d24::t_fe63135f597ce1 55
+pages/api/mcp/oauth/token.ts
+  s_8a599cee1c9d24::t_615bdf4f49b81a 1,3,6-7,9-25,27-31,34-35,37-38,52,63-67
+  s_8a599cee1c9d24::t_6c846efee17297 2,4-5,8,26,36,39-51,53-62
+  s_8a599cee1c9d24::t_3fe0f3b7b557b0 32-33
+__tests__/components/McpApiSettings.test.tsx
+  s_8a599cee1c9d24::t_c1cfbcdd6e70b5 10
+  s_8a599cee1c9d24::t_5c9ae5487378f0 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c4161a448b7e51c6e6cd1e6db5c3c114fa7d3cb3",
+  "prompts": {},
+  "sessions": {
+    "s_8a599cee1c9d24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "76548d46-be01-47c2-9990-322e00789e04",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Idzikowski20 <boski.idzikowski@gmail.com>"
+    }
+  }
+}
