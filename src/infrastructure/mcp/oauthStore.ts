@@ -65,7 +65,7 @@ export async function ensureMcpOauthTables(): Promise<void> {
    for (const alter of [
       'ALTER TABLE mcp_oauth_clients ADD COLUMN client_uri TEXT',
       'ALTER TABLE mcp_oauth_codes ADD COLUMN resource TEXT',
-      `ALTER TABLE mcp_oauth_tokens ADD COLUMN kind TEXT NOT NULL DEFAULT 'access'`,
+      'ALTER TABLE mcp_oauth_tokens ADD COLUMN kind TEXT NOT NULL DEFAULT \'access\'',
       'ALTER TABLE mcp_oauth_tokens ADD COLUMN resource TEXT',
       'ALTER TABLE mcp_oauth_tokens ADD COLUMN grant_id TEXT',
    ]) {
@@ -209,7 +209,7 @@ export async function redeemRefreshToken(p: { refreshToken: string; clientId: st
    // Rotation with reuse detection: the whole grant dies if the old refresh token is
    // replayed, so a stolen copy cannot outlive the legitimate client's next refresh.
    const grantId = row.grant_id || rand(12);
-   await db.query(`DELETE FROM mcp_oauth_tokens WHERE grant_id = ? AND kind = 'access'`, { replacements: [grantId] });
+   await db.query('DELETE FROM mcp_oauth_tokens WHERE grant_id = ? AND kind = \'access\'', { replacements: [grantId] });
 
    return mintPair({
       clientId: row.client_id,
